@@ -52,8 +52,6 @@ RUN dnf install -y \
     bouncycastle \
     gcc-toolset-9-gcc \
     gcc-toolset-9-gcc-c++ \
-    nodejs \
-    npm \
     libpmem-devel
 
 # Set GCC 9 as the default C/C++ compiler

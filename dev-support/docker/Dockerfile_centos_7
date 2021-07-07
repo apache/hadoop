@@ -76,5 +76,4 @@ RUN pkg-resolver/install-yasm.sh centos:7
 RUN pkg-resolver/install-protobuf.sh centos:7
 RUN pkg-resolver/install-boost.sh centos:7
 RUN pkg-resolver/install-spotbugs.sh centos:7
-RUN pkg-resolver/install-nodejs.sh centos:7
 RUN pkg-resolver/install-common-pkgs.sh

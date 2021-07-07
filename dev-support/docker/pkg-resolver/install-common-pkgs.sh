@@ -20,9 +20,3 @@
 # Install pylint and python-dateutil
 ######
 pip3 install pylint==2.6.0 python-dateutil==2.8.1
-
-######
-# Install bower
-######
-# hadolint ignore=DL3008
-npm install -g bower@1.8.8
