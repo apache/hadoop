@@ -117,7 +117,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.abfs.impl");
     xmlPrefixToSkipCompare.add("fs.abfss.impl");
 
-
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys
     xmlPrefixToSkipCompare.add("adl.");
@@ -130,6 +129,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.abfss.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.file.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.ftp.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.gs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.hdfs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.http.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.https.impl");
@@ -139,9 +139,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.s3a.impl");
     xmlPropsToSkipCompare.
         add("fs.viewfs.overload.scheme.target.swebhdfs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.swift.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.webhdfs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.wasb.impl");
-    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.swift.impl");
 
     // Azure properties are in a different class
     // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
