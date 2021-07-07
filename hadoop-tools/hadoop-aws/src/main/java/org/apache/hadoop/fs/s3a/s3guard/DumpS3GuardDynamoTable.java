@@ -415,8 +415,11 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
       }
       List<DirListingMetadata> childMD = new ArrayList<>(childDirs.size());
       for (DDBPathMetadata childDir : childDirs) {
-        childMD.add(getStore().listChildren(
-            childDir.getFileStatus().getPath()));
+        DirListingMetadata data = getStore().listChildren(
+            childDir.getFileStatus().getPath());
+        if (data != null) {
+            childMD.add(data);
+        }
       }
       pushAll(queue, childMD);
     }
