@@ -47,13 +47,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
@@ -500,7 +500,7 @@ public abstract class GenericTestUtils {
 
     @Override
     public void close() throws Exception {
-      IOUtils.closeQuietly(bytesPrintStream);
+      IOUtils.closeStream(bytesPrintStream);
       System.setErr(oldErr);
     }
   }
@@ -821,12 +821,10 @@ public abstract class GenericTestUtils {
    */
   public static String getFilesDiff(File a, File b) throws IOException {
     StringBuilder bld = new StringBuilder();
-    BufferedReader ra = null, rb = null;
-    try {
-      ra = new BufferedReader(
-          new InputStreamReader(new FileInputStream(a)));
-      rb = new BufferedReader(
-          new InputStreamReader(new FileInputStream(b)));
+    try (BufferedReader ra = new BufferedReader(
+        new InputStreamReader(new FileInputStream(a)));
+         BufferedReader rb = new BufferedReader(
+             new InputStreamReader(new FileInputStream(b)))) {
       while (true) {
         String la = ra.readLine();
         String lb = rb.readLine();
@@ -846,9 +844,6 @@ public abstract class GenericTestUtils {
           bld.append(" + ").append(lb).append("\n");
         }
       }
-    } finally {
-      IOUtils.closeQuietly(ra);
-      IOUtils.closeQuietly(rb);
     }
     return bld.toString();
   }
