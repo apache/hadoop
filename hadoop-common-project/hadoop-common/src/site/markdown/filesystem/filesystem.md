@@ -1419,6 +1419,75 @@ operations related to the part of the file being truncated is undefined.
 
 
 
+### `boolean copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, Path dst)`
+
+The source file or directory at `src` is on the local disk and is copied into the file system at
+destination `dst`. If the source should be deleted after the move then `delSrc` flag needs to be
+set to TRUE. If destination already exists, and the destination contents should be overwritten
+then `overwrite` flag should be set to TRUE.
+
+#### Preconditions
+
+The source file or directory must exist:
+
+    if not exists(FS, src) : raise FileNotFoundException
+
+Directories cannot be copied into files regardless to what the overwrite flag is set to:
+
+    if isDir(FS, src) && isFile(FS, dst) : raise PathExistsException
+
+If destination exists and the above precondition holds then the overwrite flag must be set to TRUE
+for the operation to succeed. This will also overwrite any files / directories at the destination:
+
+    if exists(FS, dst) && not overwrite : raise PathExistsException
+
+#### Postconditions
+Copying a file into an existing directory at destination with a non-existing file at destination
+
+    if isFile(fs, src) and not exists(FS, dst) => success
+
+Copying a file into an existing directory at destination with an existing file at destination and
+overwrite set to TRUE
+
+    if isFile(FS, src) and overwrite and exists(FS, dst) => success
+
+
+Copying a file into a non-existent directory. POSIX file systems would fail this operation, HDFS
+allows this to happen creating all the directories in the destination path.
+
+    if isFile(FS, src) and not exists(FS, parent(dst)) => success
+
+Copying directory into destination directory - last part of the destination path doesn't exist e.g.
+`/src/bar/ -> /dst/foo/ => /dst/foo/` with the precondition that `/dst/` exists but `/dst/foo/`
+doesn't:
+
+    if isDir(FS, src) and not exists(FS, dst) => success
+
+Copying directory into destination directory - last part of the destination path exists e.g.
+`/src/bar/ -> /dst/foo/ => /dst/foo/bar/` with the precondition that `/dst/foo/` exists but
+`/dst/foo/bar/` doesn't:
+
+    if isDir(FS, src) and exists(FS, dst) => success
+
+Copying a directory into a destination directory - last part of destination path and source directory
+name exist e.g. `/src/foo/ -> /dst/` with the precondition that `/dst/foo/` exists. This operation
+will only succeed if the overwrite flag is set to TRUE
+
+    if isDir(FS, src) and exists(FS, dst) and overwrite => success
+
+For all operations if the `delSrc` flag is set to TRUE then the source will be deleted. If source
+is a directory then it will be recursively deleted.
+
+#### Implementation
+
+The default HDFS implementation, is to recurse through each file and folder, found at `src`, and
+copy them sequentially to their final destination (relative to `dst`).
+
+Object store based file systems should be mindful of what limitations arise from the above
+implementation and could take advantage of parallel uploads and possible re-ordering of files copied
+into the store to maximize throughput.
+
+
 ## <a name="RemoteIterator"></a> interface `RemoteIterator`
 
 The `RemoteIterator` interface is used as a remote-access equivalent

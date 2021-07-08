@@ -125,7 +125,24 @@ public abstract class AbstractContractCopyFromLocalTest extends
     mkdirs(destination);
 
     fs.copyFromLocalFile(source, destination);
-    System.out.println("Did this work?");
+  }
+
+  @Test
+  public void testSourceIsFileAndDestinationIsNonExistentDirectory()
+      throws Throwable {
+    describe("Source is a file and destination directory does not exist. " +
+        "Copy operation should still work.");
+
+    file = createTempFile("test");
+    Path source = new Path(file.toURI());
+    FileSystem fs = getFileSystem();
+
+    File dir = createTempDirectory("test");
+    Path destination = fileToPath(dir);
+    fs.delete(destination, false);
+
+    fs.copyFromLocalFile(source, destination);
+    assertPathExists("Destination should exist.", destination);
   }
 
   @Test
