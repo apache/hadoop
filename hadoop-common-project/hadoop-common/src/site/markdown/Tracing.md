@@ -12,92 +12,95 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-Enabling Dapper-like Tracing in Hadoop
+Opentelemtry in Hadoop
 ======================================
 
 <!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
-Dapper-like Tracing in Hadoop
------------------------------
+### Opentelemtry
 
-### HTrace
-
-[HDFS-5274](https://issues.apache.org/jira/browse/HDFS-5274) added support for tracing requests through HDFS,
+[HADOOP-15566](https://issues.apache.org/jira/browse/HADOOP-15566) added support for tracing requests through HDFS,
 using the open source tracing library,
-[Apache HTrace](http://htrace.incubator.apache.org/).
-Setting up tracing is quite simple, however it requires some very minor changes to your client code.
+[Opentelemtry](https://opentelemetry.io/).
 
-### SpanReceivers
+(The following instructions will be removed after the patch has been merged)
+Currently HADOOP-15566 is in progress. In order to trace requests you need to apply the [HADOOP-15566-WIP.1.patch](https://issues.apache.org/jira/secure/attachment/13030123/HADOOP-15566-WIP.1.patch)  
+and the build
+1. git apply HADOOP-15566-WIP.1.patch
+2. mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true or  execute the command ./start-build-env.sh
+3. Setup [single node cluster](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html) using the build from Step 2.
+4. We have introduced two new variables OTEL_TRACES_EXPORTER (for exporting the spans), OTEL_METRICS_EXPORTER (for exporting the metrics)
+5. Set `OTEL_TRACES_EXPORTER=jaeger`
+6. Bring the jaeger service up using the command `docker run -d --name jaeger \
+   -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+   -p 5775:5775/udp \
+   -p 6831:6831/udp \
+   -p 6832:6832/udp \
+   -p 5778:5778 \
+   -p 16686:16686 \
+   -p 14268:14268 \
+   -p 14250:14250 \
+   -p 9411:9411 \
+   jaegertracing/all-in-one:1.23` more information is available at [jaegertracing.io](https://www.jaegertracing.io/docs/1.23/getting-started/)
+7. [Start](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html#Execution) the Single Node cluster 
 
-The tracing system works by collecting information in structs called 'Spans'.
-It is up to you to choose how you want to receive this information
-by using implementation of [SpanReceiver](http://htrace.incubator.apache.org/developer_guide.html#SpanReceivers)
-interface bundled with HTrace or implementing it by yourself.
+### What is OpenTelemetry?
+OpenTelemetry is a set of APIs, SDKs, tooling and integrations that are designed for the creation and management of telemetry data 
+such as traces, metrics, and logs. The project provides a vendor-agnostic implementation that can be configured to send telemetry data 
+to the backend(s) of your choice. It supports a variety of popular open-source projects including Jaeger and Prometheus.
 
-[HTrace](http://htrace.incubator.apache.org/) provides options such as
+The OpenTelemetry project consists of multiple components. These components are made available as a single implementation to ease adoption and ensure a vendor-agnostic solution. More can be read [here](https://opentelemetry.io/docs/concepts/components/)
 
-* FlumeSpanReceiver
-* HBaseSpanReceiver
-* HTracedRESTReceiver
-* ZipkinSpanReceiver
+We will be mainly discussing OpenTelemetry Tracing. [Tracing API](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md) consists of three main classes
+* [TracerProvider](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#tracerprovider) is the entry point of the API. It provides access to Tracers.
+* [Tracer](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#tracer) is the class responsible for creating Spans.
+* [Span](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#span) is the API to trace an operation.
 
-See core-default.xml for a description of HTrace configuration keys.  In some
-cases, you will also need to add the jar containing the SpanReceiver that you
-are using to the classpath of Hadoop on each node. (In the example above,
-LocalFileSpanReceiver is included in the htrace-core4 jar which is bundled
-with Hadoop.)
+### Exporter
+Provides functionality to emit telemetry to consumers. In our case Trace Exporter helps in collecting the traces at a central location. Exporters supported by OpenTelemetry Java can be found [here](https://github.com/open-telemetry/opentelemetry-java/tree/main/exporters)
+* jaeger-thrift
+* jaeger
+* logging-otlp
+* logging
+* otlp
+* prometheus
+* zipkin
 
+We are using jaeger to export the traces. Any library above mentioned can be used you need to make sure that the exporter is available during runtime
+for the traces to be exported
+
+### How to enable tracing
+We are using OpenTelemetry autoconfigure option thereby the exporter can be provided at the runtime using the environment variables. We haved added two new variables to hadoop-env.sh
 ```
-    $ cp htrace-htraced/target/htrace-htraced-4.1.0-incubating.jar $HADOOP_HOME/share/hadoop/common/lib/
+###
+# Opentelemetry Trace Exporters Configuration
+###
+export OTEL_TRACES_EXPORTER=jaeger
+export OTEL_METRICS_EXPORTER=none 
 ```
+Add the exporter lib as a maven dependency to hadoop-project/pom.xml and build/package the project 
+```
+    <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-exporter-jaeger</artifactId>
+        <version>${opentelemetry.version}</version>
+     </dependency>
+     <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-netty-shaded</artifactId>
+        <version>1.26.0</version>
+     </dependency>
+```
+OR
 
-### Dynamic update of tracing configuration
+copy the dependencies to `$HADOOP_HOME/share/hadoop/common/lib/`
 
-You can use `hadoop trace` command to see and update the tracing configuration of each servers.
-You must specify IPC server address of namenode or datanode by `-host` option.
-You need to run the command against all servers if you want to update the configuration of all servers.
 
-`hadoop trace -list` shows list of loaded span receivers associated with the id.
 
-      $ hadoop trace -list -host 192.168.56.2:9000
-      ID  CLASS
-      1   org.apache.htrace.core.LocalFileSpanReceiver
+### Adding a Trace
 
-      $ hadoop trace -list -host 192.168.56.2:9867
-      ID  CLASS
-      1   org.apache.htrace.core.LocalFileSpanReceiver
-
-`hadoop trace -remove` removes span receiver from server.
-`-remove` options takes id of span receiver as argument.
-
-      $ hadoop trace -remove 1 -host 192.168.56.2:9000
-      Removed trace span receiver 1
-
-`hadoop trace -add` adds span receiver to server.
-You need to specify the class name of span receiver as argument of `-class` option.
-You can specify the configuration associated with span receiver by `-Ckey=value` options.
-
-      $ hadoop trace -add -class org.apache.htrace.core.LocalFileSpanReceiver -Chadoop.htrace.local.file.span.receiver.path=/tmp/htrace.out -host 192.168.56.2:9000
-      Added trace span receiver 2 with configuration hadoop.htrace.local.file.span.receiver.path = /tmp/htrace.out
-
-      $ hadoop trace -list -host 192.168.56.2:9000
-      ID  CLASS
-      2   org.apache.htrace.core.LocalFileSpanReceiver
-
-If the cluster is Kerberized, the service principal name must be specified using `-principal` option.
-For example, to show list of span receivers of a namenode:
-
-    $ hadoop trace -list -host NN1:8020 -principal namenode/NN1@EXAMPLE.COM
-
-Or, for a datanode:
-
-    $ hadoop trace -list -host DN2:9867 -principal datanode/DN1@EXAMPLE.COM
-
-### Starting tracing spans by HTrace API
-
-In order to trace, you will need to wrap the traced logic with **tracing span** as shown below.
-When there is running tracing spans,
-the tracing information is propagated to servers along with RPC requests.
+We have written wrapper around OpenTelemetry API in order to avoid a lot of code change that would be caused by the new APIs.
+Eventually we can remove the old APIs (Wrapper code) module wise.
 
 ```java
     import org.apache.hadoop.hdfs.HdfsConfiguration;
