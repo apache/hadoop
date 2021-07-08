@@ -1348,58 +1348,6 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("dir3/file3")));
   }
 
-  /**
-   * Tests to verify the diff report with maximum SnapsdiffReportEntries limit
-   * over an rpc being set to 3.
-   * @throws Exception
-   */
-  @Test
-  public void testDiffReportWithRpcLimit3() throws Exception {
-    final Path root = new Path("/");
-    hdfs.mkdirs(root);
-    Path path = new Path(root, "dir1");
-    hdfs.mkdirs(path);
-    for (int j = 1; j <= 4; j++) {
-      final Path file = new Path(path, "file" + j);
-      DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
-    }
-    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
-    path = new Path(root, "dir1");
-    for (int j = 1; j <= 4; j++) {
-      final Path file = new Path(path, "file" + j);
-      hdfs.delete(file);
-    }
-    for (int j = 5; j <= 10; j++) {
-      final Path file = new Path(path, "file" + j);
-      DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
-    }
-
-    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
-    verifyDiffReport(root, "s0", "s1",
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file5")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file6")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file7")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file8")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file9")),
-        new DiffReportEntry(DiffType.CREATE,
-            DFSUtil.string2Bytes("dir1/file10")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir1/file1")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir1/file2")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir1/file3")),
-        new DiffReportEntry(DiffType.DELETE,
-            DFSUtil.string2Bytes("dir1/file4")));
-  }
-
   @Test
   public void testDiffReportWithRpcLimit2() throws Exception {
     final Path root = new Path("/");
@@ -1465,6 +1413,58 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("dir3/file1")),
         new DiffReportEntry(DiffType.DELETE,
             DFSUtil.string2Bytes("dir3/file3")));
+  }
+
+  /**
+   * Tests to verify the diff report with maximum SnapsdiffReportEntries limit
+   * over an rpc being set to 3.
+   * @throws Exception
+   */
+  @Test
+  public void testDiffReportWithRpcLimit3() throws Exception {
+    final Path root = new Path("/");
+    hdfs.mkdirs(root);
+    Path path = new Path(root, "dir1");
+    hdfs.mkdirs(path);
+    for (int j = 1; j <= 4; j++) {
+      final Path file = new Path(path, "file" + j);
+      DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
+    }
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s0");
+    path = new Path(root, "dir1");
+    for (int j = 1; j <= 4; j++) {
+      final Path file = new Path(path, "file" + j);
+      hdfs.delete(file, false);
+    }
+    for (int j = 5; j <= 10; j++) {
+      final Path file = new Path(path, "file" + j);
+      DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, SEED);
+    }
+
+    SnapshotTestHelper.createSnapshot(hdfs, root, "s1");
+    verifyDiffReport(root, "s0", "s1",
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("dir1")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("dir1/file5")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("dir1/file6")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("dir1/file7")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("dir1/file8")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("dir1/file9")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("dir1/file10")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir1/file1")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir1/file2")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir1/file3")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("dir1/file4")));
   }
 
   private void verifyDiffReportForGivenReport(Path dirPath, String from,
