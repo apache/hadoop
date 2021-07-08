@@ -92,6 +92,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
   @Test
   public void testCopyMissingFile() throws Throwable {
+    describe("Copying a file that's not there should fail.");
     file = createTempFile("test");
     file.delete();
     // first upload to create
