@@ -51,70 +51,70 @@ import static org.junit.Assert.assertTrue;
 
 
 public class TestRouterDistCpProcedure extends TestDistCpProcedure {
-    private static StateStoreDFSCluster cluster;
-    private static MiniRouterDFSCluster.RouterContext routerContext;
-    private static Configuration routerConf;
-    private static StateStoreService stateStore;
+  private static StateStoreDFSCluster cluster;
+  private static MiniRouterDFSCluster.RouterContext routerContext;
+  private static Configuration routerConf;
+  private static StateStoreService stateStore;
 
-    @BeforeClass
-    public static void globalSetUp() throws Exception {
-        cluster = new StateStoreDFSCluster(false, 1);
-        // Build and start a router with State Store + admin + RPC
-        Configuration conf = new RouterConfigBuilder()
-                .stateStore()
-                .admin()
-                .rpc()
-                .build();
-        cluster.addRouterOverrides(conf);
-        cluster.startRouters();
-        routerContext = cluster.getRandomRouter();
-        Router router = routerContext.getRouter();
-        stateStore = router.getStateStore();
+  @BeforeClass
+  public static void globalSetUp() throws Exception {
+    cluster = new StateStoreDFSCluster(false, 1);
+    // Build and start a router with State Store + admin + RPC
+    Configuration conf = new RouterConfigBuilder()
+        .stateStore()
+        .admin()
+        .rpc()
+        .build();
+    cluster.addRouterOverrides(conf);
+    cluster.startRouters();
+    routerContext = cluster.getRandomRouter();
+    Router router = routerContext.getRouter();
+    stateStore = router.getStateStore();
 
-        // Add one name services for testing
-        ActiveNamenodeResolver membership = router.getNamenodeResolver();
-        membership.registerNamenode(createNamenodeReport("ns0", "nn1",
-                HAServiceProtocol.HAServiceState.ACTIVE));
-        stateStore.refreshCaches(true);
+    // Add one name services for testing
+    ActiveNamenodeResolver membership = router.getNamenodeResolver();
+    membership.registerNamenode(createNamenodeReport("ns0", "nn1",
+        HAServiceProtocol.HAServiceState.ACTIVE));
+    stateStore.refreshCaches(true);
 
-        routerConf = new Configuration();
-        InetSocketAddress routerSocket = router.getAdminServerAddress();
-        routerConf.setSocketAddr(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
-                routerSocket);
-    }
+    routerConf = new Configuration();
+    InetSocketAddress routerSocket = router.getAdminServerAddress();
+    routerConf.setSocketAddr(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        routerSocket);
+  }
 
-    @Override
-    public void testDisableWrite() throws Exception {
-        // Firstly add mount entry: /test-write->{ns0,/test-write}.
-        String mount = "/test-write";
-        MountTable newEntry = MountTable
-                .newInstance(mount, Collections.singletonMap("ns0", mount),
-                        Time.now(), Time.now());
-        MountTableManager mountTable =
-                routerContext.getAdminClient().getMountTableManager();
-        AddMountTableEntryRequest addRequest =
-                AddMountTableEntryRequest.newInstance(newEntry);
-        AddMountTableEntryResponse addResponse =
-                mountTable.addMountTableEntry(addRequest);
-        assertTrue(addResponse.getStatus());
-        stateStore.loadCache(MountTableStoreImpl.class, true); // load cache.
+  @Override
+  public void testDisableWrite() throws Exception {
+    // Firstly add mount entry: /test-write->{ns0,/test-write}.
+    String mount = "/test-write";
+    MountTable newEntry = MountTable
+        .newInstance(mount, Collections.singletonMap("ns0", mount),
+        Time.now(), Time.now());
+    MountTableManager mountTable =
+        routerContext.getAdminClient().getMountTableManager();
+    AddMountTableEntryRequest addRequest =
+        AddMountTableEntryRequest.newInstance(newEntry);
+    AddMountTableEntryResponse addResponse =
+        mountTable.addMountTableEntry(addRequest);
+    assertTrue(addResponse.getStatus());
+    stateStore.loadCache(MountTableStoreImpl.class, true); // load cache.
 
-        // Construct client.
-        URI address = routerContext.getFileSystemURI();
-        DFSClient routerClient = new DFSClient(address, routerConf);
+    // Construct client.
+    URI address = routerContext.getFileSystemURI();
+    DFSClient routerClient = new DFSClient(address, routerConf);
 
-        FedBalanceContext context = new FedBalanceContext
-                .Builder(null, null, mount, routerConf).build();
-        RouterDistCpProcedure dcProcedure = new RouterDistCpProcedure();
-        executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
-                () -> dcProcedure.disableWrite(context));
-        intercept(RemoteException.class, "is in a read only mount point",
-                "Expect readonly exception.", () -> routerClient
-                        .mkdirs(mount + "/dir", new FsPermission(020), false));
-    }
+    FedBalanceContext context = new FedBalanceContext
+        .Builder(null, null, mount, routerConf).build();
+    RouterDistCpProcedure dcProcedure = new RouterDistCpProcedure();
+    executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
+        () -> dcProcedure.disableWrite(context));
+    intercept(RemoteException.class, "is in a read only mount point",
+        "Expect readonly exception.", () -> routerClient
+        .mkdirs(mount + "/dir", new FsPermission(020), false));
+  }
 
-    @AfterClass
-    public static void tearDown() {
-        cluster.stopRouter(routerContext);
-    }
+  @AfterClass
+  public static void tearDown() {
+    cluster.stopRouter(routerContext);
+  }
 }

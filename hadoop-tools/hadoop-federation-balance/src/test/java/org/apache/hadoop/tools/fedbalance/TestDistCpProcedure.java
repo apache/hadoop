@@ -400,8 +400,8 @@ public class TestDistCpProcedure {
    * @param target the target stage.
    * @param call the function executing the procedure.
    */
-  protected static void executeProcedure(DistCpProcedure procedure, Stage target,
-      Call call) throws IOException {
+  protected static void executeProcedure(DistCpProcedure procedure,
+      Stage target, Call call) throws IOException {
     Stage stage = Stage.PRE_CHECK;
     procedure.updateStage(stage);
     while (stage != target) {
