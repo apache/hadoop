@@ -25,10 +25,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.TimerTask;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
 import org.junit.After;
@@ -154,7 +154,7 @@ public class TestConfigurationNodeLabelsProvider extends NodeLabelTestBase {
     conf.set(YarnConfiguration.NM_PROVIDER_CONFIGURED_NODE_PARTITION, nodeLabels);
     FileOutputStream confStream = new FileOutputStream(nodeLabelsConfigFile);
     conf.writeXml(confStream);
-    IOUtils.closeQuietly(confStream);
+    IOUtils.closeStream(confStream);
   }
 
   private static class XMLPathClassLoader extends ClassLoader {

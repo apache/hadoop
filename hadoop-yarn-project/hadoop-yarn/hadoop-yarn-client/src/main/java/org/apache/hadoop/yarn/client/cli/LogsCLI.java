@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -55,7 +56,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -643,7 +643,7 @@ public class LogsCLI extends Configured implements Tool {
               + " for the container:" + containerIdStr + " in NodeManager:"
               + nodeId);
         } finally {
-          IOUtils.closeQuietly(is);
+          IOUtils.closeStream(is);
         }
       }
 

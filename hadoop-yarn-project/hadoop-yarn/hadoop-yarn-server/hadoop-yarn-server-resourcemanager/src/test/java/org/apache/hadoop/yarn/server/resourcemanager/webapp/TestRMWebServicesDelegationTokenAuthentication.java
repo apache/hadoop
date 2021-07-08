@@ -39,9 +39,9 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -367,8 +367,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
             }
           }
         } finally {
-          IOUtils.closeQuietly(reader);
-          IOUtils.closeQuietly(response);
+          IOUtils.closeStream(reader);
+          IOUtils.closeStream(response);
         }
         Assert.assertEquals("client2", owner);
         Token<RMDelegationTokenIdentifier> realToken = new Token<RMDelegationTokenIdentifier>();
@@ -431,10 +431,10 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
         InputStream response = conn.getInputStream();
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
-        BufferedReader reader = null;
-        try {
-          reader = new BufferedReader(new InputStreamReader(response, "UTF8"));
-          for (String line; (line = reader.readLine()) != null;) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+            response, "UTF8"))) {
+          String line;
+          while ((line = reader.readLine()) != null) {
             JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
               reader.close();
@@ -444,8 +444,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
             }
           }
         } finally {
-          IOUtils.closeQuietly(reader);
-          IOUtils.closeQuietly(response);
+          IOUtils.closeStream(response);
         }
         return ret;
       }

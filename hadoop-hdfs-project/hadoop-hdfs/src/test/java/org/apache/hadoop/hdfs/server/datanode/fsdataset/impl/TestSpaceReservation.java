@@ -19,7 +19,8 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.util.function.Supplier;
-import org.apache.commons.io.IOUtils;
+
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -554,7 +555,7 @@ public class TestSpaceReservation {
           String filename = "/file-" + rand.nextLong();
           os = localClient.create(filename, false);
           os.write(data, 0, rand.nextInt(data.length));
-          IOUtils.closeQuietly(os);
+          IOUtils.closeStream(os);
           os = null;
           localClient.delete(filename, false);
           Thread.sleep(50);     // Sleep for a bit to avoid killing the system.
@@ -566,7 +567,7 @@ public class TestSpaceReservation {
           return;
         } finally {
           if (os != null) {
-            IOUtils.closeQuietly(os);
+            IOUtils.closeStream(os);
           }
         }
       }

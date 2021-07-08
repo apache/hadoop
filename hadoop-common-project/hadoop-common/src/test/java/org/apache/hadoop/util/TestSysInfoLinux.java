@@ -23,8 +23,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -521,12 +519,9 @@ public class TestSysInfoLinux {
 
   private void writeFakeCPUInfoFile(String content) throws IOException {
     File tempFile = new File(FAKE_CPUFILE);
-    FileWriter fWriter = new FileWriter(FAKE_CPUFILE);
-    tempFile.deleteOnExit();
-    try {
+    try (FileWriter fWriter = new FileWriter(FAKE_CPUFILE)) {
+      tempFile.deleteOnExit();
       fWriter.write(content);
-    } finally {
-      IOUtils.closeQuietly(fWriter);
     }
   }
 

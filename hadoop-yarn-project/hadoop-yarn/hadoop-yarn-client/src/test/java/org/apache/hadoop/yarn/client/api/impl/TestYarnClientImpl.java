@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -28,6 +27,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
@@ -119,7 +119,7 @@ public class TestYarnClientImpl extends ParameterizedSchedulerTestBase {
       Assert.assertEquals(
               expectedTimeoutEnforcement, client.enforceAsyncAPITimeout());
     } finally {
-      IOUtils.closeQuietly(client);
+      IOUtils.closeStream(client);
     }
   }
 

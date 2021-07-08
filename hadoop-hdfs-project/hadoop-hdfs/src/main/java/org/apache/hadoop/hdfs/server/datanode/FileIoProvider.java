@@ -336,7 +336,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       onFailure(volume, begin);
       throw e;
     }
@@ -367,7 +367,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fos;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fos);
+      IOUtils.closeStream(fos);
       onFailure(volume, begin);
       throw e;
     }
@@ -432,7 +432,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       onFailure(volume, begin);
       throw e;
     }
@@ -464,7 +464,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       onFailure(volume, begin);
       throw e;
     }
@@ -495,7 +495,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return raf;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(raf);
+      IOUtils.closeStream(raf);
       onFailure(volume, begin);
       throw e;
     }

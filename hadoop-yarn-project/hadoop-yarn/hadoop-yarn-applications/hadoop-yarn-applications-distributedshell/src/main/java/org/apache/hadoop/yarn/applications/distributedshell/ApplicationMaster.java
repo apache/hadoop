@@ -1619,12 +1619,9 @@ public class ApplicationMaster {
   }
 
   private String readContent(String filePath) throws IOException {
-    DataInputStream ds = null;
-    try {
-      ds = new DataInputStream(new FileInputStream(filePath));
+    try (DataInputStream ds = new DataInputStream(
+        new FileInputStream(filePath))) {
       return ds.readUTF();
-    } finally {
-      org.apache.commons.io.IOUtils.closeQuietly(ds);
     }
   }
 
