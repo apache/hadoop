@@ -791,10 +791,62 @@ This secret sharing can be done using a Zookeeper service which is configured in
 $H4 Delegation Tokens
 
 Similar to HTTP authentication, KMS uses Hadoop Authentication for delegation tokens too.
+Under HA, every KMS instance must verify the delegation token given by another KMS instance.
+To do this, all the KMS instances must use ZKDelegationTokenSecretManager to retrieve
+the TokenIdentifiers and DelegationKeys from ZooKeeper.
 
-Under HA, A KMS instance must verify the delegation token given by another KMS instance, by checking the shared secret used to sign the delegation token. To do this, all KMS instances must be able to retrieve the shared secret from ZooKeeper.
+Sample configuration:
 
-Please see the examples given in HTTP Authentication section to configure ZooKeeper for secret sharing.
+```xml
+  <property>
+    <name>hadoop.kms.authentication.zk-dt-secret-manager.enable</name>
+    <value>true</value>
+    <description>
+      If true, Hadoop KMS uses ZKDelegationTokenSecretManager to persist
+      TokenIdentifiers and DelegationKeys in ZooKeeper.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.zk-dt-secret-manager.zkConnectionString</name>
+    <value>#HOSTNAME#:#PORT#,...</value>
+    <description>
+      The ZooKeeper connection string, a comma-separated list of hostnames and port.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.zk-dt-secret-manager.znodeWorkingPath</name>
+    <value>/hadoop-kms/zkdtsm</value>
+    <description>
+      The ZooKeeper znode path where the KMS instances will store and retrieve
+      the secret from. All the KMS instances that need to coordinate should point to the same path.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.zk-dt-secret-manager.zkAuthType</name>
+    <value>sasl</value>
+    <description>
+      The ZooKeeper authentication type, 'none' (default) or 'sasl' (Kerberos).
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.zk-dt-secret-manager.kerberos.keytab</name>
+    <value>/etc/hadoop/conf/kms.keytab</value>
+    <description>
+      The absolute path for the Kerberos keytab with the credentials to
+      connect to ZooKeeper. This parameter is effective only when
+      hadoop.kms.authentication.zk-dt-secret-manager.zkAuthType is set to 'sasl'.
+    </description>
+  </property>
+  <property>
+    <name>hadoop.kms.authentication.zk-dt-secret-manager.kerberos.principal</name>
+    <value>kms/#HOSTNAME#</value>
+    <description>
+      The Kerberos service principal used to connect to ZooKeeper.
+      This parameter is effective only when
+      hadoop.kms.authentication.zk-dt-secret-manager.zkAuthType is set to 'sasl'.
+    </description>
+  </property>
+```
 
 $H3 KMS HTTP REST API
 
