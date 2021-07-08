@@ -170,7 +170,6 @@ public final class RouterYarnClientUtils {
             uamResourceReport.getClusterUsagePercentage());
 
     am.setApplicationResourceUsageReport(amResourceReport);
-    am.getApplicationTags().addAll(uam.getApplicationTags());
   }
 
   /**
