@@ -79,7 +79,6 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
-import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
@@ -3782,36 +3781,36 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   @AuditEntryPoint
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
-      Path dst) throws IOException {
+                                Path dst) throws IOException {
     checkNotClosed();
     LOG.debug("Copying local file from {} to {}", src, dst);
     trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst,
-            () -> new CopyFromLocalOperation(
-                    createStoreContext(),
-                    src,
-                    dst,
-                    delSrc,
-                    overwrite,
-                    createCopyFromLocalCallbacks()).execute());
+        () -> new CopyFromLocalOperation(
+            createStoreContext(),
+            src,
+            dst,
+            delSrc,
+            overwrite,
+            createCopyFromLocalCallbacks()).execute());
   }
 
   protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
-      createCopyFromLocalCallbacks() throws IOException {
+  createCopyFromLocalCallbacks() throws IOException {
     LocalFileSystem local = getLocal(getConf());
     return new CopyFromLocalCallbacksImpl(local);
   }
 
   protected class CopyFromLocalCallbacksImpl implements
-          CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
+      CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
     private final LocalFileSystem local;
 
     private CopyFromLocalCallbacksImpl(LocalFileSystem local) {
-        this.local = local;
+      this.local = local;
     }
 
     @Override
     public RemoteIterator<LocatedFileStatus> listStatusIterator(
-            final Path path) throws IOException {
+        final Path path) throws IOException {
       return local.listLocatedStatus(path);
     }
 
@@ -3828,21 +3827,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public void copyFileFromTo(File file, Path from, Path to) throws IOException {
       trackDurationAndSpan(
-              OBJECT_PUT_REQUESTS,
-              to,
-              () -> {
+          OBJECT_PUT_REQUESTS,
+          to,
+          () -> {
+            final String key = pathToKey(to);
+            final ObjectMetadata om = newObjectMetadata(file.length());
+            Progressable progress = null;
+            PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
+            S3AFileSystem.this.invoker.retry(
+                "putObject(" + "" + ")", to.toString(),
+                true,
+                () -> executePut(putObjectRequest, progress));
 
-                final String key = pathToKey(to);
-                final ObjectMetadata om = newObjectMetadata(file.length());
-                Progressable progress = null;
-                PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
-                S3AFileSystem.this.invoker.retry(
-                        "putObject(" + "" + ")", to.toString(),
-                        true,
-                        () -> executePut(putObjectRequest, progress));
-
-                return null;
-              });
+            return null;
+          });
     }
 
     @Override
@@ -3852,7 +3850,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     public boolean createEmptyDir(Path path) throws IOException {
-        return S3AFileSystem.this.mkdirs(path);
+      return S3AFileSystem.this.mkdirs(path);
     }
   }
 

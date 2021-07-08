@@ -49,8 +49,7 @@ public class ITestS3ACopyFromLocalFile extends
     Path dst = fileToPath(createTempDirectory("someDir"));
 
     intercept(IllegalArgumentException.class,
-            () -> getFileSystem().copyFromLocalFile(
-                    false, true, dst, dst));
+        () -> getFileSystem().copyFromLocalFile(false, true, dst, dst));
   }
 
   @Test
@@ -63,7 +62,7 @@ public class ITestS3ACopyFromLocalFile extends
     Path sourcePath = new Path(source.toURI());
 
     intercept(PathExistsException.class,
-            () -> getFileSystem().copyFromLocalFile(false, true,
-                    sourcePath, destination));
+        () -> getFileSystem().copyFromLocalFile(false, true,
+            sourcePath, destination));
   }
 }
