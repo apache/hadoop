@@ -713,8 +713,8 @@
       Disabling this option will allow existing and new clients
       to detect an IP change and continue to locate the new host's token.
 
-      In secure multi-homed environments, the following parameter
-      will need to be set to false on both cluster servers and clients (see HADOOP-7733).
+      In secure multi-homed environments, this parameter will need to
+      be set to false on both cluster servers and clients (see HADOOP-7733).
       If it is not set correctly, the symptom will be inability to
       submit an application to YARN from an external client
       (with error "client host not a member of the Hadoop cluster"),
