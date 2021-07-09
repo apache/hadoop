@@ -137,7 +137,7 @@ public class TestPendingReconstruction {
     //
     // verify that nothing has timed out so far
     //
-    assertNull(pendingReconstructions.getTimedOutBlocks());
+    assertNull(pendingReconstructions.clearTimedOutBlocks());
     assertEquals(0L, pendingReconstructions.getNumTimedOuts());
 
     //
@@ -175,7 +175,7 @@ public class TestPendingReconstruction {
     //
     assertEquals("Size of pendingReconstructions ", 0, pendingReconstructions.size());
     assertEquals(15L, pendingReconstructions.getNumTimedOuts());
-    Block[] timedOut = pendingReconstructions.getTimedOutBlocks();
+    Block[] timedOut = pendingReconstructions.clearTimedOutBlocks();
     assertNotNull(timedOut);
     assertEquals(15, timedOut.length);
     // Verify the number is not reset
