@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -76,10 +77,20 @@ public class TestRouterYarnClientUtils {
     ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
     responses.add(getApplicationsResponse(1, false));
     responses.add(getApplicationsResponse(2, false));
+
     GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, false);
     Assert.assertNotNull(result);
     Assert.assertEquals(2, result.getApplicationList().size());
+
+    String appName1 = result.getApplicationList().get(0).getName();
+    String appName2 = result.getApplicationList().get(1).getName();
+
+    // Check that no Unmanaged applications are added to the result
+    Assert.assertEquals(false,
+        appName1.contains(UnmanagedApplicationManager.APP_NAME));
+    Assert.assertEquals(false,
+        appName2.contains(UnmanagedApplicationManager.APP_NAME));
   }
 
   /**
@@ -125,10 +136,11 @@ public class TestRouterYarnClientUtils {
    */
   private GetApplicationsResponse getApplicationsResponse(int value,
       boolean uamOnly) {
-    String host = uamOnly? null: "host";
+    String appName = uamOnly? UnmanagedApplicationManager.APP_NAME: "appname";
     List<ApplicationReport> applications = new ArrayList<>();
 
-    //Add managed application to list
+    // Create first application report. This is a managed app by default.
+    // If uamOnly is true, this becomes unmanaged application.
     ApplicationId appId = ApplicationId.newInstance(1234, value);
     Resource resource = Resource.newInstance(1024, 1);
     ApplicationResourceUsageReport appResourceUsageReport =
@@ -139,24 +151,21 @@ public class TestRouterYarnClientUtils {
 
     ApplicationReport appReport = ApplicationReport.newInstance(
         appId, ApplicationAttemptId.newInstance(appId, 1),
-        "user", "queue", "appname", host,
+        "user", "queue", appName, "host",
         124, null, YarnApplicationState.RUNNING,
         "diagnostics", "url", 0, 0,
-        0, FinalApplicationStatus.SUCCEEDED,
-        appResourceUsageReport,
-        "N/A", 0.53789f, "YARN",
-        null);
+        0, FinalApplicationStatus.SUCCEEDED, appResourceUsageReport, "N/A",
+        0.53789f, "YARN", null, null, uamOnly, null, null, null);
 
-    // Add unmanaged application to list
+    // Create second application report. This is always unmanaged application.
     ApplicationId appId2 = ApplicationId.newInstance(1234, value);
     ApplicationReport appReport2 = ApplicationReport.newInstance(
-        appId2, ApplicationAttemptId.newInstance(appId2, 1),
-        "user", "queue", "appname", null, 124,
-        null, YarnApplicationState.RUNNING,
+        appId2, ApplicationAttemptId.newInstance(appId, 1),
+        "user", "queue", UnmanagedApplicationManager.APP_NAME, "host",
+        124, null, YarnApplicationState.RUNNING,
         "diagnostics", "url", 0, 0,
-        0, FinalApplicationStatus.SUCCEEDED, appResourceUsageReport,
-        "N/A", 0.53789f,
-        "YARN", null);
+        0, FinalApplicationStatus.SUCCEEDED, appResourceUsageReport, "N/A",
+        0.53789f, "YARN", null, null, true, null, null, null);
 
     applications.add(appReport);
     applications.add(appReport2);

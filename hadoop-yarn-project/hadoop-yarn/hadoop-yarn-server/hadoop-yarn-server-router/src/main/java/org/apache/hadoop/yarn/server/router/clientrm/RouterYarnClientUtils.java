@@ -83,7 +83,7 @@ public final class RouterYarnClientUtils {
       for (ApplicationReport appReport : appResponse.getApplicationList()){
         ApplicationId appId = appReport.getApplicationId();
         // Check if this ApplicationReport is an AM
-        if (appReport.getHost() != null) {
+        if (!appReport.isUnmanagedApp()) {
           // Insert in the list of AM
           federationAM.put(appId, appReport);
           // Check if there are any UAM found before
