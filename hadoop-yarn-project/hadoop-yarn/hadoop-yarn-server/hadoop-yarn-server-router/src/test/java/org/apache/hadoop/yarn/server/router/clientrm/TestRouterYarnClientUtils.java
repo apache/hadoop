@@ -77,7 +77,6 @@ public class TestRouterYarnClientUtils {
     ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
     responses.add(getApplicationsResponse(1, false));
     responses.add(getApplicationsResponse(2, false));
-
     GetApplicationsResponse result = RouterYarnClientUtils.
         mergeApplications(responses, false);
     Assert.assertNotNull(result);
