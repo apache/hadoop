@@ -795,7 +795,7 @@ Under HA, every KMS instance must verify the delegation token given by another K
 To do this, all the KMS instances must use ZKDelegationTokenSecretManager to retrieve
 the TokenIdentifiers and DelegationKeys from ZooKeeper.
 
-Sample configuration:
+Sample configuration in `etc/hadoop/kms-site.xml`:
 
 ```xml
   <property>
