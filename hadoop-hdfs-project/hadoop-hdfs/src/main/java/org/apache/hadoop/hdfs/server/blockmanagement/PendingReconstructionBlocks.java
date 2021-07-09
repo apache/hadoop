@@ -333,7 +333,7 @@ class PendingReconstructionBlocks {
     synchronized (pendingReconstructions) {
       PendingBlockInfo found = pendingReconstructions.get(block);
       if (found != null) {
-        return found.targets;
+        return new ArrayList<>(found.targets);
       }
     }
     return null;
