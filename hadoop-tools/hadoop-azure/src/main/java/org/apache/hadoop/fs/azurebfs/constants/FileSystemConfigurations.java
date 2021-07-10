@@ -89,7 +89,7 @@ public final class FileSystemConfigurations {
   public static final int MIN_LEASE_DURATION = 15;
   public static final int MAX_LEASE_DURATION = 60;
 
-  public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = -1;
+  public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = 2;
 
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
