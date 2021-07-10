@@ -174,8 +174,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -1231,7 +1231,7 @@ public class ContainerManagerImpl extends CompositeService implements
             containerTokenIdentifier);
     byte[] tokenPass = token.getPassword().array();
     if (password == null || tokenPass == null
-        || !Arrays.equals(password, tokenPass)) {
+        || !MessageDigest.isEqual(password, tokenPass)) {
       throw new InvalidToken(
         "Invalid container token used for starting container on : "
             + context.getNodeId().toString());
