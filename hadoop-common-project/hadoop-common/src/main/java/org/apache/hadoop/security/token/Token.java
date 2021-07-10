@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.Arrays;
+import java.security.MessageDigest;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.UUID;
@@ -368,8 +368,8 @@ public class Token<T extends TokenIdentifier> implements Writable {
       return false;
     } else {
       Token<T> r = (Token<T>) right;
-      return Arrays.equals(identifier, r.identifier) &&
-             Arrays.equals(password, r.password) &&
+      return MessageDigest.isEqual(identifier, r.identifier) &&
+             MessageDigest.isEqual(password, r.password) &&
              kind.equals(r.kind) &&
              service.equals(r.service);
     }
