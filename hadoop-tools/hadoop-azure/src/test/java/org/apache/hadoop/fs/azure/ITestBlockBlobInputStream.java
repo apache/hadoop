@@ -316,49 +316,49 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
     try (
         FSDataInputStream inputStreamV1
             = accountUsingInputStreamV1.getFileSystem().open(TEST_FILE_PATH);
-        FSDataInputStream inputStreamV2_1
+        FSDataInputStream inputStreamV2
             = accountUsingInputStreamV2.getFileSystem().open(TEST_FILE_PATH);
-        FSDataInputStream inputStreamV2_2 = builder.build().get();
+        FSDataInputStream inputStreamV2NoBuffer = builder.build().get();
     ) {
       final int bufferSize = 4 * KILOBYTE;
       byte[] bufferV1 = new byte[bufferSize];
-      byte[] bufferV2_1 = new byte[bufferSize];
-      byte[] bufferV2_2 = new byte[bufferSize];
+      byte[] bufferV2 = new byte[bufferSize];
+      byte[] bufferV2NoBuffer = new byte[bufferSize];
 
-      verifyConsistentReads(inputStreamV1, inputStreamV2_1, inputStreamV2_2, 0,
-          bufferV1, bufferV2_1, bufferV2_2);
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, 0,
+          bufferV1, bufferV2, bufferV2NoBuffer);
 
       int pos = 2 * KILOBYTE;
-      verifyConsistentReads(inputStreamV1, inputStreamV2_1, inputStreamV2_2, pos,
-          bufferV1, bufferV2_1, bufferV2_2);
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, pos,
+          bufferV1, bufferV2, bufferV2NoBuffer);
 
       pos = 10 * KILOBYTE;
-      verifyConsistentReads(inputStreamV1, inputStreamV2_1, inputStreamV2_2, pos,
-          bufferV1, bufferV2_1, bufferV2_2);
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, pos,
+          bufferV1, bufferV2, bufferV2NoBuffer);
 
       pos = 4100 * KILOBYTE;
-      verifyConsistentReads(inputStreamV1, inputStreamV2_1, inputStreamV2_2, pos,
-          bufferV1, bufferV2_1, bufferV2_2);
+      verifyConsistentReads(inputStreamV1, inputStreamV2, inputStreamV2NoBuffer, pos,
+          bufferV1, bufferV2, bufferV2NoBuffer);
     }
   }
 
   private void verifyConsistentReads(FSDataInputStream inputStreamV1,
-      FSDataInputStream inputStreamV2_1, FSDataInputStream inputStreamV2_2,
-      int pos, byte[] bufferV1, byte[] bufferV2_1, byte[] bufferV2_2)
+      FSDataInputStream inputStreamV2, FSDataInputStream inputStreamV2NoBuffer,
+      int pos, byte[] bufferV1, byte[] bufferV2, byte[] bufferV2NoBuffer)
       throws IOException {
     int size = bufferV1.length;
     int numBytesReadV1 = inputStreamV1.read(pos, bufferV1, 0, size);
     assertEquals("Bytes read from V1 stream", size, numBytesReadV1);
 
-    int numBytesReadV2 = inputStreamV2_1.read(pos, bufferV2_1, 0, size);
+    int numBytesReadV2 = inputStreamV2.read(pos, bufferV2, 0, size);
     assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
     
-    int numBytesReadV2_2 = inputStreamV2_2.read(pos, bufferV2_2, 0, size);
+    int numBytesReadV2_2 = inputStreamV2NoBuffer.read(pos, bufferV2NoBuffer, 0, size);
     assertEquals("Bytes read from V2 stream (buffered pread disabled)", size,
         numBytesReadV2_2);
 
-    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2_1);
-    assertArrayEquals("Mismatch in read data", bufferV2_1, bufferV2_2);
+    assertArrayEquals("Mismatch in read data", bufferV1, bufferV2);
+    assertArrayEquals("Mismatch in read data", bufferV2, bufferV2NoBuffer);
   }
 
   /**
