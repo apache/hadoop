@@ -352,7 +352,7 @@ public class ITestBlockBlobInputStream extends AbstractAzureScaleTest {
 
     int numBytesReadV2 = inputStreamV2.read(pos, bufferV2, 0, size);
     assertEquals("Bytes read from V2 stream", size, numBytesReadV2);
-    
+
     int numBytesReadV2_2 = inputStreamV2NoBuffer.read(pos, bufferV2NoBuffer, 0, size);
     assertEquals("Bytes read from V2 stream (buffered pread disabled)", size,
         numBytesReadV2_2);
