@@ -925,6 +925,16 @@ public class NativeAzureFileSystem extends FileSystem {
     @Override
     public int read(long position, byte[] buffer, int offset, int length)
         throws IOException {
+      // SpotBugs reports bug type IS2_INCONSISTENT_SYNC here.
+      // This report is not valid here.
+      // 'this.in' is instance of BlockBlobInputStream and read(long, byte[], int, int)
+      // calls it's Super class method when 'fs.azure.block.blob.buffered.pread.disable'
+      // is configured false. Super class FSInputStream's implementation is having
+      // proper synchronization.
+      // When 'fs.azure.block.blob.buffered.pread.disable' is true, we want a lock free
+      // implementation of blob read. Here we don't use any of the InputStream's 
+      // shared resource (buffer) and also don't change any cursor position etc.
+      // So its safe to go with unsynchronized way of read.
       if (in instanceof PositionedReadable) {
         try {
           int result = ((PositionedReadable) this.in).read(position, buffer,
