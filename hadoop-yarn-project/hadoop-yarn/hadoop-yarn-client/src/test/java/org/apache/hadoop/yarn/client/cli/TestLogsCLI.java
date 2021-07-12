@@ -36,6 +36,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -59,7 +60,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -939,7 +939,7 @@ public class TestLogsCLI {
           logMessage(containerId1, "syslog")));
       sysOutStream.reset();
     } finally {
-      IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       fs.delete(new Path(rootLogDir), true);
     }
   }
@@ -1477,19 +1477,13 @@ public class TestLogsCLI {
       FileSystem fs) throws IOException {
     assertTrue(fs.exists(containerPath));
     StringBuffer inputLine = new StringBuffer();
-    BufferedReader reader = null;
-    try {
-      reader = new BufferedReader(new InputStreamReader(
-          fs.open(containerPath)));
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+        fs.open(containerPath)))) {
       String tmp;
       while ((tmp = reader.readLine()) != null) {
         inputLine.append(tmp);
       }
       return inputLine.toString();
-    } finally {
-      if (reader != null) {
-        IOUtils.closeQuietly(reader);
-      }
     }
   }
 

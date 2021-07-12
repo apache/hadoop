@@ -32,7 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,6 +40,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -267,7 +267,7 @@ public class TestLogAggregationIndexedFileController
           Charset.forName("UTF-8")));
       fInput.writeLong(0);
     } finally {
-      IOUtils.closeQuietly(fInput);
+      IOUtils.closeStream(fInput);
     }
     meta = fileFormat.readAggregatedLogsMeta(
         logRequest);
@@ -463,7 +463,7 @@ public class TestLogAggregationIndexedFileController
       writer.close();
       return file;
     } finally {
-      IOUtils.closeQuietly(writer);
+      IOUtils.closeStream(writer);
     }
   }
 
@@ -578,7 +578,7 @@ public class TestLogAggregationIndexedFileController
           Charset.forName("UTF-8")));
       fInput.writeLong(0);
     } finally {
-      IOUtils.closeQuietly(fInput);
+      IOUtils.closeStream(fInput);
     }
 
     Path nodePath = LogAggregationUtils.getRemoteAppLogDir(

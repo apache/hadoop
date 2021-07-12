@@ -105,11 +105,9 @@ public class MiniKMS {
 
   private void copyResource(String inputResourceName, File outputFile) throws
       IOException {
-    InputStream is = ThreadUtil.getResourceAsStream(inputResourceName);
-    try (OutputStream os = new FileOutputStream(outputFile)) {
+    try (InputStream is = ThreadUtil.getResourceAsStream(inputResourceName);
+         OutputStream os = new FileOutputStream(outputFile)) {
       IOUtils.copy(is, os);
-    } finally {
-      IOUtils.closeQuietly(is);
     }
   }
 

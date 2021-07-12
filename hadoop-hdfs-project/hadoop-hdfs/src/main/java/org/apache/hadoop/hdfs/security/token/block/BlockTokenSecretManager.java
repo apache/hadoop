@@ -22,6 +22,7 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -407,7 +408,7 @@ public class BlockTokenSecretManager extends
               + ", block=" + block + ", access mode=" + mode);
     }
     checkAccess(id, userId, block, mode, storageTypes, storageIds);
-    if (!Arrays.equals(retrievePassword(id), token.getPassword())) {
+    if (!MessageDigest.isEqual(retrievePassword(id), token.getPassword())) {
       throw new InvalidToken("Block token with " + id
           + " doesn't have the correct token password");
     }
@@ -427,7 +428,7 @@ public class BlockTokenSecretManager extends
               + ", block=" + block + ", access mode=" + mode);
     }
     checkAccess(id, userId, block, mode);
-    if (!Arrays.equals(retrievePassword(id), token.getPassword())) {
+    if (!MessageDigest.isEqual(retrievePassword(id), token.getPassword())) {
       throw new InvalidToken("Block token with " + id
           + " doesn't have the correct token password");
     }
