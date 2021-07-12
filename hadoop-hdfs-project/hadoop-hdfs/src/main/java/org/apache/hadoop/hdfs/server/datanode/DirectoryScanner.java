@@ -605,7 +605,7 @@ public class DirectoryScanner implements Runnable {
     Map<String, ScanInfo[]> diskReport = getDiskReport();
 
     // Hold FSDataset lock to prevent further changes to the block map
-    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
+    try(AutoCloseableLock lock = dataset.acquireDatasetReadLock()) {
       for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
         String bpid = entry.getKey();
         ScanInfo[] blockpoolReport = entry.getValue();
