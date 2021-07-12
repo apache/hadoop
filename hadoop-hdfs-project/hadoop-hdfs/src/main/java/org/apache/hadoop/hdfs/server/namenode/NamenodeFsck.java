@@ -37,8 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1109,7 +1109,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                         blockToken, datanodeId, HdfsConstants.READ_TIMEOUT);
                 } finally {
                   if (peer == null) {
-                    IOUtils.closeQuietly(s);
+                    IOUtils.closeStream(s);
                   }
                 }
                 return peer;

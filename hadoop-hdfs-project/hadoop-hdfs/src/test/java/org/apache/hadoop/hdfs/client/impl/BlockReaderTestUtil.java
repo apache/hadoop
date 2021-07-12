@@ -28,7 +28,6 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitCache;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -220,7 +220,7 @@ public class BlockReaderTestUtil {
             peer = DFSUtilClient.peerFromSocket(sock);
           } finally {
             if (peer == null) {
-              IOUtils.closeQuietly(sock);
+              IOUtils.closeStream(sock);
             }
           }
           return peer;

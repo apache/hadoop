@@ -41,7 +41,6 @@ import java.util.regex.Pattern;
 
 import javax.crypto.KeyGenerator;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -1474,9 +1473,8 @@ public class MRAppMaster extends CompositeService {
 
   private List<AMInfo> readJustAMInfos() {
     List<AMInfo> amInfos = new ArrayList<AMInfo>();
-    FSDataInputStream inputStream = null;
-    try {
-      inputStream = getPreviousJobHistoryStream(getConfig(), appAttemptID);
+    try (FSDataInputStream inputStream =
+             getPreviousJobHistoryStream(getConfig(), appAttemptID)) {
       EventReader jobHistoryEventReader = new EventReader(inputStream);
 
       // All AMInfos are contiguous. Track when the first AMStartedEvent
@@ -1492,11 +1490,11 @@ public class MRAppMaster extends CompositeService {
           }
           AMStartedEvent amStartedEvent = (AMStartedEvent) event;
           amInfos.add(MRBuilderUtils.newAMInfo(
-            amStartedEvent.getAppAttemptId(), amStartedEvent.getStartTime(),
-            amStartedEvent.getContainerId(),
-            StringInterner.weakIntern(amStartedEvent.getNodeManagerHost()),
-            amStartedEvent.getNodeManagerPort(),
-            amStartedEvent.getNodeManagerHttpPort()));
+              amStartedEvent.getAppAttemptId(), amStartedEvent.getStartTime(),
+              amStartedEvent.getContainerId(),
+              StringInterner.weakIntern(amStartedEvent.getNodeManagerHost()),
+              amStartedEvent.getNodeManagerPort(),
+              amStartedEvent.getNodeManagerHttpPort()));
         } else if (amStartedEventsBegan) {
           // This means AMStartedEvents began and this event is a
           // non-AMStarted event.
@@ -1507,10 +1505,6 @@ public class MRAppMaster extends CompositeService {
     } catch (IOException e) {
       LOG.warn("Could not parse the old history file. "
           + "Will not have old AMinfos ", e);
-    } finally {
-      if (inputStream != null) {
-        IOUtils.closeQuietly(inputStream);
-      }
     }
     return amInfos;
   }
