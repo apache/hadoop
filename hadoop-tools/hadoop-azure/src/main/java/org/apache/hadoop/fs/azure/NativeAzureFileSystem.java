@@ -932,7 +932,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // is configured false. Super class FSInputStream's implementation is having
       // proper synchronization.
       // When 'fs.azure.block.blob.buffered.pread.disable' is true, we want a lock free
-      // implementation of blob read. Here we don't use any of the InputStream's 
+      // implementation of blob read. Here we don't use any of the InputStream's
       // shared resource (buffer) and also don't change any cursor position etc.
       // So its safe to go with unsynchronized way of read.
       if (in instanceof PositionedReadable) {
