@@ -236,7 +236,7 @@ public class AzureBlobFileSystem extends FileSystem
    *                   Configuration, bufferSize and mandatoryKeys
    */
   @Override
-  public CompletableFuture<FSDataInputStream> openFileWithOptions(
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final Path path, final OpenFileParameters parameters) {
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
     Set<String> mandatoryKeys = parameters.getMandatoryKeys();

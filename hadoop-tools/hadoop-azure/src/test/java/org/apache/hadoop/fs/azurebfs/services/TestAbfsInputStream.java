@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -210,8 +211,10 @@ public class TestAbfsInputStream extends
       byte[] buf, AbfsRestOperationType source)
       throws IOException, ExecutionException, InterruptedException {
     byte[] readBuf = new byte[buf.length];
-    FSDataInputStream in = getFileSystem().openFileWithOptions(path,
-        new OpenFileParameters().withStatus(fileStatus)).get();
+    AzureBlobFileSystem fs = getFileSystem();
+    FutureDataInputStreamBuilder builder = fs.openFile(path);
+    builder.withFileStatus(fileStatus);
+    FSDataInputStream in = builder.build().get();
     assertEquals(String.format(
         "Open with fileStatus [from %s result]: Incorrect number of bytes read",
         source), buf.length, in.read(readBuf));
