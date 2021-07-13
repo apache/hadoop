@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -60,6 +61,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.federation.fairness.AbstractRouterRpcFairnessPolicyController;
@@ -68,17 +70,21 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,6 +131,12 @@ public class RouterRpcClient {
   private final RouterRpcMonitor rpcMonitor;
   /** Field separator of CallerContext. */
   private final String contextFieldSeparator;
+  /** Observer read enabled. */
+  private boolean observerReadEnabled;
+  /** Auto msync period. */
+  private long autoMsyncPeriodMs;
+  /** Last msync times. */
+  private Map<String, LongHolder> lastMsyncTimes;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -134,6 +146,17 @@ public class RouterRpcClient {
 
   /** Fairness manager to control handlers assigned per NS. */
   private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
+
+
+  private static final Method MSYNC_METHOD;
+
+  static {
+    try {
+      MSYNC_METHOD = ClientProtocol.class.getDeclaredMethod("msync");
+    } catch (NoSuchMethodException e) {
+      throw new RuntimeException("Failed to create msync method instance.", e);
+    }
+  }
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -192,6 +215,17 @@ public class RouterRpcClient {
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts, maxRetryAttempts,
         failoverSleepBaseMillis, failoverSleepMaxMillis);
+    this.observerReadEnabled = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE_DEFAULT);
+    if (this.observerReadEnabled) {
+      LOG.info("Observer read is enabled for router.");
+      this.autoMsyncPeriodMs = conf.getTimeDuration(
+          RBFConfigKeys.DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD,
+          RBFConfigKeys.DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD_DEFAULT,
+          TimeUnit.MILLISECONDS);
+      this.lastMsyncTimes = new HashMap<>();
+    }
   }
 
   /**
@@ -350,7 +384,7 @@ public class RouterRpcClient {
             ugi.getUserName(), routerUser);
       }
       connection = this.connectionManager.getConnection(
-          connUGI, rpcAddress, proto);
+          connUGI, rpcAddress, proto, nsId);
       LOG.debug("User {} NN {} is using connection {}",
           ugi.getUserName(), rpcAddress, connection);
     } catch (Exception ex) {
@@ -427,6 +461,7 @@ public class RouterRpcClient {
    * @param namenodes A prioritized list of namenodes within the same
    *                  nameservice.
    * @param method Remote ClientProtcol method to invoke.
+   * @param skipObserver Skip observer namenodes.
    * @param params Variable list of parameters matching the method.
    * @return The result of invoking the method.
    * @throws ConnectException If it cannot connect to any Namenode.
@@ -436,7 +471,8 @@ public class RouterRpcClient {
   private Object invokeMethod(
       final UserGroupInformation ugi,
       final List<? extends FederationNamenodeContext> namenodes,
-      final Class<?> protocol, final Method method, final Object... params)
+      final Class<?> protocol, final Method method, boolean skipObserver,
+      final Object... params)
           throws ConnectException, StandbyException, IOException {
 
     if (namenodes == null || namenodes.isEmpty()) {
@@ -452,8 +488,13 @@ public class RouterRpcClient {
       rpcMonitor.proxyOp();
     }
     boolean failover = false;
+    boolean tryActive = false;
     Map<FederationNamenodeContext, IOException> ioes = new LinkedHashMap<>();
     for (FederationNamenodeContext namenode : namenodes) {
+      if ((tryActive || skipObserver)
+          && namenode.getState() == FederationNamenodeServiceState.OBSERVER) {
+        continue;
+      }
       ConnectionContext connection = null;
       String nsId = namenode.getNameserviceId();
       String rpcAddress = namenode.getRpcAddress();
@@ -463,18 +504,23 @@ public class RouterRpcClient {
         final Object proxy = client.getProxy();
 
         ret = invoke(nsId, 0, method, proxy, params);
-        if (failover) {
+        if (failover &&
+            FederationNamenodeServiceState.OBSERVER != namenode.getState()) {
           // Success on alternate server, update
           InetSocketAddress address = client.getAddress();
           namenodeResolver.updateActiveNamenode(nsId, address);
         }
         if (this.rpcMonitor != null) {
-          this.rpcMonitor.proxyOpComplete(true);
+          this.rpcMonitor.proxyOpComplete(true, namenode.getState());
         }
         return ret;
       } catch (IOException ioe) {
         ioes.put(namenode, ioe);
-        if (ioe instanceof StandbyException) {
+        if (ioe instanceof ObserverRetryOnActiveException) {
+          LOG.info("Encountered ObserverRetryOnActiveException from {}."
+                  + " Retry active namenode directly.");
+          tryActive = true;
+        } else if (ioe instanceof StandbyException) {
           // Fail over indicated by retry policy and/or NN
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpFailureStandby();
@@ -484,10 +530,15 @@ public class RouterRpcClient {
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpFailureCommunicate();
           }
-          failover = true;
+          if (FederationNamenodeServiceState.OBSERVER == namenode.getState()) {
+            namenodeResolver.updateUnavailableNamenode(nsId,
+                NetUtils.createSocketAddr(namenode.getRpcAddress()));
+          } else {
+            failover = true;
+          }
         } else if (ioe instanceof RemoteException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpComplete(true);
+            this.rpcMonitor.proxyOpComplete(true, namenode.getState());
           }
           RemoteException re = (RemoteException) ioe;
           ioe = re.unwrapRemoteException();
@@ -517,7 +568,7 @@ public class RouterRpcClient {
           // Communication retries are handled by the retry policy
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpFailureCommunicate();
-            this.rpcMonitor.proxyOpComplete(false);
+            this.rpcMonitor.proxyOpComplete(false, namenode.getState());
           }
           throw ioe;
         }
@@ -528,7 +579,7 @@ public class RouterRpcClient {
       }
     }
     if (this.rpcMonitor != null) {
-      this.rpcMonitor.proxyOpComplete(false);
+      this.rpcMonitor.proxyOpComplete(false, null);
     }
 
     // All namenodes were unavailable or in standby
@@ -671,7 +722,7 @@ public class RouterRpcClient {
    */
   private boolean isClusterUnAvailable(String nsId) throws IOException {
     List<? extends FederationNamenodeContext> nnState = this.namenodeResolver
-        .getNamenodesForNameserviceId(nsId);
+        .getNamenodesForNameserviceId(nsId, false);
 
     if (nnState != null) {
       for (FederationNamenodeContext nnContext : nnState) {
@@ -801,13 +852,15 @@ public class RouterRpcClient {
     UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     acquirePermit(nsId, ugi, method);
     try {
-      List<? extends FederationNamenodeContext> nns =
-          getNamenodesForNameservice(nsId);
+      boolean isObserverRead = observerReadEnabled
+          && isReadCall(method.getMethod());
+      List<? extends FederationNamenodeContext> nns = msync(nsId, ugi,
+          isObserverRead);
       RemoteLocationContext loc = new RemoteLocation(nsId, "/", "/");
       Class<?> proto = method.getProtocol();
       Method m = method.getMethod();
       Object[] params = method.getParams(loc);
-      return invokeMethod(ugi, nns, proto, m, params);
+      return invokeMethod(ugi, nns, proto, m, !isObserverRead, params);
     } finally {
       releasePermit(nsId, ugi, method);
     }
@@ -968,12 +1021,14 @@ public class RouterRpcClient {
     for (final RemoteLocationContext loc : locations) {
       String ns = loc.getNameserviceId();
       acquirePermit(ns, ugi, remoteMethod);
+      boolean isObserverRead = observerReadEnabled && isReadCall(m);
       List<? extends FederationNamenodeContext> namenodes =
-          getNamenodesForNameservice(ns);
+          msync(ns, ugi, isObserverRead);
       try {
         Class<?> proto = remoteMethod.getProtocol();
         Object[] params = remoteMethod.getParams(loc);
-        Object result = invokeMethod(ugi, namenodes, proto, m, params);
+        Object result = invokeMethod(
+            ugi, namenodes, proto, m, !isObserverRead, params);
         // Check if the result is what we expected
         if (isExpectedClass(expectedResultClass, result) &&
             isExpectedValue(expectedResultValue, result)) {
@@ -1328,12 +1383,14 @@ public class RouterRpcClient {
       T location = locations.iterator().next();
       String ns = location.getNameserviceId();
       acquirePermit(ns, ugi, method);
+      boolean isObserverRead = observerReadEnabled && isReadCall(m);
       final List<? extends FederationNamenodeContext> namenodes =
-          getNamenodesForNameservice(ns);
+          msync(ns, ugi, isObserverRead);
       try {
         Class<?> proto = method.getProtocol();
         Object[] paramList = method.getParams(location);
-        R result = (R) invokeMethod(ugi, namenodes, proto, m, paramList);
+        R result = (R) invokeMethod(
+            ugi, namenodes, proto, m, !isObserverRead, paramList);
         RemoteResult<T, R> remoteResult = new RemoteResult<>(location, result);
         return Collections.singletonList(remoteResult);
       } catch (IOException ioe) {
@@ -1351,8 +1408,9 @@ public class RouterRpcClient {
     final CallerContext originContext = CallerContext.getCurrent();
     for (final T location : locations) {
       String nsId = location.getNameserviceId();
+      boolean isObserverRead = observerReadEnabled && isReadCall(m);
       final List<? extends FederationNamenodeContext> namenodes =
-          getNamenodesForNameservice(nsId);
+          msync(nsId, ugi, isObserverRead);
       final Class<?> proto = method.getProtocol();
       final Object[] paramList = method.getParams(location);
       if (standby) {
@@ -1369,7 +1427,8 @@ public class RouterRpcClient {
           callables.add(
               () -> {
                 transferThreadLocalContext(originCall, originContext);
-                return invokeMethod(ugi, nnList, proto, m, paramList);
+                return invokeMethod(
+                    ugi, nnList, proto, m, !isObserverRead, paramList);
               });
         }
       } else {
@@ -1378,7 +1437,8 @@ public class RouterRpcClient {
         callables.add(
             () -> {
               transferThreadLocalContext(originCall, originContext);
-              return invokeMethod(ugi, namenodes, proto, m, paramList);
+              return invokeMethod(
+                  ugi, namenodes, proto, m, !isObserverRead, paramList);
             });
       }
     }
@@ -1465,17 +1525,21 @@ public class RouterRpcClient {
 
   /**
    * Get a prioritized list of NNs that share the same nameservice ID (in the
-   * same namespace). NNs that are reported as ACTIVE will be first in the list.
+   * same namespace).
+   * In observer read case, OBSERVER NNs will be first in the list.
+   * Otherwise, ACTIVE NNs will be first in the list.
    *
    * @param nsId The nameservice ID for the namespace.
+   * @param observerRead Read on observer namenode.
    * @return A prioritized list of NNs to use for communication.
    * @throws IOException If a NN cannot be located for the nameservice ID.
    */
   private List<? extends FederationNamenodeContext> getNamenodesForNameservice(
-      final String nsId) throws IOException {
+      final String nsId, boolean observerRead) throws IOException {
 
     final List<? extends FederationNamenodeContext> namenodes =
-        namenodeResolver.getNamenodesForNameserviceId(nsId);
+        namenodeResolver.getNamenodesForNameserviceId(nsId,
+            observerRead);
 
     if (namenodes == null || namenodes.isEmpty()) {
       throw new IOException("Cannot locate a registered namenode for " + nsId +
@@ -1569,5 +1633,85 @@ public class RouterRpcClient {
       getRouterRpcFairnessPolicyController() {
     return (AbstractRouterRpcFairnessPolicyController
           )routerRpcFairnessPolicyController;
+  }
+
+  private List<? extends FederationNamenodeContext> msync(String ns,
+      UserGroupInformation ugi, boolean isObserverRead) throws IOException {
+    final List<? extends FederationNamenodeContext> namenodes =
+        getNamenodesForNameservice(ns, isObserverRead);
+    if (autoMsyncPeriodMs < 0) {
+      LOG.debug("Skipping msync because "
+          + RBFConfigKeys.DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD
+          + " is less than 0");
+      return namenodes; // no need for msync
+    }
+    if (isObserverRead) {
+      long callStartTime = callTime();
+
+      LongHolder latestMsyncTime = lastMsyncTimes.get(ns);
+
+      if (latestMsyncTime == null) {
+        // initialize
+        synchronized (lastMsyncTimes) {
+          latestMsyncTime = lastMsyncTimes.get(ns);
+          if(latestMsyncTime == null) {
+            latestMsyncTime = new LongHolder(0L);
+            lastMsyncTimes.put(ns, latestMsyncTime);
+          }
+        }
+      }
+
+      if (callStartTime - latestMsyncTime.getValue() > autoMsyncPeriodMs) {
+        synchronized (latestMsyncTime) {
+          if (callStartTime - latestMsyncTime.getValue() > autoMsyncPeriodMs) {
+            long requestTime = Time.monotonicNow();
+            invokeMethod(ugi, namenodes, ClientProtocol.class, MSYNC_METHOD,
+                true, new Object[0]);
+            latestMsyncTime.setValue(requestTime);
+          }
+        }
+      }
+    }
+    return namenodes;
+  }
+
+  private static long callTime() {
+    Call call = Server.getCurCall().get();
+    if(call != null) {
+      return call.getTimestampNanos() / 1000000L;
+    }
+    return Time.monotonicNow();
+  }
+
+  /**
+   * Check if a method is read-only.
+   * @return whether the 'method' is a read-only operation.
+   */
+  private static boolean isReadCall(Method method) {
+    if (!method.isAnnotationPresent(ReadOnly.class)) {
+      return false;
+    }
+    Call call = Server.getCurCall().get();
+    if (call != null && call.getClientStateId() == -1L) {
+       // Client disabled observer read
+      return false;
+    }
+    return !method.getAnnotationsByType(ReadOnly.class)[0].activeOnly();
+  }
+
+  private final static class LongHolder {
+    private long value;
+
+    LongHolder(long value) {
+      this.value = value;
+    }
+
+    public void setValue(long value) {
+      this.value = value;
+    }
+
+    public long getValue() {
+      return value;
+    }
   }
 }

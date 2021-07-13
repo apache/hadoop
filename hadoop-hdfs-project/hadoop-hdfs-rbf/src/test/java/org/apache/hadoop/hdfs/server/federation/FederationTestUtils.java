@@ -165,7 +165,7 @@ public final class FederationTestUtils {
    * @param resolver Active namenode resolver.
    * @param nsId Nameservice identifier.
    * @param nnId Namenode identifier.
-   * @param finalState State to check for.
+   * @param state State to check for.
    * @throws Exception Failed to verify State Store registration of namenode
    *                   nsId:nnId for state.
    */
@@ -179,7 +179,7 @@ public final class FederationTestUtils {
       public Boolean get() {
         try {
           List<? extends FederationNamenodeContext> namenodes =
-              resolver.getNamenodesForNameserviceId(nsId);
+              resolver.getNamenodesForNameserviceId(nsId, false);
           if (namenodes != null) {
             for (FederationNamenodeContext namenode : namenodes) {
               // Check if this is the Namenode we are checking
@@ -214,7 +214,7 @@ public final class FederationTestUtils {
       public Boolean get() {
         try {
           List<? extends FederationNamenodeContext> nns =
-              resolver.getNamenodesForNameserviceId(nsId);
+              resolver.getNamenodesForNameserviceId(nsId, false);
           for (FederationNamenodeContext nn : nns) {
             if (nn.getState().equals(state)) {
               return true;
@@ -398,7 +398,8 @@ public final class FederationTestUtils {
         throw new IOException("Simulate connectionManager throw IOException");
       }
     }).when(spyConnectionManager).getConnection(
-        any(UserGroupInformation.class), any(String.class), any(Class.class));
+        any(UserGroupInformation.class), any(String.class), any(Class.class),
+        any(String.class));
 
     Whitebox.setInternalState(rpcClient, "connectionManager",
         spyConnectionManager);

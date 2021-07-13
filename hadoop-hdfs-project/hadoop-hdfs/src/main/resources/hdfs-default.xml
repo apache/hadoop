@@ -6195,4 +6195,12 @@
       namenode right way for received or deleted blocks after one round.
     </description>
   </property>
+
+  <property>
+    <name>dfs.observer.read.enable</name>
+    <value>true</value>
+    <description>
+      Enable observer read for client with router
+    </description>
+  </property>
 </configuration>

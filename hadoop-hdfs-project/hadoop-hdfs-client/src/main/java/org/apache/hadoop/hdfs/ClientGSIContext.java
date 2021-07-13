@@ -40,6 +40,14 @@ public class ClientGSIContext implements AlignmentContext {
   private final LongAccumulator lastSeenStateId =
       new LongAccumulator(Math::max, Long.MIN_VALUE);
 
+  public void disableObserverRead() {
+    if(lastSeenStateId.get() > -1L) {
+      throw new IllegalStateException(
+          "Can't disable observer read after communicate.");
+    }
+    lastSeenStateId.accumulate(-1L);
+  }
+
   @Override
   public long getLastSeenStateId() {
     return lastSeenStateId.get();
@@ -66,6 +74,10 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void receiveResponseState(RpcResponseHeaderProto header) {
+    if(lastSeenStateId.get() == -1L){
+      //Observer read is disabled
+      return;
+    }
     lastSeenStateId.accumulate(header.getStateId());
   }
 

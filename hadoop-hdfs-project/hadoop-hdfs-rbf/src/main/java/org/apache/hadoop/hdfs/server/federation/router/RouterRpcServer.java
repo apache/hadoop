@@ -333,6 +333,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
+        .setAlignmentContext(new RouterStateIdContext())
         .setSecretManager(this.securityManager.getSecretManager())
         .build();
 
