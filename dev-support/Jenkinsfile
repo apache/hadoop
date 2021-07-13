@@ -61,71 +61,117 @@ pipeline {
                 dir("${WORKSPACE}/hadoop-centos-8") {
                     sh '''#!/usr/bin/env bash
 
-                    pwd
                     cp -Rp ${WORKSPACE}/${SOURCEDIR} ${WORKSPACE}/hadoop-centos-8
-                    cd src
-                    git show HEAD
+                    '''
+                }
+
+                dir("${WORKSPACE}/debian-10") {
+                    sh '''#!/usr/bin/env bash
+
+                    cp -Rp ${WORKSPACE}/${SOURCEDIR} ${WORKSPACE}/debian-10
                     '''
                 }
             }
         }
 
-//         // This is an optional stage which runs only when there's a change in
-//         // C++/C++ build/platform.
-//         // This stage serves as a means of cross platform validation, which is
-//         // really needed to ensure that any C++ related/platform change doesn't
-//         // break the Hadoop build on Centos 8.
-//         stage ('precommit-run Centos 8') {
-//             environment {
-//                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
-//                 IS_OPTIONAL = 1
-//             }
-//
-//             steps {
-//                 withCredentials(
-//                     [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
-//                                   passwordVariable: 'GITHUB_TOKEN',
-//                                   usernameVariable: 'GITHUB_USER'),
-//                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
-//                                         passwordVariable: 'JIRA_PASSWORD',
-//                                         usernameVariable: 'JIRA_USER')]) {
-//                         sh '''#!/usr/bin/env bash
-//
-//                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-//                         "${SOURCEDIR}/dev-support/jenkins.sh"
-//                         '''
-//                 }
-//             }
-//         }
-//
-//         // This is an optional stage which runs only when there's a change in
-//         // C++/C++ build/platform.
-//         // This stage serves as a means of cross platform validation, which is
-//         // really needed to ensure that any C++ related/platform change doesn't
-//         // break the Hadoop build on Debian 10.
-//         stage ('precommit-run Debian 10') {
-//             environment {
-//                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
-//                 IS_OPTIONAL = 1
-//             }
-//
-//             steps {
-//                 withCredentials(
-//                     [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
-//                                   passwordVariable: 'GITHUB_TOKEN',
-//                                   usernameVariable: 'GITHUB_USER'),
-//                     usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
-//                                         passwordVariable: 'JIRA_PASSWORD',
-//                                         usernameVariable: 'JIRA_USER')]) {
-//                         sh '''#!/usr/bin/env bash
-//
-//                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-//                         "${SOURCEDIR}/dev-support/jenkins.sh"
-//                         '''
-//                 }
-//             }
-//         }
-//
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Centos 8.
+        stage ('precommit-run Centos 8') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/hadoop-centos-8/src"
+                PATCHDIR = "${WORKSPACE}/hadoop-centos-8/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_8"
+                IS_OPTIONAL = 1
+            }
+
+            steps {
+                withCredentials(
+                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                  passwordVariable: 'GITHUB_TOKEN',
+                                  usernameVariable: 'GITHUB_USER'),
+                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                        passwordVariable: 'JIRA_PASSWORD',
+                                        usernameVariable: 'JIRA_USER')]) {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh"
+                        '''
+                }
+            }
+
+            post {
+                cleanup() {
+                    script {
+                        sh '''
+                            # See YETUS-764
+                            if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+                              echo "test-patch process appears to still be running: killing"
+                              kill `cat "${PATCHDIR}/pidfile.txt"` || true
+                              sleep 10
+                            fi
+                            if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+                              echo "test-patch container appears to still be running: killing"
+                              docker kill `cat "/${PATCHDIR}/cidfile.txt"` || true
+                            fi
+                            '''
+                    }
+                }
+            }
+        }
+
+        // This is an optional stage which runs only when there's a change in
+        // C++/C++ build/platform.
+        // This stage serves as a means of cross platform validation, which is
+        // really needed to ensure that any C++ related/platform change doesn't
+        // break the Hadoop build on Debian 10.
+        stage ('precommit-run Debian 10') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/debian-10/src"
+                PATCHDIR = "${WORKSPACE}/debian-10/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_debian_10"
+                IS_OPTIONAL = 1
+            }
+
+            steps {
+                withCredentials(
+                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                  passwordVariable: 'GITHUB_TOKEN',
+                                  usernameVariable: 'GITHUB_USER'),
+                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
+                                        passwordVariable: 'JIRA_PASSWORD',
+                                        usernameVariable: 'JIRA_USER')]) {
+                        sh '''#!/usr/bin/env bash
+
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+                        "${SOURCEDIR}/dev-support/jenkins.sh"
+                        '''
+                }
+            }
+
+            post {
+                cleanup() {
+                    script {
+                        sh '''
+                            # See YETUS-764
+                            if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+                              echo "test-patch process appears to still be running: killing"
+                              kill `cat "${PATCHDIR}/pidfile.txt"` || true
+                              sleep 10
+                            fi
+                            if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+                              echo "test-patch container appears to still be running: killing"
+                              docker kill `cat "/${PATCHDIR}/cidfile.txt"` || true
+                            fi
+                            '''
+                    }
+                }
+            }
+        }
+
 //         // We want to use Ubuntu Focal as our main CI and thus, this stage
 //         // isn't optional (runs for all the PRs).
 //         stage ('precommit-run Ubuntu focal') {
