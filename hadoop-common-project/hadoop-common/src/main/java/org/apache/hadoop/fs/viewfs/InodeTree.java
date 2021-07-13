@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import com.google.common.base.Function;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -158,8 +159,10 @@ abstract class InodeTree<T> {
   static class INodeLink<T> extends INode<T> {
     final boolean isMergeLink; // true if MergeLink
     final URI[] targetDirLinkList;
-    final T targetFileSystem;   // file system object created from the link.
-    
+    private T targetFileSystem;   // file system object created from the link.
+    // Function to initialize file system. Only applicable for simple links
+    private Function<URI, T> fileSystemInitMethod;
+    private final Object lock = new Object();
     /**
      * Construct a mergeLink
      */
@@ -175,12 +178,14 @@ abstract class InodeTree<T> {
      * Construct a simple link (i.e. not a mergeLink)
      */
     INodeLink(final String pathToNode, final UserGroupInformation aUgi,
-        final T targetFs, final URI aTargetDirLink) {
+        Function<URI, T> createFileSystemMethod,
+        final URI aTargetDirLink) {
       super(pathToNode, aUgi);
-      targetFileSystem = targetFs;
+      targetFileSystem = null;
       targetDirLinkList = new URI[1];
       targetDirLinkList[0] = aTargetDirLink;
       isMergeLink = false;
+      this.fileSystemInitMethod = createFileSystemMethod;
     }
     
     /**
@@ -195,6 +200,33 @@ abstract class InodeTree<T> {
         result.append(',').append(targetDirLinkList[i].toString());
       }
       return new Path(result.toString());
+    }
+
+    /**
+     * Get the instance of FileSystem to use, creating one if needed.
+     * @return An Initialized instance of T
+     * @throws IOException
+     */
+    public T getTargetFileSystem() throws IOException {
+      if (targetFileSystem != null) {
+        return targetFileSystem;
+      }
+      // For non NFLY and MERGE links, we initialize the FileSystem when the
+      // corresponding mount path is accessed.
+      if (targetDirLinkList.length == 1) {
+        synchronized (lock) {
+          if (targetFileSystem != null) {
+            return targetFileSystem;
+          }
+          targetFileSystem = fileSystemInitMethod.apply(targetDirLinkList[0]);
+          if (targetFileSystem == null) {
+            throw new IOException(
+                "Could not initialize target File System for URI : " +
+                    targetDirLinkList[0]);
+          }
+        }
+      }
+      return targetFileSystem;
     }
   }
 
@@ -258,7 +290,7 @@ abstract class InodeTree<T> {
           getTargetFileSystem(targetsListURI), targetsListURI);
     } else {
       newLink = new INodeLink<T>(fullPath, aUgi,
-          getTargetFileSystem(new URI(target)), new URI(target));
+          initAndGetTargetFs(), new URI(target));
     }
     curInode.addLink(iPath, newLink);
     mountPoints.add(new MountPoint<T>(src, newLink));
@@ -267,14 +299,13 @@ abstract class InodeTree<T> {
   /**
    * Below the "public" methods of InodeTree
    */
-  
+
   /**
    * The user of this class must subclass and implement the following
    * 3 abstract methods.
    * @throws IOException 
    */
-  protected abstract T getTargetFileSystem(final URI uri)
-    throws UnsupportedFileSystemException, URISyntaxException, IOException;
+  protected abstract Function<URI, T> initAndGetTargetFs();
   
   protected abstract T getTargetFileSystem(final INodeDir<T> dir)
     throws URISyntaxException;
@@ -385,7 +416,7 @@ abstract class InodeTree<T> {
    * @throws FileNotFoundException
    */
   ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
-    throws FileNotFoundException {
+    throws IOException {
     // TO DO: - more efficient to not split the path, but simply compare
     String[] path = breakIntoPathComponents(p); 
     if (path.length <= 1) { // special case for when path is "/"
@@ -422,7 +453,7 @@ abstract class InodeTree<T> {
         }
         final ResolveResult<T> res = 
           new ResolveResult<T>(ResultKind.isExternalDir,
-              link.targetFileSystem, nextInode.fullPath, remainingPath);
+              link.getTargetFileSystem(), nextInode.fullPath, remainingPath);
         return res;
       } else if (nextInode instanceof INodeDir) {
         curInode = (INodeDir<T>) nextInode;

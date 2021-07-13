@@ -19,10 +19,12 @@ package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
+import com.google.common.base.Function;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -65,6 +67,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -152,6 +156,7 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
 public class ViewFs extends AbstractFileSystem {
+  static final Logger LOG = LoggerFactory.getLogger(ViewFs.class);
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
   final Configuration config;
@@ -212,16 +217,32 @@ public class ViewFs extends AbstractFileSystem {
     fsState = new InodeTree<AbstractFileSystem>(conf, authority) {
 
       @Override
-      protected
-      AbstractFileSystem getTargetFileSystem(final URI uri)
-        throws URISyntaxException, UnsupportedFileSystemException {
-          String pathString = uri.getPath();
-          if (pathString.isEmpty()) {
-            pathString = "/";
+      protected Function<URI, AbstractFileSystem> initAndGetTargetFs() {
+        return new Function<URI, AbstractFileSystem>() {
+          @Override
+          public AbstractFileSystem apply(final URI uri) {
+            AbstractFileSystem fs;
+            try {
+              fs = ugi.doAs(
+                  new PrivilegedExceptionAction<AbstractFileSystem>() {
+                    @Override
+                    public AbstractFileSystem run() throws IOException {
+                      return AbstractFileSystem.createFileSystem(uri, config);
+                    }
+                  });
+              String pathString = uri.getPath();
+              if (pathString.isEmpty()) {
+                pathString = "/";
+              }
+              return new ChRootedFs(fs, new Path(pathString));
+            } catch (IOException | URISyntaxException |
+                InterruptedException ex) {
+              LOG.error("Could not initialize underlying FileSystem object"
+                  +" for uri " + uri + "with exception: " + ex.toString());
+            }
+            return null;
           }
-          return new ChRootedFs(
-              AbstractFileSystem.createFileSystem(uri, config),
-              new Path(pathString));
+        };
       }
 
       @Override
@@ -624,7 +645,8 @@ public class ViewFs extends AbstractFileSystem {
     List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
     for ( int i = 0; i < mountPoints.size(); ++i ) {
       List<Token<?>> tokens = 
-        mountPoints.get(i).target.targetFileSystem.getDelegationTokens(renewer);
+          mountPoints.get(i).target.getTargetFileSystem()
+              .getDelegationTokens(renewer);
       if (tokens != null) {
         result.addAll(tokens);
       }
