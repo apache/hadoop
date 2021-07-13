@@ -28,6 +28,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.Comparator;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -82,9 +84,9 @@ abstract class InodeTree<T> {
 
   static class MountPoint<T> {
     String src;
-    INodeLink<T> target;
+    INode<T> target;
 
-    MountPoint(String srcPath, INodeLink<T> mountLink) {
+    MountPoint(String srcPath, INode<T> mountLink) {
       src = srcPath;
       target = mountLink;
     }
@@ -106,10 +108,17 @@ abstract class InodeTree<T> {
   abstract static class INode<T> {
     final String fullPath; // the full path to the root
 
+    protected T targetFileSystem;
+    protected URI[] targetDirLinkList;
     public INode(String pathToNode, UserGroupInformation aUgi) {
       fullPath = pathToNode;
     }
-
+    public INode(String pathToNode,
+        T targetFileSystem, URI[] targetDirLinkList) {
+      fullPath = pathToNode;
+      this.targetFileSystem = targetFileSystem;
+      this.targetDirLinkList = targetDirLinkList;
+    }
     // INode forming the internal mount table directory tree
     // for ViewFileSystem. This internal directory tree is
     // constructed based on the mount table config entries
@@ -132,7 +141,13 @@ abstract class InodeTree<T> {
     private T internalDirFs = null; //filesystem of this internal directory
     private boolean isRoot = false;
     private INodeLink<T> fallbackLink = null;
+    boolean isLink = false;
 
+    INodeDir( String pathToNode,  UserGroupInformation aUgi,
+              T targetMergeFs,  URI[] aTargetDirLinkList, boolean isLink) {
+      super(pathToNode, targetMergeFs,aTargetDirLinkList);
+      this.isLink = isLink;
+    }
     INodeDir(final String pathToNode, final UserGroupInformation aUgi) {
       super(pathToNode, aUgi);
     }
@@ -187,7 +202,10 @@ abstract class InodeTree<T> {
       children.put(pathComponent, newDir);
       return newDir;
     }
-
+    void addLink(final String pathComponent, final INodeDir<T> link)
+        throws FileAlreadyExistsException {
+      children.put(pathComponent, link);
+    }
     void addLink(final String pathComponent, final INodeLink<T> link)
         throws FileAlreadyExistsException {
       if (children.containsKey(pathComponent)) {
@@ -256,9 +274,6 @@ abstract class InodeTree<T> {
    * is changed later it is then ignored (a dir with null entries)
    */
   static class INodeLink<T> extends INode<T> {
-    final URI[] targetDirLinkList;
-    final T targetFileSystem;   // file system object created from the link.
-
     /**
      * Construct a mergeLink or nfly.
      */
@@ -331,11 +346,13 @@ abstract class InodeTree<T> {
         nextInode = newDir;
       }
       if (nextInode.isLink()) {
-        // Error - expected a dir but got a link
-        throw new FileAlreadyExistsException("Path " + nextInode.fullPath +
-            " already exists as link");
+        INodeDir<T> newLink = new INodeDir<T>(nextInode.fullPath, aUgi,
+            nextInode.targetFileSystem, nextInode.targetDirLinkList, true);
+        newLink.setInternalDirFs(getTargetFileSystem(newLink));
+        curInode.addLink(iPath, newLink);
+        mountPoints.add(new MountPoint<T>(src, newLink));
+        curInode = newLink;
       } else {
-        assert(nextInode.isInternalDir());
         curInode = (INodeDir<T>) nextInode;
       }
     }
@@ -507,7 +524,19 @@ abstract class InodeTree<T> {
         Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH;
     boolean gotMountTableEntry = false;
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    // Compatible with older ViewFs conf
+    Map<String, String> tmpMap = new TreeMap<>(new Comparator<String>() {
+      public int compare(String obj1, String obj2) {
+        return obj1.compareTo(obj2);
+      }
+    });
     for (Entry<String, String> si : config) {
+      if (si.getKey().startsWith(mountTablePrefix)) {
+        tmpMap.put(si.getKey(), si.getValue());
+      }
+    }
+
+    for (Entry<String, String> si : tmpMap.entrySet()) {
       final String key = si.getKey();
       if (!key.startsWith(mountTablePrefix)) {
         continue;
@@ -774,11 +803,23 @@ abstract class InodeTree<T> {
     if (resolveResult != null) {
       return resolveResult;
     }
-
+    INodeDir<T> lastLinkNode = null;
+    Path remainingPath;
     int i;
+    int a = 0;
     // ignore first slash
     for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
       INode<T> nextInode = curInode.resolveInternal(path[i]);
+      a = (nextInode == null) ? i-1:i;
+      if (a >= path.length-1) {
+        remainingPath = SlashPath;
+      } else {
+        StringBuilder remainingPathStr = new StringBuilder("/" + path[a+1]);
+        for (int j = a+2; j< path.length; ++j) {
+          remainingPathStr.append('/').append(path[j]);
+        }
+        remainingPath = new Path(remainingPathStr.toString());
+      }
       if (nextInode == null) {
         if (hasFallbackLink()) {
           resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
@@ -786,39 +827,32 @@ abstract class InodeTree<T> {
               new Path(p), false);
           return resolveResult;
         } else {
-          StringBuilder failedAt = new StringBuilder(path[0]);
-          for (int j = 1; j <= i; ++j) {
-            failedAt.append('/').append(path[j]);
+          if (lastLinkNode != null) {
+            remainingPath = new Path(p.replace(lastLinkNode.fullPath, ""));
+            return new ResolveResult<T>(lastLinkNode.isLink ?
+                ResultKind.EXTERNAL_DIR : ResultKind.INTERNAL_DIR,
+                lastLinkNode.targetFileSystem, lastLinkNode.fullPath,
+                remainingPath,false);
           }
           throw (new FileNotFoundException(
-              "File/Directory does not exist: " + failedAt.toString()));
+              "File/Directory does not exist: " + p));
         }
       }
 
       if (nextInode.isLink()) {
         final INodeLink<T> link = (INodeLink<T>) nextInode;
-        final Path remainingPath;
-        if (i >= path.length - 1) {
-          remainingPath = SlashPath;
-        } else {
-          StringBuilder remainingPathStr =
-              new StringBuilder("/" + path[i + 1]);
-          for (int j = i + 2; j < path.length; ++j) {
-            remainingPathStr.append('/').append(path[j]);
-          }
-          remainingPath = new Path(remainingPathStr.toString());
-        }
-        resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-            link.getTargetFileSystem(), nextInode.fullPath, remainingPath,
-            true);
-        return resolveResult;
+        return new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+            link.getTargetFileSystem(), nextInode.fullPath,
+            remainingPath,true);
       } else if (nextInode.isInternalDir()) {
+        if (((INodeDir<T>) nextInode).isLink) {
+          lastLinkNode = (INodeDir<T>) curInode.resolveInternal(path[i]);
+        }
         curInode = (INodeDir<T>) nextInode;
       }
     }
 
     // We have resolved to an internal dir in mount table.
-    Path remainingPath;
     if (resolveLastComponent) {
       remainingPath = SlashPath;
     } else {
@@ -832,9 +866,20 @@ abstract class InodeTree<T> {
       }
       remainingPath = new Path(remainingPathStr.toString());
     }
-    resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-        curInode.getInternalDirFs(), curInode.fullPath, remainingPath, false);
-    return resolveResult;
+    if (curInode.isLink) {
+      return new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+          curInode.targetFileSystem, curInode.fullPath,
+          remainingPath,false);
+    }else if (lastLinkNode !=null ){
+      remainingPath = new Path(p.replaceAll("^"+lastLinkNode.fullPath,""));
+      return new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+          lastLinkNode.targetFileSystem, lastLinkNode.fullPath,
+          remainingPath,false);
+    }else {
+      return new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+          curInode.getInternalDirFs(), curInode.fullPath,
+          remainingPath, false);
+    }
   }
 
   /**
