@@ -44,5 +44,7 @@ public interface FsConstants {
   public static final String VIEWFS_SCHEME = "viewfs";
   String FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN =
       "fs.viewfs.overload.scheme.target.%s.impl";
+  String FS_VIEWFS_OVERLOAD_SCHEME_TARGET_ABSTRACTFS_IMPL_PATTERN =
+      "fs.viewfs.overload.scheme.target.abstract.%s.impl";
   String VIEWFS_TYPE = "viewfs";
 }

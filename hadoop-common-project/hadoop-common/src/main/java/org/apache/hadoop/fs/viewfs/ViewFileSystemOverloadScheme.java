@@ -170,7 +170,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             "Missing configuration for fs.viewfs.mounttable.path. Proceeding"
-                + "with core-site.xml mount-table information if avaialable.");
+                + "with core-site.xml mount-table information if available.");
       }
     }
     super.initialize(theUri, conf);
