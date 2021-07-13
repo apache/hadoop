@@ -695,13 +695,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       String relativePath = getRelativePath(path);
-      if (fileStatus == null) {
-        fileStatus = getFileStatus(new Path(relativePath), tracingContext);
+      String resourceType, eTag;
+      long contentLength;
+      if (fileStatus != null) {
+        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+        contentLength = fileStatus.getLen();
+        eTag = ((VersionedFileStatus) fileStatus).getVersion();
+      } else {
+        AbfsHttpOperation op = client
+            .getPathStatus(relativePath, false, tracingContext).getResult();
+        resourceType = op
+            .getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+        contentLength = Long.parseLong(
+            op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+        eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
       }
-
-      String resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
-      long contentLength = fileStatus.getLen();
-      String eTag = ((VersionedFileStatus) fileStatus).getVersion();
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(

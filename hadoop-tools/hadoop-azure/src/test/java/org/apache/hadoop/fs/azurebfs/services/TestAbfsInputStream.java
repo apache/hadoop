@@ -47,6 +47,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -224,23 +226,25 @@ public class TestAbfsInputStream extends
   }
 
   private void checkGetPathStatusCalls(Path testFile, FileStatus fileStatus,
-      AzureBlobFileSystemStore mockStore, AbfsRestOperationType source,
-      TracingContext tracingContext) throws IOException {
+      AzureBlobFileSystemStore abfsStore, AbfsClient mockClient,
+      AbfsRestOperationType source, TracingContext tracingContext)
+      throws IOException {
 
     // verify GetPathStatus not invoked when FileStatus is provided
-    mockStore.openFileForRead(testFile,
+    abfsStore.openFileForRead(testFile,
         new OpenFileParameters().withStatus(fileStatus), null, tracingContext);
-    verify(mockStore, times(0).description((String.format(
-        "FileStatus [from %s result] provided, GetFileStatus should not be invoked", source))))
-        .getFileStatus(any(Path.class), any(TracingContext.class));
+    verify(mockClient, times(0).description((String.format(
+        "FileStatus [from %s result] provided, GetFileStatus should not be invoked",
+        source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class));
 
-    // verify GetPathStatus invoked when FileStatus not provided
-    mockStore.openFileForRead(testFile, new OpenFileParameters(), null, tracingContext);
-    verify(mockStore, times(1).description(
+    //     verify GetPathStatus invoked when FileStatus not provided
+    abfsStore.openFileForRead(testFile, new OpenFileParameters(), null,
+        tracingContext);
+    verify(mockClient, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
-        .getFileStatus(any(Path.class), any(TracingContext.class));
+        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class));
 
-    Mockito.reset(mockStore); //clears invocation count for next test case
+    Mockito.reset(mockClient); //clears invocation count for next test case
   }
 
   @Test
@@ -275,19 +279,18 @@ public class TestAbfsInputStream extends
         AbfsRestOperationType.ListPaths);
 
     // verify number of GetPathStatus invocations
-    AzureBlobFileSystemStore store = new AzureBlobFileSystemStore(fs.getUri(),
-        fs.isSecureScheme(), getRawConfiguration(),
-        new AbfsCountersImpl(fs.getUri()));
-    AzureBlobFileSystemStore mockStore = spy(store);
+    AzureBlobFileSystemStore abfsStore = getAbfsStore(fs);
+    AbfsClient mockClient = spy(getAbfsClient(abfsStore));
+    setAbfsClient(abfsStore, mockClient);
     TracingContext tracingContext = getTestTracingContext(fs, false);
     checkGetPathStatusCalls(smallTestFile, getFileStatusResults[0],
-        mockStore, AbfsRestOperationType.GetPathStatus, tracingContext);
+        abfsStore, mockClient, AbfsRestOperationType.GetPathStatus, tracingContext);
     checkGetPathStatusCalls(largeTestFile, getFileStatusResults[1],
-        mockStore, AbfsRestOperationType.GetPathStatus, tracingContext);
+        abfsStore, mockClient, AbfsRestOperationType.GetPathStatus, tracingContext);
     checkGetPathStatusCalls(smallTestFile, listStatusResults[0],
-        mockStore, AbfsRestOperationType.ListPaths, tracingContext);
+        abfsStore, mockClient, AbfsRestOperationType.ListPaths, tracingContext);
     checkGetPathStatusCalls(largeTestFile, listStatusResults[1],
-        mockStore, AbfsRestOperationType.ListPaths, tracingContext);
+        abfsStore, mockClient, AbfsRestOperationType.ListPaths, tracingContext);
   }
 
   /**
