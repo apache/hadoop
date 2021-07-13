@@ -72,9 +72,12 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -628,26 +631,10 @@ public class DFSUtil {
       defaultAddress = null;
     }
 
-    Collection<String> parentNameServices = conf.getTrimmedStringCollection
-            (DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY);
-
-    if (parentNameServices.isEmpty()) {
-      parentNameServices = conf.getTrimmedStringCollection
-              (DFSConfigKeys.DFS_NAMESERVICES);
-    } else {
-      // Ensure that the internal service is ineed in the list of all available
-      // nameservices.
-      Set<String> availableNameServices = Sets.newHashSet(conf
-              .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMESERVICES));
-      for (String nsId : parentNameServices) {
-        if (!availableNameServices.contains(nsId)) {
-          throw new IOException("Unknown nameservice: " + nsId);
-        }
-      }
-    }
+    Collection<String> parentNameServices = getParentNameServices(conf);
 
     Map<String, Map<String, InetSocketAddress>> addressList =
-            DFSUtilClient.getAddressesForNsIds(conf, parentNameServices,
+            getAddressesForNsIds(conf, parentNameServices,
                                                defaultAddress,
                                                DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
                                                DFS_NAMENODE_RPC_ADDRESS_KEY);
@@ -673,6 +660,58 @@ public class DFSUtil {
       getNNLifelineRpcAddressesForCluster(Configuration conf)
       throws IOException {
 
+    Collection<String> parentNameServices = getParentNameServices(conf);
+
+    return getAddressesForNsIds(conf, parentNameServices, null,
+        DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
+  }
+
+  //
+  /**
+   * Returns the configured address for all NameNodes in the cluster.
+   * This is similar with DFSUtilClient.getAddressesForNsIds()
+   * but can access DFSConfigKeys.
+   *
+   * @param conf configuration
+   * @param defaultAddress default address to return in case key is not found.
+   * @param keys Set of keys to look for in the order of preference
+   *
+   * @return a map(nameserviceId to map(namenodeId to InetSocketAddress))
+   */
+  static Map<String, Map<String, InetSocketAddress>> getAddressesForNsIds(
+      Configuration conf, Collection<String> nsIds, String defaultAddress,
+      String... keys) {
+    // Look for configurations of the form
+    // <key>[.<nameserviceId>][.<namenodeId>]
+    // across all of the configured nameservices and namenodes.
+    Map<String, Map<String, InetSocketAddress>> ret = Maps.newLinkedHashMap();
+    for (String nsId : DFSUtilClient.emptyAsSingletonNull(nsIds)) {
+
+      String configKeyWithHost =
+          DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED + "." + nsId;
+      boolean resolveNeeded = conf.getBoolean(configKeyWithHost,
+          DFSConfigKeys.DFS_NAMESERVICES_RESOLUTION_ENABLED_DEFAULT);
+
+      Map<String, InetSocketAddress> isas;
+
+      if (resolveNeeded) {
+        DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
+            conf, nsId, DFSConfigKeys.DFS_NAMESERVICES_RESOLVER_IMPL);
+        isas = DFSUtilClient.getResolvedAddressesForNsId(
+            conf, nsId, dnr, defaultAddress, keys);
+      } else {
+        isas = DFSUtilClient.getAddressesForNameserviceId(
+            conf, nsId, defaultAddress, keys);
+      }
+      if (!isas.isEmpty()) {
+        ret.put(nsId, isas);
+      }
+    }
+    return ret;
+  }
+
+  private static Collection<String> getParentNameServices(Configuration conf)
+      throws IOException {
     Collection<String> parentNameServices = conf.getTrimmedStringCollection(
         DFSConfigKeys.DFS_INTERNAL_NAMESERVICES_KEY);
 
@@ -691,8 +730,7 @@ public class DFSUtil {
       }
     }
 
-    return DFSUtilClient.getAddressesForNsIds(conf, parentNameServices, null,
-        DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY);
+    return parentNameServices;
   }
 
   /**
