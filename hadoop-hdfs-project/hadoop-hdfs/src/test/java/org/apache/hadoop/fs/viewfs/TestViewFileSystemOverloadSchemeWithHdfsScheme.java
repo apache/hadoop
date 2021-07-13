@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -178,7 +177,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
      */
     addMountLinks(defaultFSURI.getAuthority(), new String[] {userFolder },
         new String[] {nonExistTargetPath.toUri().toString() }, conf);
-    FileSystem.get(conf);
+    FileSystem fs = FileSystem.get(conf);
+    fs.resolvePath(new Path(userFolder));
     Assert.fail("Expected to fail with non existent link");
   }
 
@@ -361,7 +361,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * Unset fs.viewfs.overload.scheme.target.hdfs.impl property.
    * So, OverloadScheme target fs initialization will fail.
    */
-  @Test(expected = UnsupportedFileSystemException.class, timeout = 30000)
+  @Test(expected = IOException.class, timeout = 30000)
   public void testInvalidOverloadSchemeTargetFS() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     String mountTableIfSet = conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH);
