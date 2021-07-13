@@ -521,6 +521,10 @@ class BlockManagerSafeMode {
     return bytesInFutureECBlockGroups.longValue();
   }
 
+  public int getSafeReplication() {
+    return safeReplication;
+  }
+
   void close() {
     assert namesystem.hasWriteLock() : "Closing bmSafeMode needs write lock!";
     try {

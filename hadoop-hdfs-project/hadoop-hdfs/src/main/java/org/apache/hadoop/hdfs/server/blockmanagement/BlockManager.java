@@ -1214,7 +1214,7 @@ public class BlockManager implements BlockStatsMXBean {
     bmSafeMode.adjustBlockTotals(0, 1);
     final int minStorage = curBlock.isStriped() ?
         ((BlockInfoStriped) curBlock).getRealDataBlockNum() : minReplication;
-    bmSafeMode.incrementSafeBlockCount(Math.min(numNodes, minStorage),
+    bmSafeMode.incrementSafeBlockCount(Math.min(numNodes, Math.min(minStorage, bmSafeMode.getSafeReplication())),
         curBlock);
   }
 
