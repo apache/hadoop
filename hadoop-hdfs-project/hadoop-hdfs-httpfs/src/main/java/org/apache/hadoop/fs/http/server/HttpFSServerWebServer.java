@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import static org.apache.hadoop.util.StringUtils.startupShutdownMessage;
 
 import java.io.IOException;
@@ -124,7 +126,8 @@ public class HttpFSServerWebServer {
         .setName(NAME)
         .setConf(conf)
         .setSSLConf(sslConf)
-        .authFilterConfigurationPrefix(HttpFSAuthenticationFilter.CONF_PREFIX)
+        .setAuthFilterConfigurationPrefixes(
+            HttpFSAuthenticationFilter.CONF_PREFIXES)
         .setACL(new AccessControlList(conf.get(HTTP_ADMINS_KEY, " ")))
         .addEndpoint(endpoint)
         .build();
@@ -176,6 +179,11 @@ public class HttpFSServerWebServer {
       throw new RuntimeException("It should never happen: " + ex.getMessage(),
           ex);
     }
+  }
+
+  @VisibleForTesting
+  HttpServer2 getHttpServer() {
+    return httpServer;
   }
 
   public static void main(String[] args) throws Exception {
