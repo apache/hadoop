@@ -1936,4 +1936,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  public  static final String DFS_NAMENODE_BUFFER_VALUE_KEY="dfs.namenode.buffer.value";
+  public static final  int DFS_NAMENODE_BUFFER_VALUE_DEFAULT_KEY=512*1024;
+
 }
