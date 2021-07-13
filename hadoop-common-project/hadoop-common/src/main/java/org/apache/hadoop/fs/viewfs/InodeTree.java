@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.util.function.Function;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -257,7 +258,10 @@ abstract class InodeTree<T> {
    */
   static class INodeLink<T> extends INode<T> {
     final URI[] targetDirLinkList;
-    final T targetFileSystem;   // file system object created from the link.
+    private T targetFileSystem;   // file system object created from the link.
+    // Function to initialize file system. Only applicable for simple links
+    private Function<URI, T> fileSystemInitMethod;
+    private final Object lock = new Object();
 
     /**
      * Construct a mergeLink or nfly.
@@ -273,11 +277,13 @@ abstract class InodeTree<T> {
      * Construct a simple link (i.e. not a mergeLink).
      */
     INodeLink(final String pathToNode, final UserGroupInformation aUgi,
-        final T targetFs, final URI aTargetDirLink) {
+        Function<URI, T> createFileSystemMethod,
+        final URI aTargetDirLink) {
       super(pathToNode, aUgi);
-      targetFileSystem = targetFs;
+      targetFileSystem = null;
       targetDirLinkList = new URI[1];
       targetDirLinkList[0] = aTargetDirLink;
+      this.fileSystemInitMethod = createFileSystemMethod;
     }
 
     /**
@@ -298,7 +304,30 @@ abstract class InodeTree<T> {
       return false;
     }
 
-    public T getTargetFileSystem() {
+    /**
+     * Get the instance of FileSystem to use, creating one if needed.
+     * @return An Initialized instance of T
+     * @throws IOException
+     */
+    public T getTargetFileSystem() throws IOException {
+      if (targetFileSystem != null) {
+        return targetFileSystem;
+      }
+      // For non NFLY and MERGE links, we initialize the FileSystem when the
+      // corresponding mount path is accessed.
+      if (targetDirLinkList.length == 1) {
+        synchronized (lock) {
+          if (targetFileSystem != null) {
+            return targetFileSystem;
+          }
+          targetFileSystem = fileSystemInitMethod.apply(targetDirLinkList[0]);
+          if (targetFileSystem == null) {
+            throw new IOException(
+                "Could not initialize target File System for URI : " +
+                    targetDirLinkList[0]);
+          }
+        }
+      }
       return targetFileSystem;
     }
   }
@@ -359,7 +388,7 @@ abstract class InodeTree<T> {
     switch (linkType) {
     case SINGLE:
       newLink = new INodeLink<T>(fullPath, aUgi,
-          getTargetFileSystem(new URI(target)), new URI(target));
+          initAndGetTargetFs(), new URI(target));
       break;
     case SINGLE_FALLBACK:
     case MERGE_SLASH:
@@ -385,8 +414,7 @@ abstract class InodeTree<T> {
    * 3 abstract methods.
    * @throws IOException
    */
-  protected abstract T getTargetFileSystem(URI uri)
-      throws UnsupportedFileSystemException, URISyntaxException, IOException;
+  protected abstract Function<URI, T> initAndGetTargetFs();
 
   protected abstract T getTargetFileSystem(INodeDir<T> dir)
       throws URISyntaxException, IOException;
@@ -589,7 +617,7 @@ abstract class InodeTree<T> {
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
       root = new INodeLink<T>(mountTableName, ugi,
-          getTargetFileSystem(new URI(mergeSlashTarget)),
+          initAndGetTargetFs(),
           new URI(mergeSlashTarget));
       mountPoints.add(new MountPoint<T>("/", (INodeLink<T>) root));
       rootFallbackLink = null;
@@ -608,8 +636,7 @@ abstract class InodeTree<T> {
                 + "not allowed.");
           }
           fallbackLink = new INodeLink<T>(mountTableName, ugi,
-              getTargetFileSystem(new URI(le.getTarget())),
-              new URI(le.getTarget()));
+              initAndGetTargetFs(), new URI(le.getTarget()));
           continue;
         case REGEX:
           addRegexMountEntry(le);
@@ -633,9 +660,8 @@ abstract class InodeTree<T> {
       FileSystem.LOG
           .info("Empty mount table detected for {} and considering itself "
               + "as a linkFallback.", theUri);
-      rootFallbackLink =
-          new INodeLink<T>(mountTableName, ugi, getTargetFileSystem(theUri),
-              theUri);
+      rootFallbackLink = new INodeLink<T>(mountTableName, ugi,
+          initAndGetTargetFs(), theUri);
       getRootDir().addFallbackLink(rootFallbackLink);
     }
   }
@@ -733,10 +759,10 @@ abstract class InodeTree<T> {
    * @param p - input path
    * @param resolveLastComponent
    * @return ResolveResult which allows further resolution of the remaining path
-   * @throws FileNotFoundException
+   * @throws IOException
    */
   ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
-      throws FileNotFoundException {
+      throws IOException {
     ResolveResult<T> resolveResult = null;
     String[] path = breakIntoPathComponents(p);
     if (path.length <= 1) { // special case for when path is "/"
@@ -880,19 +906,20 @@ abstract class InodeTree<T> {
       ResultKind resultKind, String resolvedPathStr,
       String targetOfResolvedPathStr, Path remainingPath) {
     try {
-      T targetFs = getTargetFileSystem(
-          new URI(targetOfResolvedPathStr));
+      T targetFs = initAndGetTargetFs()
+          .apply(new URI(targetOfResolvedPathStr));
+      if (targetFs == null) {
+        LOGGER.error(String.format(
+            "Not able to initialize target file system."
+                + " ResultKind:%s, resolvedPathStr:%s,"
+                + " targetOfResolvedPathStr:%s, remainingPath:%s,"
+                + " will return null.",
+            resultKind, resolvedPathStr, targetOfResolvedPathStr,
+            remainingPath));
+        return null;
+      }
       return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
           remainingPath, true);
-    } catch (IOException ex) {
-      LOGGER.error(String.format(
-          "Got Exception while build resolve result."
-              + " ResultKind:%s, resolvedPathStr:%s,"
-              + " targetOfResolvedPathStr:%s, remainingPath:%s,"
-              + " will return null.",
-          resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
-          ex);
-      return null;
     } catch (URISyntaxException uex) {
       LOGGER.error(String.format(
           "Got Exception while build resolve result."
