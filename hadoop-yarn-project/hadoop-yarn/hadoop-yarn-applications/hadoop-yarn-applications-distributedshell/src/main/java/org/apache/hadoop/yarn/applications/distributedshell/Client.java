@@ -42,7 +42,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -1221,13 +1220,9 @@ public class Client {
     Path dst =
         new Path(fs.getHomeDirectory(), suffix);
     if (fileSrcPath == null) {
-      FSDataOutputStream ostream = null;
-      try {
-        ostream = FileSystem
-            .create(fs, dst, new FsPermission((short) 0710));
+      try (FSDataOutputStream ostream = FileSystem.create(fs, dst,
+          new FsPermission((short) 0710))) {
         ostream.writeUTF(resources);
-      } finally {
-        IOUtils.closeQuietly(ostream);
       }
     } else {
       fs.copyFromLocalFile(new Path(fileSrcPath), dst);

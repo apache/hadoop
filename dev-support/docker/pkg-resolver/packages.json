@@ -245,24 +245,6 @@
     "ubuntu:focal": "maven",
     "ubuntu:focal::arch64": "maven"
   },
-  "javascript": {
-    "debian:10": [
-      "nodejs",
-      "node-yarn",
-      "npm"
-    ],
-    "ubuntu:focal": [
-      "nodejs",
-      "node-yarn",
-      "npm"
-    ],
-    "ubuntu:focal::arch64": [
-      "nodejs",
-      "node-yarn",
-      "npm",
-      "phantomjs"
-    ]
-  },
   "java": {
     "debian:10": "openjdk-11-jdk",
     "ubuntu:focal": [

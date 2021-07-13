@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Date;
+import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +50,9 @@ interface NativeFileSystemStore {
   InputStream retrieve(String key) throws IOException;
 
   InputStream retrieve(String key, long byteRangeStart) throws IOException;
+
+  InputStream retrieve(String key, long byteRangeStart,
+      Optional<Configuration> options) throws IOException;
 
   DataOutputStream storefile(String keyEncoded,
       PermissionStatus permissionStatus,

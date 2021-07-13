@@ -6187,12 +6187,32 @@
         accessed or modified before the specified time interval.
     </description>
   </property>
+
   <property>
     <name>dfs.datanode.directoryscan.max.notify.count</name>
     <value>5</value>
     <description>
       Defines the maximum number of blocks that the DirectoryScanner may notify
       namenode right way for received or deleted blocks after one round.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.nameservices.resolution-enabled</name>
+    <value>false</value>
+    <description>
+      Determines if the given nameservice address is a domain name which needs to
+      be resolved (using the resolver configured by dfs.nameservices.resolver.impl).
+      This is used by datanode to resolve namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.nameservices.resolver.impl</name>
+    <value></value>
+    <description>
+      Nameservice resolver implementation used by datanode.
+      Effective with dfs.nameservices.resolution-enabled on.
     </description>
   </property>
 </configuration>
