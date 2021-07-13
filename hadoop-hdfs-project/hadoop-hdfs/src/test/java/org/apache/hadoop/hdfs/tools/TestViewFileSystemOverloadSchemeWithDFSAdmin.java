@@ -198,13 +198,15 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
    */
   @Test
   public void testSafeModeWithWrongFS() throws Exception {
+    String wrongFsUri = "hdfs://nonExistent";
     final Path hdfsTargetPath =
-        new Path("hdfs://nonExistent" + HDFS_USER_FOLDER);
+        new Path(wrongFsUri + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getHost(), new String[] {HDFS_USER_FOLDER},
         new String[] {hdfsTargetPath.toUri().toString()}, conf);
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
     redirectStream();
-    int ret = ToolRunner.run(dfsAdmin, new String[] {"-safemode", "enter" });
+    int ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-fs", wrongFsUri, "-safemode", "enter" });
     assertEquals(-1, ret);
     assertErrMsg("safemode: java.net.UnknownHostException: nonExistent", 0);
   }

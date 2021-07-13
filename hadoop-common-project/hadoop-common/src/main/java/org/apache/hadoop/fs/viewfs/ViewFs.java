@@ -21,10 +21,12 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
+import java.util.function.Function;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -237,15 +239,32 @@ public class ViewFs extends AbstractFileSystem {
         initingUriAsFallbackOnNoMounts) {
 
       @Override
-      protected AbstractFileSystem getTargetFileSystem(final URI uri)
-        throws URISyntaxException, UnsupportedFileSystemException {
-          String pathString = uri.getPath();
-          if (pathString.isEmpty()) {
-            pathString = "/";
+      protected Function<URI, AbstractFileSystem> initAndGetTargetFs() {
+        return new Function<URI, AbstractFileSystem>() {
+          @Override
+          public AbstractFileSystem apply(final URI uri) {
+            AbstractFileSystem fs;
+            try {
+              fs = ugi.doAs(
+                  new PrivilegedExceptionAction<AbstractFileSystem>() {
+                    @Override
+                    public AbstractFileSystem run() throws IOException {
+                      return AbstractFileSystem.createFileSystem(uri, config);
+                    }
+                  });
+              String pathString = uri.getPath();
+              if (pathString.isEmpty()) {
+                pathString = "/";
+              }
+              return new ChRootedFs(fs, new Path(pathString));
+            } catch (IOException | URISyntaxException |
+                InterruptedException ex) {
+              LOG.error("Could not initialize underlying FileSystem object"
+                  +" for uri " + uri + "with exception: " + ex.toString());
+            }
+            return null;
           }
-          return new ChRootedFs(
-              AbstractFileSystem.createFileSystem(uri, config),
-              new Path(pathString));
+        };
       }
 
       @Override
@@ -719,7 +738,8 @@ public class ViewFs extends AbstractFileSystem {
     List<Token<?>> result = new ArrayList<Token<?>>(initialListSize);
     for ( int i = 0; i < mountPoints.size(); ++i ) {
       List<Token<?>> tokens = 
-        mountPoints.get(i).target.targetFileSystem.getDelegationTokens(renewer);
+          mountPoints.get(i).target.getTargetFileSystem()
+              .getDelegationTokens(renewer);
       if (tokens != null) {
         result.addAll(tokens);
       }
