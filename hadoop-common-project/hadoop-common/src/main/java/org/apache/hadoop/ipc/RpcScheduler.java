@@ -62,10 +62,10 @@ public interface RpcScheduler {
     // this interface, a default implementation is supplied which uses the old
     // method. All new implementations MUST override this interface and should
     // NOT use the other addResponseTime method.
-    int queueTime = (int)
-        details.get(ProcessingDetails.Timing.QUEUE, RpcMetrics.TIMEUNIT);
-    int processingTime = (int)
-        details.get(ProcessingDetails.Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+    int queueTime = (int) details.get(ProcessingDetails.Timing.QUEUE,
+        RpcMetrics.getMetricsTimeUnit());
+    int processingTime = (int) details.get(ProcessingDetails.Timing.PROCESSING,
+        RpcMetrics.getMetricsTimeUnit());
     addResponseTime(callName, schedulable.getPriorityLevel(),
         queueTime, processingTime);
   }

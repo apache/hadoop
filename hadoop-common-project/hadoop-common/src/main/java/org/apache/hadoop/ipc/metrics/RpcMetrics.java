@@ -19,6 +19,8 @@ package org.apache.hadoop.ipc.metrics;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.Server;
@@ -49,7 +51,7 @@ public class RpcMetrics {
   final String name;
   final boolean rpcQuantileEnable;
   /** The time unit used when storing/accessing time durations. */
-  public final static TimeUnit TIMEUNIT = TimeUnit.MILLISECONDS;
+  private static TimeUnit metricsTimeUnit = TimeUnit.MILLISECONDS;
   
   RpcMetrics(Server server, Configuration conf) {
     String port = String.valueOf(server.getListenerAddress().getPort());
@@ -75,19 +77,19 @@ public class RpcMetrics {
       for (int i = 0; i < intervals.length; i++) {
         int interval = intervals[i];
         rpcQueueTimeQuantiles[i] = registry.newQuantiles("rpcQueueTime"
-            + interval + "s", "rpc queue time in " + TIMEUNIT, "ops",
+            + interval + "s", "rpc queue time in " + metricsTimeUnit, "ops",
             "latency", interval);
         rpcLockWaitTimeQuantiles[i] = registry.newQuantiles(
             "rpcLockWaitTime" + interval + "s",
-            "rpc lock wait time in " + TIMEUNIT, "ops",
+            "rpc lock wait time in " + metricsTimeUnit, "ops",
             "latency", interval);
         rpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "rpcProcessingTime" + interval + "s",
-            "rpc processing time in " + TIMEUNIT, "ops",
+            "rpc processing time in " + metricsTimeUnit, "ops",
             "latency", interval);
         deferredRpcProcessingTimeQuantiles[i] = registry.newQuantiles(
             "deferredRpcProcessingTime" + interval + "s",
-            "deferred rpc processing time in " + TIMEUNIT, "ops",
+            "deferred rpc processing time in " + metricsTimeUnit, "ops",
             "latency", interval);
       }
     }
@@ -97,8 +99,25 @@ public class RpcMetrics {
   public String name() { return name; }
 
   public static RpcMetrics create(Server server, Configuration conf) {
+    if (server instanceof RPC.Server) {
+      setMetricTimeUnit(conf);
+    }
     RpcMetrics m = new RpcMetrics(server, conf);
     return DefaultMetricsSystem.instance().register(m.name, null, m);
+  }
+
+  private static void setMetricTimeUnit(Configuration conf) {
+    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
+    if (StringUtils.isNotEmpty(timeunit)) {
+      try {
+        metricsTimeUnit = TimeUnit.valueOf(timeunit);
+      } catch (IllegalArgumentException e) {
+        LOG.info("Config key {} 's value {} does not correspond to enum values"
+                + " of java.util.concurrent.TimeUnit. Hence default unit"
+                + " MILLISECONDS will be used",
+            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit);
+      }
+    }
   }
 
   @Metric("Number of received bytes") MutableCounterLong receivedBytes;
@@ -139,6 +158,10 @@ public class RpcMetrics {
 
   @Metric("Number of dropped connections") public long numDroppedConnections() {
     return server.getNumDroppedConnections();
+  }
+
+  public static TimeUnit getMetricsTimeUnit() {
+    return metricsTimeUnit;
   }
 
   // Public instrumentation methods that could be extracted to an

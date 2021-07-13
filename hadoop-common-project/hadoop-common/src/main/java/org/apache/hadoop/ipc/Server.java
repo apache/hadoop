@@ -544,13 +544,13 @@ public abstract class Server {
         (rpcMetrics.getProcessingStdDev() * deviation);
 
     long processingTime =
-            details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+            details.get(Timing.PROCESSING, RpcMetrics.getMetricsTimeUnit());
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
         (processingTime > threeSigma)) {
       LOG.warn(
           "Slow RPC : {} took {} {} to process from client {},"
               + " the processing detail is {}",
-          methodName, processingTime, RpcMetrics.TIMEUNIT, call,
+          methodName, processingTime, RpcMetrics.getMetricsTimeUnit(), call,
           details.toString());
       rpcMetrics.incrSlowRpc();
     }
@@ -570,7 +570,7 @@ public abstract class Server {
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
 
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
+    long queueTime = details.get(Timing.QUEUE, RpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcQueueTime(queueTime);
 
     if (call.isResponseDeferred() || connDropped) {
@@ -579,9 +579,9 @@ public abstract class Server {
     }
 
     long processingTime =
-        details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+        details.get(Timing.PROCESSING, RpcMetrics.getMetricsTimeUnit());
     long waitTime =
-        details.get(Timing.LOCKWAIT, RpcMetrics.TIMEUNIT);
+        details.get(Timing.LOCKWAIT, RpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
     // don't include lock wait for detailed metrics.

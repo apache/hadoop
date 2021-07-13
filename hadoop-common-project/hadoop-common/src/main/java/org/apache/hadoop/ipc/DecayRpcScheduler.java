@@ -725,8 +725,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
-    long processingTime = details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+    long queueTime = details.get(Timing.QUEUE, RpcMetrics.getMetricsTimeUnit());
+    long processingTime = details.get(Timing.PROCESSING,
+        RpcMetrics.getMetricsTimeUnit());
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);
