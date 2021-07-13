@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import com.google.common.base.Function;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -47,10 +48,8 @@ public class TestViewFsConfig {
      new InodeTree<Foo>(conf, null) {
 
       @Override
-      protected
-      Foo getTargetFileSystem(final URI uri)
-        throws URISyntaxException, UnsupportedFileSystemException {
-          return null;
+      protected Function<URI, Foo> initAndGetTargetFs() {
+        return null;
       }
 
       @Override
