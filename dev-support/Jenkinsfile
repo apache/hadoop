@@ -63,7 +63,8 @@ pipeline {
 
                     pwd
                     cp -Rp ${WORKSPACE}/${SOURCEDIR} ${WORKSPACE}/hadoop-centos-8
-                    ls -l
+                    cd src
+                    git show HEAD
                     '''
                 }
             }
