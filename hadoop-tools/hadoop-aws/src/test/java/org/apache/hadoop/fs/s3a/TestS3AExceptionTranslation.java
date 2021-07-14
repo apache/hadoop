@@ -38,7 +38,6 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.s3a.impl.ErrorTranslation;
@@ -184,9 +183,9 @@ public class TestS3AExceptionTranslation {
       AmazonClientException exception) throws Exception {
     // Verifying that the translated exception have the correct error message.
     IOException ioe = translateException("test", "/", exception);
-    Assertions.assertThat(ioe.getMessage()).describedAs("Translated "
-        + "Exception should contain the error message of the actual exception")
-        .contains(exception.getMessage());
+    assertExceptionContains(exception.getMessage(), ioe,
+        "Translated Exception should contain the error message of the "
+            + "actual exception");
     return verifyExceptionClass(clazz, ioe);
   }
 
