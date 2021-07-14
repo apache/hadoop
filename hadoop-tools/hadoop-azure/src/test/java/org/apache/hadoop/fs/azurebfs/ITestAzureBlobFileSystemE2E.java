@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -176,7 +178,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
     fs.delete(testFilePath, true);
-    assertFalse(fs.exists(testFilePath));
+    assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
     intercept(FileNotFoundException.class,
             () -> inputStream.read(new byte[1]));
@@ -188,11 +190,11 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final Path testFilePath = path(methodName.getMethodName());
 
     FSDataOutputStream stream = fs.create(testFilePath);
-    assertTrue(fs.exists(testFilePath));
+    assertPathExists(fs, "Path should exist", testFilePath);
     stream.write(TEST_BYTE);
 
     fs.delete(testFilePath, true);
-    assertFalse(fs.exists(testFilePath));
+    assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
     // trigger append call
     intercept(FileNotFoundException.class,
@@ -208,10 +210,10 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     }
 
     FSDataOutputStream stream = fs.create(testFilePath);
-    assertTrue(fs.exists(testFilePath));
+    assertPathExists(fs, "This path should exist", testFilePath);
 
     fs.delete(testFilePath, true);
-    assertFalse(fs.exists(testFilePath));
+    assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
     intercept(FileNotFoundException.class,
             () -> stream.close());

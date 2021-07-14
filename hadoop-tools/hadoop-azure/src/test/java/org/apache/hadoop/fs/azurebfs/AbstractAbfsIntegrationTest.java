@@ -272,7 +272,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     // so first create temporary instance of the filesystem using SharedKey
     // then re-use the filesystem it creates with SAS auth instead of SharedKey.
     AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-    Assert.assertTrue(tempFs.exists(new Path("/")));
+    ContractTestUtils.assertPathExists(tempFs, "This path should exist",
+        new Path("/"));
     abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
     usingFilesystemForSASTests = true;
   }
@@ -446,7 +447,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   /**
-   * Generate a unique path using the given filepath
+   * Generate a unique path using the given filepath.
    * @param filepath path string
    * @return unique path created from filepath and a GUID
    */

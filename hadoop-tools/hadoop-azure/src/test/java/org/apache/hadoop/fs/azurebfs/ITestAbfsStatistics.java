@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 
 /**
  * Tests AzureBlobFileSystem Statistics.
@@ -211,12 +213,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.CALL_RENAME, 1, metricMap);
 
     //Testing if file exists at path.
-    assertTrue(String.format("File with name %s should exist",
-        destCreateFilePath),
-        fs.exists(destCreateFilePath));
-    assertFalse(String.format("File with name %s should not exist",
-        createFilePath),
-        fs.exists(createFilePath));
+    assertPathExists(fs,
+        String.format("File with name %s should exist", destCreateFilePath),
+        destCreateFilePath);
+    assertPathDoesNotExist(fs,
+        String.format("File with name %s should not exist", createFilePath),
+        createFilePath);
 
     metricMap = fs.getInstrumentationMap();
     //Testing exists() calls.
@@ -244,12 +246,10 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
       assertTrue(fs.rename(createFilePath, destCreateFilePath));
 
       //check if first name is existing and 2nd is not existing.
-      assertTrue(String.format("File with name %s should exist",
-          destCreateFilePath),
-          fs.exists(destCreateFilePath));
-      assertFalse(String.format("File with name %s should not exist",
-          createFilePath),
-          fs.exists(createFilePath));
+      assertPathExists(fs, String.format("File with name %s should exist",
+          destCreateFilePath), destCreateFilePath);
+      assertPathDoesNotExist(fs, String.format(
+          "File with name %s should not exist", createFilePath), createFilePath);
 
     }
 

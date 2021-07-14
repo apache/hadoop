@@ -45,6 +45,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 
 /**
  * Test Azure Oauth with Blob Data contributor role and Blob Data Reader role.
@@ -82,21 +84,21 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     try(FSDataOutputStream stream = fs.create(FILE_PATH)) {
       stream.write(0);
     }
-    assertTrue(fs.exists(FILE_PATH));
+    assertPathExists(fs, "This path should exist", FILE_PATH);
     FileStatus fileStatus = fs.getFileStatus(FILE_PATH);
     assertEquals(1, fileStatus.getLen());
     // delete file
     assertTrue(fs.delete(FILE_PATH, true));
-    assertFalse(fs.exists(FILE_PATH));
+    assertPathDoesNotExist(fs, "This path should not exist", FILE_PATH);
 
     // Verify Blob Data Contributor has full access to existed folder, file
 
     // READ FOLDER
-    assertTrue(fs.exists(existedFolderPath));
+    assertPathExists(fs, "This path should exist", existedFolderPath);
 
     //DELETE FOLDER
     fs.delete(existedFolderPath, true);
-    assertFalse(fs.exists(existedFolderPath));
+    assertPathDoesNotExist(fs, "This path should not exist", existedFolderPath);
 
     // READ FILE
     try (FSDataInputStream stream = fs.open(existedFilePath)) {
@@ -114,7 +116,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
 
     // REMOVE FILE
     fs.delete(existedFilePath, true);
-    assertFalse(fs.exists(existedFilePath));
+    assertPathDoesNotExist(fs, "This path should not exist", existedFilePath);
   }
 
   /*
@@ -138,7 +140,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // TEST READ FS
     Map<String, String> properties = abfsStore.getFilesystemProperties(tracingContext);
     // TEST READ FOLDER
-    assertTrue(fs.exists(existedFolderPath));
+    assertPathExists(fs, "This path should exist", existedFolderPath);
 
     // TEST DELETE FOLDER
     try {
@@ -170,9 +172,9 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // Blob data contributor and Blob data reader
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.create(existedFilePath);
-    assertTrue(fs.exists(existedFilePath));
+    assertPathExists(fs, "This path should exist", existedFilePath);
     fs.mkdirs(existedFolderPath);
-    assertTrue(fs.exists(existedFolderPath));
+    assertPathExists(fs, "This path should exist", existedFolderPath);
   }
 
   private AzureBlobFileSystem getBlobConributor() throws Exception {

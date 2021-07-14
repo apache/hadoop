@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
+
 /**
  * Test FileStatus.
  */
@@ -111,10 +113,10 @@ public class ITestAzureBlobFileSystemFileStatus extends
 
     // verify compatibility of this path format
     fs.create(pathWithHost1);
-    assertTrue(fs.exists(pathwithouthost1));
+    assertPathExists(fs, "This path should exist", pathwithouthost1);
 
     fs.create(pathwithouthost2);
-    assertTrue(fs.exists(pathWithHost2));
+    assertPathExists(fs, "This path should exist", pathWithHost2);
 
     // verify get
     FileStatus fileStatus1 = fs.getFileStatus(pathWithHost1);

@@ -51,6 +51,7 @@ import static org.mockito.Mockito.when;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 
@@ -178,11 +179,12 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path(testDir2 + "/test1/test2/test3"));
     fs.mkdirs(new Path(testDir2 + "/test4"));
     Assert.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
-    assertTrue(fs.exists(testDir2));
-    assertTrue(fs.exists(new Path(testDir2 + "/test1/test2")));
-    assertTrue(fs.exists(new Path(testDir2 + "/test4")));
-    assertTrue(fs.exists(new Path(testDir2 + "/test4/test3")));
-    assertFalse(fs.exists(new Path(testDir2 + "/test1/test2/test3")));
+    assertPathExists(fs, "This path should exist", testDir2);
+    assertPathExists(fs, "This path should exist", new Path(testDir2 + "/test1/test2"));
+    assertPathExists(fs, "This path should exist",new Path(testDir2 + "/test4"));
+    assertPathExists(fs, "This path should exist",new Path(testDir2 + "/test4/test3"));
+    assertPathDoesNotExist(fs, "This path should not exist", new Path(testDir2 +
+        "/test1/test2/test3"));
   }
 
   @Test
