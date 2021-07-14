@@ -57,7 +57,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   public void testFileStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
-    Path testFile = getUniquePath(TEST_FILE);
+    Path testFile = path(TEST_FILE);
     touch(testFile);
     validateStatus(fs, testFile, false);
   }
@@ -94,7 +94,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   public void testFolderStatusPermissionsAndOwnerAndGroup() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.getConf().set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, DEFAULT_UMASK_VALUE);
-    Path testFolder = getUniquePath(TEST_FOLDER);
+    Path testFolder = path(TEST_FOLDER);
     fs.mkdirs(testFolder);
 
     validateStatus(fs, testFolder, true);
@@ -103,11 +103,10 @@ public class ITestAzureBlobFileSystemFileStatus extends
   @Test
   public void testAbfsPathWithHost() throws IOException {
     AzureBlobFileSystem fs = this.getFileSystem();
-    Path host = getUniquePath("mycluster");
-    Path pathWithHost1 = new Path(String.format("abfs://%s/abfs/file1.txt", host));
+    Path pathWithHost1 = new Path("abfs://mycluster/abfs/file1.txt");
     Path pathwithouthost1 = new Path("/abfs/file1.txt");
 
-    Path pathWithHost2 = new Path(String.format("abfs://%s/abfs/file2.txt", host));
+    Path pathWithHost2 = new Path("abfs://mycluster/abfs/file2.txt");
     Path pathwithouthost2 = new Path("/abfs/file2.txt");
 
     // verify compatibility of this path format
@@ -128,7 +127,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   @Test
   public void testLastModifiedTime() throws IOException {
     AzureBlobFileSystem fs = this.getFileSystem();
-    Path testFilePath = getUniquePath("childfile1.txt");
+    Path testFilePath = path("childfile1.txt");
     long createStartTime = System.currentTimeMillis();
     long minCreateStartTime = (createStartTime / 1000) * 1000 - 1;
     //  Dividing and multiplying by 1000 to make last 3 digits 0.

@@ -95,13 +95,13 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameFileUnderDir() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path sourceDir = getUniquePath("/testSrc");
+    Path sourceDir = path("/testSrc");
     assertMkdirs(fs, sourceDir);
     String filename = "file1";
     Path file1 = new Path(sourceDir, filename);
     touch(file1);
 
-    Path destDir = getUniquePath("/testDst");
+    Path destDir = path("/testDst");
     assertRenameOutcome(fs, sourceDir, destDir, true);
     FileStatus[] fileStatus = fs.listStatus(destDir);
     assertNotNull("Null file status", fileStatus);
@@ -113,7 +113,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testDir = getUniquePath("testDir");
+    Path testDir = path("testDir");
     fs.mkdirs(testDir);
     Path test1 = new Path(testDir + "/test1");
     fs.mkdirs(test1);
@@ -131,7 +131,7 @@ public class ITestAzureBlobFileSystemRename extends
     final List<Future<Void>> tasks = new ArrayList<>();
 
     ExecutorService es = Executors.newFixedThreadPool(10);
-    Path source = getUniquePath("/test");
+    Path source = path("/test");
     for (int i = 0; i < 1000; i++) {
       final Path fileName = new Path(source + "/" + i);
       Callable<Void> callable = new Callable<Void>() {
@@ -150,7 +150,7 @@ public class ITestAzureBlobFileSystemRename extends
     }
 
     es.shutdownNow();
-    Path dest = getUniquePath("/renamedDir");
+    Path dest = path("/renamedDir");
     assertRenameOutcome(fs, source, dest, true);
 
     FileStatus[] files = fs.listStatus(dest);
@@ -174,7 +174,7 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testPosixRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    Path testDir2 = getUniquePath("testDir2");
+    Path testDir2 = path("testDir2");
     fs.mkdirs(new Path(testDir2 + "/test1/test2/test3"));
     fs.mkdirs(new Path(testDir2 + "/test4"));
     Assert.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));

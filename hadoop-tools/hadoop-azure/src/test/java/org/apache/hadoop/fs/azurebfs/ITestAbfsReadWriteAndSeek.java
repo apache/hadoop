@@ -75,7 +75,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
-    Path testPath = getUniquePath(TEST_PATH);
+    Path testPath = path(TEST_PATH);
     try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
@@ -113,7 +113,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] b = new byte[bufferSize * 10];
     new Random().nextBytes(b);
-    Path testPath = getUniquePath(TEST_PATH);
+    Path testPath = path(TEST_PATH);
     try (FSDataOutputStream stream = fs.create(testPath)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),

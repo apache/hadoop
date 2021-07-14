@@ -237,7 +237,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   @Test
   public void testHasNextForFile() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testFile = getUniquePath("testFile");
+    Path testFile = path("testFile");
     String testFileName = testFile.toString();
     getFileSystem().create(testFile);
     setPageSize(10);
@@ -304,7 +304,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
 
   private Path createTestDirectory() throws IOException {
     String testDirectoryName = "testDirectory" + System.currentTimeMillis();
-    Path testDirectory = getUniquePath(testDirectoryName);
+    Path testDirectory = path(testDirectoryName);
     getFileSystem().mkdirs(testDirectory);
     return testDirectory;
   }

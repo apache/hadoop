@@ -442,7 +442,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected Path path(String filepath) throws IOException {
     return getFileSystem().makeQualified(
-        new Path(getTestPath(), filepath));
+        new Path(getTestPath(), getUniquePath(filepath)));
   }
 
   /**
@@ -451,6 +451,9 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @return unique path created from filepath and a GUID
    */
   protected Path getUniquePath(String filepath) {
+    if (filepath.equals("/")) {
+      return new Path(filepath);
+    }
     return new Path(filepath + StringUtils
         .right(UUID.randomUUID().toString(), SHORTENED_GUID_LEN));
   }

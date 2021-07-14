@@ -72,8 +72,8 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_SECRET);
     Assume.assumeTrue("Contributor client secret not provided", secret != null);
 
-    Path existedFilePath = getUniquePath(EXISTED_FILE_PATH);
-    Path existedFolderPath = getUniquePath(EXISTED_FOLDER_PATH);
+    Path existedFilePath = path(EXISTED_FILE_PATH);
+    Path existedFolderPath = path(EXISTED_FOLDER_PATH);
     prepareFiles(existedFilePath, existedFolderPath);
 
     final AzureBlobFileSystem fs = getBlobConributor();
@@ -127,8 +127,8 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
     Assume.assumeTrue("Reader client secret not provided", secret != null);
 
-    Path existedFilePath = getUniquePath(EXISTED_FILE_PATH);
-    Path existedFolderPath = getUniquePath(EXISTED_FOLDER_PATH);
+    Path existedFilePath = path(EXISTED_FILE_PATH);
+    Path existedFolderPath = path(EXISTED_FOLDER_PATH);
     prepareFiles(existedFilePath, existedFolderPath);
     final AzureBlobFileSystem fs = getBlobReader();
 

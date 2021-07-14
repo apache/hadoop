@@ -79,7 +79,7 @@ public class ITestAzureBlobFileSystemDelete extends
   public void testDeleteRoot() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
 
-    Path testPath = getUniquePath("/testFolder");
+    Path testPath = path("/testFolder");
     fs.mkdirs(new Path(testPath + "_0"));
     fs.mkdirs(new Path(testPath + "_1"));
     fs.mkdirs(new Path(testPath + "_2"));
@@ -99,7 +99,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test()
   public void testOpenFileAfterDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testfile = getUniquePath("/testFile");
+    Path testfile = path("/testFile");
     touch(testfile);
     assertDeleted(fs, testfile, false);
 
@@ -110,7 +110,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testEnsureFileIsDeleted() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testfile = getUniquePath("testfile");
+    Path testfile = path("testfile");
     touch(testfile);
     assertDeleted(fs, testfile, false);
     assertPathDoesNotExist(fs, "deleted", testfile);
@@ -119,7 +119,7 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path dir = getUniquePath("testfile");
+    Path dir = path("testfile");
     fs.mkdirs(dir);
     fs.mkdirs(new Path(dir + "/test1"));
     fs.mkdirs(new Path(dir + "/test1/test2"));
@@ -134,7 +134,7 @@ public class ITestAzureBlobFileSystemDelete extends
     final List<Future<Void>> tasks = new ArrayList<>();
 
     ExecutorService es = Executors.newFixedThreadPool(10);
-    Path dir = getUniquePath("/test");
+    Path dir = path("/test");
     for (int i = 0; i < 1000; i++) {
       final Path fileName = new Path(dir + "/" + i);
       Callable<Void> callable = new Callable<Void>() {

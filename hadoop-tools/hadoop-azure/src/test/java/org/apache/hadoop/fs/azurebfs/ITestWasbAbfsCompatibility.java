@@ -62,7 +62,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path testFiles = getUniquePath("/testfiles");
+    Path testFiles = path("/testfiles");
     Path path1 = new Path(testFiles + "/~12/!008/3/abFsTestfile");
     try(FSDataOutputStream abfsStream = fs.create(path1, true)) {
       abfsStream.write(ABFS_TEST_CONTEXT.getBytes());
@@ -98,7 +98,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path testFile = getUniquePath("/testReadFile");
+    Path testFile = path("/testReadFile");
     for (int i = 0; i< 4; i++) {
       Path path = new Path(testFile + "/~12/!008/testfile" + i);
       final FileSystem createFs = createFileWithAbfs[i] ? abfs : wasb;
@@ -139,7 +139,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path testDir = getUniquePath("/testDir");
+    Path testDir = path("/testDir");
     for (int i = 0; i < 4; i++) {
       Path path = new Path(testDir + "/t" + i);
       //create
@@ -175,7 +175,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path d1 = getUniquePath("/d1");
+    Path d1 = path("/d1");
     Path d1d4 = new Path(d1 + "/d2/d3/d4");
     assertMkdirs(abfs, d1d4);
 

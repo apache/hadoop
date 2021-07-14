@@ -50,7 +50,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
     CloudBlobContainer container = blobClient.getContainerReference(this.getFileSystemName());
     container.createIfNotExists();
 
-    Path testPath = getUniquePath("test");
+    Path testPath = path("test");
     CloudBlockBlob blockBlob = container
         .getBlockBlobReference(testPath + "/10/10/10");
     blockBlob.uploadText("");

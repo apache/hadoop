@@ -40,7 +40,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test
   public void testReadWriteBytesToFileAndEnsureThreadPoolCleanup() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testPath = getUniquePath(TEST_PATH);
+    Path testPath = path(TEST_PATH);
     try(FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(TEST_DATA);
     }
@@ -57,7 +57,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test
   public void testWriteOneByteToFileAndEnsureThreadPoolCleanup() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testPath = getUniquePath(TEST_PATH);
+    Path testPath = path(TEST_PATH);
     try(FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(TEST_DATA);
     }
@@ -85,7 +85,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest }");
-    Path testPath = getUniquePath(TEST_PATH);
+    Path testPath = path(TEST_PATH);
     touch(testPath);
     TracingContext tracingContext = getTestTracingContext(fs, true);
     fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
@@ -113,7 +113,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest兩 }");
-    Path testPath = getUniquePath(TEST_PATH);
+    Path testPath = path(TEST_PATH);
     touch(testPath);
     TracingContext tracingContext = getTestTracingContext(fs, true);
     fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
