@@ -685,6 +685,9 @@
       fs.azure.account.key.*
       fs.azure.oauth2.*
       fs.adl.oauth2.*
+      fs.gs.encryption.*
+      fs.gs.proxy.*
+      fs.gs.auth.*
       credential$
       oauth.*secret
       oauth.*password
@@ -697,6 +700,27 @@
       private credentials should not be logged.
   </description>
 </property>
+
+  <property>
+    <name>hadoop.security.token.service.use_ip</name>
+    <value>true</value>
+    <description>
+      Controls whether tokens always use IP addresses.
+      DNS changes will not be detected if this option is enabled.
+      Existing client connections that break will always reconnect
+      to the IP of the original host. New clients will connect
+      to the host's new IP but fail to locate a token.
+      Disabling this option will allow existing and new clients
+      to detect an IP change and continue to locate the new host's token.
+
+      In secure multi-homed environments, this parameter will need to
+      be set to false on both cluster servers and clients (see HADOOP-7733).
+      If it is not set correctly, the symptom will be inability to
+      submit an application to YARN from an external client
+      (with error "client host not a member of the Hadoop cluster"),
+      or even from an in-cluster client if server failover occurs.
+    </description>
+  </property>
 
 <property>
   <name>hadoop.workaround.non.threadsafe.getpwuid</name>
@@ -1068,6 +1092,15 @@
   <value>org.apache.hadoop.fs.http.HttpFileSystem</value>
   <description>The HttpFileSystem for view file system overload scheme
    when child file system and ViewFSOverloadScheme's schemes are http.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The GoogleHadoopFS/Google Cloud Storage file system for view
+   file system overload scheme when child file system and ViewFSOverloadScheme's
+   schemes are gs.
   </description>
 </property>
 
@@ -2264,6 +2297,13 @@
     This setting provides better performance compared to blob-specific saskeys.
   </description>
 </property>
+
+<property>
+  <name>fs.AbstractFileSystem.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The AbstractFileSystem for gs: uris.</description>
+</property>
+
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
