@@ -228,6 +228,16 @@ class FSDirWriteFileOp {
     // while chooseTarget() was executing.
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
     INodesInPath iip = fsn.dir.resolvePath(null, src, fileId);
+
+    INode[] missing = new INode[]{iip.getLastINode()};
+    INodesInPath existing = iip.getParentINodesInPath();
+    if(missing.length == 0){
+      return null;
+    }
+    // switch the locks
+    FSDirectory fsd = fsn.getFSDirectory();
+    fsd.getINodeMap().latchWriteLock(existing, missing);
+
     FileState fileState = analyzeFileState(fsn, iip, fileId, clientName,
                                            previous, onRetryBlock);
     final INodeFile pendingFile = fileState.inode;
@@ -393,11 +403,12 @@ class FSDirWriteFileOp {
     fsn.checkFsObjectLimit();
     INodeFile newNode = null;
     INodesInPath parent =
-        FSDirMkdirOp.createAncestorDirectories(fsd, iip, permissions);
+        FSDirMkdirOp.createMissingDirs(fsd, iip.getParentINodesInPath(), permissions);
     if (parent != null) {
       iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
           replication, blockSize, holder, clientMachine, shouldReplicate,
-          ecPolicyName, storagePolicy);
+          ecPolicyName, storagePolicy, parent.getPath().equalsIgnoreCase(
+              iip.getPath()));
       newNode = iip != null ? iip.getLastINode().asFile() : null;
     }
     if (newNode == null) {
@@ -541,13 +552,51 @@ class FSDirWriteFileOp {
       FSDirectory fsd, INodesInPath existing, byte[] localName,
       PermissionStatus permissions, short replication, long preferredBlockSize,
       String clientName, String clientMachine, boolean shouldReplicate,
-      String ecPolicyName, String storagePolicy) throws IOException {
+      String ecPolicyName, String storagePolicy, boolean isLockAcquired)
+      throws IOException {
 
     Preconditions.checkNotNull(existing);
     long modTime = now();
     INodesInPath newiip;
     fsd.writeLock();
     try {
+      INodeFile newNode = createINodeFile(fsd, existing, localName,
+          permissions, replication, preferredBlockSize, clientName,
+          clientMachine, shouldReplicate, ecPolicyName, storagePolicy, modTime);
+
+      if(!isLockAcquired){
+        // parent lock is not acquired earlier, so get the lock first
+        INode[] missing = new INode[]{newNode};
+        existing = existing.getExistingINodes();
+        if(missing.length == 0){
+          return existing;
+        }
+        // switch the locks
+        fsd.getINodeMap().latchWriteLock(existing, missing);
+      }
+
+      newiip = fsd.addINode(existing, newNode, permissions.getPermission());
+    } finally {
+      fsd.writeUnlock();
+    }
+    if (newiip == null) {
+      NameNode.stateChangeLog.info("DIR* addFile: failed to add " +
+          existing.getPath() + "/" + DFSUtil.bytes2String(localName));
+      return null;
+    }
+
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* addFile: " +
+          DFSUtil.bytes2String(localName) + " is added");
+    }
+    return newiip;
+  }
+
+  private static INodeFile createINodeFile(FSDirectory fsd,
+      INodesInPath existing, byte[] localName, PermissionStatus permissions,
+      short replication, long preferredBlockSize, String clientName,
+      String clientMachine, boolean shouldReplicate, String ecPolicyName,
+      String storagePolicy, long modTime) throws IOException {
       boolean isStriped = false;
       ErasureCodingPolicy ecPolicy = null;
       byte storagepolicyid = 0;
@@ -576,22 +625,8 @@ class FSDirWriteFileOp {
           storagepolicyid, blockType);
       newNode.setLocalName(localName);
       newNode.toUnderConstruction(clientName, clientMachine);
-      newiip = fsd.addINode(existing, newNode, permissions.getPermission());
-    } finally {
-      fsd.writeUnlock();
+    return newNode;
     }
-    if (newiip == null) {
-      NameNode.stateChangeLog.info("DIR* addFile: failed to add " +
-          existing.getPath() + "/" + DFSUtil.bytes2String(localName));
-      return null;
-    }
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* addFile: " +
-          DFSUtil.bytes2String(localName) + " is added");
-    }
-    return newiip;
-  }
 
   private static FileState analyzeFileState(
       FSNamesystem fsn, INodesInPath iip, long fileId, String clientName,
@@ -687,6 +722,14 @@ class FSDirWriteFileOp {
     }
     checkBlock(fsn, last);
     INodesInPath iip = fsn.dir.resolvePath(pc, src, fileId);
+
+    assert (iip.getLastINode() instanceof INodeFile);
+    INode[] missing = new INode[] { iip.getLastINode() };
+    INodesInPath existing = iip.getParentINodesInPath();
+    // switch the locks
+    FSDirectory fsd = fsn.getFSDirectory();
+    fsd.getINodeMap().latchWriteLock(existing, missing);
+
     return completeFileInternal(fsn, iip, holder,
         ExtendedBlock.getLocalBlock(last), fileId);
   }
