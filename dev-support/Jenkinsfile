@@ -115,7 +115,7 @@ pipeline {
                             fi
                             if [ -f "${PATCHDIR}/cidfile.txt" ]; then
                               echo "test-patch container appears to still be running: killing"
-                              docker kill `cat "/${PATCHDIR}/cidfile.txt"` || true
+                              docker kill `cat "${PATCHDIR}/cidfile.txt"` || true
                             fi
                             '''
                     }
@@ -164,7 +164,7 @@ pipeline {
                             fi
                             if [ -f "${PATCHDIR}/cidfile.txt" ]; then
                               echo "test-patch container appears to still be running: killing"
-                              docker kill `cat "/${PATCHDIR}/cidfile.txt"` || true
+                              docker kill `cat "${PATCHDIR}/cidfile.txt"` || true
                             fi
                             '''
                     }

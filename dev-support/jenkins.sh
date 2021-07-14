@@ -115,10 +115,10 @@ function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
   # this must be clean for every run
-  if [[ -d "${WORKSPACE}/${PATCHDIR}" ]]; then
-    rm -rf "${WORKSPACE:?}/${PATCHDIR}"
+  if [[ -d "${PATCHDIR}" ]]; then
+    rm -rf "${PATCHDIR:?}"
   fi
-  mkdir -p "${WORKSPACE}/${PATCHDIR}"
+  mkdir -p "${PATCHDIR}"
 
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
@@ -128,23 +128,23 @@ function run_ci() {
   if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
     YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
   elif [[ -z "${CHANGE_URL}" ]]; then
-    echo "Full build skipped" >"${WORKSPACE}/${PATCHDIR}/report.html"
+    echo "Full build skipped" >"${PATCHDIR}/report.html"
     exit 0
   fi
 
-  YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
+  YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
   # where the source is located
-  YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
+  YETUS_ARGS+=("--basedir=${SOURCEDIR}")
 
   # our project defaults come from a personality file
   YETUS_ARGS+=("--project=hadoop")
-  YETUS_ARGS+=("--personality=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/hadoop.sh")
+  YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/bin/hadoop.sh")
 
   # lots of different output formats
-  YETUS_ARGS+=("--brief-report-file=${WORKSPACE}/${PATCHDIR}/brief.txt")
-  YETUS_ARGS+=("--console-report-file=${WORKSPACE}/${PATCHDIR}/console.txt")
-  YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
+  YETUS_ARGS+=("--brief-report-file=${PATCHDIR}/brief.txt")
+  YETUS_ARGS+=("--console-report-file=${PATCHDIR}/console.txt")
+  YETUS_ARGS+=("--html-report-file=${PATCHDIR}/report.html")
 
   # enable writing back to Github
   YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
