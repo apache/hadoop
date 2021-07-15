@@ -23,7 +23,6 @@
 #include <cstdio>
 #include <fstream>
 
-
 using ::testing::_;
 
 using namespace hdfs;
