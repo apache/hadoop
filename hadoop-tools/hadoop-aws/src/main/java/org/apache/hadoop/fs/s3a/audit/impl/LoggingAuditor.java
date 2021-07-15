@@ -411,11 +411,8 @@ public class LoggingAuditor
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
 
-
       String error = "executing a request outside an audit span "
           + analyzer.analyze(request);
-      LOG.warn("{} {}",
-          getSpanId(), error);
       final String unaudited = getSpanId() + " "
           + UNAUDITED_OPERATION + " " + error;
       if (isRequestNotAlwaysInSpan(request)) {
