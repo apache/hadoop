@@ -112,6 +112,7 @@ pipeline {
                     script {
                         sh '''#!/usr/bin/env bash
 
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
                         "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
                         '''
                     }
@@ -153,6 +154,7 @@ pipeline {
                     script {
                         sh '''#!/usr/bin/env bash
 
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
                         "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
                         '''
                     }
@@ -196,6 +198,7 @@ pipeline {
                                               usernameVariable: 'GITHUB_USER')]) {
                             sh '''#!/usr/bin/env bash
 
+                            chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
                             "${SOURCEDIR}/dev-support/jenkins.sh" github_status_recovery
                             '''
                         }
@@ -226,6 +229,7 @@ pipeline {
                     script {
                         sh '''#!/usr/bin/env bash
 
+                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
                         "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
                         '''
                     }
