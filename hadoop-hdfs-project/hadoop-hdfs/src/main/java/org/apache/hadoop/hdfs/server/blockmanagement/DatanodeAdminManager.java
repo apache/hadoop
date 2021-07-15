@@ -186,7 +186,7 @@ public class DatanodeAdminManager {
 
     monitor = new Monitor(blocksPerInterval, 
         nodesPerInterval, maxConcurrentTrackedNodes);
-    executor.scheduleAtFixedRate(monitor, intervalSecs, intervalSecs,
+    executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
     LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
