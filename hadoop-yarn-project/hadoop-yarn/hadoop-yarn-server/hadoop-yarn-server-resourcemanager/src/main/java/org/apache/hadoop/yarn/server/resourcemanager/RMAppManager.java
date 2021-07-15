@@ -84,7 +84,7 @@ import org.apache.hadoop.yarn.util.StringHelper;
 /**
  * This class manages the list of applications for the resource manager. 
  */
-public class RMAppManager implements EventHandler<RMAppManagerEvent>, 
+public class RMAppManager implements EventHandler<RMAppManagerEvent>,
                                         Recoverable {
 
   private static final Logger LOG =
@@ -399,13 +399,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       RMAppState recoveredFinalState) throws YarnException {
 
     ApplicationPlacementContext placementContext = null;
-    if (recoveredFinalState == null) {
+    if (recoveredFinalState == null || (isRecovery && submissionContext.getQueue().equals("default"))) {
       placementContext = placeApplication(rmContext.getQueuePlacementManager(),
           submissionContext, user, isRecovery);
     }
 
     // We only replace the queue when it's a new application
-    if (!isRecovery) {
+    if (!isRecovery || submissionContext.getQueue().equals("default")) {
       copyPlacementQueueToSubmissionContext(placementContext,
           submissionContext);
 
