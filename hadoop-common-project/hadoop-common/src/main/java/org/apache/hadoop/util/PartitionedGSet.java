@@ -295,9 +295,9 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
       // Special case: an iterator was created for an empty PartitionedGSet.
       // Check whether new partitions have been added since then.
       if (partitionIterator == null) {
-        if (partitions.size() == 0)
+        if (partitions.size() == 0) {
           return false;
-        else {
+        } else {
           keyIterator = partitions.keySet().iterator();
           K nextKey = keyIterator.next();
           partitionIterator = partitions.get(nextKey).iterator();
@@ -316,8 +316,9 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
 
     @Override
     public E next() {
-      if (!hasNext())
+      if (!hasNext()) {
         throw new NoSuchElementException("No more elements in this set.");
+      }
       return partitionIterator.next();
     }
   }
