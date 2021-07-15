@@ -228,8 +228,9 @@ function github_status_recovery() {
 
 if [ -z "$1" ]; then
   echo "Must specify an argument for jenkins.sh"
-  echo "run_ci          - Runs the CI based on platform image as defined by DOCKERFILE"
-  echo "cleanup_ci_proc - Cleans up the processes spawned for running the CI"
+  echo "run_ci                  - Runs the CI based on platform image as defined by DOCKERFILE"
+  echo "cleanup_ci_proc         - Cleans up the processes spawned for running the CI"
+  echo "github_status_recovery  - Sends Github status"
   exit 1
 fi
 
