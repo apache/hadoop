@@ -64,8 +64,9 @@ public class TestFileSignerSecretProvider {
             AuthenticationFilter.SIGNATURE_SECRET_FILE,
             secretFile.getAbsolutePath());
 
-    Exception exception = assertThrows(RuntimeException.class,
-            () -> secretProvider.init(secretProviderProps, null, -1));
-    assertTrue(exception.getMessage().startsWith("No secret in signature secret file:"));
+    Exception exception = assertThrows(RuntimeException.class, () ->
+        secretProvider.init(secretProviderProps, null, -1));
+    assertTrue(exception.getMessage().startsWith(
+        "No secret in signature secret file:"));
   }
 }
