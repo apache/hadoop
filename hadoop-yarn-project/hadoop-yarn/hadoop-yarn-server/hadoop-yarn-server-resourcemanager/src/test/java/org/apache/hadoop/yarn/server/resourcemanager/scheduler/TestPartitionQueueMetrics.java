@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueM
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -110,6 +111,13 @@ public class TestPartitionQueueMetrics {
     checkResources(partitionSource, 0, 0, 0, 200 * GB, 200, 5 * GB, 5, 5);
     checkResources(rootQueueSource, 0, 0, 0, 200 * GB, 200, 5 * GB, 5, 5);
     checkResources(q2Source, 0, 0, 0, 0, 0, 3 * GB, 3, 3);
+
+    PartitionQueueMetrics pq1 =
+        new PartitionQueueMetrics(ms, "root.q1", parentQueue, true, CONF, "x");
+    Assert.assertTrue("Name of registry should be \""
+        + PartitionQueueMetrics.P_RECORD_INFO.name() + "\", but was \""
+        + pq1.registry.info().name() + "\".", pq1.registry.info().name()
+        .compareTo(PartitionQueueMetrics.P_RECORD_INFO.name()) == 0);
   }
 
   /**
