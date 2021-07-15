@@ -37,22 +37,22 @@ public class UnknownStoreException extends PathIOException {
   /**
    * Constructor.
    *
-   * @param message message.
    * @param path    path trying to access.
+   * @param message message.
    */
-  public UnknownStoreException(final String message, final String path) {
-    this(message, null, path);
+  public UnknownStoreException(final String path, final String message) {
+    this(path, message, null);
   }
 
   /**
    * Constructor.
    *
+   * @param path    path trying to access.
    * @param message message.
    * @param cause   cause (may be null).
-   * @param path    path trying to access.
    */
-  public UnknownStoreException(final String message, Throwable cause,
-      String path) {
+  public UnknownStoreException(String path, final String message,
+      Throwable cause) {
     super(path, message);
     if (cause != null) {
       initCause(cause);
