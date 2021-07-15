@@ -42,9 +42,9 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID;
-import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_METHOD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -152,12 +152,6 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
         DEFAULT_SCALE_TESTS_ENABLED));
     S3AFileSystem fs = getFileSystem();
     Path filePath = path(getMethodName());
-    // To force multi part put and get in small files, we'll set the
-    // threshold and part size to 5MB.
-    fs.getConf().set(Constants.MULTIPART_SIZE,
-        String.valueOf(MULTIPART_MIN_SIZE));
-    fs.getConf().set(Constants.MIN_MULTIPART_THRESHOLD,
-        String.valueOf(MULTIPART_MIN_SIZE));
     byte[] fileContent = dataset(BIG_FILE_SIZE, 'a', 26);
     int offsetSeek = fileContent[BIG_FILE_SIZE - 4];
 
@@ -209,8 +203,8 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     Path encryptedFilePath = path(getMethodName() + "cse");
 
     // Initialize a CSE disabled FS.
-    cseDisabledConf.unset(CLIENT_SIDE_ENCRYPTION_METHOD);
-    cseDisabledConf.unset(CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID);
+    cseDisabledConf.unset(S3_ENCRYPTION_ALGORITHM);
+    cseDisabledConf.unset(S3_ENCRYPTION_KEY);
     cseDisabledFS.initialize(getFileSystem().getUri(),
         cseDisabledConf);
 
@@ -268,6 +262,12 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.removeBaseAndBucketOverrides(conf, Constants.MULTIPART_SIZE,
         Constants.MIN_MULTIPART_THRESHOLD);
+    // To force multi part put and get in small files, we'll set the
+    // threshold and part size to 5MB.
+    conf.set(Constants.MULTIPART_SIZE,
+        String.valueOf(MULTIPART_MIN_SIZE));
+    conf.set(Constants.MIN_MULTIPART_THRESHOLD,
+        String.valueOf(MULTIPART_MIN_SIZE));
     return conf;
   }
 

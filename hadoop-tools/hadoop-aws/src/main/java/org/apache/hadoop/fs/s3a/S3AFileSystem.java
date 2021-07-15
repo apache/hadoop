@@ -421,15 +421,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // DT Bindings may override this
       setEncryptionSecrets(new EncryptionSecrets(
           getEncryptionAlgorithm(bucket, conf),
-          getServerSideEncryptionKey(bucket, getConf())));
+          getS3EncryptionKey(bucket, getConf())));
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
       initializeStatisticsBinding();
-      // If CSE method is set then CSE is enabled.
-      isCSEEnabled = conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null;
+      // If CSE-KMS method is set then CSE is enabled.
+      isCSEEnabled = S3AUtils.lookupPassword(conf,
+          S3_ENCRYPTION_ALGORITHM, null) != null;
       LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
-      setCSEGauge(isCSEEnabled);
+      setCSEGauge();
       // Username is the current user at the time the FS was instantiated.
       owner = UserGroupInformation.getCurrentUser();
       username = owner.getShortUserName();
@@ -555,8 +556,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
-      listing = new Listing(listingOperationCallbacks, createStoreContext(),
-          isCSEEnabled);
+      listing = new Listing(listingOperationCallbacks, createStoreContext());
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -573,10 +573,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Set the client side encryption gauge to 0 or 1, indicating if CSE is
    * enabled through the gauge or not.
-   *
-   * @param isCSEEnabled Boolean that tells if CSE is enabled or not in the FS.
    */
-  private void setCSEGauge(boolean isCSEEnabled) {
+  private void setCSEGauge() {
     IOStatisticsStore ioStatisticsStore =
         (IOStatisticsStore) getIOStatistics();
     if (isCSEEnabled) {
@@ -5434,6 +5432,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setContextAccessors(new ContextAccessorsImpl())
         .setTimeProvider(getTtlTimeProvider())
         .setAuditor(getAuditor())
+        .setEnableCSE(isCSEEnabled)
         .build();
   }
 

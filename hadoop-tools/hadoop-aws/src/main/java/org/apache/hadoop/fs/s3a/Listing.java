@@ -98,10 +98,10 @@ public class Listing extends AbstractStoreOperation {
   private final ListingOperationCallbacks listingOperationCallbacks;
 
   public Listing(ListingOperationCallbacks listingOperationCallbacks,
-                 StoreContext storeContext, boolean isCSEEnabled) {
+      StoreContext storeContext) {
     super(storeContext);
     this.listingOperationCallbacks = listingOperationCallbacks;
-    this.isCSEEnabled = isCSEEnabled;
+    this.isCSEEnabled = storeContext.isCSEEnabled();
   }
 
   /**

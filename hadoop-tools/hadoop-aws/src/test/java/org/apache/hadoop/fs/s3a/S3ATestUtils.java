@@ -1502,7 +1502,7 @@ public final class S3ATestUtils {
    */
   public static void skipIfKmsKeyIdIsNotSet(Configuration configuration) {
     if (configuration.get(
-        Constants.CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID) == null) {
+        S3_ENCRYPTION_KEY) == null) {
       skip("AWS KMS key id is not set");
     }
   }

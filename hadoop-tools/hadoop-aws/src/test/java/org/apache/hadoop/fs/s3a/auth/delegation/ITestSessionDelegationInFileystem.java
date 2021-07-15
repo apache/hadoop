@@ -143,15 +143,15 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
-        SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        SERVER_SIDE_ENCRYPTION_KEY);
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
     // switch to SSE_S3.
     if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
-      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
+      conf.set(S3_ENCRYPTION_ALGORITHM,
           S3AEncryptionMethods.SSE_S3.getMethod());
     }
     // set the YARN RM up for YARN tests.
@@ -340,8 +340,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // this is to simulate better a remote deployment.
     removeBaseAndBucketOverrides(bucket, conf,
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
-        SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        SERVER_SIDE_ENCRYPTION_KEY,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
         DELEGATION_TOKEN_ROLE_ARN,
         DELEGATION_TOKEN_ENDPOINT);
     // this is done to make sure you cannot create an STS session no

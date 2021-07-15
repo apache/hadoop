@@ -178,7 +178,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     if (useInconsistentClient()) {
       AmazonS3 client = getFileSystem()
           .getAmazonS3ClientForTesting("fault injection");
-      if(client instanceof InconsistentAmazonS3Client) {
+      if (client instanceof InconsistentAmazonS3Client) {
         inconsistentClient = (InconsistentAmazonS3Client) client;
       }
     }

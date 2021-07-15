@@ -125,14 +125,14 @@ public final class S3AUtils {
   public static final String SSE_C_NO_KEY_ERROR =
       S3AEncryptionMethods.SSE_C.getMethod()
           + " is enabled but no encryption key was declared in "
-          + SERVER_SIDE_ENCRYPTION_KEY;
+          + S3_ENCRYPTION_KEY;
   /**
    * Encryption SSE-S3 is used but the caller also set an encryption key.
    */
   public static final String SSE_S3_WITH_KEY_ERROR =
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
-          + SERVER_SIDE_ENCRYPTION_KEY;
+          + S3_ENCRYPTION_KEY;
   private static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
 
@@ -1563,7 +1563,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get any SSE key from a configuration/credential provider.
+   * Get any SSE/CSE key from a configuration/credential provider.
    * This operation handles the case where the option has been
    * set in the provider or configuration to the option
    * {@code OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY}.
@@ -1573,18 +1573,18 @@ public final class S3AUtils {
    * @return the encryption key or ""
    * @throws IllegalArgumentException bad arguments.
    */
-  public static String getServerSideEncryptionKey(String bucket,
+  public static String getS3EncryptionKey(String bucket,
       Configuration conf) {
     try {
-      return lookupPassword(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
+      return lookupPassword(bucket, conf, S3_ENCRYPTION_KEY);
     } catch (IOException e) {
-      LOG.error("Cannot retrieve " + SERVER_SIDE_ENCRYPTION_KEY, e);
+      LOG.error("Cannot retrieve " + S3_ENCRYPTION_KEY, e);
       return "";
     }
   }
 
   /**
-   * Get the server-side encryption algorithm.
+   * Get the server-side encryption or client side encryption algorithm.
    * This includes validation of the configuration, checking the state of
    * the encryption key given the chosen algorithm.
    *
@@ -1596,22 +1596,23 @@ public final class S3AUtils {
    */
   public static S3AEncryptionMethods getEncryptionAlgorithm(String bucket,
       Configuration conf) throws IOException {
-    S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
+    S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(
         lookupPassword(bucket, conf,
-            SERVER_SIDE_ENCRYPTION_ALGORITHM));
-    String sseKey = getServerSideEncryptionKey(bucket, conf);
-    int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
-    String diagnostics = passwordDiagnostics(sseKey, "key");
-    switch (sse) {
+            S3_ENCRYPTION_ALGORITHM));
+    String encryptionKey = getS3EncryptionKey(bucket, conf);
+    int encryptionKeyLen =
+        StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();
+    String diagnostics = passwordDiagnostics(encryptionKey, "key");
+    switch (encryptionMethod) {
     case SSE_C:
       LOG.debug("Using SSE-C with {}", diagnostics);
-      if (sseKeyLen == 0) {
+      if (encryptionKeyLen == 0) {
         throw new IOException(SSE_C_NO_KEY_ERROR);
       }
       break;
 
     case SSE_S3:
-      if (sseKeyLen != 0) {
+      if (encryptionKeyLen != 0) {
         throw new IOException(SSE_S3_WITH_KEY_ERROR
             + " (" + diagnostics + ")");
       }
@@ -1622,12 +1623,17 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case CSE_KMS:
+      LOG.debug("Using CSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");
       break;
     }
-    return sse;
+    return encryptionMethod;
   }
 
   /**

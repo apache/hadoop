@@ -41,6 +41,7 @@ import com.amazonaws.services.s3.model.EncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.RuntimeHttpUtils;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,14 +53,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID;
-import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_METHOD;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
@@ -124,12 +124,14 @@ public class DefaultS3ClientFactory extends Configured
     }
 
     try {
-      if (conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) == null) {
-        return buildAmazonS3Client(
+      if (S3AEncryptionMethods.getMethod(S3AUtils.
+          lookupPassword(conf, S3_ENCRYPTION_ALGORITHM, null))
+          .equals(S3AEncryptionMethods.CSE_KMS)) {
+        return buildAmazonS3EncryptionClient(
             awsConf,
             parameters);
       } else {
-        return buildAmazonS3EncryptionClient(
+        return buildAmazonS3Client(
             awsConf,
             parameters);
       }
@@ -144,13 +146,13 @@ public class DefaultS3ClientFactory extends Configured
    * {@link AmazonS3EncryptionV2} if CSE is enabled.
    *
    * @param awsConf    AWS configuration.
-   * @param parameters parameters
+   * @param parameters parameters.
    *
    * @return new AmazonS3 client.
    */
   protected AmazonS3 buildAmazonS3EncryptionClient(
       final ClientConfiguration awsConf,
-      final S3ClientCreationParameters parameters){
+      final S3ClientCreationParameters parameters) throws IOException {
 
     AmazonS3 client;
     AmazonS3EncryptionClientV2Builder builder =
@@ -158,10 +160,11 @@ public class DefaultS3ClientFactory extends Configured
     Configuration conf = getConf();
 
     //CSE-KMS Method
-    String kmsKeyId = conf.get(CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID);
+    String kmsKeyId = S3AUtils.lookupPassword(conf,
+        S3_ENCRYPTION_KEY, null);
     // Check if kmsKeyID is not null
     Preconditions.checkArgument(kmsKeyId != null, "CSE-KMS method "
-        + "requires KMS key ID. Use " + CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID
+        + "requires KMS key ID. Use " + S3_ENCRYPTION_KEY
         + " property to set it. ");
 
     EncryptionMaterialsProvider materialsProvider =

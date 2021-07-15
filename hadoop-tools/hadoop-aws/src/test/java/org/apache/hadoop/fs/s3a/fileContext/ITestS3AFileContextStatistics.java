@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FCStatisticsBaseTest;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 
@@ -31,7 +32,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
-import static org.apache.hadoop.fs.s3a.Constants.CLIENT_SIDE_ENCRYPTION_METHOD;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 
 /**
@@ -82,7 +83,8 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
     long expectedBlockSize = blockSize;
-    if (conf.get(CLIENT_SIDE_ENCRYPTION_METHOD) != null) {
+    if (conf.get(S3_ENCRYPTION_ALGORITHM, "")
+        .equals(S3AEncryptionMethods.CSE_KMS.getMethod())) {
       // Adding padding length and KMS key generation bytes written.
       expectedBlockSize += CSE_PADDING_LENGTH + 130;
     }

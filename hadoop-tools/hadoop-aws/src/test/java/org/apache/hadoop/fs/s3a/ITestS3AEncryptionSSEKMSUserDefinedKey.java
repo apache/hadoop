@@ -22,7 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 
 /**
@@ -37,13 +38,15 @@ public class ITestS3AEncryptionSSEKMSUserDefinedKey
   protected Configuration createConfiguration() {
     // get the KMS key for this test.
     Configuration c = new Configuration();
-    String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
-    if (StringUtils.isBlank(kmsKey)){
-      skip(SERVER_SIDE_ENCRYPTION_KEY+ " is not set for " +
-          SSE_KMS.getMethod());
+    String kmsKey = c.get(S3_ENCRYPTION_KEY);
+    if (StringUtils.isBlank(kmsKey) || !c.get(S3_ENCRYPTION_ALGORITHM)
+        .equals(S3AEncryptionMethods.CSE_KMS.name())) {
+      skip(S3_ENCRYPTION_KEY + " is not set for " +
+          SSE_KMS.getMethod() + " or CSE-KMS algorithm is used instead of "
+          + "SSE-KMS");
     }
     Configuration conf = super.createConfiguration();
-    conf.set(SERVER_SIDE_ENCRYPTION_KEY, kmsKey);
+    conf.set(S3_ENCRYPTION_KEY, kmsKey);
     return conf;
   }
 

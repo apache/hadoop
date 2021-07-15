@@ -420,8 +420,13 @@ public final class Constants {
       "fs.s3a.multipart.purge.age";
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
-  // s3 server-side encryption, see S3AEncryptionMethods for valid options
-  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
+  /**
+   * s3 server-side encryption or s3 client side encryption method, see
+   * {@link S3AEncryptionMethods} for valid options.
+   *
+   * {@value}
+   */
+  public static final String S3_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
   /**
@@ -437,14 +442,14 @@ public final class Constants {
 
   /**
    * Used to specify which AWS KMS key to use if
-   * {@link #SERVER_SIDE_ENCRYPTION_ALGORITHM} is
+   * {@link #S3_ENCRYPTION_ALGORITHM} is
    * {@code SSE-KMS} (will default to aws/s3
    * master key if left blank).
    * With with {@code SSE_C}, the base-64 encoded AES 256 key.
    * May be set within a JCEKS file.
    * Value: "{@value}".
    */
-  public static final String SERVER_SIDE_ENCRYPTION_KEY =
+  public static final String S3_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
   /**
@@ -1093,19 +1098,4 @@ public final class Constants {
    */
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
-  /**
-   * S3 client-side encryption(CSE) method.
-   * <p>
-   * Value: {@value}
-   */
-  public static final String CLIENT_SIDE_ENCRYPTION_METHOD =
-      "fs.s3a.cse.method";
-
-  /**
-   * Key ID for KMS S3 CSE method.
-   * <p>
-   * Value: {@value}
-   */
-  public static final String CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID =
-      "fs.s3a.cse.kms.key-id";
 }

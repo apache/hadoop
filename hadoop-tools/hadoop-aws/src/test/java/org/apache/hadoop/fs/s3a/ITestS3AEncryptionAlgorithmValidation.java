@@ -46,7 +46,7 @@ public class ITestS3AEncryptionAlgorithmValidation
 
         Configuration conf = super.createConfiguration();
         //DES is an invalid encryption algorithm
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, "DES");
+        conf.set(Constants.S3_ENCRYPTION_ALGORITHM, "DES");
         S3AContract contract = (S3AContract) createContract(conf);
         contract.init();
         //extract the test FS
@@ -67,13 +67,13 @@ public class ITestS3AEncryptionAlgorithmValidation
     //skip tests if they aren't enabled
     assumeEnabled();
     intercept(IllegalArgumentException.class, "The value of property " +
-        Constants.SERVER_SIDE_ENCRYPTION_KEY + " must not be null", () -> {
+        Constants.S3_ENCRYPTION_KEY + " must not be null", () -> {
 
         Configuration conf = super.createConfiguration();
         //SSE-C must be configured with an encryption key
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
             S3AEncryptionMethods.SSE_C.getMethod());
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, null);
+        conf.set(Constants.S3_ENCRYPTION_KEY, null);
         S3AContract contract = (S3AContract) createContract(conf);
         contract.init();
         //extract the test FS
@@ -95,9 +95,9 @@ public class ITestS3AEncryptionAlgorithmValidation
 
         Configuration conf = super.createConfiguration();
         //SSE-C must be configured with an encryption key
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
             S3AEncryptionMethods.SSE_C.getMethod());
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
+        conf.set(Constants.S3_ENCRYPTION_KEY, "");
         S3AContract contract = (S3AContract) createContract(conf);
         contract.init();
         //extract the test FS
@@ -121,9 +121,9 @@ public class ITestS3AEncryptionAlgorithmValidation
 
         Configuration conf = super.createConfiguration();
         //SSE-S3 cannot be configured with an encryption key
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
             S3AEncryptionMethods.SSE_S3.getMethod());
-        conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY,
+        conf.set(Constants.S3_ENCRYPTION_KEY,
             "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
         S3AContract contract = (S3AContract) createContract(conf);
         contract.init();
