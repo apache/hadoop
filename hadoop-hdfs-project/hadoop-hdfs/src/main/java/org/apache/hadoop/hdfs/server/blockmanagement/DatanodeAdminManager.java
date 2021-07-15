@@ -182,7 +182,7 @@ public class DatanodeAdminManager {
         + DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES);
 
     monitor = new Monitor(blocksPerInterval, maxConcurrentTrackedNodes);
-    executor.scheduleAtFixedRate(monitor, intervalSecs, intervalSecs,
+    executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
     LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
