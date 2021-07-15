@@ -255,7 +255,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   }
 
   private S3AEncryptionMethods encryptionAlgorithm() {
-    return getFileSystem().getServerSideEncryptionAlgorithm();
+    return getFileSystem().getS3EncryptionAlgorithm();
   }
 
   @Test

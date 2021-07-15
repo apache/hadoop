@@ -1170,7 +1170,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the encryption algorithm of this endpoint.
    * @return the encryption algorithm.
    */
-  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
+  public S3AEncryptionMethods getS3EncryptionAlgorithm() {
     return encryptionSecrets.getEncryptionMethod();
   }
 
@@ -1511,7 +1511,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new S3ObjectAttributes(bucket,
         f,
         pathToKey(f),
-        getServerSideEncryptionAlgorithm(),
+        getS3EncryptionAlgorithm(),
         encryptionSecrets.getEncryptionKey(),
         eTag,
         versionId,
@@ -4479,9 +4479,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       sb.append(", blockSize=").append(getDefaultBlockSize());
     }
     sb.append(", multiPartThreshold=").append(multiPartThreshold);
-    if (getServerSideEncryptionAlgorithm() != null) {
-      sb.append(", serverSideEncryptionAlgorithm='")
-          .append(getServerSideEncryptionAlgorithm())
+    if (getS3EncryptionAlgorithm() != null) {
+      sb.append(", s3EncryptionAlgorithm='")
+          .append(getS3EncryptionAlgorithm())
           .append('\'');
     }
     if (blockFactory != null) {
