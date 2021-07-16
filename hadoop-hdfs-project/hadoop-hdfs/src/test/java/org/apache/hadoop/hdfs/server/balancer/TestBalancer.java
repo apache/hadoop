@@ -1259,7 +1259,7 @@ public class TestBalancer {
       Field field1 = dispatcher.getClass().getDeclaredField("hotBlockTimeInterval");
       field1.setAccessible(true);
       Object hotBlockTimeInterval = field1.get(dispatcher);
-      assertEquals(1000, Long.parseLong(String.valueOf(hotBlockTimeInterval)));
+      assertEquals(1000, (long)hotBlockTimeInterval);
     } catch (Exception e) {
       Assert.fail(e.getMessage());
     }
