@@ -681,8 +681,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
             () -> s3.doesBucketExist(bucket)))) {
-      throw new UnknownStoreException("/", "Bucket " + bucket + " does not "
-          + "exist");
+      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
+          + "not exist");
     }
   }
 
@@ -700,8 +700,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
             () -> s3.doesBucketExistV2(bucket)))) {
-      throw new UnknownStoreException("/", "Bucket " + bucket + " does not "
-          + "exist");
+      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
+          + "not exist");
     }
   }
 
