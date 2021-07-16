@@ -4221,6 +4221,16 @@
 </property>
 
 <property>
+  <name>dfs.checksum.ec.socket-timeout</name>
+  <value>3000</value>
+  <description>
+    Default timeout value in milliseconds for computing the checksum of striped blocks.
+    Recommended to set the same value between client and DNs in a cluster because mismatching
+    may cause exhausting handler threads.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.block.write.locateFollowingBlock.retries</name>
   <value>5</value>
   <description>

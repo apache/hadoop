@@ -597,7 +597,7 @@ final class BlockChecksumHelper {
     private void checksumBlock(ExtendedBlock block, int blockIdx,
                                Token<BlockTokenIdentifier> blockToken,
                                DatanodeInfo targetDatanode) throws IOException {
-      int timeout = 3000;
+      int timeout = getDatanode().getDnConf().getEcChecksumSocketTimeout();
       try (IOStreamPair pair = getDatanode().connectToDN(targetDatanode,
           timeout, block, blockToken)) {
 
