@@ -121,7 +121,7 @@ public class INodeMap {
     }
 
     @Override
-    protected void readTopdUnlock() {
+    protected void readTopUnlock() {
       namesystem.getFSLock().readUnlock("INodeMap", null, false);
     }
 
@@ -194,7 +194,7 @@ public class INodeMap {
     // Compute the map capacity by allocating 1% of total memory
     int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
     this.map = new PartitionedGSet<>(capacity, new INodeKeyComparator(),
-            new INodeMapLock(), rootDir);
+            new INodeMapLock());
 
     // Pre-populate initial empty partitions
     PartitionedGSet<INode, INodeWithAdditionalFields> pgs =
