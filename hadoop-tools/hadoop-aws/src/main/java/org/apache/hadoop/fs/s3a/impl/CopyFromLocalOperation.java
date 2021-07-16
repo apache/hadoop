@@ -18,20 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import org.apache.commons.collections.comparators.ReverseComparator;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathExistsException;
-import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -48,17 +34,33 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.commons.collections.comparators.ReverseComparator;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
 
 /**
- * <p>Implementation of CopyFromLocalOperation</p>
+ * Implementation of CopyFromLocalOperation.
  * <p>
- *     This operation copies a file or directory (recursively) from a local
- *     FS to an object store. Initially, this operation has been developed for
- *     S3 (s3a) interaction, however, there's minimal work needed for it to
- *     work with other stores.
+ * This operation copies a file or directory (recursively) from a local
+ * FS to an object store. Initially, this operation has been developed for
+ * S3 (s3a) interaction, however, there's minimal work needed for it to
+ * work with other stores.
  * </p>
  * <p>How the uploading of files works:</p>
  * <ul>
@@ -74,7 +76,7 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinA
 public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
   /**
-   * Largest N files to be uploaded first
+   * Largest N files to be uploaded first.
    */
   private static final int LARGEST_N_FILES = 5;
 
@@ -129,6 +131,9 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     this.overwrite = overwrite;
     this.source = source;
     this.destination = destination;
+
+    // Capacity of 1 is a safe default for now since transfer manager can also
+    // spawn threads when uploading bigger files.
     this.executor = MoreExecutors.listeningDecorator(
         storeContext.createThrottledExecutor(1)
     );
@@ -137,10 +142,10 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   /**
    * Executes the {@link CopyFromLocalOperation}.
    *
-   * @throws IOException - if there are any failures with upload or deletion
-   * of files. Check {@link CopyFromLocalOperationCallbacks} for specifics.
+   * @throws IOException         - if there are any failures with upload or deletion
+   *                             of files. Check {@link CopyFromLocalOperationCallbacks} for specifics.
    * @throws PathExistsException - if the path exists and no overwrite flag
-   * is set OR if the source is file and destination is a directory
+   *                             is set OR if the source is file and destination is a directory
    */
   @Override
   @Retries.RetryTranslated
@@ -154,6 +159,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     if (getDestStatus().isPresent() && getDestStatus().get().isDirectory()
         && sourceFile.isDirectory()) {
       destination = new Path(destination, sourceFile.getName());
+      LOG.debug("Destination updated to: {}", destination);
       updateDestStatus(destination);
     }
 
@@ -276,7 +282,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   /**
    * Async call to upload a file.
    *
-   * @param file - File to be uploaded
+   * @param file        - File to be uploaded
    * @param uploadEntry - Upload entry holding the source and destination
    * @return the submitted future
    */
@@ -285,7 +291,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
       UploadEntry uploadEntry) {
     return submit(executor, callableWithinAuditSpan(
         getAuditSpan(), () -> {
-          callbacks.copyFileFromTo(
+          callbacks.copyLocalFileFromTo(
               file,
               uploadEntry.source,
               uploadEntry.destination);
@@ -295,7 +301,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   }
 
   /**
-   * Checks the source before upload starts
+   * Checks the source before upload starts.
    *
    * @param src - Source file
    * @throws FileNotFoundException - if the file isn't found
@@ -311,24 +317,26 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
    * Check the destination path and make sure it's compatible with the source,
    * i.e. source and destination are both files / directories.
    *
-   * @param dest - Destination path
-   * @param src - Source file
+   * @param dest      - Destination path
+   * @param src       - Source file
    * @param overwrite - Should source overwrite destination
    * @throws PathExistsException - If the destination path exists and no
-   * overwrite flag is set or source is file and destination is path
+   *                             overwrite flag is set
+   * @throws FileAlreadyExistsException - If source is file and destination is path
    */
   private void checkDestination(
       Path dest,
       File src,
-      boolean overwrite) throws PathExistsException {
+      boolean overwrite) throws PathExistsException,
+      FileAlreadyExistsException {
     if (!getDestStatus().isPresent()) {
       return;
     }
 
     if (src.isDirectory() && getDestStatus().get().isFile()) {
-      throw new PathExistsException(
-          "Source '" + src.getPath() +"' is file and " +
-              "destination '" + dest + "' is directory");
+      throw new FileAlreadyExistsException(
+          "Source '" + src.getPath() + "' is directory and " +
+              "destination '" + dest + "' is file");
     }
 
     if (!overwrite) {
@@ -337,7 +345,8 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   }
 
   /**
-   * Get the final path of a source file with regards to its destination
+   * Get the final path of a source file with regards to its destination.
+   *
    * @param src - source path
    * @return - the final path for the source file to be uploaded to
    * @throws PathIOException - if a relative path can't be created
@@ -346,7 +355,8 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     URI currentSrcUri = src.toUri();
     URI relativeSrcUri = source.toUri().relativize(currentSrcUri);
     if (relativeSrcUri.equals(currentSrcUri)) {
-      throw new PathIOException("Cannot get relative path");
+      throw new PathIOException("Cannot get relative path for URI:"
+          + relativeSrcUri);
     }
 
     Optional<FileStatus> status = getDestStatus();
@@ -430,10 +440,10 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   }
 
   /**
-   * <p>Represents an entry for a file to be uploaded.</p>
+   * <p>Represents an entry for a file to be moved.</p>
    * <p>
-   *     Helpful with sorting files by their size and keeping track of path
-   *     information for the upload.
+   * Helpful with sorting files by their size and keeping track of path
+   * information for the upload.
    * </p>
    */
   private static final class UploadEntry {
@@ -466,6 +476,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   public interface CopyFromLocalOperationCallbacks {
     /**
      * List all entries (files AND directories) for a path.
+     *
      * @param path - path to list
      * @return an iterator for all entries
      * @throws IOException - for any failure
@@ -475,6 +486,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
     /**
      * Get the file status for a path
+     *
      * @param path - target path
      * @return FileStatus
      * @throws IOException - for any failure
@@ -483,6 +495,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
     /**
      * Get the file from a path
+     *
      * @param path - target path
      * @return file at path
      */
@@ -490,7 +503,8 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
     /**
      * Delete file / directory at path
-     * @param path - target path
+     *
+     * @param path      - target path
      * @param recursive - recursive deletion
      * @return boolean result of operation
      * @throws IOException for any failure
@@ -499,18 +513,20 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
     /**
      * Copy / Upload a file from a source path to a destination path
-     * @param file - target file
-     * @param source - source path
+     *
+     * @param file        - target file
+     * @param source      - source path
      * @param destination - destination path
      * @throws IOException for any failure
      */
-    void copyFileFromTo(
+    void copyLocalFileFromTo(
         File file,
         Path source,
         Path destination) throws IOException;
 
     /**
      * Create empty directory at path. Most likely an upload operation
+     *
      * @param path - target path
      * @return boolean result of operation
      * @throws IOException for any failure

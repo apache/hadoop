@@ -19,15 +19,12 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.fs.contract.AbstractContractCopyFromLocalTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
-
-import java.io.File;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -50,19 +47,5 @@ public class ITestS3ACopyFromLocalFile extends
 
     intercept(IllegalArgumentException.class,
         () -> getFileSystem().copyFromLocalFile(false, true, dst, dst));
-  }
-
-  @Test
-  public void testSourceIsDirectoryAndDestinationIsFile() throws Throwable {
-    describe("Source is a directory and destination is a file should fail");
-
-    File file = createTempFile("local");
-    File source = createTempDirectory("srcDir");
-    Path destination = copyFromLocal(file, false);
-    Path sourcePath = new Path(source.toURI());
-
-    intercept(PathExistsException.class,
-        () -> getFileSystem().copyFromLocalFile(false, true,
-            sourcePath, destination));
   }
 }

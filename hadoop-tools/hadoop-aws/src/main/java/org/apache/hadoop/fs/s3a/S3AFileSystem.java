@@ -3825,7 +3825,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public void copyFileFromTo(File file, Path from, Path to) throws IOException {
+    public void copyLocalFileFromTo(File file, Path from, Path to) throws IOException {
       trackDurationAndSpan(
           OBJECT_PUT_REQUESTS,
           to,

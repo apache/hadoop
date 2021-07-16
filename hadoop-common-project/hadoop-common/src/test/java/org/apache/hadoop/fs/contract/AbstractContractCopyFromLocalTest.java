@@ -18,20 +18,22 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathExistsException;
-import org.junit.Test;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+
+import org.junit.Test;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathExistsException;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -53,7 +55,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
   public void testCopyEmptyFile() throws Throwable {
     file = File.createTempFile("test", ".txt");
     Path dest = copyFromLocal(file, true);
-    assertPathExists("uploaded file", dest);
+    assertPathExists("uploaded file not found", dest);
   }
 
   @Test
@@ -67,7 +69,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
     FileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(dest);
-    assertEquals("File length of " + status,
+    assertEquals("File length not equal " + status,
         message.getBytes(ASCII).length, status.getLen());
     assertFileTextEquals(dest, message);
   }
@@ -92,7 +94,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
   @Test
   public void testCopyMissingFile() throws Throwable {
-    describe("Copying a file that's not there should fail.");
+    describe("Copying a file that's not there must fail.");
     file = createTempFile("test");
     file.delete();
     // first upload to create
@@ -107,31 +109,34 @@ public abstract class AbstractContractCopyFromLocalTest extends
     file = createTempFile("test");
     copyFromLocal(file, false, true);
 
-    assertFalse("uploaded file", Files.exists(file.toPath()));
+    assertFalse("Source file not deleted", Files.exists(file.toPath()));
   }
 
   @Test
   public void testSourceIsFileAndDestinationIsDirectory() throws Throwable {
     describe("Source is a file and destination is a directory. File" +
-        "should be copied inside the directory.");
+        "must be copied inside the directory.");
 
     file = createTempFile("test");
     Path source = new Path(file.toURI());
     FileSystem fs = getFileSystem();
-
     File dir = createTempDirectory("test");
     Path destination = fileToPath(dir);
+
+    // Make sure there's nothing already existing at destination
     fs.delete(destination, false);
     mkdirs(destination);
-
     fs.copyFromLocalFile(source, destination);
+
+    Path expectedFile = path(dir.getName() + "/" + source.getName());
+    assertPathExists("File not copied into directory", expectedFile);
   }
 
   @Test
   public void testSourceIsFileAndDestinationIsNonExistentDirectory()
       throws Throwable {
     describe("Source is a file and destination directory does not exist. " +
-        "Copy operation should still work.");
+        "Copy operation must still work.");
 
     file = createTempFile("test");
     Path source = new Path(file.toURI());
@@ -140,15 +145,16 @@ public abstract class AbstractContractCopyFromLocalTest extends
     File dir = createTempDirectory("test");
     Path destination = fileToPath(dir);
     fs.delete(destination, false);
+    assertPathDoesNotExist("Destination not deleted", destination);
 
     fs.copyFromLocalFile(source, destination);
-    assertPathExists("Destination should exist.", destination);
+    assertPathExists("Destination doesn't exist.", destination);
   }
 
   @Test
   public void testSrcIsDirWithFilesAndCopySuccessful() throws Throwable {
-    describe("Source is a directory with files, copy should copy all" +
-        " dir contents to source");
+    describe("Source is a directory with files, copy must copy all" +
+        " dir contents to destination");
     String firstChild = "childOne";
     String secondChild = "childTwo";
     File parent = createTempDirectory("parent");
@@ -165,7 +171,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
   @Test
   public void testSrcIsEmptyDirWithCopySuccessful() throws Throwable {
-    describe("Source is an empty directory, copy should succeed");
+    describe("Source is an empty directory, copy must succeed");
     File source = createTempDirectory("source");
     Path dest = copyFromLocal(source, false);
 
@@ -175,12 +181,9 @@ public abstract class AbstractContractCopyFromLocalTest extends
   @Test
   public void testSrcIsDirWithOverwriteOptions() throws Throwable {
     describe("Source is a directory, destination exists and" +
-        "should be overwritten.");
-    // Disabling checksum because overwriting directories does not
-    // overwrite checksums
-    FileSystem fs = getFileSystem();
-    fs.setVerifyChecksum(false);
+        "must be overwritten.");
 
+    FileSystem fs = getFileSystem();
     File source = createTempDirectory("source");
     Path sourcePath = new Path(source.toURI());
     String contents = "test file";
@@ -194,18 +197,17 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
     String updated = "updated contents";
     FileUtils.write(child, updated, ASCII);
-    fs.copyFromLocalFile(false, true, sourcePath, dest);
+    fs.copyFromLocalFile(sourcePath, dest);
 
     assertPathExists("Parent directory not copied", fileToPath(source));
     assertFileTextEquals(fileToPath(child, source.getParentFile()),
         updated);
-    getFileSystem().setVerifyChecksum(true);
   }
 
   @Test
   public void testSrcIsDirWithDelSrcOptions() throws Throwable {
-    describe("Source is a directory, destination exists and" +
-        "should be overwritten.");
+    describe("Source is a directory containing a file and delSrc flag is set" +
+        ", this must delete the source after the copy.");
     File source = createTempDirectory("source");
     String contents = "child file";
     File child = createTempFile(source, "child", contents);
@@ -235,11 +237,16 @@ public abstract class AbstractContractCopyFromLocalTest extends
     copyFromLocal(srcDir, false, false);
     File root = srcDir.getParentFile();
 
-    assertPathExists("Parent directory", fileToPath(srcDir));
-    assertPathExists("Child directory", fileToPath(childDir, root));
-    assertPathExists("Second Child directory", fileToPath(secondChild, root));
-    assertPathExists("Parent file", fileToPath(parentFile, root));
-    assertPathExists("Child file", fileToPath(childFile, root));
+    assertPathExists("Parent directory not found",
+        fileToPath(srcDir));
+    assertPathExists("Child directory not found",
+        fileToPath(childDir, root));
+    assertPathExists("Second child directory not found",
+        fileToPath(secondChild, root));
+    assertPathExists("Parent file not found",
+        fileToPath(parentFile, root));
+    assertPathExists("Child file not found",
+        fileToPath(childFile, root));
   }
 
   @Test
@@ -251,8 +258,22 @@ public abstract class AbstractContractCopyFromLocalTest extends
     Path dst = path(srcDir.getFileName().toString());
     getFileSystem().copyFromLocalFile(true, true, src, dst);
 
-    assertFalse("Source directory should've been deleted",
+    assertFalse("Source directory was not deleted",
         Files.exists(srcDir));
+  }
+
+  @Test
+  public void testSourceIsDirectoryAndDestinationIsFile() throws Throwable {
+    describe("Source is a directory and destination is a file must fail");
+
+    File file = createTempFile("local");
+    File source = createTempDirectory("srcDir");
+    Path destination = copyFromLocal(file, false);
+    Path sourcePath = new Path(source.toURI());
+
+    intercept(FileAlreadyExistsException.class,
+        () -> getFileSystem().copyFromLocalFile(false, true,
+            sourcePath, destination));
   }
 
   protected Path fileToPath(File file) throws IOException {

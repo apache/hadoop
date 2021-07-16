@@ -1422,9 +1422,9 @@ operations related to the part of the file being truncated is undefined.
 ### `boolean copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, Path dst)`
 
 The source file or directory at `src` is on the local disk and is copied into the file system at
-destination `dst`. If the source should be deleted after the move then `delSrc` flag needs to be
-set to TRUE. If destination already exists, and the destination contents should be overwritten
-then `overwrite` flag should be set to TRUE.
+destination `dst`. If the source must be deleted after the move then `delSrc` flag must be
+set to TRUE. If destination already exists, and the destination contents must be overwritten
+then `overwrite` flag must be set to TRUE.
 
 #### Preconditions
 
@@ -1434,10 +1434,11 @@ The source file or directory must exist:
 
 Directories cannot be copied into files regardless to what the overwrite flag is set to:
 
-    if isDir(FS, src) && isFile(FS, dst) : raise PathExistsException
+    if isDir(FS, src) and isFile(FS, dst) : raise PathExistsException
 
-If destination exists and the above precondition holds then the overwrite flag must be set to TRUE
-for the operation to succeed. This will also overwrite any files / directories at the destination:
+For all cases, except the one for which the above precondition throws, the overwrite flag must be
+set to TRUE for the operation to succeed. This will also overwrite any files / directories at the
+destination:
 
     if exists(FS, dst) && not overwrite : raise PathExistsException
 
