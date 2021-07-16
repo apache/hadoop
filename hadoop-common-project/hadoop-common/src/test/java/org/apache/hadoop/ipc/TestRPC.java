@@ -113,6 +113,7 @@ public class TestRPC extends TestRpcBase {
   @Before
   public void setup() {
     setupConf();
+    conf.set(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, "NANOSECONDS");
   }
 
   int datasize = 1024*100;

@@ -18,6 +18,7 @@
 package org.apache.hadoop.ipc.metrics;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -50,8 +51,13 @@ public class RpcMetrics {
   final MetricsRegistry registry;
   final String name;
   final boolean rpcQuantileEnable;
+
+  private static final TimeUnit DEFAULT_METRIC_TIME_UNIT =
+      TimeUnit.MILLISECONDS;
   /** The time unit used when storing/accessing time durations. */
-  private static TimeUnit metricsTimeUnit = TimeUnit.MILLISECONDS;
+  private static TimeUnit metricsTimeUnit = DEFAULT_METRIC_TIME_UNIT;
+  private static final AtomicBoolean METRICS_TIME_UNIT_UPDATED =
+      new AtomicBoolean(false);
   
   RpcMetrics(Server server, Configuration conf) {
     String port = String.valueOf(server.getListenerAddress().getPort());
@@ -108,14 +114,18 @@ public class RpcMetrics {
 
   private static void setMetricTimeUnit(Configuration conf) {
     String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
-    if (StringUtils.isNotEmpty(timeunit)) {
+    // If rpc.metrics.timeunit config is available, update metricsTimeUnit
+    // only once for first server (of type RPC.Server) initialization
+    if (StringUtils.isNotEmpty(timeunit)
+        && METRICS_TIME_UNIT_UPDATED.compareAndSet(false, true)) {
       try {
         metricsTimeUnit = TimeUnit.valueOf(timeunit);
       } catch (IllegalArgumentException e) {
         LOG.info("Config key {} 's value {} does not correspond to enum values"
                 + " of java.util.concurrent.TimeUnit. Hence default unit"
-                + " MILLISECONDS will be used",
-            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit);
+                + " {} will be used",
+            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
+            DEFAULT_METRIC_TIME_UNIT);
       }
     }
   }
