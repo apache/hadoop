@@ -254,7 +254,7 @@ public final class S3AUtils {
       case 404:
         if (isUnknownBucket(ase)) {
           // this is a missing bucket
-          ioe = new UnknownStoreException(path, ase);
+          ioe = new UnknownStoreException(path, message, ase);
         } else {
           // a normal unknown object
           ioe = new FileNotFoundException(message);
