@@ -162,12 +162,12 @@ public class ITestS3AAWSCredentialsProvider {
     conf.set(AWS_CREDENTIALS_PROVIDER,
         AnonymousAWSCredentialsProvider.class.getName());
     Path testFile = getCSVTestPath(conf);
-    FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf);
-    assertNotNull(fs);
-    assertTrue(fs instanceof S3AFileSystem);
-    FileStatus stat = fs.getFileStatus(testFile);
-    assertNotNull(stat);
-    assertEquals(testFile, stat.getPath());
+    try (FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf);) {
+        assertNotNull(fs);
+        assertTrue(fs instanceof S3AFileSystem);
+        FileStatus stat = fs.getFileStatus(testFile);
+        assertNotNull(stat);
+        assertEquals(testFile, stat.getPath());
+    }
   }
-
 }
