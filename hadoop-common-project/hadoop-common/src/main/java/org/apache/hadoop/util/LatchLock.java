@@ -30,7 +30,7 @@ public abstract class LatchLock<C> {
   protected abstract boolean isReadTopLocked();
   /** @return true topLock is locked for write by any thread */
   protected abstract boolean isWriteTopLocked();
-  protected abstract void readTopdUnlock();
+  protected abstract void readTopUnlock();
   protected abstract void writeTopUnlock();
 
   protected abstract boolean hasReadChildLock();
@@ -46,7 +46,7 @@ public abstract class LatchLock<C> {
   // Public APIs to use with the class
   public void readLock() {
     readChildLock();
-    readTopdUnlock();
+    readTopUnlock();
   }
 
   public void readUnlock() {

@@ -24,7 +24,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
-
+import java.util.NoSuchElementException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
@@ -79,8 +79,7 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
 
   public PartitionedGSet(final int capacity,
       final Comparator<? super K> comparator,
-      final LatchLock<?> latchLock,
-      final E rootKey) {
+      final LatchLock<?> latchLock) {
     this.partitions = new TreeMap<K, PartitionEntry>(comparator);
     this.latchLock = latchLock;
     // addNewPartition(rootKey).put(rootKey);
@@ -275,17 +274,36 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
    * modifying other partitions, while iterating through the current one.
    */
   private class EntryIterator implements Iterator<E> {
-    private final Iterator<K> keyIterator;
+    private Iterator<K> keyIterator;
     private Iterator<E> partitionIterator;
 
     public EntryIterator() {
       keyIterator = partitions.keySet().iterator();
-      K curKey = partitions.firstKey();
-      partitionIterator = getPartition(curKey).iterator();
+ 
+      if (!keyIterator.hasNext()) {
+        partitionIterator = null;
+        return;
+      }
+
+      K firstKey = keyIterator.next();
+      partitionIterator = partitions.get(firstKey).iterator();
     }
 
     @Override
     public boolean hasNext() {
+
+      // Special case: an iterator was created for an empty PartitionedGSet.
+      // Check whether new partitions have been added since then.
+      if (partitionIterator == null) {
+        if (partitions.size() == 0) {
+          return false;
+        } else {
+          keyIterator = partitions.keySet().iterator();
+          K nextKey = keyIterator.next();
+          partitionIterator = partitions.get(nextKey).iterator();
+        }
+      }
+
       while(!partitionIterator.hasNext()) {
         if(!keyIterator.hasNext()) {
           return false;
@@ -298,9 +316,8 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
 
     @Override
     public E next() {
-      while(!partitionIterator.hasNext()) {
-        K curKey = keyIterator.next();
-        partitionIterator = getPartition(curKey).iterator();
+      if (!hasNext()) {
+        throw new NoSuchElementException("No more elements in this set.");
       }
       return partitionIterator.next();
     }
