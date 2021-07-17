@@ -29,7 +29,6 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.Server.Connection;
-import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
@@ -113,7 +112,6 @@ public class TestRPC extends TestRpcBase {
   @Before
   public void setup() {
     setupConf();
-    conf.set(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, "NANOSECONDS");
   }
 
   int datasize = 1024*100;
@@ -1099,7 +1097,7 @@ public class TestRPC extends TestRpcBase {
       proxy.lockAndSleep(null, newSleepRequest(5));
       rpcMetrics = getMetrics(server.getRpcMetrics().name());
       assertGauge("RpcLockWaitTimeAvgTime",
-          (double)(RpcMetrics.getMetricsTimeUnit().convert(10L,
+          (double)(server.getRpcMetrics().getMetricsTimeUnit().convert(10L,
               TimeUnit.SECONDS)), rpcMetrics);
     } finally {
       if (proxy2 != null) {
@@ -1649,7 +1647,7 @@ public class TestRPC extends TestRpcBase {
       proxy.lockAndSleep(null, newSleepRequest(5));
       rpcMetrics = getMetrics(server.getRpcMetrics().name());
       assertGauge("RpcLockWaitTimeAvgTime",
-          (double)(RpcMetrics.getMetricsTimeUnit().convert(10L,
+          (double)(server.getRpcMetrics().getMetricsTimeUnit().convert(10L,
               TimeUnit.SECONDS)), rpcMetrics);
       LOG.info("RpcProcessingTimeAvgTime: {} , RpcQueueTimeAvgTime: {}",
           getDoubleGauge("RpcProcessingTimeAvgTime", rpcMetrics),

@@ -41,6 +41,7 @@ import javax.management.ObjectName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.AtomicDoubleArray;
@@ -193,6 +194,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final String namespace;
   private final int topUsersCount; // e.g., report top 10 users' metrics
   private static final double PRECISION = 0.0001;
+  private final TimeUnit metricsTimeUnit;
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
   private final Map<String, Integer> staticPriorities = new HashMap<>();
@@ -265,6 +267,24 @@ public class DecayRpcScheduler implements RpcScheduler,
     decayRpcSchedulerDetailedMetrics =
         DecayRpcSchedulerDetailedMetrics.create(ns);
     decayRpcSchedulerDetailedMetrics.init(numLevels);
+
+    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
+    TimeUnit tmpTimeUnit;
+    if (StringUtils.isNotEmpty(timeunit)) {
+      try {
+        tmpTimeUnit = TimeUnit.valueOf(timeunit);
+      } catch (IllegalArgumentException e) {
+        LOG.info("Config key {} 's value {} does not correspond to enum values"
+                + " of java.util.concurrent.TimeUnit. Hence default unit"
+                + " {} will be used",
+            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
+            RpcMetrics.DEFAULT_METRIC_TIME_UNIT);
+        tmpTimeUnit = RpcMetrics.DEFAULT_METRIC_TIME_UNIT;
+      }
+    } else {
+      tmpTimeUnit = RpcMetrics.DEFAULT_METRIC_TIME_UNIT;
+    }
+    metricsTimeUnit = tmpTimeUnit;
 
     // Setup delay timer
     Timer timer = new Timer(true);
@@ -725,9 +745,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.getMetricsTimeUnit());
+    long queueTime = details.get(Timing.QUEUE, metricsTimeUnit);
     long processingTime = details.get(Timing.PROCESSING,
-        RpcMetrics.getMetricsTimeUnit());
+        metricsTimeUnit);
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);

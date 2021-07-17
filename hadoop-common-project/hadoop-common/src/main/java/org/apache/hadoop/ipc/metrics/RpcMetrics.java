@@ -18,10 +18,8 @@
 package org.apache.hadoop.ipc.metrics;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.Server;
@@ -52,13 +50,11 @@ public class RpcMetrics {
   final String name;
   final boolean rpcQuantileEnable;
 
-  private static final TimeUnit DEFAULT_METRIC_TIME_UNIT =
+  public static final TimeUnit DEFAULT_METRIC_TIME_UNIT =
       TimeUnit.MILLISECONDS;
   /** The time unit used when storing/accessing time durations. */
-  private static TimeUnit metricsTimeUnit = DEFAULT_METRIC_TIME_UNIT;
-  private static final AtomicBoolean METRICS_TIME_UNIT_UPDATED =
-      new AtomicBoolean(false);
-  
+  private final TimeUnit metricsTimeUnit;
+
   RpcMetrics(Server server, Configuration conf) {
     String port = String.valueOf(server.getListenerAddress().getPort());
     name = "RpcActivityForPort" + port;
@@ -71,6 +67,23 @@ public class RpcMetrics {
     rpcQuantileEnable = (intervals.length > 0) && conf.getBoolean(
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE,
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE_DEFAULT);
+    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
+    TimeUnit tmpTimeUnit;
+    if (StringUtils.isNotEmpty(timeunit)) {
+      try {
+        tmpTimeUnit = TimeUnit.valueOf(timeunit);
+      } catch (IllegalArgumentException e) {
+        LOG.info("Config key {} 's value {} does not correspond to enum values"
+                + " of java.util.concurrent.TimeUnit. Hence default unit"
+                + " {} will be used",
+            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
+            DEFAULT_METRIC_TIME_UNIT);
+        tmpTimeUnit = DEFAULT_METRIC_TIME_UNIT;
+      }
+    } else {
+      tmpTimeUnit = DEFAULT_METRIC_TIME_UNIT;
+    }
+    metricsTimeUnit = tmpTimeUnit;
     if (rpcQuantileEnable) {
       rpcQueueTimeQuantiles =
           new MutableQuantiles[intervals.length];
@@ -105,29 +118,8 @@ public class RpcMetrics {
   public String name() { return name; }
 
   public static RpcMetrics create(Server server, Configuration conf) {
-    if (server instanceof RPC.Server) {
-      setMetricTimeUnit(conf);
-    }
     RpcMetrics m = new RpcMetrics(server, conf);
     return DefaultMetricsSystem.instance().register(m.name, null, m);
-  }
-
-  private static void setMetricTimeUnit(Configuration conf) {
-    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
-    // If rpc.metrics.timeunit config is available, update metricsTimeUnit
-    // only once for first server (of type RPC.Server) initialization
-    if (StringUtils.isNotEmpty(timeunit)
-        && METRICS_TIME_UNIT_UPDATED.compareAndSet(false, true)) {
-      try {
-        metricsTimeUnit = TimeUnit.valueOf(timeunit);
-      } catch (IllegalArgumentException e) {
-        LOG.info("Config key {} 's value {} does not correspond to enum values"
-                + " of java.util.concurrent.TimeUnit. Hence default unit"
-                + " {} will be used",
-            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
-            DEFAULT_METRIC_TIME_UNIT);
-      }
-    }
   }
 
   @Metric("Number of received bytes") MutableCounterLong receivedBytes;
@@ -170,7 +162,7 @@ public class RpcMetrics {
     return server.getNumDroppedConnections();
   }
 
-  public static TimeUnit getMetricsTimeUnit() {
+  public TimeUnit getMetricsTimeUnit() {
     return metricsTimeUnit;
   }
 
