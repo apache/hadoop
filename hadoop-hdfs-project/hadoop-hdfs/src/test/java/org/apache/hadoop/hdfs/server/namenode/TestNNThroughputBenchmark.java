@@ -26,8 +26,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -114,6 +117,49 @@ public class TestNNThroughputBenchmark {
       benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
       NNThroughputBenchmark.runBenchmark(benchConf,
           new String[]{"-fs", cluster.getURI().toString(), "-op", "all"});
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * for append operation.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputForAppendOp() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {"-op", "create", "-keepResults", "-files", "3",
+              "-close" });
+      FSNamesystem fsNamesystem = cluster.getNamesystem();
+      DirectoryListing listing =
+          fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
+      HdfsFileStatus[] partialListing = listing.getPartialListing();
+
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {"-op", "append", "-files", "3", "-useExisting" });
+      listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
+      HdfsFileStatus[] partialListingAfter = listing.getPartialListing();
+
+      Assert.assertEquals(partialListing.length, partialListingAfter.length);
+      for (int i = 0; i < partialListing.length; i++) {
+        //Check the modification time after append operation
+        Assert.assertNotEquals(partialListing[i].getModificationTime(),
+            partialListingAfter[i].getModificationTime());
+      }
+
     } finally {
       if (cluster != null) {
         cluster.shutdown();
