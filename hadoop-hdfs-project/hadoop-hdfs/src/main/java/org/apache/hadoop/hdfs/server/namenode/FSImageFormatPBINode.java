@@ -276,9 +276,10 @@ public final class FSImageFormatPBINode {
         if (e == null) {
           break;
         }
-        INodeDirectory p = dir.getInode(e.getParent()).asDirectory();
+        INodeDirectory p =
+            dir.getInodeFromTempINodeMap(e.getParent()).asDirectory();
         for (long id : e.getChildrenList()) {
-          INode child = dir.getInode(id);
+          INode child = dir.getInodeFromTempINodeMap(id);
           if (!addToParent(p, child)) {
             LOG.warn("Failed to add the inode {} to the directory {}",
                 child.getId(), p.getId());
@@ -382,6 +383,7 @@ public final class FSImageFormatPBINode {
         if (p == null) {
           break;
         }
+        LOG.debug("loadINodesInSection: cntr={}, inode={}", cntr, p.getId());
         if (p.getId() == INodeId.ROOT_INODE_ID) {
           synchronized(this) {
             loadRootINode(p);
@@ -389,7 +391,7 @@ public final class FSImageFormatPBINode {
         } else {
           INode n = loadINode(p);
           synchronized(this) {
-            dir.addToInodeMap(n);
+            dir.addToTempInodeMap(n);
           }
           fillUpInodeList(inodeList, n);
         }
@@ -761,7 +763,7 @@ public final class FSImageFormatPBINode {
               DirEntry.newBuilder().setParent(n.getId());
           for (INode inode : children) {
             // Error if the child inode doesn't exist in inodeMap
-            if (dir.getInode(inode.getId()) == null) {
+            if (dir.getInode(inode) == null) {
               FSImage.LOG.error(
                   "FSImageFormatPBINode#serializeINodeDirectorySection: " +
                       "Dangling child pointer found. Missing INode in " +
@@ -812,6 +814,7 @@ public final class FSImageFormatPBINode {
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
         INodeWithAdditionalFields n = iter.next();
+        LOG.debug("i = {}, save inode: {}", i, n);
         save(out, n);
         ++i;
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {

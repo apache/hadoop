@@ -761,6 +761,16 @@ public class FSImage implements Closeable {
           "above for more info.");
     }
     prog.endPhase(Phase.LOADING_FSIMAGE);
+
+    /*
+     * loadEdits always sets the parent of an inode before adding the inode to
+     * inodeMap. So, it is safe to move inodes from inodeMapTemp to inodeMap
+     * before loadEdits.
+     */
+    FSDirectory dir = target.getFSDirectory();
+    dir.moveInodes();
+    LOG.info("LOADING_FSIMAGE: loaded {} inodes into inodeMap",
+        dir.getINodeMap().size());
     
     if (!rollingRollback) {
       prog.beginPhase(Phase.LOADING_EDITS);
@@ -776,6 +786,8 @@ public class FSImage implements Closeable {
       needToSave = false;
     }
     editLog.setNextTxId(lastAppliedTxId + 1);
+    LOG.info("LOADING_EDITS: loaded {} inodes into inodeMap",
+        dir.getINodeMap().size());
     return needToSave;
   }
 
