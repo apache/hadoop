@@ -129,7 +129,7 @@
     <kerby.version>1.0.1</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
-    <hikari.version>2.4.12</hikari.version>
+    <hikari.version>4.0.3</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
     <jdom.version>1.1</jdom.version>
@@ -1686,7 +1686,7 @@
         </dependency>
         <dependency>
           <groupId>com.zaxxer</groupId>
-          <artifactId>HikariCP-java7</artifactId>
+          <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
         </dependency>
         <dependency>
