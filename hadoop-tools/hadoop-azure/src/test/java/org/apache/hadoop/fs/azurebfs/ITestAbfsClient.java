@@ -93,7 +93,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testListPathWithValidListMaxResultsValues()
       throws IOException, ExecutionException, InterruptedException {
     final int fileCount = 10;
-    final Path directory = path("testWithValidListMaxResultsValues");
+    final Path directory = getUniquePath("testWithValidListMaxResultsValues");
     createDirectoryWithNFiles(directory, fileCount);
     final int[] testData = {fileCount + 100, fileCount + 1, fileCount,
         fileCount - 1, 1};
@@ -114,7 +114,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testListPathWithValueGreaterThanServerMaximum()
       throws IOException, ExecutionException, InterruptedException {
     setListMaxResults(LIST_MAX_RESULTS_SERVER + 100);
-    final Path directory = path(
+    final Path directory = getUniquePath(
         "testWithValueGreaterThanServerMaximum");
     createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
     Assertions.assertThat(listPath(directory.toString())).describedAs(
