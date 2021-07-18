@@ -180,11 +180,14 @@ public class ITestAzureBlobFileSystemRename extends
     fs.mkdirs(new Path(testDir2 + "/test4"));
     Assert.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
     assertPathExists(fs, "This path should exist", testDir2);
-    assertPathExists(fs, "This path should exist", new Path(testDir2 + "/test1/test2"));
-    assertPathExists(fs, "This path should exist",new Path(testDir2 + "/test4"));
-    assertPathExists(fs, "This path should exist",new Path(testDir2 + "/test4/test3"));
-    assertPathDoesNotExist(fs, "This path should not exist", new Path(testDir2 +
-        "/test1/test2/test3"));
+    assertPathExists(fs, "This path should exist",
+        new Path(testDir2 + "/test1/test2"));
+    assertPathExists(fs, "This path should exist",
+        new Path(testDir2 + "/test4"));
+    assertPathExists(fs, "This path should exist",
+        new Path(testDir2 + "/test4/test3"));
+    assertPathDoesNotExist(fs, "This path should not exist",
+        new Path(testDir2 + "/test1/test2/test3"));
   }
 
   @Test

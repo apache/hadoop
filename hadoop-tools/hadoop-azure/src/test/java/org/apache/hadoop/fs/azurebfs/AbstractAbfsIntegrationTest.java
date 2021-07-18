@@ -26,7 +26,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
