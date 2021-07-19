@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
@@ -193,10 +192,7 @@ public class LogAggregationTFileController
       if ((nodeId == null || nodeName.contains(LogAggregationUtils
           .getNodeString(nodeId))) && !nodeName.endsWith(
               LogAggregationUtils.TMP_FILE_SUFFIX)) {
-        AggregatedLogFormat.LogReader reader = null;
-        try {
-          reader = new AggregatedLogFormat.LogReader(conf,
-              thisNodeFile.getPath());
+        try (LogReader reader = new LogReader(conf, thisNodeFile.getPath())) {
           DataInputStream valueStream;
           LogKey key = new LogKey();
           valueStream = reader.next(key);
@@ -251,10 +247,10 @@ public class LogAggregationTFileController
             key = new LogKey();
             valueStream = reader.next(key);
           }
-        } finally {
-          if (reader != null) {
-            reader.close();
-          }
+        } catch (IOException ex) {
+          LOG.error("Skipping empty or corrupt file " +
+              thisNodeFile.getPath(), ex);
+          continue; // skip empty or corrupt files
         }
       }
     }
@@ -268,10 +264,7 @@ public class LogAggregationTFileController
     Map<String, List<ContainerLogFileInfo>> logMetaFiles = new HashMap<>();
     Path nodePath = currentNodeFile.getPath();
 
-    LogReader reader =
-        new LogReader(conf,
-            nodePath);
-    try {
+    try (LogReader reader = new LogReader(conf, nodePath)) {
       DataInputStream valueStream;
       LogKey key = new LogKey();
       valueStream = reader.next(key);
@@ -286,8 +279,6 @@ public class LogAggregationTFileController
         key = new LogKey();
         valueStream = reader.next(key);
       }
-    } finally {
-      reader.close();
     }
     return logMetaFiles;
   }
@@ -349,10 +340,8 @@ public class LogAggregationTFileController
       }
       if (!thisNodeFile.getPath().getName()
           .endsWith(LogAggregationUtils.TMP_FILE_SUFFIX)) {
-        AggregatedLogFormat.LogReader reader =
-            new AggregatedLogFormat.LogReader(conf,
-            thisNodeFile.getPath());
-        try {
+        try (LogReader reader = new LogReader(conf,
+            thisNodeFile.getPath())) {
           DataInputStream valueStream;
           LogKey key = new LogKey();
           valueStream = reader.next(key);
@@ -383,8 +372,10 @@ public class LogAggregationTFileController
             key = new LogKey();
             valueStream = reader.next(key);
           }
-        } finally {
-          reader.close();
+        } catch (IOException ex) {
+          LOG.error("Skipping empty or corrupt file " +
+              thisNodeFile.getPath(), ex);
+          continue; // skip empty or corrupt files
         }
       }
     }
