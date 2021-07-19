@@ -56,7 +56,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
@@ -66,9 +65,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestIODataParameters;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.IOUtils;
@@ -810,7 +807,7 @@ public class AbfsClient implements Closeable {
 
     AbfsRestOperation op = null;
 
-    if (reqParams.getMode() == Mode.FASTPATH_CONNECTION_MODE) {
+    if (reqParams.getConnectionType() == AbfsConnectionType.FASTPATH) {
       op = executeFastpathRead(path, reqParams, url, requestHeaders, buffer,
           sasTokenForReuse, tracingContext);
     } else {
@@ -827,7 +824,7 @@ public class AbfsClient implements Closeable {
           ioDataParams,
           sasTokenForReuse);
 
-      op.execute(tracingContext);
+      op.execute(tracingContext, reqParams.getAbfsConnectionMode());
     }
 
     return op;
@@ -1286,15 +1283,16 @@ public class AbfsClient implements Closeable {
         sasTokenForReuse);
 
     try {
-      op.execute(tracingContext);
+      op.execute(tracingContext, reqParams.getAbfsConnectionMode());
       return op;
     } catch (AbfsFastpathException ex) {
       // Fastpath threw irrecoverable exception
-        reqParams.setMode(Mode.HTTP_CONNECTION_MODE);
         if (ex.getCause() instanceof FastpathRequestException) {
-          tracingContext.setFastpathStatus(FastpathStatus.REQ_FAIL_REST_FALLBACK);
+          tracingContext.setConnectionMode(AbfsConnectionMode.FASTPATH_REQ_FAIL_REST_FALLBACK);
+          reqParams.setConnectionMode(AbfsConnectionMode.FASTPATH_REQ_FAIL_REST_FALLBACK);
         } else {
-          tracingContext.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
+          tracingContext.setConnectionMode(AbfsConnectionMode.FASTPATH_CONN_FAIL_REST_FALLBACK);
+          reqParams.setConnectionMode(AbfsConnectionMode.FASTPATH_CONN_FAIL_REST_FALLBACK);
         }
 
         return read(path, buffer, op.getSasToken(), reqParams, tracingContext);
@@ -1313,7 +1311,7 @@ public class AbfsClient implements Closeable {
         url,
         requestHeaders,
         sasTokenForReuse);
-    op.execute(tracingContext);
+    op.execute(tracingContext, AbfsConnectionMode.FASTPATH_CONN);
     return op;
   }
 
@@ -1331,7 +1329,7 @@ public class AbfsClient implements Closeable {
         requestHeaders,
         sasTokenForReuse,
         fastpathFileHandle);
-    op.execute(tracingContext);
+    op.execute(tracingContext, AbfsConnectionMode.FASTPATH_CONN);
     return op;
   }
 

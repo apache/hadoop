@@ -54,23 +54,6 @@ public class MockAbfsInputStream extends AbfsInputStream {
         in.getContentLength(), in.getContext().withFastpathEnabledState(true),
         in.getETag(),
         in.getTracingContext());
-
-  }
-
-  protected boolean checkFastpathStatus() {
-    try {
-      AbfsRestOperation op;
-      this.tracingContext.setFastpathStatus(FastpathStatus.FASTPATH);
-      op = executeFastpathOpen(path, eTag);
-      this.fastpathFileHandle = op.getFastpathFileHandle();
-      LOG.debug("Fastpath handled opened {}", this.fastpathFileHandle);
-    } catch (AzureBlobFileSystemException e) {
-      LOG.debug("Fastpath status check (Fastpath open) failed with {}", e);
-      this.tracingContext.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
-      return false;
-    }
-
-    return true;
   }
 
   protected AbfsRestOperation executeFastpathOpen(String path, String eTag, TracingContext tracingContext)

@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -116,7 +115,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
 
-  private boolean isFastPathEnabled = false;
+  protected AbfsConnectionMode connectionMode = AbfsConnectionMode.REST_CONN;
   protected String fastpathFileHandle = null;
 
   public AbfsInputStream(
@@ -147,30 +146,37 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setOperation(FSOperationType.READ);
     this.tracingContext.setStreamID(inputStreamId);
+    this.tracingContext.setConnectionMode(connectionMode);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
-    isFastPathEnabled = abfsInputStreamContext.isFastpathEnabled()
-        ? checkFastpathStatus()
-        : false;
+    if (abfsInputStreamContext.isFastpathEnabled()) {
+      updateConnectionMode(AbfsConnectionMode.FASTPATH_CONN);
+      checkFastpathStatus();
+    }
+
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
     }
+  }
+
+  private void updateConnectionMode(AbfsConnectionMode mode) {
+    this.connectionMode = mode;
+    this.tracingContext.setConnectionMode(mode);
   }
 
   @VisibleForTesting
   protected boolean checkFastpathStatus() {
     try {
       AbfsRestOperation op;
-      this.tracingContext.setFastpathStatus(FastpathStatus.FASTPATH);
       op = executeFastpathOpen(path, eTag);
       this.fastpathFileHandle = op.getFastpathFileHandle();
       LOG.debug("Fastpath handled opened {}", this.fastpathFileHandle);
     } catch (AzureBlobFileSystemException e) {
-      this.tracingContext.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
+      updateConnectionMode(AbfsConnectionMode.FASTPATH_CONN_FAIL_REST_FALLBACK);
       LOG.debug("Fastpath status check (Fastpath open) failed with {}", e);
       return false;
     }
@@ -536,18 +542,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      ReadRequestParameters reqParams = new ReadRequestParameters(
-          (isFastPathEnabled ? Mode.FASTPATH_CONNECTION_MODE : Mode.HTTP_CONNECTION_MODE),
+      ReadRequestParameters reqParams = new ReadRequestParameters(connectionMode,
           position, offset, length,
           tolerateOobAppends ? "*" : eTag,
           fastpathFileHandle);
       op =  executeRead(path, b, cachedSasToken.get(), reqParams, tracingContext);
       cachedSasToken.update(op.getSasToken());
       // switch to REST permanently if fastpath connection had a problem.
-      if (isFastPathEnabled &&
-          (tracingContext.getFastpathStatus() == FastpathStatus.CONN_FAIL_REST_FALLBACK)) {
-        isFastPathEnabled = false;
-        this.tracingContext.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
+      if (op.getCurrentConnectionMode() == AbfsConnectionMode.FASTPATH_CONN_FAIL_REST_FALLBACK) {
+        updateConnectionMode(AbfsConnectionMode.FASTPATH_CONN_FAIL_REST_FALLBACK);
       }
 
       if (streamStatistics != null) {

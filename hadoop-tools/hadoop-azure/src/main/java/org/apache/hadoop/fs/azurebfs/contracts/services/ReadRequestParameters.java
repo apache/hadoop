@@ -18,29 +18,29 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
+import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionMode;
+import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionType;
+
 /**
  * Saves the different request parameters for read
  */
 public class ReadRequestParameters {
-  public enum Mode {
-    HTTP_CONNECTION_MODE,
-    FASTPATH_CONNECTION_MODE
-  }
 
   private final long storeFilePosition;
   private final int bufferOffset;
   private final int readLength;
-  private ReadRequestParameters.Mode mode;
   private final String eTag;
   private final String fastpathFileHandle;
 
-  public ReadRequestParameters(final ReadRequestParameters.Mode mode,
+  private AbfsConnectionMode connMode;
+
+  public ReadRequestParameters(final AbfsConnectionMode connMode,
       final long storeFilePosition,
       final int bufferOffset,
       final int readLength,
       final String eTag,
       final String fastpathFileHandle) {
-    this.mode = mode;
+    this.connMode = connMode;
     this.storeFilePosition = storeFilePosition;
     this.bufferOffset = bufferOffset;
     this.readLength = readLength;
@@ -64,15 +64,19 @@ public class ReadRequestParameters {
     return this.eTag;
   }
 
-  public ReadRequestParameters.Mode getMode() {
-    return this.mode;
+  public AbfsConnectionMode getAbfsConnectionMode() {
+    return this.connMode;
+  }
+
+  public AbfsConnectionType getConnectionType() {
+    return AbfsConnectionMode.getConnectionType(connMode);
   }
 
   public String getFastpathFileHandle() {
     return this.fastpathFileHandle;
   }
 
-  public void setMode(final Mode mode) {
-    this.mode = mode;
+  public void setConnectionMode(final AbfsConnectionMode connMode) {
+    this.connMode = connMode;
   }
 }

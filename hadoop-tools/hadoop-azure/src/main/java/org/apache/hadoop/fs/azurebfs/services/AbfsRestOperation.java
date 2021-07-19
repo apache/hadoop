@@ -75,6 +75,7 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
   protected String fastpathFileHandle;
+  private AbfsConnectionMode connMode = AbfsConnectionMode.REST_CONN;
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -107,6 +108,10 @@ public class AbfsRestOperation {
 
   String getFastpathFileHandle() {
     return ((AbfsFastpathConnection) this.result).getFastpathFileHandle();
+  }
+
+  AbfsConnectionMode getCurrentConnectionMode() {
+    return connMode;
   }
 
   /**
@@ -212,14 +217,20 @@ public class AbfsRestOperation {
     }
   }
 
+  public void execute(TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    execute(tracingContext, connMode);
+  }
+
   /**
    * Execute a AbfsRestOperation. Track the Duration of a request if
    * abfsCounters isn't null.
    * @param tracingContext TracingContext instance to track correlation IDs
    */
-  public void execute(TracingContext tracingContext)
+  public void execute(TracingContext tracingContext, AbfsConnectionMode connMode)
       throws AzureBlobFileSystemException {
 
+    this.connMode = connMode;
     try {
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),

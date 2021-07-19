@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 
@@ -50,6 +51,47 @@ import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
  * Represents a Fastpath operation.
  */
 public class AbfsFastpathConnection extends AbfsHttpOperation {
+
+  // Saving the http status code to string map
+  // to avoid adding external dependency on commons-httpclient
+  private static final Map<Integer, String> STATUS_CODE_MAP = new HashMap<Integer, String>() {{
+    put(200, "OK");
+    put(201, "CREATED");
+    put(200, "OK");
+    put(203, "NOT AUTHORITATIVE");
+    put(204, "NO CONTENT");
+    put(205, "RESET");
+    put(206, "PARTIAL");
+    put(300, "MULT CHOICE");
+    put(301, "MOVED PERM");
+    put(302, "MOVED TEMP");
+    put(303, "SEE OTHER");
+    put(304, "NOT MODIFIED");
+    put(305, "USE PROXY");
+    put(400, "BAD REQUEST");
+    put(401, "UNAUTHORIZED");
+    put(402, "PAYMENT REQUIRED");
+    put(403, "FORBIDDEN");
+    put(404, "NOT FOUND");
+    put(405, "BAD METHOD");
+    put(406, "NOT ACCEPTABLE");
+    put(407, "PROXY AUTH");
+    put(408, "CLIENT TIMEOUT");
+    put(409, "CONFLICT");
+    put(410, "GONE");
+    put(411, "LENGTH REQUIRED");
+    put(412, "PRECON FAILED");
+    put(413, "ENTITY TOO LARGE");
+    put(414, "REQ TOO LONG");
+    put(415, "UNSUPPORTED TYPE");
+    put(500, "SERVER ERROR");
+    put(500, "INTERNAL ERROR");
+    put(501, "NOT IMPLEMENTED");
+    put(502, "BAD GATEWAY");
+    put(503, "UNAVAILABLE");
+    put(504, "GATEWAY TIMEOUT");
+    put(505, "VERSION");
+  }};
 
   int defaultTimeout = Integer.valueOf(DEFAULT_TIMEOUT);
   String fastpathFileHandle;
@@ -147,7 +189,9 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   private void setStatusFromFastpathResponse(FastpathResponse response) {
     this.response = response;
     this.statusCode = response.getHttpStatus();
-    this.statusDescription = String.valueOf(response.getStoreErrorDescription());
+    this.statusDescription = (STATUS_CODE_MAP.containsKey(this.statusCode)
+        ? STATUS_CODE_MAP.get(this.statusCode)
+        : DEFAULT_VALUE_UNKNOWN);
     this.storageErrorCode = String.valueOf(response.getStoreErrorCode());
     this.storageErrorMessage = response.getStoreErrorDescription();
   }
