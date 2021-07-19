@@ -325,7 +325,8 @@ public class Balancer {
      * created before this time period.
      */
     final long hotBlockTimeInterval =
-        p.getHotBlockTimeInterval() != 0L ? p.getHotBlockTimeInterval() : conf.getTimeDuration(
+        p.getHotBlockTimeInterval() != 0L ? p.getHotBlockTimeInterval() :
+            conf.getTimeDuration(
             DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
             DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
             TimeUnit.MILLISECONDS);
