@@ -106,6 +106,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.TestNodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
@@ -156,8 +157,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     delSrvc.init(conf);
     exec = createContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
-    nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
-    nodeHealthChecker.init(conf);
+    setNodeHealthCheckerService(
+        new NodeHealthCheckerServiceImpl(dirsHandler), conf);
 
   }
 

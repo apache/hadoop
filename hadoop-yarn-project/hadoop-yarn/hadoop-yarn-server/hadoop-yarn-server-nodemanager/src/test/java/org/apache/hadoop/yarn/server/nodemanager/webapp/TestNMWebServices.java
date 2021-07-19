@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
@@ -143,7 +144,7 @@ public class TestNMWebServices extends JerseyTestBase {
           LOGSERVICEWSADDR);
       dirsHandler = new LocalDirsHandlerService();
       NodeHealthCheckerService healthChecker =
-          new NodeHealthCheckerService(dirsHandler);
+          new NodeHealthCheckerServiceImpl(dirsHandler);
       healthChecker.init(conf);
       aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
