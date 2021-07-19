@@ -268,23 +268,7 @@ public class DecayRpcScheduler implements RpcScheduler,
         DecayRpcSchedulerDetailedMetrics.create(ns);
     decayRpcSchedulerDetailedMetrics.init(numLevels);
 
-    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
-    TimeUnit tmpTimeUnit;
-    if (StringUtils.isNotEmpty(timeunit)) {
-      try {
-        tmpTimeUnit = TimeUnit.valueOf(timeunit);
-      } catch (IllegalArgumentException e) {
-        LOG.info("Config key {} 's value {} does not correspond to enum values"
-                + " of java.util.concurrent.TimeUnit. Hence default unit"
-                + " {} will be used",
-            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
-            RpcMetrics.DEFAULT_METRIC_TIME_UNIT);
-        tmpTimeUnit = RpcMetrics.DEFAULT_METRIC_TIME_UNIT;
-      }
-    } else {
-      tmpTimeUnit = RpcMetrics.DEFAULT_METRIC_TIME_UNIT;
-    }
-    metricsTimeUnit = tmpTimeUnit;
+    metricsTimeUnit = RpcMetrics.getMetricsTimeUnit(conf);
 
     // Setup delay timer
     Timer timer = new Timer(true);

@@ -1630,7 +1630,7 @@ public class TestRPC extends TestRpcBase {
         });
     try {
       proxy = getClient(addr, conf);
-      for (int i = 0; i < 1000; i++) {
+      for (int i = 0; i < 100; i++) {
         proxy.ping(null, newEmptyRequest());
         proxy.echo(null, newEchoRequest("" + i));
         proxy2.echo(null, newEchoRequest("" + i));

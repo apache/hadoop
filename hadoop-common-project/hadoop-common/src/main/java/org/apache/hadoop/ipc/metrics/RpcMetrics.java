@@ -67,23 +67,7 @@ public class RpcMetrics {
     rpcQuantileEnable = (intervals.length > 0) && conf.getBoolean(
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE,
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE_DEFAULT);
-    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
-    TimeUnit tmpTimeUnit;
-    if (StringUtils.isNotEmpty(timeunit)) {
-      try {
-        tmpTimeUnit = TimeUnit.valueOf(timeunit);
-      } catch (IllegalArgumentException e) {
-        LOG.info("Config key {} 's value {} does not correspond to enum values"
-                + " of java.util.concurrent.TimeUnit. Hence default unit"
-                + " {} will be used",
-            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
-            DEFAULT_METRIC_TIME_UNIT);
-        tmpTimeUnit = DEFAULT_METRIC_TIME_UNIT;
-      }
-    } else {
-      tmpTimeUnit = DEFAULT_METRIC_TIME_UNIT;
-    }
-    metricsTimeUnit = tmpTimeUnit;
+    metricsTimeUnit = getMetricsTimeUnit(conf);
     if (rpcQuantileEnable) {
       rpcQueueTimeQuantiles =
           new MutableQuantiles[intervals.length];
@@ -163,6 +147,23 @@ public class RpcMetrics {
   }
 
   public TimeUnit getMetricsTimeUnit() {
+    return metricsTimeUnit;
+  }
+
+  public static TimeUnit getMetricsTimeUnit(Configuration conf) {
+    TimeUnit metricsTimeUnit = RpcMetrics.DEFAULT_METRIC_TIME_UNIT;
+    String timeunit = conf.get(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT);
+    if (StringUtils.isNotEmpty(timeunit)) {
+      try {
+        metricsTimeUnit = TimeUnit.valueOf(timeunit);
+      } catch (IllegalArgumentException e) {
+        LOG.info("Config key {} 's value {} does not correspond to enum values"
+                + " of java.util.concurrent.TimeUnit. Hence default unit"
+                + " {} will be used",
+            CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, timeunit,
+            RpcMetrics.DEFAULT_METRIC_TIME_UNIT);
+      }
+    }
     return metricsTimeUnit;
   }
 
