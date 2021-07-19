@@ -1250,12 +1250,10 @@ public class TestBalancer {
       List<NameNodeConnector> connectors = NameNodeConnector.newNameNodeConnectors(namenodes,
             Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
             BalancerParameters.DEFAULT.getMaxIdleIteration());
-      
       Balancer run = new Balancer(connectors.get(0), p, new HdfsConfiguration());
       Field field = run.getClass().getDeclaredField("dispatcher");
       field.setAccessible(true);
       Object dispatcher = field.get(run);
-      
       Field field1 = dispatcher.getClass().getDeclaredField("hotBlockTimeInterval");
       field1.setAccessible(true);
       Object hotBlockTimeInterval = field1.get(dispatcher);
