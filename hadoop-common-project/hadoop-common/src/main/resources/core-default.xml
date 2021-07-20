@@ -3346,6 +3346,21 @@
 </property>
 
 <property>
+  <name>rpc.metrics.timeunit</name>
+  <value>MILLISECONDS</value>
+  <description>
+    This property is used to configure timeunit for various RPC Metrics
+    e.g rpcQueueTime, rpcLockWaitTime, rpcProcessingTime,
+    deferredRpcProcessingTime. In the absence of this property,
+    default timeunit used is milliseconds.
+    The value of this property should match to any one value of enum:
+    java.util.concurrent.TimeUnit.
+    Some of the valid values: NANOSECONDS, MICROSECONDS, MILLISECONDS,
+    SECONDS etc.
+  </description>
+</property>
+
+<property>
   <name>rpc.metrics.percentiles.intervals</name>
   <value></value>
   <description>
