@@ -619,7 +619,12 @@ function hadoop_bootstrap
   export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
   # defaults
-  export HADOOP_OPTS=${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"}
+  # shellcheck disable=SC2154
+  if [[ "${HADOOP_ALLOW_IPV6}" -ne "yes" ]]; then
+    export HADOOP_OPTS=${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"}
+  else
+    export HADOOP_OPTS=${HADOOP_OPTS:-""}
+  fi
   hadoop_debug "Initial HADOOP_OPTS=${HADOOP_OPTS}"
 }
 
