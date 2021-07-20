@@ -631,7 +631,7 @@ public class ProtoUtils {
   }
 
   public static List<YarnProtos.IntLongMapProto>
-  convertIntLongMapToProtoList(Map<Integer, Long> integerLongMap) {
+      convertIntLongMapToProtoList(Map<Integer, Long> integerLongMap) {
     List<YarnProtos.IntLongMapProto> pList = new ArrayList<>();
     if (integerLongMap != null && !integerLongMap.isEmpty()) {
       IntLongMapProto.Builder pBuilder = IntLongMapProto.newBuilder();
