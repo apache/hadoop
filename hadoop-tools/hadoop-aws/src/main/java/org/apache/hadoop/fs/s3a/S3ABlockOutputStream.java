@@ -397,10 +397,9 @@ class S3ABlockOutputStream extends OutputStream implements
         // PUT the final block
         if (hasBlock &&
             (block.hasData() || multiPartUpload.getPartsSubmitted() == 0)) {
-          // send last part and set the value of isLastPart to true in case of
-          // CSE being enabled, since we are sure it is last part as parts
-          // are being uploaded serially in CSE.
-          uploadCurrentBlock(isCSEEnabled);
+          // send last part and set the value of isLastPart to true.
+          // Necessary to set this "true" in case of client side encryption.
+          uploadCurrentBlock(true);
         }
         // wait for the partial uploads to finish
         final List<PartETag> partETags =

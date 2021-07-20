@@ -87,7 +87,7 @@ Encryption options
 
 With server-side encryption, the data is uploaded to S3 unencrypted (but wrapped by the HTTPS
 encryption channel).
-The data is dynamically encrypted and decrypted in the S3 Store, as needed.
+The data is encrypted in the S3 store and decrypted when it's being retrieved.
 
 A server side algorithm can be enabled by default for a bucket, so that
 whenever data is uploaded unencrypted a default encryption algorithm is added.
@@ -95,11 +95,11 @@ When data is encrypted with S3-SSE or SSE-KMS it is transparent to all clients
 downloading the data.
 SSE-C is different in that every client must know the secret key needed to decypt the data.
 
-Working with SSE-C data hard because every client must be configured to use the
-algorithm and supply the key. In particular, it is very hard to mix SSE-C
-encrypted objects in the same S3 bucket with objects encrypted with other
-algorithms or unencrypted; The S3A client
-(and other applications) get very confused.
+Working with SSE-C data is harder because every client must be configured to
+use the algorithm and supply the key. In particular, it is very hard to mix
+SSE-C encrypted objects in the same S3 bucket with objects encrypted with
+other algorithms or unencrypted; The S3A client (and other applications) get
+very confused.
 
 KMS-based key encryption is powerful as access to a key can be restricted to
 specific users/IAM roles. However, use of the key is billed and can be
@@ -113,15 +113,15 @@ This encrypts the data on the client, before transmitting to S3, where it is
 stored encrypted. The data is unencrypted after downloading when it is being
 read back.
 
-in CSE-KMS, the ID of an AWS-KMS key is provided to the S3A client; 
+In CSE-KMS, the ID of an AWS-KMS key is provided to the S3A client; 
 the client communicates with AWS-KMS to request a new encryption key, which
 KMS returns along with the same key encrypted with the KMS key.
 The S3 client encrypts the payload *and* attaches the KMS-encrypted version
 of the key as a header to the object.
 
 When downloading data, this header is extracted, passed to AWS KMS, and,
-if the client has the appropriate permissions, the symmetric key
-retrieved and returned.
+if the client has the appropriate permissions, the symmetric key is
+retrieved.
 This key is then used to decode the data.
 
 ## <a name="sse-s3"></a> S3 Default Encryption
@@ -479,7 +479,7 @@ them in the "XAttr" list of attributed, prefixed with `header.`.
 This makes them retrievable in the `getXAttr()` API calls, which
 is available on the command line through the `hadoop fs -getfattr -d` command.
 
-This makes viewing the encryption headers of a file straightforward
+This makes viewing the encryption headers of a file straightforward.
 
 Here is an example of the operation invoked on a file where the client is using CSE-KMS:
 ```
@@ -505,8 +505,9 @@ header.x-amz-wrap-alg="kms+context"
 
 Analysis
 
-1. the WARN commands are the AWS SDK warning that because the S3A client uses an encryption algorithm which seek() requires,
-the SDK considers it less secure than the most recent algorithm(s). Ignore.
+1. The WARN commands are the AWS SDK warning that because the S3A client uses
+an encryption algorithm which seek() requires, the SDK considers it less
+secure than the most recent algorithm(s). Ignore.
    
 * `header.x-amz-server-side-encryption="AES256"` : the file has been encrypted with S3-SSE. This is set up as the S3 default encryption,
 so even when CSE is enabled, the data is doubly encrypted.
@@ -518,7 +519,7 @@ so even when CSE is enabled, the data is doubly encrypted.
   it always removes 16 bytes from non-empty files when declaring the length.
 * `header.x-amz-version-id="zXccFCB9eICszFgqv_paG1pzaUKY09Xa"`: the bucket is versioned; this is the version ID.
 
-And a directory encrypted with S3-SSE only
+And a directory encrypted with S3-SSE only:
 
 ```
 bin/hadoop fs -getfattr -d s3a://test-london/user/stevel/target/test/data/sOCOsNgEjv
@@ -532,7 +533,7 @@ header.x-amz-server-side-encryption="AES256"
 header.x-amz-version-id="KcDOVmznIagWx3gP1HlDqcZvm1mFWZ2a"
 ```
 
-A file with no-encryption (on a bucket without versioning but with intelligent tiering)
+A file with no-encryption (on a bucket without versioning but with intelligent tiering):
 
 ```
 bin/hadoop fs -getfattr -d s3a://landsat-pds/scene_list.gz
@@ -603,7 +604,7 @@ clients where S3-CSE has not been enabled.
 - Performance will be reduced. All encrypt/decrypt is now being done on the
  client.
 - Writing files may be slower, as only a single block can be encrypted and
- uploaded at a time
+ uploaded at a time.
 - Multipart Uploader API disabled. 
 - S3 Select is not supported.
 - Multipart uploads would be serial, and partSize must be a multiple of 16
@@ -618,6 +619,19 @@ clients where S3-CSE has not been enabled.
 - If already created, [view the kms key ID by these steps.](https://docs.aws.amazon.com/kms/latest/developerguide/find-cmk-id-arn.html)
 - Set `fs.s3a.server-side-encryption-algorithm=CSE-KMS`.
 - Set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>`.
+
+KMS_KEY_ID:
+
+Identifies the symmetric CMK that encrypts the data key.
+To specify a CMK, use its key ID, key ARN, alias name, or alias ARN. When
+using an alias name, prefix it with "alias/". To specify a CMK in a
+different AWSaccount, you must use the key ARN or alias ARN.
+
+For example:
+- Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
+- Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
+- Alias name: alias/ExampleAlias
+- Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
 
 *Note:* If `fs.s3a.server-side-encryption-algorithm=CSE-KMS` is set, 
 `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` property must be set for
