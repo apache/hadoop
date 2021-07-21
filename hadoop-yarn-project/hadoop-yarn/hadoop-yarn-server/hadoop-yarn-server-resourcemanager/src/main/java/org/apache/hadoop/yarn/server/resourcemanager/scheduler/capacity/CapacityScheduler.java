@@ -368,7 +368,10 @@ public class CapacityScheduler extends
           + getMinimumResourceCapability() + ">, " + "maximumAllocation=<"
           + getMaximumResourceCapability() + ">, " + "asynchronousScheduling="
           + scheduleAsynchronously + ", " + "asyncScheduleInterval="
-          + asyncScheduleInterval + "ms");
+          + asyncScheduleInterval + "ms" + ", " + "assignMultipleEnabled="
+          + assignMultipleEnabled + ", " + "maxAssignPerHeartbeat="
+          + maxAssignPerHeartbeat + ", " + "offswitchPerHeartbeatLimit="
+          + offswitchPerHeartbeatLimit);
     } finally {
       writeLock.unlock();
     }
@@ -453,7 +456,13 @@ public class CapacityScheduler extends
       this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
 
       // Setup how many containers we can allocate for each round
+      assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
+      maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
       offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+
+      LOG.info("assignMultipleEnabled = " + assignMultipleEnabled + "\n" +
+          "maxAssignPerHeartbeat = " + maxAssignPerHeartbeat + "\n" +
+          "offswitchPerHeartbeatLimit = " + offswitchPerHeartbeatLimit);
     } finally {
       writeLock.unlock();
     }
