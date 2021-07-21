@@ -231,11 +231,8 @@ class FSDirWriteFileOp {
 
     INode[] missing = new INode[]{iip.getLastINode()};
     INodesInPath existing = iip.getParentINodesInPath();
-    if(missing.length == 0){
-      return null;
-    }
-    // switch the locks
     FSDirectory fsd = fsn.getFSDirectory();
+    // switch the locks
     fsd.getINodeMap().latchWriteLock(existing, missing);
 
     FileState fileState = analyzeFileState(fsn, iip, fileId, clientName,
@@ -407,8 +404,7 @@ class FSDirWriteFileOp {
     if (parent != null) {
       iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
           replication, blockSize, holder, clientMachine, shouldReplicate,
-          ecPolicyName, storagePolicy, parent.getPath().equalsIgnoreCase(
-              iip.getPath()));
+          ecPolicyName, storagePolicy);
       newNode = iip != null ? iip.getLastINode().asFile() : null;
     }
     if (newNode == null) {
@@ -552,7 +548,7 @@ class FSDirWriteFileOp {
       FSDirectory fsd, INodesInPath existing, byte[] localName,
       PermissionStatus permissions, short replication, long preferredBlockSize,
       String clientName, String clientMachine, boolean shouldReplicate,
-      String ecPolicyName, String storagePolicy, boolean isLockAcquired)
+      String ecPolicyName, String storagePolicy)
       throws IOException {
 
     Preconditions.checkNotNull(existing);
@@ -564,16 +560,9 @@ class FSDirWriteFileOp {
           permissions, replication, preferredBlockSize, clientName,
           clientMachine, shouldReplicate, ecPolicyName, storagePolicy, modTime);
 
-      if(!isLockAcquired){
-        // parent lock is not acquired earlier, so get the lock first
-        INode[] missing = new INode[]{newNode};
-        existing = existing.getExistingINodes();
-        if(missing.length == 0){
-          return existing;
-        }
-        // switch the locks
-        fsd.getINodeMap().latchWriteLock(existing, missing);
-      }
+      INode[] missing = new INode[] { newNode };
+      // switch the locks
+      fsd.getINodeMap().latchWriteLock(existing, missing);
 
       newiip = fsd.addINode(existing, newNode, permissions.getPermission());
     } finally {
