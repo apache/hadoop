@@ -338,7 +338,7 @@ with the following configurations.
  retries. Default value is 5.
 * `fs.azure.oauth.token.fetch.retry.min.backoff.interval`: Minimum back-off
   interval. Added to the retry interval computed from delta backoff. By
-   default this si set as 0. Set the interval in milli seconds.
+   default this is set as 0. Set the interval in milli seconds.
 * `fs.azure.oauth.token.fetch.retry.max.backoff.interval`: Maximum back-off
 interval. Default value is 60000 (sixty seconds). Set the interval in milli
 seconds.
@@ -802,6 +802,28 @@ The following configs are related to read and write operations.
 Currently this is used only for the server call retry logic. Used within
 AbfsClient class as part of the ExponentialRetryPolicy. The value should be
 greater than or equal to 0.
+
+`fs.azure.io.retry.min.backoff.interval`: Sets the minimum backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within AbfsClient class as part of the EponentialRetryPolicy. This
+value indicates the smallest interval (in milliseconds) to wait before retrying
+an IO operation. The default value is 3000 (3 seconds).
+
+`fs.azure.io.retry.max.backoff.interval`: Sets the maximum backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within AbfsClient class as part of the EponentialRetryPolicy. This
+value indicates the largest interval (in milliseconds) to wait before retrying
+an IO operation. The default value is 30000 (30 seconds).
+
+`fs.azure.io.retry.backoff.interval`: Sets the default backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within AbfsClient class as part of the EponentialRetryPolicy. This
+value is used to compute a random delta between 80% and 120% of the specified
+value. This random delta is then multiplied by an exponent of the current IO
+retry number (i.e., the default is multiplied by `2^(retryNum - 1)`) and then
+contstrained within the range of [`fs.azure.io.retry.min.backoff.interval`,
+`fs.azure.io.retry.max.backoff.interval`] to determine the amount of time to
+wait before the next IO retry attempt. The default value is 3000 (3 seconds).
 
 `fs.azure.write.request.size`: To set the write buffer size. Specify the value
 in bytes. The value should be between 16384 to 104857600 both inclusive (16 KB
