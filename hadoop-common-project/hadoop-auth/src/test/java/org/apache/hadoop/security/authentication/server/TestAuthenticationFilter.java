@@ -314,6 +314,7 @@ public class TestAuthenticationFilter {
       Mockito.when(config.getInitParameter(
               AuthenticationFilter.AUTH_TYPE)).thenReturn("simple");
       File secretFile = File.createTempFile("test_empty_secret", ".txt");
+      secretFile.deleteOnExit();
       Assert.assertTrue(secretFile.exists());
       Mockito.when(config.getInitParameter(
               AuthenticationFilter.SIGNATURE_SECRET_FILE))
