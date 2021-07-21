@@ -237,10 +237,8 @@ public class AuthenticationFilter implements Filter {
         provider.init(config, ctx, validity);
       } catch (Exception e) {
         if (!disallowFallbackToRandomSecretProvider) {
-          LOG.error("Unable to initialize FileSignerSecretProvider, reason: "
-                       + e.getMessage());
-          LOG.info("Unable to initialize FileSignerSecretProvider, " +
-                       "falling back to use random secrets.");
+          LOG.warn("Unable to initialize FileSignerSecretProvider, " +
+              "falling back to use random secrets. Reason: " + e.getMessage());
           provider = new RandomSignerSecretProvider();
           provider.init(config, ctx, validity);
         } else {
