@@ -21,7 +21,7 @@ import Converter from 'yarn-ui/utils/converter';
 
 export default DS.Model.extend({
   name: DS.attr("string"),
-  path: DS.attr("string"),
+  queuePath: DS.attr("string"),
   children: DS.attr("array"),
   parent: DS.attr("string"),
   capacity: DS.attr("number"),
