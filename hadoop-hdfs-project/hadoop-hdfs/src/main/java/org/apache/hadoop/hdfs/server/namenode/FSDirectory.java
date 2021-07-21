@@ -1934,46 +1934,12 @@ public class FSDirectory implements Closeable {
   public INode getInodeFromTempINodeMap(long id) {
     LOG.debug("getInodeFromTempINodeMap: id={}, TempINodeMap.size={}",
         id, inodeMapTemp.size());
-    INode inode = new INodeWithAdditionalFields(id, null,
-        new PermissionStatus("", "", new FsPermission((short) 0)), 0, 0) {
-      @Override
-      void recordModification(int latestSnapshotId) {
-
-      }
-
-      @Override
-      public void cleanSubtree(ReclaimContext reclaimContext, int snapshotId,
-          int priorSnapshotId) {
-      }
-
-      @Override
-      public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
-
-      }
-
-      @Override
-      public ContentSummaryComputationContext computeContentSummary(
-          int snapshotId, ContentSummaryComputationContext summary)
-          throws AccessControlException {
-        return null;
-      }
-
-      @Override
-      public QuotaCounts computeQuotaUsage(BlockStoragePolicySuite bsps,
-          byte blockStoragePolicyId, boolean useCache, int lastSnapshotId) {
-        return null;
-      }
-
-      @Override
-      public byte getStoragePolicyID() {
-        return HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      }
-
-      @Override
-      public byte getLocalStoragePolicyID() {
-        return HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      }
-    };
+    /*
+     * Convert a long inode id into an INode object. We only need to compare
+     * two inodes by inode id. So, it can be any type of INode object.
+     */
+    INode inode = new INodeDirectory(id, null,
+        new PermissionStatus("", "", new FsPermission((short) 0)), 0);
 
     return inodeMapTemp.get(inode);
   }
