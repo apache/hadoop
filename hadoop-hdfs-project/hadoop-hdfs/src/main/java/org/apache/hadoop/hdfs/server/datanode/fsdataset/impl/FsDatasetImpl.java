@@ -728,7 +728,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         infos.length);
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getNormalizedUri().toString());
+          info.getFailedStorageLocation().toString());
     }
     return failedStorageLocations.toArray(
         new String[failedStorageLocations.size()]);
