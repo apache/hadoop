@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Stack;
@@ -84,37 +85,37 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
       CopyFromLocalOperation.class);
 
   /**
-   * Callbacks to be used by this operation for external / IO actions
+   * Callbacks to be used by this operation for external / IO actions.
    */
   private final CopyFromLocalOperationCallbacks callbacks;
 
   /**
-   * Delete source after operation finishes
+   * Delete source after operation finishes.
    */
   private final boolean deleteSource;
 
   /**
-   * Overwrite destination files / folders
+   * Overwrite destination files / folders.
    */
   private final boolean overwrite;
 
   /**
-   * Source path to file / directory
+   * Source path to file / directory.
    */
   private final Path source;
 
   /**
-   * Async operations executor
+   * Async operations executor.
    */
   private final ListeningExecutorService executor;
 
   /**
-   * Destination path
+   * Destination path.
    */
   private Path destination;
 
   /**
-   * Destination file status
+   * Destination file status.
    */
   private FileStatus destStatus;
 
@@ -152,7 +153,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   public Void execute()
       throws IOException, PathExistsException {
     LOG.debug("Copying local file from {} to {}", source, destination);
-    File sourceFile = callbacks.pathToFile(source);
+    File sourceFile = callbacks.pathToLocalFile(source);
     updateDestStatus(destination);
 
     // Handles bar/ -> foo/ => foo/bar and bar/ -> foo/bar/ => foo/bar/bar
@@ -168,7 +169,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     uploadSourceFromFS();
 
     if (deleteSource) {
-      callbacks.delete(source, true);
+      callbacks.deleteLocal(source, true);
     }
 
     return null;
@@ -177,8 +178,9 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   /**
    * Does a {@link CopyFromLocalOperationCallbacks#getFileStatus(Path)}
    * operation on the provided destination and updates the internal status of
-   * destPath property
+   * destStatus field.
    *
+   * @param  dest - destination Path
    * @throws IOException if getFileStatus fails
    */
   private void updateDestStatus(Path dest) throws IOException {
@@ -238,7 +240,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
 
     for (int uploadNo = 0; uploadNo < sortedUploadsCount; uploadNo++) {
       UploadEntry uploadEntry = entries.get(uploadNo);
-      File file = callbacks.pathToFile(uploadEntry.source);
+      File file = callbacks.pathToLocalFile(uploadEntry.source);
       activeOps.add(submitUpload(file, uploadEntry));
       markedForUpload.add(uploadEntry);
     }
@@ -252,7 +254,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     entries.removeAll(markedForUpload);
     Collections.shuffle(entries);
     for (UploadEntry uploadEntry : entries) {
-      File file = callbacks.pathToFile(uploadEntry.source);
+      File file = callbacks.pathToLocalFile(uploadEntry.source);
       activeOps.add(submitUpload(file, uploadEntry));
     }
 
@@ -273,7 +275,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
   private CompletableFuture<Void> submitCreateEmptyDir(Path dir) {
     return submit(executor, callableWithinAuditSpan(
         getAuditSpan(), () -> {
-          callbacks.createEmptyDir(dir);
+          callbacks.createEmptyDir(dir, getStoreContext());
           return null;
         }
     ));
@@ -391,7 +393,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
       private final Stack<RemoteIterator<LocatedFileStatus>> iterators =
           new Stack<>();
       private RemoteIterator<LocatedFileStatus> current =
-          callbacks.listStatusIterator(path);
+          callbacks.listLocalStatusIterator(path);
       private LocatedFileStatus curFile;
 
       @Override
@@ -422,7 +424,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
         } else { // directory
           curFile = stat;
           iterators.push(current);
-          current = callbacks.listStatusIterator(stat.getPath());
+          current = callbacks.listLocalStatusIterator(stat.getPath());
         }
       }
 
@@ -433,7 +435,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
           curFile = null;
           return result;
         }
-        throw new java.util.NoSuchElementException("No more entry in "
+        throw new NoSuchElementException("No more entry in "
             + path);
       }
     };
@@ -458,7 +460,7 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     }
 
     /**
-     * Compares {@link UploadEntry} objects and produces DESC ordering
+     * Compares {@link UploadEntry} objects and produces DESC ordering.
      */
     static class SizeComparator implements Comparator<UploadEntry>,
         Serializable {
@@ -481,11 +483,11 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
      * @return an iterator for all entries
      * @throws IOException - for any failure
      */
-    RemoteIterator<LocatedFileStatus> listStatusIterator(Path path)
+    RemoteIterator<LocatedFileStatus> listLocalStatusIterator(Path path)
         throws IOException;
 
     /**
-     * Get the file status for a path
+     * Get the file status for a path.
      *
      * @param path - target path
      * @return FileStatus
@@ -494,25 +496,25 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
     FileStatus getFileStatus(Path path) throws IOException;
 
     /**
-     * Get the file from a path
+     * Get the file from a path.
      *
      * @param path - target path
      * @return file at path
      */
-    File pathToFile(Path path);
+    File pathToLocalFile(Path path);
 
     /**
-     * Delete file / directory at path
+     * Delete file / directory at path.
      *
      * @param path      - target path
      * @param recursive - recursive deletion
      * @return boolean result of operation
      * @throws IOException for any failure
      */
-    boolean delete(Path path, boolean recursive) throws IOException;
+    boolean deleteLocal(Path path, boolean recursive) throws IOException;
 
     /**
-     * Copy / Upload a file from a source path to a destination path
+     * Copy / Upload a file from a source path to a destination path.
      *
      * @param file        - target file
      * @param source      - source path
@@ -525,12 +527,14 @@ public class CopyFromLocalOperation extends ExecutingStoreOperation<Void> {
         Path destination) throws IOException;
 
     /**
-     * Create empty directory at path. Most likely an upload operation
+     * Create empty directory at path. Most likely an upload operation.
      *
      * @param path - target path
+     * @param storeContext - store context
      * @return boolean result of operation
      * @throws IOException for any failure
      */
-    boolean createEmptyDir(Path path) throws IOException;
+    boolean createEmptyDir(Path path, StoreContext storeContext)
+        throws IOException;
   }
 }

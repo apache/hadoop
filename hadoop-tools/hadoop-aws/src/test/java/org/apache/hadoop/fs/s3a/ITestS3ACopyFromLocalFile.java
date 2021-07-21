@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.File;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractCopyFromLocalTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -43,9 +45,20 @@ public class ITestS3ACopyFromLocalFile extends
 
   @Test
   public void testLocalFilesOnly() throws Throwable {
-    Path dst = fileToPath(createTempDirectory("someDir"));
+    describe("Copying into other file systems must fail");
+    Path dest = fileToPath(createTempDirectory("someDir"));
 
     intercept(IllegalArgumentException.class,
-        () -> getFileSystem().copyFromLocalFile(false, true, dst, dst));
+        () -> getFileSystem().copyFromLocalFile(false, true, dest, dest));
+  }
+
+  @Test
+  public void testOnlyFromLocal() throws Throwable {
+    describe("Copying must be from a local file system");
+    File source = createTempFile("someFile");
+    Path dest = copyFromLocal(source, true);
+
+    intercept(IllegalArgumentException.class,
+        () -> getFileSystem().copyFromLocalFile(true, true, dest, dest));
   }
 }

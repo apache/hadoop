@@ -114,8 +114,8 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
   @Test
   public void testSourceIsFileAndDestinationIsDirectory() throws Throwable {
-    describe("Source is a file and destination is a directory. File" +
-        "must be copied inside the directory.");
+    describe("Source is a file and destination is a directory. " +
+        "File must be copied inside the directory.");
 
     file = createTempFile("test");
     Path source = new Path(file.toURI());
@@ -180,7 +180,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
 
   @Test
   public void testSrcIsDirWithOverwriteOptions() throws Throwable {
-    describe("Source is a directory, destination exists and" +
+    describe("Source is a directory, destination exists and " +
         "must be overwritten.");
 
     FileSystem fs = getFileSystem();
@@ -323,7 +323,7 @@ public abstract class AbstractContractCopyFromLocalTest extends
     return f;
   }
 
-  private File createTempDirectory(File parent, String name)
+  protected File createTempDirectory(File parent, String name)
       throws IOException {
     return Files.createTempDirectory(parent.toPath(), name).toFile();
   }

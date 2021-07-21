@@ -1427,57 +1427,91 @@ set to TRUE. If destination already exists, and the destination contents must be
 then `overwrite` flag must be set to TRUE.
 
 #### Preconditions
+Source and destination must be different
+```python
+if src = dest : raise FileExistsException
+```
 
-The source file or directory must exist:
+Destination and source must not be descendants one another
+```python
+if isDescendant(src, dest) or isDescendant(dest, src) : TODO
+```
 
-    if not exists(FS, src) : raise FileNotFoundException
+The source file or directory must exist locally:
+```python
+if not exists(LocalFS, src) : raise FileNotFoundException
+```
 
 Directories cannot be copied into files regardless to what the overwrite flag is set to:
 
-    if isDir(FS, src) and isFile(FS, dst) : raise PathExistsException
+```python
+if isDir(LocalFS, src) and isFile(FS, dst) : raise PathExistsException
+```
 
 For all cases, except the one for which the above precondition throws, the overwrite flag must be
-set to TRUE for the operation to succeed. This will also overwrite any files / directories at the
-destination:
+set to TRUE for the operation to succeed if destination exists. This will also overwrite any files
+ / directories at the destination:
 
-    if exists(FS, dst) && not overwrite : raise PathExistsException
+```python
+if exists(FS, dst) and not overwrite : raise PathExistsException
+```
 
-#### Postconditions
-Copying a file into an existing directory at destination with a non-existing file at destination
+#### Determining the final name of the copy
+Given a base path on the source `base` and a child path `child` where `base` is in
+`ancestors(child) + child`:
 
-    if isFile(fs, src) and not exists(FS, dst) => success
+```python
+def final_name(base, child, dest):
+    is base = child:
+        return dest
+    else:
+        return dest + childElements(base, child)
+```
 
-Copying a file into an existing directory at destination with an existing file at destination and
-overwrite set to TRUE
+#### Outcome where source is a file `isFile(LocalFS, src)`
+For a file, data at destination becomes that of the source. All ancestors are directories.
+```python
+if isFile(LocalFS, src) and (not exists(FS, dest) or (exists(FS, dest) and overwrite)):
+    FS' = FS where:
+        FS'.Files[dest] = LocalFS.Files[src]
+        FS'.Directories = FS.Directories + ancestors(FS, dest)
+    LocalFS' = LocalFS where
+        not delSrc or (delSrc = true and delete(LocalFS, src, false))
+else if isFile(LocalFS, src) and isDir(FS, dest):
+    FS' = FS where:
+        let d = final_name(src, dest)
+        FS'.Files[d] = LocalFS.Files[src]
+    LocalFS' = LocalFS where:
+        not delSrc or (delSrc = true and delete(LocalFS, src, false))
+```
+There are no expectations that the file changes are atomic for both local `LocalFS` and remote `FS`.
 
-    if isFile(FS, src) and overwrite and exists(FS, dst) => success
+#### Outcome where source is a directory `isDir(LocalFS, src)`
+```python
+if is Dir(LocalFS, src) and (isFile(FS, dest) or isFile(FS, dest + childElements(src))):
+    raise FileAlreadyExistsException
+else if isDir(LocalFS, src):
+    dest' = dest
+    if exists(FS, dest)
+        dest' = dest + childElements(src)
+        if exists(FS, dest') and not overwrite:
+            raise PathExistsException
 
-
-Copying a file into a non-existent directory. POSIX file systems would fail this operation, HDFS
-allows this to happen creating all the directories in the destination path.
-
-    if isFile(FS, src) and not exists(FS, parent(dst)) => success
-
-Copying directory into destination directory - last part of the destination path doesn't exist e.g.
-`/src/bar/ -> /dst/foo/ => /dst/foo/` with the precondition that `/dst/` exists but `/dst/foo/`
-doesn't:
-
-    if isDir(FS, src) and not exists(FS, dst) => success
-
-Copying directory into destination directory - last part of the destination path exists e.g.
-`/src/bar/ -> /dst/foo/ => /dst/foo/bar/` with the precondition that `/dst/foo/` exists but
-`/dst/foo/bar/` doesn't:
-
-    if isDir(FS, src) and exists(FS, dst) => success
-
-Copying a directory into a destination directory - last part of destination path and source directory
-name exist e.g. `/src/foo/ -> /dst/` with the precondition that `/dst/foo/` exists. This operation
-will only succeed if the overwrite flag is set to TRUE
-
-    if isDir(FS, src) and exists(FS, dst) and overwrite => success
-
-For all operations if the `delSrc` flag is set to TRUE then the source will be deleted. If source
-is a directory then it will be recursively deleted.
+    FS' = FS where:
+        forall c in descendants(LocalFS, src):
+            not exists(FS', final_name(c)) or overwrite
+        and forall c in descendants(LocalFS, src) where isDir(LocalFS, c):
+            FS'.Directories = FS'.Directories + (dest' + childElements(src, c))
+        and forall c in descendants(LocalFS, src) where isFile(LocalFS, c):
+            FS'.Files[final_name(c, dest')] = LocalFS.Files[c]
+    LocalFS' = LocalFS where
+        not delSrc or (delSrc = true and delete(LocalFS, src, true))
+```
+There are no expectations of operation isolation / atomicity. This means files can change
+in source or destination while the operation is executing. No guarantees are made for the
+final state of the file or directory after a copy other than it is best effort. E.g.: when
+copying a directory, one file can be moved from source to destination but there's nothing
+stopping the new file at destination being updated while the copy operation is still in place.
 
 #### Implementation
 

@@ -3809,18 +3809,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public RemoteIterator<LocatedFileStatus> listStatusIterator(
+    public RemoteIterator<LocatedFileStatus> listLocalStatusIterator(
         final Path path) throws IOException {
       return local.listLocatedStatus(path);
     }
 
     @Override
-    public File pathToFile(Path path) {
+    public File pathToLocalFile(Path path) {
       return local.pathToFile(path);
     }
 
     @Override
-    public boolean delete(Path path, boolean recursive) throws IOException {
+    public boolean deleteLocal(Path path, boolean recursive) throws IOException {
       return local.delete(path, recursive);
     }
 
@@ -3849,8 +3849,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public boolean createEmptyDir(Path path) throws IOException {
-      return S3AFileSystem.this.mkdirs(path);
+    public boolean createEmptyDir(Path path, StoreContext storeContext)
+        throws IOException {
+      return trackDuration(getDurationTrackerFactory(),
+          INVOCATION_MKDIRS.getSymbol(),
+          new MkdirOperation(
+              storeContext,
+              path,
+              createMkdirOperationCallbacks()));
     }
   }
 
