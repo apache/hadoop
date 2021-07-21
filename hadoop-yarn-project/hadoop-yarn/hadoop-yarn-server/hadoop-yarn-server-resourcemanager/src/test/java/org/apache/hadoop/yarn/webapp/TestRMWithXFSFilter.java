@@ -26,25 +26,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-
-import static org.junit.Assert.assertNull;
 
 /**
  * Used TestRMWebServices as an example of web invocations of RM and added
  * test for XFS Filter.
  */
 public class TestRMWithXFSFilter {
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-
   private static MockRM rm;
 
   private void createMockRm(final Boolean xfsEnabled,
@@ -105,13 +97,14 @@ public class TestRMWithXFSFilter {
     URL url = new URL("http://localhost:8088/ws/v1/cluster/info");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    assertNull("Unexpected X-FRAME-OPTION in header", xfoHeader);
+    Assert.assertNull("Unexpected X-FRAME-OPTION in header", xfoHeader);
   }
 
   @Test
-  public void testXFrameOptionsIllegalOption() throws Exception {
-    exception.expect(IllegalArgumentException.class);
-    createMockRm(true, "otherValue");
+  public void testXFrameOptionsIllegalOption() {
+    IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> createMockRm(true, "otherValue"));
   }
 
   @After
