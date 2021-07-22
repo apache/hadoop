@@ -426,7 +426,7 @@ public final class Constants {
    *
    * {@value}
    */
-  public static final String S3_ENCRYPTION_ALGORITHM =
+  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
   /**
@@ -442,14 +442,14 @@ public final class Constants {
 
   /**
    * Used to specify which AWS KMS key to use if
-   * {@link #S3_ENCRYPTION_ALGORITHM} is
+   * {@link #SERVER_SIDE_ENCRYPTION_ALGORITHM} is
    * {@code SSE-KMS} (will default to aws/s3
    * master key if left blank).
    * With with {@code SSE_C}, the base-64 encoded AES 256 key.
    * May be set within a JCEKS file.
    * Value: "{@value}".
    */
-  public static final String S3_ENCRYPTION_KEY =
+  public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
 
   /**

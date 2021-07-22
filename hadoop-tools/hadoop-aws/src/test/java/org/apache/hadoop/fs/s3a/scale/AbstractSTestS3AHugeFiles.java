@@ -402,7 +402,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_040_PositionedReadHugeFile() throws Throwable {
     assumeHugeFileExists();
     final String encryption = getConf().getTrimmed(
-        S3_ENCRYPTION_ALGORITHM);
+        SERVER_SIDE_ENCRYPTION_ALGORITHM);
     boolean encrypted = encryption != null;
     if (encrypted) {
       LOG.info("File is encrypted with algorithm {}", encryption);

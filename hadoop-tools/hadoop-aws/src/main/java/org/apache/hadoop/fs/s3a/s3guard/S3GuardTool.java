@@ -1348,7 +1348,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
           ENDPOINT,
           StringUtils.isNotEmpty(endpoint) ? endpoint : "(unset)");
       String encryption =
-          printOption(out, "\tEncryption", S3_ENCRYPTION_ALGORITHM,
+          printOption(out, "\tEncryption", SERVER_SIDE_ENCRYPTION_ALGORITHM,
               "none");
       printOption(out, "\tInput seek policy", INPUT_FADVISE, INPUT_FADV_NORMAL);
       printOption(out, "\tChange Detection Source", CHANGE_DETECT_SOURCE,

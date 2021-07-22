@@ -58,8 +58,8 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
@@ -125,7 +125,7 @@ public class DefaultS3ClientFactory extends Configured
 
     try {
       if (S3AEncryptionMethods.getMethod(S3AUtils.
-          lookupPassword(conf, S3_ENCRYPTION_ALGORITHM, null))
+          lookupPassword(conf, SERVER_SIDE_ENCRYPTION_ALGORITHM, null))
           .equals(S3AEncryptionMethods.CSE_KMS)) {
         return buildAmazonS3EncryptionClient(
             awsConf,
@@ -149,6 +149,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param parameters parameters.
    *
    * @return new AmazonS3 client.
+   * @throws IOException if lookupPassword() has any problem.
    */
   protected AmazonS3 buildAmazonS3EncryptionClient(
       final ClientConfiguration awsConf,
@@ -161,10 +162,10 @@ public class DefaultS3ClientFactory extends Configured
 
     //CSE-KMS Method
     String kmsKeyId = S3AUtils.lookupPassword(conf,
-        S3_ENCRYPTION_KEY, null);
+        SERVER_SIDE_ENCRYPTION_KEY, null);
     // Check if kmsKeyID is not null
     Preconditions.checkArgument(kmsKeyId != null, "CSE-KMS method "
-        + "requires KMS key ID. Use " + S3_ENCRYPTION_KEY
+        + "requires KMS key ID. Use " + SERVER_SIDE_ENCRYPTION_KEY
         + " property to set it. ");
 
     EncryptionMaterialsProvider materialsProvider =

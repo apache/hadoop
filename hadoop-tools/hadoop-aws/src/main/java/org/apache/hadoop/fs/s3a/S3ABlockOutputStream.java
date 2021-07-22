@@ -329,7 +329,8 @@ class S3ABlockOutputStream extends OutputStream implements
    * @param isLast true, if part being uploaded is last and client side
    *               encryption is enabled.
    * @throws IOException Problems opening the destination for upload,
-   *                     initializing the upload, or if a previous operation has failed.
+   *                     initializing the upload, or if a previous operation
+   *                     has failed.
    */
   private synchronized void uploadCurrentBlock(boolean isLast)
       throws IOException {

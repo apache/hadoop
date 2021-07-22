@@ -141,22 +141,22 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
-    String s3EncryptionMethod = conf.getTrimmed(S3_ENCRYPTION_ALGORITHM,
+    String s3EncryptionMethod = conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM,
         S3AEncryptionMethods.SSE_KMS.getMethod());
-    String s3EncryptionKey = conf.getTrimmed(S3_ENCRYPTION_KEY, "");
+    String s3EncryptionKey = conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY, "");
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
-        S3_ENCRYPTION_ALGORITHM,
-        S3_ENCRYPTION_KEY);
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
     // switch to CSE-KMS(if specified) else SSE-KMS.
     if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
-      conf.set(S3_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
+      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
       // KMS key ID a must if CSE-KMS is being tested.
-      conf.set(S3_ENCRYPTION_KEY, s3EncryptionKey);
+      conf.set(SERVER_SIDE_ENCRYPTION_KEY, s3EncryptionKey);
     }
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
@@ -344,8 +344,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // this is to simulate better a remote deployment.
     removeBaseAndBucketOverrides(bucket, conf,
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
-        S3_ENCRYPTION_ALGORITHM,
-        S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY,
         DELEGATION_TOKEN_ROLE_ARN,
         DELEGATION_TOKEN_ENDPOINT);
     // this is done to make sure you cannot create an STS session no

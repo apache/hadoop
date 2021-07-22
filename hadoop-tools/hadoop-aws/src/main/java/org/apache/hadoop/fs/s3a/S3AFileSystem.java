@@ -428,7 +428,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       initializeStatisticsBinding();
       // If CSE-KMS method is set then CSE is enabled.
       isCSEEnabled = S3AUtils.lookupPassword(conf,
-          S3_ENCRYPTION_ALGORITHM, null) != null;
+          SERVER_SIDE_ENCRYPTION_ALGORITHM, null) != null;
       LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
       setCSEGauge();
       // Username is the current user at the time the FS was instantiated.

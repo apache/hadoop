@@ -46,8 +46,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapab
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ETAG;
 import static org.hamcrest.Matchers.nullValue;
@@ -72,8 +72,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
-        S3_ENCRYPTION_ALGORITHM,
-        S3_ENCRYPTION_KEY);
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
     return conf;
   }
 

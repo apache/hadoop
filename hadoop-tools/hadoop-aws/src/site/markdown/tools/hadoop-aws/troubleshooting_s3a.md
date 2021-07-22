@@ -1161,7 +1161,7 @@ file using configured SSE-C keyB into that structure.
 
 ### Instruction file not found for S3 object
 
-Reading an unencrypted file would fail when read through CSE enabled client. 
+Reading an unencrypted file would fail when read through CSE enabled client.
 ```
 java.lang.SecurityException: Instruction file not found for S3 object with bucket name: ap-south-cse, key: unencryptedData.txt
 	at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.decipher(S3CryptoModuleAE.java:190)
@@ -1199,13 +1199,13 @@ java.lang.SecurityException: Instruction file not found for S3 object with bucke
 	at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
 	at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
 ```
-CSE enabled client should read encrypted data only. 
+CSE enabled client should read encrypted data only.
 
-### CSE-KMS method requires KMS key ID 
+### CSE-KMS method requires KMS key ID
 
 KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
- to failure. 
- 
+ to failure.
+
 ```
 2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
 s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
@@ -1214,7 +1214,7 @@ method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to se
  set it.
 ```
 
-set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` generated through AWS console. 
+set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` generated through AWS console.
 
 ### `com.amazonaws.services.kms.model.IncorrectKeyException` The key ID in the request does not identify a CMK that can perform this operation.
 
@@ -1231,7 +1231,7 @@ The key ID in the request does not identify a CMK that can perform this
 operation. (Service: AWSKMS ; Status Code: 400; Error Code: IncorrectKeyException;
 Request ID: da21aa8a-f00d-467c-94a0-32b627d32bc0; Proxy: null)
 ```
-Use the same KMS key ID used to upload data to download and read it as well. 
+Use the same KMS key ID used to upload data to download and read it as well.
 
 ### `com.amazonaws.services.kms.model.NotFoundException` key/<KMS_KEY_ID> does not exist
 
@@ -1249,8 +1249,8 @@ does not exist(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException;
 Request ID: 279db85d-864d-4a38-9acd-d892adb504c0; Proxy: null)
 ```
 While generating the KMS Key ID make sure to generate it in the same region
- as your bucket. 
- 
+ as your bucket.
+
 ### Unable to perform range get request: Range get support has been disabled
 
 If Range get is not supported for a CSE algorithm or is disabled:
@@ -1276,7 +1276,7 @@ java.lang.SecurityException: Unable to perform range get request: Range get supp
 	at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:408)
 	at java.io.DataInputStream.readByte(DataInputStream.java:265)
 ```
-Range gets msut be enabled for CSE to work. 
+Range gets must be enabled for CSE to work.
 
 ### WARNING: Range gets do not provide authenticated encryption properties even when used with an authenticated mode (AES-GCM).
 
@@ -1297,7 +1297,7 @@ get data.
 
 The S3 Encryption Client is configured to read encrypted data with legacy
 encryption modes through the CryptoMode setting, and we would see this
-warning for all S3-CSE request. 
+warning for all S3-CSE request.
 
 ```
 2021-07-14 12:54:09,519 [main] WARN  s3.AmazonS3EncryptionClientV2
@@ -1307,16 +1307,18 @@ encryption modes through the CryptoMode setting. If you don't have objects
 encrypted with these legacy modes, you should disable support for them to
 enhance security. See https://docs.aws.amazon.com/general/latest/gr/aws_sdk_cryptography.html
 ```
-We can ignore this, since this CryptoMode setting(CryptoMode.AuthenticatedEncryption) 
-is required for range gets to work. 
+We can ignore this, since this CryptoMode setting(CryptoMode.AuthenticatedEncryption)
+is required for range gets to work.
 
 ### com.amazonaws.services.kms.model.InvalidKeyUsageException: You cannot generate a data key with an asymmetric CMK
 
 If you generated an Asymmetric CMK from AWS console then CSE-KMS won't be
-able to generate unique data key for encryption. 
+able to generate unique data key for encryption.
 
 ```
-Caused by: com.amazonaws.services.kms.model.InvalidKeyUsageException: You cannot generate a data key with an asymmetric CMK (Service: AWSKMS; Status Code: 400; Error Code: InvalidKeyUsageException; Request ID: 93609c15-e490-4035-8390-f4396f0d90bf; Proxy: null)
+Caused by: com.amazonaws.services.kms.model.InvalidKeyUsageException:
+You cannot generate a data key with an asymmetric CMK
+(Service: AWSKMS; Status Code: 400; Error Code: InvalidKeyUsageException; Request ID: 93609c15-e490-4035-8390-f4396f0d90bf; Proxy: null)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1819)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1403)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1372)
@@ -1348,7 +1350,7 @@ Caused by: com.amazonaws.services.kms.model.InvalidKeyUsageException: You cannot
 ```
 
 Generate a Symmetric Key in the same region as your S3 storage for CSE-KMS to
-work. 
+work.
 
 ### com.amazonaws.services.kms.model.NotFoundException: Invalid keyId
 
@@ -1356,7 +1358,8 @@ If the value in `fs.s3a.server-side-encryption.key` property, does not exist
 /valid in AWS KMS CMK(Customer managed keys), then this error would be seen.
 
 ```
-Caused by: com.amazonaws.services.kms.model.NotFoundException: Invalid keyId abc (Service: AWSKMS; Status Code: 400; Error Code: NotFoundException; Request ID: 9d53552a-3d1b-47c8-984c-9a599d5c2391; Proxy: null)
+Caused by: com.amazonaws.services.kms.model.NotFoundException: Invalid keyId abc
+(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException; Request ID: 9d53552a-3d1b-47c8-984c-9a599d5c2391; Proxy: null)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1819)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1403)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1372)
@@ -1392,12 +1395,11 @@ same on AWS console.
 
 ### com.amazonaws.services.kms.model.AWSKMSException: User: <User_ARN> is not authorized to perform : kms :GenerateDataKey on resource: <KEY_ID>
 
-User doesn't have authorisation to the specific AWS KMS Key ID. 
+User doesn't have authorization to the specific AWS KMS Key ID.
 ```
-Caused by: com.amazonaws.services.kms.model.AWSKMSException: User: arn:aws
-:iam::152813717728:user/<user> is not authorized to perform: kms
-:GenerateDataKey on resource: <key_ID> (Service: AWSKMS; Status Code: 400
-; Error Code: AccessDeniedException; Request ID: 4ded9f1f-b245-4213-87fc-16cba7a1c4b9; Proxy: null)
+Caused by: com.amazonaws.services.kms.model.AWSKMSException:
+User: arn:aws:iam::152813717728:user/<user> is not authorized to perform: kms:GenerateDataKey on resource: <key_ID>
+(Service: AWSKMS; Status Code: 400; Error Code: AccessDeniedException; Request ID: 4ded9f1f-b245-4213-87fc-16cba7a1c4b9; Proxy: null)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1819)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1403)
 	at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1372)
@@ -1431,8 +1433,8 @@ Caused by: com.amazonaws.services.kms.model.AWSKMSException: User: arn:aws
 The user trying to use the KMS Key ID should have the right permissions to access
 (encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.server-side-encryption.key`.
 If not, then add permission(or IAM role) in "Key users" section by selecting the
-AWS-KMS CMK Key on AWS console. 
- 
+AWS-KMS CMK Key on AWS console.
+
 ### <a name="not_all_bytes_were_read"></a> Message appears in logs "Not all bytes were read from the S3ObjectInputStream"
 
 

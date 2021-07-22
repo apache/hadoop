@@ -71,7 +71,7 @@ public class ITestS3AClientSideEncryptionKms
     // Assert content encryption algo for KMS, is present in the
     // materials description and KMS key ID isn't.
     String keyId =
-        getConfiguration().get(Constants.S3_ENCRYPTION_KEY);
+        getConfiguration().get(Constants.SERVER_SIDE_ENCRYPTION_KEY);
     Assertions.assertThat(processHeader(fsXAttrs,
         xAttrPrefix + Headers.MATERIALS_DESCRIPTION))
         .describedAs("Materials Description should contain the content "

@@ -60,7 +60,7 @@ to encrypt the data as it saved to S3. It remains encrypted on S3 until deleted:
 clients cannot change the encryption attributes of an object once uploaded.
 
 The Amazon AWS SDK also offers client-side encryption, in which all the encoding
-and decoding of data is performed on the client. 
+and decoding of data is performed on the client.
 
 The server-side "SSE" encryption is performed with symmetric AES256 encryption;
 S3 offers different mechanisms for actually defining the key to use.
@@ -113,7 +113,7 @@ This encrypts the data on the client, before transmitting to S3, where it is
 stored encrypted. The data is unencrypted after downloading when it is being
 read back.
 
-In CSE-KMS, the ID of an AWS-KMS key is provided to the S3A client; 
+In CSE-KMS, the ID of an AWS-KMS key is provided to the S3A client;
 the client communicates with AWS-KMS to request a new encryption key, which
 KMS returns along with the same key encrypted with the KMS key.
 The S3 client encrypts the payload *and* attaches the KMS-encrypted version
@@ -508,7 +508,7 @@ Analysis
 1. The WARN commands are the AWS SDK warning that because the S3A client uses
 an encryption algorithm which seek() requires, the SDK considers it less
 secure than the most recent algorithm(s). Ignore.
-   
+
 * `header.x-amz-server-side-encryption="AES256"` : the file has been encrypted with S3-SSE. This is set up as the S3 default encryption,
 so even when CSE is enabled, the data is doubly encrypted.
 * `header.x-amz-cek-alg="AES/GCM/NoPadding`: client-side encrypted with the `"AES/GCM/NoPadding` algorithm.
@@ -569,11 +569,11 @@ Use `distCp`for this, with per-bucket encryption policies.
 Amazon S3 Client Side Encryption(S3-CSE), is used to encrypt data on the
 client-side and then transmit it over to S3 storage. The same encrypted data
 is then transmitted over to client while reading and then
-decrypted on the client-side. 
+decrypted on the client-side.
 
 S3-CSE, uses `AmazonS3EncryptionClientV2.java`  as the AmazonS3 client. The
 encryption and decryption is done by AWS SDK. As of July 2021, Only CSE-KMS
-method is supported. 
+method is supported.
 
 A key reason this feature (HADOOP-13887) has been unavailable for a long time
 is that the AWS S3 client pads uploaded objects with a 16 byte footer. This
@@ -585,7 +585,7 @@ footer, as ORC and Parquet do.
 There is now a workaround: compensate for the footer in listings when CSE is enabled.
 
 - When listing files and directories, 16 bytes are subtracted from the length
-of all non-empty objects( greater than or equal to 16 bytes). 
+of all non-empty objects( greater than or equal to 16 bytes).
 - Directory markers MAY be longer than 0 bytes long.
 
 This "appears" to work; secondly it does in the testing as of July 2021. However
@@ -605,11 +605,11 @@ clients where S3-CSE has not been enabled.
  client.
 - Writing files may be slower, as only a single block can be encrypted and
  uploaded at a time.
-- Multipart Uploader API disabled. 
+- Multipart Uploader API disabled.
 - S3 Select is not supported.
 - Multipart uploads would be serial, and partSize must be a multiple of 16
  bytes.
-- maximum message size in bytes that can be encrypted under this mode is 
+- maximum message size in bytes that can be encrypted under this mode is
  2^36-32, or ~64G, due to the security limitation of AES/GCM as recommended by
  NIST.
 
@@ -625,15 +625,15 @@ KMS_KEY_ID:
 Identifies the symmetric CMK that encrypts the data key.
 To specify a CMK, use its key ID, key ARN, alias name, or alias ARN. When
 using an alias name, prefix it with "alias/". To specify a CMK in a
-different AWSaccount, you must use the key ARN or alias ARN.
+different AWS account, you must use the key ARN or alias ARN.
 
 For example:
-- Key ID: 1234abcd-12ab-34cd-56ef-1234567890ab
-- Key ARN: arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
-- Alias name: alias/ExampleAlias
-- Alias ARN: arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias
+- Key ID: `1234abcd-12ab-34cd-56ef-1234567890ab`
+- Key ARN: `arn:aws:kms:us-east-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab`
+- Alias name: `alias/ExampleAlias`
+- Alias ARN: `arn:aws:kms:us-east-2:111122223333:alias/ExampleAlias`
 
-*Note:* If `fs.s3a.server-side-encryption-algorithm=CSE-KMS` is set, 
+*Note:* If `fs.s3a.server-side-encryption-algorithm=CSE-KMS` is set,
 `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` property must be set for
 S3-CSE to work.
 
