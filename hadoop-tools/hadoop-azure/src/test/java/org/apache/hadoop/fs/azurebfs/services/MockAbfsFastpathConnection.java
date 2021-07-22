@@ -45,9 +45,11 @@ public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
       final AuthType authType,
       final String authToken,
       final List<AbfsHttpHeader> requestHeaders,
-      final String fastpathFileHandle) throws IOException {
+      final String fastpathFileHandle,
+      final boolean fastpathMockSoEnabled) throws IOException {
     super(opType, url, method, authType, authToken, requestHeaders,
         fastpathFileHandle);
+    MockFastpathConnection.setTestMock(fastpathMockSoEnabled);
   }
 
   protected FastpathOpenResponse triggerOpen(FastpathOpenRequestParams openRequestParams)

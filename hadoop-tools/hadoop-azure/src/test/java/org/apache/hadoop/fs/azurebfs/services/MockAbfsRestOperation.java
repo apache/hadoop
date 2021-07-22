@@ -27,6 +27,7 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
   int errStatus = 0;
   boolean mockRequestException = false;
   boolean mockConnectionException = false;
+  boolean fastpathMockSoEnabled = true;
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
       final AbfsClient client,
@@ -34,6 +35,7 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final URL url,
       final List<AbfsHttpHeader> requestHeaders) {
     super(operationType, client, method, url, requestHeaders);
+    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
   }
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -43,6 +45,7 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final List<AbfsHttpHeader> requestHeaders,
       final String sasToken) {
     super(operationType, client, method, url, requestHeaders, sasToken);
+    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
   }
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -53,6 +56,7 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final String sasToken,
       final String fastpathFileHandle) {
     super(operationType, client, method, url, requestHeaders, sasToken, fastpathFileHandle);
+    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
   }
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -63,12 +67,13 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final AbfsRestIODataParameters ioDataParams,
       final String sasToken) {
     super(operationType, client, method, url, requestHeaders, ioDataParams, sasToken);
+    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
   }
 
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
     return new MockAbfsFastpathConnection(operationType, url, method,
         client.getAuthType(), client.getAccessToken(), requestHeaders,
-        fastpathFileHandle);
+        fastpathFileHandle, fastpathMockSoEnabled);
   }
 
   // is this needed

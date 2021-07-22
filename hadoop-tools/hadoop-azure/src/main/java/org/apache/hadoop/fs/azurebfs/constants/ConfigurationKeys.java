@@ -212,6 +212,7 @@ public final class ConfigurationKeys {
    * Config control to enable alternate store connection using Fastpath
    */
   public static final String FS_AZURE_FASTPATH_ENABLE = "fs.azure.fastpath.enable";
+  public static final String FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED = "fs.azure.test.fastpath.mockSo.enabled";
 
   private ConfigurationKeys() {}
 }

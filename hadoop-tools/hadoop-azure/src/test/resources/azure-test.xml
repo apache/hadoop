@@ -43,6 +43,16 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.azure.fastpath.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>fs.azure.test.fastpath.mockSo.enabled</name>
+    <value>true</value>
+  </property>
+
   <!--====================  ABFS CONFIGURATION ====================-->
   <!-- SEE relevant section in "site/markdown/testing_azure.md"-->
 

@@ -127,6 +127,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FASTPATH_ENABLE)
   private boolean enableFastpath;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, DefaultValue = true)
+  private boolean fastpathMockSoEnabled;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
   private int minBackoffInterval;
@@ -615,6 +619,8 @@ public class AbfsConfiguration{
   }
 
   public boolean isFastpathEnabled() { return this.enableFastpath; }
+
+  public boolean isFastpathMockSoEnabled() { return this.fastpathMockSoEnabled; }
 
   public int getMinBackoffIntervalMilliseconds() {
     return this.minBackoffInterval;
