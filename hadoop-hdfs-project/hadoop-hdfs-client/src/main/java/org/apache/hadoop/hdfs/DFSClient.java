@@ -27,6 +27,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY;
+import static org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcErrorCodeProto.ERROR_NO_SUCH_METHOD;
 
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -248,6 +249,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final long serverDefaultsValidityPeriod;
 
+  private boolean suppressGetEcPolicyException = false;
+
   /**
    * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
    * start.
@@ -412,6 +415,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
+
+    suppressGetEcPolicyException = conf.getBoolean(
+        "dfs.client.suppress.ec.policy.exception", false);
   }
 
   /**
@@ -3283,6 +3289,13 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
              newPathTraceScope("getErasureCodingPolicy", src)) {
       return namenode.getErasureCodingPolicy(src);
     } catch (RemoteException re) {
+      if (re.getErrorCode() == ERROR_NO_SUCH_METHOD &&
+          suppressGetEcPolicyException) {
+        LOG.debug(
+            "Ignoring the exception as a workaround for clients that " +
+            "cannot handle RemoteException from getErasureCodingPolicy.");
+        return null;
+      }
       throw re.unwrapRemoteException(FileNotFoundException.class,
           AccessControlException.class, UnresolvedPathException.class);
     }
