@@ -419,6 +419,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         () -> {
           int b;
           try {
+            // When exception happens before re-setting wrappedStream in "reopen" called
+            // by onReadFailure, then wrappedStream will be null. But the **retry** may
+            // re-execute this block and cause NPE if we don't check wrappedStream
+            if (wrappedStream == null) {
+              throw new IOException("Null IO stream for reading "  + uri);
+            }
             b = wrappedStream.read();
           } catch (EOFException e) {
             return -1;
@@ -507,6 +513,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         () -> {
           int bytes;
           try {
+            // When exception happens before re-setting wrappedStream in "reopen" called
+            // by onReadFailure, then wrappedStream will be null. But the **retry** may
+            // re-execute this block and cause NPE if we don't check wrappedStream
+            if (wrappedStream == null) {
+              throw new IOException("Null IO stream for reading "  + uri);
+            }
             bytes = wrappedStream.read(buf, off, len);
           } catch (EOFException e) {
             // the base implementation swallows EOFs.
