@@ -1945,14 +1945,9 @@ public class LeafQueue extends AbstractCSQueue {
 
       updateAbsoluteCapacities();
 
-      // If maxApplications not set, use the system total max app, apply newly
-      // calculated abs capacity of the queue.
-      // When add new queue, the parent queue's other children should also
-      // update the max app.
-      super.updateMaxAppRelatedField(csContext.getConfiguration(),
-          this, CommonNodeLabelsManager.NO_LABEL);
-
       super.updateEffectiveResources(clusterResource);
+      super.updateMaxAppRelatedField(csContext.getConfiguration(),
+              this);
 
       updateCurrentResourceLimits(currentResourceLimits, clusterResource);
 

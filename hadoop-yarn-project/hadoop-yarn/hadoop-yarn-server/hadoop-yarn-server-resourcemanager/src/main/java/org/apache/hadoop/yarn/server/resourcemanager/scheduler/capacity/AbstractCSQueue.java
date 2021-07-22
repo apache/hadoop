@@ -1528,21 +1528,30 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   void updateMaxAppRelatedField(CapacitySchedulerConfiguration conf,
-      LeafQueue leafQueue, String label) {
+      LeafQueue leafQueue) {
     int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
+    int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
+    String maxLabel = RMNodeLabelsManager.NO_LABEL;
+
     if (maxApplications < 0) {
-      int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-      if (maxGlobalPerQueueApps > 0) {
-        // In absolute mode, should
-        // shrink when change to corresponding label capacity.
-        maxApplications = this.capacityConfigType
-            != CapacityConfigType.ABSOLUTE_RESOURCE ?
-          maxGlobalPerQueueApps :
-            (int) (maxGlobalPerQueueApps * queueCapacities
-                .getAbsoluteCapacity(label));
-      } else{
-        maxApplications = (int) (conf.getMaximumSystemApplications()
-            * queueCapacities.getAbsoluteCapacity(label));
+      for (String label : configuredNodeLabels) {
+        int maxApplicationsByLabel = 0;
+        if (maxGlobalPerQueueApps > 0) {
+          // In absolute mode, should
+          // shrink when change to corresponding label capacity.
+          maxApplicationsByLabel = this.capacityConfigType
+              != CapacityConfigType.ABSOLUTE_RESOURCE ?
+              maxGlobalPerQueueApps :
+              (int) (maxGlobalPerQueueApps * queueCapacities
+                  .getAbsoluteCapacity(label));
+        } else {
+          maxApplicationsByLabel = (int) (conf.getMaximumSystemApplications()
+              * queueCapacities.getAbsoluteCapacity(label));
+        }
+        if (maxApplicationsByLabel > maxApplications) {
+          maxApplications = maxApplicationsByLabel;
+          maxLabel = label;
+        }
       }
     }
     leafQueue.setMaxApplications(maxApplications);
@@ -1560,9 +1569,9 @@ public abstract class AbstractCSQueue implements CSQueue {
         "update max app related, maxApplications="
         + maxApplications + ", maxApplicationsPerUser="
         + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
-        .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
-        .getCapacity(label) + ", MaxCap : " + queueCapacities
-        .getMaximumCapacity(label));
+        .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
+        .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(maxLabel));
   }
 
   private void deriveCapacityFromAbsoluteConfigurations(String label,
@@ -1643,11 +1652,6 @@ public abstract class AbstractCSQueue implements CSQueue {
         deriveCapacityFromAbsoluteConfigurations(label, clusterResource, rc);
         // Re-visit max applications for a queue based on absolute capacity if
         // needed.
-        if (this instanceof LeafQueue) {
-          LeafQueue leafQueue = (LeafQueue) this;
-          CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-          updateMaxAppRelatedField(conf, leafQueue, label);
-        }
       } else{
         queueResourceQuotas.setEffectiveMinResource(label, Resources
             .multiply(resourceByLabel,
