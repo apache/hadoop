@@ -98,17 +98,16 @@ public class ClientCache {
     if (Client.LOG.isDebugEnabled()) {
       Client.LOG.debug("stopping client from cache: " + client);
     }
-    final int count;
     synchronized (this) {
-      count = client.decAndGetCount();
-      if (count == 0) {
+      client.decCount();
+      if (client.isZeroReference()) {
         if (Client.LOG.isDebugEnabled()) {
           Client.LOG.debug("removing client from cache: " + client);
         }
         clients.remove(client.getSocketFactory());
       }
     }
-    if (count == 0) {
+    if (client.isZeroReference()) {
       if (Client.LOG.isDebugEnabled()) {
         Client.LOG.debug("stopping actual client because no more references remain: "
             + client);
