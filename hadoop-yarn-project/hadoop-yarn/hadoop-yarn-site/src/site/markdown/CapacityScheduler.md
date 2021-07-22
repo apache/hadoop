@@ -468,7 +468,7 @@ Note, this feature should be disabled if YARN is deployed separately with the fi
 
   * Container Allocation per NodeManager Heartbeat
 
-  The `CapacityScheduler` supports the following parameters to control how many containers can be allocated in each NodeManager heartbeat.
+  The `CapacityScheduler` supports the following parameters to control how many containers can be allocated in each NodeManager heartbeat. These parameters are refreshable via *yarn rmadmin -refreshQueues*.
 
 | Property | Description |
 |:---- |:---- |
