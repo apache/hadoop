@@ -1578,7 +1578,7 @@ public class FSDirectory implements Closeable {
    * After the inodes are set properly (set the parent for each inode), we move
    * them from INodeMapTemp to INodeMap.
    */
-  public void moveInodes() throws IOException {
+  void moveInodes() throws IOException {
     long count=0, inodeNum = inodeMapTemp.size();
     LOG.debug("inodeMapTemp={}", inodeMapTemp);
 
@@ -1590,7 +1590,7 @@ public class FSDirectory implements Closeable {
      * add it to the new LightweightGSet.
      */
     Iterator<INodeWithAdditionalFields> iter = inodeMapTemp.iterator();
-    while ( iter.hasNext() ) {
+    while (iter.hasNext()) {
       INodeWithAdditionalFields n = iter.next();
       iter.remove();
 

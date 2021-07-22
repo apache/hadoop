@@ -301,8 +301,9 @@ public class INodeMap {
       key.setParent(new INodeDirectory((long)p, null, perm, 0));
       PartitionedGSet.PartitionEntry e = pgs.getPartition(key);
       
-      if(e.contains(inode))
-        return (INode)e.get(inode);
+      if (e.contains(inode)) {
+        return (INode) e.get(inode);
+      }
     }
 
     return null;
@@ -318,7 +319,7 @@ public class INodeMap {
     INode tmpInode = inode;
     while (i > 0 && tmpInode.getParent() != null) {
       tmpInode = tmpInode.getParent();
-      i -- ;
+      i--;
     }
 
     /*

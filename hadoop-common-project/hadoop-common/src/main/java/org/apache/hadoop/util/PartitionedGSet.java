@@ -243,8 +243,9 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
               getMethod("getParent").invoke(first);
           long parentId = (parent == null ? 0L :
             (long) inodeClass.getMethod("getId").invoke(parent));
-          for(int j=0; j < key.length; j++)
+          for (int j=0; j < key.length; j++) {
             firstKey[j] = firstKeyRef[j];
+          }
           firstKey[0] = parentId;
         }
         LOG.error("Partition #{}\t key: {}\t size: {}\t first: {}",
