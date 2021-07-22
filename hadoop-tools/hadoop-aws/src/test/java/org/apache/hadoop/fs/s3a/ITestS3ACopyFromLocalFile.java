@@ -30,11 +30,6 @@ import org.junit.Test;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
-/**
- * Test {@link S3AFileSystem#copyFromLocalFile(boolean, boolean, Path, Path)}.
- * Some of the tests have been disabled pending a fix for HADOOP-15932 and
- * recursive directory copying; the test cases themselves may be obsolete.
- */
 public class ITestS3ACopyFromLocalFile extends
         AbstractContractCopyFromLocalTest {
 
