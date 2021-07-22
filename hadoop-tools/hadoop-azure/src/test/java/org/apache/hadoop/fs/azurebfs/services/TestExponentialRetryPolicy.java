@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
  * Unit test TestExponentialRetryPolicy.
  */
 public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
-
   private final int maxRetryCount = 30;
   private final int noRetryCount = 0;
   private final int retryCount = new Random().nextInt(maxRetryCount);
@@ -73,10 +72,11 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     // Ensure we choose expected values that are not defaults
     ExponentialRetryPolicy template = new ExponentialRetryPolicy(
         getAbfsConfig().getMaxIoRetries());
-    int expectedMaxRetries = template.getRetryCount() + 5;
-    int expectedMinBackoff = template.getMinBackoff() + 2000;
-    int expectedMaxBackoff = template.getMaxBackoff() + 10000;
-    int expectedDeltaBackoff = template.getDeltaBackoff() + 3000;
+    int testModifier = 1;
+    int expectedMaxRetries = template.getRetryCount() + testModifier;
+    int expectedMinBackoff = template.getMinBackoff() + testModifier;
+    int expectedMaxBackoff = template.getMaxBackoff() + testModifier;
+    int expectedDeltaBackoff = template.getDeltaBackoff() + testModifier;
 
     Configuration config = new Configuration(this.getRawConfiguration());
     config.setInt(AZURE_MAX_IO_RETRIES, expectedMaxRetries);

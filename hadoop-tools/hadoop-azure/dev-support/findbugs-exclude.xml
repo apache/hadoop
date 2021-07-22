@@ -83,4 +83,12 @@
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
+  <!-- See comment in code on the read(long,byte[],int,int) method. Usage is safe based
+  on a conditional property. Either a properly synchronized parent class is called, or
+  no resources needing synchronization are used. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.azure.NativeAzureFileSystem$NativeAzureFsInputStream" />
+    <Field name="in" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
  </FindBugsFilter>
