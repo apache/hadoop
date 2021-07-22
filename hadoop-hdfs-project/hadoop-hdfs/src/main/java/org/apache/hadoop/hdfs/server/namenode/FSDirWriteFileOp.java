@@ -399,8 +399,8 @@ class FSDirWriteFileOp {
     }
     fsn.checkFsObjectLimit();
     INodeFile newNode = null;
-    INodesInPath parent =
-        FSDirMkdirOp.createMissingDirs(fsd, iip.getParentINodesInPath(), permissions);
+    INodesInPath parent = FSDirMkdirOp.createMissingDirs(fsd,
+        iip.getParentINodesInPath(), permissions);
     if (parent != null) {
       iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
           replication, blockSize, holder, clientMachine, shouldReplicate,

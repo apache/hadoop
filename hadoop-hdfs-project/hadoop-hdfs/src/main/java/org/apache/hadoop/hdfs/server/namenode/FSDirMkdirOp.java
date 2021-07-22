@@ -77,7 +77,7 @@ class FSDirMkdirOp {
     }
   }
 
-  public static INodesInPath createMissingDirs(FSDirectory fsd,
+  static INodesInPath createMissingDirs(FSDirectory fsd,
       INodesInPath iip, PermissionStatus permissions) throws IOException {
     // create all missing directories along the path,
     // but don't add them to the INodeMap yet
@@ -263,7 +263,7 @@ class FSDirMkdirOp {
   /**
    * Find-out missing iNodes for the current mkdir OP
    */
-  public static INode[] createPathDirectories(FSDirectory fsd,
+  private static INode[] createPathDirectories(FSDirectory fsd,
       INodesInPath iip, PermissionStatus perm)
       throws IOException {
     assert fsd.hasWriteLock();
