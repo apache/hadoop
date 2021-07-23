@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -146,7 +147,8 @@ class FSDirMkdirOp {
         existing = createSingleDirectory(fsd, existing, component, perm);
         if(existing == null) {
           FSNamesystem.LOG.error("unprotectedMkdir returned null for "
-              + iip.getPath() + " for " + new String(component) + " i = " + i);
+              + iip.getPath() + " for "
+              + new String(component, StandardCharsets.US_ASCII) + " i = " + i);
           // Somebody already created the parent. Recalculate existing
           existing = INodesInPath.resolve(fsd.getRoot(), iip.getPathComponents());
           i = existing.length() - 1;

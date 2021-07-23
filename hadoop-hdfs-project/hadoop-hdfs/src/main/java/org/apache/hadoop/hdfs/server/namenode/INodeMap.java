@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -202,8 +203,8 @@ public class INodeMap {
     PermissionStatus perm = new PermissionStatus(
         "", "", new FsPermission((short) 0));
     for(int p = 0; p < NUM_RANGES_STATIC; p++) {
-      INodeDirectory key = new INodeDirectory(
-          INodeId.ROOT_INODE_ID, "range key".getBytes(), perm, 0);
+      INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
+          "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
       key.setParent(new INodeDirectory((long)p, null, perm, 0));
       pgs.addNewPartition(key);
     }
