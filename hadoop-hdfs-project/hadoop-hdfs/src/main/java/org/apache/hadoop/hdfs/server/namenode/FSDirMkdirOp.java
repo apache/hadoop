@@ -70,23 +70,32 @@ class FSDirMkdirOp {
         // create multiple inodes.
         fsn.checkFsObjectLimit();
 
-        // create all missing directories along the path,
-        // but don't add them to the INodeMap yet
-        permissions = addImplicitUwx(permissions, permissions); // SHV !!!
-        INode[] missing = createPathDirectories(fsd, iip, permissions);
-        iip = iip.getExistingINodes();
-        // switch the locks
-        fsd.getINodeMap().latchWriteLock(iip, missing);
-        // Add missing inodes to the INodeMap
-        for(INode dir : missing) {
-          iip = addSingleDirectory(fsd, iip, dir, permissions);
-          assert iip != null : "iip should not be null";
-        }
+        iip = createMissingDirs(fsd, iip, permissions);
       }
       return fsd.getAuditFileInfo(iip);
     } finally {
       fsd.writeUnlock();
     }
+  }
+
+  static INodesInPath createMissingDirs(FSDirectory fsd,
+      INodesInPath iip, PermissionStatus permissions) throws IOException {
+    // create all missing directories along the path,
+    // but don't add them to the INodeMap yet
+    permissions = addImplicitUwx(permissions, permissions); // SHV !!!
+    INode[] missing = createPathDirectories(fsd, iip, permissions);
+    iip = iip.getExistingINodes();
+    if (missing.length == 0) {
+      return iip;
+    }
+    // switch the locks
+    fsd.getINodeMap().latchWriteLock(iip, missing);
+    // Add missing inodes to the INodeMap
+    for (INode dir : missing) {
+      iip = addSingleDirectory(fsd, iip, dir, permissions);
+      assert iip != null : "iip should not be null";
+    }
+    return iip;
   }
 
   /**
@@ -253,6 +262,9 @@ class FSDirMkdirOp {
     return dir;
   }
 
+  /**
+   * Find-out missing iNodes for the current mkdir OP.
+   */
   private static INode[] createPathDirectories(FSDirectory fsd,
       INodesInPath iip, PermissionStatus perm)
       throws IOException {
