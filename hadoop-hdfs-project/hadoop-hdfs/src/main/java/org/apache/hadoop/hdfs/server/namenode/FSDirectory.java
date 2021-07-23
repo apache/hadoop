@@ -165,7 +165,7 @@ public class FSDirectory implements Closeable {
   private final long contentSleepMicroSec;
   private final INodeMap inodeMap; // Synchronized by dirLock
   // Temp InodeMap used when loading an FS image.
-  private final GSet<INode, INodeWithAdditionalFields> inodeMapTemp;
+  private final GSet<INode, INodeWithAdditionalFields> tempInodeMap;
   private long yieldCount = 0; // keep track of lock yield count.
   private int quotaInitThreads;
 
@@ -324,10 +324,10 @@ public class FSDirectory implements Closeable {
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir, ns);
-    inodeMapTemp = new LightWeightGSet<INode, INodeWithAdditionalFields>(1000);
+    tempInodeMap = new LightWeightGSet<INode, INodeWithAdditionalFields>(1000);
 
     // add rootDir to inodeMapTemp.
-    inodeMapTemp.put(rootDir);
+    tempInodeMap.put(rootDir);
 
     this.isPermissionEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
@@ -1486,15 +1486,12 @@ public class FSDirectory implements Closeable {
   public INodeMap getINodeMap() {
     return inodeMap;
   }
-  public GSet<INode, INodeWithAdditionalFields> getTempINodeMap() {
-    return inodeMapTemp;
-  }
 
-  public final void addToTempInodeMap(INode inode) {
+  final void addToTempInodeMap(INode inode) {
     if (inode instanceof INodeWithAdditionalFields) {
       LOG.debug("addToTempInodeMap: id={}, inodeMapTemp.size={}",
-          inode.getId(), inodeMapTemp.size());
-      inodeMapTemp.put((INodeWithAdditionalFields) inode);
+          inode.getId(), tempInodeMap.size());
+      tempInodeMap.put((INodeWithAdditionalFields) inode);
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
         addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
@@ -1579,8 +1576,8 @@ public class FSDirectory implements Closeable {
    * them from INodeMapTemp to INodeMap.
    */
   void moveInodes() throws IOException {
-    long count=0, inodeNum = inodeMapTemp.size();
-    LOG.debug("inodeMapTemp={}", inodeMapTemp);
+    long count=0, inodeNum = tempInodeMap.size();
+    LOG.debug("inodeMapTemp={}", tempInodeMap);
 
     /**
      * Note:
@@ -1589,7 +1586,7 @@ public class FSDirectory implements Closeable {
      * we need to first remove it from its original LightweightGSet and then
      * add it to the new LightweightGSet.
      */
-    Iterator<INodeWithAdditionalFields> iter = inodeMapTemp.iterator();
+    Iterator<INodeWithAdditionalFields> iter = tempInodeMap.iterator();
     while (iter.hasNext()) {
       INodeWithAdditionalFields n = iter.next();
       iter.remove();
@@ -1608,7 +1605,7 @@ public class FSDirectory implements Closeable {
     }
 
     //inodeMap.show();
-    inodeMapTemp.clear();
+    tempInodeMap.clear();
   }
 
   /**
@@ -1933,7 +1930,7 @@ public class FSDirectory implements Closeable {
   }
   public INode getInodeFromTempINodeMap(long id) {
     LOG.debug("getInodeFromTempINodeMap: id={}, TempINodeMap.size={}",
-        id, inodeMapTemp.size());
+        id, tempInodeMap.size());
     /*
      * Convert a long inode id into an INode object. We only need to compare
      * two inodes by inode id. So, it can be any type of INode object.
@@ -1941,7 +1938,7 @@ public class FSDirectory implements Closeable {
     INode inode = new INodeDirectory(id, null,
         new PermissionStatus("", "", new FsPermission((short) 0)), 0);
 
-    return inodeMapTemp.get(inode);
+    return tempInodeMap.get(inode);
   }
   @VisibleForTesting
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
