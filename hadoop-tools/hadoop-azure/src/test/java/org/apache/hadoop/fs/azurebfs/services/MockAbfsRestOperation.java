@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED;
+
 public class MockAbfsRestOperation extends AbfsRestOperation {
 
   int errStatus = 0;
@@ -35,7 +37,8 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final URL url,
       final List<AbfsHttpHeader> requestHeaders) {
     super(operationType, client, method, url, requestHeaders);
-    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
+    fastpathMockSoEnabled = client.getAbfsConfiguration().getRawConfiguration()
+        .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, true);
   }
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -45,7 +48,8 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final List<AbfsHttpHeader> requestHeaders,
       final String sasToken) {
     super(operationType, client, method, url, requestHeaders, sasToken);
-    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
+    fastpathMockSoEnabled = client.getAbfsConfiguration().getRawConfiguration()
+        .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, true);
   }
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -56,7 +60,8 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final String sasToken,
       final String fastpathFileHandle) {
     super(operationType, client, method, url, requestHeaders, sasToken, fastpathFileHandle);
-    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
+    fastpathMockSoEnabled = client.getAbfsConfiguration().getRawConfiguration()
+        .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, true);
   }
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -67,7 +72,8 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final AbfsRestIODataParameters ioDataParams,
       final String sasToken) {
     super(operationType, client, method, url, requestHeaders, ioDataParams, sasToken);
-    fastpathMockSoEnabled = client.getAbfsConfiguration().isFastpathMockSoEnabled();
+    fastpathMockSoEnabled = client.getAbfsConfiguration().getRawConfiguration()
+        .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, true);
   }
 
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
