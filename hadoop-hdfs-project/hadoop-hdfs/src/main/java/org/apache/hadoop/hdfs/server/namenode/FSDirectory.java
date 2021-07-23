@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -165,7 +166,7 @@ public class FSDirectory implements Closeable {
   private final long contentSleepMicroSec;
   private final INodeMap inodeMap; // Synchronized by dirLock
   // Temp InodeMap used when loading an FS image.
-  private final GSet<INode, INodeWithAdditionalFields> tempInodeMap;
+  private HashMap<Long, INodeWithAdditionalFields> tempInodeMap;
   private long yieldCount = 0; // keep track of lock yield count.
   private int quotaInitThreads;
 
@@ -324,10 +325,10 @@ public class FSDirectory implements Closeable {
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir, ns);
-    tempInodeMap = new LightWeightGSet<INode, INodeWithAdditionalFields>(1000);
+    tempInodeMap = new HashMap<>(1000);
 
     // add rootDir to inodeMapTemp.
-    tempInodeMap.put(rootDir);
+    tempInodeMap.put(rootDir.getId(), rootDir);
 
     this.isPermissionEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
@@ -1491,7 +1492,7 @@ public class FSDirectory implements Closeable {
     if (inode instanceof INodeWithAdditionalFields) {
       LOG.debug("addToTempInodeMap: id={}, inodeMapTemp.size={}",
           inode.getId(), tempInodeMap.size());
-      tempInodeMap.put((INodeWithAdditionalFields) inode);
+      tempInodeMap.put(inode.getId(), (INodeWithAdditionalFields) inode);
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
         addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
@@ -1576,20 +1577,11 @@ public class FSDirectory implements Closeable {
    * them from INodeMapTemp to INodeMap.
    */
   void moveInodes() throws IOException {
-    long count=0, inodeNum = tempInodeMap.size();
+    long count=0, totalInodes = tempInodeMap.size();
     LOG.debug("inodeMapTemp={}", tempInodeMap);
 
-    /**
-     * Note:
-     * LightweightGSet uses linked lists, to implement a map. Thus, to move an
-     * Inode from one LightweightGSet (inodeMapTemp) to another (inodeMap),
-     * we need to first remove it from its original LightweightGSet and then
-     * add it to the new LightweightGSet.
-     */
-    Iterator<INodeWithAdditionalFields> iter = tempInodeMap.iterator();
-    while (iter.hasNext()) {
-      INodeWithAdditionalFields n = iter.next();
-      iter.remove();
+    for (Map.Entry e: tempInodeMap.entrySet()) {
+      INodeWithAdditionalFields n = (INodeWithAdditionalFields)e.getValue();
 
       LOG.debug("populate {}-th inode: id={}, fullpath={}",
           count, n.getId(), n.getFullPathName());
@@ -1598,14 +1590,16 @@ public class FSDirectory implements Closeable {
       count++;
     }
 
-    if (count != inodeNum) {
+    if (count != totalInodes) {
       String msg = String.format("moveInodes: expected to move %l inodes, " +
-          "but moved %l inodes", inodeNum, count);
+          "but moved %l inodes", totalInodes, count);
       throw new IOException(msg);
     }
 
     //inodeMap.show();
     tempInodeMap.clear();
+    assert(tempInodeMap.isEmpty());
+    tempInodeMap = null;
   }
 
   /**
@@ -1931,14 +1925,10 @@ public class FSDirectory implements Closeable {
   public INode getInodeFromTempINodeMap(long id) {
     LOG.debug("getInodeFromTempINodeMap: id={}, TempINodeMap.size={}",
         id, tempInodeMap.size());
-    /*
-     * Convert a long inode id into an INode object. We only need to compare
-     * two inodes by inode id. So, it can be any type of INode object.
-     */
-    INode inode = new INodeDirectory(id, null,
-        new PermissionStatus("", "", new FsPermission((short) 0)), 0);
+    if (id < INodeId.ROOT_INODE_ID)
+      return null;
 
-    return tempInodeMap.get(inode);
+    return tempInodeMap.get(id);
   }
   @VisibleForTesting
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
