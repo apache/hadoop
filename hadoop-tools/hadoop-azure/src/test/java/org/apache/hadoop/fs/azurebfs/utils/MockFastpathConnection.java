@@ -93,7 +93,7 @@ public class MockFastpathConnection
     MockFastpathConnection.testMockSoEnabled = testMockSoEnabled;
   }
 
-  public MockFastpathConnection() {
+  public MockFastpathConnection() throws FastpathConnectionException {
     super(true);
   }
 
