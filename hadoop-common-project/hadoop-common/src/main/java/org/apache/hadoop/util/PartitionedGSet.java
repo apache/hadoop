@@ -250,6 +250,9 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
         }
         LOG.error("Partition #{}\t key: {}\t size: {}\t first: {}",
             i++, key, s, firstKey);  // SHV should be info
+      } catch (NoSuchElementException ex) {
+        LOG.error("iterator.next() throws NoSuchElementException.");
+        throw ex;
       } catch (Exception ex) {
         LOG.error("Cannot find Method getNamespaceKey() in {}", inodeClass);
       }

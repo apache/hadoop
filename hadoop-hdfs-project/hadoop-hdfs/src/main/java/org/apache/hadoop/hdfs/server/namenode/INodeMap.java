@@ -247,47 +247,12 @@ public class INodeMap {
   public INode get(long id) {
     PartitionedGSet<INode, INodeWithAdditionalFields> pgs =
         (PartitionedGSet<INode, INodeWithAdditionalFields>) map;
-
-    INode inode = new INodeWithAdditionalFields(id, null,
-        new PermissionStatus("", "", new FsPermission((short) 0)), 0, 0) {
-      
-      @Override
-      void recordModification(int latestSnapshotId) {
-      }
-      
-      @Override
-      public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
-        // Nothing to do
-      }
-
-      @Override
-      public QuotaCounts computeQuotaUsage(
-          BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
-          boolean useCache, int lastSnapshotId) {
-        return null;
-      }
-
-      @Override
-      public ContentSummaryComputationContext computeContentSummary(
-          int snapshotId, ContentSummaryComputationContext summary) {
-        return null;
-      }
-      
-      @Override
-      public void cleanSubtree(
-          ReclaimContext reclaimContext, int snapshotId, int priorSnapshotId) {
-      }
-
-      @Override
-      public byte getStoragePolicyID() {
-        return HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      }
-
-      @Override
-      public byte getLocalStoragePolicyID() {
-        return HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      }
-    };
+    /*
+     * Convert a long inode id into an INode object. We only need to compare
+     * two inodes by inode id. So, it can be any type of INode object.
+     */
+    INode inode = new INodeDirectory(id, null,
+        new PermissionStatus("", "", new FsPermission((short) 0)), 0);
 
     /*
      * Iterate all partitions of PGSet and return the INode.
@@ -297,8 +262,8 @@ public class INodeMap {
         new PermissionStatus("", "", new FsPermission((short) 0));
     // TODO: create a static array, to avoid creation of keys each time.
     for (int p = 0; p < NUM_RANGES_STATIC; p++) {
-      INodeDirectory key = new INodeDirectory(
-          INodeId.ROOT_INODE_ID, "range key".getBytes(), perm, 0);
+      INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
+          "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
       key.setParent(new INodeDirectory((long)p, null, perm, 0));
       PartitionedGSet.PartitionEntry e = pgs.getPartition(key);
       
