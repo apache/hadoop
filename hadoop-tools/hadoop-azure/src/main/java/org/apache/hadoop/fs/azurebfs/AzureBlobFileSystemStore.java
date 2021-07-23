@@ -673,12 +673,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public AbfsInputStream openFileForRead(final Path path,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
       throws IOException {
-    return openFileForRead(path, new OpenFileParameters(), statistics,
+    return openFileForRead(path, Optional.empty(), statistics,
         tracingContext);
   }
 
   public AbfsInputStream openFileForRead(final Path path,
-      final OpenFileParameters parameters,
+      final Optional<OpenFileParameters> parameters,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
       throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForRead",
@@ -686,14 +686,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       LOG.debug("openFileForRead filesystem: {} path: {}",
           client.getFileSystem(), path);
 
-      Optional<Configuration> options = Optional.empty();
-
       FileStatus fileStatus = null;
-      if (parameters != null) {
-        options = Optional.ofNullable(parameters.getOptions());
-        fileStatus = parameters.getStatus();
+      if (parameters.isPresent()) {
+        fileStatus = parameters.get().getStatus();
       }
-
       String relativePath = getRelativePath(path);
       String resourceType, eTag;
       long contentLength;
@@ -723,16 +719,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics, relativePath,
-          contentLength, populateAbfsInputStreamContext(options), eTag,
+          contentLength, populateAbfsInputStreamContext(parameters), eTag,
           tracingContext);
     }
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
-      Optional<Configuration> options) {
-    boolean bufferedPreadDisabled = options
-        .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
-        .orElse(false);
+      Optional<OpenFileParameters> parameters) {
+    boolean bufferedPreadDisabled = false;
+    if (parameters.isPresent() && parameters.get().getOptions() != null) {
+      bufferedPreadDisabled = parameters.get().getOptions()
+          .getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false);
+    }
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())

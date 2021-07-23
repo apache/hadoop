@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
@@ -230,14 +231,15 @@ public class TestAbfsInputStream extends
       throws IOException {
 
     // verify GetPathStatus not invoked when FileStatus is provided
-    abfsStore.openFileForRead(testFile,
-        new OpenFileParameters().withStatus(fileStatus), null, tracingContext);
+    abfsStore.openFileForRead(testFile, Optional
+        .ofNullable(new OpenFileParameters().withStatus(fileStatus)), null, tracingContext);
     verify(mockClient, times(0).description((String.format(
         "FileStatus [from %s result] provided, GetFileStatus should not be invoked",
         source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class));
 
     //     verify GetPathStatus invoked when FileStatus not provided
-    abfsStore.openFileForRead(testFile, new OpenFileParameters(), null,
+    abfsStore.openFileForRead(testFile,
+        Optional.empty(), null,
         tracingContext);
     verify(mockClient, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))

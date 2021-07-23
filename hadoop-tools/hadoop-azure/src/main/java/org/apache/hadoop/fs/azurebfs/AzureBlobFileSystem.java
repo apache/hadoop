@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -204,11 +205,11 @@ public class AzureBlobFileSystem extends FileSystem
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     // bufferSize is unused.
-    return open(path, new OpenFileParameters());
+    return open(path, Optional.empty());
   }
 
   private FSDataInputStream open(final Path path,
-      final OpenFileParameters parameters) throws IOException {
+      final Optional<OpenFileParameters> parameters) throws IOException {
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
 
@@ -216,8 +217,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.OPEN, tracingHeaderFormat, listener);
       InputStream inputStream = abfsStore
-          .openFileForRead(qualifiedPath, parameters, statistics,
-              tracingContext);
+          .openFileForRead(qualifiedPath, parameters, statistics, tracingContext);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
@@ -236,19 +236,15 @@ public class AzureBlobFileSystem extends FileSystem
    */
   @Override
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
-      final Path path, final OpenFileParameters parameters) {
+      final Path path, final OpenFileParameters parameters) throws IOException {
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
-    Set<String> mandatoryKeys = parameters.getMandatoryKeys();
-    if (mandatoryKeys == null) {
-      mandatoryKeys = Collections.emptySet();
-    }
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
-        mandatoryKeys,
+        parameters.getMandatoryKeys(),
         Collections.emptySet(),
         "for " + path);
     return LambdaUtils.eval(
         new CompletableFuture<>(), () ->
-            open(path, parameters));
+            open(path, Optional.of(parameters)));
   }
 
   @Override
