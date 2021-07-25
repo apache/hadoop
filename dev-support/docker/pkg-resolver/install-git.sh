@@ -40,16 +40,15 @@ fi
 
 if [ "$version_to_install" == "2.9.5" ]; then
   # hadolint ignore=DL3003
-  mkdir -p /opt/boost-library &&
-    curl -L https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.9.5.tar.gz > git-2.9.5.tar.gz &&
-    mv boost_1_72_0.tar.bz2 /opt/boost-library &&
-    cd /opt/boost-library &&
-    tar --bzip2 -xf boost_1_72_0.tar.bz2 &&
-    cd /opt/boost-library/boost_1_72_0 &&
-    ./bootstrap.sh --prefix=/usr/ &&
-    ./b2 --without-python install &&
-    cd /root &&
-    rm -rf /opt/boost-library
+  mkdir -p /tmp/git /opt/git &&
+    curl -L -s -S https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.9.5.tar.gz >/tmp/git/git-2.9.5.tar.gz &&
+    tar xzf /tmp/git/git-2.9.5.tar.gz --strip-components 1 -C /opt/git &&
+    cd /opt/git || exit &&
+    make configure &&
+    ./configure --prefix=/usr/local &&
+    make "-j$(nproc)" &&
+    make install &&
+    cd /root || exit
 else
   echo "ERROR: Don't know how to install version $version_to_install"
   exit 1

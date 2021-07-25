@@ -18,6 +18,9 @@
     "centos:7": "automake",
     "centos:8": "automake"
   },
+  "autoconf": {
+    "centos:7": "autoconf"
+  },
   "bats": {
     "debian:10": "bats",
     "ubuntu:focal": "bats",
