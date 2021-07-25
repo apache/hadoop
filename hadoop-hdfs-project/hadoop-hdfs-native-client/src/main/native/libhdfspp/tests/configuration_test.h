@@ -36,6 +36,7 @@
 #include <gtest/gtest.h>
 
 namespace hdfs {
+
 template <typename T, typename U>
 void simpleConfigStreamProperty(std::stringstream& out, T key, U value) {
   out << "<property>"
