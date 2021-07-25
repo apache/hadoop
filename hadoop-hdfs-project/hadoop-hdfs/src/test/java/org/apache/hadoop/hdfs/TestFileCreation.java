@@ -1313,6 +1313,10 @@ public class TestFileCreation {
         fail();
       } catch(FileNotFoundException e) {
         FileSystem.LOG.info("Caught Expected FileNotFoundException: ", e);
+      } catch (AssertionError ae) {
+        //FSDirWriteFileOp#completeFile throws AssertError if the given
+        // id/node is not an instance of INodeFile.
+        FileSystem.LOG.info("Caught Expected AssertionError: ", ae);
       }
     } finally {
       IOUtils.closeStream(dfs);

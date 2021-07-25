@@ -25,6 +25,8 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -151,5 +153,83 @@ public class TestDFSMkdirs {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testMkDirsWithRestart() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    try {
+      // Create a dir in root dir, should succeed
+      assertTrue(dfs.mkdir(new Path("/mkdir-1"), FsPermission.getDefault()));
+      dfs.mkdir(new Path("/mkdir-2"), FsPermission.getDefault());
+      dfs.mkdir(new Path("/mkdir-3"), FsPermission.getDefault());
+      DFSTestUtil.writeFile(dfs, new Path("/mkdir-1/file1"), "hello world");
+      cluster.restartNameNodes();
+      dfs = cluster.getFileSystem();
+      assertTrue(dfs.exists(new Path("/mkdir-1")));
+      assertTrue(dfs.exists(new Path("/mkdir-2")));
+      assertTrue(dfs.exists(new Path("/mkdir-3")));
+      assertTrue(dfs.exists(new Path("/mkdir-1/file1")));
+    } finally {
+      dfs.close();
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testMkdirWithDelete() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    // Create a dir in root dir, should succeed
+    String dirA = "/A";
+    String dirB = "/B";
+
+    String fileA = "/a";
+    String fileB = "/b";
+
+    try {
+      FsPermission fsP = FsPermission.getDefault();
+      dfs.mkdir(new Path(dirA), fsP);
+      dfs.mkdir(new Path(dirB), fsP);
+      dfs.mkdirs(new Path(dirB + "/B1/B2/B3"), fsP);
+
+      DFSTestUtil.writeFile(dfs, new Path(dirA + fileA), "hello world");
+      //Overwrite existing file
+      DFSTestUtil.writeFile(dfs, new Path(dirA + fileA), "hello world");
+      DFSTestUtil.writeFile(dfs, new Path(dirB + fileB), "hello world");
+
+      //non-existing DIRS
+      DFSTestUtil.writeFile(dfs, new Path(dirA + "/non-existing" + fileA),
+          "hello " + "world");
+
+      int totalFiles = getFileCount(dfs);
+      assertTrue("Incorrect file count", 3 == totalFiles);
+
+      dfs.delete(new Path(dirA + fileA), false);
+      totalFiles = getFileCount(dfs);
+      assertTrue("Incorrect file count", 2 == totalFiles);
+      dfs.delete(new Path(dirA), true);
+      totalFiles = getFileCount(dfs);
+      assertTrue("Incorrect file count", 1 == totalFiles);
+    } finally {
+      dfs.close();
+      cluster.shutdown();
+    }
+  }
+
+  private int getFileCount(DistributedFileSystem dfs) throws IOException {
+    RemoteIterator<LocatedFileStatus> fileItr =
+        dfs.listFiles(new Path("/"), true);
+    int totalFiles = 0;
+    while (fileItr.hasNext()) {
+      fileItr.next();
+      totalFiles++;
+    }
+    return totalFiles;
   }
 }
