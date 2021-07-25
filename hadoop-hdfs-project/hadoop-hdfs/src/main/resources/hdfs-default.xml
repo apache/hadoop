@@ -791,7 +791,7 @@
 
 <property>
   <name>dfs.blockreport.initialDelay</name>
-  <value>0s</value>
+  <value>0</value>
   <description>
     Delay for first block report in seconds. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.If
@@ -836,7 +836,7 @@
 
 <property>
   <name>dfs.datanode.directoryscan.interval</name>
-  <value>21600s</value>
+  <value>21600</value>
   <description>Interval in seconds for Datanode to scan data directories and
   reconcile the difference between blocks in memory and on the disk.
   Support multiple time unit suffix(case insensitive), as described
@@ -887,7 +887,7 @@
 
 <property>
   <name>dfs.heartbeat.interval</name>
-  <value>3s</value>
+  <value>3</value>
   <description>
     Determines datanode heartbeat interval in seconds.
     Can use the following suffix (case insensitive):
@@ -1100,7 +1100,7 @@
 
 <property>
   <name>dfs.namenode.decommission.interval</name>
-  <value>30s</value>
+  <value>30</value>
   <description>Namenode periodicity in seconds to check if
     decommission or maintenance is complete. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.
@@ -1168,7 +1168,7 @@
 
 <property>
   <name>dfs.namenode.redundancy.interval.seconds</name>
-  <value>3s</value>
+  <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
   low redundancy work for datanodes. Support multiple time unit suffix(case insensitive),
   as described in dfs.heartbeat.interval.
@@ -1292,7 +1292,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.period</name>
-  <value>3600s</value>
+  <value>3600</value>
   <description>
     The number of seconds between two periodic checkpoints.
     Support multiple time unit suffix(case insensitive), as described
@@ -1312,7 +1312,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.check.period</name>
-  <value>60s</value>
+  <value>60</value>
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
   of uncheckpointed transactions. Support multiple time unit suffix(case insensitive),
@@ -1769,7 +1769,7 @@
 
 <property>
   <name>dfs.client.datanode-restart.timeout</name>
-  <value>30s</value>
+  <value>30</value>
   <description>
     Expert only. The time to wait, in seconds, from reception of an
     datanode shutdown notification for quick restart, until declaring
@@ -1839,7 +1839,7 @@
 
 <property>
   <name>dfs.ha.log-roll.period</name>
-  <value>120s</value>
+  <value>120</value>
   <description>
     How often, in seconds, the StandbyNode should ask the active to
     roll edit logs. Since the StandbyNode only reads from finalized
@@ -1854,7 +1854,7 @@
 
 <property>
   <name>dfs.ha.tail-edits.period</name>
-  <value>60s</value>
+  <value>60</value>
   <description>
     How often, the StandbyNode and ObserverNode should check if there are new
     edit log entries ready to be consumed. This is the minimum period between
@@ -3805,7 +3805,7 @@
 
 <property>
   <name>dfs.datanode.bp-ready.timeout</name>
-  <value>20s</value>
+  <value>20</value>
   <description>
     The maximum wait time for datanode to be ready before failing the
     received request. Setting this to 0 fails requests right away if the
