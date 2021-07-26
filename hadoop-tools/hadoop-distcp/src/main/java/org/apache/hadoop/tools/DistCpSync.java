@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -66,6 +67,11 @@ class DistCpSync {
     this.conf = conf;
     this.copyFilter = CopyFilter.getCopyFilter(conf);
     this.copyFilter.initialize();
+  }
+
+  @VisibleForTesting
+  public void setCopyFilter(CopyFilter copyFilter) {
+    this.copyFilter = copyFilter;
   }
 
   private boolean isRdiff() {
@@ -516,6 +522,26 @@ class DistCpSync {
   }
 
   /**
+   * checks if a parent dir is marked deleted as a part of dir rename happening
+   * to a path which is excluded by the the filter.
+   * @return true if it's marked deleted
+   */
+  private boolean isParentOrSelfMarkedDeleted(DiffInfo diff,
+      DiffInfo[] deletedDirDiffArray) {
+    for (DiffInfo item : deletedDirDiffArray) {
+      if (item.getSource().equals(diff.getSource())) {
+        if (diff.getType() == SnapshotDiffReport.DiffType.MODIFY) {
+          return true;
+        }
+      }
+      if (isParentOf(item.getSource(), diff.getSource())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * For a given sourcePath, get its real path if it or its parent was renamed.
    *
    * For example, if we renamed dirX to dirY, and created dirY/fileX,
@@ -563,10 +589,27 @@ class DistCpSync {
     } else {
       List<DiffInfo> renameDiffsList =
           diffMap.get(SnapshotDiffReport.DiffType.RENAME);
+      List<DiffInfo> deletedDirDiffsList =
+          diffMap.get(SnapshotDiffReport.DiffType.DELETE);
       DiffInfo[] renameDiffArray =
           renameDiffsList.toArray(new DiffInfo[renameDiffsList.size()]);
+      DiffInfo[] deletedDirDiffArray =
+          deletedDirDiffsList.toArray(new DiffInfo[deletedDirDiffsList.size()]);
       Arrays.sort(renameDiffArray, DiffInfo.sourceComparator);
+      Arrays.sort(deletedDirDiffArray, DiffInfo.sourceComparator);
       for (DiffInfo diff : modifyAndCreateDiffs) {
+        //  In cases, where files/dirs got created after a snapshot is taken
+        // and then the parent dir is moved to location which is excluded by
+        // the filters. For example, files/dirs created inside a dir in an
+        // encryption zone in HDFS. When the parent dir gets deleted, it will be
+        // moved to trash within which is inside the encryption zone itself.
+        // If the trash path gets excluded by filters , the dir will be marked
+        // for DELETE for the target location. All the subsequent creates should
+        // for such dirs should be ignored as well as the modify operation
+        // on the dir itself.
+        if (isParentOrSelfMarkedDeleted(diff, deletedDirDiffArray)) {
+          continue;
+        }
         DiffInfo renameItem = getRenameItem(diff, renameDiffArray);
         if (renameItem == null) {
           diff.setTarget(diff.getSource());
