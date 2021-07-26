@@ -686,10 +686,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       LOG.debug("openFileForRead filesystem: {} path: {}",
           client.getFileSystem(), path);
 
-      FileStatus fileStatus = null;
-      if (parameters.isPresent()) {
-        fileStatus = parameters.get().getStatus();
-      }
+      FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
+          .orElse(null);
       String relativePath = getRelativePath(path);
       String resourceType, eTag;
       long contentLength;
@@ -719,18 +717,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics, relativePath,
-          contentLength, populateAbfsInputStreamContext(parameters), eTag,
-          tracingContext);
+          contentLength, populateAbfsInputStreamContext(
+          parameters.map(OpenFileParameters::getOptions)),
+          eTag, tracingContext);
     }
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
-      Optional<OpenFileParameters> parameters) {
-    boolean bufferedPreadDisabled = false;
-    if (parameters.isPresent() && parameters.get().getOptions() != null) {
-      bufferedPreadDisabled = parameters.get().getOptions()
-          .getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false);
-    }
+      Optional<Configuration> options) {
+    boolean bufferedPreadDisabled = options
+        .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
+        .orElse(false);
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
