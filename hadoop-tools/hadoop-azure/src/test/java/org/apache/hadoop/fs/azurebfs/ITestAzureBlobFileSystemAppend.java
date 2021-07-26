@@ -47,7 +47,7 @@ public class ITestAzureBlobFileSystemAppend extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path filePath = path(TEST_FILE_PATH);
     fs.mkdirs(filePath);
-    fs.append(filePath, 0);
+    fs.append(filePath, 0).close();
   }
 
   @Test
@@ -69,7 +69,7 @@ public class ITestAzureBlobFileSystemAppend extends
     ContractTestUtils.touch(fs, filePath);
     fs.delete(filePath, false);
 
-    fs.append(filePath);
+    fs.append(filePath).close();
   }
 
   @Test(expected = FileNotFoundException.class)
@@ -77,14 +77,14 @@ public class ITestAzureBlobFileSystemAppend extends
     final AzureBlobFileSystem fs = getFileSystem();
     final Path folderPath = path(TEST_FOLDER_PATH);
     fs.mkdirs(folderPath);
-    fs.append(folderPath);
+    fs.append(folderPath).close();
   }
 
   @Test
   public void testTracingForAppend() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
     Path testPath = path(TEST_FILE_PATH);
-    fs.create(testPath);
+    fs.create(testPath).close();
     fs.registerListener(new TracingHeaderValidator(
         fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
         fs.getFileSystemId(), FSOperationType.APPEND, false, 0));

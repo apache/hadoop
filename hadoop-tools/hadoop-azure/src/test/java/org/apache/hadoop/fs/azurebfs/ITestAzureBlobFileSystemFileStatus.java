@@ -112,10 +112,10 @@ public class ITestAzureBlobFileSystemFileStatus extends
     Path pathwithouthost2 = new Path("/abfs/file2.txt");
 
     // verify compatibility of this path format
-    fs.create(pathWithHost1);
+    fs.create(pathWithHost1).close();
     assertPathExists(fs, "This path should exist", pathwithouthost1);
 
-    fs.create(pathwithouthost2);
+    fs.create(pathwithouthost2).close();
     assertPathExists(fs, "This path should exist", pathWithHost2);
 
     // verify get
@@ -135,7 +135,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     //  Dividing and multiplying by 1000 to make last 3 digits 0.
     //  It is observed that modification time is returned with last 3
     //  digits 0 always.
-    fs.create(testFilePath);
+    fs.create(testFilePath).close();
     long createEndTime = System.currentTimeMillis();
     FileStatus fStat = fs.getFileStatus(testFilePath);
     long lastModifiedTime = fStat.getModificationTime();

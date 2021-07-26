@@ -79,7 +79,7 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
             getFileSystem()));
     final AzureBlobFileSystem fs = getFileSystem();
     Path path = path("testFilePath");
-    fs.create(path);
+    fs.create(path).close();
     assertTrue(fs.getFileStatus(path).isFile());
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(path));
   }

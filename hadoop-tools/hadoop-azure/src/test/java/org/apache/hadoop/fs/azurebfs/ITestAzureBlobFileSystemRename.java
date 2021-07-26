@@ -313,7 +313,7 @@ public class ITestAzureBlobFileSystemRename extends
       when(op.getResult()).thenReturn(http400Op);
     } else if (renameRequestStatus == HTTP_NOT_FOUND) {
       // Create the file new.
-      fs.create(destinationPath);
+      fs.create(destinationPath).close();
       when(op.getResult()).thenReturn(http404Op);
 
       if (isOldOp) {

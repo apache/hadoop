@@ -316,14 +316,13 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
     byte[] buf = new byte[10];
     new Random().nextBytes(buf);
-    FSDataOutputStream out = fs.create(new Path("/testFile"));
-    ((AbfsOutputStream) out.getWrappedStream()).registerListener(
-        new TracingHeaderValidator(
-            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
-            fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
-            ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
-    out.write(buf);
-    out.hsync();
+    try (FSDataOutputStream out = fs.create(new Path("/testFile"))) {
+      ((AbfsOutputStream) out.getWrappedStream()).registerListener(new TracingHeaderValidator(
+          fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(), fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+          ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
+      out.write(buf);
+      out.hsync();
+    }
   }
 
   @Test
@@ -383,9 +382,10 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   private FSDataOutputStream getStreamAfterWrite(AzureBlobFileSystem fs, Path path, byte[] buffer, boolean enableFlush) throws IOException {
     fs.getAbfsStore().getAbfsConfiguration().setEnableFlush(enableFlush);
-    FSDataOutputStream stream = fs.create(path);
-    stream.write(buffer);
-    return stream;
+    try (FSDataOutputStream stream = fs.create(path)) {
+      stream.write(buffer);
+      return stream;
+    }
   }
 
   private void validate(InputStream stream, byte[] writeBuffer, boolean isEqual)

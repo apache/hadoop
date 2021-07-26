@@ -176,12 +176,13 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final Path testFilePath = path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
 
-    FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
-    fs.delete(testFilePath, true);
-    assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
+    try (FSDataInputStream inputStream = fs.open(testFilePath,
+        TEST_DEFAULT_BUFFER_SIZE)) {
+      fs.delete(testFilePath, true);
+      assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
-    intercept(FileNotFoundException.class,
-            () -> inputStream.read(new byte[1]));
+      intercept(FileNotFoundException.class, () -> inputStream.read(new byte[1]));
+    }
   }
 
   @Test
@@ -189,16 +190,16 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = path(methodName.getMethodName());
 
-    FSDataOutputStream stream = fs.create(testFilePath);
-    assertPathExists(fs, "Path should exist", testFilePath);
-    stream.write(TEST_BYTE);
+    try (FSDataOutputStream stream = fs.create(testFilePath)) {
+      assertPathExists(fs, "Path should exist", testFilePath);
+      stream.write(TEST_BYTE);
 
-    fs.delete(testFilePath, true);
-    assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
+      fs.delete(testFilePath, true);
+      assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
-    // trigger append call
-    intercept(FileNotFoundException.class,
-            () -> stream.close());
+      // trigger append call
+      intercept(FileNotFoundException.class, () -> stream.close());
+    }
   }
 
   @Test
@@ -209,14 +210,14 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
       return;
     }
 
-    FSDataOutputStream stream = fs.create(testFilePath);
-    assertPathExists(fs, "This path should exist", testFilePath);
+    try (FSDataOutputStream stream = fs.create(testFilePath)) {
+      assertPathExists(fs, "This path should exist", testFilePath);
 
-    fs.delete(testFilePath, true);
-    assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
+      fs.delete(testFilePath, true);
+      assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
-    intercept(FileNotFoundException.class,
-            () -> stream.close());
+      intercept(FileNotFoundException.class, () -> stream.close());
+    }
   }
 
   private void testWriteOneByteToFile(Path testFilePath) throws Exception {

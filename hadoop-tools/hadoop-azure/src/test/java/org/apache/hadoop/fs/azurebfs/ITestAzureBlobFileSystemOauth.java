@@ -158,7 +158,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // TEST WRITE FILE
     try {
       abfsStore.openFileForWrite(existedFilePath, fs.getFsStatistics(), true,
-          tracingContext);
+          tracingContext).close();
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     } finally {
@@ -171,7 +171,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // create test files/folders to verify access control diff between
     // Blob data contributor and Blob data reader
     final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.create(existedFilePath);
+    fs.create(existedFilePath).close();
     assertPathExists(fs, "This path should exist", existedFilePath);
     fs.mkdirs(existedFolderPath);
     assertPathExists(fs, "This path should exist", existedFolderPath);

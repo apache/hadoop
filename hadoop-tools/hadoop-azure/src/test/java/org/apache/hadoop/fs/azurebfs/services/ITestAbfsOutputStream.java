@@ -70,19 +70,18 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     conf.set(ConfigurationKeys.AZURE_WRITE_MAX_REQUESTS_TO_QUEUE,
         "" + maxRequestsToQueue);
     final AzureBlobFileSystem fs = getFileSystem(conf);
-    FSDataOutputStream out = fs.create(path(TEST_FILE_PATH));
-    AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
+    try (FSDataOutputStream out = fs.create(path(TEST_FILE_PATH))) {
+      AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
 
-    if (stream.isAppendBlobStream()) {
-      maxConcurrentRequests = 1;
+      if (stream.isAppendBlobStream()) {
+        maxConcurrentRequests = 1;
+      }
+
+      Assertions.assertThat(stream.getMaxConcurrentRequestCount()).describedAs(
+          "maxConcurrentRequests should be " + maxConcurrentRequests).isEqualTo(maxConcurrentRequests);
+      Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued()).describedAs("maxRequestsToQueue should be " + maxRequestsToQueue)
+          .isEqualTo(maxRequestsToQueue);
     }
-
-    Assertions.assertThat(stream.getMaxConcurrentRequestCount())
-        .describedAs("maxConcurrentRequests should be " + maxConcurrentRequests)
-        .isEqualTo(maxConcurrentRequests);
-    Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued())
-        .describedAs("maxRequestsToQueue should be " + maxRequestsToQueue)
-        .isEqualTo(maxRequestsToQueue);
   }
 
 }

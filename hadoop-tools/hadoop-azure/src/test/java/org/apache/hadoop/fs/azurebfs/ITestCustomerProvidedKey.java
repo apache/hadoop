@@ -553,14 +553,15 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = path("/" + methodName.getMethodName())
         .toString();
-    fs.create(new Path(testFileName));
+    fs.create(new Path(testFileName)).close();
     AbfsClient abfsClient = fs.getAbfsClient();
     String expectedCPKSha = getCPKSha(fs);
 
     byte[] fileContent = getRandomBytesArray(FILE_SIZE);
     Path testFilePath = new Path(testFileName + "1");
-    FSDataOutputStream oStream = fs.create(testFilePath);
-    oStream.write(fileContent);
+    try (FSDataOutputStream oStream = fs.create(testFilePath)) {
+      oStream.write(fileContent);
+    }
 
     //  Trying to read with different CPK headers
     Configuration conf = fs.getConf();
@@ -800,7 +801,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
     final String testFileName = path("/" + methodName.getMethodName())
         .toString();
-    fs.create(new Path(testFileName));
+    fs.create(new Path(testFileName)).close();
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
         .checkAccess(testFileName, "rwx", getTestTracingContext(fs, false));
