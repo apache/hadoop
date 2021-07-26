@@ -382,10 +382,9 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
   private FSDataOutputStream getStreamAfterWrite(AzureBlobFileSystem fs, Path path, byte[] buffer, boolean enableFlush) throws IOException {
     fs.getAbfsStore().getAbfsConfiguration().setEnableFlush(enableFlush);
-    try (FSDataOutputStream stream = fs.create(path)) {
-      stream.write(buffer);
-      return stream;
-    }
+    FSDataOutputStream stream = fs.create(path);
+    stream.write(buffer);
+    return stream;
   }
 
   private void validate(InputStream stream, byte[] writeBuffer, boolean isEqual)

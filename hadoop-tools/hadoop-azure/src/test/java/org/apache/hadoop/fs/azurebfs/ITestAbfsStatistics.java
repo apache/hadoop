@@ -31,8 +31,6 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 
 /**
  * Tests AzureBlobFileSystem Statistics.
