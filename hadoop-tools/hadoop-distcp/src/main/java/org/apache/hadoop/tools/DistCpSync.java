@@ -60,6 +60,9 @@ class DistCpSync {
   //
   private EnumMap<SnapshotDiffReport.DiffType, List<DiffInfo>> diffMap;
   private DiffInfo[] renameDiffs;
+  // entries which are marked deleted because of rename to a excluded target
+  // path
+  private DiffInfo[] deletedByExclusionDiffs;
   private CopyFilter copyFilter;
 
   DistCpSync(DistCpContext context, Configuration conf) {
@@ -228,7 +231,7 @@ class DistCpSync {
           SnapshotDiffReport.DiffType.values()) {
         diffMap.put(type, new ArrayList<DiffInfo>());
       }
-
+      List<DiffInfo> deletedOnExclusion = null;
       for (SnapshotDiffReport.DiffReportEntry entry : report.getDiffList()) {
         // If the entry is the snapshot root, usually a item like "M\t."
         // in the diff report. We don't need to handle it and cannot handle it,
@@ -256,15 +259,25 @@ class DistCpSync {
               list.add(new DiffInfo(source, target, dt));
             } else {
               list = diffMap.get(SnapshotDiffReport.DiffType.DELETE);
-              list.add(new DiffInfo(source, target,
-                      SnapshotDiffReport.DiffType.DELETE));
-            }
+              DiffInfo info = new DiffInfo(source, target,
+                  SnapshotDiffReport.DiffType.DELETE);
+              list.add(info);
+              if (deletedOnExclusion == null) {
+                deletedOnExclusion = new ArrayList<>();
+              }
+              deletedOnExclusion.add(info);
+              }
           } else if (copyFilter.shouldCopy(relativeTarget)) {
             list = diffMap.get(SnapshotDiffReport.DiffType.CREATE);
             list.add(new DiffInfo(target, null,
                     SnapshotDiffReport.DiffType.CREATE));
           }
         }
+      }
+      if (deletedOnExclusion != null) {
+        deletedByExclusionDiffs =
+            deletedOnExclusion.toArray(new DiffInfo[deletedOnExclusion.size()]);
+        Arrays.sort(renameDiffs, DiffInfo.targetComparator);
       }
       return true;
     } catch (IOException e) {
@@ -589,14 +602,9 @@ class DistCpSync {
     } else {
       List<DiffInfo> renameDiffsList =
           diffMap.get(SnapshotDiffReport.DiffType.RENAME);
-      List<DiffInfo> deletedDirDiffsList =
-          diffMap.get(SnapshotDiffReport.DiffType.DELETE);
       DiffInfo[] renameDiffArray =
           renameDiffsList.toArray(new DiffInfo[renameDiffsList.size()]);
-      DiffInfo[] deletedDirDiffArray =
-          deletedDirDiffsList.toArray(new DiffInfo[deletedDirDiffsList.size()]);
       Arrays.sort(renameDiffArray, DiffInfo.sourceComparator);
-      Arrays.sort(deletedDirDiffArray, DiffInfo.sourceComparator);
       for (DiffInfo diff : modifyAndCreateDiffs) {
         //  In cases, where files/dirs got created after a snapshot is taken
         // and then the parent dir is moved to location which is excluded by
@@ -607,7 +615,8 @@ class DistCpSync {
         // for DELETE for the target location. All the subsequent creates should
         // for such dirs should be ignored as well as the modify operation
         // on the dir itself.
-        if (isParentOrSelfMarkedDeleted(diff, deletedDirDiffArray)) {
+        if (deletedByExclusionDiffs != null && isParentOrSelfMarkedDeleted(diff,
+            deletedByExclusionDiffs)) {
           continue;
         }
         DiffInfo renameItem = getRenameItem(diff, renameDiffArray);
