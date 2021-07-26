@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -277,7 +277,7 @@ class DistCpSync {
       if (deletedOnExclusion != null) {
         deletedByExclusionDiffs =
             deletedOnExclusion.toArray(new DiffInfo[deletedOnExclusion.size()]);
-        Arrays.sort(renameDiffs, DiffInfo.targetComparator);
+        Arrays.sort(deletedByExclusionDiffs, DiffInfo.sourceComparator);
       }
       return true;
     } catch (IOException e) {
