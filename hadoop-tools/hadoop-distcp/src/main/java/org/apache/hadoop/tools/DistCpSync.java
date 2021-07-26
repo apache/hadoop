@@ -266,7 +266,7 @@ class DistCpSync {
                 deletedOnExclusion = new ArrayList<>();
               }
               deletedOnExclusion.add(info);
-              }
+            }
           } else if (copyFilter.shouldCopy(relativeTarget)) {
             list = diffMap.get(SnapshotDiffReport.DiffType.CREATE);
             list.add(new DiffInfo(target, null,
