@@ -1051,6 +1051,7 @@ public class Listing extends AbstractStoreOperation {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
       RemoteIterator<? extends LocatedFileStatus> iterator) {
     return (RemoteIterator < LocatedFileStatus >) iterator;
