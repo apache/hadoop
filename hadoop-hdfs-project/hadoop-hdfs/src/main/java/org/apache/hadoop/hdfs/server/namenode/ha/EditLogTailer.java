@@ -179,7 +179,7 @@ public class EditLogTailer {
     this.editLog = namesystem.getEditLog();
     
     lastLoadTimeMs = monotonicNow();
-    lastRollTimeMs = monotonicNow();
+    resetLastRollTimeMs();
 
     logRollPeriodMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
@@ -423,19 +423,20 @@ public class EditLogTailer {
     try {
       future = rollEditsRpcExecutor.submit(getNameNodeProxy());
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
-      lastRollTimeMs = monotonicNow();
+      resetLastRollTimeMs();
       lastRollTriggerTxId = lastLoadedTxnId;
-    } catch (ExecutionException e) {
+    } catch (ExecutionException | InterruptedException e) {
       LOG.warn("Unable to trigger a roll of the active NN", e);
     } catch (TimeoutException e) {
-      if (future != null) {
-        future.cancel(true);
-      }
+      future.cancel(true);
       LOG.warn(String.format(
           "Unable to finish rolling edits in %d ms", rollEditsTimeoutMs));
-    } catch (InterruptedException e) {
-      LOG.warn("Unable to trigger a roll of the active NN", e);
     }
+  }
+
+  @VisibleForTesting
+  public void resetLastRollTimeMs() {
+    this.lastRollTimeMs = monotonicNow();
   }
 
   @VisibleForTesting

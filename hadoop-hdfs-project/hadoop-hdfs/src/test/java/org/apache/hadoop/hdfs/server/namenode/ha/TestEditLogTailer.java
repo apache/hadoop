@@ -394,13 +394,20 @@ public class TestEditLogTailer {
     // Time in seconds to wait before checking if edit logs are rolled while
     // expecting no edit log roll
     final int noLogRollWaitTime = 2;
+
     // Time in seconds to wait before checking if edit logs are rolled while
-    // expecting edit log roll
-    final int logRollWaitTime = 3;
+    // expecting edit log roll.
+    // Aggressive tests like this one are resource sensitive and bound to
+    // fail with slow system, hence waiting to confirm
+    // curSegmentTxId for 7 seconds makes it more reliable in case
+    // EditLogTailer#doWork() takes few more milliseconds to retrieve result
+    // from EditLogTailer#triggerActiveLogRoll() and lastRollTimeMs is not
+    // updated frequently.
+    final int logRollWaitTime = 7;
 
     Configuration conf = getConf();
     conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        standbyCatchupWaitTime + noLogRollWaitTime + 1);
+        standbyCatchupWaitTime + noLogRollWaitTime + 2);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
 
@@ -433,15 +440,28 @@ public class TestEditLogTailer {
         NameNodeAdapter.mkdirs(active, getDirPath(i),
             new PermissionStatus("test", "test",
             new FsPermission((short)00755)), true);
+        // reset lastRollTimeMs in EditLogTailer.
+        active.getNamesystem().getEditLogTailer().resetLastRollTimeMs();
       }
 
-      boolean exceptionThrown = false;
+      // We should explicitly update lastRollTimeMs in EditLogTailer
+      // so that our timeout test provided just below can take advantage
+      // of validation: (monotonicNow() - lastRollTimeMs) > logRollPeriodMs
+      // provided in EditLogTailer#tooLongSinceLastLoad().
+      active.getNamesystem().getEditLogTailer().resetLastRollTimeMs();
+
       try {
-        checkForLogRoll(active, origTxId, noLogRollWaitTime);
+        // Aggressive checks like this one are resource sensitive and bound to
+        // fail with slow system, hence waiting to confirm
+        // curSegmentTxId for (noLogRollWaitTime - 1) seconds
+        // makes it more reliable in case EditLogTailer#doWork() takes few
+        // more milliseconds to retrieve result from
+        // EditLogTailer#triggerActiveLogRoll().
+        checkForLogRoll(active, origTxId, noLogRollWaitTime - 1);
+        fail("Expected to timeout");
       } catch (TimeoutException e) {
-        exceptionThrown = true;
+        // expected
       }
-      assertTrue(exceptionThrown);
 
       checkForLogRoll(active, origTxId, logRollWaitTime);
     } finally {
@@ -452,26 +472,20 @@ public class TestEditLogTailer {
   private static void waitForStandbyToCatchUpWithInProgressEdits(
       final NameNode standby, final long activeTxId,
       int maxWaitSec) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        long standbyTxId = standby.getNamesystem().getFSImage()
-            .getLastAppliedTxId();
-        return (standbyTxId >= activeTxId);
-      }
-    }, 100, maxWaitSec * 1000);
+    GenericTestUtils.waitFor(() -> {
+      long standbyTxId = standby.getNamesystem().getFSImage()
+          .getLastAppliedTxId();
+      return (standbyTxId >= activeTxId);
+    }, 100, TimeUnit.SECONDS.toMillis(maxWaitSec));
   }
 
   private static void checkForLogRoll(final NameNode active,
       final long origTxId, int maxWaitSec) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        long curSegmentTxId = active.getNamesystem().getFSImage().getEditLog()
-            .getCurSegmentTxId();
-        return (origTxId != curSegmentTxId);
-      }
-    }, 100, maxWaitSec * 1000);
+    GenericTestUtils.waitFor(() -> {
+      long curSegmentTxId = active.getNamesystem().getFSImage().getEditLog()
+          .getCurSegmentTxId();
+      return (origTxId != curSegmentTxId);
+    }, 500, TimeUnit.SECONDS.toMillis(maxWaitSec));
   }
 
   private static MiniDFSCluster createMiniDFSCluster(Configuration conf,
