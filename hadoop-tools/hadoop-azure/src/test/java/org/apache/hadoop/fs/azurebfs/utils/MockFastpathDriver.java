@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.azure.storage.fastpath.driver.FastpathDriver;
-import com.azure.storage.fastpath.exceptions.FastpathException;
+import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
 import com.azure.storage.fastpath.exceptions.FastpathRequestException;
 
 public class MockFastpathDriver extends FastpathDriver {
@@ -109,7 +109,7 @@ public class MockFastpathDriver extends FastpathDriver {
 
   public String Open (int timeout,
       String clientRequestId,
-      String serializedRequestParams) {
+      String serializedRequestParams) throws FastpathConnectionException {
     return responseRegistry.get(clientRequestId).mockResponse;
   }
 
@@ -119,7 +119,7 @@ public class MockFastpathDriver extends FastpathDriver {
       final String serializedRequestParams,
       final int rdBufOffset,
       final int readLength,
-      final java.nio.ByteBuffer rdBuffer) throws FastpathException {
+      final java.nio.ByteBuffer rdBuffer) throws FastpathConnectionException {
     byte[] tmpRdBBuffer = new byte[readLength];
     ReadByteArray(timeout, clientRequestID, serializedRequestParams,
         rdBufOffset, readLength, tmpRdBBuffer);
@@ -133,7 +133,7 @@ public class MockFastpathDriver extends FastpathDriver {
       final String serializedRequestParams,
       final int rdBufOffset,
       final int readLength,
-      final byte[] rdBuffer) throws FastpathException {
+      final byte[] rdBuffer) throws FastpathConnectionException {
     ResponseRegisterFields mockResponseRegister = responseRegistry.get(clientRequestId);
     org.junit.Assert.assertTrue(mockResponseRegister != null);
     int len = Math.min(
@@ -141,7 +141,7 @@ public class MockFastpathDriver extends FastpathDriver {
             - (int) responseRegistry.get(clientRequestId).remotePosition),
         readLength);
     if (len < 0) {
-      throw new FastpathRequestException("invalid offset/read length ");
+      throw new FastpathConnectionException("invalid offset/read length ");
     } else if (len == 0) {
       LOG.debug("nothing left to read");
       return responseRegistry.get(clientRequestId).mockResponse;
@@ -158,7 +158,7 @@ public class MockFastpathDriver extends FastpathDriver {
 
   public String Close (int timeout,
       String transactionId,
-      String serializedRequestParams) {
+      String serializedRequestParams) throws FastpathConnectionException {
     return responseRegistry.get(transactionId).mockResponse;
   }
 }
