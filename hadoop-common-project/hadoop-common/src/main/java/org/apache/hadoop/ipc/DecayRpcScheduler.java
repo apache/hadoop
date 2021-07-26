@@ -193,6 +193,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final String namespace;
   private final int topUsersCount; // e.g., report top 10 users' metrics
   private static final double PRECISION = 0.0001;
+  private final TimeUnit metricsTimeUnit;
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
   private final Map<String, Integer> staticPriorities = new HashMap<>();
@@ -265,6 +266,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     decayRpcSchedulerDetailedMetrics =
         DecayRpcSchedulerDetailedMetrics.create(ns);
     decayRpcSchedulerDetailedMetrics.init(numLevels);
+
+    metricsTimeUnit = RpcMetrics.getMetricsTimeUnit(conf);
 
     // Setup delay timer
     Timer timer = new Timer(true);
@@ -725,8 +728,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
-    long processingTime = details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+    long queueTime = details.get(Timing.QUEUE, metricsTimeUnit);
+    long processingTime = details.get(Timing.PROCESSING,
+        metricsTimeUnit);
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);

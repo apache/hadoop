@@ -3991,6 +3991,15 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "submit.retry";
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
 
+  /**
+   * The interceptor class used in FederationClientInterceptor should return
+   * partial ApplicationReports.
+   */
+  public static final String ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED =
+          ROUTER_PREFIX + "partial-result.enabled";
+  public static final boolean DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED =
+          false;
+
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 
   public static final String ROUTER_USER_CLIENT_THREADS_SIZE =
