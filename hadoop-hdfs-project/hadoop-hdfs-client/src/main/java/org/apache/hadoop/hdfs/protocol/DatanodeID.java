@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-
+import org.apache.hadoop.net.NetUtils;
 import java.net.InetSocketAddress;
 
 /**
@@ -125,8 +125,9 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
 
   public void setIpAddr(String ipAddr) {
+    this.ipAddr = ipAddr;
     //updated during registration, preserve former xferPort
-    setIpAndXferPort(ipAddr, getByteString(ipAddr), xferPort);
+    setIpAndXferPort(this.ipAddr, getByteString(ipAddr), xferPort);
   }
 
   private void setIpAndXferPort(String ipAddr, ByteString ipAddrBytes,
@@ -135,7 +136,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     this.ipAddr = ipAddr;
     this.ipAddrBytes = ipAddrBytes;
     this.xferPort = xferPort;
-    this.xferAddr = ipAddr + ":" + xferPort;
+    this.xferAddr = NetUtils.getIPPortString(ipAddr, xferPort);
   }
 
   public void setPeerHostName(String peerHostName) {
@@ -201,21 +202,21 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * @return IP:ipcPort string
    */
   private String getIpcAddr() {
-    return ipAddr + ":" + ipcPort;
+    return NetUtils.getIPPortString(ipAddr, ipcPort);
   }
 
   /**
    * @return IP:infoPort string
    */
   public String getInfoAddr() {
-    return ipAddr + ":" + infoPort;
+    return NetUtils.getIPPortString(ipAddr, infoPort);
   }
 
   /**
    * @return IP:infoPort string
    */
   public String getInfoSecureAddr() {
-    return ipAddr + ":" + infoSecurePort;
+    return NetUtils.getIPPortString(ipAddr, infoSecurePort);
   }
 
   /**
@@ -299,6 +300,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * Note that this does not update storageID.
    */
   public void updateRegInfo(DatanodeID nodeReg) {
+    ipAddr = nodeReg.getIpAddr();
     setIpAndXferPort(nodeReg.getIpAddr(), nodeReg.getIpAddrBytes(),
         nodeReg.getXferPort());
     hostName = nodeReg.getHostName();

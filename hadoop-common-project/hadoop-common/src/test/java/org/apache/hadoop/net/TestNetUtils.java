@@ -721,8 +721,8 @@ public class TestNetUtils {
     } catch (UnknownHostException e) {
       Assume.assumeTrue("Network not resolving "+ oneHost, false);
     }
-    List<String> hosts = Arrays.asList("127.0.0.1",
-        "localhost", oneHost, "UnknownHost123");
+    List<String> hosts = Arrays.asList(new String[] {"127.0.0.1",
+        "localhost", oneHost, "UnknownHost123.invalid"});
     List<String> normalizedHosts = NetUtils.normalizeHostNames(hosts);
     String summary = "original [" + StringUtils.join(hosts, ", ") + "]"
         + " normalized [" + StringUtils.join(normalizedHosts, ", ") + "]";
@@ -745,11 +745,13 @@ public class TestNetUtils {
     assertNull(NetUtils.getHostNameOfIP(null));
     assertNull(NetUtils.getHostNameOfIP(""));
     assertNull(NetUtils.getHostNameOfIP("crazytown"));
-    assertNull(NetUtils.getHostNameOfIP("127.0.0.1:"));   // no port
     assertNull(NetUtils.getHostNameOfIP("127.0.0.1:-1")); // bogus port
     assertNull(NetUtils.getHostNameOfIP("127.0.0.1:A"));  // bogus port
+    assertNotNull(NetUtils.getHostNameOfIP("[::1]"));
+    assertNotNull(NetUtils.getHostNameOfIP("[::1]:1"));
     assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1"));
     assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1:1"));
+    assertEquals("localhost", NetUtils.getHostNameOfIP("127.0.0.1:"));
   }
 
   @Test
