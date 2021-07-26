@@ -60,7 +60,7 @@ message MasterKeyProto {
 
 message NodeHealthDetailsProto {
   optional int32 overall_value = 1;
-  repeated IntLongMapProto node_resource_values = 2;
+  repeated IntLongMapProto node_health_details = 2;
 }
 
 message NodeHealthStatusProto {
