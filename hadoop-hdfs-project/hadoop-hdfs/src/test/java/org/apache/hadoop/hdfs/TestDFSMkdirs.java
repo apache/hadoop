@@ -157,7 +157,6 @@ public class TestDFSMkdirs {
 
   @Test
   public void testMkDirsWithRestart() throws IOException {
-    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem dfs = cluster.getFileSystem();
@@ -181,7 +180,6 @@ public class TestDFSMkdirs {
 
   @Test
   public void testMkdirWithDelete() throws IOException {
-    Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem dfs = cluster.getFileSystem();
