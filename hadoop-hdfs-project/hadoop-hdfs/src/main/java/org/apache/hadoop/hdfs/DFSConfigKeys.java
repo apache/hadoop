@@ -735,7 +735,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY =
       "dfs.balancer.getBlocks.hot-time-interval";
   public static final long    DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT =
-      0;
+      0L;
   public static final String  DFS_BALANCER_KEYTAB_ENABLED_KEY = "dfs.balancer.keytab.enabled";
   public static final boolean DFS_BALANCER_KEYTAB_ENABLED_DEFAULT = false;
   public static final String  DFS_BALANCER_ADDRESS_KEY = "dfs.balancer.address";
