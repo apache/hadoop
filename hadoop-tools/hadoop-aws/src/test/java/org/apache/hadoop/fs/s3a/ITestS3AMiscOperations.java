@@ -187,6 +187,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    */
   private void assumeNoDefaultEncryption() throws IOException {
     try {
+      skipIfClientSideEncryption();
       Assume.assumeThat(getDefaultEncryption(), nullValue());
     } catch (AccessDeniedException e) {
       // if the user can't check the default encryption, assume that it is
@@ -254,7 +255,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
   }
 
   private S3AEncryptionMethods encryptionAlgorithm() {
-    return getFileSystem().getServerSideEncryptionAlgorithm();
+    return getFileSystem().getS3EncryptionAlgorithm();
   }
 
   @Test

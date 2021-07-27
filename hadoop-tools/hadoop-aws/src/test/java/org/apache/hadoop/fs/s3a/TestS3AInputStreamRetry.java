@@ -96,7 +96,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         fs.getBucket(),
         path,
         fs.pathToKey(path),
-        fs.getServerSideEncryptionAlgorithm(),
+        fs.getS3EncryptionAlgorithm(),
         new EncryptionSecrets().getEncryptionKey(),
         eTag,
         versionId,
