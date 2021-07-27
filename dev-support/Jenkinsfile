@@ -26,6 +26,7 @@ pipeline {
         timeout (time: 24, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
+        parallelsAlwaysFailFast()
     }
 
     environment {
