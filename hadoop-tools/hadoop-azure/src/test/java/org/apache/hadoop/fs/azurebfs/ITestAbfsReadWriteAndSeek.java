@@ -45,7 +45,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = "/testfile";
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
@@ -75,13 +75,14 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    Path testPath = path(TEST_PATH);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.READ, true, 0,
@@ -112,7 +113,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] b = new byte[bufferSize * 10];
     new Random().nextBytes(b);
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    Path testPath = path(TEST_PATH);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
@@ -126,7 +128,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     fs.registerListener(
         new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
             fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.READ, false, 0,

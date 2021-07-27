@@ -33,16 +33,22 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
  */
 public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   private static final int TEST_DATA = 100;
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = "/testfile";
   public ITestFileSystemProperties() throws Exception {
   }
 
   @Test
   public void testReadWriteBytesToFileAndEnsureThreadPoolCleanup() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    testWriteOneByteToFileAndEnsureThreadPoolCleanup();
+    Path testPath = path(TEST_PATH);
+    try(FSDataOutputStream stream = fs.create(testPath)) {
+      stream.write(TEST_DATA);
+    }
 
-    try(FSDataInputStream inputStream = fs.open(TEST_PATH, 4 * 1024 * 1024)) {
+    FileStatus fileStatus = fs.getFileStatus(testPath);
+    assertEquals(1, fileStatus.getLen());
+
+    try(FSDataInputStream inputStream = fs.open(testPath, 4 * 1024 * 1024)) {
       int i = inputStream.read();
       assertEquals(TEST_DATA, i);
     }
@@ -51,11 +57,12 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   @Test
   public void testWriteOneByteToFileAndEnsureThreadPoolCleanup() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    try(FSDataOutputStream stream = fs.create(TEST_PATH)) {
+    Path testPath = path(TEST_PATH);
+    try(FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(TEST_DATA);
     }
 
-    FileStatus fileStatus = fs.getFileStatus(TEST_PATH);
+    FileStatus fileStatus = fs.getFileStatus(testPath);
     assertEquals(1, fileStatus.getLen());
   }
 
@@ -78,11 +85,12 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest }");
-    touch(TEST_PATH);
+    Path testPath = path(TEST_PATH);
+    touch(testPath);
     TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setPathProperties(TEST_PATH, properties, tracingContext);
+    fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
     Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
-        .getPathStatus(TEST_PATH, tracingContext);
+        .getPathStatus(testPath, tracingContext);
 
     assertEquals(properties, fetchedProperties);
   }
@@ -105,11 +113,12 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: valueTest兩 }");
-    touch(TEST_PATH);
+    Path testPath = path(TEST_PATH);
+    touch(testPath);
     TracingContext tracingContext = getTestTracingContext(fs, true);
-    fs.getAbfsStore().setPathProperties(TEST_PATH, properties, tracingContext);
+    fs.getAbfsStore().setPathProperties(testPath, properties, tracingContext);
     Hashtable<String, String> fetchedProperties = fs.getAbfsStore()
-        .getPathStatus(TEST_PATH, tracingContext);
+        .getPathStatus(testPath, tracingContext);
 
     assertEquals(properties, fetchedProperties);
   }

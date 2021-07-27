@@ -62,7 +62,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path path1 = new Path("/testfiles/~12/!008/3/abFsTestfile");
+    Path testFiles = path("/testfiles");
+    Path path1 = new Path(testFiles + "/~12/!008/3/abFsTestfile");
     try(FSDataOutputStream abfsStream = fs.create(path1, true)) {
       abfsStream.write(ABFS_TEST_CONTEXT.getBytes());
       abfsStream.flush();
@@ -70,7 +71,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
     }
 
     // create file using wasb
-    Path path2 = new Path("/testfiles/~12/!008/3/nativeFsTestfile");
+    Path path2 = new Path(testFiles + "/~12/!008/3/nativeFsTestfile");
     LOG.info("{}", wasb.getUri());
     try(FSDataOutputStream nativeFsStream = wasb.create(path2, true)) {
       nativeFsStream.write(WASB_TEST_CONTEXT.getBytes());
@@ -78,8 +79,8 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
       nativeFsStream.hsync();
     }
     // list file using abfs and wasb
-    FileStatus[] abfsFileStatus = fs.listStatus(new Path("/testfiles/~12/!008/3/"));
-    FileStatus[] nativeFsFileStatus = wasb.listStatus(new Path("/testfiles/~12/!008/3/"));
+    FileStatus[] abfsFileStatus = fs.listStatus(new Path(testFiles + "/~12/!008/3/"));
+    FileStatus[] nativeFsFileStatus = wasb.listStatus(new Path(testFiles + "/~12/!008/3/"));
 
     assertEquals(2, abfsFileStatus.length);
     assertEquals(2, nativeFsFileStatus.length);
@@ -97,8 +98,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
+    Path testFile = path("/testReadFile");
     for (int i = 0; i< 4; i++) {
-      Path path = new Path("/testReadFile/~12/!008/testfile" + i);
+      Path path = new Path(testFile + "/~12/!008/testfile" + i);
       final FileSystem createFs = createFileWithAbfs[i] ? abfs : wasb;
 
       // Write
@@ -137,8 +139,9 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
+    Path testDir = path("/testDir");
     for (int i = 0; i < 4; i++) {
-      Path path = new Path("/testDir/t" + i);
+      Path path = new Path(testDir + "/t" + i);
       //create
       final FileSystem createFs = createDirWithAbfs[i] ? abfs : wasb;
       assertTrue(createFs.mkdirs(path));
@@ -172,11 +175,12 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
 
     NativeAzureFileSystem wasb = getWasbFileSystem();
 
-    Path d1d4 = new Path("/d1/d2/d3/d4");
+    Path d1 = path("/d1");
+    Path d1d4 = new Path(d1 + "/d2/d3/d4");
     assertMkdirs(abfs, d1d4);
 
     //set working directory to path1
-    Path path1 = new Path("/d1/d2");
+    Path path1 = new Path(d1 + "/d2");
     wasb.setWorkingDirectory(path1);
     abfs.setWorkingDirectory(path1);
     assertEquals(path1, wasb.getWorkingDirectory());
