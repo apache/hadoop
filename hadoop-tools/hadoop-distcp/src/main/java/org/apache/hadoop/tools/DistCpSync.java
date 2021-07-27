@@ -38,6 +38,7 @@ import java.util.Random;
 import java.util.EnumMap;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Collections;
 
 /**
  * This class provides the basic functionality to sync two FileSystems based on
@@ -62,7 +63,7 @@ class DistCpSync {
   private DiffInfo[] renameDiffs;
   // entries which are marked deleted because of rename to a excluded target
   // path
-  private DiffInfo[] deletedByExclusionDiffs;
+  private List<DiffInfo> deletedByExclusionDiffs;
   private CopyFilter copyFilter;
 
   DistCpSync(DistCpContext context, Configuration conf) {
@@ -231,7 +232,7 @@ class DistCpSync {
           SnapshotDiffReport.DiffType.values()) {
         diffMap.put(type, new ArrayList<DiffInfo>());
       }
-      List<DiffInfo> deletedOnExclusion = null;
+      deletedByExclusionDiffs = null;
       for (SnapshotDiffReport.DiffReportEntry entry : report.getDiffList()) {
         // If the entry is the snapshot root, usually a item like "M\t."
         // in the diff report. We don't need to handle it and cannot handle it,
@@ -262,10 +263,10 @@ class DistCpSync {
               DiffInfo info = new DiffInfo(source, target,
                   SnapshotDiffReport.DiffType.DELETE);
               list.add(info);
-              if (deletedOnExclusion == null) {
-                deletedOnExclusion = new ArrayList<>();
+              if (deletedByExclusionDiffs == null) {
+                deletedByExclusionDiffs = new ArrayList<>();
               }
-              deletedOnExclusion.add(info);
+              deletedByExclusionDiffs.add(info);
             }
           } else if (copyFilter.shouldCopy(relativeTarget)) {
             list = diffMap.get(SnapshotDiffReport.DiffType.CREATE);
@@ -274,10 +275,8 @@ class DistCpSync {
           }
         }
       }
-      if (deletedOnExclusion != null) {
-        deletedByExclusionDiffs =
-            deletedOnExclusion.toArray(new DiffInfo[deletedOnExclusion.size()]);
-        Arrays.sort(deletedByExclusionDiffs, DiffInfo.sourceComparator);
+      if (deletedByExclusionDiffs != null) {
+        Collections.sort(deletedByExclusionDiffs, DiffInfo.sourceComparator);
       }
       return true;
     } catch (IOException e) {
@@ -540,7 +539,7 @@ class DistCpSync {
    * @return true if it's marked deleted
    */
   private boolean isParentOrSelfMarkedDeleted(DiffInfo diff,
-      DiffInfo[] deletedDirDiffArray) {
+      List<DiffInfo> deletedDirDiffArray) {
     for (DiffInfo item : deletedDirDiffArray) {
       if (item.getSource().equals(diff.getSource())) {
         // The same path string may appear in:
