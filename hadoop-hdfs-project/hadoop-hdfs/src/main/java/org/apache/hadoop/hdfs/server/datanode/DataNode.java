@@ -723,7 +723,7 @@ public class DataNode extends ReconfigurableBase
         for (Iterator<StorageLocation> newLocationItr =
              results.newLocations.iterator(); newLocationItr.hasNext();) {
           StorageLocation newLocation = newLocationItr.next();
-          if (newLocation.getNormalizedUri().toString().equals(
+          if (newLocation.toString().equals(
               failedStorageLocation)) {
             // The failed storage is being re-added. DataNode#refreshVolumes()
             // will take care of re-assessing it.

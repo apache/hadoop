@@ -115,10 +115,10 @@ function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
   # this must be clean for every run
-  if [[ -d "${WORKSPACE}/${PATCHDIR}" ]]; then
-    rm -rf "${WORKSPACE:?}/${PATCHDIR}"
+  if [[ -d "${PATCHDIR}" ]]; then
+    rm -rf "${PATCHDIR:?}"
   fi
-  mkdir -p "${WORKSPACE}/${PATCHDIR}"
+  mkdir -p "${PATCHDIR}"
 
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
@@ -128,23 +128,23 @@ function run_ci() {
   if [[ -n "${JIRA_ISSUE_KEY}" ]]; then
     YETUS_ARGS+=("${JIRA_ISSUE_KEY}")
   elif [[ -z "${CHANGE_URL}" ]]; then
-    echo "Full build skipped" >"${WORKSPACE}/${PATCHDIR}/report.html"
+    echo "Full build skipped" >"${PATCHDIR}/report.html"
     exit 0
   fi
 
-  YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${PATCHDIR}")
+  YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
   # where the source is located
-  YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
+  YETUS_ARGS+=("--basedir=${SOURCEDIR}")
 
   # our project defaults come from a personality file
   YETUS_ARGS+=("--project=hadoop")
-  YETUS_ARGS+=("--personality=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/hadoop.sh")
+  YETUS_ARGS+=("--personality=${SOURCEDIR}/dev-support/bin/hadoop.sh")
 
   # lots of different output formats
-  YETUS_ARGS+=("--brief-report-file=${WORKSPACE}/${PATCHDIR}/brief.txt")
-  YETUS_ARGS+=("--console-report-file=${WORKSPACE}/${PATCHDIR}/console.txt")
-  YETUS_ARGS+=("--html-report-file=${WORKSPACE}/${PATCHDIR}/report.html")
+  YETUS_ARGS+=("--brief-report-file=${PATCHDIR}/brief.txt")
+  YETUS_ARGS+=("--console-report-file=${PATCHDIR}/console.txt")
+  YETUS_ARGS+=("--html-report-file=${PATCHDIR}/report.html")
 
   # enable writing back to Github
   YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
@@ -206,7 +206,49 @@ function run_ci() {
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
 
-# Check if the CI needs to be run, if so, do so :)
-if check_ci_run; then
-  run_ci
+## @description  Cleans up the processes started by YETUS
+function cleanup_ci_proc() {
+  # See YETUS-764
+  if [ -f "${PATCHDIR}/pidfile.txt" ]; then
+    echo "test-patch process appears to still be running: killing"
+    kill "$(cat "${PATCHDIR}/pidfile.txt")" || true
+    sleep 10
+  fi
+  if [ -f "${PATCHDIR}/cidfile.txt" ]; then
+    echo "test-patch container appears to still be running: killing"
+    docker kill "$(cat "${PATCHDIR}/cidfile.txt")" || true
+  fi
+}
+
+## @description  Invokes github_status_recovery in YETUS's precommit
+function github_status_recovery() {
+  YETUS_ARGS+=("--github-token=${GITHUB_TOKEN}")
+  YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
+  TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/github-status-recovery.sh"
+  /usr/bin/env bash "${TESTPATCHBIN}" "${YETUS_ARGS[@]}" "${EXTRA_ARGS}" || true
+}
+
+if [ -z "$1" ]; then
+  echo "Must specify an argument for jenkins.sh"
+  echo "run_ci                  - Runs the CI based on platform image as defined by DOCKERFILE"
+  echo "cleanup_ci_proc         - Cleans up the processes spawned for running the CI"
+  echo "github_status_recovery  - Sends Github status (refer to YETUS precommit for more details)"
+  exit 1
+fi
+
+# Process arguments to jenkins.sh
+if [ "$1" == "run_ci" ]; then
+  # Check if the CI needs to be run, if so, do so :)
+  if check_ci_run; then
+    run_ci
+  else
+    echo "No C++ file/C++ build/platform changes found, will not run CI"
+  fi
+elif [ "$1" == "cleanup_ci_proc" ]; then
+  cleanup_ci_proc
+elif [ "$1" == "github_status_recovery" ]; then
+  github_status_recovery
+else
+  echo "Don't know how to process $1"
+  exit 1
 fi
