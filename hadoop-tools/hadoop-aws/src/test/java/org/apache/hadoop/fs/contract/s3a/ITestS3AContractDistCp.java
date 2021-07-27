@@ -18,17 +18,14 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
-
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER;
-import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_DISK;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
  * Contract test suite covering S3A integration with DistCp.
@@ -72,8 +69,9 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   public void testDistCpWithIterator() throws Exception {
     final long renames = getRenameOperationCount();
     super.testDistCpWithIterator();
-    assertEquals("Expected no renames for a direct write distcp", 0L,
-        getRenameOperationCount() - renames);
+    assertEquals("Expected no renames for a direct write distcp",
+        getRenameOperationCount(),
+         renames);
   }
 
   @Override
