@@ -64,4 +64,7 @@ message RequestHeaderProto {
 
   /** protocol version of class declaring the called method */
   required uint64 clientProtocolVersion = 3;
+
+  /** protocol extensions */
+  extensions 1000 to max;
 }
