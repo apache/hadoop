@@ -135,6 +135,11 @@
       <artifactId>dnsjava</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+
   </dependencies>
 
   <build>
