@@ -237,7 +237,7 @@ public class TestAbfsInputStream extends
         "FileStatus [from %s result] provided, GetFileStatus should not be invoked",
         source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class));
 
-    //     verify GetPathStatus invoked when FileStatus not provided
+    // verify GetPathStatus invoked when FileStatus not provided
     abfsStore.openFileForRead(testFile,
         Optional.empty(), null,
         tracingContext);
@@ -292,6 +292,12 @@ public class TestAbfsInputStream extends
         abfsStore, mockClient, AbfsRestOperationType.ListPaths, tracingContext);
     checkGetPathStatusCalls(largeTestFile, listStatusResults[1],
         abfsStore, mockClient, AbfsRestOperationType.ListPaths, tracingContext);
+
+    // Verify with general filestatus (not instance of VersionedFileStatus)
+    FileStatus fileStatus = new FileStatus(smallBuffer.length, false, 0, 0,
+        getFileStatusResults[0].getModificationTime(), smallTestFile); //no etag
+    verifyOpenWithProvidedStatus(smallTestFile, fileStatus, smallBuffer,
+        AbfsRestOperationType.GetPathStatus);
   }
 
   /**

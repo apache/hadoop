@@ -131,6 +131,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLU
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
@@ -694,7 +695,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (fileStatus != null) {
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
-        eTag = ((VersionedFileStatus) fileStatus).getVersion();
+        if (fileStatus instanceof VersionedFileStatus) {
+          eTag = ((VersionedFileStatus) fileStatus).getVersion();
+        } else {
+          eTag = EMPTY_STRING;
+        }
       } else {
         AbfsHttpOperation op = client
             .getPathStatus(relativePath, false, tracingContext).getResult();
