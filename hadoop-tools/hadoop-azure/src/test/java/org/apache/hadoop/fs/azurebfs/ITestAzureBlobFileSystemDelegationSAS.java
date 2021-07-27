@@ -53,6 +53,8 @@ import org.apache.hadoop.security.AccessControlException;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
@@ -223,15 +225,15 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertFalse(fs.exists(destinationPath));
+    assertPathDoesNotExist(fs, "This path should not exist", destinationPath);
     fs.rename(sourcePath, destinationPath);
-    assertFalse(fs.exists(sourcePath));
-    assertTrue(fs.exists(destinationPath));
+    assertPathDoesNotExist(fs, "This path should not exist", sourcePath);
+    assertPathExists(fs, "This path should exist", destinationPath);
 
-    assertFalse(fs.exists(destinationDir));
+    assertPathDoesNotExist(fs, "This path should not exist", destinationDir);
     fs.rename(sourceDir, destinationDir);
-    assertFalse(fs.exists(sourceDir));
-    assertTrue(fs.exists(destinationDir));
+    assertPathDoesNotExist(fs, "This path should not exist", sourceDir);
+    assertPathExists(fs, "This path should exist", destinationDir);
   }
 
   @Test
@@ -246,13 +248,13 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertTrue(fs.exists(filePath));
+    assertPathExists(fs, "This path should exist", filePath);
     fs.delete(filePath, false);
-    assertFalse(fs.exists(filePath));
+    assertPathDoesNotExist(fs, "This path should not exist", filePath);
 
-    assertTrue(fs.exists(dirPath));
+    assertPathExists(fs, "This path should exist", dirPath);
     fs.delete(dirPath, false);
-    assertFalse(fs.exists(dirPath));
+    assertPathDoesNotExist(fs, "This path should not exist", dirPath);
   }
 
   @Test
@@ -267,11 +269,11 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertTrue(fs.exists(dirPath));
-    assertTrue(fs.exists(filePath));
+    assertPathExists(fs, "This path should exist", dirPath);
+    assertPathExists(fs, "This path should exist", filePath);
     fs.delete(dirPath, true);
-    assertFalse(fs.exists(filePath));
-    assertFalse(fs.exists(dirPath));
+    assertPathDoesNotExist(fs, "This path should not exist", filePath);
+    assertPathDoesNotExist(fs, "This path should not exist", dirPath);
   }
 
   @Test
@@ -395,8 +397,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   public void testSignatureMask() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    String src = "/testABC/test.xt";
-    fs.create(new Path(src));
+    String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
+    fs.create(new Path(src)).close();
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
         .renamePath(src, "/testABC" + "/abc.txt", null,
             getTestTracingContext(fs, false));
