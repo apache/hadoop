@@ -539,6 +539,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (hasMetadataStore()) {
         LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
             getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+        if (isCSEEnabled) {
+          throw new RuntimeException("Disable S3-CSE if S3Guard is enabled.");
+        }
       }
 
       // LOG if S3Guard is disabled on the warn level set in config
