@@ -543,11 +543,18 @@ class DistCpSync {
       DiffInfo[] deletedDirDiffArray) {
     for (DiffInfo item : deletedDirDiffArray) {
       if (item.getSource().equals(diff.getSource())) {
+        // The same path string may appear in:
+        // 1. both deleted and modified snapshot diff entries.
+        // 2. both deleted and created snapshot diff entries.
+        // Case 1 is the about same file/directory, whereas case 2
+        // is about two different files/directories.
+        // We are finding case 1 here, thus we check against DiffType.MODIFY.
         if (diff.getType() == SnapshotDiffReport.DiffType.MODIFY) {
           return true;
         }
-      }
-      if (isParentOf(item.getSource(), diff.getSource())) {
+      } else if (isParentOf(item.getSource(), diff.getSource())) {
+        // If deleted entry is the parent of diff entry, then both MODIFY and
+        // CREATE diff entries should be handled.
         return true;
       }
     }
