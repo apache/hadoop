@@ -352,7 +352,8 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   private Path setupTestDirectoryAndUserAccess(String testFileName,
       FsAction fsAction) throws Exception {
-    Path file = new Path(TEST_FOLDER_PATH + testFileName);
+    Path testPath = path(TEST_FOLDER_PATH);
+    Path file = new Path(testPath + testFileName);
     file = this.superUserFs.makeQualified(file);
     this.superUserFs.delete(file, true);
     this.superUserFs.create(file);
