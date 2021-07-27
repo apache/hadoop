@@ -23,7 +23,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
@@ -32,7 +31,7 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
  * Test create operation.
  */
 public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
-  private static final Path TEST_FILE_PATH = new Path("testfile");
+  private static final String TEST_FILE_PATH = "testfile";
 
   public ITestAbfsOutputStream() throws Exception {
     super();
@@ -42,7 +41,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   public void testMaxRequestsAndQueueCapacityDefaults() throws Exception {
     Configuration conf = getRawConfiguration();
     final AzureBlobFileSystem fs = getFileSystem(conf);
-    try (FSDataOutputStream out = fs.create(TEST_FILE_PATH)) {
+    try (FSDataOutputStream out = fs.create(path(TEST_FILE_PATH))) {
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
 
       int maxConcurrentRequests
@@ -71,19 +70,18 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     conf.set(ConfigurationKeys.AZURE_WRITE_MAX_REQUESTS_TO_QUEUE,
         "" + maxRequestsToQueue);
     final AzureBlobFileSystem fs = getFileSystem(conf);
-    FSDataOutputStream out = fs.create(TEST_FILE_PATH);
-    AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
+    try (FSDataOutputStream out = fs.create(path(TEST_FILE_PATH))) {
+      AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
 
-    if (stream.isAppendBlobStream()) {
-      maxConcurrentRequests = 1;
+      if (stream.isAppendBlobStream()) {
+        maxConcurrentRequests = 1;
+      }
+
+      Assertions.assertThat(stream.getMaxConcurrentRequestCount()).describedAs(
+          "maxConcurrentRequests should be " + maxConcurrentRequests).isEqualTo(maxConcurrentRequests);
+      Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued()).describedAs("maxRequestsToQueue should be " + maxRequestsToQueue)
+          .isEqualTo(maxRequestsToQueue);
     }
-
-    Assertions.assertThat(stream.getMaxConcurrentRequestCount())
-        .describedAs("maxConcurrentRequests should be " + maxConcurrentRequests)
-        .isEqualTo(maxConcurrentRequests);
-    Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued())
-        .describedAs("maxRequestsToQueue should be " + maxRequestsToQueue)
-        .isEqualTo(maxRequestsToQueue);
   }
 
 }

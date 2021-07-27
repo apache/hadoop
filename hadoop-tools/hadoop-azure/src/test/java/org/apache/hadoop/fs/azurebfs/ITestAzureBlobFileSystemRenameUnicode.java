@@ -76,7 +76,7 @@ public class ITestAzureBlobFileSystemRenameUnicode extends
   @Test
   public void testRenameFileUsingUnicode() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path folderPath1 = new Path(srcDir);
+    Path folderPath1 = path(srcDir);
     assertMkdirs(fs, folderPath1);
     assertIsDirectory(fs, folderPath1);
     Path filePath = new Path(folderPath1 + "/" + filename);

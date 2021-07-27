@@ -51,6 +51,7 @@ import static org.mockito.Mockito.when;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 
@@ -95,13 +96,13 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameFileUnderDir() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path sourceDir = new Path("/testSrc");
+    Path sourceDir = path("/testSrc");
     assertMkdirs(fs, sourceDir);
     String filename = "file1";
     Path file1 = new Path(sourceDir, filename);
     touch(file1);
 
-    Path destDir = new Path("/testDst");
+    Path destDir = path("/testDst");
     assertRenameOutcome(fs, sourceDir, destDir, true);
     FileStatus[] fileStatus = fs.listStatus(destDir);
     assertNotNull("Null file status", fileStatus);
@@ -113,14 +114,15 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("testDir"));
-    Path test1 = new Path("testDir/test1");
+    Path testDir = path("testDir");
+    fs.mkdirs(testDir);
+    Path test1 = new Path(testDir + "/test1");
     fs.mkdirs(test1);
-    fs.mkdirs(new Path("testDir/test1/test2"));
-    fs.mkdirs(new Path("testDir/test1/test2/test3"));
+    fs.mkdirs(new Path(testDir + "/test1/test2"));
+    fs.mkdirs(new Path(testDir + "/test1/test2/test3"));
 
     assertRenameOutcome(fs, test1,
-        new Path("testDir/test10"), true);
+        new Path(testDir + "/test10"), true);
     assertPathDoesNotExist(fs, "rename source dir", test1);
   }
 
@@ -130,8 +132,9 @@ public class ITestAzureBlobFileSystemRename extends
     final List<Future<Void>> tasks = new ArrayList<>();
 
     ExecutorService es = Executors.newFixedThreadPool(10);
+    Path source = path("/test");
     for (int i = 0; i < 1000; i++) {
-      final Path fileName = new Path("/test/" + i);
+      final Path fileName = new Path(source + "/" + i);
       Callable<Void> callable = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
@@ -148,8 +151,7 @@ public class ITestAzureBlobFileSystemRename extends
     }
 
     es.shutdownNow();
-    Path source = new Path("/test");
-    Path dest = new Path("/renamedDir");
+    Path dest = path("/renamedDir");
     assertRenameOutcome(fs, source, dest, true);
 
     FileStatus[] files = fs.listStatus(dest);
@@ -173,14 +175,19 @@ public class ITestAzureBlobFileSystemRename extends
   @Test
   public void testPosixRenameDirectory() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    fs.mkdirs(new Path("testDir2/test1/test2/test3"));
-    fs.mkdirs(new Path("testDir2/test4"));
-    Assert.assertTrue(fs.rename(new Path("testDir2/test1/test2/test3"), new Path("testDir2/test4")));
-    assertTrue(fs.exists(new Path("testDir2")));
-    assertTrue(fs.exists(new Path("testDir2/test1/test2")));
-    assertTrue(fs.exists(new Path("testDir2/test4")));
-    assertTrue(fs.exists(new Path("testDir2/test4/test3")));
-    assertFalse(fs.exists(new Path("testDir2/test1/test2/test3")));
+    Path testDir2 = path("testDir2");
+    fs.mkdirs(new Path(testDir2 + "/test1/test2/test3"));
+    fs.mkdirs(new Path(testDir2 + "/test4"));
+    Assert.assertTrue(fs.rename(new Path(testDir2 + "/test1/test2/test3"), new Path(testDir2 + "/test4")));
+    assertPathExists(fs, "This path should exist", testDir2);
+    assertPathExists(fs, "This path should exist",
+        new Path(testDir2 + "/test1/test2"));
+    assertPathExists(fs, "This path should exist",
+        new Path(testDir2 + "/test4"));
+    assertPathExists(fs, "This path should exist",
+        new Path(testDir2 + "/test4/test3"));
+    assertPathDoesNotExist(fs, "This path should not exist",
+        new Path(testDir2 + "/test1/test2/test3"));
   }
 
   @Test
@@ -306,7 +313,7 @@ public class ITestAzureBlobFileSystemRename extends
       when(op.getResult()).thenReturn(http400Op);
     } else if (renameRequestStatus == HTTP_NOT_FOUND) {
       // Create the file new.
-      fs.create(destinationPath);
+      fs.create(destinationPath).close();
       when(op.getResult()).thenReturn(http404Op);
 
       if (isOldOp) {

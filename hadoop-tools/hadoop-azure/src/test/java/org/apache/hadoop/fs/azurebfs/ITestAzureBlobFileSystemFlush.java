@@ -316,14 +316,13 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
     byte[] buf = new byte[10];
     new Random().nextBytes(buf);
-    FSDataOutputStream out = fs.create(new Path("/testFile"));
-    ((AbfsOutputStream) out.getWrappedStream()).registerListener(
-        new TracingHeaderValidator(
-            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
-            fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
-            ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
-    out.write(buf);
-    out.hsync();
+    try (FSDataOutputStream out = fs.create(new Path("/testFile"))) {
+      ((AbfsOutputStream) out.getWrappedStream()).registerListener(new TracingHeaderValidator(
+          fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(), fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+          ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
+      out.write(buf);
+      out.hsync();
+    }
   }
 
   @Test

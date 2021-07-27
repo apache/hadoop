@@ -99,7 +99,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
         this.getConfiguration().getRawConfiguration());
     intercept(SASTokenProviderException.class,
         () -> {
-          testFs.create(new org.apache.hadoop.fs.Path("/testFile"));
+          testFs.create(new org.apache.hadoop.fs.Path("/testFile")).close();
         });
   }
 
@@ -114,7 +114,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
     intercept(SASTokenProviderException.class,
         ()-> {
-          testFs.create(new org.apache.hadoop.fs.Path("/testFile"));
+          testFs.create(new org.apache.hadoop.fs.Path("/testFile")).close();
         });
   }
 
@@ -297,7 +297,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
       fs.listStatus(reqPath);
       break;
     case CreatePath:
-      fs.create(reqPath);
+      fs.create(reqPath).close();
       break;
     case RenamePath:
       fs.rename(reqPath,

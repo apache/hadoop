@@ -84,7 +84,8 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
         new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
     fs.removeDefaultAcl(path.getParent());
 
-    fs.create(path, permission, true, KILOBYTE, (short) 1, KILOBYTE - 1, null);
+    fs.create(path, permission, true, KILOBYTE, (short) 1, KILOBYTE - 1,
+        null).close();
     FileStatus status = fs.getFileStatus(path);
     Assert.assertEquals(permission.applyUMask(DEFAULT_UMASK_PERMISSION), status.getPermission());
   }
