@@ -324,10 +324,12 @@ public class Balancer {
      * Balancer prefer to get blocks which are belong to the cold files
      * created before this time period.
      */
-    final long hotBlockTimeInterval = conf.getTimeDuration(
-        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
-        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
+    final long hotBlockTimeInterval =
+        p.getHotBlockTimeInterval() != 0L ? p.getHotBlockTimeInterval() :
+            conf.getTimeDuration(
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
 
     // DataNode configuration parameters for balancing
     final int maxConcurrentMovesPerNode = getInt(conf,

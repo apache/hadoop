@@ -38,6 +38,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 
+import java.lang.reflect.Field;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
@@ -67,6 +68,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.StringUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1217,6 +1219,52 @@ public class TestBalancer {
     parameters = new String[] { "-blockpools", "bp-1," };
     p = Balancer.Cli.parse(parameters);
     assertEquals(1, p.getBlockPools().size());
+  }
+
+  @Test
+  public void testBalancerCliParseHotBlockTimeInterval() {
+    String[] parameters = new String[]{"-hotBlockTimeInterval", "1000"};
+    BalancerParameters p = Balancer.Cli.parse(parameters);
+    assertEquals(1000, p.getHotBlockTimeInterval());
+  }
+
+  @Test
+  public void testBalancerDispatchHotBlockTimeInterval() {
+    String[] parameters = new String[]{"-hotBlockTimeInterval", "1000"};
+    BalancerParameters p = Balancer.Cli.parse(parameters);
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    try {
+      cluster = new MiniDFSCluster
+          .Builder(conf)
+          .numDataNodes(0)
+          .setNNRedundancyConsiderLoad(false)
+          .build();
+      cluster.getConfiguration(0).setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      cluster.waitClusterUp();
+      cluster.waitActive();
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      List<NameNodeConnector> connectors =
+          NameNodeConnector.newNameNodeConnectors(namenodes,
+              Balancer.class.getSimpleName(),
+              Balancer.BALANCER_ID_PATH, conf,
+              BalancerParameters.DEFAULT.getMaxIdleIteration());
+      Balancer run = new Balancer(
+          connectors.get(0), p, new HdfsConfiguration());
+      Field field = run.getClass().getDeclaredField("dispatcher");
+      field.setAccessible(true);
+      Object dispatcher = field.get(run);
+      Field field1 =
+          dispatcher.getClass().getDeclaredField("hotBlockTimeInterval");
+      field1.setAccessible(true);
+      Object hotBlockTimeInterval = field1.get(dispatcher);
+      assertEquals(1000, (long)hotBlockTimeInterval);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
   }
 
   /**
