@@ -67,28 +67,31 @@ public final class TestAbfsClient {
   private final Pattern userAgentStringPattern;
 
   public TestAbfsClient(){
+    StringBuilder regExQuote = new StringBuilder();
+    regExQuote.append(APN_VERSION);
+    regExQuote.append(SINGLE_WHITE_SPACE);
+    regExQuote.append(CLIENT_VERSION);
+    regExQuote.append(SINGLE_WHITE_SPACE);
+    regExQuote.append("(");
+    regExQuote.append(System.getProperty(JAVA_VENDOR)
+        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
+    regExQuote.append(SINGLE_WHITE_SPACE);
+    regExQuote.append("JavaJRE");
+    regExQuote.append(SINGLE_WHITE_SPACE);
+    regExQuote.append(System.getProperty(JAVA_VERSION));
+    regExQuote.append(SEMICOLON);
+    regExQuote.append(SINGLE_WHITE_SPACE);
+    regExQuote.append(System.getProperty(OS_NAME)
+        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
+    regExQuote.append(SINGLE_WHITE_SPACE);
+    regExQuote.append(System.getProperty(OS_VERSION));
+    regExQuote.append(FORWARD_SLASH);
+    regExQuote.append(System.getProperty(OS_ARCH));
+    regExQuote.append(SEMICOLON);
+    String regExConstant = Pattern.quote(regExQuote.toString());
+
     StringBuilder regEx = new StringBuilder();
-    regEx.append("^");
-    regEx.append(APN_VERSION);
-    regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append(CLIENT_VERSION);
-    regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append("\\(");
-    regEx.append(System.getProperty(JAVA_VENDOR)
-        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
-    regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append("JavaJRE");
-    regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append(System.getProperty(JAVA_VERSION));
-    regEx.append(SEMICOLON);
-    regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append(System.getProperty(OS_NAME)
-        .replaceAll(SINGLE_WHITE_SPACE, EMPTY_STRING));
-    regEx.append(SINGLE_WHITE_SPACE);
-    regEx.append(System.getProperty(OS_VERSION));
-    regEx.append(FORWARD_SLASH);
-    regEx.append(System.getProperty(OS_ARCH));
-    regEx.append(SEMICOLON);
+    regEx.append(regExConstant);
     regEx.append("([a-zA-Z].*; )?");      // Regex for sslProviderName
     regEx.append("([a-zA-Z].*; )?");      // Regex for tokenProvider
     regEx.append(" ?");
