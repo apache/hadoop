@@ -51,7 +51,7 @@ public final class EncryptionTestUtils {
    */
   public static String convertKeyToMd5(FileSystem fs) {
     String base64Key = fs.getConf().getTrimmed(
-            SERVER_SIDE_ENCRYPTION_KEY
+        SERVER_SIDE_ENCRYPTION_KEY
     );
     byte[] key = Base64.decodeBase64(base64Key);
     byte[] md5 =  DigestUtils.md5(key);

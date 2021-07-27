@@ -86,14 +86,14 @@ public class TestSSEConfiguration extends Assert {
   public void testSSEEmptyKey() {
     // test the internal logic of the test setup code
     Configuration c = buildConf(SSE_C.getMethod(), "");
-    assertEquals("", getServerSideEncryptionKey(BUCKET, c));
+    assertEquals("", getS3EncryptionKey(BUCKET, c));
   }
 
   @Test
   public void testSSEKeyNull() throws Throwable {
     // test the internal logic of the test setup code
     final Configuration c = buildConf(SSE_C.getMethod(), null);
-    assertEquals("", getServerSideEncryptionKey(BUCKET, c));
+    assertEquals("", getS3EncryptionKey(BUCKET, c));
 
     intercept(IOException.class, SSE_C_NO_KEY_ERROR,
         () -> getEncryptionAlgorithm(BUCKET, c));
@@ -109,7 +109,7 @@ public class TestSSEConfiguration extends Assert {
     // provider provisioned value instead.
     conf.set(SERVER_SIDE_ENCRYPTION_KEY, "keyInConfObject");
 
-    String sseKey = getServerSideEncryptionKey(BUCKET, conf);
+    String sseKey = getS3EncryptionKey(BUCKET, conf);
     assertNotNull("Proxy password should not retrun null.", sseKey);
     assertEquals("Proxy password override did NOT work.", key, sseKey);
   }

@@ -87,6 +87,7 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -521,6 +522,7 @@ public final class S3AUtils {
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
    * @param versionId S3 object versionId or null if unavailable
+   * @param isCSEEnabled is client side encryption enabled?
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
@@ -528,10 +530,15 @@ public final class S3AUtils {
       long blockSize,
       String owner,
       String eTag,
-      String versionId) {
+      String versionId,
+      boolean isCSEEnabled) {
     long size = summary.getSize();
+    // check if cse is enabled; strip out constant padding length.
+    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
+      size -= CSE_PADDING_LENGTH;
+    }
     return createFileStatus(keyPath,
-        objectRepresentsDirectory(summary.getKey(), size),
+        objectRepresentsDirectory(summary.getKey()),
         size, summary.getLastModified(), blockSize, owner, eTag, versionId);
   }
 
@@ -572,14 +579,11 @@ public final class S3AUtils {
   /**
    * Predicate: does the object represent a directory?.
    * @param name object name
-   * @param size object size
    * @return true if it meets the criteria for being an object
    */
-  public static boolean objectRepresentsDirectory(final String name,
-      final long size) {
+  public static boolean objectRepresentsDirectory(final String name) {
     return !name.isEmpty()
-        && name.charAt(name.length() - 1) == '/'
-        && size == 0L;
+        && name.charAt(name.length() - 1) == '/';
   }
 
   /**
@@ -1564,7 +1568,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get any SSE key from a configuration/credential provider.
+   * Get any SSE/CSE key from a configuration/credential provider.
    * This operation handles the case where the option has been
    * set in the provider or configuration to the option
    * {@code OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY}.
@@ -1574,7 +1578,7 @@ public final class S3AUtils {
    * @return the encryption key or ""
    * @throws IllegalArgumentException bad arguments.
    */
-  public static String getServerSideEncryptionKey(String bucket,
+  public static String getS3EncryptionKey(String bucket,
       Configuration conf) {
     try {
       return lookupPassword(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
@@ -1585,7 +1589,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get the server-side encryption algorithm.
+   * Get the server-side encryption or client side encryption algorithm.
    * This includes validation of the configuration, checking the state of
    * the encryption key given the chosen algorithm.
    *
@@ -1597,22 +1601,23 @@ public final class S3AUtils {
    */
   public static S3AEncryptionMethods getEncryptionAlgorithm(String bucket,
       Configuration conf) throws IOException {
-    S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
+    S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(
         lookupPassword(bucket, conf,
             SERVER_SIDE_ENCRYPTION_ALGORITHM));
-    String sseKey = getServerSideEncryptionKey(bucket, conf);
-    int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
-    String diagnostics = passwordDiagnostics(sseKey, "key");
-    switch (sse) {
+    String encryptionKey = getS3EncryptionKey(bucket, conf);
+    int encryptionKeyLen =
+        StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();
+    String diagnostics = passwordDiagnostics(encryptionKey, "key");
+    switch (encryptionMethod) {
     case SSE_C:
       LOG.debug("Using SSE-C with {}", diagnostics);
-      if (sseKeyLen == 0) {
+      if (encryptionKeyLen == 0) {
         throw new IOException(SSE_C_NO_KEY_ERROR);
       }
       break;
 
     case SSE_S3:
-      if (sseKeyLen != 0) {
+      if (encryptionKeyLen != 0) {
         throw new IOException(SSE_S3_WITH_KEY_ERROR
             + " (" + diagnostics + ")");
       }
@@ -1623,12 +1628,17 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case CSE_KMS:
+      LOG.debug("Using CSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");
       break;
     }
-    return sse;
+    return encryptionMethod;
   }
 
   /**

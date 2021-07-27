@@ -73,6 +73,8 @@ public class StoreContextBuilder {
 
   private AuditSpanSource<AuditSpanS3A> auditor;
 
+  private boolean isCSEEnabled;
+
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
     return this;
@@ -180,6 +182,17 @@ public class StoreContextBuilder {
     return this;
   }
 
+  /**
+   * set is client side encryption boolean value.
+   * @param value value indicating if client side encryption is enabled or not.
+   * @return builder instance.
+   */
+  public StoreContextBuilder setEnableCSE(
+      boolean value) {
+    isCSEEnabled = value;
+    return this;
+  }
+
   @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
@@ -199,6 +212,7 @@ public class StoreContextBuilder {
         useListV1,
         contextAccessors,
         timeProvider,
-        auditor);
+        auditor,
+        isCSEEnabled);
   }
 }

@@ -89,6 +89,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
 
     final FileSystem fs = getFileSystem();
     Path testPath = getContract().getTestPath();
+    Assume.assumeTrue("Multipart uploader is not supported",
+        fs.hasPathCapability(testPath,
+            CommonPathCapabilities.FS_MULTIPART_UPLOADER));
     uploader0 = fs.createMultipartUploader(testPath).build();
     uploader1 = fs.createMultipartUploader(testPath).build();
   }

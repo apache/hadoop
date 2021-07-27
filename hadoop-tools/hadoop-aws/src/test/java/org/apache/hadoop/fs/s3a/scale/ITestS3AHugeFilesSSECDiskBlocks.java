@@ -49,7 +49,7 @@ public class ITestS3AHugeFilesSSECDiskBlocks
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
     removeBaseAndBucketOverrides(conf, SERVER_SIDE_ENCRYPTION_KEY,
-            SERVER_SIDE_ENCRYPTION_ALGORITHM);
+           SERVER_SIDE_ENCRYPTION_ALGORITHM);
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
         getSSEAlgorithm().getMethod());

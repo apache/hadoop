@@ -229,4 +229,17 @@ public interface S3ATestConstants {
    * every test case.
    */
   String DIRECTORY_MARKER_AUDIT = "fs.s3a.directory.marker.audit";
+
+  /**
+   * Constant bytes being written when Client side encryption KMS is enabled
+   * for a test. This bytes written takes into account "EncryptionContext",
+   * which contains the algo used for eg:
+   * "aws:x-amz-cek-alg":"AES/GCM/NoPadding" , and "KeySpec", which specifies
+   * the length of data key. for eg: AES_256 to generate a 256-bit symmetric
+   * key.
+   *
+   * For test using bytesWritten as an assertion this constant value can be
+   * used.
+   */
+  int KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN = 94;
 }

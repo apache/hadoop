@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,11 +178,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     if (useInconsistentClient()) {
       AmazonS3 client = getFileSystem()
           .getAmazonS3ClientForTesting("fault injection");
-      Assert.assertTrue(
-          "AWS client is not inconsistent, even though the test requirees it "
-          + client,
-          client instanceof InconsistentAmazonS3Client);
-      inconsistentClient = (InconsistentAmazonS3Client) client;
+      if (client instanceof InconsistentAmazonS3Client) {
+        inconsistentClient = (InconsistentAmazonS3Client) client;
+      }
     }
   }
 

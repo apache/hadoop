@@ -638,7 +638,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       copyResult = callbacks.copyFile(srcKey, destinationKey,
           srcAttributes, readContext);
     }
-    if (objectRepresentsDirectory(srcKey, len)) {
+    if (objectRepresentsDirectory(srcKey)) {
       renameTracker.directoryMarkerCopied(
           sourceFile,
           destination,

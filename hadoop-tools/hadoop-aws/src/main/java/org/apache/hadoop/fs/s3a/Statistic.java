@@ -577,7 +577,14 @@ public enum Statistic {
   AUDIT_REQUEST_EXECUTION(
       AuditStatisticNames.AUDIT_REQUEST_EXECUTION,
       "AWS request made",
-      TYPE_COUNTER);
+      TYPE_COUNTER),
+
+  /* Client side encryption gauge */
+  CLIENT_SIDE_ENCRYPTION_ENABLED(
+      "client_side_encryption_enabled",
+      "gauge to indicate if client side encryption is enabled",
+      TYPE_GAUGE
+  );
 
 
   /**

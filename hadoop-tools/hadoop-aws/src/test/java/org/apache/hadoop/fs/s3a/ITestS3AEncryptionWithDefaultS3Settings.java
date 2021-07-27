@@ -57,9 +57,11 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     S3AFileSystem fs = getFileSystem();
     Configuration c = fs.getConf();
     String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
-    if (StringUtils.isBlank(kmsKey)) {
+    if (StringUtils.isBlank(kmsKey) || !c.get(SERVER_SIDE_ENCRYPTION_ALGORITHM)
+        .equals(S3AEncryptionMethods.CSE_KMS.name())) {
       skip(SERVER_SIDE_ENCRYPTION_KEY + " is not set for " +
-          SSE_KMS.getMethod());
+          SSE_KMS.getMethod() + " or CSE-KMS algorithm is used instead of "
+          + "SSE-KMS");
     }
   }
 

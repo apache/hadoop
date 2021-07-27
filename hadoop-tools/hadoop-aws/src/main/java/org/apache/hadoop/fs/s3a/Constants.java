@@ -420,7 +420,12 @@ public final class Constants {
       "fs.s3a.multipart.purge.age";
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
-  // s3 server-side encryption, see S3AEncryptionMethods for valid options
+  /**
+   * s3 server-side encryption or s3 client side encryption method, see
+   * {@link S3AEncryptionMethods} for valid options.
+   *
+   * {@value}
+   */
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
