@@ -87,10 +87,10 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     ExponentialRetryPolicy policy = new ExponentialRetryPolicy(
         new AbfsConfiguration(config, "dummyAccountName"));
 
-    Assert.assertEquals(expectedMaxRetries, policy.getRetryCount());
-    Assert.assertEquals(expectedMinBackoff, policy.getMinBackoff());
-    Assert.assertEquals(expectedMaxBackoff, policy.getMaxBackoff());
-    Assert.assertEquals(expectedDeltaBackoff, policy.getDeltaBackoff());
+    Assert.assertEquals("Max retry count was not set as expected.", expectedMaxRetries, policy.getRetryCount());
+    Assert.assertEquals("Min backoff interval was not set as expected.", expectedMinBackoff, policy.getMinBackoff());
+    Assert.assertEquals("Max backoff interval was not set as expected.", expectedMaxBackoff, policy.getMaxBackoff());
+    Assert.assertEquals("Delta backoff interval was not set as expected.", expectedDeltaBackoff, policy.getDeltaBackoff());
   }
 
   private AbfsConfiguration getAbfsConfig() throws Exception {
