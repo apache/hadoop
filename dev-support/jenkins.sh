@@ -84,7 +84,7 @@ is_cpp_change() {
 
 ## @description  Check if the CI needs to be run - CI will always run if
 ##               IS_OPTIONAL is 0, or if there's any change in
-##               C++/C++ build or platform
+##               C++/C++ build/platform
 ## @return       0 if yes
 ## @return       1 if no
 function check_ci_run() {
