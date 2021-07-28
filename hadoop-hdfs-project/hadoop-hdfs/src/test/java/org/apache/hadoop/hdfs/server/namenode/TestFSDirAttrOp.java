@@ -28,6 +28,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.FileNotFoundException;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
@@ -40,7 +42,8 @@ public class TestFSDirAttrOp {
       LoggerFactory.getLogger(TestFSDirAttrOp.class);
 
   private boolean unprotectedSetTimes(long atime, long atime0, long precision,
-      long mtime, boolean force) throws QuotaExceededException {
+      long mtime, boolean force)
+      throws QuotaExceededException, FileNotFoundException {
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     SnapshotManager ssMgr = Mockito.mock(SnapshotManager.class);
     FSDirectory fsd = Mockito.mock(FSDirectory.class);
@@ -130,5 +133,17 @@ public class TestFSDirAttrOp {
     // atime < access time + precision, but mtime is set
     assertTrue("SetTimes should update access time",
         unprotectedSetTimes(100, 0, 1000, 1, false));
+  }
+
+  @Test(expected = FileNotFoundException.class)
+  public void testUnprotectedSetTimesFNFE()
+      throws QuotaExceededException, FileNotFoundException {
+    FSDirectory fsd = Mockito.mock(FSDirectory.class);
+    INodesInPath iip = Mockito.mock(INodesInPath.class);
+
+    when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
+    when(iip.getLastINode()).thenReturn(null);
+
+    FSDirAttrOp.unprotectedSetTimes(fsd, iip, 0, 0, false);
   }
 }
