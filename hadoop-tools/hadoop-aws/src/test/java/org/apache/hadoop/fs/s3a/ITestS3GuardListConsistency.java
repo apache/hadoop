@@ -77,7 +77,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
-    if (getFileSystem()
+    if (getFileSystem() != null && getFileSystem()
         .getAmazonS3Client() instanceof InconsistentAmazonS3Client) {
       clearInconsistency(getFileSystem());
     }
