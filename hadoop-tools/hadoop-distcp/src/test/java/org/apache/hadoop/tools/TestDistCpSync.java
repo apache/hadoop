@@ -53,6 +53,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class TestDistCpSync {
   private MiniDFSCluster cluster;
@@ -290,6 +291,175 @@ public class TestDistCpSync {
 
     // verify the source and target now has the same structure
     verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
+  }
+
+  /**
+   * Test the basic functionality.
+   */
+  @Test
+  public void testSync1() throws Exception {
+    Path srcpath = new Path(source, "encz-mock");
+    dfs.mkdirs(srcpath);
+    dfs.mkdirs(new Path(source, "encz-mock/datedir"));
+    enableAndCreateFirstSnapshot();
+
+    // before sync, make some further changes on source
+    DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file1"),
+        BLOCK_SIZE, DATA_NUM, 0);
+    dfs.delete(new Path(source, "encz-mock/datedir"), true);
+    dfs.mkdirs(new Path(source, "encz-mock/datedir"));
+    DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file2"),
+        BLOCK_SIZE, DATA_NUM, 0);
+    dfs.createSnapshot(source, "s2");
+    Assert.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    System.out.println(report);
+
+    DistCpSync distCpSync = new DistCpSync(context, conf);
+
+    // do the sync
+    Assert.assertTrue(distCpSync.sync());
+    // make sure the source path has been updated to the snapshot path
+    final Path spath = new Path(source,
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+
+    // build copy listing
+    final Path listingPath = new Path("/tmp/META/fileList.seq");
+    CopyListing listing =
+        new SimpleCopyListing(conf, new Credentials(), distCpSync);
+    listing.buildListing(listingPath, context);
+
+    Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(conf, null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapContext =
+        stubContext.getContext();
+    copyMapper.setup(mapContext);
+    for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing
+        .entrySet()) {
+      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
+    }
+    Assert.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
+    // verify the source and target now has the same structure
+    verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
+  }
+
+  /**
+   * Test the basic functionality.
+   */
+  @Test
+  public void testSyncNew() throws Exception {
+    Path srcpath = new Path(source, "encz-mock");
+    dfs.mkdirs(srcpath);
+    dfs.mkdirs(new Path(source, "encz-mock/datedir"));
+    dfs.mkdirs(new Path(source, "trash"));
+    enableAndCreateFirstSnapshot();
+
+    // before sync, make some further changes on source
+    DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file1"),
+        BLOCK_SIZE, DATA_NUM, 0);
+    dfs.rename(new Path(source, "encz-mock/datedir"),
+        new Path(source, "trash"));
+    dfs.mkdirs(new Path(source, "encz-mock/datedir"));
+    DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file2"),
+        BLOCK_SIZE, DATA_NUM, 0);
+    dfs.createSnapshot(source, "s2");
+    Assert.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    System.out.println(report);
+
+    DistCpSync distCpSync = new DistCpSync(context, conf);
+
+    // do the sync
+    Assert.assertTrue(distCpSync.sync());
+    // make sure the source path has been updated to the snapshot path
+    final Path spath = new Path(source,
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+
+    // build copy listing
+    final Path listingPath = new Path("/tmp/META/fileList.seq");
+    CopyListing listing =
+        new SimpleCopyListing(conf, new Credentials(), distCpSync);
+    listing.buildListing(listingPath, context);
+
+    Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(conf, null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapContext =
+        stubContext.getContext();
+    copyMapper.setup(mapContext);
+    for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing
+        .entrySet()) {
+      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
+    }
+    Assert.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
+    Assert.assertTrue(dfs.exists(new Path(target, "trash/datedir/file1")));
+    // verify the source and target now has the same structure
+    verifyCopy(dfs.getFileStatus(spath), dfs.getFileStatus(target), false);
+  }
+
+  /**
+   * Test the basic functionality.
+   */
+  @Test
+  public void testSyncWithFilters() throws Exception {
+    Path srcpath = new Path(source, "encz-mock");
+    dfs.mkdirs(srcpath);
+    dfs.mkdirs(new Path(source, "encz-mock/datedir"));
+    dfs.mkdirs(new Path(source, "trash"));
+    enableAndCreateFirstSnapshot();
+
+    // before sync, make some further changes on source
+    DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file1"),
+        BLOCK_SIZE, DATA_NUM, 0);
+    dfs.rename(new Path(source, "encz-mock/datedir"),
+        new Path(source, "trash"));
+    dfs.mkdirs(new Path(source, "encz-mock/datedir"));
+    DFSTestUtil.createFile(dfs, new Path(source, "encz-mock/datedir/file2"),
+        BLOCK_SIZE, DATA_NUM, 0);
+    dfs.createSnapshot(source, "s2");
+    Assert.assertTrue(dfs.exists(new Path(source, "encz-mock/datedir/file2")));
+
+    SnapshotDiffReport report = dfs.getSnapshotDiffReport(source, "s1", "s2");
+    System.out.println(report);
+    List<Pattern> filters = new ArrayList<>();
+    filters.add(Pattern.compile(".*trash.*"));
+    RegexCopyFilter regexCopyFilter = new RegexCopyFilter("fakeFile");
+    regexCopyFilter.setFilters(filters);
+
+    DistCpSync distCpSync = new DistCpSync(context, conf);
+    distCpSync.setCopyFilter(regexCopyFilter);
+
+    // do the sync
+    Assert.assertTrue(distCpSync.sync());
+    // make sure the source path has been updated to the snapshot path
+    final Path spath = new Path(source,
+        HdfsConstants.DOT_SNAPSHOT_DIR + Path.SEPARATOR + "s2");
+    Assert.assertEquals(spath, context.getSourcePaths().get(0));
+
+    // build copy listing
+    final Path listingPath = new Path("/tmp/META/fileList.seq");
+    CopyListing listing =
+        new SimpleCopyListing(conf, new Credentials(), distCpSync);
+    listing.buildListing(listingPath, context);
+
+    Map<Text, CopyListingFileStatus> copyListing = getListing(listingPath);
+    CopyMapper copyMapper = new CopyMapper();
+    StubContext stubContext = new StubContext(conf, null, 0);
+    Mapper<Text, CopyListingFileStatus, Text, Text>.Context mapContext =
+        stubContext.getContext();
+    copyMapper.setup(mapContext);
+    for (Map.Entry<Text, CopyListingFileStatus> entry : copyListing
+        .entrySet()) {
+      copyMapper.map(entry.getKey(), entry.getValue(), mapContext);
+    }
+    Assert.assertTrue(dfs.exists(new Path(target, "encz-mock/datedir/file2")));
+    Assert.assertFalse(dfs.exists(new Path(target, "encz-mock/datedir/file1")));
+    Assert.assertFalse(dfs.exists(new Path(target, "trash/datedir/file1")));
   }
 
   private Map<Text, CopyListingFileStatus> getListing(Path listingPath)

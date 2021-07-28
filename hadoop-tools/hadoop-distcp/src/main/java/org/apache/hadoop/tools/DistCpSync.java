@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -37,6 +38,7 @@ import java.util.Random;
 import java.util.EnumMap;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Collections;
 
 /**
  * This class provides the basic functionality to sync two FileSystems based on
@@ -59,6 +61,9 @@ class DistCpSync {
   //
   private EnumMap<SnapshotDiffReport.DiffType, List<DiffInfo>> diffMap;
   private DiffInfo[] renameDiffs;
+  // entries which are marked deleted because of rename to a excluded target
+  // path
+  private List<DiffInfo> deletedByExclusionDiffs;
   private CopyFilter copyFilter;
 
   DistCpSync(DistCpContext context, Configuration conf) {
@@ -66,6 +71,11 @@ class DistCpSync {
     this.conf = conf;
     this.copyFilter = CopyFilter.getCopyFilter(conf);
     this.copyFilter.initialize();
+  }
+
+  @VisibleForTesting
+  public void setCopyFilter(CopyFilter copyFilter) {
+    this.copyFilter = copyFilter;
   }
 
   private boolean isRdiff() {
@@ -222,7 +232,7 @@ class DistCpSync {
           SnapshotDiffReport.DiffType.values()) {
         diffMap.put(type, new ArrayList<DiffInfo>());
       }
-
+      deletedByExclusionDiffs = null;
       for (SnapshotDiffReport.DiffReportEntry entry : report.getDiffList()) {
         // If the entry is the snapshot root, usually a item like "M\t."
         // in the diff report. We don't need to handle it and cannot handle it,
@@ -250,8 +260,13 @@ class DistCpSync {
               list.add(new DiffInfo(source, target, dt));
             } else {
               list = diffMap.get(SnapshotDiffReport.DiffType.DELETE);
-              list.add(new DiffInfo(source, target,
-                      SnapshotDiffReport.DiffType.DELETE));
+              DiffInfo info = new DiffInfo(source, target,
+                  SnapshotDiffReport.DiffType.DELETE);
+              list.add(info);
+              if (deletedByExclusionDiffs == null) {
+                deletedByExclusionDiffs = new ArrayList<>();
+              }
+              deletedByExclusionDiffs.add(info);
             }
           } else if (copyFilter.shouldCopy(relativeTarget)) {
             list = diffMap.get(SnapshotDiffReport.DiffType.CREATE);
@@ -259,6 +274,9 @@ class DistCpSync {
                     SnapshotDiffReport.DiffType.CREATE));
           }
         }
+      }
+      if (deletedByExclusionDiffs != null) {
+        Collections.sort(deletedByExclusionDiffs, DiffInfo.sourceComparator);
       }
       return true;
     } catch (IOException e) {
@@ -516,6 +534,33 @@ class DistCpSync {
   }
 
   /**
+   * checks if a parent dir is marked deleted as a part of dir rename happening
+   * to a path which is excluded by the the filter.
+   * @return true if it's marked deleted
+   */
+  private boolean isParentOrSelfMarkedDeleted(DiffInfo diff,
+      List<DiffInfo> deletedDirDiffArray) {
+    for (DiffInfo item : deletedDirDiffArray) {
+      if (item.getSource().equals(diff.getSource())) {
+        // The same path string may appear in:
+        // 1. both deleted and modified snapshot diff entries.
+        // 2. both deleted and created snapshot diff entries.
+        // Case 1 is the about same file/directory, whereas case 2
+        // is about two different files/directories.
+        // We are finding case 1 here, thus we check against DiffType.MODIFY.
+        if (diff.getType() == SnapshotDiffReport.DiffType.MODIFY) {
+          return true;
+        }
+      } else if (isParentOf(item.getSource(), diff.getSource())) {
+        // If deleted entry is the parent of diff entry, then both MODIFY and
+        // CREATE diff entries should be handled.
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * For a given sourcePath, get its real path if it or its parent was renamed.
    *
    * For example, if we renamed dirX to dirY, and created dirY/fileX,
@@ -567,6 +612,19 @@ class DistCpSync {
           renameDiffsList.toArray(new DiffInfo[renameDiffsList.size()]);
       Arrays.sort(renameDiffArray, DiffInfo.sourceComparator);
       for (DiffInfo diff : modifyAndCreateDiffs) {
+        //  In cases, where files/dirs got created after a snapshot is taken
+        // and then the parent dir is moved to location which is excluded by
+        // the filters. For example, files/dirs created inside a dir in an
+        // encryption zone in HDFS. When the parent dir gets deleted, it will be
+        // moved to trash within which is inside the encryption zone itself.
+        // If the trash path gets excluded by filters , the dir will be marked
+        // for DELETE for the target location. All the subsequent creates should
+        // for such dirs should be ignored as well as the modify operation
+        // on the dir itself.
+        if (deletedByExclusionDiffs != null && isParentOrSelfMarkedDeleted(diff,
+            deletedByExclusionDiffs)) {
+          continue;
+        }
         DiffInfo renameItem = getRenameItem(diff, renameDiffArray);
         if (renameItem == null) {
           diff.setTarget(diff.getSource());
