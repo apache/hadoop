@@ -63,6 +63,8 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected String autoCreationEligibility;
   protected String defaultNodeLabelExpression;
   protected AutoQueueTemplatePropertiesInfo autoQueueTemplateProperties;
+  protected AutoQueueTemplatePropertiesInfo autoQueueParentTemplateProperties;
+  protected AutoQueueTemplatePropertiesInfo autoQueueLeafTemplateProperties;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -108,10 +110,18 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     queuePriority = parent.getPriority().getPriority();
     if (parent instanceof ParentQueue) {
-      orderingPolicyInfo = ((ParentQueue) parent).getQueueOrderingPolicy()
+      ParentQueue queue = (ParentQueue) parent;
+      orderingPolicyInfo = queue.getQueueOrderingPolicy()
           .getConfigName();
       autoQueueTemplateProperties = CapacitySchedulerInfoHelper
-            .getAutoCreatedTemplate((ParentQueue) parent);
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getTemplateProperties());
+      autoQueueParentTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getParentOnlyProperties());
+      autoQueueLeafTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getLeafOnlyProperties());
     }
     mode = CapacitySchedulerInfoHelper.getMode(parent);
     queueType = CapacitySchedulerInfoHelper.getQueueType(parent);

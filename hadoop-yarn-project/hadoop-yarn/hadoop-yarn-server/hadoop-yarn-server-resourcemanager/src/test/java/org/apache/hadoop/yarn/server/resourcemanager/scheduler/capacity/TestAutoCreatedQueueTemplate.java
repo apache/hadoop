@@ -22,10 +22,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE;
+
 public class TestAutoCreatedQueueTemplate {
   private static final String TEST_QUEUE_ABC = "root.a.b.c";
   private static final String TEST_QUEUE_AB = "root.a.b";
   private static final String TEST_QUEUE_A = "root.a";
+  private static final String TEST_QUEUE_B = "root.b";
   private static final String ROOT = "root";
   private CapacitySchedulerConfiguration conf;
 
@@ -120,8 +123,46 @@ public class TestAutoCreatedQueueTemplate {
         conf.getNonLabeledQueueWeight(TEST_QUEUE_A), 10e-6);
   }
 
+  @Test
+  public void testQueueSpecificTemplates() {
+    conf.set(getTemplateKey("root", "capacity"), "2w");
+    conf.set(getLeafTemplateKey("root",
+        "default-node-label-expression"), "test");
+    conf.set(getLeafTemplateKey("root", "capacity"), "10w");
+    conf.setBoolean(getParentTemplateKey(
+        "root", AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE), false);
+
+    AutoCreatedQueueTemplate template =
+        new AutoCreatedQueueTemplate(conf, ROOT);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_B, true);
+
+    Assert.assertNull("default-node-label-expression is set for parent",
+        conf.getDefaultNodeLabelExpression(TEST_QUEUE_A));
+    Assert.assertEquals("default-node-label-expression is not set for leaf",
+        "test", conf.getDefaultNodeLabelExpression(TEST_QUEUE_B));
+    Assert.assertFalse("auto queue removal is not disabled for parent",
+        conf.isAutoExpiredDeletionEnabled(TEST_QUEUE_A));
+    Assert.assertEquals("weight should not be overridden when set by " +
+            "queue type specific template",
+        10f, conf.getNonLabeledQueueWeight(TEST_QUEUE_B), 10e-6);
+    Assert.assertEquals("weight should be set by common template",
+        2f, conf.getNonLabeledQueueWeight(TEST_QUEUE_A), 10e-6);
+
+  }
+
   private String getTemplateKey(String queuePath, String entryKey) {
     return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
         + AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX + entryKey;
+  }
+
+  private String getParentTemplateKey(String queuePath, String entryKey) {
+    return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
+        + AutoCreatedQueueTemplate.AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + entryKey;
+  }
+
+  private String getLeafTemplateKey(String queuePath, String entryKey) {
+    return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
+        + AutoCreatedQueueTemplate.AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + entryKey;
   }
 }

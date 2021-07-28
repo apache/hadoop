@@ -112,12 +112,11 @@ public class CapacitySchedulerInfoHelper {
   }
 
   public static AutoQueueTemplatePropertiesInfo getAutoCreatedTemplate(
-      ParentQueue parent) {
+      Map<String, String> templateProperties) {
     AutoQueueTemplatePropertiesInfo propertiesInfo =
         new AutoQueueTemplatePropertiesInfo();
     for (Map.Entry<String, String> e :
-        parent.getAutoCreatedQueueTemplate().getTemplateProperties()
-            .entrySet()) {
+        templateProperties.entrySet()) {
       propertiesInfo.add(new ConfItem(e.getKey(), e.getValue()));
     }
 
