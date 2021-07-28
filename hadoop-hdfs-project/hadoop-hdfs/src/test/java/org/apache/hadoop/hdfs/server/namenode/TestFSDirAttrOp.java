@@ -43,7 +43,7 @@ public class TestFSDirAttrOp {
 
   private boolean unprotectedSetTimes(long atime, long atime0, long precision,
       long mtime, boolean force)
-      throws QuotaExceededException, FileNotFoundException {
+      throws FileNotFoundException {
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     SnapshotManager ssMgr = Mockito.mock(SnapshotManager.class);
     FSDirectory fsd = Mockito.mock(FSDirectory.class);
@@ -137,7 +137,7 @@ public class TestFSDirAttrOp {
 
   @Test(expected = FileNotFoundException.class)
   public void testUnprotectedSetTimesFNFE()
-      throws QuotaExceededException, FileNotFoundException {
+      throws FileNotFoundException {
     FSDirectory fsd = Mockito.mock(FSDirectory.class);
     INodesInPath iip = Mockito.mock(INodesInPath.class);
 

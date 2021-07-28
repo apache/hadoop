@@ -300,7 +300,7 @@ public class FSDirAttrOp {
 
   static boolean setTimes(
       FSDirectory fsd, INodesInPath iip, long mtime, long atime, boolean force)
-      throws QuotaExceededException, FileNotFoundException {
+      throws FileNotFoundException {
     fsd.writeLock();
     try {
       return unprotectedSetTimes(fsd, iip, mtime, atime, force);
@@ -492,7 +492,7 @@ public class FSDirAttrOp {
 
   static boolean unprotectedSetTimes(
       FSDirectory fsd, INodesInPath iip, long mtime, long atime, boolean force)
-      throws QuotaExceededException, FileNotFoundException {
+      throws FileNotFoundException {
     assert fsd.hasWriteLock();
     boolean status = false;
     INode inode = iip.getLastINode();
