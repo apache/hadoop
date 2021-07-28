@@ -134,4 +134,9 @@ public final class InternalConstants {
    */
   public static final int CSE_PADDING_LENGTH = 16;
 
+  /**
+   * Error message to indicate S3-CSE is incompatible with S3Guard.
+   */
+  public static final String CSE_S3GUARD_INCOMPATIBLE = "S3-CSE cannot be "
+      + "used with S3Guard";
 }
