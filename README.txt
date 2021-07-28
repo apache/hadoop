@@ -1,7 +1,7 @@
-For the latest information about Hadoop, please visit our website at:
+## For the latest information about Hadoop, please visit our website at:
 
-   _http://hadoop.apache.org/_
+   http://hadoop.apache.org/
 
 and our wiki, at:
 
-   _https://cwiki.apache.org/confluence/display/HADOOP/_
+## https://cwiki.apache.org/confluence/display/HADOOP/
