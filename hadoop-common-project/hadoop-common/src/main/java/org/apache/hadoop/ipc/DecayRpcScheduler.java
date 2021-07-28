@@ -284,6 +284,18 @@ public class DecayRpcScheduler implements RpcScheduler,
         CostProvider.class);
 
     if (providers.size() < 1) {
+      String[] nsPort = ns.split("\\.");
+      if (nsPort.length == 2) {
+        // Only if ns is split with ".", we can separate namespace and port.
+        // In the absence of "ipc.<port>.cost-provider.impl" property,
+        // we look up "ipc.cost-provider.impl" property.
+        providers = conf.getInstances(
+            nsPort[0] + "." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY,
+            CostProvider.class);
+      }
+    }
+
+    if (providers.size() < 1) {
       LOG.info("CostProvider not specified, defaulting to DefaultCostProvider");
       return new DefaultCostProvider();
     } else if (providers.size() > 1) {
@@ -302,6 +314,18 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<IdentityProvider> providers = conf.getInstances(
       ns + "." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
+
+    if (providers.size() < 1) {
+      String[] nsPort = ns.split("\\.");
+      if (nsPort.length == 2) {
+        // Only if ns is split with ".", we can separate namespace and port.
+        // In the absence of "ipc.<port>.identity-provider.impl" property,
+        // we look up "ipc.identity-provider.impl" property.
+        providers = conf.getInstances(
+            nsPort[0] + "." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
+            IdentityProvider.class);
+      }
+    }
 
     if (providers.size() < 1) {
       LOG.info("IdentityProvider not specified, " +

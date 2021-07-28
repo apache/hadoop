@@ -831,17 +831,45 @@ public abstract class Server {
         getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
         getQueueClass(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
         maxQueueSize, prefix, conf);
-    callQueue.setClientBackoffEnabled(getClientBackoffEnable(prefix, conf));
+    callQueue.setClientBackoffEnabled(getClientBackoffEnable(
+        CommonConfigurationKeys.IPC_NAMESPACE, port, conf));
   }
 
   /**
    * Get from config if client backoff is enabled on that port.
    */
+  @Deprecated
   static boolean getClientBackoffEnable(
       String prefix, Configuration conf) {
     String name = prefix + "." +
         CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
     return conf.getBoolean(name,
+        CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT);
+  }
+
+  /**
+   * Return boolean value configured by property 'ipc.<port>.backoff.enable'
+   * if it is present. If the config is not present, default config
+   * (without port) is used to derive class i.e 'ipc.backoff.enable',
+   * and derived value is returned if configured. Otherwise, default value
+   * {@link CommonConfigurationKeys#IPC_BACKOFF_ENABLE_DEFAULT} is returned.
+   *
+   * @param namespace Namespace "ipc".
+   * @param port Server's listener port.
+   * @param conf Configuration properties.
+   * @return Value returned based on configuration.
+   */
+  static boolean getClientBackoffEnable(
+      String namespace, int port, Configuration conf) {
+    String name = namespace + "." + port + "." +
+        CommonConfigurationKeys.IPC_BACKOFF_ENABLE;
+    boolean valueWithPort = conf.getBoolean(name,
+        CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT);
+    if (valueWithPort != CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT) {
+      return valueWithPort;
+    }
+    return conf.getBoolean(namespace + "."
+            + CommonConfigurationKeys.IPC_BACKOFF_ENABLE,
         CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT);
   }
 
@@ -3184,7 +3212,8 @@ public abstract class Server {
     this.callQueue = new CallQueueManager<>(
         getQueueClass(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
         getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
-        getClientBackoffEnable(prefix, conf), maxQueueSize, prefix, conf);
+        getClientBackoffEnable(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
+        maxQueueSize, prefix, conf);
 
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
     this.authorize = 

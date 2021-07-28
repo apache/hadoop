@@ -156,6 +156,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
 
     // FairCallQueue configs that includes dynamic ports in its keys
     xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");
+    xmlPropsToSkipCompare.add("ipc.backoff.enable");
     xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.impl");
     xmlPropsToSkipCompare.add("ipc.callqueue.impl");
     xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.impl");
@@ -164,7 +165,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add(
         "ipc.[port_number].faircallqueue.multiplexer.weights");
     xmlPropsToSkipCompare.add("ipc.[port_number].identity-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.identity-provider.impl");
     xmlPropsToSkipCompare.add("ipc.[port_number].cost-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.cost-provider.impl");
     xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.period-ms");
     xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.decay-factor");
     xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.thresholds");

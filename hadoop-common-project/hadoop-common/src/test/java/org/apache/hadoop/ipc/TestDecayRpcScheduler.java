@@ -55,6 +55,29 @@ public class TestDecayRpcScheduler {
     return mockCall;
   }
 
+  private static class TestIdentityProvider implements IdentityProvider {
+    public String makeIdentity(Schedulable obj) {
+      UserGroupInformation ugi = obj.getUserGroupInformation();
+      if (ugi == null) {
+        return null;
+      }
+      return ugi.getShortUserName();
+    }
+  }
+
+  private static class TestCostProvider implements CostProvider {
+
+    @Override
+    public void init(String namespace, Configuration conf) {
+      // No-op
+    }
+
+    @Override
+    public long getCost(ProcessingDetails details) {
+      return 1;
+    }
+  }
+
   private DecayRpcScheduler scheduler;
 
   @Test(expected=IllegalArgumentException.class)
@@ -80,6 +103,44 @@ public class TestDecayRpcScheduler {
     conf.setLong("ipc.2." + DecayRpcScheduler.IPC_FCQ_DECAYSCHEDULER_PERIOD_KEY,
       1058);
     scheduler = new DecayRpcScheduler(1, "ipc.2", conf);
+    assertEquals(1058L, scheduler.getDecayPeriodMillis());
+  }
+
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testParsePeriodWithPortLessIdentityProvider() {
+    // By default
+    scheduler = new DecayRpcScheduler(1, "ipc.50", new Configuration());
+    assertEquals(DecayRpcScheduler.IPC_SCHEDULER_DECAYSCHEDULER_PERIOD_DEFAULT,
+        scheduler.getDecayPeriodMillis());
+
+    // Custom
+    Configuration conf = new Configuration();
+    conf.setLong("ipc.51." + DecayRpcScheduler.IPC_FCQ_DECAYSCHEDULER_PERIOD_KEY,
+        1058);
+    conf.unset("ipc.51." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY);
+    conf.set("ipc." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
+        "org.apache.hadoop.ipc.TestDecayRpcScheduler$TestIdentityProvider");
+    scheduler = new DecayRpcScheduler(1, "ipc.51", conf);
+    assertEquals(1058L, scheduler.getDecayPeriodMillis());
+  }
+
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testParsePeriodWithPortLessCostProvider() {
+    // By default
+    scheduler = new DecayRpcScheduler(1, "ipc.52", new Configuration());
+    assertEquals(DecayRpcScheduler.IPC_SCHEDULER_DECAYSCHEDULER_PERIOD_DEFAULT,
+        scheduler.getDecayPeriodMillis());
+
+    // Custom
+    Configuration conf = new Configuration();
+    conf.setLong("ipc.52." + DecayRpcScheduler.IPC_FCQ_DECAYSCHEDULER_PERIOD_KEY,
+        1058);
+    conf.unset("ipc.52." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY);
+    conf.set("ipc." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY,
+        "org.apache.hadoop.ipc.TestDecayRpcScheduler$TestCostProvider");
+    scheduler = new DecayRpcScheduler(1, "ipc.52", conf);
     assertEquals(1058L, scheduler.getDecayPeriodMillis());
   }
 

@@ -2505,6 +2505,17 @@
 </property>
 
 <property>
+  <name>ipc.backoff.enable</name>
+  <value>false</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].backoff.enable" is not defined.
+    It determines whether or not to enable client backoff when
+    a queue is full.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].callqueue.impl</name>
   <value>java.util.concurrent.LinkedBlockingQueue</value>
   <description>The fully qualified name of a class to use as the implementation
@@ -2587,9 +2598,33 @@
 </property>
 
 <property>
+  <name>ipc.identity-provider.impl</name>
+  <value>org.apache.hadoop.ipc.UserIdentityProvider</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].identity-provider.impl" is not defined.
+    The identity provider mapping user requests to their identity.
+    This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].cost-provider.impl</name>
   <value>org.apache.hadoop.ipc.DefaultCostProvider</value>
   <description>The cost provider mapping user requests to their cost. To
+    enable determination of cost based on processing time, use
+    org.apache.hadoop.ipc.WeightedTimeCostProvider.
+    This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
+  <name>ipc.cost-provider.impl</name>
+  <value>org.apache.hadoop.ipc.DefaultCostProvider</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].cost-provider.impl" is not defined.
+    The cost provider mapping user requests to their cost. To
     enable determination of cost based on processing time, use
     org.apache.hadoop.ipc.WeightedTimeCostProvider.
     This property applies to DecayRpcScheduler.
