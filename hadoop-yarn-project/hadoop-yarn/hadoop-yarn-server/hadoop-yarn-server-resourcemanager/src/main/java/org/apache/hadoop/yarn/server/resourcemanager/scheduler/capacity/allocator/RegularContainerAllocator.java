@@ -520,7 +520,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     Resource available = node.getUnallocatedResource();
     Resource totalResource = node.getTotalResource();
 
-    if (!Resources.fitsIn(rc, capability, totalResource)) {
+    if (!Resources.fitsIn(capability, available)) {
       LOG.warn("Node : " + node.getNodeID()
           + " does not have sufficient resource for ask : " + pendingAsk
           + " node total capability : " + node.getTotalResource());
