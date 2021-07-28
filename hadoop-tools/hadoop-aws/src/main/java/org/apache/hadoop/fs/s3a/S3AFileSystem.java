@@ -540,7 +540,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
             getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
         if (isCSEEnabled) {
-          throw new RuntimeException("Disable S3-CSE if S3Guard is enabled.");
+          throw new PathIOException(uri.toString(), "S3-CSE cannot be used "
+              + "with S3Guard");
         }
       }
 

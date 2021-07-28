@@ -1435,11 +1435,11 @@ The user trying to use the KMS Key ID should have the right permissions to acces
 If not, then add permission(or IAM role) in "Key users" section by selecting the
 AWS-KMS CMK Key on AWS console.
 
-### Disable S3-CSE if S3Guard is enabled
+### S3-CSE cannot be used with S3Guard
 
 S3-CSE not supported for S3Guard enabled buckets.
 ```
-java.lang.RuntimeException: Disable S3-CSE if S3Guard is enabled.
+org.apache.hadoop.fs.PathIOException: `s3a://test-bucket': S3-CSE cannot be used with S3Guard
     at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:543)
     at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3460)
     at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
