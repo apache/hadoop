@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionMode;
-import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsFastpathSessionInfo;
 
 /**
  * Saves the different request parameters for read
@@ -30,7 +30,7 @@ public class ReadRequestParameters {
   private final int bufferOffset;
   private final int readLength;
   private final String eTag;
-  private final String fastpathFileHandle;
+  private final AbfsFastpathSessionInfo fastpathSessionInfo;
 
   private AbfsConnectionMode connMode;
 
@@ -39,13 +39,13 @@ public class ReadRequestParameters {
       final int bufferOffset,
       final int readLength,
       final String eTag,
-      final String fastpathFileHandle) {
+      final AbfsFastpathSessionInfo fastpathSessionInfo) {
     this.connMode = connMode;
     this.storeFilePosition = storeFilePosition;
     this.bufferOffset = bufferOffset;
     this.readLength = readLength;
     this.eTag = eTag;
-    this.fastpathFileHandle = fastpathFileHandle;
+    this.fastpathSessionInfo = fastpathSessionInfo;
   }
 
   public long getStoreFilePosition() {
@@ -68,12 +68,12 @@ public class ReadRequestParameters {
     return this.connMode;
   }
 
-  public AbfsConnectionType getConnectionType() {
-    return AbfsConnectionMode.getConnectionType(connMode);
+  public boolean isFastpathConnection() {
+    return AbfsConnectionMode.isFastpathConnection(connMode);
   }
 
-  public String getFastpathFileHandle() {
-    return this.fastpathFileHandle;
+  public AbfsFastpathSessionInfo getAbfsFastpathSessionInfo() {
+    return this.fastpathSessionInfo;
   }
 
   public void setConnectionMode(final AbfsConnectionMode connMode) {

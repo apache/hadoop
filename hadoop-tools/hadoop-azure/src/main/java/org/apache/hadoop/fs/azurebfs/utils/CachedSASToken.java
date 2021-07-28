@@ -81,7 +81,7 @@ public final class CachedSASToken {
    * @param token an Azure Storage SAS token
    * @return the sasExpiry or OffsetDateTime.MIN if invalid.
    */
-  private static OffsetDateTime getExpiry(String token) {
+  public static OffsetDateTime getExpiry(String token) {
     // return MIN for all invalid input, including a null token
     if (token == null) {
       return OffsetDateTime.MIN;

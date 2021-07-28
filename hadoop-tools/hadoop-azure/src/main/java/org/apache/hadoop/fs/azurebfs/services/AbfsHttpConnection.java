@@ -39,12 +39,16 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
+
 public class AbfsHttpConnection extends AbfsHttpOperation {
 
   private HttpURLConnection connection;
   protected ListResultSchema listResultSchema = null;
+  private byte[] responseContentBuffer;
 
-  public AbfsHttpConnection(final URL url, final String method, List<AbfsHttpHeader> requestHeaders) throws IOException {
+  public AbfsHttpConnection(final URL url,
+      final String method,
+      List<AbfsHttpHeader> requestHeaders) throws IOException {
     super(url, method, requestHeaders);
     init(url, method, requestHeaders);
   }
@@ -149,6 +153,11 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       }
     }
   }
+
+  public byte[] getResponseContentBuffer() {
+    return responseContentBuffer;
+  }
+
   /**
    * Gets and processes the HTTP response.
    *
@@ -225,12 +234,14 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
               }
               totalBytesRead += bytesRead;
             }
+
+            responseContentBuffer = buffer;
           }
           if (!endOfStream && stream.read() != -1) {
             // read and discard
             int bytesRead = 0;
-            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-            while ((bytesRead = stream.read(b)) >= 0) {
+            responseContentBuffer = new byte[this.connection.getContentLength()];
+            while ((bytesRead = stream.read(responseContentBuffer)) >= 0) {
               totalBytesRead += bytesRead;
             }
           }

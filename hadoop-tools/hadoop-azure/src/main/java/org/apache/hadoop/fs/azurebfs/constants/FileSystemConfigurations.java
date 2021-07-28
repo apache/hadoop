@@ -116,5 +116,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_FASTPATH_ENABLE = false;
 
+  public static final int DEFAULT_FASTPATH_SSSN_UPD_INTERVAL_SEC = 1 * 60;
+  public static final int DEFAULT_BG_FASTPATH_SSSN_UPD_INTERVAL_SEC = 3 * 60;
+
   private FileSystemConfigurations() {}
 }

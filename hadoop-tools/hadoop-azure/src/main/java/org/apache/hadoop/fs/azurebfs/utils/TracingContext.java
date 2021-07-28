@@ -34,6 +34,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CORR_INDICATOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_SSN_UPD_FALLBACK_CORR_INDICATOR;
 
 /**
  * The TracingContext class to correlate Store requests using unique
@@ -197,10 +198,12 @@ public class TracingContext {
     switch(connectionMode) {
     case FASTPATH_CONN:
      return FASTPATH_CORR_INDICATOR;
-    case FASTPATH_REQ_FAIL_REST_FALLBACK:
+    case REST_ON_FASTPATH_REQ_FAILURE:
       return FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
-    case FASTPATH_CONN_FAIL_REST_FALLBACK:
+    case REST_ON_FASTPATH_CONN_FAILURE:
       return FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
+    case REST_ON_FASTPATH_SESSION_UPD_FAILURE:
+      return FASTPATH_SSN_UPD_FALLBACK_CORR_INDICATOR;
     }
 
     return EMPTY_STRING;

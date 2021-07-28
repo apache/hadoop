@@ -88,7 +88,7 @@ public class MockFastpathConnection
 
   int bufferOffset;
 
-  public MockFastpathConnection() {
+  public MockFastpathConnection() throws FastpathConnectionException {
     super(true);
   }
 

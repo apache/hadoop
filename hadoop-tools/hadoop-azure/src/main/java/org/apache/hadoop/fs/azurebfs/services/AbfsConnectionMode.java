@@ -21,16 +21,16 @@ package org.apache.hadoop.fs.azurebfs.services;
 public enum AbfsConnectionMode {
   REST_CONN,
   FASTPATH_CONN,
-  FASTPATH_REQ_FAIL_REST_FALLBACK,
-  FASTPATH_CONN_FAIL_REST_FALLBACK;
+  REST_ON_FASTPATH_REQ_FAILURE,
+  REST_ON_FASTPATH_CONN_FAILURE,
+  REST_ON_FASTPATH_SESSION_UPD_FAILURE;
 
-  public static AbfsConnectionType getConnectionType(final AbfsConnectionMode type) {
-    if (type == FASTPATH_CONN) {
-      return AbfsConnectionType.FASTPATH;
-    }
-    else {
-      return AbfsConnectionType.REST;
-    }
+  public static boolean isFastpathConnection(final AbfsConnectionMode mode) {
+    return (mode == FASTPATH_CONN);
+  }
+
+  public static boolean isRESTConnection(final AbfsConnectionMode mode) {
+    return (!isFastpathConnection(mode));
   }
 
 }

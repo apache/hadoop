@@ -39,15 +39,15 @@ public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
   boolean mockRequestException = false;
   boolean mockConnectionException = false;
 
-  public MockAbfsFastpathConnection(final org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType opType,
+  public MockAbfsFastpathConnection(final AbfsRestOperationType opType,
       final URL url,
       final String method,
       final AuthType authType,
       final String authToken,
       final List<AbfsHttpHeader> requestHeaders,
-      final String fastpathFileHandle) throws IOException {
+      final AbfsFastpathSessionInfo fastpathSessionInfo) throws IOException {
     super(opType, url, method, authType, authToken, requestHeaders,
-        fastpathFileHandle);
+        fastpathSessionInfo);
   }
 
   protected FastpathOpenResponse triggerOpen(FastpathOpenRequestParams openRequestParams)

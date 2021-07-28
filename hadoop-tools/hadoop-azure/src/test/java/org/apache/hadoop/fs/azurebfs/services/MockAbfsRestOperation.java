@@ -41,34 +41,47 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
       final String method,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders,
+      final AbfsFastpathSessionInfo fastpathSessionInfo) {
+    super(operationType, client, method, url, requestHeaders, fastpathSessionInfo);
+  }
+
+  MockAbfsRestOperation(final AbfsRestOperationType operationType,
+      final AbfsClient client,
+      final String method,
+      final URL url,
+      final List<AbfsHttpHeader> requestHeaders,
       final String sasToken) {
     super(operationType, client, method, url, requestHeaders, sasToken);
   }
 
-  MockAbfsRestOperation(final AbfsRestOperationType operationType,
-      final AbfsClient client,
-      final String method,
-      final URL url,
-      final List<AbfsHttpHeader> requestHeaders,
-      final String sasToken,
-      final String fastpathFileHandle) {
-    super(operationType, client, method, url, requestHeaders, sasToken, fastpathFileHandle);
+  MockAbfsRestOperation(AbfsRestOperationType operationType,
+      AbfsClient client,
+      String method,
+      URL url,
+      List<AbfsHttpHeader> requestHeaders,
+      byte[] buffer,
+      int bufferOffset,
+      int bufferLength,
+      String sasToken) {
+    super(operationType, client, method, url, requestHeaders, buffer, bufferOffset, bufferLength, sasToken);
   }
 
-  MockAbfsRestOperation(final AbfsRestOperationType operationType,
-      final AbfsClient client,
-      final String method,
-      final URL url,
-      final List<AbfsHttpHeader> requestHeaders,
-      final AbfsRestIODataParameters ioDataParams,
-      final String sasToken) {
-    super(operationType, client, method, url, requestHeaders, ioDataParams, sasToken);
+  MockAbfsRestOperation(AbfsRestOperationType operationType,
+      AbfsClient client,
+      String method,
+      URL url,
+      List<AbfsHttpHeader> requestHeaders,
+      byte[] buffer,
+      int bufferOffset,
+      int bufferLength,
+      AbfsFastpathSessionInfo fastpathSessionInfo) {
+    super(operationType, client, method, url, requestHeaders, buffer, bufferOffset, bufferLength, fastpathSessionInfo);
   }
 
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
     return new MockAbfsFastpathConnection(operationType, url, method,
         client.getAuthType(), client.getAccessToken(), requestHeaders,
-        fastpathFileHandle);
+        fastpathSessionInfo);
   }
 
   // is this needed

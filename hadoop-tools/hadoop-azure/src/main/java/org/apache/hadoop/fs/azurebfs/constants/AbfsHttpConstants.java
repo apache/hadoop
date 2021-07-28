@@ -47,6 +47,7 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String TOKEN_VERSION = "2";
+  public static final String CREATE_FASTPATH_READ_SESSION = "createFastpathReadSession";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
@@ -115,6 +116,7 @@ public final class AbfsHttpConstants {
   public static final String FASTPATH_CORR_INDICATOR = "F";
   public static final String FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR = "RF";
   public static final String FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR = "CF";
+  public static final String FASTPATH_SSN_UPD_FALLBACK_CORR_INDICATOR = "SF";
 
   private AbfsHttpConstants() {}
 }

@@ -44,5 +44,6 @@ public enum AbfsRestOperationType {
     LeasePath,
     FastpathOpen,
     FastpathRead,
-    FastpathClose
+    FastpathClose,
+    GetReadFastpathSessionToken
 }

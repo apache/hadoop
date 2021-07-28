@@ -59,13 +59,13 @@ public class MockAbfsInputStream extends AbfsInputStream {
   protected AbfsRestOperation executeFastpathOpen(String path, String eTag, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).fastPathOpen(path, eTag, tracingContext);
+    return ((MockAbfsClient)client).fastPathOpen(path, eTag, fastpathSessionInfo, tracingContext);
   }
 
   protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).fastPathClose(path, eTag, fastpathFileHandle, tracingContext);
+    return ((MockAbfsClient)client).fastPathClose(path, eTag, fastpathSessionInfo, tracingContext);
   }
 
   protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam, TracingContext tracingContext)
