@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.AbstractQueue;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -58,8 +59,12 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
   public static final Logger LOG = LoggerFactory.getLogger(FairCallQueue.class);
 
-  /* The queues */
-  private final ArrayList<BlockingQueue<E>> queues;
+  /**
+   * Save the queue data of multiple priority strategies.
+   * Usually the number of queue data and priority strategies saved
+   * is the same.
+   */
+  private final List<BlockingQueue<E>> queues;
 
   /* Track available permits for scheduled objects.  All methods that will
    * mutate a subqueue must acquire or release a permit on the semaphore.
