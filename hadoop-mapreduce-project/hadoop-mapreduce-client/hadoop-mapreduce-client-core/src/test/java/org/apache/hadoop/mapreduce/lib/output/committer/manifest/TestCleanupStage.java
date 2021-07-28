@@ -18,26 +18,18 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractJobCommitStage.E_TRASH_DISABLED;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperationsThroughFileSystem.E_TRASH_FALSE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.UnreliableStoreOperations.E_TIMEOUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.UnreliableStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -140,7 +132,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     describe("cleanup by rename to trash");
 
     CleanupJobStage.CleanupResult result = cleanup(
-            true, true, false, true,
+        true, true, false, true,
         CleanupJobStage.Outcome.RENAMED_TO_TRASH, 0);
     verifyJobDirsCleanedUp();
   }
@@ -154,7 +146,6 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
         cleanup(true, true, false, true,
             CleanupJobStage.Outcome.MOVE_TO_TRASH_FAILED, 0));
   }
-
 
   @Test
   public void testDeleteFailureFallbackToRename() throws Throwable {
