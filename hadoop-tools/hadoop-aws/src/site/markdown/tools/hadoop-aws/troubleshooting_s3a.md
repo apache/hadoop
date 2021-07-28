@@ -1435,6 +1435,31 @@ The user trying to use the KMS Key ID should have the right permissions to acces
 If not, then add permission(or IAM role) in "Key users" section by selecting the
 AWS-KMS CMK Key on AWS console.
 
+### S3-CSE cannot be used with S3Guard
+
+S3-CSE not supported for S3Guard enabled buckets.
+```
+org.apache.hadoop.fs.PathIOException: `s3a://test-bucket': S3-CSE cannot be used with S3Guard
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:543)
+    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3460)
+    at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
+    at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3565)
+    at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3512)
+    at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:539)
+    at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+    at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
+    at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
+    at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
+    at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
+    at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+    at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+    at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+```
+If you want to use S3Guard then disable S3-CSE or disable S3Guard if you want
+to use S3-CSE.
+
 ### <a name="not_all_bytes_were_read"></a> Message appears in logs "Not all bytes were read from the S3ObjectInputStream"
 
 

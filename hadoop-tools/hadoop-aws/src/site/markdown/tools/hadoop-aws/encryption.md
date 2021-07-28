@@ -601,6 +601,7 @@ clients where S3-CSE has not been enabled.
 
 ### Limitations
 
+- S3Guard is not supported with S3-CSE.
 - Performance will be reduced. All encrypt/decrypt is now being done on the
  client.
 - Writing files may be slower, as only a single block can be encrypted and
