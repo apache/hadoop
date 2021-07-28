@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
@@ -75,13 +74,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   }
 
   @Override
-  public void testDirectWrite() throws Exception {
-    skip("Not needed as all tests are direct by default");
-  }
-
-  @Override
   public void testNonDirectWrite() throws Exception {
-//    ContractTestUtils.skip("disabled for peformance reasons");
     final long renames = getRenameOperationCount();
     super.testNonDirectWrite();
     assertEquals("Expected 2 renames for a non-direct write distcp", 2L,

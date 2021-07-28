@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.tools.contract;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DISTCP_JOB_ID;
 
 import java.io.IOException;
@@ -170,12 +172,20 @@ public abstract class AbstractContractDistCpTest
     localDir =
         localFS.makeQualified(new Path(new Path(
         GenericTestUtils.getTestDir().toURI()), testSubDir + "/local"));
+    localFS.delete(localDir, true);
     mkdirs(localFS, localDir);
-    remoteDir = path(testSubDir + "/remote");
+    Path testSubPath = path(testSubDir);
+    remoteDir = new Path(testSubPath, "remote");
     // test teardown does this, but IDE-based test debugging can skip
     // that teardown; this guarantees the initial state is clean
     remoteFS.delete(remoteDir, true);
-    localFS.delete(localDir, true);
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    // if remote FS supports IOStatistics log it.
+    logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, getRemoteFS());
+    super.teardown();
   }
 
   /**
@@ -550,9 +560,9 @@ public abstract class AbstractContractDistCpTest
   private void largeFiles(FileSystem srcFS, Path srcDir, FileSystem dstFS,
       Path dstDir) throws Exception {
     int fileSizeKb = conf.getInt(SCALE_TEST_DISTCP_FILE_SIZE_KB,
-        DEFAULT_DISTCP_SIZE_KB);
+        getDefaultDistCPSizeKb());
     if (fileSizeKb < 1) {
-      skip("File size in " + SCALE_TEST_DISTCP_FILE_SIZE_KB + " too small");
+      skip("File size in " + SCALE_TEST_DISTCP_FILE_SIZE_KB + " is zero");
     }
     initPathFields(srcDir, dstDir);
     Path largeFile1 = new Path(inputDir, "file1");
@@ -571,6 +581,18 @@ public abstract class AbstractContractDistCpTest
     verifyFileContents(dstFS, new Path(target, "inputDir/file1"), data1);
     verifyFileContents(dstFS, new Path(target, "inputDir/file2"), data2);
     verifyFileContents(dstFS, new Path(target, "inputDir/file3"), data3);
+  }
+
+  /**
+   * Override point. What is the default distcp size
+   * for large files if not overridden by
+   * {@link #SCALE_TEST_DISTCP_FILE_SIZE_KB}.
+   * If 0 then, unless overridden in the configuration,
+   * the large file tests will not run.
+   * @return file size.
+   */
+  protected int getDefaultDistCPSizeKb() {
+    return DEFAULT_DISTCP_SIZE_KB;
   }
 
   /**
@@ -629,14 +651,14 @@ public abstract class AbstractContractDistCpTest
   @Test
   public void testDirectWrite() throws Exception {
     describe("copy file from local to remote using direct write option");
+    if (directWriteAlways()) {
+      skip("not needed as all other tests use the -direct option.");
+    }
     directWrite(localFS, localDir, remoteFS, remoteDir, true);
   }
 
   @Test
   public void testNonDirectWrite() throws Exception {
-    if (directWriteAlways()) {
-      skip("not needed");
-    }
     describe("copy file from local to remote without using direct write " +
         "option");
     directWrite(localFS, localDir, remoteFS, remoteDir, false);
