@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
@@ -265,7 +264,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     final INodeAttributes[] inodeAttrs = new INodeAttributes[inodes.length];
     final byte[][] components = inodesInPath.getPathComponents();
     for (int i = 0; i < inodes.length && inodes[i] != null; i++) {
-      inodeAttrs[i] = getINodeAttrs(inodes[i], snapshotId);
+      inodeAttrs[i] = getINodeAttrs(components, i, inodes[i], snapshotId);
     }
 
     String path = inodesInPath.getPath();
@@ -315,7 +314,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   void checkPermission(INode inode, int snapshotId, FsAction access)
       throws AccessControlException {
     byte[][] pathComponents = inode.getPathComponents();
-    INodeAttributes nodeAttributes = getINodeAttrs(inode, snapshotId);
+    INodeAttributes nodeAttributes = getINodeAttrs(pathComponents,
+        pathComponents.length - 1, inode, snapshotId);
     try {
       INodeAttributes[] iNodeAttr = {nodeAttributes};
       AccessControlEnforcer enforcer = getAccessControlEnforcer();
@@ -424,31 +424,23 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         authzContext.getSubAccess(), authzContext.isIgnoreEmptyDir());
   }
 
-  private INodeAttributes getINodeAttrs(INode inode, int snapshotId) {
+  private INodeAttributes getINodeAttrs(byte[][] pathByNameArr, int pathIdx,
+      INode inode, int snapshotId) {
     INodeAttributes inodeAttrs = inode.getSnapshotINode(snapshotId);
-    /**
-     * This logic is similar to {@link FSDirectory#getAttributes()} and it
-     * ensures that the attribute provider sees snapshot paths resolved to their
-     * original location. This means the attributeProvider can apply permissions
-     * to the snapshot paths in the same was as the live paths. See HDFS-15372.
-     */
     if (getAttributesProvider() != null) {
+      String[] elements = new String[pathIdx + 1];
       /**
-       * If we have an inode representing a path like /d/.snapshot/snap1
-       * then calling inode.getPathComponents returns [null, d, snap1]. If we
-       * call inode.getFullPathName() it will return /d/.snapshot/snap1. For
-       * this special path (snapshot root) the attribute provider should see:
-       *
-       * [null, d, .snapshot/snap1]
-       *
-       * Using IIP.resolveFromRoot, it will take the inode fullPathName and
-       * construct an IIP object that give the correct components as above.
+       * {@link INode#getPathComponents(String)} returns a null component
+       * for the root only path "/". Assign an empty string if so.
        */
-      INodesInPath iip = INodesInPath.resolveFromRoot(inode);
-      byte[][] components = iip.getPathComponents();
-      components = Arrays.copyOfRange(components, 1, components.length);
-      inodeAttrs = getAttributesProvider()
-          .getAttributes(components, inodeAttrs);
+      if (pathByNameArr.length == 1 && pathByNameArr[0] == null) {
+        elements[0] = "";
+      } else {
+        for (int i = 0; i < elements.length; i++) {
+          elements[i] = DFSUtil.bytes2String(pathByNameArr[i]);
+        }
+      }
+      inodeAttrs = getAttributesProvider().getAttributes(elements, inodeAttrs);
     }
     return inodeAttrs;
   }
@@ -504,7 +496,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       if (!(cList.isEmpty() && ignoreEmptyDir)) {
         //TODO have to figure this out with inodeattribute provider
         INodeAttributes inodeAttr =
-            getINodeAttrs(d, snapshotId);
+            getINodeAttrs(components, pathIdx, d, snapshotId);
         if (!hasPermission(inodeAttr, access)) {
           throw new AccessControlException(
               toAccessControlString(inodeAttr, d.getFullPathName(), access));
@@ -522,7 +514,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         if (inodeAttr.getFsPermission().getStickyBit()) {
           for (INode child : cList) {
             INodeAttributes childInodeAttr =
-                getINodeAttrs(child, snapshotId);
+                getINodeAttrs(components, pathIdx, child, snapshotId);
             if (isStickyBitViolated(inodeAttr, childInodeAttr)) {
               List<byte[]> allComponentList = new ArrayList<>();
               for (int i = 0; i <= pathIdx; ++i) {

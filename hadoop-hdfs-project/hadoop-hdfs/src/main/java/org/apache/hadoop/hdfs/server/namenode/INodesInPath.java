@@ -135,27 +135,6 @@ public class INodesInPath {
     return resolve(startingDir, components, false);
   }
 
-  /**
-   * Retrieves the existing INodes from a path, starting at the root directory.
-   * The root directory is located by following the parent link in the inode
-   * recursively until the final root inode is found.
-   * The inodes returned will depend upon the output of inode.getFullPathName().
-   * For a snapshot path, like /data/.snapshot/snap1, it will be resolved to:
-   *     [null, data, .snapshot/snap1]
-   * For a file in the snapshot, as inode.getFullPathName resolves the snapshot
-   * information, the returned inodes for a path like /data/.snapshot/snap1/d1
-   * would be:
-   *     [null, data, d1]
-   * @param inode the {@link INode} to be resolved
-   * @return INodesInPath
-   */
-  static INodesInPath resolveFromRoot(INode inode) {
-    INode[] inodes = getINodes(inode);
-    byte[][] paths = INode.getPathComponents(inode.getFullPathName());
-    INodeDirectory rootDir = inodes[0].asDirectory();
-    return resolve(rootDir, paths);
-  }
-
   static INodesInPath resolve(final INodeDirectory startingDir,
       byte[][] components, final boolean isRaw) {
     Preconditions.checkArgument(startingDir.compareTo(components[0]) == 0);
