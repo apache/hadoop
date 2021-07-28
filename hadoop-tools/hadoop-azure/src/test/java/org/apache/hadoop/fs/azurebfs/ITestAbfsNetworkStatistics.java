@@ -326,7 +326,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       expectedConnectionsMade++;
       expectedGetResponses++;
 
-      if (isMockFastpathTest || getConfiguration().isFastpathEnabled()) {
+      if (!isMockFastpathTest && getConfiguration().isFastpathEnabled()) {
         expectedConnectionsMade++; // for FastpathOpen
         expectedGetResponses++;
       }
