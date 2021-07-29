@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.junit.Test;
 import org.mockito.Mockito;
