@@ -25,7 +25,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -50,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -117,6 +120,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   private ReservationSubmissionRequest reservationRequest;
 
   private Map<ApplicationId, AMSimulator> appIdToAMSim;
+
+  private Set<NodeId> ranNodes = new ConcurrentSkipListSet<NodeId>();
 
   public AMSimulator() {
     this.responseQueue = new LinkedBlockingQueue<>();
@@ -234,6 +239,11 @@ public abstract class AMSimulator extends TaskRunner.Task {
           amContainer.getId());
     } else {
       LOG.info("AM container is null");
+    }
+
+    // Clear runningApps for ranNodes of this app
+    for (NodeId nodeId : ranNodes) {
+      se.getNmMap().get(nodeId).finishApplication(getApplicationId());
     }
 
     if (null == appAttemptId) {
@@ -496,5 +506,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   public ApplicationAttemptId getApplicationAttemptId() {
     return appAttemptId;
+  }
+
+  public Set<NodeId> getRanNodes() {
+    return this.ranNodes;
   }
 }

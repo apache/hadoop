@@ -22,6 +22,7 @@ import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -32,7 +33,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.*;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -41,6 +44,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,7 +54,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
+import static org.mockito.Mockito.when;
 
 @RunWith(Parameterized.class)
 public class TestAMSimulator {
@@ -288,6 +295,28 @@ public class TestAMSimulator {
     Assert.assertEquals(3, nodeRequestCount);
   }
 
+  @Test
+  public void testAMSimulatorRanNodesCleared() throws Exception {
+    NMSimulator nm = new NMSimulator();
+    nm.init("/rack1/testNode1", Resources.createResource(1024 * 10, 10), 0, 1000,
+        rm, -1f);
+
+    Map<NodeId, NMSimulator> nmMap = new HashMap<>();
+    nmMap.put(nm.getNode().getNodeID(), nm);
+
+    MockAMSimulator app = new MockAMSimulator();
+    app.appId = ApplicationId.newInstance(0l, 1);
+    SLSRunner slsRunner = Mockito.mock(SLSRunner.class);
+    app.se = slsRunner;
+    when(slsRunner.getNmMap()).thenReturn(nmMap);
+    app.getRanNodes().add(nm.getNode().getNodeID());
+    nm.getNode().getRunningApps().add(app.appId);
+    Assert.assertTrue(nm.getNode().getRunningApps().contains(app.appId));
+
+    app.lastStep();
+    Assert.assertFalse(nm.getNode().getRunningApps().contains(app.appId));
+    Assert.assertTrue(nm.getNode().getRunningApps().isEmpty());
+  }
 
   @After
   public void tearDown() {
