@@ -76,6 +76,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -95,6 +96,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   final ResourceCalculator resourceCalculator;
   Set<String> accessibleLabels;
+  protected Set<String> configuredNodeLabels;
   Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
@@ -208,7 +210,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected void setupConfigurableCapacities(
       CapacitySchedulerConfiguration configuration) {
     CSQueueUtils.loadCapacitiesByLabelsFromConf(getQueuePath(), queueCapacities,
-        configuration);
+        configuration, configuredNodeLabels);
   }
 
   @Override
@@ -360,9 +362,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     writeLock.lock();
     try {
-      if (isDynamicQueue() && getParent() instanceof ParentQueue) {
-        ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
-            .setTemplateEntriesForChild(configuration, getQueuePath());
+      if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
+        setDynamicQueueProperties(configuration);
       }
       // get labels
       this.accessibleLabels =
@@ -385,6 +386,17 @@ public abstract class AbstractCSQueue implements CSQueue {
           && this.accessibleLabels.containsAll(
           parent.getAccessibleNodeLabels())) {
         this.defaultLabelExpression = parent.getDefaultNodeLabelExpression();
+      }
+
+      if (csContext.getCapacitySchedulerQueueManager() != null
+          && csContext.getCapacitySchedulerQueueManager()
+          .getConfiguredNodeLabels() != null) {
+        this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
+            .getConfiguredNodeLabels().getLabelsByQueue(getQueuePath());
+      } else {
+        // Fallback to suboptimal but correct logic
+        this.configuredNodeLabels = csContext.getConfiguration()
+            .getConfiguredNodeLabels(queuePath);
       }
 
       // After we setup labels, we can setup capacities
@@ -478,6 +490,32 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
+  /**
+   * Set properties specific to dynamic queues.
+   * @param configuration configuration on which the properties are set
+   */
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    // Set properties from parent template
+    if (getParent() instanceof ParentQueue) {
+      ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
+          .setTemplateEntriesForChild(configuration, getQueuePath());
+
+      String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
+          AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
+      parentTemplate = parentTemplate.substring(0, parentTemplate.lastIndexOf(
+          DOT));
+      Set<String> parentNodeLabels = csContext
+          .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+          .getLabelsByQueue(parentTemplate);
+
+      if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
+        csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+            .setLabelsByQueue(queuePath, new HashSet<>(parentNodeLabels));
+      }
+    }
+  }
+
   private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
     String myQueuePath = getQueuePath();
     Resource clusterMax = ResourceUtils
@@ -559,10 +597,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   protected void updateConfigurableResourceRequirement(String queuePath,
       Resource clusterResource) {
-    CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-    Set<String> configuredNodelabels = conf.getConfiguredNodeLabels(queuePath);
-
-    for (String label : configuredNodelabels) {
+    for (String label : configuredNodeLabels) {
       Resource minResource = getMinimumAbsoluteResource(queuePath, label);
       Resource maxResource = getMaximumAbsoluteResource(queuePath, label);
 
@@ -1493,21 +1528,30 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   void updateMaxAppRelatedField(CapacitySchedulerConfiguration conf,
-      LeafQueue leafQueue, String label) {
+      LeafQueue leafQueue) {
     int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
+    int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
+    String maxLabel = RMNodeLabelsManager.NO_LABEL;
+
     if (maxApplications < 0) {
-      int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-      if (maxGlobalPerQueueApps > 0) {
-        // In absolute mode, should
-        // shrink when change to corresponding label capacity.
-        maxApplications = this.capacityConfigType
-            != CapacityConfigType.ABSOLUTE_RESOURCE ?
-          maxGlobalPerQueueApps :
-            (int) (maxGlobalPerQueueApps * queueCapacities
-                .getAbsoluteCapacity(label));
-      } else{
-        maxApplications = (int) (conf.getMaximumSystemApplications()
-            * queueCapacities.getAbsoluteCapacity(label));
+      for (String label : configuredNodeLabels) {
+        int maxApplicationsByLabel = 0;
+        if (maxGlobalPerQueueApps > 0) {
+          // In absolute mode, should
+          // shrink when change to corresponding label capacity.
+          maxApplicationsByLabel = this.capacityConfigType
+              != CapacityConfigType.ABSOLUTE_RESOURCE ?
+              maxGlobalPerQueueApps :
+              (int) (maxGlobalPerQueueApps * queueCapacities
+                  .getAbsoluteCapacity(label));
+        } else {
+          maxApplicationsByLabel = (int) (conf.getMaximumSystemApplications()
+              * queueCapacities.getAbsoluteCapacity(label));
+        }
+        if (maxApplicationsByLabel > maxApplications) {
+          maxApplications = maxApplicationsByLabel;
+          maxLabel = label;
+        }
       }
     }
     leafQueue.setMaxApplications(maxApplications);
@@ -1525,9 +1569,9 @@ public abstract class AbstractCSQueue implements CSQueue {
         "update max app related, maxApplications="
         + maxApplications + ", maxApplicationsPerUser="
         + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
-        .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
-        .getCapacity(label) + ", MaxCap : " + queueCapacities
-        .getMaximumCapacity(label));
+        .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
+        .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(maxLabel));
   }
 
   private void deriveCapacityFromAbsoluteConfigurations(String label,
@@ -1566,9 +1610,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   void updateEffectiveResources(Resource clusterResource) {
-    Set<String> configuredNodelabels =
-        csContext.getConfiguration().getConfiguredNodeLabels(getQueuePath());
-    for (String label : configuredNodelabels) {
+    for (String label : configuredNodeLabels) {
       Resource resourceByLabel = labelManager.getResourceByLabel(label,
           clusterResource);
 
@@ -1610,11 +1652,6 @@ public abstract class AbstractCSQueue implements CSQueue {
         deriveCapacityFromAbsoluteConfigurations(label, clusterResource, rc);
         // Re-visit max applications for a queue based on absolute capacity if
         // needed.
-        if (this instanceof LeafQueue) {
-          LeafQueue leafQueue = (LeafQueue) this;
-          CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-          updateMaxAppRelatedField(conf, leafQueue, label);
-        }
       } else{
         queueResourceQuotas.setEffectiveMinResource(label, Resources
             .multiply(resourceByLabel,
@@ -1703,5 +1740,4 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
-
 }

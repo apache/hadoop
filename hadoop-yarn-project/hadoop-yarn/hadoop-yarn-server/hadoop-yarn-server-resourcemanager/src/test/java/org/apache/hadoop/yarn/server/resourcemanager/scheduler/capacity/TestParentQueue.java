@@ -1164,18 +1164,26 @@ public class TestParentQueue {
     assertEquals(b.getMaxApplications(), b.getMaxApplicationsPerUser());
 
     // Extra cases for testing maxApplicationsPerUser
-    int halfPercent = 50;
-    int oneAndQuarterPercent = 125;
+    float halfPercent = 50f;
+    float oneAndQuarterPercent = 125f;
+    float thirdPercent = 33.3f;
     a.getUsersManager().setUserLimit(halfPercent);
     b.getUsersManager().setUserLimit(oneAndQuarterPercent);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    assertEquals(a.getMaxApplications() * halfPercent / 100,
+    assertEquals((int) (a.getMaxApplications() * halfPercent / 100),
             a.getMaxApplicationsPerUser());
     // Q_B's limit per user shouldn't be greater
     // than the whole queue's application limit
     assertEquals(b.getMaxApplications(), b.getMaxApplicationsPerUser());
+
+    b.getUsersManager().setUserLimit(thirdPercent);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
+    assertEquals((int) (b.getMaxApplications() * thirdPercent / 100),
+        b.getMaxApplicationsPerUser());
 
     float userLimitFactorQueueA = 0.9f;
     float userLimitFactorQueueB = 1.1f;

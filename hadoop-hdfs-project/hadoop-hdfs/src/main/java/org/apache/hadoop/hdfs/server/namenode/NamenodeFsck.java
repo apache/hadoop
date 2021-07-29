@@ -37,8 +37,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -574,10 +574,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     final FSNamesystem fsn = namenode.getNamesystem();
     final String operationName = "fsckGetBlockLocations";
     FSPermissionChecker.setOperationType(operationName);
+    FSPermissionChecker pc = fsn.getPermissionChecker();
     fsn.readLock();
     try {
       blocks = FSDirStatAndListingOp.getBlockLocations(
-          fsn.getFSDirectory(), fsn.getPermissionChecker(),
+          fsn.getFSDirectory(), pc,
           path, 0, fileLen, false)
           .blocks;
     } catch (FileNotFoundException fnfe) {
@@ -1108,7 +1109,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
                         blockToken, datanodeId, HdfsConstants.READ_TIMEOUT);
                 } finally {
                   if (peer == null) {
-                    IOUtils.closeQuietly(s);
+                    IOUtils.closeStream(s);
                   }
                 }
                 return peer;

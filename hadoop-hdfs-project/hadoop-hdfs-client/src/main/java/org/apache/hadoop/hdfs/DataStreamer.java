@@ -783,7 +783,19 @@ class DataStreamer extends Daemon {
         // Is this block full?
         if (one.isLastPacketInBlock()) {
           // wait for the close packet has been acked
-          waitForAllAcks();
+          try {
+            waitForAllAcks();
+          } catch (IOException ioe) {
+            // No need to do a close recovery if the last packet was acked.
+            // i.e. ackQueue is empty.  waitForAllAcks() can get an exception
+            // (e.g. connection reset) while sending a heartbeat packet,
+            // if the DN sends the final ack and closes the connection.
+            synchronized (dataQueue) {
+              if (!ackQueue.isEmpty()) {
+                throw ioe;
+              }
+            }
+          }
           if (shouldStop()) {
             continue;
           }
@@ -1683,7 +1695,7 @@ class DataStreamer extends Daemon {
 
   DatanodeInfo[] getExcludedNodes() {
     return excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
-            .keySet().toArray(new DatanodeInfo[0]);
+            .keySet().toArray(DatanodeInfo.EMPTY_ARRAY);
   }
 
   /**

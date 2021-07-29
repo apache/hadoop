@@ -58,6 +58,7 @@ Following are all the operations supported along with their respective operation
 |`mkdirs` | [`-threads 3`] [`-dirs 10`] [`-dirsPerDir 2`] |
 |`open` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
 |`delete` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
+|`append` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-appendNewBlk`] |
 |`fileStatus` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
 |`rename` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
 |`blockReport` | [`-datanodes 10`] [`-reports 30`] [`-blocksPerReport 100`] [`-blocksPerFile 10`] |

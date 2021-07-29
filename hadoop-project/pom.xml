@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.40.v20210413</jetty.version>
+    <jetty.version>9.4.43.v20210629</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -100,7 +100,7 @@
     <zookeeper.version>3.5.6</zookeeper.version>
     <curator.version>4.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
-    <dnsjava.version>2.1.7</dnsjava.version>
+    <dnsjava.version>3.4.0</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.2.3</guice.version>
@@ -129,7 +129,7 @@
     <kerby.version>1.0.1</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
-    <hikari.version>2.4.12</hikari.version>
+    <hikari.version>4.0.3</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
     <jdom.version>1.1</jdom.version>
@@ -198,7 +198,7 @@
     <snakeyaml.version>1.26</snakeyaml.version>
     <hbase.one.version>1.4.8</hbase.one.version>
     <hbase.two.version>2.0.2</hbase.two.version>
-    <junit.version>4.13.1</junit.version>
+    <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <junit.vintage.version>5.5.1</junit.vintage.version>
     <junit.platform.version>1.5.1</junit.platform.version>
@@ -1686,7 +1686,7 @@
         </dependency>
         <dependency>
           <groupId>com.zaxxer</groupId>
-          <artifactId>HikariCP-java7</artifactId>
+          <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
         </dependency>
         <dependency>

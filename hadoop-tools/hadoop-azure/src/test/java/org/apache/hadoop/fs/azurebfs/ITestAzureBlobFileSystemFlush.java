@@ -29,8 +29,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
@@ -41,6 +45,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APPEND_BLOB_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
 
@@ -299,6 +304,26 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.hsync();
       validate(fs, testFilePath, buffer, true);
     }
+  }
+
+  @Test
+  public void testTracingHeaderForAppendBlob() throws Exception {
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(FS_AZURE_APPEND_BLOB_KEY, "abfss:/");
+    config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(config);
+
+    byte[] buf = new byte[10];
+    new Random().nextBytes(buf);
+    FSDataOutputStream out = fs.create(new Path("/testFile"));
+    ((AbfsOutputStream) out.getWrappedStream()).registerListener(
+        new TracingHeaderValidator(
+            fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+            ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
+    out.write(buf);
+    out.hsync();
   }
 
   @Test

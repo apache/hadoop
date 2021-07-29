@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -118,7 +119,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       doThrow(new IOException())
           .doCallRealMethod()
           .when(abfsInputStream)
-          .readRemote(anyLong(), any(), anyInt(), anyInt());
+          .readRemote(anyLong(), any(), anyInt(), anyInt(),
+              any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
       verifyBeforeSeek(abfsInputStream);
@@ -247,8 +249,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     assertEquals(0, abfsInputStream.getBCursor());
   }
 
-  private void verifyAfterSeek(AbfsInputStream abfsInputStream, long seekPos){
-    assertEquals(seekPos, abfsInputStream.getFCursor());
+  private void verifyAfterSeek(AbfsInputStream abfsInputStream, long seekPos) throws IOException {
+    assertEquals(seekPos, abfsInputStream.getPos());
     assertEquals(-1, abfsInputStream.getFCursorAfterLastRead());
     assertEquals(0, abfsInputStream.getLimit());
     assertEquals(0, abfsInputStream.getBCursor());

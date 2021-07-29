@@ -68,6 +68,14 @@ public final class ConfigurationKeys {
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
   public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
   public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+
+  /**
+   * Read ahead range parameter which can be set by user.
+   * Default value is {@link FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * This might reduce number of calls to remote as next requested
+   * data could already be present in buffer {@value}.
+   */
+  public static final String AZURE_READ_AHEAD_RANGE = "fs.azure.readahead.range";
   public static final String AZURE_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
   public static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME = "fs.azure.block.location.impersonatedhost";
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";
@@ -109,6 +117,12 @@ public final class ConfigurationKeys {
    *  Default value of this config is true. **/
   public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
+  /**
+   * The client correlation ID provided over config that will be added to
+   * x-ms-client-request-Id header. Defaults to empty string if the length and
+   * character constraints are not satisfied. **/
+  public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
+  public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";

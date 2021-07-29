@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -112,14 +111,21 @@ public class ParentQueue extends AbstractCSQueue {
 
   public ParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
-    this(cs, cs.getConfiguration(), queueName, parent, old);
+    this(cs, cs.getConfiguration(), queueName, parent, old, false);
+  }
+  private ParentQueue(CapacitySchedulerContext cs,
+      CapacitySchedulerConfiguration csConf, String queueName,
+      CSQueue parent,
+      CSQueue old) throws IOException {
+    this(cs, csConf, queueName, parent, old, false);
   }
 
   private ParentQueue(CapacitySchedulerContext cs,
       CapacitySchedulerConfiguration csConf, String queueName, CSQueue parent,
-      CSQueue old)
+      CSQueue old, boolean isDynamic)
       throws IOException {
     super(cs, queueName, parent, old);
+    setDynamicQueue(isDynamic);
     this.scheduler = cs;
     this.rootQueue = (parent == null);
 
@@ -476,26 +482,6 @@ public class ParentQueue extends AbstractCSQueue {
         "numContainers=" + getNumContainers();
   }
 
-  private CapacitySchedulerConfiguration getConfForAutoCreatedQueue(
-      String childQueuePath, boolean isLeaf) {
-    // Copy existing config
-    CapacitySchedulerConfiguration dupCSConfig =
-        new CapacitySchedulerConfiguration(
-        csContext.getConfiguration(), false);
-    autoCreatedQueueTemplate.setTemplateEntriesForChild(dupCSConfig,
-        childQueuePath);
-    if (isLeaf) {
-      // set to -1, to disable it
-      dupCSConfig.setUserLimitFactor(childQueuePath, -1);
-
-      // Set Max AM percentage to a higher value
-      dupCSConfig.setMaximumApplicationMasterResourcePerQueuePercent(
-          childQueuePath, 0.5f);
-    }
-
-    return dupCSConfig;
-  }
-
   private CSQueue createNewQueue(String childQueuePath, boolean isLeaf)
       throws SchedulerDynamicEditException {
     try {
@@ -504,13 +490,11 @@ public class ParentQueue extends AbstractCSQueue {
           childQueuePath.lastIndexOf(".") + 1);
 
       if (isLeaf) {
-        childQueue = new LeafQueue(csContext,
-            getConfForAutoCreatedQueue(childQueuePath, isLeaf), queueShortName,
-            this, null);
+        childQueue = new LeafQueue(csContext, csContext.getConfiguration(),
+            queueShortName, this, null, true);
       } else{
-        childQueue = new ParentQueue(csContext,
-            getConfForAutoCreatedQueue(childQueuePath, isLeaf), queueShortName,
-            this, null);
+        childQueue = new ParentQueue(csContext, csContext.getConfiguration(),
+            queueShortName, this, null, true);
       }
       childQueue.setDynamicQueue(true);
       // It should be sufficient now, we don't need to set more, because weights
@@ -1273,9 +1257,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // Update effective capacity in all parent queue.
-      Set<String> configuredNodelabels = csContext.getConfiguration()
-          .getConfiguredNodeLabels(getQueuePath());
-      for (String label : configuredNodelabels) {
+      for (String label : configuredNodeLabels) {
         calculateEffectiveResourcesAndCapacity(label, clusterResource);
       }
 

@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.SignableRequest;
+import com.amazonaws.auth.AWS4Signer;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
 import com.amazonaws.services.s3.internal.AWSS3V4Signer;
@@ -169,6 +170,20 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       LOG.info("Creating Signer #{}", c);
     }
 
+    /**
+     * Method to sign the incoming request with credentials.
+     *
+     * NOTE: In case of Client-side encryption, we do a "Generate Key" POST
+     * request to AWSKMS service rather than S3, this was causing the test to
+     * break. When this request happens, we have the endpoint in form of
+     * "kms.[REGION].amazonaws.com", and bucket-name becomes "kms". We can't
+     * use AWSS3V4Signer for AWSKMS service as it contains a header
+     * "x-amz-content-sha256:UNSIGNED-PAYLOAD", which returns a 400 bad
+     * request because the signature calculated by the service doesn't match
+     * what we sent.
+     * @param request the request to sign.
+     * @param credentials credentials used to sign the request.
+     */
     @Override
     public void sign(SignableRequest<?> request, AWSCredentials credentials) {
       int c = INVOCATION_COUNT.incrementAndGet();
@@ -182,10 +197,21 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi", e);
       }
-      AWSS3V4Signer realSigner = new AWSS3V4Signer();
-      realSigner.setServiceName("s3");
-      realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-      realSigner.sign(request, credentials);
+      if (bucketName.equals("kms")) {
+        AWS4Signer realKMSSigner = new AWS4Signer();
+        realKMSSigner.setServiceName("kms");
+        if (lastStoreValue != null) {
+          realKMSSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+        }
+        realKMSSigner.sign(request, credentials);
+      } else {
+        AWSS3V4Signer realSigner = new AWSS3V4Signer();
+        realSigner.setServiceName("s3");
+        if (lastStoreValue != null) {
+          realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+        }
+        realSigner.sign(request, credentials);
+      }
     }
 
     public static int getInstantiationCount() {
