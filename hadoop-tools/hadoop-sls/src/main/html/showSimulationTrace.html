@@ -100,6 +100,10 @@
     <div class="divborder span8 " style="margin-left:50px" id="area7"></div>
     <div class="span7 chart-area" id="area8"></div>
   </div>
+  <div class="row">
+    <div class="divborder span8 chart-area" style="margin-left:50px" id="area9"></div>
+    <div class="divborder span8 chart-area" id="area10"></div>
+  </div>
 </div>
 <p>&nbsp;</p>
 <script>
@@ -162,6 +166,23 @@ function drawCharts(filepath) {
         "scheduler.handle-APP_REMOVED.timecost", "scheduler.handle-CONTAINER_EXPIRED.timecost"
       ];
       drawEachChart("#area7", data, legends, "Scheduler allocate & handle operations timecost", "Timecost (ms)", 0, 210);
+
+      // Node usage stats
+      legends = [
+        "nodes.memory.unused", "nodes.memory.1to19pctUsed",
+        "nodes.memory.20to39pctUsed", "nodes.memory.40to59pctUsed",
+        "nodes.memory.60to79pctUsed","nodes.memory.80to99pctUsed",
+        "nodes.memory.full"
+      ];
+      drawEachChart("#area9", data, legends, "Cluster nodes memory usage", "Node count", 1, 0);
+
+      legends = [
+        "nodes.vcores.unused", "nodes.vcores.1to19pctUsed",
+        "nodes.vcores.20to39pctUsed", "nodes.vcores.40to59pctUsed",
+        "nodes.vcores.60to79pctUsed", "nodes.vcores.80to99pctUsed",
+        "nodes.vcores.full"
+      ];
+      drawEachChart("#area10", data, legends, "Cluster nodes vcores usage", "Node count", 1, 0);
     });
   }).done(function() {
     $("#data").css("display", "block");

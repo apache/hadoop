@@ -54,11 +54,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.sls.utils.NodeUsageRanges;
 import org.apache.hadoop.yarn.sls.web.SLSWebApp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,6 +159,8 @@ public abstract class SchedulerMetrics {
     registerClusterResourceMetrics();
     registerContainerAppNumMetrics();
     registerSchedulerMetrics();
+    registerNodesUsageMetrics("memory");
+    registerNodesUsageMetrics("vcores");
 
     // .csv output
     initMetricsCSVOutput();
@@ -457,6 +461,49 @@ public abstract class SchedulerMetrics {
             histogram);
         schedulerHistogramList.add(histogram);
         histogramTimerMap.put(histogram, schedulerHandleTimerMap.get(e));
+      }
+    } finally {
+      samplerLock.unlock();
+    }
+  }
+
+  private void registerNodesUsageMetrics(String resourceType) {
+    samplerLock.lock();
+    try {
+      for (NodeUsageRanges.Range range : NodeUsageRanges.getRanges()) {
+        String metricName = "nodes." + resourceType + "." + range.getKeyword();
+        metrics.register(metricName,
+            new Gauge<Integer>() {
+              @Override
+              public Integer getValue() {
+                if (!(scheduler instanceof AbstractYarnScheduler)) {
+                  return 0;
+                } else {
+                  int count = 0;
+                  AbstractYarnScheduler sch = (AbstractYarnScheduler) scheduler;
+                  for (Object node : sch.getNodeTracker().getAllNodes()) {
+                    SchedulerNode sNode = (SchedulerNode) node;
+                    long allocated = 0, total = 0;
+                    if (resourceType.equals("memory")) {
+                      allocated = sNode.getAllocatedResource().getMemorySize();
+                      total = sNode.getTotalResource().getMemorySize();
+                    } else if (resourceType.equals("vcores")) {
+                      allocated =
+                          sNode.getAllocatedResource().getVirtualCores();
+                      total =
+                          sNode.getTotalResource().getVirtualCores();
+                    }
+                    float usedPct = allocated * 100f / total;
+                    if (range.getLowerLimit() <= usedPct
+                        && usedPct <= range.getUpperLimit()) {
+                      count++;
+                    }
+                  }
+                  return count;
+                }
+              }
+            }
+        );
       }
     } finally {
       samplerLock.unlock();
