@@ -140,6 +140,12 @@
       <artifactId>metrics-core</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
