@@ -704,10 +704,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = fileStatus.getLen();
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
       } else {
-        AbfsHttpOperation op = client
-            .getPathStatus(relativePath, false, tracingContext).getResult();
-        resourceType = op
-            .getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+        LOG.warn(
+            "Falling back to getPathStatus REST call as provided filestatus "
+                + "is not of type VersionedFileStatus");
+        AbfsHttpOperation op = client.getPathStatus(relativePath, false,
+            tracingContext).getResult();
+        resourceType = op.getResponseHeader(
+            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
         contentLength = Long.parseLong(
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
