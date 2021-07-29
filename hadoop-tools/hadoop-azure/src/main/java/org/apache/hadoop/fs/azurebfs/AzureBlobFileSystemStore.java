@@ -692,14 +692,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String relativePath = getRelativePath(path);
       String resourceType, eTag;
       long contentLength;
-      if (fileStatus != null) {
+      if (fileStatus instanceof VersionedFileStatus) {
+        if (fileStatus.getPath() != path) {
+          LOG.error(String.format(
+              "Filestatus path [%s] does not match with given path [%s]",
+              fileStatus.getPath(), path));
+          throw new IOException(
+              "Provided fileStatus does not correspond to path" + path);
+        }
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
-        if (fileStatus instanceof VersionedFileStatus) {
-          eTag = ((VersionedFileStatus) fileStatus).getVersion();
-        } else {
-          eTag = EMPTY_STRING;
-        }
+        eTag = ((VersionedFileStatus) fileStatus).getVersion();
       } else {
         AbfsHttpOperation op = client
             .getPathStatus(relativePath, false, tracingContext).getResult();

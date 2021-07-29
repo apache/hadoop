@@ -293,11 +293,13 @@ public class TestAbfsInputStream extends
     checkGetPathStatusCalls(largeTestFile, listStatusResults[1],
         abfsStore, mockClient, AbfsRestOperationType.ListPaths, tracingContext);
 
-    // Verify with general filestatus (not instance of VersionedFileStatus)
+    // Verify with incorrect filestatus
     FileStatus fileStatus = new FileStatus(smallBuffer.length, false, 0, 0,
-        getFileStatusResults[0].getModificationTime(), smallTestFile); //no etag
-    verifyOpenWithProvidedStatus(smallTestFile, fileStatus, smallBuffer,
-        AbfsRestOperationType.GetPathStatus);
+        getFileStatusResults[0].getModificationTime(),
+        new Path(smallTestFile + "wrongpath")); //no etag
+    intercept(IOException.class,
+        () -> verifyOpenWithProvidedStatus(smallTestFile, fileStatus,
+            smallBuffer, AbfsRestOperationType.GetPathStatus));
   }
 
   /**
