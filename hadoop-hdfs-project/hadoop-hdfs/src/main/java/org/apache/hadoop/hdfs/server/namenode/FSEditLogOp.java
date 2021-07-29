@@ -412,6 +412,17 @@ public abstract class FSEditLogOp {
     return PBHelperClient.convertXAttrs(proto.getXAttrsList());
   }
 
+  private static Block[] deepCopy(Block[] blocks) {
+    if (blocks == null || blocks.length == 0) {
+      return blocks;
+    }
+    Block[] copy = new Block[blocks.length];
+    for (int i = 0; i < blocks.length; ++i) {
+      copy[i] = blocks[i] == null ? null : new Block(blocks[i]);
+    }
+    return copy;
+  }
+
   @SuppressWarnings("unchecked")
   static abstract class AddCloseOp
          extends FSEditLogOp
@@ -500,7 +511,7 @@ public abstract class FSEditLogOp {
         throw new RuntimeException("Can't have more than " + MAX_BLOCKS +
             " in an AddCloseOp.");
       }
-      this.blocks = blocks;
+      this.blocks = FSEditLogOp.deepCopy(blocks);
       return (T)this;
     }
     
@@ -978,7 +989,7 @@ public abstract class FSEditLogOp {
     }
 
     AddBlockOp setPenultimateBlock(Block pBlock) {
-      this.penultimateBlock = pBlock;
+      this.penultimateBlock = pBlock == null ? null : new Block(pBlock);
       return this;
     }
     
@@ -987,7 +998,7 @@ public abstract class FSEditLogOp {
     }
     
     AddBlockOp setLastBlock(Block lastBlock) {
-      this.lastBlock = lastBlock;
+      this.lastBlock = lastBlock == null ? null : new Block(lastBlock);
       return this;
     }
     
@@ -1090,7 +1101,7 @@ public abstract class FSEditLogOp {
     }
 
     UpdateBlocksOp setBlocks(Block[] blocks) {
-      this.blocks = blocks;
+      this.blocks = FSEditLogOp.deepCopy(blocks);
       return this;
     }
     
@@ -2881,7 +2892,8 @@ public abstract class FSEditLogOp {
     }
 
     TruncateOp setTruncateBlock(Block truncateBlock) {
-      this.truncateBlock = truncateBlock;
+      this.truncateBlock = truncateBlock == null ?
+          null : new Block(truncateBlock);
       return this;
     }
 
