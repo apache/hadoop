@@ -678,7 +678,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         tracingContext);
   }
 
-  public AbfsInputStream openFileForRead(final Path path,
+  public AbfsInputStream openFileForRead(Path path,
       final Optional<OpenFileParameters> parameters,
       final FileSystem.Statistics statistics, TracingContext tracingContext)
       throws IOException {
@@ -693,13 +693,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String resourceType, eTag;
       long contentLength;
       if (fileStatus instanceof VersionedFileStatus) {
-        if (fileStatus.getPath() != path) {
-          LOG.error(String.format(
-              "Filestatus path [%s] does not match with given path [%s]",
-              fileStatus.getPath(), path));
-          throw new IOException(
-              "Provided fileStatus does not correspond to path" + path);
-        }
+        path = path.makeQualified(this.uri, path);
+        Preconditions.checkArgument(fileStatus.getPath().equals(path),
+            String.format(
+                "Filestatus path [%s] does not match with given path [%s]",
+                fileStatus.getPath(), path));
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
