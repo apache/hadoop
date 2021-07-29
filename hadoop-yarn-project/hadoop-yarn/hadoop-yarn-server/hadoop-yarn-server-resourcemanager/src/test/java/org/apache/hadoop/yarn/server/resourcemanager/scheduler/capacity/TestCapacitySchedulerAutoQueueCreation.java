@@ -142,7 +142,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
       validateUserAndAppLimits(autoCreatedLeafQueue, 4000, 4000);
-      validateContainerLimits(autoCreatedLeafQueue);
+      validateContainerLimits(autoCreatedLeafQueue, 6, 10240);
 
       assertTrue(autoCreatedLeafQueue
           .getOrderingPolicy() instanceof FairOrderingPolicy);
@@ -165,6 +165,35 @@ public class TestCapacitySchedulerAutoQueueCreation
           expectedChildQueueAbsCapacity,
           new HashSet<String>() {{ add(NO_LABEL); }});
 
+    } finally {
+      cleanupQueue(USER0);
+      cleanupQueue(TEST_GROUPUSER);
+    }
+  }
+
+  @Test(timeout = 20000)
+  public void testAutoCreateLeafQueueCreationSchedulerMaximumAllocation()
+      throws Exception {
+    try {
+      // Check the minimum/maximum allocation settings via the
+      // yarn.scheduler.minimum/maximum-allocation-mb/vcore property
+      setSchedulerMinMaxAllocation(cs.getConfiguration());
+      cs.getConfiguration().setAutoCreatedLeafQueueConfigMaximumAllocation(C,
+          "memory-mb=18384,vcores=8");
+      cs.reinitialize(cs.getConfiguration(), mockRM.getRMContext());
+
+      // submit an app
+      submitApp(mockRM, cs.getQueue(PARENT_QUEUE), USER0, USER0, 1, 1);
+
+      // check preconditions
+      List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
+      assertEquals(1, appsInC.size());
+      assertNotNull(cs.getQueue(USER0));
+
+      AutoCreatedLeafQueue autoCreatedLeafQueue =
+          (AutoCreatedLeafQueue) cs.getQueue(USER0);
+
+      validateContainerLimits(autoCreatedLeafQueue, 8, 18384);
     } finally {
       cleanupQueue(USER0);
       cleanupQueue(TEST_GROUPUSER);
@@ -936,7 +965,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
       validateUserAndAppLimits(user3Queue, 4000, 4000);
-      validateContainerLimits(user3Queue);
+      validateContainerLimits(user3Queue, 6, 10240);
 
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
           (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)

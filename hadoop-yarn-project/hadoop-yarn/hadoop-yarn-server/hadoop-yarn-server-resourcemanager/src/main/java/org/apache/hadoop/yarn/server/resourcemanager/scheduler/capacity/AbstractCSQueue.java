@@ -518,8 +518,14 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
     String myQueuePath = getQueuePath();
+    /* YARN-10869: When using AutoCreatedLeafQueues, the passed configuration
+    * object is a cloned one containing only the template configs
+    * (see ManagedParentQueue#getLeafQueueConfigs). To ensure that the actual
+    * cluster maximum allocation is fetched the original config object should
+    * be used.
+    */
     Resource clusterMax = ResourceUtils
-        .fetchMaximumAllocationFromConfig(csConf);
+        .fetchMaximumAllocationFromConfig(this.csContext.getConfiguration());
     Resource queueMax = csConf.getQueueMaximumAllocation(myQueuePath);
 
     maximumAllocation = Resources.clone(
