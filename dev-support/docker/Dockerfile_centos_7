@@ -35,6 +35,7 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 ######
 # hadolint ignore=DL3008,SC2046
 RUN yum update -y \
+    && yum groupinstall -y "Development Tools" \
     && yum install -y \
         centos-release-scl \
         python3 \
@@ -43,6 +44,21 @@ RUN yum update -y \
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
+
+######
+# Set the environment variables needed for CMake
+# to find and use GCC 9 for compilation
+######
+ENV GCC_HOME "/opt/rh/devtoolset-9"
+ENV CC "${GCC_HOME}/root/usr/bin/gcc"
+ENV CXX "${GCC_HOME}/root/usr/bin/g++"
+ENV SHLVL 1
+ENV LD_LIBRARY_PATH "${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
+ENV PCP_DIR "${GCC_HOME}/root"
+ENV MANPATH "${GCC_HOME}/root/usr/share/man:"
+ENV PATH "${GCC_HOME}/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV PKG_CONFIG_PATH "${GCC_HOME}/root/usr/lib64/pkgconfig"
+ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 
 # TODO: Set locale
 
@@ -65,7 +81,6 @@ ENV SPOTBUGS_HOME /opt/spotbugs
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
-
 ######
 # Install packages
 ######
@@ -76,4 +91,6 @@ RUN pkg-resolver/install-yasm.sh centos:7
 RUN pkg-resolver/install-protobuf.sh centos:7
 RUN pkg-resolver/install-boost.sh centos:7
 RUN pkg-resolver/install-spotbugs.sh centos:7
+RUN pkg-resolver/install-nodejs.sh centos:7
+RUN pkg-resolver/install-git.sh centos:7
 RUN pkg-resolver/install-common-pkgs.sh
