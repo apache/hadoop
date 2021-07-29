@@ -1434,7 +1434,7 @@ if src = dest : raise FileExistsException
 
 Destination and source must not be descendants one another
 ```python
-if isDescendant(src, dest) or isDescendant(dest, src) : TODO
+if isDescendant(src, dest) or isDescendant(dest, src) : raise IOException
 ```
 
 The source file or directory must exist locally:
@@ -1488,14 +1488,15 @@ There are no expectations that the file changes are atomic for both local `Local
 
 #### Outcome where source is a directory `isDir(LocalFS, src)`
 ```python
-if is Dir(LocalFS, src) and (isFile(FS, dest) or isFile(FS, dest + childElements(src))):
+if isDir(LocalFS, src) and (isFile(FS, dest) or isFile(FS, dest + childElements(src))):
     raise FileAlreadyExistsException
 else if isDir(LocalFS, src):
-    dest' = dest
-    if exists(FS, dest)
+    if exists(FS, dest):
         dest' = dest + childElements(src)
         if exists(FS, dest') and not overwrite:
             raise PathExistsException
+    else:
+        dest' = dest
 
     FS' = FS where:
         forall c in descendants(LocalFS, src):
@@ -1507,11 +1508,12 @@ else if isDir(LocalFS, src):
     LocalFS' = LocalFS where
         not delSrc or (delSrc = true and delete(LocalFS, src, true))
 ```
-There are no expectations of operation isolation / atomicity. This means files can change
-in source or destination while the operation is executing. No guarantees are made for the
-final state of the file or directory after a copy other than it is best effort. E.g.: when
-copying a directory, one file can be moved from source to destination but there's nothing
-stopping the new file at destination being updated while the copy operation is still in place.
+There are no expectations of operation isolation / atomicity.
+This means files can change in source or destination while the operation is executing.
+No guarantees are made for the final state of the file or directory after a copy other than it is
+best effort. E.g.: when copying a directory, one file can be moved from source to destination but
+there's nothing stopping the new file at destination being updated while the copy operation is still
+in place.
 
 #### Implementation
 
