@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_FASTPATH_ENABLE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -71,7 +70,6 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   @Test (expected = IOException.class)
   public void testOOBWritesAndReadFail() throws Exception {
-    Assume.assumeFalse(getConfiguration().getBoolean(FS_AZURE_FASTPATH_ENABLE, false));
     Configuration conf = this.getRawConfiguration();
     conf.setBoolean(AZURE_TOLERATE_CONCURRENT_APPEND, false);
     final AzureBlobFileSystem fs = getFileSystem();
@@ -173,7 +171,6 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testReadWithFileNotFoundException() throws Exception {
-    Assume.assumeFalse(getConfiguration().getBoolean(FS_AZURE_FASTPATH_ENABLE, false));
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
