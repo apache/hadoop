@@ -55,7 +55,7 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   }
 
   @Override
-  protected boolean directWriteAlways() {
+  protected boolean shouldUseDirectWrite() {
     return true;
   }
 

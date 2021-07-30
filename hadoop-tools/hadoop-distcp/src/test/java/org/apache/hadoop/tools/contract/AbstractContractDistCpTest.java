@@ -350,7 +350,7 @@ public abstract class AbstractContractDistCpTest
             .withDeleteMissing(true)
             .withSyncFolder(true)
             .withCRC(true)
-            .withDirectWrite(directWriteAlways())
+            .withDirectWrite(shouldUseDirectWrite())
             .withOverwrite(false)));
   }
 
@@ -404,7 +404,7 @@ public abstract class AbstractContractDistCpTest
             inputDirUnderOutputDir)
             .withTrackMissing(trackDir)
             .withSyncFolder(true)
-            .withDirectWrite(directWriteAlways())
+            .withDirectWrite(shouldUseDirectWrite())
             .withOverwrite(false)));
 
     lsR("tracked udpate", remoteFS, destDir);
@@ -598,13 +598,13 @@ public abstract class AbstractContractDistCpTest
   /**
    * Executes DistCp and asserts that the job finished successfully.
    * The choice of direct/indirect is based on the value of
-   *  {@link #directWriteAlways()}.
+   *  {@link #shouldUseDirectWrite()}.
    * @param src source path
    * @param dst destination path
    * @throws Exception if there is a failure
    */
   private void runDistCp(Path src, Path dst) throws Exception {
-    if (directWriteAlways()) {
+    if (shouldUseDirectWrite()) {
       runDistCpDirectWrite(src, dst);
     } else {
       runDistCpWithRename(src, dst);
@@ -651,7 +651,7 @@ public abstract class AbstractContractDistCpTest
   @Test
   public void testDirectWrite() throws Exception {
     describe("copy file from local to remote using direct write option");
-    if (directWriteAlways()) {
+    if (shouldUseDirectWrite()) {
       skip("not needed as all other tests use the -direct option.");
     }
     directWrite(localFS, localDir, remoteFS, remoteDir, true);
@@ -710,32 +710,32 @@ public abstract class AbstractContractDistCpTest
    * false by default; enable for stores where rename is slow.
    * @return true if direct write should be used in all tests.
    */
-  protected boolean directWriteAlways() {
+  protected boolean shouldUseDirectWrite() {
     return false;
   }
 
   /**
    * Return the default options for distcp, including,
-   * if {@link #directWriteAlways()} is true,
+   * if {@link #shouldUseDirectWrite()} is true,
    * the -direct option.
    * Append or prepend this to string CLIs.
    * @return default options.
    */
   protected String getDefaultCLIOptions() {
-    return directWriteAlways()
+    return shouldUseDirectWrite()
         ? " -direct "
         : "";
   }
 
   /**
    * Return the default options for distcp, including,
-   * if {@link #directWriteAlways()} is true,
+   * if {@link #shouldUseDirectWrite()} is true,
    * the -direct option, null if there are no
    * defaults.
    * @return default options.
    */
   protected String getDefaultCLIOptionsOrNull() {
-    return directWriteAlways()
+    return shouldUseDirectWrite()
         ? " -direct "
         : null;
   }
