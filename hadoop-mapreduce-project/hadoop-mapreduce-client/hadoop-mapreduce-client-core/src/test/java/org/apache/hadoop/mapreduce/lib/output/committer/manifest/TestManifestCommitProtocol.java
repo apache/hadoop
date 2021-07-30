@@ -94,11 +94,12 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * This is a contract test for the commit protocol on a target filesystem.
  * It is subclassed in the ABFS integration tests.
+ * Derived from the S3A protocol suite, which was itself based off
+ * the test suite {@code TestFileOutputCommitter}.
  */
 public class TestManifestCommitProtocol
     extends AbstractManifestCommitterTest {
 
-  private Path outDir;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestManifestCommitProtocol.class);
@@ -107,6 +108,23 @@ public class TestManifestCommitProtocol
 
   protected static final String PART_00000 = "part-m-00000";
 
+  private static final Text KEY_1 = new Text("key1");
+
+  private static final Text KEY_2 = new Text("key2");
+
+  private static final Text VAL_1 = new Text("val1");
+
+  private static final Text VAL_2 = new Text("val2");
+
+  /**
+   * Snapshot of stats, which will be collected from
+   * committers.
+   */
+  private static final IOStatisticsSnapshot IOSTATISTICS =
+      IOStatisticsSupport.snapshotIOStatistics();
+  /**
+   * Job ID for jobs.
+   */
   private final String jobId;
 
   /**
@@ -120,16 +138,13 @@ public class TestManifestCommitProtocol
 
   private final TaskAttemptID taskAttempt1;
 
-  private static final Text KEY_1 = new Text("key1");
-
-  private static final Text KEY_2 = new Text("key2");
-
-  private static final Text VAL_1 = new Text("val1");
-
-  private static final Text VAL_2 = new Text("val2");
-
   /** A job to abort in test case teardown. */
-  private List<JobData> abortInTeardown = new ArrayList<>(1);
+  private final List<JobData> abortInTeardown = new ArrayList<>(1);
+
+  /**
+   * Output directory.
+   */
+  private Path outDir;
 
   /**
    * Committer factory which calls back into
@@ -143,13 +158,6 @@ public class TestManifestCommitProtocol
       getFileSystem().delete(outDir, true);
     }
   }
-
-  /**
-   * Snapshot of stats, which will be collected from
-   * committers.
-   */
-  private static final IOStatisticsSnapshot IOSTATISTICS =
-      IOStatisticsSupport.snapshotIOStatistics();
 
   /**
    * Constructor.
