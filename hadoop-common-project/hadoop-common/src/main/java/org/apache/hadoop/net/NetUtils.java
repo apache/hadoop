@@ -60,8 +60,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.net.HostAndPort;
-import com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 import org.apache.http.conn.util.InetAddressUtils;
 import java.net.*;
 

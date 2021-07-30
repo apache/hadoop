@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -330,56 +331,39 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
         return tmpDir;
     }
 
-    private static int getPort(String hostPort) {
-        String[] split = hostPort.split(":");
-        String portstr = split[split.length-1];
-        String[] pc = portstr.split("/");
-        if (pc.length > 1) {
-            portstr = pc[0];
-        }
-        return Integer.parseInt(portstr);
+  static ServerCnxnFactory createNewServerInstance(File dataDir,
+      ServerCnxnFactory factory, String hostPort, int maxCnxns)
+      throws IOException, InterruptedException {
+    ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
+    final int port = NetUtils.getPortFromHostPort(hostPort);
+    if (factory == null) {
+      factory = ServerCnxnFactory.createFactory(port, maxCnxns);
     }
+    factory.startup(zks);
+    Assert.assertTrue("waiting for server up", ClientBaseWithFixes
+        .waitForServerUp("127.0.0.1:" + port, CONNECTION_TIMEOUT));
 
-    static ServerCnxnFactory createNewServerInstance(File dataDir,
-            ServerCnxnFactory factory, String hostPort, int maxCnxns)
-        throws IOException, InterruptedException
-    {
-        ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
-        final int PORT = getPort(hostPort);
-        if (factory == null) {
-            factory = ServerCnxnFactory.createFactory(PORT, maxCnxns);
-        }
-        factory.startup(zks);
-        Assert.assertTrue("waiting for server up",
-                   ClientBaseWithFixes.waitForServerUp("127.0.0.1:" + PORT,
-                                              CONNECTION_TIMEOUT));
+    return factory;
+  }
 
-        return factory;
+  static void shutdownServerInstance(ServerCnxnFactory factory,
+      String hostPort) {
+    if (factory != null) {
+      ZKDatabase zkDb;
+      ZooKeeperServer zs = getServer(factory);
+      zkDb = zs.getZKDatabase();
+      factory.shutdown();
+      try {
+        zkDb.close();
+      } catch (IOException ie) {
+        LOG.warn("Error closing logs ", ie);
+      }
+      final int port = NetUtils.getPortFromHostPort(hostPort);
+
+      Assert.assertTrue("waiting for server down", ClientBaseWithFixes
+          .waitForServerDown("127.0.0.1:" + port, CONNECTION_TIMEOUT));
     }
-
-    static void shutdownServerInstance(ServerCnxnFactory factory,
-            String hostPort)
-    {
-        if (factory != null) {
-            ZKDatabase zkDb;
-            {
-                ZooKeeperServer zs = getServer(factory);
-        
-                zkDb = zs.getZKDatabase();
-            }
-            factory.shutdown();
-            try {
-                zkDb.close();
-            } catch (IOException ie) {
-                LOG.warn("Error closing logs ", ie);
-            }
-            final int PORT = getPort(hostPort);
-
-            Assert.assertTrue("waiting for server down",
-                       ClientBaseWithFixes.waitForServerDown("127.0.0.1:" + PORT,
-                                                    CONNECTION_TIMEOUT));
-        }
-    }
+  }
 
     /**
      * Test specific setup

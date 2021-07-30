@@ -82,6 +82,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 
 import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
 import static org.apache.hadoop.util.KMSUtil.checkNotNull;
@@ -290,16 +291,20 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         // In the current scheme, all hosts have to run on the same port
         int port = -1;
         String hostsPart = authority;
+
         if (authority.contains(":")) {
-          String[] t = authority.split(":");
           try {
-            port = Integer.parseInt(t[1]);
-          } catch (Exception e) {
+            HostAndPort hp = HostAndPort.fromString(hostsPart);
+            if (hp.hasPort()) {
+              port = hp.getPort();
+              hostsPart = hp.getHost();
+            }
+          } catch (IllegalArgumentException e) {
             throw new IOException(
                 "Could not parse port in kms uri [" + origUrl + "]");
           }
-          hostsPart = t[0];
         }
+
         KMSClientProvider[] providers =
             createProviders(conf, origUrl, port, hostsPart);
         return new LoadBalancingKMSClientProvider(providerUri, providers, conf);

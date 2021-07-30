@@ -57,6 +57,14 @@ public class TestNetUtils {
   private static final String DEST_PORT_NAME = Integer.toString(DEST_PORT);
   private static final int LOCAL_PORT = 8080;
   private static final String LOCAL_PORT_NAME = Integer.toString(LOCAL_PORT);
+  private static final String IPV6_LOOPBACK_LONG_STRING = "0:0:0:0:0:0:0:1";
+  private static final String IPV6_SAMPLE_ADDRESS =
+      "2a03:2880:2130:cf05:face:b00c:0:1";
+  private static final String IPV6_LOOPBACK_SHORT_STRING = "::1";
+  private static final String IPV6_LOOPBACK_WITH_PORT =
+      "[" + IPV6_LOOPBACK_LONG_STRING + "]:10";
+  private static final String IPV6_SAMPLE_WITH_PORT =
+      "[" + IPV6_SAMPLE_ADDRESS + "]:10";
 
   /**
    * Some slop around expected times when making sure timeouts behave
@@ -755,10 +763,30 @@ public class TestNetUtils {
   }
 
   @Test
+  public void testGetHostNameOfIPworksWithIPv6() {
+    assertNotNull(NetUtils.getHostNameOfIP(IPV6_LOOPBACK_LONG_STRING));
+    assertNotNull(NetUtils.getHostNameOfIP(IPV6_LOOPBACK_SHORT_STRING));
+    assertNotNull(NetUtils.getHostNameOfIP(IPV6_SAMPLE_ADDRESS));
+    assertNotNull(NetUtils.getHostNameOfIP(IPV6_SAMPLE_WITH_PORT));
+    assertNotNull(NetUtils.getHostNameOfIP(IPV6_LOOPBACK_WITH_PORT));
+  }
+
+  @Test
   public void testTrimCreateSocketAddress() {
     Configuration conf = new Configuration();
     NetUtils.addStaticResolution("host", "127.0.0.1");
     final String defaultAddr = "host:1  ";
+
+    InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
+    conf.setSocketAddr("myAddress", addr);
+    assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+  }
+
+  @Test
+  public void testTrimCreateSocketAddressIPv6() {
+    Configuration conf = new Configuration();
+    NetUtils.addStaticResolution("hostIPv6", IPV6_LOOPBACK_LONG_STRING);
+    final String defaultAddr = "hostIPv6:1  ";
 
     InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);

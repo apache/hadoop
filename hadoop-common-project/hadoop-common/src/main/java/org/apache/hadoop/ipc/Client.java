@@ -499,10 +499,11 @@ public class Client implements AutoCloseable {
       boolean trySasl = UserGroupInformation.isSecurityEnabled() ||
                         (ticket != null && !ticket.getTokens().isEmpty());
       this.authProtocol = trySasl ? AuthProtocol.SASL : AuthProtocol.NONE;
-      
-      this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
-          server.toString() +
-          " from " + ((ticket==null)?"an unknown user":ticket.getUserName()));
+
+      this.setName(
+          "IPC Client (" + socketFactory.hashCode() + ") connection to "
+              + NetUtils.getSocketAddressString(server) + " from " + ((ticket
+              == null) ? "an unknown user" : ticket.getUserName()));
       this.setDaemon(true);
     }
 
@@ -636,8 +637,9 @@ public class Client implements AutoCloseable {
                                server.getHostName(), server.getPort());
 
       if (!server.equals(currentAddr)) {
-        LOG.warn("Address change detected. Old: " + server.toString() +
-                                 " New: " + currentAddr.toString());
+        LOG.warn("Address change detected. Old: " + NetUtils
+            .getSocketAddressString(server) + " New: " + NetUtils
+            .getSocketAddressString(currentAddr));
         server = currentAddr;
         UserGroupInformation ticket = remoteId.getTicket();
         this.setName("IPC Client (" + socketFactory.hashCode()
@@ -1835,7 +1837,7 @@ public class Client implements AutoCloseable {
     
     @Override
     public String toString() {
-      return address.toString();
+      return NetUtils.getSocketAddressString(address);
     }
   }  
 

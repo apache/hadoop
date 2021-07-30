@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.thirdparty.com.google.common.net.HostAndPort;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SOCKS_SERVER_KEY;
 
@@ -148,13 +149,16 @@ public class SocksSocketFactory extends SocketFactory implements
    * @param proxyStr the proxy address using the format "host:port"
    */
   private void setProxy(String proxyStr) {
-    String[] strs = proxyStr.split(":", 2);
-    if (strs.length != 2)
+    try {
+      HostAndPort hp = HostAndPort.fromString(proxyStr);
+      if (!hp.hasPort()) {
+        throw new RuntimeException("Bad SOCKS proxy parameter: " + proxyStr);
+      }
+      String host = hp.getHost();
+      this.proxy = new Proxy(Proxy.Type.SOCKS,
+          InetSocketAddress.createUnresolved(host, hp.getPort()));
+    } catch (IllegalArgumentException e) {
       throw new RuntimeException("Bad SOCKS proxy parameter: " + proxyStr);
-    String host = strs[0];
-    int port = Integer.parseInt(strs[1]);
-    this.proxy =
-        new Proxy(Proxy.Type.SOCKS, InetSocketAddress.createUnresolved(host,
-            port));
+    }
   }
 }
