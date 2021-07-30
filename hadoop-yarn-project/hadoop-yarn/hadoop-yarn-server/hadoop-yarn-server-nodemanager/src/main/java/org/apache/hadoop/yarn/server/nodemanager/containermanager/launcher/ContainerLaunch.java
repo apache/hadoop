@@ -46,6 +46,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -1449,6 +1451,9 @@ public class ContainerLaunch implements Callable<Integer> {
   private static final class WindowsShellScriptBuilder
       extends ShellScriptBuilder {
 
+    private static final Pattern variablePattern = Pattern.compile("%(.*?)%");
+    private static final Pattern splitPattern = Pattern.compile(":");
+
     private void errorCheck() {
       line("@if %errorlevel% neq 0 exit /b %errorlevel%");
     }
@@ -1539,34 +1544,18 @@ public class ContainerLaunch implements Callable<Integer> {
       if (envVal == null || envVal.isEmpty()) {
         return Collections.emptySet();
       }
+
+      // Example inputs: %var%, %%, %a:b%
+      Matcher matcher = variablePattern.matcher(envVal);
       final Set<String> deps = new HashSet<>();
-      final int len = envVal.length();
-      int i = 0;
-      while (i < len) {
-        i = envVal.indexOf('%', i); // find beginning of variable
-        if (i < 0 || i == (len - 1)) {
-          break;
+      while (matcher.find()) {
+        String match = matcher.group(1);
+        if (match.length() > 0) {
+          // Either store the variable name before the : string manipulation
+          // character or the whole match. (%var% -> var, %a:b% -> a)
+          String[] split = splitPattern.split(match, 2);
+          deps.add(split[0]);
         }
-        i++;
-        // 3 cases: %var%, %var:...% or %%
-        final int j = envVal.indexOf('%', i); // find end of variable
-        if (j == i) {
-          // %% case, just skip it
-          i++;
-          continue;
-        }
-        if (j < 0) {
-          break; // even %var:...% syntax ends with a %, so j cannot be negative
-        }
-        final int k = envVal.indexOf(':', i);
-        if (k >= 0 && k < j) {
-          // %var:...% syntax
-          deps.add(envVal.substring(i, k));
-        } else {
-          // %var% syntax
-          deps.add(envVal.substring(i, j));
-        }
-        i = j + 1;
       }
       return deps;
     }
