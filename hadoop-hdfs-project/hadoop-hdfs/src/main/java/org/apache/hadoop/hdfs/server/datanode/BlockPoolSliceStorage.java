@@ -80,11 +80,21 @@ public class BlockPoolSliceStorage extends Storage {
    *      progress. Do not delete the 'previous' directory.
    */
   static final String ROLLING_UPGRADE_MARKER_FILE = "RollingUpgradeInProgress";
+  private static final String BLOCK_POOL_ID_IPV4_PATTERN_BASE =
+      "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}";
+
+  // Because we don't support ":" in path BlockPoolID on IPv6 boxes we replace
+  // ":" with ".".
+  // Also format of IPv6 is less fixed so we surround it with square brackets
+  // and just check that match
+  private static final String BLOCK_POOL_ID_IPV6_PATTERN_BASE =
+      Pattern.quote("[") + "(?:.*)" + Pattern.quote("]");
 
   private static final String BLOCK_POOL_ID_PATTERN_BASE =
-      Pattern.quote(File.separator) +
-      "BP-\\d+-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d+" +
-      Pattern.quote(File.separator);
+      Pattern.quote(File.separator) + "BP-\\d+-(?:"
+          + BLOCK_POOL_ID_IPV4_PATTERN_BASE + "|"
+          + BLOCK_POOL_ID_IPV6_PATTERN_BASE + ")-\\d+" + Pattern
+          .quote(File.separator);
 
   private static final Pattern BLOCK_POOL_PATH_PATTERN = Pattern.compile(
       "^(.*)(" + BLOCK_POOL_ID_PATTERN_BASE + ")(.*)$");

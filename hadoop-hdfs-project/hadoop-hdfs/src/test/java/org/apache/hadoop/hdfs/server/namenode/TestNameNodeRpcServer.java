@@ -25,7 +25,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.AnyOf.anyOf;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -43,14 +45,18 @@ public class TestNameNodeRpcServer {
     // The name node in MiniDFSCluster only binds to 127.0.0.1.
     // We can set the bind address to 0.0.0.0 to make it listen
     // to all interfaces.
+    // On IPv4-only machines it will return that it is listening on 0.0.0.0
+    // On dual-stack or IPv6-only machines it will return 0:0:0:0:0:0:0:0
     conf.set(DFS_NAMENODE_RPC_BIND_HOST_KEY, "0.0.0.0");
     MiniDFSCluster cluster = null;
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
-      assertEquals("0.0.0.0", ((NameNodeRpcServer)cluster.getNameNodeRpc())
-          .getClientRpcServer().getListenerAddress().getHostName());
+      String listenerAddress = ((NameNodeRpcServer)cluster.getNameNodeRpc())
+          .getClientRpcServer().getListenerAddress().getHostName();
+      assertThat("Bind address " + listenerAddress + " is not wildcard.",
+          listenerAddress, anyOf(is("0.0.0.0"), is("0:0:0:0:0:0:0:0")));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

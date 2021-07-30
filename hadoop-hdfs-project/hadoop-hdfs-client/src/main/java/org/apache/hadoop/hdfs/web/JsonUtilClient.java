@@ -305,7 +305,7 @@ public class JsonUtilClient {
     if (ipAddr == null) {
       String name = getString(m, "name", null);
       if (name != null) {
-        int colonIdx = name.indexOf(':');
+        int colonIdx = name.lastIndexOf(':');
         if (colonIdx > 0) {
           ipAddr = name.substring(0, colonIdx);
           xferPort = Integer.parseInt(name.substring(colonIdx +1));

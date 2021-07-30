@@ -56,6 +56,7 @@ import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
@@ -1522,7 +1523,13 @@ public class DatanodeManager {
     DatanodeID dnId;
     String hostStr;
     int port;
-    int idx = hostLine.indexOf(':');
+    int idx;
+
+    if (InetAddressUtils.isIPv6StdAddress(hostLine)) {
+      idx = -1;
+    } else {
+      idx = hostLine.lastIndexOf(':');
+    }
 
     if (-1 == idx) {
       hostStr = hostLine;

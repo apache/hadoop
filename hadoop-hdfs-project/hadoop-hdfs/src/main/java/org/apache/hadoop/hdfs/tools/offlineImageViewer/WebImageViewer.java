@@ -34,6 +34,7 @@ import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -122,7 +123,9 @@ public class WebImageViewer implements Closeable {
     allChannels.add(channel);
 
     address = (InetSocketAddress) channel.localAddress();
-    LOG.info("WebImageViewer started. Listening on " + address.toString() + ". Press Ctrl+C to stop the viewer.");
+    LOG.info("WebImageViewer started. Listening on " + NetUtils
+        .getSocketAddressString(address) +
+        ". Press Ctrl+C to stop the viewer.");
   }
 
   /**

@@ -56,6 +56,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+import org.apache.http.conn.util.InetAddressUtils;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -1024,6 +1025,10 @@ public class NNStorage extends Storage implements Closeable,
     String ip;
     try {
       ip = DNS.getDefaultIP("default");
+      if (InetAddressUtils.isIPv6StdAddress(ip)) {
+        // HDFS doesn't support ":" in path, replace it with "."
+        ip = "[" + ip.replaceAll(":", ".") + "]";
+      }
     } catch (UnknownHostException e) {
       LOG.warn("Could not find ip address of \"default\" inteface.");
       throw e;

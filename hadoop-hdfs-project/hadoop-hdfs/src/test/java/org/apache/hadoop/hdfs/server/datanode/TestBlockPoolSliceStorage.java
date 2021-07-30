@@ -22,6 +22,8 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -56,11 +58,35 @@ public class TestBlockPoolSliceStorage {
     }
   }
 
-  private String makeRandomIpAddress() {
+  private String makeRandomIpv4Address() {
     return rand.nextInt(256) + "." +
            rand.nextInt(256) + "." +
            rand.nextInt(256) + "." +
            rand.nextInt(256);
+  }
+
+  private String makeRandomIpv6Address() {
+    byte[] bytes = new byte[16];
+    rand.nextBytes(bytes);
+    InetAddress adr = null;
+    try {
+      adr = InetAddress.getByAddress("unused", bytes);
+    } catch (UnknownHostException uhe) {
+      // Should never happen
+      LOG.error("UnknownHostException " + uhe);
+      assertThat(true, is(false));
+    }
+    String addrString = adr.getHostAddress().replaceAll(":", ".");
+
+    return "[" + addrString + "]";
+  }
+
+  private String makeRandomIpAddress() {
+    if (rand.nextBoolean()) {
+      return makeRandomIpv4Address();
+    } else {
+      return makeRandomIpv6Address();
+    }
   }
 
   private String makeRandomBlockpoolId() {

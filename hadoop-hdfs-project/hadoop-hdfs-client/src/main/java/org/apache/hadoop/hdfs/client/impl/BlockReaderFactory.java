@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -876,6 +877,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
    */
   public static String getFileName(final InetSocketAddress s,
       final String poolId, final long blockId) {
-    return s.toString() + ":" + poolId + ":" + blockId;
+    return NetUtils.getSocketAddressString(s) + ":" + poolId + ":" + blockId;
   }
 }
