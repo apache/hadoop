@@ -34,13 +34,13 @@ import org.apache.hadoop.util.DataChecksum;
  */
 @DoNotPool
 public class BuiltInGzipDecompressor implements Decompressor {
-  private static final int GZIP_MAGIC_ID = 0x8b1f;  // if read as LE short int
-  private static final int GZIP_DEFLATE_METHOD = 8;
-  private static final int GZIP_FLAGBIT_HEADER_CRC  = 0x02;
-  private static final int GZIP_FLAGBIT_EXTRA_FIELD = 0x04;
-  private static final int GZIP_FLAGBIT_FILENAME    = 0x08;
-  private static final int GZIP_FLAGBIT_COMMENT     = 0x10;
-  private static final int GZIP_FLAGBITS_RESERVED   = 0xe0;
+  public static final int GZIP_MAGIC_ID = 0x8b1f;  // if read as LE short int
+  public static final int GZIP_DEFLATE_METHOD = 8;
+  public static final int GZIP_FLAGBIT_HEADER_CRC  = 0x02;
+  public static final int GZIP_FLAGBIT_EXTRA_FIELD = 0x04;
+  public static final int GZIP_FLAGBIT_FILENAME    = 0x08;
+  public static final int GZIP_FLAGBIT_COMMENT     = 0x10;
+  public static final int GZIP_FLAGBITS_RESERVED   = 0xe0;
 
   // 'true' (nowrap) => Inflater will handle raw deflate stream only
   private Inflater inflater = new Inflater(true);
@@ -68,7 +68,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    * (Technically, the private variables localBuf through hasHeaderCRC are
    * also part of the state, so this enum is merely the label for it.)
    */
-  private enum GzipStateLabel {
+  public enum GzipStateLabel {
     /**
      * Immediately prior to or (strictly) within the 10-byte basic gzip header.
      */
@@ -93,6 +93,10 @@ public class BuiltInGzipDecompressor implements Decompressor {
      * Immediately prior to or within the main compressed (deflate) data stream.
      */
     DEFLATE_STREAM,
+    /**
+     * Immediately prior to or within the main uncompressed (inflate) data stream.
+     */
+    INFLATE_STREAM,
     /**
      * Immediately prior to or (strictly) within the 4-byte uncompressed CRC.
      */

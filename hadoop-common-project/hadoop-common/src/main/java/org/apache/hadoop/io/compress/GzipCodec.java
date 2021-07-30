@@ -29,6 +29,7 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
@@ -154,7 +155,7 @@ public class GzipCodec extends DefaultCodec {
   public Compressor createCompressor() {
     return (ZlibFactory.isNativeZlibLoaded(conf))
       ? new GzipZlibCompressor(conf)
-      : null;
+      : new BuiltInGzipCompressor(conf);
   }
 
   @Override

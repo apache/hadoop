@@ -1180,14 +1180,6 @@ public class SequenceFile {
           new Metadata() : metadataOption.getValue();
       this.compress = compressionTypeOption.getValue();
       final CompressionCodec codec = compressionTypeOption.getCodec();
-      if (codec != null &&
-          (codec instanceof GzipCodec) &&
-          !NativeCodeLoader.isNativeCodeLoaded() &&
-          !ZlibFactory.isNativeZlibLoaded(conf)) {
-        throw new IllegalArgumentException("SequenceFile doesn't work with " +
-                                           "GzipCodec without native-hadoop " +
-                                           "code!");
-      }
       this.syncInterval = (syncIntervalOption == null) ?
           SYNC_INTERVAL :
           syncIntervalOption.getValue();

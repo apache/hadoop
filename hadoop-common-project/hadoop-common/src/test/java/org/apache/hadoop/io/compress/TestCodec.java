@@ -882,18 +882,15 @@ public class TestCodec {
 
     BufferedWriter w = null;
     Compressor gzipCompressor = CodecPool.getCompressor(codec);
-    if (null != gzipCompressor) {
-      // If it gives us back a Compressor, we should be able to use this
-      // to write files we can then read back with Java's gzip tools.
-      OutputStream os = new CompressorStream(new FileOutputStream(fileName),
-          gzipCompressor);
-      w = new BufferedWriter(new OutputStreamWriter(os));
-      w.write(msg);
-      w.close();
-      CodecPool.returnCompressor(gzipCompressor);
-
-      verifyGzipFile(fileName, msg);
-    }
+    // When it gives us back a Compressor, we should be able to use this
+    // to write files we can then read back with Java's gzip tools.
+    OutputStream os = new CompressorStream(new FileOutputStream(fileName),
+        gzipCompressor);
+    w = new BufferedWriter(new OutputStreamWriter(os));
+    w.write(msg);
+    w.close();
+    CodecPool.returnCompressor(gzipCompressor);
+    verifyGzipFile(fileName, msg);
 
     // Create a gzip text file via codec.getOutputStream().
     w = new BufferedWriter(new OutputStreamWriter(
