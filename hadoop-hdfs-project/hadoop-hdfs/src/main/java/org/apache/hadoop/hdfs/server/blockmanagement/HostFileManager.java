@@ -23,12 +23,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashSet;
 
 /**
@@ -89,16 +88,14 @@ public class HostFileManager extends HostConfigManager {
   @VisibleForTesting
   static InetSocketAddress parseEntry(String type, String fn, String line) {
     try {
-      URI uri = new URI("dummy", line, null, null, null);
-      int port = uri.getPort() == -1 ? 0 : uri.getPort();
-      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), port);
+      InetSocketAddress addr = NetUtils.createSocketAddr(line, 0);
       if (addr.isUnresolved()) {
         LOG.warn(String.format("Failed to resolve address `%s` in `%s`. " +
                 "Ignoring in the %s list.", line, fn, type));
         return null;
       }
       return addr;
-    } catch (URISyntaxException e) {
+    } catch (IllegalArgumentException e) {
       LOG.warn(String.format("Failed to parse `%s` in `%s`. " + "Ignoring in " +
               "the %s list.", line, fn, type));
     }

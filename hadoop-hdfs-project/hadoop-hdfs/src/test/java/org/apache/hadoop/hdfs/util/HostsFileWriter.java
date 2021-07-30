@@ -141,11 +141,14 @@ public class HostsFileWriter {
           includeHosts.toString());
     } else {
       HashSet<DatanodeAdminProperties> allDNs = new HashSet<>();
-      for(String hostNameAndPort : hostNameAndPorts) {
-        String[] hostAndPort = hostNameAndPort.split(":");
+      for (String hostNameAndPort : hostNameAndPorts) {
+        int i = hostNameAndPort.lastIndexOf(':');
+        String port =
+            hostNameAndPort.substring(hostNameAndPort.lastIndexOf(":") + 1);
+        String addr = hostNameAndPort.substring(0, i);
         DatanodeAdminProperties dn = new DatanodeAdminProperties();
-        dn.setHostName(hostAndPort[0]);
-        dn.setPort(Integer.parseInt(hostAndPort[1]));
+        dn.setHostName(addr);
+        dn.setPort(Integer.parseInt(port));
         allDNs.add(dn);
       }
       CombinedHostsFileWriter.writeFile(combinedFile.toString(), allDNs);

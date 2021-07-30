@@ -151,14 +151,15 @@ public class TestHostsFiles {
 
     HostsFileWriter hostsFileWriter = new HostsFileWriter();
     hostsFileWriter.initialize(conf, "temp/decommission");
-    hostsFileWriter.initIncludeHosts(new String[]
-        {"localhost:52","127.0.0.1:7777"});
+    hostsFileWriter.initIncludeHosts(
+        new String[] {"localhost:52", "127.0.0.1:7777", "[::1]:42",
+            "[0:0:0:0:0:0:0:1]:24"});
 
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       final FSNamesystem ns = cluster.getNameNode().getNamesystem();
-      assertTrue(ns.getNumDeadDataNodes() == 2);
+      assertTrue(ns.getNumDeadDataNodes() == 4);
       assertTrue(ns.getNumLiveDataNodes() == 0);
 
       // Testing using MBeans
@@ -166,7 +167,7 @@ public class TestHostsFiles {
       ObjectName mxbeanName = new ObjectName(
           "Hadoop:service=NameNode,name=FSNamesystemState");
       String nodes = mbs.getAttribute(mxbeanName, "NumDeadDataNodes") + "";
-      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 2);
+      assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumDeadDataNodes") == 4);
       assertTrue((Integer) mbs.getAttribute(mxbeanName, "NumLiveDataNodes") == 0);
     } finally {
       if (cluster != null) {
