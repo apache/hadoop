@@ -38,6 +38,7 @@ public class TestContainerLaunchParameterized {
         Arguments.of("$$", asSet()),
         Arguments.of("$1", asSet()),
         Arguments.of("handle \"'$A'\" simple quotes", asSet()),
+        Arguments.of("handle \" escaped \\\" '${A}'\" simple quotes", asSet()),
         Arguments
             .of("$ crash test for StringArrayOutOfBoundException", asSet()),
         Arguments.of("${ crash test for StringArrayOutOfBoundException",
@@ -58,7 +59,42 @@ public class TestContainerLaunchParameterized {
         Arguments.of("${A}$B var outside var", asSet("A", "B")),
         Arguments.of("$A:$B:$C:pathlist var", asSet("A", "B", "C")),
         Arguments
-            .of("${A}/foo/bar:$B:${C}:pathlist var", asSet("A", "B", "C"))
+            .of("${A}/foo/bar:$B:${C}:pathlist var", asSet("A", "B", "C")),
+        // https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html
+        Arguments.of("${parameter:-word}", asSet("parameter")),
+        Arguments.of("${parameter:=word}", asSet("parameter")),
+        Arguments.of("${parameter:?word}", asSet("parameter")),
+        Arguments.of("${parameter:+word}", asSet("parameter")),
+        Arguments.of("${parameter:71}", asSet("parameter")),
+        Arguments.of("${parameter:71:30}", asSet("parameter")),
+        Arguments.of("!{prefix*}", asSet()),
+        Arguments.of("${!prefix@}", asSet()),
+        Arguments.of("${!name[@]}", asSet()),
+        Arguments.of("${!name[*]}", asSet()),
+        Arguments.of("${#parameter}", asSet("parameter")),
+        Arguments.of("${parameter#word}", asSet("parameter")),
+        Arguments.of("${parameter##word}", asSet("parameter")),
+        Arguments.of("${parameter%word}", asSet("parameter")),
+        Arguments.of("${parameter/pattern/string}", asSet("parameter")),
+        Arguments.of("${parameter^pattern}", asSet("parameter")),
+        Arguments.of("${parameter^^pattern}", asSet("parameter")),
+        Arguments.of("${parameter,pattern}", asSet("parameter")),
+        Arguments.of("${parameter,,pattern}", asSet("parameter")),
+        Arguments.of("${parameter@o}", asSet("parameter")),
+        Arguments.of("${parameter:-${another}}", asSet("parameter", "another")),
+        Arguments
+            .of("${FILES:-$(git diff --name-only \"${GIT_REVISION}..HEAD\"" +
+                    " | grep \"java$\" | grep -iv \"test\")}",
+                asSet("FILES", "GIT_REVISION")),
+        Arguments.of("handle '${A}' simple quotes", asSet("A")),
+        Arguments.of("handle '${A} $B ${C:-$D}' simple quotes",
+            asSet("A", "B", "C", "D")),
+        Arguments.of("handle \"'${A}'\" double and single quotes", asSet()),
+        Arguments.of("handle \"'\\${A}'\" double and single quotes", asSet()),
+        Arguments.of("handle '\\${A} \\$B \\${C:-D}' single quotes", asSet()),
+        Arguments.of("handle \"${A}\" double quotes", asSet("A")),
+        Arguments.of("handle \"${A} $B ${C:-$D}\" double quotes",
+            asSet("A", "B", "C", "D"))
     );
   }
 
@@ -85,6 +121,8 @@ public class TestContainerLaunchParameterized {
         Arguments.of("%%%A%", asSet("A")),
         Arguments.of("%%C%A%", asSet("A")),
         Arguments.of("%A:~-1%", asSet("A")),
+        Arguments.of("%A:%", asSet("A")),
+        Arguments.of("%A:whatever:a:b:%", asSet("A")),
         Arguments.of("%A%B%", asSet("A")),
         Arguments.of("%A%%%%%B%", asSet("A")),
         Arguments.of("%A%%B%", asSet("A", "B")),
