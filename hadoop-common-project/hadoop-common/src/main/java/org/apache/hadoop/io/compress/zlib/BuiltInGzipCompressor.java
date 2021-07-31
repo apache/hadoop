@@ -163,7 +163,7 @@ public class BuiltInGzipCompressor implements Compressor {
     public void end() { deflater.end(); }
 
     @Override
-    public void finish() { deflater.finished(); }
+    public void finish() { deflater.finish(); }
 
     @Override
     public void reinit(Configuration conf) {
