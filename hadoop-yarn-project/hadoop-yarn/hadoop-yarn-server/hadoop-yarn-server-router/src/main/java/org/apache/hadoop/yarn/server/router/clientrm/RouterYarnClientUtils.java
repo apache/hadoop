@@ -42,24 +42,24 @@ public final class RouterYarnClientUtils {
   }
 
   public static GetClusterMetricsResponse merge(
-      Collection<GetClusterMetricsResponse> responses) {
+          Collection<GetClusterMetricsResponse> responses) {
     YarnClusterMetrics tmp = YarnClusterMetrics.newInstance(0);
     for (GetClusterMetricsResponse response : responses) {
       YarnClusterMetrics metrics = response.getClusterMetrics();
       tmp.setNumNodeManagers(
-          tmp.getNumNodeManagers() + metrics.getNumNodeManagers());
+              tmp.getNumNodeManagers() + metrics.getNumNodeManagers());
       tmp.setNumActiveNodeManagers(
-          tmp.getNumActiveNodeManagers() + metrics.getNumActiveNodeManagers());
+              tmp.getNumActiveNodeManagers() + metrics.getNumActiveNodeManagers());
       tmp.setNumDecommissionedNodeManagers(
-          tmp.getNumDecommissionedNodeManagers() + metrics
-              .getNumDecommissionedNodeManagers());
+              tmp.getNumDecommissionedNodeManagers() + metrics
+                      .getNumDecommissionedNodeManagers());
       tmp.setNumLostNodeManagers(
-          tmp.getNumLostNodeManagers() + metrics.getNumLostNodeManagers());
+              tmp.getNumLostNodeManagers() + metrics.getNumLostNodeManagers());
       tmp.setNumRebootedNodeManagers(tmp.getNumRebootedNodeManagers() + metrics
-          .getNumRebootedNodeManagers());
+              .getNumRebootedNodeManagers());
       tmp.setNumUnhealthyNodeManagers(
-          tmp.getNumUnhealthyNodeManagers() + metrics
-              .getNumUnhealthyNodeManagers());
+              tmp.getNumUnhealthyNodeManagers() + metrics
+                      .getNumUnhealthyNodeManagers());
     }
     return GetClusterMetricsResponse.newInstance(tmp);
   }
@@ -74,8 +74,8 @@ public final class RouterYarnClientUtils {
    * @return the merged ApplicationsResponse
    */
   public static GetApplicationsResponse mergeApplications(
-      Collection<GetApplicationsResponse> responses,
-      boolean returnPartialResult){
+          Collection<GetApplicationsResponse> responses,
+          boolean returnPartialResult){
     Map<ApplicationId, ApplicationReport> federationAM = new HashMap<>();
     Map<ApplicationId, ApplicationReport> federationUAMSum = new HashMap<>();
 
@@ -100,7 +100,7 @@ public final class RouterYarnClientUtils {
         } else if (federationUAMSum.containsKey(appId)) {
           // Merge the current UAM with its own UAM and update the list of UAM
           ApplicationReport mergedUAMReport =
-              mergeUAMWithUAM(federationUAMSum.get(appId), appReport);
+                  mergeUAMWithUAM(federationUAMSum.get(appId), appReport);
           federationUAMSum.put(appId, mergedUAMReport);
         } else {
           // Insert in the list of UAM
@@ -119,57 +119,62 @@ public final class RouterYarnClientUtils {
   }
 
   private static ApplicationReport mergeUAMWithUAM(ApplicationReport uam1,
-      ApplicationReport uam2){
+                                                   ApplicationReport uam2){
     uam1.setName(PARTIAL_REPORT + uam1.getApplicationId());
     mergeAMWithUAM(uam1, uam2);
     return uam1;
   }
 
   private static void mergeAMWithUAM(ApplicationReport am,
-      ApplicationReport uam){
+                                     ApplicationReport uam){
     ApplicationResourceUsageReport amResourceReport =
-        am.getApplicationResourceUsageReport();
+            am.getApplicationResourceUsageReport();
 
     ApplicationResourceUsageReport uamResourceReport =
-        uam.getApplicationResourceUsageReport();
+            uam.getApplicationResourceUsageReport();
 
-    amResourceReport.setNumUsedContainers(
-        amResourceReport.getNumUsedContainers() +
-            uamResourceReport.getNumUsedContainers());
+    if (amResourceReport == null) {
+      am.setApplicationResourceUsageReport(uamResourceReport);
+    } else if (uamResourceReport != null) {
 
-    amResourceReport.setNumReservedContainers(
-        amResourceReport.getNumReservedContainers() +
-            uamResourceReport.getNumReservedContainers());
+      amResourceReport.setNumUsedContainers(
+              amResourceReport.getNumUsedContainers() +
+                      uamResourceReport.getNumUsedContainers());
 
-    amResourceReport.setUsedResources(Resources.add(
-        amResourceReport.getUsedResources(),
-        uamResourceReport.getUsedResources()));
+      amResourceReport.setNumReservedContainers(
+              amResourceReport.getNumReservedContainers() +
+                      uamResourceReport.getNumReservedContainers());
 
-    amResourceReport.setReservedResources(Resources.add(
-        amResourceReport.getReservedResources(),
-        uamResourceReport.getReservedResources()));
+      amResourceReport.setUsedResources(Resources.add(
+              amResourceReport.getUsedResources(),
+              uamResourceReport.getUsedResources()));
 
-    amResourceReport.setNeededResources(Resources.add(
-        amResourceReport.getNeededResources(),
-        uamResourceReport.getNeededResources()));
+      amResourceReport.setReservedResources(Resources.add(
+              amResourceReport.getReservedResources(),
+              uamResourceReport.getReservedResources()));
 
-    amResourceReport.setMemorySeconds(
-        amResourceReport.getMemorySeconds() +
-            uamResourceReport.getMemorySeconds());
+      amResourceReport.setNeededResources(Resources.add(
+              amResourceReport.getNeededResources(),
+              uamResourceReport.getNeededResources()));
 
-    amResourceReport.setVcoreSeconds(
-        amResourceReport.getVcoreSeconds() +
-            uamResourceReport.getVcoreSeconds());
+      amResourceReport.setMemorySeconds(
+              amResourceReport.getMemorySeconds() +
+                      uamResourceReport.getMemorySeconds());
 
-    amResourceReport.setQueueUsagePercentage(
-        amResourceReport.getQueueUsagePercentage() +
-            uamResourceReport.getQueueUsagePercentage());
+      amResourceReport.setVcoreSeconds(
+              amResourceReport.getVcoreSeconds() +
+                      uamResourceReport.getVcoreSeconds());
 
-    amResourceReport.setClusterUsagePercentage(
-        amResourceReport.getClusterUsagePercentage() +
-            uamResourceReport.getClusterUsagePercentage());
+      amResourceReport.setQueueUsagePercentage(
+              amResourceReport.getQueueUsagePercentage() +
+                      uamResourceReport.getQueueUsagePercentage());
 
-    am.setApplicationResourceUsageReport(amResourceReport);
+      amResourceReport.setClusterUsagePercentage(
+              amResourceReport.getClusterUsagePercentage() +
+                      uamResourceReport.getClusterUsagePercentage());
+
+      am.setApplicationResourceUsageReport(amResourceReport);
+    }
   }
 
   /**
@@ -179,7 +184,7 @@ public final class RouterYarnClientUtils {
    * partial result or not
    */
   private static boolean mergeUamToReport(String appName,
-      boolean returnPartialResult){
+                                          boolean returnPartialResult){
     if (returnPartialResult) {
       return true;
     }
@@ -187,6 +192,6 @@ public final class RouterYarnClientUtils {
       return false;
     }
     return !(appName.startsWith(UnmanagedApplicationManager.APP_NAME) ||
-        appName.startsWith(PARTIAL_REPORT));
+            appName.startsWith(PARTIAL_REPORT));
   }
 }
