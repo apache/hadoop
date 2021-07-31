@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -35,12 +36,12 @@ import org.apache.hadoop.util.PartitionedGSet;
  * and INode.  
  */
 public class INodeMap {
-  static final int NAMESPACE_KEY_DEBTH = 2;
+  static final int NAMESPACE_KEY_DEPTH = 2;
   static final int NUM_RANGES_STATIC = 256;  // power of 2
 
   public static class INodeKeyComparator implements Comparator<INode> {
     INodeKeyComparator() {
-      FSDirectory.LOG.info("Namespace key debth = {}", NAMESPACE_KEY_DEBTH);
+      FSDirectory.LOG.info("Namespace key depth = {}", NAMESPACE_KEY_DEPTH);
     }
 
     @Override
@@ -48,9 +49,9 @@ public class INodeMap {
       if (i1 == null || i2 == null) {
         throw new NullPointerException("Cannot compare null INodes");
       }
-      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEBTH);
-      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEBTH);
-      for(int l = 0; l < NAMESPACE_KEY_DEBTH; l++) {
+      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEPTH);
+      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEPTH);
+      for(int l = 0; l < NAMESPACE_KEY_DEPTH; l++) {
         if(key1[l] == key2[l]) continue;
         return (key1[l] < key2[l] ? -1 : 1);
       }
@@ -64,7 +65,7 @@ public class INodeMap {
    */
   public static class HPINodeKeyComparator implements Comparator<INode> {
     HPINodeKeyComparator() {
-      FSDirectory.LOG.info("Namespace key debth = {}", NAMESPACE_KEY_DEBTH);
+      FSDirectory.LOG.info("Namespace key depth = {}", NAMESPACE_KEY_DEPTH);
     }
 
     @Override
@@ -72,13 +73,13 @@ public class INodeMap {
       if (i1 == null || i2 == null) {
         throw new NullPointerException("Cannot compare null INodes");
       }
-      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEBTH);
-      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEBTH);
+      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEPTH);
+      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEPTH);
       long key1_0 = INode.indexOf(key1);
       long key2_0 = INode.indexOf(key2);
       if(key1_0 != key2_0)
         return (key1_0 < key2_0 ? -1 : 1);
-      for(int l = 1; l < NAMESPACE_KEY_DEBTH; l++) {
+      for(int l = 1; l < NAMESPACE_KEY_DEPTH; l++) {
         if(key1[l] == key2[l]) continue;
         return (key1[l] < key2[l] ? -1 : 1);
       }
@@ -202,8 +203,8 @@ public class INodeMap {
     PermissionStatus perm = new PermissionStatus(
         "", "", new FsPermission((short) 0));
     for(int p = 0; p < NUM_RANGES_STATIC; p++) {
-      INodeDirectory key = new INodeDirectory(
-          INodeId.ROOT_INODE_ID, "range key".getBytes(), perm, 0);
+      INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
+          "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
       key.setParent(new INodeDirectory((long)p, null, perm, 0));
       pgs.addNewPartition(key);
     }
@@ -244,48 +245,58 @@ public class INodeMap {
    *         such {@link INode} in the map.
    */
   public INode get(long id) {
-    INode inode = new INodeWithAdditionalFields(id, null, new PermissionStatus(
-        "", "", new FsPermission((short) 0)), 0, 0) {
-      
-      @Override
-      void recordModification(int latestSnapshotId) {
-      }
-      
-      @Override
-      public void destroyAndCollectBlocks(ReclaimContext reclaimContext) {
-        // Nothing to do
-      }
+    PartitionedGSet<INode, INodeWithAdditionalFields> pgs =
+        (PartitionedGSet<INode, INodeWithAdditionalFields>) map;
+    /*
+     * Convert a long inode id into an INode object. We only need to compare
+     * two inodes by inode id. So, it can be any type of INode object.
+     */
+    INode inode = new INodeDirectory(id, null,
+        new PermissionStatus("", "", new FsPermission((short) 0)), 0);
 
-      @Override
-      public QuotaCounts computeQuotaUsage(
-          BlockStoragePolicySuite bsps, byte blockStoragePolicyId,
-          boolean useCache, int lastSnapshotId) {
-        return null;
-      }
-
-      @Override
-      public ContentSummaryComputationContext computeContentSummary(
-          int snapshotId, ContentSummaryComputationContext summary) {
-        return null;
-      }
+    /*
+     * Iterate all partitions of PGSet and return the INode.
+     * Just for fallback.
+     */
+    PermissionStatus perm =
+        new PermissionStatus("", "", new FsPermission((short) 0));
+    // TODO: create a static array, to avoid creation of keys each time.
+    for (int p = 0; p < NUM_RANGES_STATIC; p++) {
+      INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
+          "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
+      key.setParent(new INodeDirectory((long)p, null, perm, 0));
+      PartitionedGSet.PartitionEntry e = pgs.getPartition(key);
       
-      @Override
-      public void cleanSubtree(
-          ReclaimContext reclaimContext, int snapshotId, int priorSnapshotId) {
+      if (e.contains(inode)) {
+        return (INode) e.get(inode);
       }
+    }
 
-      @Override
-      public byte getStoragePolicyID(){
-        return HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      }
+    return null;
+  }
 
-      @Override
-      public byte getLocalStoragePolicyID() {
-        return HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
-      }
-    };
-      
-    return map.get(inode);
+  public INode get(INode inode) {
+
+    /*
+     * Check whether the Inode has (NAMESPACE_KEY_DEPTH - 1) levels of parent
+     * dirs
+     */
+    int i = NAMESPACE_KEY_DEPTH - 1;
+    INode tmpInode = inode;
+    while (i > 0 && tmpInode.getParent() != null) {
+      tmpInode = tmpInode.getParent();
+      i--;
+    }
+
+    /*
+     * If the Inode has (NAMESPACE_KEY_DEPTH - 1) levels of parent dirs,
+     * use map.get(); else, fall back to get INode based on Inode ID.
+     */
+    if (i == 0) {
+      return map.get(inode);
+    } else {
+      return get(inode.getId());
+    }
   }
   
   /**

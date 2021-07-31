@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.util.GSet;
+import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -160,6 +165,8 @@ public class FSDirectory implements Closeable {
   private final int contentCountLimit; // max content summary counts per run
   private final long contentSleepMicroSec;
   private final INodeMap inodeMap; // Synchronized by dirLock
+  // Temp InodeMap used when loading an FS image.
+  private HashMap<Long, INodeWithAdditionalFields> tempInodeMap;
   private long yieldCount = 0; // keep track of lock yield count.
   private int quotaInitThreads;
 
@@ -318,6 +325,11 @@ public class FSDirectory implements Closeable {
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir, ns);
+    tempInodeMap = new HashMap<>(1000);
+
+    // add rootDir to inodeMapTemp.
+    tempInodeMap.put(rootDir.getId(), rootDir);
+
     this.isPermissionEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
@@ -1476,6 +1488,23 @@ public class FSDirectory implements Closeable {
     return inodeMap;
   }
 
+  final void addToTempInodeMap(INode inode) {
+    if (inode instanceof INodeWithAdditionalFields) {
+      LOG.debug("addToTempInodeMap: id={}, inodeMapTemp.size={}",
+          inode.getId(), tempInodeMap.size());
+      tempInodeMap.put(inode.getId(), (INodeWithAdditionalFields) inode);
+      if (!inode.isSymlink()) {
+        final XAttrFeature xaf = inode.getXAttrFeature();
+        addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
+        StoragePolicySatisfyManager spsManager =
+            namesystem.getBlockManager().getSPSManager();
+        if (spsManager != null && spsManager.isEnabled()) {
+          addStoragePolicySatisfier((INodeWithAdditionalFields) inode, xaf);
+        }
+      }
+    }
+  }
+
   /**
    * This method is always called with writeLock of FSDirectory held.
    */
@@ -1541,6 +1570,36 @@ public class FSDirectory implements Closeable {
    */
   public final void addRootDirToEncryptionZone(XAttrFeature xaf) {
     addEncryptionZone(rootDir, xaf);
+  }
+
+  /**
+   * After the inodes are set properly (set the parent for each inode), we move
+   * them from INodeMapTemp to INodeMap.
+   */
+  void moveInodes() throws IOException {
+    long count=0, totalInodes = tempInodeMap.size();
+    LOG.debug("inodeMapTemp={}", tempInodeMap);
+
+    for (Map.Entry e: tempInodeMap.entrySet()) {
+      INodeWithAdditionalFields n = (INodeWithAdditionalFields)e.getValue();
+
+      LOG.debug("populate {}-th inode: id={}, fullpath={}",
+          count, n.getId(), n.getFullPathName());
+
+      inodeMap.put(n);
+      count++;
+    }
+
+    if (count != totalInodes) {
+      String msg = String.format("moveInodes: expected to move %l inodes, " +
+          "but moved %l inodes", totalInodes, count);
+      throw new IOException(msg);
+    }
+
+    //inodeMap.show();
+    tempInodeMap.clear();
+    assert(tempInodeMap.isEmpty());
+    tempInodeMap = null;
   }
 
   /**
@@ -1860,6 +1919,17 @@ public class FSDirectory implements Closeable {
     }
   }
 
+  public INode getInode(INode inode) {
+    return inodeMap.get(inode);
+  }
+  public INode getInodeFromTempINodeMap(long id) {
+    LOG.debug("getInodeFromTempINodeMap: id={}, TempINodeMap.size={}",
+        id, tempInodeMap.size());
+    if (id < INodeId.ROOT_INODE_ID)
+      return null;
+
+    return tempInodeMap.get(id);
+  }
   @VisibleForTesting
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
       UserGroupInformation ugi) throws AccessControlException {
