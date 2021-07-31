@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.util.HostUtil;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Shell;
@@ -342,7 +343,7 @@ public class ReliabilityTest extends Configured implements Tool {
       LOG.info(new Date() + " Stopping a few trackers");
 
       for (String tracker : trackerNamesList) {
-        String host = convertTrackerNameToHostName(tracker);
+        String host = HostUtil.convertTrackerNameToHostName(tracker);
         LOG.info(new Date() + " Marking tracker on host: " + host);
         fos.write((host + "\n").getBytes());
         if (count++ >= trackerNamesList.size()/2) {
@@ -379,15 +380,6 @@ public class ReliabilityTest extends Configured implements Tool {
       if (output != null && !output.equals("")) {
         LOG.info(output);
       }
-    }
-
-    private String convertTrackerNameToHostName(String trackerName) {
-      // Convert the trackerName to it's host name
-      int indexOfColon = trackerName.indexOf(":");
-      String trackerHostName = (indexOfColon == -1) ?
-          trackerName :
-            trackerName.substring(0, indexOfColon);
-      return trackerHostName.substring("tracker_".length());
     }
 
   }

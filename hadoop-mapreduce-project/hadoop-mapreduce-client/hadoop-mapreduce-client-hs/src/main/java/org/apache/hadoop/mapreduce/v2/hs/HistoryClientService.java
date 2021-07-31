@@ -91,6 +91,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,10 +174,12 @@ public class HistoryClientService extends AbstractService {
         .withXFSProtection(JHAdminConfig.MR_HISTORY_XFS_PREFIX)
         .withAppClientProtocol(appClientProtocol)
         .at(NetUtils.getHostPortString(bindAddress)).start(webApp);
-    
-    String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf).split(":")[0];
-    MRWebAppUtil.setJHSWebappURLWithoutScheme(conf,
-        connectHost + ":" + webApp.getListenerAddress().getPort());
+
+    String connectHost = MRWebAppUtil.getJHSWebappURLWithoutScheme(conf);
+
+    MRWebAppUtil.setJHSWebappURLWithoutScheme(conf, HostAndPort
+        .fromParts(HostAndPort.fromString(connectHost).getHost(),
+            webApp.getListenerAddress().getPort()).toString());
   }
 
   @Override

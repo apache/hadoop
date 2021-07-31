@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.util;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.net.NetUtils;
 
 @Private
 @Unstable
@@ -56,10 +57,7 @@ public class HostUtil {
   public static String convertTrackerNameToHostName(String trackerName) {
     // Ugly!
     // Convert the trackerName to its host name
-    int indexOfColon = trackerName.indexOf(":");
-    String trackerHostName = (indexOfColon == -1) ? 
-      trackerName : 
-      trackerName.substring(0, indexOfColon);
+    String trackerHostName = NetUtils.getHostFromHostPort(trackerName);
     return trackerHostName.substring("tracker_".length());
   }
 

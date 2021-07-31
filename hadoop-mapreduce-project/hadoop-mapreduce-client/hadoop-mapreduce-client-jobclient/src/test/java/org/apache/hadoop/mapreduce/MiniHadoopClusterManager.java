@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.eclipse.jetty.util.ajax.JSON;
+import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,8 +194,8 @@ public class MiniHadoopClusterManager {
         map.put("namenode_port", dfs.getNameNodePort());
       }
       if (mr != null) {
-        map.put("resourcemanager_port", mr.getConfig().get(
-            YarnConfiguration.RM_ADDRESS).split(":")[1]);
+        map.put("resourcemanager_port", HostAndPort.fromString(
+            mr.getConfig().get(YarnConfiguration.RM_ADDRESS)).getPort());
       }
       FileWriter fw = new FileWriter(new File(writeDetails));
       fw.write(new JSON().toJSON(map));

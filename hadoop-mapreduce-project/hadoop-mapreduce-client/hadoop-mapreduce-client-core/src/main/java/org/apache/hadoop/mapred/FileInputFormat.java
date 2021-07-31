@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StopWatch;
@@ -712,19 +713,19 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   
   private String[] identifyHosts(int replicationFactor, 
                                  Map<Node,NodeInfo> racksMap) {
-    
+
     String [] retVal = new String[replicationFactor];
-   
-    List <NodeInfo> rackList = new LinkedList<NodeInfo>(); 
+
+    List <NodeInfo> rackList = new LinkedList<NodeInfo>();
 
     rackList.addAll(racksMap.values());
-    
+
     // Sort the racks based on their contribution to this split
     sortInDescendingOrder(rackList);
     
     boolean done = false;
     int index = 0;
-    
+
     // Get the host list for all our aggregated items, sort
     // them and return the top entries
     for (NodeInfo ni: rackList) {
@@ -733,27 +734,27 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
       List<NodeInfo>hostList = new LinkedList<NodeInfo>();
       hostList.addAll(hostSet);
-    
+
       // Sort the hosts in this rack based on their contribution
       sortInDescendingOrder(hostList);
 
       for (NodeInfo host: hostList) {
         // Strip out the port number from the host name
-        retVal[index++] = host.node.getName().split(":")[0];
+        retVal[index++] = NetUtils.getHostFromHostPort(host.node.getName());
         if (index == replicationFactor) {
           done = true;
           break;
         }
       }
-      
+
       if (done == true) {
         break;
       }
     }
     return retVal;
   }
-  
-  private String[] fakeRacks(BlockLocation[] blkLocations, int index) 
+
+  private String[] fakeRacks(BlockLocation[] blkLocations, int index)
   throws IOException {
     String[] allHosts = blkLocations[index].getHosts();
     String[] allTopos = new String[allHosts.length];

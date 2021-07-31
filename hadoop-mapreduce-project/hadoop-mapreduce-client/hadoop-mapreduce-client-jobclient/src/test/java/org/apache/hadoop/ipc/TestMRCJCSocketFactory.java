@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.net.HostAndPort;
+
 /**
  * This class checks that RPCs can use specialized socket factories.
  */
@@ -89,9 +91,9 @@ public class TestMRCJCSocketFactory {
                 "org.apache.hadoop.ipc.DummySocketFactory");
       jconf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       String rmAddress = jconf.get(YarnConfiguration.RM_ADDRESS);
-      String[] split = rmAddress.split(":");
-      jconf.set(YarnConfiguration.RM_ADDRESS, split[0] + ':'
-          + (Integer.parseInt(split[1]) + 10));
+      HostAndPort hp = HostAndPort.fromString(rmAddress);
+      jconf.set("yarn.resourcemanager.address",
+          hp.getHost() + ':' + (hp.getPort() + 10));
       client = new JobClient(jconf);
 
       JobStatus[] jobs = client.jobsToComplete();
