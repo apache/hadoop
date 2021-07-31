@@ -591,13 +591,19 @@ public class TestNetUtils {
     return addr;
   }
 
-  private void
-  verifyInetAddress(InetAddress addr, String host, String ip) {
+  private void verifyInetAddress(InetAddress addr, String host, String... ips) {
     assertNotNull(addr);
     assertEquals(host, addr.getHostName());
-    assertEquals(ip, addr.getHostAddress());
+
+    boolean found = false;
+    for (String ip : ips) {
+      found |= ip.equals(addr.getHostAddress());
+    }
+    assertTrue("Expected addr.getHostAddress[" + addr.getHostAddress()
+        + "]  to be one of " + StringUtils.join(ips, ","), found);
   }
-  
+
+
   @Test
   public void testResolverUnqualified() {
     String host = "host";
@@ -627,12 +633,13 @@ public class TestNetUtils {
   }
   
   // localhost
-  
+
   @Test
   public void testResolverLoopback() {
     String host = "Localhost";
     InetAddress addr = verifyResolve(host); // no lookup should occur
-    verifyInetAddress(addr, "Localhost", "127.0.0.1");
+    verifyInetAddress(addr, "Localhost", "127.0.0.1", IPV6_LOOPBACK_LONG_STRING,
+        IPV6_LOOPBACK_SHORT_STRING);
   }
 
   @Test
@@ -737,11 +744,14 @@ public class TestNetUtils {
     // when ipaddress is normalized, same address is expected in return
     assertEquals(summary, hosts.get(0), normalizedHosts.get(0));
     // for normalizing a resolvable hostname, resolved ipaddress is expected in return
+
     assertFalse("Element 1 equal "+ summary,
         normalizedHosts.get(1).equals(hosts.get(1)));
-    assertEquals(summary, hosts.get(0), normalizedHosts.get(1));
-    // this address HADOOP-8372: when normalizing a valid resolvable hostname start with numeric, 
-    // its ipaddress is expected to return
+    assertTrue("Should get the localhost address back",
+        normalizedHosts.get(1).equals(hosts.get(0)) || normalizedHosts.get(1)
+            .equals(IPV6_LOOPBACK_LONG_STRING));
+    // this address HADOOP-8372: when normalizing a valid resolvable hostname
+    // start with numeric, its ipaddress is expected to return
     assertFalse("Element 2 equal " + summary,
         normalizedHosts.get(2).equals(hosts.get(2)));
     // return the same hostname after normalizing a irresolvable hostname.
@@ -790,7 +800,8 @@ public class TestNetUtils {
 
     InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);
-    assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+    assertTrue("Trim should have been called on ipv6 hostname",
+        defaultAddr.trim().equalsIgnoreCase(NetUtils.getHostPortString(addr)));
   }
 
   @Test

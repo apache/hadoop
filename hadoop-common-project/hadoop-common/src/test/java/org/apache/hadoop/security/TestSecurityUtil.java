@@ -182,16 +182,12 @@ public class TestSecurityUtil {
     conf.setBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
     SecurityUtil.setConfiguration(conf);
-    assertEquals("127.0.0.1:123",
-        SecurityUtil.buildTokenService(new InetSocketAddress("LocalHost", 123)).toString()
-    );
-    assertEquals("127.0.0.1:123",
-        SecurityUtil.buildTokenService(new InetSocketAddress("127.0.0.1", 123)).toString()
-    );
-    // what goes in, comes out
-    assertEquals("127.0.0.1:123",
-        SecurityUtil.buildTokenService(NetUtils.createSocketAddr("127.0.0.1", 123)).toString()
-    );
+    assertOneOf(SecurityUtil
+        .buildTokenService(NetUtils.createSocketAddrForHost("LocalHost", 123))
+        .toString(), "127.0.0.1:123", "[0:0:0:0:0:0:0:1]:123");
+    assertOneOf(SecurityUtil
+        .buildTokenService(NetUtils.createSocketAddrForHost("127.0.0.1", 123))
+        .toString(), "127.0.0.1:123", "[0:0:0:0:0:0:0:1]:123");
   }
 
   @Test
@@ -495,5 +491,14 @@ public class TestSecurityUtil {
     provider.createCredentialEntry(CommonConfigurationKeys.ZK_AUTH,
         ZK_AUTH_VALUE.toCharArray());
     provider.flush();
+  }
+
+  private void assertOneOf(String value, String... expected) {
+    boolean found = false;
+    for (String ip : expected) {
+      found |= ip.equals(value);
+    }
+    assertTrue("Expected value [" + value + "]  to be one of " + StringUtils
+        .join(",", expected), found);
   }
 }

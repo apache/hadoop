@@ -125,10 +125,10 @@ public class DefaultImpersonationProvider implements ImpersonationProvider {
           + " is not allowed to impersonate " + user.getUserName());
     }
 
-    MachineList MachineList = proxyHosts.get(
+    MachineList machineList = proxyHosts.get(
         getProxySuperuserIpConfKey(realUser.getShortUserName()));
 
-    if(MachineList == null || !MachineList.includes(remoteAddress)) {
+    if(machineList == null || !machineList.includes(remoteAddress)) {
       throw new AuthorizationException("Unauthorized connection for super-user: "
           + realUser.getUserName() + " from IP " + remoteAddress);
     }

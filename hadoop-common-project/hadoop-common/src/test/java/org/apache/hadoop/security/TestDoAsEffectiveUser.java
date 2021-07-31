@@ -25,7 +25,6 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.TestRpcBase;
-import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
@@ -361,7 +360,6 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
   public void testProxyWithToken() throws Exception {
     final Configuration conf = new Configuration(masterConf);
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, conf);
     RPC.setProtocolEngine(conf, TestRpcService.class,
         ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
@@ -408,7 +406,6 @@ public class TestDoAsEffectiveUser extends TestRpcBase {
   public void testTokenBySuperUser() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     final Configuration newConf = new Configuration(masterConf);
-    SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS, newConf);
     // Set RPC engine to protobuf RPC engine
     RPC.setProtocolEngine(newConf, TestRpcService.class,
         ProtobufRpcEngine2.class);
