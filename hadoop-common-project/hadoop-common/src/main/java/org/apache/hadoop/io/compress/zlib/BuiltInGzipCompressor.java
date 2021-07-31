@@ -226,6 +226,7 @@ public class BuiltInGzipCompressor implements Compressor {
             b[off + 3] = (byte) (streamCrc >> 24);
 
             len -= 4;
+            off += 4;
 
             writtenSize += 4;
             state = BuiltInGzipDecompressor.GzipStateLabel.TRAILER_SIZE;
@@ -239,6 +240,8 @@ public class BuiltInGzipCompressor implements Compressor {
             b[off + 2] = (byte) (totalIn >> 16);
             b[off + 3] = (byte) (totalIn >> 24);
 
+            len -= 4;
+            off += 4;
             writtenSize += 4;
 
             state = BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
