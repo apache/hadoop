@@ -68,7 +68,7 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
    * Consists of a hash table {@link LightWeightGSet} and a lock, which
    * controls access to this partition independently on the other ones.
    */
-  private class PartitionEntry extends LightWeightGSet<K, E> {
+  public class PartitionEntry extends LightWeightGSet<K, E> {
     private final LatchLock<?> partLock;
 
     PartitionEntry(int defaultPartitionCapacity) {
@@ -121,7 +121,7 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     return size;
   }
 
-  protected PartitionEntry getPartition(final K key) {
+  public PartitionEntry getPartition(final K key) {
     Entry<K, PartitionEntry> partEntry = partitions.floorEntry(key);
     if(partEntry == null) {
       return null;
@@ -174,6 +174,10 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     E result = part.put(element);
     if(result == null) {  // new element
       size++;
+      LOG.debug("partitionPGSet.put: added key {}, size is now {} ", key, size);
+    } else {
+      LOG.debug("partitionPGSet.put: replaced key {}, size is now {}",
+          key, size);
     }
     return result;
   }
@@ -230,19 +234,25 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
       try {
         long[] key = (long[]) inodeClass.
             getMethod("getNamespaceKey", int.class).invoke(e.getKey(), 2);
-        long[] firstKey = new long[0];
+        long[] firstKey = new long[key.length];
         if(part.iterator().hasNext()) {
           Object first = part.iterator().next();
-          firstKey = (long[]) inodeClass.getMethod(
+          long[] firstKeyRef = (long[]) inodeClass.getMethod(
             "getNamespaceKey", int.class).invoke(first, 2);
           Object parent = inodeClass.
               getMethod("getParent").invoke(first);
           long parentId = (parent == null ? 0L :
             (long) inodeClass.getMethod("getId").invoke(parent));
+          for (int j=0; j < key.length; j++) {
+            firstKey[j] = firstKeyRef[j];
+          }
           firstKey[0] = parentId;
         }
         LOG.error("Partition #{}\t key: {}\t size: {}\t first: {}",
             i++, key, s, firstKey);  // SHV should be info
+      } catch (NoSuchElementException ex) {
+        LOG.error("iterator.next() throws NoSuchElementException.");
+        throw ex;
       } catch (Exception ex) {
         LOG.error("Cannot find Method getNamespaceKey() in {}", inodeClass);
       }
@@ -250,8 +260,8 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     partSizeAvg = (int) (totalSize / parts.size());
     LOG.error("Partition sizes: min = {}, avg = {}, max = {}, sum = {}",
         partSizeMin, partSizeAvg, partSizeMax, totalSize);
-    LOG.error("Number of partitions: empty = {}, full = {}",
-        numEmptyPartitions, numFullPartitions);
+    LOG.error("Number of partitions: empty = {}, in-use = {}, full = {}",
+        numEmptyPartitions, parts.size()-numEmptyPartitions, numFullPartitions);
   }
 
   @Override
@@ -277,6 +287,8 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     private Iterator<K> keyIterator;
     private Iterator<E> partitionIterator;
 
+    // Set partitionIterator to point to the first partition, or set it to null
+    // when there is no partitions created for this PartitionedGSet.
     public EntryIterator() {
       keyIterator = partitions.keySet().iterator();
  
