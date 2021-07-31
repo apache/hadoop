@@ -227,6 +227,31 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
+  public void testAppLogsDomainLogLastlyScanned() throws Exception {
+    EntityGroupFSTimelineStore.AppLogs appLogs =
+            store.new AppLogs(mainTestAppId, mainTestAppDirPath,
+                    AppState.COMPLETED);
+    Path attemptDirPath = new Path(new Path(testActiveDirPath,
+            mainTestAppId.toString()),
+            getAttemptDirName(mainTestAppId));
+    //Delete the domain log from AppDirPath so first scan won't find it
+    fs.delete(new Path(attemptDirPath, TEST_DOMAIN_LOG_FILE_NAME), false);
+    appLogs.scanForLogs();
+    List<LogInfo> summaryLogs = appLogs.getSummaryLogs();
+    assertEquals(1, summaryLogs.size());
+    assertEquals(TEST_SUMMARY_LOG_FILE_NAME, summaryLogs.get(0).getFilename());
+
+    //Generate the domain log
+    FSDataOutputStream out = fs.create(
+            new Path(attemptDirPath, TEST_DOMAIN_LOG_FILE_NAME));
+    out.close();
+
+    appLogs.scanForLogs();
+    assertEquals(2, summaryLogs.size());
+    assertEquals(TEST_DOMAIN_LOG_FILE_NAME, summaryLogs.get(0).getFilename());
+  }
+
+  @Test
   public void testMoveToDone() throws Exception {
     EntityGroupFSTimelineStore.AppLogs appLogs =
         store.new AppLogs(mainTestAppId, mainTestAppDirPath,
