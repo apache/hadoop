@@ -68,6 +68,9 @@ public class DataNodeFaultInjector {
       throws IOException {
   }
 
+  public void delayAckLastPacket() throws IOException {
+  }
+
   /**
    * Used as a hook to delay writing a packet to disk.
    */
