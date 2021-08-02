@@ -162,7 +162,7 @@ public class GzipCodec extends DefaultCodec {
   public Class<? extends Compressor> getCompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibCompressor.class
-      : null;
+      : BuiltInGzipCompressor.class;
   }
 
   @Override

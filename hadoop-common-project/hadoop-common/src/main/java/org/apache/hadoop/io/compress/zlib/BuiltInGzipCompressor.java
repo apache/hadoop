@@ -31,7 +31,6 @@ import org.apache.hadoop.util.DataChecksum;
 /**
  * A {@link Compressor} based on the popular gzip compressed file format.
  * http://www.gzip.org/
- *
  */
 @DoNotPool
 public class BuiltInGzipCompressor implements Compressor {
@@ -43,8 +42,7 @@ public class BuiltInGzipCompressor implements Compressor {
     private static final byte[] GZIP_HEADER = new byte[] {
             0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-    // 'true' (nowrap) => Deflater will handle raw deflate stream only
-    private Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+    private Deflater deflater;
 
     private int headerOff = 0;
 
@@ -65,6 +63,7 @@ public class BuiltInGzipCompressor implements Compressor {
         ZlibCompressor.CompressionLevel level = ZlibFactory.getCompressionLevel(conf);
         ZlibCompressor.CompressionStrategy strategy = ZlibFactory.getCompressionStrategy(conf);
 
+        // 'true' (nowrap) => Deflater will handle raw deflate stream only
         deflater = new Deflater(level.compressionLevel(), true);
         deflater.setStrategy(strategy.compressionStrategy());
 
@@ -166,7 +165,12 @@ public class BuiltInGzipCompressor implements Compressor {
 
     @Override
     public void reinit(Configuration conf) {
-        deflater.reset();
+        ZlibCompressor.CompressionLevel level = ZlibFactory.getCompressionLevel(conf);
+        ZlibCompressor.CompressionStrategy strategy = ZlibFactory.getCompressionStrategy(conf);
+
+        // 'true' (nowrap) => Deflater will handle raw deflate stream only
+        deflater = new Deflater(level.compressionLevel(), true);
+        deflater.setStrategy(strategy.compressionStrategy());
         state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
         crc.reset();
         userBufOff = userBufLen = 0;
