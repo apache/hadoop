@@ -179,6 +179,11 @@ public interface S3ATestConstants {
   String TEST_S3GUARD_DYNAMO_TABLE_PREFIX_DEFAULT = "s3guard.test.";
 
   /**
+   * ACL for S3 Logging; used in some tests: {@value}.
+   */
+  String LOG_DELIVERY_WRITE = "LogDeliveryWrite";
+
+  /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */
   int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
