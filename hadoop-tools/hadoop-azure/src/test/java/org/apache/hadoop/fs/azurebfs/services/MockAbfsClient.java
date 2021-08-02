@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
-import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.FastpathClose;
 
 public class MockAbfsClient extends AbfsClient {
 

@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.Base64;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -53,9 +52,7 @@ import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
-
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_AUTH;
 
 /**
  * The AbfsInputStream for AbfsClient.
@@ -118,10 +115,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
 
-  protected AbfsConnectionMode connectionMode = AbfsConnectionMode.REST_CONN;
-  protected AbfsFastpathSessionInfo fastpathSessionInfo = null;
-  private static final ReentrantLock FASTPATH_SESSION_REFRESH_LOCK = new ReentrantLock();
-  private static final ReentrantLock FASTPATH_SESSION_TOKEN_UPDATE_LOCK = new ReentrantLock();
+  protected AbfsFastpathSession fastpathSession = null;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -151,89 +145,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setOperation(FSOperationType.READ);
     this.tracingContext.setStreamID(inputStreamId);
-    this.tracingContext.setConnectionMode(connectionMode);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
-    if (abfsInputStreamContext.isFastpathEnabled()) {
-      if (fetchFastpathSessionToken()) {
-        updateConnectionMode(AbfsConnectionMode.FASTPATH_CONN);
-        getFastpathFileHandle();
-      }
-    }
+    createAbfsFastpathSession(abfsInputStreamContext.isFastpathEnabled());
 
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
     }
-  }
-
-  private void updateConnectionMode(AbfsConnectionMode mode) {
-    this.connectionMode = mode;
-    this.tracingContext.setConnectionMode(mode);
-  }
-
-  @VisibleForTesting
-  protected boolean fetchFastpathSessionToken() {
-    try {
-      AbfsRestOperation op;
-      op = executeFetchFastpathSessionToken(path, eTag);
-      byte[] buffer = ((AbfsHttpConnection)op.getResult()).getResponseContentBuffer();
-      FASTPATH_SESSION_TOKEN_UPDATE_LOCK.lock();
-      try {
-        if (this.fastpathSessionInfo == null) {
-          this.fastpathSessionInfo = new AbfsFastpathSessionInfo();
-        }
-
-        this.fastpathSessionInfo.updateSession(
-            Base64.getEncoder().encodeToString(buffer),
-            CachedSASToken.getExpiry(
-                    op.getResult()
-                        .getResponseHeader(X_MS_FASTPATH_SESSION_AUTH)));
-        fastpathSessionInfo.setRefreshInitiated(false);
-      } finally {
-        FASTPATH_SESSION_TOKEN_UPDATE_LOCK.unlock();
-      }
-    } catch (AzureBlobFileSystemException e) {
-      LOG.debug("Fastpath session token fetch unsuccessful {}", e);
-      connectionMode = AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE;
-      return false;
-    }
-
-    return true;
-  }
-
-  @VisibleForTesting
-  protected boolean getFastpathFileHandle() {
-    try {
-      AbfsRestOperation op;
-      op = executeFastpathOpen(path, eTag);
-      fastpathSessionInfo.setFileHandle(
-          ((AbfsFastpathConnection) op.getResult()).getFastpathFileHandle());
-      LOG.debug("Fastpath handled opened {}",
-          this.fastpathSessionInfo.getFileHandle());
-    } catch (AzureBlobFileSystemException e) {
-      updateConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
-      LOG.debug("Fastpath status check (Fastpath open) failed with {}", e);
-      return false;
-    }
-
-    return true;
-  }
-
-  @VisibleForTesting
-  protected AbfsRestOperation executeFetchFastpathSessionToken(String path, String eTag)
-      throws AzureBlobFileSystemException {
-    return client.getReadFastpathSessionToken(path, eTag, tracingContext);
-  }
-
-  @VisibleForTesting
-  protected AbfsRestOperation executeFastpathOpen(String path, String eTag)
-      throws AzureBlobFileSystemException {
-    return client.fastPathOpen(path, eTag, this.fastpathSessionInfo,
-        tracingContext);
   }
 
   public String getPath() {
@@ -242,6 +164,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private String createInputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
+  }
+
+  protected void createAbfsFastpathSession(boolean isFastpathFeatureConfigOn) {
+    if (isFastpathFeatureConfigOn) {
+      fastpathSession = new AbfsFastpathSession(client, path, eTag, tracingContext);
+    }
   }
 
   @Override
@@ -564,7 +492,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
+  int readRemote(long position, byte[] b, int offset, int length, TracingContext readThreadTracingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
@@ -586,17 +514,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
+
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      refreshFastpathSession();
-      ReadRequestParameters reqParams = new ReadRequestParameters(connectionMode,
-          position, offset, length,
-          tolerateOobAppends ? "*" : eTag,
-          fastpathSessionInfo);
-      op =  executeRead(path, b, cachedSasToken.get(), reqParams, tracingContext);
+      ReadRequestParameters reqParams = new ReadRequestParameters(position,
+          offset, length, tolerateOobAppends ? "*" : eTag,
+          ((fastpathSession == null) ? null: fastpathSession.getAbfsFastpathSessionInfo()));
+      op =  executeRead(path, b, cachedSasToken.get(), reqParams, readThreadTracingContext);
       cachedSasToken.update(op.getSasToken());
-      // switch to REST permanently if fastpath connection had a problem.
-      if (op.getCurrentConnectionMode() == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE) {
-        updateConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
+      if (fastpathSession != null) {
+        fastpathSession.updateConnectionMode(op.getCurrentConnectionMode());
       }
 
       if (streamStatistics != null) {
@@ -625,59 +551,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("HTTP request read bytes = {}", bytesRead);
     bytesFromRemoteRead += bytesRead;
     return (int) bytesRead;
-  }
-
-  private void refreshFastpathSession() {
-    if (connectionMode != AbfsConnectionMode.FASTPATH_CONN) {
-      return;
-    }
-
-    // does session need active thread refresh ?
-    // if yes, - make threads wait and refresh
-    // dont check for refreshInitiated state now, we want threads to be blocked here
-    // let them get lock, find the refresh has happened and exit
-    if (fastpathSessionInfo.needsActiveThreadRefresh()) {
-      FASTPATH_SESSION_REFRESH_LOCK.lock();
-      try {
-        // possible that another thread just refreshed and left, so
-        // check if refresh is still needed before proceeding
-        if (fastpathSessionInfo.needsActiveThreadRefresh()) {
-          fastpathSessionInfo.setRefreshInitiated(true);
-          fetchFastpathSessionToken();
-          fastpathSessionInfo.setRefreshInitiated(false);
-        }
-      } finally {
-        FASTPATH_SESSION_REFRESH_LOCK.unlock();
-      }
-
-      // not need to check on background refresh, as active refresh just finished
-      return;
-    }
-
-    // no, active thread refresh is not required.Before returning,
-    // check if session needs a background thread refresh
-    // start one only if no refresh is in progress
-    if (!fastpathSessionInfo.isBeingRefreshed() &&
-        fastpathSessionInfo.needsBackgroundThreadRefresh()) {
-      FASTPATH_SESSION_REFRESH_LOCK.lock();
-      try {
-        // possible that another thread just refreshed and left, so
-        // check if refresh is still needed before proceeding
-        if (!fastpathSessionInfo.isBeingRefreshed() &&
-            fastpathSessionInfo.needsBackgroundThreadRefresh()) {
-          fastpathSessionInfo.setRefreshInitiated(true);
-          Runnable backgroundRefresh = new Runnable() {
-            public void run() {
-              fetchFastpathSessionToken();
-            }
-          };
-
-          new Thread(backgroundRefresh).start();
-        }
-      } finally {
-        FASTPATH_SESSION_REFRESH_LOCK.unlock();
-      }
-    }
   }
 
   @VisibleForTesting
@@ -823,24 +696,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized void close() throws IOException {
-    try {
-      if (fastpathSessionInfo != null) {
-        executeFastpathClose(path, eTag, fastpathSessionInfo);
-      }
-    } catch (Exception ex) {
-      // no failure handling required, ignore
-      LOG.debug("Fastpath close failed {} ", ex);
+    if (fastpathSession != null) {
+      fastpathSession.close();
     }
 
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
     LOG.debug("Closing {}", this);
-  }
-
-  @VisibleForTesting
-  protected AbfsRestOperation executeFastpathClose(String path, String eTag,
-      AbfsFastpathSessionInfo fastpathSessionInfo) throws AzureBlobFileSystemException {
-    return client.fastPathClose(path, eTag, fastpathSessionInfo, tracingContext);
   }
 
   /**
@@ -1003,4 +865,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @VisibleForTesting
   Statistics getFSStatistics() { return this.statistics; }
+
+  @VisibleForTesting
+  AbfsFastpathSession getFastpathSession() { return this.fastpathSession; }
+
+  @VisibleForTesting
+  void setFastpathSession(AbfsFastpathSession fastpathSession)
+  {
+    if ((fastpathSession != null) && (
+        fastpathSession.getAbfsFastpathSessionInfo() != null)) {
+      tracingContext.setConnectionMode(
+          fastpathSession.getAbfsFastpathSessionInfo().getConnectionMode());
+    }
+
+    this.fastpathSession = fastpathSession;
+  }
 }

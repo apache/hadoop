@@ -31,8 +31,6 @@ import com.azure.storage.fastpath.responseProviders.FastpathCloseResponse;
 import com.azure.storage.fastpath.responseProviders.FastpathOpenResponse;
 import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-
 public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
 
   int errStatus = 0;

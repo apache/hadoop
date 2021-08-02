@@ -19,58 +19,93 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.junit.Assert;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
-import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
+import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_AUTH;
+import static org.apache.hadoop.fs.azurebfs.utils.SASGenerator.ISO_8601_FORMATTER;
 
 public class MockAbfsInputStream extends AbfsInputStream {
 
   int errStatus = 0;
   boolean mockRequestException = false;
   boolean mockConnectionException = false;
+  boolean disableForceFastpathMock = false;
 
   public MockAbfsInputStream(final AbfsClient mockClient,
-      final org.apache.hadoop.fs.FileSystem.Statistics statistics,
+      final Statistics statistics,
       final String path,
       final long contentLength,
       final AbfsInputStreamContext abfsInputStreamContext,
       final String eTag,
-      TracingContext tracingContext) {
+      TracingContext tracingContext) throws Exception {
     super(mockClient, statistics, path, contentLength, abfsInputStreamContext,
         eTag,
         new TracingContext("MockFastpathTest",
             UUID.randomUUID().toString(), FSOperationType.OPEN, TracingHeaderFormat.ALL_ID_FORMAT,
             null));
+    createMockAbfsFastpathSession();
   }
 
   public MockAbfsInputStream(final AbfsClient client, final AbfsInputStream in)
       throws IOException {
     super(new MockAbfsClient(client), in.getFSStatistics(), in.getPath(),
-        in.getContentLength(), in.getContext().withFastpathEnabledState(true),
+        in.getContentLength(), in.getContext().withFastpathEnabledState(false),
         in.getETag(),
         in.getTracingContext());
+    try {
+      createMockAbfsFastpathSession();
+    } catch (Exception e) {
+      Assert.fail("createMockAbfsFastpathSession failed");
+    }
   }
 
-  protected AbfsRestOperation executeFastpathOpen(String path, String eTag, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).fastPathOpen(path, eTag, fastpathSessionInfo, tracingContext);
+  protected void createAbfsFastpathSession(boolean isFastpathFeatureConfigOn) {
+    if (isFastpathFeatureConfigOn) {
+      try {
+        fastpathSession = new MockAbfsFastpathSession(client, path, eTag, tracingContext);
+      } catch (IOException e) {
+        Assert.fail("Failure in creating MockAbfsFastpathSession instance");
+      }
+    }
   }
 
-  protected AbfsRestOperation executeFastpathClose(String path, String eTag, String fastpathFileHandle, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    signalErrorConditionToMockClient();
-    return ((MockAbfsClient)client).fastPathClose(path, eTag, fastpathSessionInfo, tracingContext);
+  public void createMockAbfsFastpathSession()
+      throws Exception {
+    AbfsFastpathSession fastpathSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
+        client, path, eTag,
+        tracingContext);
+    setFastpathSession(new MockAbfsFastpathSession(fastpathSsn));
   }
 
   protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
+    // Force fastpath connection so that test fails and not pass on REST fallback
     return ((MockAbfsClient)client).read(path, b, sasToken, reqParam, tracingContext);
   }
 
@@ -85,6 +120,10 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
     if (mockConnectionException) {
       ((MockAbfsClient) client).induceConnectionException();
+    }
+
+    if (disableForceFastpathMock) {
+      ((MockAbfsClient) client).forceFastpathReadAlways = false;
     }
   }
 
@@ -108,9 +147,86 @@ public class MockAbfsInputStream extends AbfsInputStream {
     mockConnectionException = true;
   }
 
+  public void disableAlwaysOnFastpathTestMock() {
+    disableForceFastpathMock = true;
+    ((MockAbfsClient)client).forceFastpathReadAlways = false;
+  }
+
   public void resetAllMockErrStates() {
     errStatus = 0;
     mockRequestException = false;
     mockConnectionException = false;
+  }
+
+  public static AbfsFastpathSession getStubAbfsFastpathSession(final AbfsClient client,
+      final String path,
+      final String eTag,
+      TracingContext tracingContext) throws Exception {
+
+    AbfsFastpathSession mockSession = mock(AbfsFastpathSession.class);
+    Logger log = LoggerFactory.getLogger(AbfsInputStream.class);
+    double session_refresh_internal_factor = 0.75;
+    ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+    Lock readLock = rwLock.readLock();
+    Lock writeLock = rwLock.writeLock();
+
+    // override fields
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "LOG", log);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "SESSION_REFRESH_INTERVAL_FACTOR", session_refresh_internal_factor);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "client", client);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "path", path);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "eTag", eTag);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "tracingContext", tracingContext);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "scheduledExecutorService", scheduledExecutorService);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "rwLock", rwLock);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "readLock", readLock);
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "writeLock", writeLock);
+
+    doCallRealMethod().when(mockSession)
+        .updateAbfsFastpathSessionInfo(any(), any());
+    doCallRealMethod().when(mockSession)
+        .updateConnectionMode(any(AbfsConnectionMode.class));
+    doCallRealMethod().when(mockSession).close();
+    doCallRealMethod().when(mockSession)
+        .setAbfsFastpathSessionInfo(any(AbfsFastpathSessionInfo.class));
+    doCallRealMethod().when(mockSession)
+        .setConnectionMode(any(AbfsConnectionMode.class));
+
+    when(mockSession.executeFastpathClose()).thenCallRealMethod();
+    when(mockSession.executeFastpathOpen()).thenCallRealMethod();
+    when(mockSession.getAbfsFastpathSessionInfo()).thenCallRealMethod();
+    when(mockSession.executeFetchFastpathSessionToken()).thenCallRealMethod();
+    when(mockSession.getSessionRefreshIntervalInSec()).thenCallRealMethod();
+    when(mockSession.fetchFastpathSessionToken()).thenCallRealMethod();
+
+    return mockSession;
+  }
+
+  public static AbfsRestOperation getMockSuccessRestOp(AbfsClient client, byte[] token, Duration tokenDuration)
+      throws IOException {
+    AbfsRestOperation op = mock(AbfsRestOperation.class);
+    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
+    AbfsConfiguration abfsConfig = client.getAbfsConfiguration();
+    byte[] accountKey = Base64.decode(abfsConfig.getStorageAccountKey());
+    ServiceSASGenerator sasGenerator = new ServiceSASGenerator(accountKey);
+    String se = ISO_8601_FORMATTER.format(java.time.Instant.now().plus(tokenDuration));
+    System.out.println("New Expiry - " + se);
+    String auth = sasGenerator.getContainerSASWithFullControl(
+        abfsConfig.getAccountName(), client.getContainerName(), se);
+    when(httpOp.getResponseHeader(X_MS_FASTPATH_SESSION_AUTH)).thenReturn(auth);
+    when(httpOp.getResponseContentBuffer()).thenReturn(token);
+    when(op.getResult()).thenReturn(httpOp);
+    return op;
   }
 }

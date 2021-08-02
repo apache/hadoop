@@ -120,9 +120,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         tracingContext);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
-    ReadRequestParameters readParams = new ReadRequestParameters(
-        AbfsConnectionMode.REST_CONN,
-        0, 0, length, eTag,
+    ReadRequestParameters readParams = new ReadRequestParameters(0, 0, length, eTag,
         null);
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(fileName,  buffer, null, readParams, tracingContext);
@@ -174,9 +172,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .getPathStatus(fileName, false, tracingContext);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
-    ReadRequestParameters readParams = new ReadRequestParameters(
-        AbfsConnectionMode.REST_CONN,
-        0, 0, length, eTag,
+    ReadRequestParameters readParams = new ReadRequestParameters(0, 0, length, eTag,
         null);
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(fileName,  buffer, null, readParams, tracingContext);

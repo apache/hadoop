@@ -44,7 +44,6 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
 
   private HttpURLConnection connection;
   protected ListResultSchema listResultSchema = null;
-  private byte[] responseContentBuffer;
 
   public AbfsHttpConnection(final URL url,
       final String method,
@@ -152,10 +151,6 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
         this.sendRequestTimeMs = elapsedTimeMs(startTime);
       }
     }
-  }
-
-  public byte[] getResponseContentBuffer() {
-    return responseContentBuffer;
   }
 
   /**

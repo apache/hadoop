@@ -1375,4 +1375,7 @@ public class AbfsClient implements Closeable {
   protected AccessTokenProvider getTokenProvider() {
     return tokenProvider;
   }
+
+  @VisibleForTesting
+  protected String getContainerName() { return filesystem; }
 }

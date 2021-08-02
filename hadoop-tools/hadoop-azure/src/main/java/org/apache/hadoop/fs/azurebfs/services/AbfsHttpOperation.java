@@ -78,6 +78,29 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   protected AuthType authType;
   protected String authToken;
 
+  protected byte[] responseContentBuffer;
+
+  public AbfsHttpOperation(final AbfsRestOperationType opType,
+      final URL url,
+      final String method,
+      final AuthType authType,
+      final String authToken,
+      List<AbfsHttpHeader> requestHeaders) throws IOException {
+
+    this.opType = opType;
+    this.isTraceEnabled = LOG.isTraceEnabled();
+    this.url = url;
+    this.method = method;
+    this.clientRequestId = UUID.randomUUID().toString();
+  }
+
+  public AbfsHttpOperation(final URL url, final String method, List<AbfsHttpHeader> requestHeaders) throws IOException {
+    this.isTraceEnabled = LOG.isTraceEnabled();
+    this.url = url;
+    this.method = method;
+    this.clientRequestId = UUID.randomUUID().toString();
+  }
+
   public String getMethod() {
     return method;
   }
@@ -139,25 +162,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   public abstract void processResponse(byte[] buffer, final int offset, final int length) throws IOException;
 
-  public AbfsHttpOperation(final AbfsRestOperationType opType,
-      final URL url,
-      final String method,
-      final AuthType authType,
-      final String authToken,
-      List<AbfsHttpHeader> requestHeaders) throws IOException {
-
-    this.opType = opType;
-    this.isTraceEnabled = LOG.isTraceEnabled();
-    this.url = url;
-    this.method = method;
-    this.clientRequestId = UUID.randomUUID().toString();
-  }
-
-  public AbfsHttpOperation(final URL url, final String method, List<AbfsHttpHeader> requestHeaders) throws IOException {
-    this.isTraceEnabled = LOG.isTraceEnabled();
-    this.url = url;
-    this.method = method;
-    this.clientRequestId = UUID.randomUUID().toString();
+  public byte[] getResponseContentBuffer() {
+    return responseContentBuffer;
   }
 
   // Returns a trace message for the request
