@@ -19,15 +19,23 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 import org.junit.Assume;
+
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
 
 /**
  * Contract test for distCp operation.
  */
 public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTest {
   private final ABFSContractTestBinding binding;
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    return AzureTestConstants.SCALE_TEST_TIMEOUT_MILLIS;
+  }
 
   public ITestAbfsFileSystemContractDistCp() throws Exception {
     binding = new ABFSContractTestBinding();
@@ -38,6 +46,7 @@ public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTes
   public void setup() throws Exception {
     binding.setup();
     super.setup();
+    assumeScaleTestsEnabled(binding.getRawConfiguration());
   }
 
   @Override

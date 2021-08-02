@@ -943,8 +943,8 @@ public abstract class GenericTestUtils {
       final int fileCount,
       final int dirCount) throws IOException {
     return createDirsAndFiles(fs, destDir, depth, fileCount, dirCount,
-        new ArrayList<Path>(fileCount),
-        new ArrayList<Path>(dirCount));
+        new ArrayList<>(fileCount),
+        new ArrayList<>(dirCount));
   }
 
   /**
