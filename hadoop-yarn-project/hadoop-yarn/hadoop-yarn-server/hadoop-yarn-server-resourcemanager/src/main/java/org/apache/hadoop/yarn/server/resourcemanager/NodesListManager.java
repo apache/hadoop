@@ -85,6 +85,7 @@ public class NodesListManager extends CompositeService implements
   private Timer removalTimer;
   private int nodeRemovalCheckInterval;
   private Set<RMNode> gracefulDecommissionableNodes;
+  private boolean enableNodeUntrackedWithoutIncludePath;
 
   public NodesListManager(RMContext rmContext) {
     super(NodesListManager.class.getName());
@@ -124,6 +125,9 @@ public class NodesListManager extends CompositeService implements
       disableHostsFileReader(ioe);
     }
 
+    enableNodeUntrackedWithoutIncludePath = conf.getBoolean(
+        YarnConfiguration.RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH,
+        YarnConfiguration.DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH);
     final int nodeRemovalTimeout =
         conf.getInt(
             YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC,
@@ -605,7 +609,10 @@ public class NodesListManager extends CompositeService implements
     Set<String> hostsList = hostDetails.getIncludedHosts();
     Set<String> excludeList = hostDetails.getExcludedHosts();
 
-    return !hostsList.isEmpty() && !hostsList.contains(hostName)
+    return (!hostsList.isEmpty() || (enableNodeUntrackedWithoutIncludePath
+          && (hostDetails.getIncludesFile() == null
+              || hostDetails.getIncludesFile().isEmpty())))
+        && !hostsList.contains(hostName)
         && !hostsList.contains(ip) && !excludeList.contains(hostName)
         && !excludeList.contains(ip);
   }

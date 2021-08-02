@@ -1169,6 +1169,15 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC = 60000;
 
   /**
+   * Whether to enable RM to mark inactive nodes as untracked and removed from
+   * nodes list for the YARN cluster without configured include path.
+   */
+  public static final String RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH =
+      RM_PREFIX + "enable-node-untracked-without-include-path";
+  public static final boolean
+      DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH = false;
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";

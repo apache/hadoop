@@ -4779,4 +4779,25 @@
     <name>yarn.resourcemanager.application-tag-based-placement.force-lowercase</name>
     <value>true</value>
   </property>
+
+  <property>
+    <description>
+      Whether to enable RM to mark inactive nodes as untracked after the timeout
+      specified by yarn.resourcemanager.node-removal-untracked.timeout-ms and
+      then remove them from nodes list for the YARN cluster without configured
+      include path, which means RM can periodically clear inactive nodes to
+      avoid increasing memory to store these data when enabled, most desired by
+      elastic cloud environment with frequent auto-scaling operations.
+      It works only when the YARN cluster doesn't utilize include file, the key
+      configurations are as follows:
+          yarn.resourcemanager.nodes.exclude-path=/path-to-exclude-file
+          yarn.resourcemanager.nodes.include-path=
+          yarn.resourcemanager.node-removal-untracked.timeout-ms=60000
+      In this situation, the inactive nodes will never be marked as untracked
+      and removed from the nodes list unless this configuration is enabled:
+          yarn.resourcemanager.enable-node-untracked-without-include-path=true
+    </description>
+    <name>yarn.resourcemanager.enable-node-untracked-without-include-path</name>
+    <value>false</value>
+  </property>
 </configuration>
