@@ -1492,7 +1492,7 @@ class BlockReceiver implements Closeable {
           if (lastPacketInBlock) {
             // Finalize the block and close the block file
             finalizeBlock(startTime);
-            /* for test only, no-op in production system */
+            // For test only, no-op in production system.
             DataNodeFaultInjector.get().delayAckLastPacket();
           }
 
