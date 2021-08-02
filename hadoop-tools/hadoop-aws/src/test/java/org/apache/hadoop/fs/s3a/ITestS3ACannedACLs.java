@@ -76,7 +76,7 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
   }
 
   /**
-   * Assert that a given object granded the AWS logging service
+   * Assert that a given object granted the AWS logging service
    * write access.
    * Logs all the grants.
    * @param path path

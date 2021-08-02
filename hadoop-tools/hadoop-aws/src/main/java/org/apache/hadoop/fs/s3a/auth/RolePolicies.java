@@ -378,7 +378,6 @@ public final class RolePolicies {
       STATEMENT_ALL_S3_GET_BUCKET_LOCATION
   );
 
-  public static final String CANNED_ACL_LOG = "LogDeliveryWrite";
   public static Statement allowS3GuardClientOperations(String tableArn) {
     return statement(true,
         tableArn,
