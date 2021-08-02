@@ -233,7 +233,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
   }
 
   private ContainerAllocation checkIfNodeBlackListed(FiCaSchedulerNode node,
-      SchedulerRequestKey schedulerKey) {
+      SchedulerRequestKey schedulerKey, RMContainer reservedContainer) {
     if (SchedulerAppUtils.isPlaceBlacklisted(application, node, LOG)) {
       application.updateAppSkipNodeDiagnostics(
           CSAMContainerLaunchDiagnosticsConstants.SKIP_AM_ALLOCATION_IN_BLACK_LISTED_NODE);
@@ -241,6 +241,14 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           activitiesManager, node, application, schedulerKey,
           ActivityDiagnosticConstant.NODE_IS_BLACKLISTED,
           ActivityLevel.NODE);
+
+      // The reserved container could not be allocated on a blacklisted node, try to release it
+      if (reservedContainer != null) {
+        LOG.warn("Found reserved container=" + reservedContainer.getContainerId()
+            + " on a blacklist node=" + node.getNodeID()
+            + " for application=" + application.getApplicationId() + ", try to release it");
+        return new ContainerAllocation(reservedContainer, null, AllocationState.APP_SKIPPED);
+      }
       return ContainerAllocation.APP_SKIPPED;
     }
 
@@ -254,7 +262,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     ContainerAllocation result;
 
     // Sanity checks before assigning to this node
-    result = checkIfNodeBlackListed(node, schedulerKey);
+    result = checkIfNodeBlackListed(node, schedulerKey, reservedContainer);
     if (null != result) {
       return result;
     }
