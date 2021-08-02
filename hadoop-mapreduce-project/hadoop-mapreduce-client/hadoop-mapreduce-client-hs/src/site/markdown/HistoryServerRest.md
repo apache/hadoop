@@ -1415,7 +1415,7 @@ With the task counters API, you can object a collection of resources that repres
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | id | string | The task id |
-| taskcounterGroup | array of counterGroup objects(JSON)/zero or more counterGroup objects(XML) | A collection of counter group objects |
+| taskCounterGroup | array of counterGroup objects(JSON)/zero or more counterGroup objects(XML) | A collection of counter group objects |
 
 #### Elements of the *counterGroup* object
 
