@@ -485,14 +485,13 @@ public class TestCodec {
     if (ZlibFactory.isNativeZlibLoaded(conf)) {
       GzipCodec gzc = ReflectionUtils.newInstance(GzipCodec.class, conf);
       gzipReinitTest(conf, gzc);
+    } else {
+      LOG.warn("testCodecPoolCompressorReinit skipped: native libs not loaded");
     }
     // don't use native libs
     ZlibFactory.setNativeZlibLoaded(false);
     DefaultCodec dfc = ReflectionUtils.newInstance(DefaultCodec.class, conf);
     gzipReinitTest(conf, dfc);
-
-    GzipCodec gzc = ReflectionUtils.newInstance(GzipCodec.class, conf);
-    gzipReinitTest(conf, gzc);
   }
 
   @Test
