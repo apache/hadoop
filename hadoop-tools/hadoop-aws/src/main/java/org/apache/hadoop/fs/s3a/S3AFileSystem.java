@@ -492,7 +492,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       initTransferManager();
 
-      initCannedAcls(conf);
 
       // This initiates a probe against S3 for the bucket existing.
       doBucketProbing();
@@ -921,6 +920,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.warn("Configuration property {} shouldn't be overridden by client",
           UPLOAD_PART_COUNT_LIMIT);
     }
+
+    // ACLs; this is passed to the
+    // request factory.
+    initCannedAcls(getConf());
 
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
