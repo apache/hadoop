@@ -199,8 +199,15 @@ public class Path
     int start = 0;
 
     // parse uri scheme, if any
-    int colon = pathString.indexOf(':');
-    int slash = pathString.indexOf('/');
+    int colon = -1;
+    int slash = -1;
+    if (StringUtils.countMatches(pathString, ":") > 2) {
+      colon = pathString.indexOf(":/");
+      slash = pathString.indexOf('/');
+    } else {
+      colon = pathString.indexOf(':');
+      slash = pathString.indexOf('/');
+    }
     if ((colon != -1) &&
         ((slash == -1) || (colon < slash))) {     // has a scheme
       scheme = pathString.substring(0, colon);

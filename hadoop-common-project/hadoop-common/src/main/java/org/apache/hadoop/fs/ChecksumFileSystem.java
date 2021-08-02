@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -104,12 +105,18 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
   /** Return the name of the checksum file associated with a file.*/
   public Path getChecksumFile(Path file) {
+    if (StringUtils.countMatches(file.toString(), ":") > 2) {
+      return new Path(file.getParent(), "./" + file.getName() + ".crc");
+    }
     return new Path(file.getParent(), "." + file.getName() + ".crc");
   }
 
   /** Return true iff file is a checksum file name.*/
   public static boolean isChecksumFile(Path file) {
     String name = file.getName();
+    if (StringUtils.countMatches(file.toString(), ":") > 2) {
+      return name.startsWith("./") && name.endsWith(".crc");
+    }
     return name.startsWith(".") && name.endsWith(".crc");
   }
 
