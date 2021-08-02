@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Timer;
 import org.slf4j.event.Level;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -397,17 +398,11 @@ public class TestEditLogTailer {
 
     // Time in seconds to wait before checking if edit logs are rolled while
     // expecting edit log roll.
-    // Aggressive tests like this one are resource sensitive and bound to
-    // fail with slow system, hence waiting to confirm
-    // curSegmentTxId for 7 seconds makes it more reliable in case
-    // EditLogTailer#doWork() takes few more milliseconds to retrieve result
-    // from EditLogTailer#triggerActiveLogRoll() and lastRollTimeMs is not
-    // updated frequently.
-    final int logRollWaitTime = 7;
+    final int logRollWaitTime = 3;
 
+    final int logRollPeriod = standbyCatchupWaitTime + noLogRollWaitTime + 1;
     Configuration conf = getConf();
-    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        standbyCatchupWaitTime + noLogRollWaitTime + 2);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, logRollPeriod);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
 
@@ -436,32 +431,31 @@ public class TestEditLogTailer {
       waitForStandbyToCatchUpWithInProgressEdits(standby, activeTxId,
           standbyCatchupWaitTime);
 
+      long curTime = standby.getNamesystem().getEditLogTailer().getTimer()
+          .monotonicNow();
+      long inSufficientTimeForLogRoll =
+          TimeUnit.SECONDS.toMillis(logRollPeriod / 3);
+      TestTimer testTimer = new TestTimer(curTime + inSufficientTimeForLogRoll);
+      standby.getNamesystem().getEditLogTailer().setTimerForTest(testTimer);
+
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         NameNodeAdapter.mkdirs(active, getDirPath(i),
             new PermissionStatus("test", "test",
             new FsPermission((short)00755)), true);
-        // reset lastRollTimeMs in EditLogTailer.
-        active.getNamesystem().getEditLogTailer().resetLastRollTimeMs();
       }
 
-      // We should explicitly update lastRollTimeMs in EditLogTailer
-      // so that our timeout test provided just below can take advantage
-      // of validation: (monotonicNow() - lastRollTimeMs) > logRollPeriodMs
-      // provided in EditLogTailer#tooLongSinceLastLoad().
-      active.getNamesystem().getEditLogTailer().resetLastRollTimeMs();
-
       try {
-        // Aggressive checks like this one are resource sensitive and bound to
-        // fail with slow system, hence waiting to confirm
-        // curSegmentTxId for (noLogRollWaitTime - 1) seconds
-        // makes it more reliable in case EditLogTailer#doWork() takes few
-        // more milliseconds to retrieve result from
-        // EditLogTailer#triggerActiveLogRoll().
-        checkForLogRoll(active, origTxId, noLogRollWaitTime - 1);
+        checkForLogRoll(active, origTxId, noLogRollWaitTime);
         fail("Expected to timeout");
       } catch (TimeoutException e) {
         // expected
       }
+
+      long curTimeNew = standby.getNamesystem().getEditLogTailer().getTimer()
+          .monotonicNow();
+      long sufficientTimeForLogRoll =
+          TimeUnit.SECONDS.toMillis(logRollPeriod * 3);
+      testTimer.setTime(curTimeNew + sufficientTimeForLogRoll);
 
       checkForLogRoll(active, origTxId, logRollWaitTime);
     } finally {
@@ -485,7 +479,7 @@ public class TestEditLogTailer {
       long curSegmentTxId = active.getNamesystem().getFSImage().getEditLog()
           .getCurSegmentTxId();
       return (origTxId != curSegmentTxId);
-    }, 500, TimeUnit.SECONDS.toMillis(maxWaitSec));
+    }, 100, TimeUnit.SECONDS.toMillis(maxWaitSec));
   }
 
   private static MiniDFSCluster createMiniDFSCluster(Configuration conf,
@@ -502,4 +496,23 @@ public class TestEditLogTailer {
         .build();
     return cluster;
   }
+
+  private static final class TestTimer extends Timer {
+
+    private volatile long time;
+
+    private TestTimer(long time) {
+      this.time = time;
+    }
+
+    private void setTime(long newTime) {
+      this.time = newTime;
+    }
+
+    @Override
+    public long monotonicNow() {
+      return time;
+    }
+  }
+
 }
