@@ -200,13 +200,14 @@ public class Path
 
     // parse uri scheme, if any
     int colon = -1;
-    int slash = -1;
+    int slash = pathString.indexOf('/');
     if (StringUtils.countMatches(pathString, ":") > 2) {
+      //In case of IPv6 address, we should be able to parse the scheme
+      // correctly (This will ensure to parse path with & without scheme
+      // correctly in IPv6).
       colon = pathString.indexOf(":/");
-      slash = pathString.indexOf('/');
     } else {
       colon = pathString.indexOf(':');
-      slash = pathString.indexOf('/');
     }
     if ((colon != -1) &&
         ((slash == -1) || (colon < slash))) {     // has a scheme
