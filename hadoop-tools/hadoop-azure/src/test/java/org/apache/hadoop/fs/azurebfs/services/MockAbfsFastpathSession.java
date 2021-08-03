@@ -49,7 +49,7 @@ public class MockAbfsFastpathSession extends AbfsFastpathSession {
         srcSession.tracingContext);
   }
 
-  protected void getSessionTokenAndFileHandle() {
+  protected void fetchSessionTokenAndFileHandle() {
     try {
       AbfsFastpathSession fastpathSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
           client, path, eTag,
@@ -63,9 +63,10 @@ public class MockAbfsFastpathSession extends AbfsFastpathSession {
           .executeFetchFastpathSessionToken();
 
       fastpathSsn.fetchFastpathSessionToken();
-      fastpathSsn.getAbfsFastpathSessionInfo()
-          .setFastpathFileHandle(UUID.randomUUID().toString());
-      setAbfsFastpathSessionInfo(fastpathSsn.getAbfsFastpathSessionInfo());
+
+      AbfsFastpathSessionInfo stubbedInfo = fastpathSsn.getCurrentAbfsFastpathSessionInfoCopy();
+      stubbedInfo.setFastpathFileHandle(UUID.randomUUID().toString());
+      setAbfsFastpathSessionInfo(stubbedInfo);
     } catch (Exception ex) {
       Assert.fail(
           "Failure in creating mock AbfsFastpathSessionInfo instance with 5 min validity");

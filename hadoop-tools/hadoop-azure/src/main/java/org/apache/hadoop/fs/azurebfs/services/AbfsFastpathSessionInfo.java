@@ -39,6 +39,13 @@ public class AbfsFastpathSessionInfo {
     this.sessionTokenExpiry = sessionTokenExpiry;
   }
 
+  public AbfsFastpathSessionInfo(AbfsFastpathSessionInfo sessionInfo) {
+    this.sessionToken = sessionInfo.getSessionToken();
+    this.sessionTokenExpiry = sessionInfo.getSessionTokenExpiry();
+    this.fastpathFileHandle = sessionInfo.getFastpathFileHandle();
+    this.connectionMode = sessionInfo.getConnectionMode();
+  }
+
   public String getSessionToken() {
     if (isValidSession()) {
       return sessionToken;

@@ -38,8 +38,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.azure.storage.fastpath.exceptions.FastpathRequestException;
-
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -52,6 +50,8 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.azure.storage.fastpath.exceptions.FastpathRequestException;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -846,7 +846,7 @@ public class AbfsClient implements Closeable {
           reqParams.getBufferOffset(),
           reqParams.getReadLength(), sasTokenForReuse);
 
-      op.execute(tracingContext, reqParams.getAbfsConnectionMode());
+      op.execute(tracingContext);
     }
 
     return op;
@@ -1313,20 +1313,31 @@ public class AbfsClient implements Closeable {
         reqParams.getAbfsFastpathSessionInfo());
 
     try {
-      op.execute(tracingContext, reqParams.getAbfsConnectionMode());
+      op.execute(tracingContext);
       return op;
     } catch (AbfsFastpathException ex) {
       // Fastpath threw irrecoverable exception
-        if (ex.getCause() instanceof FastpathRequestException) {
-          tracingContext.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
-          reqParams.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
-        } else {
-          tracingContext.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
-          reqParams.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
-        }
-
-        return read(path, buffer, op.getSasToken(), reqParams, tracingContext);
+      // when FastpathRequestException is received, the request needs to
+      // be retried on REST
+      if (ex.getCause() instanceof FastpathRequestException) {
+        tracingContext.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
+        reqParams.getAbfsFastpathSessionInfo()
+            .setConnectionMode(
+                AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
+      } else {
+        // when FastpathConnectionException is received, the request needs to
+        // be retried on REST as well as switch AbfsInputStream to REST for
+        // all future reads in its lifetime
+        tracingContext.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
+        reqParams.getAbfsFastpathSessionInfo()
+            .setConnectionMode(
+                AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
       }
+
+      return read(path, buffer, op.getSasToken(), reqParams, tracingContext);
+    }
   }
 
   @VisibleForTesting
@@ -1341,7 +1352,7 @@ public class AbfsClient implements Closeable {
         url,
         requestHeaders,
         fastpathSessionInfo);
-    op.execute(tracingContext, AbfsConnectionMode.FASTPATH_CONN);
+    op.execute(tracingContext);
     return op;
   }
 
@@ -1357,7 +1368,7 @@ public class AbfsClient implements Closeable {
         url,
         requestHeaders,
         fastpathSessionInfo);
-    op.execute(tracingContext, AbfsConnectionMode.FASTPATH_CONN);
+    op.execute(tracingContext);
     return op;
   }
 

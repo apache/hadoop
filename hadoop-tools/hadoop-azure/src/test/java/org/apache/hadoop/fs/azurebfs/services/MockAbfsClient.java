@@ -75,7 +75,7 @@ public class MockAbfsClient extends AbfsClient {
       // becase of Fastpath open failure. This is for mock tests to fail
       // if fastpath connection didnt work rather than reporting a successful test
       // run due to REST fallback
-      reqParams.setConnectionMode(AbfsConnectionMode.FASTPATH_CONN);
+      reqParams.getAbfsFastpathSessionInfo().setConnectionMode(AbfsConnectionMode.FASTPATH_CONN);
     }
 
     return super.read(path, buffer, cachedSasToken, reqParams, tracingContext);
@@ -101,7 +101,7 @@ public class MockAbfsClient extends AbfsClient {
 
     try {
       signalErrorConditionToMockRestOp(op);
-      op.execute(tracingContext, reqParams.getAbfsConnectionMode());
+      op.execute(tracingContext);
       return op;
     } catch (AbfsFastpathException ex) {
       if (mockErrorConditionSet()) {
@@ -109,10 +109,10 @@ public class MockAbfsClient extends AbfsClient {
         // execute original abfsclient behaviour
         if (ex.getCause() instanceof FastpathRequestException) {
           tracingContext.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
-          reqParams.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
+          reqParams.getAbfsFastpathSessionInfo().setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
         } else {
           tracingContext.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
-          reqParams.setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
+          reqParams.getAbfsFastpathSessionInfo().setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
         }
 
         return read(path, buffer, op.getSasToken(), reqParams, tracingContext);
@@ -135,7 +135,7 @@ public class MockAbfsClient extends AbfsClient {
         requestHeaders,
         fastpathSessionInfo);
     signalErrorConditionToMockRestOp(op);
-    op.execute(tracingContext, AbfsConnectionMode.FASTPATH_CONN);
+    op.execute(tracingContext);
     return op;
   }
 
@@ -151,7 +151,7 @@ public class MockAbfsClient extends AbfsClient {
         requestHeaders,
         fastpathSessionInfo);
     signalErrorConditionToMockRestOp(op);
-    op.execute(tracingContext, AbfsConnectionMode.FASTPATH_CONN);
+    op.execute(tracingContext);
     return op;
   }
 

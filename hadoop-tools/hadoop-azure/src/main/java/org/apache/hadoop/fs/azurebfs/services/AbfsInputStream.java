@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -516,15 +515,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
 
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
+      AbfsFastpathSessionInfo fastpathSessionInfo = ((fastpathSession == null)
+          ? null
+          : fastpathSession.getCurrentAbfsFastpathSessionInfoCopy());
       ReadRequestParameters reqParams = new ReadRequestParameters(position,
           offset, length, tolerateOobAppends ? "*" : eTag,
-          ((fastpathSession == null) ? null: fastpathSession.getAbfsFastpathSessionInfo()));
+          fastpathSessionInfo);
       op =  executeRead(path, b, cachedSasToken.get(), reqParams, readThreadTracingContext);
       cachedSasToken.update(op.getSasToken());
-      if (fastpathSession != null) {
-        fastpathSession.updateConnectionMode(op.getCurrentConnectionMode());
-      }
-
+      checkForFastpathConnectionFailures(fastpathSessionInfo);
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
       }
@@ -551,6 +550,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("HTTP request read bytes = {}", bytesRead);
     bytesFromRemoteRead += bytesRead;
     return (int) bytesRead;
+  }
+
+  protected void checkForFastpathConnectionFailures(final AbfsFastpathSessionInfo fastpathSessionInfo) {
+    if (fastpathSessionInfo != null) {
+      fastpathSession.updateConnectionModeForFailures(fastpathSessionInfo.getConnectionMode());
+    }
   }
 
   @VisibleForTesting
@@ -873,9 +878,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   void setFastpathSession(AbfsFastpathSession fastpathSession)
   {
     if ((fastpathSession != null) && (
-        fastpathSession.getAbfsFastpathSessionInfo() != null)) {
+        fastpathSession.getCurrentAbfsFastpathSessionInfoCopy() != null)) {
       tracingContext.setConnectionMode(
-          fastpathSession.getAbfsFastpathSessionInfo().getConnectionMode());
+          fastpathSession.getCurrentAbfsFastpathSessionInfoCopy().getConnectionMode());
     }
 
     this.fastpathSession = fastpathSession;

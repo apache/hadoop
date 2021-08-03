@@ -45,8 +45,6 @@ public class AbfsFastpathSession {
   private static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
 
   private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-  private final Lock readLock = rwLock.readLock();
-  private final Lock writeLock = rwLock.writeLock();
 
   protected AbfsFastpathSessionInfo fastpathSessionInfo;
   protected AbfsClient client;
@@ -66,45 +64,35 @@ public class AbfsFastpathSession {
     this.path = path;
     this.eTag = eTag;
     this.tracingContext = tracingContext;
-    getSessionTokenAndFileHandle();
+    fetchSessionTokenAndFileHandle();
   }
 
-  protected void getSessionTokenAndFileHandle() {
-    fetchFastpathSessionToken();
-    if ((fastpathSessionInfo != null) &&
-        (fastpathSessionInfo.isValidSession())) {
-      fetchFastpathFileHandle();
-    }
-  }
-
-  public void updateConnectionMode(AbfsConnectionMode connectionMode) {
-    // Fastpath connection and session refresh failures are not recoverable,
-    // update connection mode if that happens
-    if ((connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE) ||
-        (connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE)) {
-      writeLock.lock();
-      try {
-        tracingContext.setConnectionMode(connectionMode);
-        if (fastpathSessionInfo != null) {
-          fastpathSessionInfo.setConnectionMode(connectionMode);
-        }
-      } finally {
-        writeLock.unlock();
-      }
-    }
-  }
-
-  public AbfsFastpathSessionInfo getAbfsFastpathSessionInfo() {
-    readLock.lock();
+  /**
+   * This returns a snap of the current sessionInfo
+   * SessionInfo returned can be updated by request processors,
+   * which should not reflect onto active instance.
+   * @return
+   */
+  public AbfsFastpathSessionInfo getCurrentAbfsFastpathSessionInfoCopy() {
+    rwLock.readLock().lock();
     try {
       if (fastpathSessionInfo.isValidSession()) {
-        return fastpathSessionInfo;
+        return new AbfsFastpathSessionInfo(fastpathSessionInfo);
       }
 
       LOG.debug("There is no valid Fastpath session currently");
       return null;
     } finally {
-      readLock.unlock();
+      rwLock.readLock().unlock();
+    }
+  }
+
+  public void updateConnectionModeForFailures(AbfsConnectionMode connectionMode) {
+    // Fastpath connection and session refresh failures are not recoverable,
+    // update connection mode if that happens
+    if ((connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE) ||
+        (connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE)) {
+      updateConnectionMode(connectionMode);
     }
   }
 
@@ -120,16 +108,17 @@ public class AbfsFastpathSession {
     }
   }
 
-  @VisibleForTesting
-  protected AbfsRestOperation executeFastpathClose()
-      throws AzureBlobFileSystemException {
-    return client.fastPathClose(path, eTag, fastpathSessionInfo,
-        tracingContext);
+  protected void fetchSessionTokenAndFileHandle() {
+    fetchFastpathSessionToken();
+    if ((fastpathSessionInfo != null) &&
+        (fastpathSessionInfo.isValidSession())) {
+      fetchFastpathFileHandle();
+    }
   }
 
   @VisibleForTesting
-  void updateAbfsFastpathSessionInfo(String token, OffsetDateTime expiry) {
-    writeLock.lock();
+  protected void updateAbfsFastpathSessionToken(String token, OffsetDateTime expiry) {
+    rwLock.writeLock().lock();
     try {
       if (fastpathSessionInfo == null) {
         fastpathSessionInfo = new AbfsFastpathSessionInfo(token, expiry);
@@ -142,10 +131,16 @@ public class AbfsFastpathSession {
           utcNow.until(expiry, ChronoUnit.SECONDS)
               * SESSION_REFRESH_INTERVAL_FACTOR);
 
+      // 0 or negative sessionRefreshIntervalInSec indicates a session token
+      // whose expiry is near as soon as its received. This will end up
+      // generating a lot of REST calls refreshing the session. Better to
+      // switch off Fastpath in that case.
       if (sessionRefreshIntervalInSec <= 0) {
         LOG.debug(
             "Expiry time at present or past. Drop Fastpath session (could be clock skew). Received expiry {} ",
             expiry);
+        tracingContext.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
         fastpathSessionInfo.setConnectionMode(
             AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
         return;
@@ -162,7 +157,30 @@ public class AbfsFastpathSession {
           "Fastpath session token fetch successful, valid till {}. Refresh scheduled after {} secs",
           expiry, sessionRefreshIntervalInSec);
     } finally {
-      writeLock.unlock();
+      rwLock.writeLock().unlock();
+    }
+  }
+
+  @VisibleForTesting
+  protected void updateConnectionMode(AbfsConnectionMode connectionMode) {
+    rwLock.writeLock().lock();
+    try {
+      tracingContext.setConnectionMode(connectionMode);
+      if (fastpathSessionInfo != null) {
+        fastpathSessionInfo.setConnectionMode(connectionMode);
+      }
+    } finally {
+      rwLock.writeLock().unlock();
+    }
+  }
+
+  private void updateFastpathFileHandle(String fileHandle) {
+    rwLock.writeLock().lock();
+    try {
+      fastpathSessionInfo.setFastpathFileHandle(fileHandle);
+      LOG.debug("Fastpath handled opened {}", fastpathSessionInfo.getFastpathFileHandle());
+    } finally {
+      rwLock.writeLock().unlock();
     }
   }
 
@@ -178,7 +196,7 @@ public class AbfsFastpathSession {
     try {
       AbfsRestOperation op = executeFetchFastpathSessionToken();
       byte[] buffer = op.getResult().getResponseContentBuffer();
-      updateAbfsFastpathSessionInfo(Base64.getEncoder().encodeToString(buffer),
+      updateAbfsFastpathSessionToken(Base64.getEncoder().encodeToString(buffer),
           CachedSASToken.getExpiry(
               op.getResult().getResponseHeader(X_MS_FASTPATH_SESSION_AUTH)));
       return true;
@@ -197,9 +215,7 @@ public class AbfsFastpathSession {
       AbfsRestOperation op = executeFastpathOpen();
       String fileHandle
           = ((AbfsFastpathConnection) op.getResult()).getFastpathFileHandle();
-      fastpathSessionInfo.setFastpathFileHandle(fileHandle);
-      updateConnectionMode(AbfsConnectionMode.FASTPATH_CONN);
-      LOG.debug("Fastpath handled opened {}", fileHandle);
+      updateFastpathFileHandle(fileHandle);
       return true;
     } catch (AzureBlobFileSystemException e) {
       LOG.debug("Fastpath  open failed with {}", e);
@@ -210,30 +226,43 @@ public class AbfsFastpathSession {
   }
 
   @VisibleForTesting
-  protected AbfsRestOperation executeFastpathOpen()
-      throws AzureBlobFileSystemException {
-    return client.fastPathOpen(path, eTag, fastpathSessionInfo, tracingContext);
-  }
-
-  @VisibleForTesting
   protected AbfsRestOperation executeFetchFastpathSessionToken()
       throws AzureBlobFileSystemException {
     return client.getReadFastpathSessionToken(path, eTag, tracingContext);
   }
 
   @VisibleForTesting
+  protected AbfsRestOperation executeFastpathOpen()
+      throws AzureBlobFileSystemException {
+    return client.fastPathOpen(path, eTag, fastpathSessionInfo, tracingContext);
+  }
+
+  @VisibleForTesting
+  protected AbfsRestOperation executeFastpathClose()
+      throws AzureBlobFileSystemException {
+    return client.fastPathClose(path, eTag, fastpathSessionInfo,
+        tracingContext);
+  }
+
+  @VisibleForTesting
   int getSessionRefreshIntervalInSec() {
-    return sessionRefreshIntervalInSec;
+    rwLock.readLock().lock();
+    try {
+      return sessionRefreshIntervalInSec;
+    } finally {
+      rwLock.readLock().unlock();
+    }
   }
 
   @VisibleForTesting
   void setConnectionMode(AbfsConnectionMode connMode) {
-    this.fastpathSessionInfo.setConnectionMode(connMode);
+    updateConnectionMode(connMode);
   }
 
   @VisibleForTesting
   void setAbfsFastpathSessionInfo(AbfsFastpathSessionInfo sessionInfo) {
-    this.fastpathSessionInfo = sessionInfo;
+    updateAbfsFastpathSessionToken(sessionInfo.getSessionToken(), sessionInfo.getSessionTokenExpiry());
+    updateConnectionMode(sessionInfo.getConnectionMode());
+    updateFastpathFileHandle(sessionInfo.getFastpathFileHandle());
   }
-
 }

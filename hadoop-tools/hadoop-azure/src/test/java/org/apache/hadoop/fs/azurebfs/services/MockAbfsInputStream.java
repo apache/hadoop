@@ -168,8 +168,6 @@ public class MockAbfsInputStream extends AbfsInputStream {
     double session_refresh_internal_factor = 0.75;
     ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    Lock readLock = rwLock.readLock();
-    Lock writeLock = rwLock.writeLock();
 
     // override fields
     mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
@@ -188,15 +186,13 @@ public class MockAbfsInputStream extends AbfsInputStream {
         mockSession, "scheduledExecutorService", scheduledExecutorService);
     mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
         mockSession, "rwLock", rwLock);
-    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
-        mockSession, "readLock", readLock);
-    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
-        mockSession, "writeLock", writeLock);
 
     doCallRealMethod().when(mockSession)
-        .updateAbfsFastpathSessionInfo(any(), any());
+        .updateAbfsFastpathSessionToken(any(), any());
     doCallRealMethod().when(mockSession)
         .updateConnectionMode(any(AbfsConnectionMode.class));
+    doCallRealMethod().when(mockSession)
+        .updateConnectionModeForFailures(any(AbfsConnectionMode.class));
     doCallRealMethod().when(mockSession).close();
     doCallRealMethod().when(mockSession)
         .setAbfsFastpathSessionInfo(any(AbfsFastpathSessionInfo.class));
@@ -205,7 +201,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
     when(mockSession.executeFastpathClose()).thenCallRealMethod();
     when(mockSession.executeFastpathOpen()).thenCallRealMethod();
-    when(mockSession.getAbfsFastpathSessionInfo()).thenCallRealMethod();
+    when(mockSession.getCurrentAbfsFastpathSessionInfoCopy()).thenCallRealMethod();
     when(mockSession.executeFetchFastpathSessionToken()).thenCallRealMethod();
     when(mockSession.getSessionRefreshIntervalInSec()).thenCallRealMethod();
     when(mockSession.fetchFastpathSessionToken()).thenCallRealMethod();
