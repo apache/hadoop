@@ -554,6 +554,7 @@ public class TestCodec {
   @Test
   public void testSequenceFileGzipCodec() throws IOException, ClassNotFoundException,
           InstantiationException, IllegalAccessException {
+    sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.GzipCodec", 5);
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.GzipCodec", 100);
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.GzipCodec", 1000000);
   }
