@@ -112,7 +112,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
   public void testFastpathSessionRefresh() throws Exception {
     describe("Tests successful session refresh  on an account which has feature enabled on backend");
 
-    // Run mock test only if feature is set to off
+    // Run this test only if feature is set to on
     Assume.assumeTrue(getDefaultFastpathFeatureStatus());
 
     Path testPath = path("testFastpathSessionRefresh");
@@ -175,7 +175,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
   public void testMockFastpathSessionRefreshFail() throws Exception {
     describe("Tests failed session refresh on an account which has feature enabled on backend");
 
-    // Run mock test only if feature is set to off
+    // Run this test only if feature is set to on
     Assume.assumeTrue(getDefaultFastpathFeatureStatus());
 
     Path testPath = path("testMockFastpathSessionRefreshFail");
