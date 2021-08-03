@@ -83,7 +83,6 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
     put(413, "ENTITY TOO LARGE");
     put(414, "REQ TOO LONG");
     put(415, "UNSUPPORTED TYPE");
-    put(500, "SERVER ERROR");
     put(500, "INTERNAL ERROR");
     put(501, "NOT IMPLEMENTED");
     put(502, "BAD GATEWAY");
