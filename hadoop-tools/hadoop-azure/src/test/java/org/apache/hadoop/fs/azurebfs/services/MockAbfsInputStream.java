@@ -80,7 +80,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
     try {
       createMockAbfsFastpathSession();
     } catch (Exception e) {
-      Assert.fail("createMockAbfsFastpathSession failed");
+      Assert.fail("createMockAbfsFastpathSession failed " + e);
     }
   }
 
@@ -89,7 +89,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
       try {
         fastpathSession = new MockAbfsFastpathSession(client, path, eTag, tracingContext);
       } catch (IOException e) {
-        Assert.fail("Failure in creating MockAbfsFastpathSession instance");
+        Assert.fail("Failure in creating MockAbfsFastpathSession instance " + e);
       }
     }
   }
@@ -231,7 +231,6 @@ public class MockAbfsInputStream extends AbfsInputStream {
     byte[] accountKey = Base64.decode(abfsConfig.getStorageAccountKey());
     ServiceSASGenerator sasGenerator = new ServiceSASGenerator(accountKey);
     String se = ISO_8601_FORMATTER.format(java.time.Instant.now().plus(tokenDuration));
-    System.out.println("New Expiry - " + se);
     String auth = sasGenerator.getContainerSASWithFullControl(
         abfsConfig.getAccountName(), client.getContainerName(), se);
     when(httpOp.getResponseHeader(X_MS_FASTPATH_SESSION_AUTH)).thenReturn(auth);

@@ -46,7 +46,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 
-
 /**
  * Represents a Fastpath operation.
  */
@@ -57,7 +56,7 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
   private static final Map<Integer, String> STATUS_CODE_MAP = new HashMap<Integer, String>() {{
     put(200, "OK");
     put(201, "CREATED");
-    put(200, "OK");
+    put(202, "ACCEPTED");
     put(203, "NOT AUTHORITATIVE");
     put(204, "NO CONTENT");
     put(205, "RESET");

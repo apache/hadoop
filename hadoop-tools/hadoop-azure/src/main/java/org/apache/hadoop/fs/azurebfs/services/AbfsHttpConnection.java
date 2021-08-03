@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
-
 public class AbfsHttpConnection extends AbfsHttpOperation {
 
   private HttpURLConnection connection;

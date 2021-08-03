@@ -97,6 +97,4 @@ public class ServiceSASGenerator extends SASGenerator {
     LOG.debug("Service SAS stringToSign: " + stringToSign.replace("\n", "."));
     return computeHmac256(stringToSign);
   }
-
-
 }

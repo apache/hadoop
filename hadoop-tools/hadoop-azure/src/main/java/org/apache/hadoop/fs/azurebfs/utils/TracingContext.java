@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionMode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
-
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CORR_INDICATOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;

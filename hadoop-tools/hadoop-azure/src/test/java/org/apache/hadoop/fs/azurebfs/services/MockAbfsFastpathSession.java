@@ -79,7 +79,7 @@ public class MockAbfsFastpathSession extends AbfsFastpathSession {
       fetchFastpathFileHandle();
     } catch (Exception ex) {
       Assert.fail(
-          "Failure in creating mock AbfsFastpathSessionInfo instance with 5 min validity");
+          "Failure in creating mock AbfsFastpathSessionInfo instance with 5 min validity - " + ex);
     }
   }
 

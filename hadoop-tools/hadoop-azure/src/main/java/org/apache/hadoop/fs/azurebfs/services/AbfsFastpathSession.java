@@ -19,15 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -94,6 +93,9 @@ public class AbfsFastpathSession {
     // update connection mode if that happens
     if ((connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE) ||
         (connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE)) {
+      LOG.debug(
+          "{}: Switching to error connection mode : {}",
+          Thread.currentThread().getName(), connectionMode);
       updateConnectionMode(connectionMode);
     }
   }
@@ -103,6 +105,7 @@ public class AbfsFastpathSession {
         && (fastpathSessionInfo.getFastpathFileHandle() != null)) {
       try {
         executeFastpathClose();
+        updateConnectionMode(AbfsConnectionMode.REST_CONN);
       } catch (AzureBlobFileSystemException e) {
         LOG.debug("Fastpath handle close failed - {} - {}",
             fastpathSessionInfo.getFastpathFileHandle(), e);
@@ -189,8 +192,7 @@ public class AbfsFastpathSession {
   @VisibleForTesting
   boolean fetchFastpathSessionToken() {
     if ((fastpathSessionInfo != null) &&
-        AbfsConnectionMode.isErrorConnectionMode(
-            fastpathSessionInfo.getConnectionMode())) {
+        (fastpathSessionInfo.getConnectionMode() != AbfsConnectionMode.FASTPATH_CONN)) {
       // no need to refresh or schedule another
       return false;
     }
