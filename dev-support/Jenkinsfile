@@ -112,13 +112,7 @@ pipeline {
             }
 
             steps {
-                withCredentials(
-                    [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
-                                  passwordVariable: 'GITHUB_TOKEN',
-                                  usernameVariable: 'GITHUB_USER'),
-                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
-                                        passwordVariable: 'JIRA_PASSWORD',
-                                        usernameVariable: 'JIRA_USER')]) {
+                withCredentials(getGithubAndJiraCreds()) {
                         sh '''#!/usr/bin/env bash
 
                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
