@@ -34,13 +34,13 @@ import org.apache.hadoop.util.DataChecksum;
  */
 @DoNotPool
 public class BuiltInGzipDecompressor implements Decompressor {
-  public static final int GZIP_MAGIC_ID = 0x8b1f;  // if read as LE short int
-  public static final int GZIP_DEFLATE_METHOD = 8;
-  public static final int GZIP_FLAGBIT_HEADER_CRC  = 0x02;
-  public static final int GZIP_FLAGBIT_EXTRA_FIELD = 0x04;
-  public static final int GZIP_FLAGBIT_FILENAME    = 0x08;
-  public static final int GZIP_FLAGBIT_COMMENT     = 0x10;
-  public static final int GZIP_FLAGBITS_RESERVED   = 0xe0;
+  private static final int GZIP_MAGIC_ID = 0x8b1f;  // if read as LE short int
+  private static final int GZIP_DEFLATE_METHOD = 8;
+  private static final int GZIP_FLAGBIT_HEADER_CRC  = 0x02;
+  private static final int GZIP_FLAGBIT_EXTRA_FIELD = 0x04;
+  private static final int GZIP_FLAGBIT_FILENAME    = 0x08;
+  private static final int GZIP_FLAGBIT_COMMENT     = 0x10;
+  private static final int GZIP_FLAGBITS_RESERVED   = 0xe0;
 
   // 'true' (nowrap) => Inflater will handle raw deflate stream only
   private Inflater inflater = new Inflater(true);
