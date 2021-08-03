@@ -252,11 +252,18 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         expectedConnectionsMade++; // for FastpathOpen
         expectedGetResponses++;
       } else {
-        // In case of REST and non-mock fastpath
+        // In case of REST and fastpath
         // Network stats calculation: For Creating AbfsInputStream:
         // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
         expectedConnectionsMade++;
         expectedGetResponses++;
+
+        // Fastpath feature is on,
+        // Additional connections for FastpathCreateSession and FastpathOpen
+        if (getDefaultFastpathFeatureStatus()) {
+          expectedConnectionsMade+=2;
+          expectedGetResponses+=2;
+        }
       }
       // --------------------------------------------------------------------
 
@@ -330,6 +337,13 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
         expectedConnectionsMade++;
         expectedGetResponses++;
+
+        // Fastpath feature is on,
+        // Additional connections for FastpathCreateSession and FastpathOpen
+        if (getDefaultFastpathFeatureStatus()) {
+          expectedConnectionsMade+=2;
+          expectedGetResponses+=2;
+        }
       }
 
       // --------------------------------------------------------------------

@@ -69,12 +69,9 @@ public class ReadRequestParameters {
   }
 
   public boolean isFastpathConnection() {
-    if (fastpathSessionInfo == null) {
-      return false;
-    } else {
-      return AbfsConnectionMode.isFastpathConnection(
-          fastpathSessionInfo.getConnectionMode());
-    }
+    return ((fastpathSessionInfo != null)
+        && (AbfsConnectionMode.isFastpathConnection(
+        fastpathSessionInfo.getConnectionMode())));
   }
 
   public AbfsFastpathSessionInfo getAbfsFastpathSessionInfo() {

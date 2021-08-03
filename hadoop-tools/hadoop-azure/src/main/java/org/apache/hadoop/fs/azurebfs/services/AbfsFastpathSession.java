@@ -41,10 +41,10 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_AUTH;
 
 public class AbfsFastpathSession {
-  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
-  private static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
+  protected static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  protected static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
 
-  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+  protected final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
   protected AbfsFastpathSessionInfo fastpathSessionInfo;
   protected AbfsClient client;
@@ -52,9 +52,9 @@ public class AbfsFastpathSession {
   protected String eTag;
   protected TracingContext tracingContext;
 
-  private final ScheduledExecutorService scheduledExecutorService
+  protected final ScheduledExecutorService scheduledExecutorService
       = Executors.newScheduledThreadPool(1);
-  private int sessionRefreshIntervalInSec = -1;
+  protected int sessionRefreshIntervalInSec = -1;
 
   public AbfsFastpathSession(final AbfsClient client,
       final String path,
@@ -69,9 +69,11 @@ public class AbfsFastpathSession {
 
   /**
    * This returns a snap of the current sessionInfo
-   * SessionInfo returned can be updated by request processors,
-   * which should not reflect onto active instance.
-   * @return
+   * SessionInfo updates can happen for various reasons:
+   * 1. Request processing threads are changing connection mode to retry
+   * store request (incase of reads, readAhead threads)
+   * 2. session update (success or failure)
+   * @return abfsFastpathSessionInfo instance
    */
   public AbfsFastpathSessionInfo getCurrentAbfsFastpathSessionInfoCopy() {
     rwLock.readLock().lock();
@@ -210,7 +212,7 @@ public class AbfsFastpathSession {
   }
 
   @VisibleForTesting
-  private boolean fetchFastpathFileHandle() {
+  boolean fetchFastpathFileHandle() {
     try {
       AbfsRestOperation op = executeFastpathOpen();
       String fileHandle
@@ -257,12 +259,5 @@ public class AbfsFastpathSession {
   @VisibleForTesting
   void setConnectionMode(AbfsConnectionMode connMode) {
     updateConnectionMode(connMode);
-  }
-
-  @VisibleForTesting
-  void setAbfsFastpathSessionInfo(AbfsFastpathSessionInfo sessionInfo) {
-    updateAbfsFastpathSessionToken(sessionInfo.getSessionToken(), sessionInfo.getSessionTokenExpiry());
-    updateConnectionMode(sessionInfo.getConnectionMode());
-    updateFastpathFileHandle(sessionInfo.getFastpathFileHandle());
   }
 }

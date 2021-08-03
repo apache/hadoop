@@ -20,7 +20,17 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.UUID;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.junit.Assert;
 
@@ -65,11 +75,50 @@ public class MockAbfsFastpathSession extends AbfsFastpathSession {
       fastpathSsn.fetchFastpathSessionToken();
 
       AbfsFastpathSessionInfo stubbedInfo = fastpathSsn.getCurrentAbfsFastpathSessionInfoCopy();
-      stubbedInfo.setFastpathFileHandle(UUID.randomUUID().toString());
       setAbfsFastpathSessionInfo(stubbedInfo);
+      fetchFastpathFileHandle();
     } catch (Exception ex) {
       Assert.fail(
           "Failure in creating mock AbfsFastpathSessionInfo instance with 5 min validity");
+    }
+  }
+
+  void setAbfsFastpathSessionInfo(AbfsFastpathSessionInfo sessionInfo) {
+    rwLock.writeLock().lock();
+    try {
+      fastpathSessionInfo = sessionInfo;
+      OffsetDateTime utcNow = OffsetDateTime.now(ZoneOffset.UTC);
+      sessionRefreshIntervalInSec = (int) Math.floor(
+          utcNow.until(fastpathSessionInfo.getSessionTokenExpiry(), ChronoUnit.SECONDS)
+              * SESSION_REFRESH_INTERVAL_FACTOR);
+
+      // 0 or negative sessionRefreshIntervalInSec indicates a session token
+      // whose expiry is near as soon as its received. This will end up
+      // generating a lot of REST calls refreshing the session. Better to
+      // switch off Fastpath in that case.
+      if (sessionRefreshIntervalInSec <= 0) {
+        LOG.debug(
+            "Expiry time at present or past. Drop Fastpath session (could be clock skew). Received expiry {} ",
+            fastpathSessionInfo.getSessionTokenExpiry());
+        tracingContext.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
+        fastpathSessionInfo.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
+        return;
+      }
+
+      // schedule for refresh right away
+      ScheduledFuture scheduledFuture =
+          scheduledExecutorService.schedule(new Callable() {
+            public Boolean call() throws Exception {
+              return fetchFastpathSessionToken();
+            }
+          }, sessionRefreshIntervalInSec, TimeUnit.SECONDS);
+      LOG.debug(
+          "Fastpath session token fetch successful, valid till {}. Refresh scheduled after {} secs",
+          fastpathSessionInfo.getSessionTokenExpiry(), sessionRefreshIntervalInSec);
+    } finally {
+      rwLock.writeLock().unlock();
     }
   }
 

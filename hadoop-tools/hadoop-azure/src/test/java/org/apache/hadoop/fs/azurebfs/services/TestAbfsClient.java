@@ -303,6 +303,7 @@ public final class TestAbfsClient {
 
     when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
     when(client.createRequestUrl(any(), any())).thenCallRealMethod();
+    when(client.createRequestUrl(any(), any(), any())).thenCallRealMethod();
     when(client.getAccessToken()).thenCallRealMethod();
     when(client.getSharedKeyCredentials()).thenCallRealMethod();
     when(client.createDefaultHeaders()).thenCallRealMethod();

@@ -161,6 +161,22 @@ public class MockAbfsInputStream extends AbfsInputStream {
   public static AbfsFastpathSession getStubAbfsFastpathSession(final AbfsClient client,
       final String path,
       final String eTag,
+      TracingContext tracingContext,
+  AbfsFastpathSessionInfo ssnInfo) throws Exception {
+    AbfsFastpathSession mockSession = getStubAbfsFastpathSession(client, path, eTag, tracingContext);
+    // set the sessionInfo so that fileHandle and connectionMode are set
+    // (session token and expiry will also get set but they will be rewritten)
+    mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
+        mockSession, "fastpathSessionInfo", ssnInfo);
+    // Overwrite session token and expiry so that refresh of the token is
+    // triggered as well.
+    mockSession.updateAbfsFastpathSessionToken(ssnInfo.getSessionToken(), ssnInfo.getSessionTokenExpiry());
+    return mockSession;
+  }
+
+  public static AbfsFastpathSession getStubAbfsFastpathSession(final AbfsClient client,
+      final String path,
+      final String eTag,
       TracingContext tracingContext) throws Exception {
 
     AbfsFastpathSession mockSession = mock(AbfsFastpathSession.class);
@@ -194,8 +210,6 @@ public class MockAbfsInputStream extends AbfsInputStream {
     doCallRealMethod().when(mockSession)
         .updateConnectionModeForFailures(any(AbfsConnectionMode.class));
     doCallRealMethod().when(mockSession).close();
-    doCallRealMethod().when(mockSession)
-        .setAbfsFastpathSessionInfo(any(AbfsFastpathSessionInfo.class));
     doCallRealMethod().when(mockSession)
         .setConnectionMode(any(AbfsConnectionMode.class));
 

@@ -169,20 +169,19 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
       String currSessionToken = currFastpathSessionInfo.getSessionToken();
 
       // Fetch a mocked session using current values
-      AbfsFastpathSession mockSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
-          currStream.client, currStream.path, currStream.eTag,
-          currStream.tracingContext);
       AbfsFastpathSessionInfo mockSsnInfo = getMockAbfsFastpathSessionInfo(
           currSessionToken,
           currSessionTokenExpiry,
           currFastpathFileHandle,
           AbfsConnectionMode.FASTPATH_CONN);
+      AbfsFastpathSession mockSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
+          currStream.client, currStream.path, currStream.eTag,
+          currStream.tracingContext, mockSsnInfo);
 
       when(mockSsn.executeFetchFastpathSessionToken()).thenThrow(
           new AbfsRestOperationException(400, "", "",
               new Exception("session token fetch failed")));
 
-      mockSsn.setAbfsFastpathSessionInfo(mockSsnInfo);
       currStream.setFastpathSession(mockSsn);
       currFastpathSession.close();
 
