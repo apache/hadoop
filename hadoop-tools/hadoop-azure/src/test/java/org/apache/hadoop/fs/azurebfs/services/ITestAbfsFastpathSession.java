@@ -85,7 +85,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
 
     // Run this test only if feature is set to on
     Assume.assumeTrue(getDefaultFastpathFeatureStatus());
-    Path testPath = new Path("testFastpathSessionTokenFetch");
+    Path testPath = path("testFastpathSessionTokenFetch");
     byte[] fileContent = createTestFileAndRegisterToMock(testPath, EIGHT_MB);
 
     try (FSDataInputStream inputStream = openMockAbfsInputStream(this.getFileSystem(), testPath)) {
@@ -115,7 +115,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
     // Run mock test only if feature is set to off
     Assume.assumeTrue(getDefaultFastpathFeatureStatus());
 
-    Path testPath = new Path("testFastpathSessionRefresh");
+    Path testPath = path("testFastpathSessionRefresh");
     byte[] fileContent = createTestFileAndRegisterToMock(testPath, EIGHT_MB);
 
     try (FSDataInputStream inputStream = openMockAbfsInputStream(this.getFileSystem(), testPath)) {
@@ -178,7 +178,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
     // Run mock test only if feature is set to off
     Assume.assumeTrue(getDefaultFastpathFeatureStatus());
 
-    Path testPath = new Path("testMockFastpathSessionRefreshFail");
+    Path testPath = path("testMockFastpathSessionRefreshFail");
     byte[] fileContent = createTestFileAndRegisterToMock(testPath, EIGHT_MB);
 
     try (FSDataInputStream inputStream = openMockAbfsInputStream(this.getFileSystem(), testPath)) {
@@ -268,7 +268,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
     AbfsClient client = TestAbfsClient.getMockAbfsClient(
         getAbfsClient(getFileSystem()),
         this.getConfiguration());
-    Path testPath = new Path(fileName);
+    Path testPath = path(fileName);
     createTestFileAndRegisterToMock(testPath, ONE_KB);
     try(AbfsInputStream inputStream = getInputStreamWithMockFastpathSession(client, testPath, FIVE_MIN)) {
       AbfsFastpathSession fastpathSsn = inputStream.getFastpathSession();
@@ -362,7 +362,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
         .thenAnswer(answer);
 
     String fileName = "testFailedReadAheadOnFastpath,txt";
-    Path testPath = new Path(fileName);
+    Path testPath = path(fileName);
     createTestFileAndRegisterToMock(testPath, THREE_KB);
     try(AbfsInputStream inputStream = getInputStreamWithMockFastpathSession(client, testPath, FIVE_MIN)) {
       // Initially sessionInfo is valid and is in FASTPATH_CONN mode
