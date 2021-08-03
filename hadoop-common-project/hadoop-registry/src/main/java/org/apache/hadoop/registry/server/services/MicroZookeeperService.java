@@ -229,7 +229,7 @@ public class MicroZookeeperService
     setupSecurity();
 
     FileTxnSnapLog ftxn = new FileTxnSnapLog(dataDir, dataDir);
-    ZooKeeperServer zkServer = new ZooKeeperServer(ftxn, tickTime);
+    ZooKeeperServer zkServer = new ZooKeeperServer(ftxn, tickTime, "");
 
     LOG.info("Starting Local Zookeeper service");
     factory = ServerCnxnFactory.createFactory();
