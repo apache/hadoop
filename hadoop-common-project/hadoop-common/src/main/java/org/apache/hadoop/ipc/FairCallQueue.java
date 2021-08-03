@@ -95,6 +95,8 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
   /**
    * Create a FairCallQueue.
+   * @param priorityLevels the total size of all multi-level queue
+   *                       priority policies
    * @param capacity the total size of all sub-queues
    * @param ns the prefix to use for configuration
    * @param capacityWeights the weights array for capacity allocation
