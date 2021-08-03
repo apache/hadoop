@@ -28,6 +28,11 @@
  * the intent being that at the JSON-level they are compatible.
  * This is to aid testing/validation and support calls, with one single
  * format to load.
+ *
+ * Consult the individual formats for their declarations of access;
+ * the _SUCCESS file is one which tests may use.
  */
-
+@InterfaceStability.Unstable
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;
+
+import org.apache.hadoop.classification.InterfaceStability;

@@ -56,7 +56,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Scale test only (it is big and slow)
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@SuppressWarnings("StaticNonFinalField")
+@SuppressWarnings({"StaticNonFinalField", "OptionalUsedAsFieldOrParameterType"})
 public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
 
   private static final Logger LOG =
@@ -137,8 +137,8 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    */
   private void prepareToTerasort() {
     // small sample size for faster runs
-    terasortPath = new Path("/terasort")
-        .makeQualified(getFileSystem());
+
+    terasortPath = getFileSystem().makeQualified(new Path("/terasort"));
     sortInput = new Path(terasortPath, "sortin");
     sortOutput = new Path(terasortPath, "sortout");
     sortValidate = new Path(terasortPath, "validate");

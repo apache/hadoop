@@ -72,7 +72,7 @@ public final class ManifestCommitterStatisticNames {
       "committer_task_file_count";
 
   /**
-   * File Size
+   * File Size.
    */
   public static final String COMMITTER_FILE_SIZE_MEAN =
       "committer_task_file_size";

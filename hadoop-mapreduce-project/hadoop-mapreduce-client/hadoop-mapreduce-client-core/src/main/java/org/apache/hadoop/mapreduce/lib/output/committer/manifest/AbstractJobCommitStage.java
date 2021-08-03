@@ -393,19 +393,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final Path createNewDirectory(String operation,
       Path path) throws IOException {
-    LOG.debug("{}: creating directory which must not exist {}",
-        operation, path);
-    final FileStatus status = getFileStatusOrNull(path);
-    if (status == null) {
-      mkdirs(path, true);
-      return path;
-    } else {
-      String type = status.isDirectory() ? "directory" : "file";
-      LOG.error("{}: {}: {} exists: {}", this, operation, type, status);
-      throw new FileAlreadyExistsException(
-          this + " " + operation + ": " + path + " exists and is a "
-              + type);
-    }
+    // rely on mkdirs returning false if dir exists as the sign of failure.
+    mkdirs(path, true);
+    return path;
   }
 
   /**
@@ -422,9 +412,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     final FileStatus status = getFileStatus(path);
     if (!status.isDirectory()) {
       throw new PathIOException(path.toString(),
-          operation + ": "
-              + path
-              + "is not a directory; the status of the path is :" + status);
+          operation
+              + ":. Path is not a directory; its status is :" + status);
     }
     return path;
   }
@@ -438,6 +427,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param finalPath final path for rename.
    * @throws IOException failure to load/parse
    */
+  @SuppressWarnings("unchecked")
   protected final <T extends AbstractManifestData> void save(T manifestData,
       final Path tempPath,
       final Path finalPath) throws IOException {

@@ -52,7 +52,7 @@ public abstract class AbstractManifestData<T extends AbstractManifestData>
    * @param path path
    * @return a string value, or, if path==null, null.
    */
-  public static final String marshallPath(@Nullable Path path) {
+  public static String marshallPath(@Nullable Path path) {
     return path != null
         ? path.toUri().toString()
         : null;
@@ -64,7 +64,7 @@ public abstract class AbstractManifestData<T extends AbstractManifestData>
    * @return path value
    * @throws RuntimeException marshalling failure.
    */
-  public static final Path unmarshallPath(String path) {
+  public static Path unmarshallPath(String path) {
     try {
       return new Path(new URI(path));
     } catch (URISyntaxException e) {

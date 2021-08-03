@@ -26,7 +26,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -182,13 +181,12 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
   }
 
   /**
-   * Calculate the total amout of data which will be committed.
+   * Calculate the total amount of data which will be committed.
    * @return the sum of sizes of all files to commit.
    */
   @JsonIgnore
   public long getTotalFileSize() {
-    return filesToCommit.stream().collect(
-        Collectors.summingLong(FileOrDirEntry::getSize));
+    return filesToCommit.stream().mapToLong(FileOrDirEntry::getSize).sum();
   }
 
   public List<FileOrDirEntry> getDirectoriesToCreate() {

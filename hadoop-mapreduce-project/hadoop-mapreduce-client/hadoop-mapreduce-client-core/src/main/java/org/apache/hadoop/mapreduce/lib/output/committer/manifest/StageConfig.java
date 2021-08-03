@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
-import java.util.function.Consumer;
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -192,7 +190,7 @@ public class StageConfig {
    * @return this
    */
   public StageConfig withJobDirectories(final
-      ManifestCommitterSupport.AttemptDirectories dirs) {
+  ManifestCommitterSupport.AttemptDirectories dirs) {
     checkOpen();
     withJobAttemptDir(dirs.getJobAttemptDir())
         .withDestinationDir(dirs.getOutputPath())

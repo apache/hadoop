@@ -149,8 +149,7 @@ public interface StoreOperations extends Closeable {
    * Result.
    * if renamed == false then failureIOE must be non-null.
    */
-   final class MoveToTrashResult {
-
+  final class MoveToTrashResult {
 
     private final MoveToTrashOutcome outcome;
     private final IOException exception;

@@ -150,10 +150,10 @@ may surface in cloud storage.
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 
-The algorithm is one of
+The algorithm is:
 
 1. If `mapreduce.fileoutputcommitter.cleanup.skipped` is true, skip all cleanup.
-2. if `mapreduce.manifest.committer.cleanup.move.to.trash` is true, jump to step #5   
+2. if `mapreduce.manifest.committer.cleanup.move.to.trash` is true, jump to step #5
 3. Attempt parallel task attempt directory delete unless
    `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` is false.
    Any error here is swallowed.
@@ -170,6 +170,3 @@ It's complicated, but the goal is to perform a fast/scalable delete
 fall back to a rename to trash if that fails, and
 throw a meaningful exception if that didn't work.
 
-
-  
- 

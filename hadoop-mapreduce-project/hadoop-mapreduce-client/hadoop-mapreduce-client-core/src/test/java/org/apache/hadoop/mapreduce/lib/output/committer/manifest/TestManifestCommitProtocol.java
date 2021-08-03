@@ -48,12 +48,15 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -106,6 +109,9 @@ public class TestManifestCommitProtocol
 
   private static final String SUB_DIR = "SUB_DIR";
 
+  /**
+   * Part of the name of the output of task attempt 0.
+   */
   protected static final String PART_00000 = "part-m-00000";
 
   private static final Text KEY_1 = new Text("key1");
@@ -122,6 +128,7 @@ public class TestManifestCommitProtocol
    */
   private static final IOStatisticsSnapshot IOSTATISTICS =
       IOStatisticsSupport.snapshotIOStatistics();
+
   /**
    * Job ID for jobs.
    */
@@ -132,19 +139,31 @@ public class TestManifestCommitProtocol
    */
   private final String attempt0;
 
+  /**
+   *  Attempt 0's task attempt ID.
+   */
   private final TaskAttemptID taskAttempt0;
 
+  /**
+   * TA 1.
+   */
+  private final TaskAttemptID taskAttempt1;
+
+  /**
+   * Attempt 1 string value.
+   */
   private final String attempt1;
 
-  private final TaskAttemptID taskAttempt1;
 
   /** A job to abort in test case teardown. */
   private final List<JobData> abortInTeardown = new ArrayList<>(1);
 
   /**
    * Output directory.
+   * This is the directory into which output goes;
+   * all the job files go in _temporary underneath.
    */
-  private Path outDir;
+  private Path outputDir;
 
   /**
    * Committer factory which calls back into
@@ -153,9 +172,14 @@ public class TestManifestCommitProtocol
   private final LocalCommitterFactory
       localCommitterFactory = new LocalCommitterFactory();
 
-  private void cleanupDestDir() throws IOException {
-    if (outDir != null) {
-      getFileSystem().delete(outDir, true);
+  /**
+   * Clean up the output dir. No-op if
+   * {@link #outputDir} is null.
+   * @throws IOException failure to delete
+   */
+  private void cleanupOutputDir() throws IOException {
+    if (outputDir != null) {
+      getFileSystem().delete(outputDir, true);
     }
   }
 
@@ -203,8 +227,8 @@ public class TestManifestCommitProtocol
   public void setup() throws Exception {
     super.setup();
 
-    outDir = path(getMethodName());
-    cleanupDestDir();
+    outputDir = path(getMethodName());
+    cleanupOutputDir();
   }
 
   @Override
@@ -216,12 +240,10 @@ public class TestManifestCommitProtocol
       // and then get its statistics
       IOSTATISTICS.aggregate(jobData.committer.getIOStatistics());
     }
-    if (outDir != null) {
-      try {
-        cleanupDestDir();
-      } catch (IOException e) {
-        log().info("Exception during cleanup", e);
-      }
+    try {
+      cleanupOutputDir();
+    } catch (IOException e) {
+      log().info("Exception during cleanup", e);
     }
     super.teardown();
   }
@@ -263,7 +285,7 @@ public class TestManifestCommitProtocol
    */
   protected ManifestCommitter createCommitter(
       TaskAttemptContext context) throws IOException {
-    return createCommitter(getOutDir(), context);
+    return createCommitter(getOutputDir(), context);
   }
 
   /**
@@ -279,8 +301,8 @@ public class TestManifestCommitProtocol
     return new ManifestCommitter(outputPath, context);
   }
 
-  protected Path getOutDir() {
-    return outDir;
+  protected Path getOutputDir() {
+    return outputDir;
   }
 
   protected String getJobId() {
@@ -324,7 +346,7 @@ public class TestManifestCommitProtocol
    * The normal committer creation factory, uses the abstract methods
    * in the class.
    */
-  public class LocalCommitterFactory implements CommitterFactory {
+  protected class LocalCommitterFactory implements CommitterFactory {
 
     @Override
     public ManifestCommitter createCommitter(TaskAttemptContext context)
@@ -386,11 +408,10 @@ public class TestManifestCommitProtocol
     describe("write output");
     try (DurationInfo d = new DurationInfo(LOG,
         "Writing Text output for task %s", context.getTaskAttemptID())) {
-      TextOutputForTests.LoggingLineRecordWriter<Object, Object>
-          recordWriter = new TextOutputForTests<>().getRecordWriter(
-          context);
-      writeOutput(recordWriter, context);
-      return recordWriter.getDest();
+      TextOutputForTests.LoggingLineRecordWriter<Writable, Object> writer
+          = new TextOutputForTests<Writable, Object>().getRecordWriter(context);
+      writeOutput(writer, context);
+      return writer.getDest();
     }
   }
 
@@ -401,11 +422,12 @@ public class TestManifestCommitProtocol
    * @throws IOException IO failure
    * @throws InterruptedException write interrupted
    */
-  private void writeOutput(RecordWriter writer,
+  private void writeOutput(
+      RecordWriter<Writable, Object> writer,
       TaskAttemptContext context) throws IOException, InterruptedException {
     NullWritable nullWritable = NullWritable.get();
-    try (ManifestCommitterTestSupport.CloseWriter cw =
-             new ManifestCommitterTestSupport.CloseWriter(writer, context)) {
+    try (ManifestCommitterTestSupport.CloseWriter<Writable, Object> cw =
+             new ManifestCommitterTestSupport.CloseWriter<>(writer, context)) {
       writer.write(KEY_1, VAL_1);
       writer.write(null, nullWritable);
       writer.write(null, VAL_1);
@@ -425,13 +447,13 @@ public class TestManifestCommitProtocol
    * @throws IOException IO failure
    * @throws InterruptedException write interrupted
    */
-  private void writeMapFileOutput(RecordWriter writer,
+  private void writeMapFileOutput(RecordWriter<WritableComparable<?>, Writable> writer,
       TaskAttemptContext context) throws IOException, InterruptedException {
     describe("\nWrite map output");
     try (DurationInfo d = new DurationInfo(LOG,
         "Writing Text output for task %s", context.getTaskAttemptID());
-         ManifestCommitterTestSupport.CloseWriter cw =
-             new ManifestCommitterTestSupport.CloseWriter(writer, context)) {
+         ManifestCommitterTestSupport.CloseWriter<WritableComparable<?>, Writable> cw =
+             new ManifestCommitterTestSupport.CloseWriter<>(writer, context)) {
       for (int i = 0; i < 10; ++i) {
         Text val = ((i & 1) == 1) ? VAL_1 : VAL_2;
         writer.write(new LongWritable(i), val);
@@ -444,7 +466,7 @@ public class TestManifestCommitProtocol
   /**
    * Details on a job for use in {@code startJob} and elsewhere.
    */
-  public static class JobData {
+  protected static final class JobData {
 
     private final Job job;
 
@@ -481,7 +503,7 @@ public class TestManifestCommitProtocol
    * @throws IOException failure
    */
   public Job newJob() throws IOException {
-    return newJob(outDir, getConfiguration(), attempt0);
+    return newJob(outputDir, getConfiguration(), attempt0);
   }
 
   /**
@@ -574,7 +596,7 @@ public class TestManifestCommitProtocol
       committer.setupJob(jContext);
     }
     setupCommitter(committer, tContext);
-    describe("setup complete\n");
+    describe("setup complete");
   }
 
   private void setupCommitter(
@@ -730,6 +752,13 @@ public class TestManifestCommitProtocol
     committer2.abortJob(jContext2, JobStatus.State.KILLED);
   }
 
+  /**
+   * Assert that the task attempt FS Doesn't have a task attempt
+   * directory.
+   * @param committer committer
+   * @param context task context
+   * @throws IOException IO failure.
+   */
   protected void assertTaskAttemptPathDoesNotExist(
       ManifestCommitter committer, TaskAttemptContext context)
       throws IOException {
@@ -872,13 +901,13 @@ public class TestManifestCommitProtocol
 
     // this is only task commit; there MUST be no part- files in the dest dir
     try {
-      RemoteIterators.foreach(getFileSystem().listFiles(outDir, false),
+      RemoteIterators.foreach(getFileSystem().listFiles(outputDir, false),
           (status) ->
               assertFalse("task committed file to dest :" + status,
                   status.getPath().toString().contains("part")));
     } catch (FileNotFoundException ignored) {
       log().info("Outdir {} is not created by task commit phase ",
-          outDir);
+          outputDir);
     }
 
     describe("3. Committing job");
@@ -888,7 +917,7 @@ public class TestManifestCommitProtocol
     // validate output
     describe("4. Validating content");
     String jobUniqueId = jobData.jobId();
-    ManifestSuccessData successData = validateContent(outDir,
+    ManifestSuccessData successData = validateContent(outputDir,
         true,
         jobUniqueId);
     // look in the SUMMARY
@@ -899,13 +928,13 @@ public class TestManifestCommitProtocol
     // manifest
     verifyStatisticCounterValue(jobStats,
         OP_LOAD_MANIFEST, 1);
-    FileStatus st = getFileSystem().getFileStatus(getPart0000(outDir));
+    FileStatus st = getFileSystem().getFileStatus(getPart0000(outputDir));
     verifyStatisticCounterValue(jobStats,
         COMMITTER_FILES_COMMITTED_COUNT, filesCreated);
     verifyStatisticCounterValue(jobStats,
         COMMITTER_BYTES_COMMITTED_COUNT, st.getLen());
 
-    // now load an examine the job report.
+    // now load and examine the job report.
     // this MUST contain all the stats of the summary, plus timings on
     // job commit itself
 
@@ -958,7 +987,7 @@ public class TestManifestCommitProtocol
     commit(committer, jContext, tContext);
 
     // validate output
-    validateContent(outDir, shouldExpectSuccessMarker(),
+    validateContent(outputDir, shouldExpectSuccessMarker(),
         committer.getJobUniqueId());
 
     // commit task to fail on retry as task attempt dir doesn't exist
@@ -972,8 +1001,7 @@ public class TestManifestCommitProtocol
    * committed, MUST NOT be visible in the final output.
    * <p></p>
    * What's important is not just that only one TA must succeed,
-   * but it must be the last one executed. Why? because that's
-   * the one
+   * but it must be the last one executed.
    */
   @Test
   public void testTwoTaskAttemptsCommit() throws Exception {
@@ -1028,15 +1056,15 @@ public class TestManifestCommitProtocol
 
     // validate output
     FileSystem fs = getFileSystem();
-    ManifestSuccessData successData = validateSuccessFile(outDir, fs, "query",
+    ManifestSuccessData successData = validateSuccessFile(outputDir, fs, "query",
         1,
         "");
     Assertions.assertThat(successData.getFilenames())
         .describedAs("Files committed")
         .hasSize(1);
 
-    assertPathExists("attempt2 output", new Path(outDir, name2));
-    assertPathDoesNotExist("attempt1 output", new Path(outDir, name1));
+    assertPathExists("attempt2 output", new Path(outputDir, name2));
+    assertPathDoesNotExist("attempt1 output", new Path(outputDir, name1));
 
   }
 
@@ -1117,29 +1145,26 @@ public class TestManifestCommitProtocol
   }
 
   /**
-   * Simulate a failure on the first job commit; expect the
-   * second to succeed.
+   * Commit a taslk with no output.
+   * Dest dir should exist.
    */
-  /*@Test
+  @Test
   public void testCommitterWithNoOutputs() throws Exception {
     describe("Have a task and job with no outputs: expect success");
-    JobData jobData = startJob(new FailingCommitterFactory(), false);
+    JobData jobData = startJob(localCommitterFactory, false);
     TaskAttemptContext tContext = jobData.tContext;
     ManifestCommitter committer = jobData.committer;
 
     // do commit
     committer.commitTask(tContext);
-    assertTaskAttemptPathDoesNotExist(committer, tContext);
+    Path attemptPath = committer.getTaskAttemptPath(tContext);
+    ContractTestUtils.assertPathExists(
+        attemptPath.getFileSystem(tContext.getConfiguration()),
+        "task attempt dir",
+        attemptPath);
   }
-*/
-  /*
-  protected static void expectSimulatedFailureOnJobCommit(JobContext jContext,
-      ManifestCommitter committer) throws Exception {
-    ((CommitterFaultInjection) committer).setFaults(
-        CommitterFaultInjection.Faults.commitJob);
-    expectJobCommitFailure(jContext, committer,
-        CommitterFaultInjectionImpl.Failure.class);
-  }*/
+
+
   @Test
   public void testMapFileOutputCommitter() throws Exception {
     describe("Test that the committer generates map output into a directory\n" +
@@ -1151,27 +1176,27 @@ public class TestManifestCommitProtocol
     Configuration conf = jobData.conf;
 
     // write output
-    writeMapFileOutput(new MapFileOutputFormat().getRecordWriter(tContext),
-        tContext);
+    writeMapFileOutput(new MapFileOutputFormat()
+            .getRecordWriter(tContext), tContext);
 
     // do commit
     commit(committer, jContext, tContext);
     FileSystem fs = getFileSystem();
 
-    lsR(fs, outDir, true);
-    String ls = ls(outDir);
+    lsR(fs, outputDir, true);
+    String ls = ls(outputDir);
     describe("\nvalidating");
 
     // validate output
-    verifySuccessMarker(outDir, committer.getJobUniqueId());
+    verifySuccessMarker(outputDir, committer.getJobUniqueId());
 
-    describe("validate output of %s", outDir);
-    validateMapFileOutputContent(fs, outDir);
+    describe("validate output of %s", outputDir);
+    validateMapFileOutputContent(fs, outputDir);
 
     // Ensure getReaders call works and also ignores
     // hidden filenames (_ or . prefixes)
     describe("listing");
-    FileStatus[] filtered = fs.listStatus(outDir, HIDDEN_FILE_FILTER);
+    FileStatus[] filtered = fs.listStatus(outputDir, HIDDEN_FILE_FILTER);
     assertEquals("listed children under " + ls,
         1, filtered.length);
     FileStatus fileStatus = filtered[0];
@@ -1180,19 +1205,19 @@ public class TestManifestCommitProtocol
 
     describe("getReaders()");
     assertEquals("Number of MapFile.Reader entries with shared FS "
-            + outDir + " : " + ls,
-        1, getReaders(fs, outDir, conf).length);
+            + outputDir + " : " + ls,
+        1, getReaders(fs, outputDir, conf).length);
 
     describe("getReaders(new FS)");
-    FileSystem fs2 = FileSystem.get(outDir.toUri(), conf);
+    FileSystem fs2 = FileSystem.get(outputDir.toUri(), conf);
     assertEquals("Number of MapFile.Reader entries with shared FS2 "
-            + outDir + " : " + ls,
-        1, getReaders(fs2, outDir, conf).length);
+            + outputDir + " : " + ls,
+        1, getReaders(fs2, outputDir, conf).length);
 
     describe("MapFileOutputFormat.getReaders");
     assertEquals("Number of MapFile.Reader entries with new FS in "
-            + outDir + " : " + ls,
-        1, MapFileOutputFormat.getReaders(outDir, conf).length);
+            + outputDir + " : " + ls,
+        1, MapFileOutputFormat.getReaders(outputDir, conf).length);
   }
 
   /** Open the output generated by this format. */
@@ -1249,7 +1274,7 @@ public class TestManifestCommitProtocol
           // step 2: commit the job
           createCommitter(tContext).commitJob(tContext);
           // verify that no output can be observed
-          assertPart0000DoesNotExist(outDir);
+          assertPart0000DoesNotExist(outputDir);
           // that includes, no pending MPUs; commitJob is expected to
           // cancel any.
 
@@ -1278,7 +1303,6 @@ public class TestManifestCommitProtocol
    * Base assertions
    * <ul>
    *   <li>Output dir is absent or, if present, empty</li>
-   *   <li>No pending MPUs to/under the output dir</li>
    * </ul>
    * @param jobData job data
    * @throws Exception failure
@@ -1286,14 +1310,14 @@ public class TestManifestCommitProtocol
   public void assertJobAbortCleanedUp(JobData jobData) throws Exception {
     FileSystem fs = getFileSystem();
     try {
-      FileStatus[] children = listChildren(fs, outDir);
+      FileStatus[] children = listChildren(fs, outputDir);
       if (children.length != 0) {
-        lsR(fs, outDir, true);
+        lsR(fs, outputDir, true);
       }
-      assertArrayEquals("Output directory not empty " + ls(outDir),
+      assertArrayEquals("Output directory not empty " + ls(outputDir),
           new FileStatus[0], children);
     } catch (FileNotFoundException e) {
-      // this is a valid failure mode; it means the dest dir doesn't exist yet.
+      // this is a valid state; it means the dest dir doesn't exist yet.
     }
 
   }
@@ -1311,9 +1335,9 @@ public class TestManifestCommitProtocol
 
     committer.getJobAttemptPath(jContext);
     committer.getTaskAttemptPath(tContext);
-    assertPart0000DoesNotExist(outDir);
-    assertSuccessMarkerDoesNotExist(outDir);
-    describe("Aborting job into %s", outDir);
+    assertPart0000DoesNotExist(outputDir);
+    assertSuccessMarkerDoesNotExist(outputDir);
+    describe("Aborting job into %s", outputDir);
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
 
@@ -1383,7 +1407,7 @@ public class TestManifestCommitProtocol
   @Test
   public void testConcurrentCommitTaskWithSubDir() throws Exception {
     Job job = newJob();
-    FileOutputFormat.setOutputPath(job, outDir);
+    FileOutputFormat.setOutputPath(job, outputDir);
     final Configuration conf = job.getConfiguration();
 
     final JobContext jContext =
@@ -1396,10 +1420,11 @@ public class TestManifestCommitProtocol
     taCtx[0] = new TaskAttemptContextImpl(conf, taskAttempt0);
     taCtx[1] = new TaskAttemptContextImpl(conf, taskAttempt1);
 
-    final TextOutputFormat[] tof = new TextOutputForTests[2];
+    final TextOutputFormat<Writable, Object>[] tof =
+        new TextOutputForTests[2];
 
     for (int i = 0; i < tof.length; i++) {
-      tof[i] = new TextOutputForTests() {
+      tof[i] = new TextOutputForTests<Writable, Object>() {
         @Override
         public Path getDefaultWorkFile(
             TaskAttemptContext context,
@@ -1420,9 +1445,7 @@ public class TestManifestCommitProtocol
           final OutputCommitter outputCommitter =
               tof[taskIdx].getOutputCommitter(taCtx[taskIdx]);
           outputCommitter.setupTask(taCtx[taskIdx]);
-          final RecordWriter rw =
-              tof[taskIdx].getRecordWriter(taCtx[taskIdx]);
-          writeOutput(rw, taCtx[taskIdx]);
+          writeOutput(tof[taskIdx].getRecordWriter(taCtx[taskIdx]), taCtx[taskIdx]);
           describe("Committing Task %d", taskIdx);
           outputCommitter.commitTask(taCtx[taskIdx]);
           return null;
@@ -1440,9 +1463,9 @@ public class TestManifestCommitProtocol
 
     describe("\nCommitting Job");
     amCommitter.commitJob(jContext);
-    assertPathExists("base output directory", outDir);
-    assertPart0000DoesNotExist(outDir);
-    Path outSubDir = new Path(outDir, SUB_DIR);
+    assertPathExists("base output directory", outputDir);
+    assertPart0000DoesNotExist(outputDir);
+    Path outSubDir = new Path(outputDir, SUB_DIR);
     assertPathDoesNotExist("Must not end up with sub_dir/sub_dir",
         new Path(outSubDir, SUB_DIR));
 
@@ -1476,7 +1499,7 @@ public class TestManifestCommitProtocol
   public void testOutputFormatIntegration() throws Throwable {
     Configuration conf = getConfiguration();
     Job job = newJob();
-    assertCommitterFactoryIsManifestCommitter(job, outDir);
+    assertCommitterFactoryIsManifestCommitter(job, outputDir);
     job.setOutputFormatClass(TextOutputForTests.class);
     conf = job.getConfiguration();
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt0);
@@ -1484,8 +1507,9 @@ public class TestManifestCommitProtocol
     JobContext jContext = new JobContextImpl(conf, taskAttempt0.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf,
         taskAttempt0);
-    TextOutputForTests outputFormat = (TextOutputForTests)
-        ReflectionUtils.newInstance(tContext.getOutputFormatClass(), conf);
+    TextOutputForTests<IntWritable, IntWritable> outputFormat =
+        (TextOutputForTests<IntWritable, IntWritable>)
+            ReflectionUtils.newInstance(tContext.getOutputFormatClass(), conf);
     ManifestCommitter committer = (ManifestCommitter)
         outputFormat.getOutputCommitter(tContext);
 
@@ -1493,7 +1517,7 @@ public class TestManifestCommitProtocol
     JobData jobData = new JobData(job, jContext, tContext, committer);
     setupJob(jobData);
     abortInTeardown(jobData);
-    TextOutputForTests.LoggingLineRecordWriter recordWriter
+    TextOutputForTests.LoggingLineRecordWriter<IntWritable, IntWritable> recordWriter
         = outputFormat.getRecordWriter(tContext);
     IntWritable iw = new IntWritable(1);
     recordWriter.write(iw, iw);
@@ -1522,7 +1546,7 @@ public class TestManifestCommitProtocol
         ioStatisticsSourceToString(committer));
 
     // validate output
-    ManifestSuccessData successData = verifySuccessMarker(outDir,
+    ManifestSuccessData successData = verifySuccessMarker(outputDir,
         committer.getJobUniqueId());
 
     // the task commit count should get through the job commit
@@ -1537,23 +1561,23 @@ public class TestManifestCommitProtocol
    * a task. This mimics the action of an AM when a container fails and
    * the AM wants to abort the task attempt.
    */
-/*  @Test
+  @Test
   public void testAMWorkflow() throws Throwable {
     describe("Create a committer with a null output path & use as an AM");
     JobData jobData = startJob(true);
     JobContext jContext = jobData.jContext;
     TaskAttemptContext tContext = jobData.tContext;
 
-    TaskAttemptContext newAttempt = taskAttemptForJob(
-        MRBuilderUtils.newJobId(1, 1, 1), jContext);
+    TaskAttemptContext newAttempt = new TaskAttemptContextImpl(
+        jContext.getConfiguration(),
+        taskAttempt0);
     Configuration conf = jContext.getConfiguration();
 
     // bind
     TextOutputForTests.bind(conf);
 
     OutputFormat<?, ?> outputFormat
-        = ReflectionUtils.newInstance(newAttempt
-        .getOutputFormatClass(), conf);
+        = ReflectionUtils.newInstance(newAttempt.getOutputFormatClass(), conf);
     Path outputPath = FileOutputFormat.getOutputPath(newAttempt);
     assertNotNull("null output path in new task attempt", outputPath);
 
@@ -1561,7 +1585,11 @@ public class TestManifestCommitProtocol
         outputFormat.getOutputCommitter(newAttempt);
     committer2.abortTask(tContext);
 
-  }*/
+  }
+
+  /**
+   * Make sure that two jobs in parallel directory trees coexist.
+   */
   @Test
   public void testParallelJobsToAdjacentPaths() throws Throwable {
 
@@ -1579,8 +1607,8 @@ public class TestManifestCommitProtocol
     String attempt21 = "attempt_" + jobId2 + "_m_000001_0";
     TaskAttemptID taskAttempt21 = TaskAttemptID.forName(attempt21);
 
-    Path job1Dest = outDir;
-    Path job2Dest = new Path(getOutDir().getParent(),
+    Path job1Dest = outputDir;
+    Path job2Dest = new Path(getOutputDir().getParent(),
         getMethodName() + "job2Dest");
     // little safety check
     assertNotEquals(job1Dest, job2Dest);
@@ -1631,10 +1659,10 @@ public class TestManifestCommitProtocol
       // clean things up in test failures.
       FileSystem fs = getFileSystem();
       if (committer1 != null) {
-        fs.delete(committer1.getOutputPath());
+        fs.delete(committer1.getOutputPath(), true);
       }
       if (committer2 != null) {
-        fs.delete(committer2.getOutputPath());
+        fs.delete(committer2.getOutputPath(), true);
       }
     }
 

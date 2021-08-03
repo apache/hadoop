@@ -414,12 +414,20 @@ public class ManifestSuccessData
     setIOStatistics(IOStatisticsSupport.snapshotIOStatistics(iostats));
   }
 
-  public boolean getSuccess() {
-    return success;
-  }
-
+  /**
+   * Set the success flag.
+   * @param success did the job succeed?
+   */
   public void setSuccess(boolean success) {
     this.success = success;
+  }
+
+  /**
+   * Get the success flag.
+   * @return did the job succeed?
+   */
+  public boolean getSuccess() {
+    return success;
   }
 
   public String getState() {
@@ -433,12 +441,12 @@ public class ManifestSuccessData
   /**
    * Note a failure by setting success flag to false,
    * then add the exception to the diagnostics.
-   * @param t throwable
+   * @param thrown throwable
    */
-  public void jobFailure(Throwable t) {
+  public void recordJobFailure(Throwable thrown) {
     setSuccess(false);
-    String stacktrace = ExceptionUtils.getStackTrace(t);
-    diagnostics.put(DiagnosticKeys.EXCEPTION, t.toString());
+    String stacktrace = ExceptionUtils.getStackTrace(thrown);
+    diagnostics.put(DiagnosticKeys.EXCEPTION, thrown.toString());
     diagnostics.put(DiagnosticKeys.STACKTRACE, stacktrace);
   }
 }

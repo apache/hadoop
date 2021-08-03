@@ -672,7 +672,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
         createJobSummaryFilename(config.getJobUniqueId()));
 
     if (thrown != null) {
-      report.jobFailure(thrown);
+      report.recordJobFailure(thrown);
     }
     report.putDiagnostic(STAGE, activeStage);
     try (StoreOperations operations =
@@ -694,7 +694,6 @@ public class ManifestCommitter extends PathOutputCommitter implements
       return path;
     } catch (IOException e) {
       LOG.debug("Failed to save summary to {}", path, e);
-      
       if (quiet) {
         return null;
       } else {

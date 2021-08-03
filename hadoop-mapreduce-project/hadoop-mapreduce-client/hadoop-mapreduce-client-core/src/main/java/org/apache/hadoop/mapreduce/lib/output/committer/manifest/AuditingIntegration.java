@@ -18,19 +18,24 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+/*
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_STAGE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_TASK_ATTEMPT_ID;
+*/
 
 /**
  * Helper class to support integration with Hadoop 3.3.2+ Auditing.
  * This MUST BE the sole place where fs.audit methods are used, so can be replaced
  * by a stub class on any backport.
+ * All use of auditing is currently commented out so it *is the stub*
  */
-public class AuditingIntegration {
+public final class AuditingIntegration {
+  private AuditingIntegration() {
+  }
 
   /**
    * Add jobID to current context; also
@@ -38,6 +43,7 @@ public class AuditingIntegration {
    */
   public static void updateCommonContextOnCommitterEntry(
       ManifestCommitterConfig committerConfig) {
+/*
     CommonAuditContext context = currentAuditContext();
     context.put(AuditConstants.PARAM_JOB_ID,
         committerConfig.getJobUniqueId());
@@ -47,6 +53,7 @@ public class AuditingIntegration {
           committerConfig.getTaskAttemptId());
 
     }
+*/
   }
 
   /**
@@ -56,14 +63,18 @@ public class AuditingIntegration {
    * @param stage new stage
    */
   public static void enterStage(String stage) {
+/*
     currentAuditContext().put(CONTEXT_ATTR_STAGE, stage);
+*/
   }
 
   /**
    * Remove stage from common audit context.
    */
   public static void exitStage() {
+/*
     currentAuditContext().remove(CONTEXT_ATTR_STAGE);
+*/
   }
 
   /**
@@ -75,8 +86,10 @@ public class AuditingIntegration {
    * @param stage stage name.
    */
   public static void enterStageWorker(String jobId, String stage) {
+/*
       CommonAuditContext context = currentAuditContext();
       context.put(AuditConstants.PARAM_JOB_ID, jobId);
       context.put(CONTEXT_ATTR_STAGE, stage);
+*/
   }
 }

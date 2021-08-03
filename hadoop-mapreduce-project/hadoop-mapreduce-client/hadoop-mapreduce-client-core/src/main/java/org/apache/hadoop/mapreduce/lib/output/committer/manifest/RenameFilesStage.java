@@ -50,7 +50,7 @@ public class RenameFilesStage extends
   /**
    * List of all files committed.
    */
-  private List<FileOrDirEntry> filesCommitted = new ArrayList<>();
+  private final List<FileOrDirEntry> filesCommitted = new ArrayList<>();
 
   /**
    * Total file size.
@@ -88,9 +88,6 @@ public class RenameFilesStage extends
   protected ManifestSuccessData executeStage(
       final List<TaskManifest> taskManifests)
       throws IOException {
-
-    // set the list of files to be as big as the number of tasks.
-    filesCommitted = new ArrayList<>(taskManifests.size());
 
     final ManifestSuccessData success = createManifestOutcome(getStageConfig(),
         OP_STAGE_JOB_COMMIT);

@@ -215,13 +215,13 @@ public final class ManifestCommitterTestSupport {
    * Closeable which can be used to safely close writers in
    * a try-with-resources block..
    */
-  public static class CloseWriter implements AutoCloseable {
+  public static final class CloseWriter<K, V> implements AutoCloseable {
 
-    private final RecordWriter writer;
+    private final RecordWriter<K, V> writer;
 
     private final TaskAttemptContext context;
 
-    public CloseWriter(RecordWriter writer,
+    public CloseWriter(RecordWriter<K, V> writer,
         TaskAttemptContext context) {
       this.writer = writer;
       this.context = context;
@@ -245,7 +245,7 @@ public final class ManifestCommitterTestSupport {
    * Creates a random JobID and then as many tasks
    * with the specific number of task attempts.
    */
-  public static class JobAndTaskIDsForTests {
+  public static final class JobAndTaskIDsForTests {
 
     /** Job ID; will be created uniquely for each instance. */
     private final String jobId;
