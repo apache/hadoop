@@ -87,6 +87,11 @@ public class MockFastpathConnection
       = new HashMap<String, ByteBuffer>();
 
   int bufferOffset;
+  static boolean testMockSoEnabled;
+
+  public static void setTestMock(boolean testMockSoEnabled) {
+    MockFastpathConnection.testMockSoEnabled = testMockSoEnabled;
+  }
 
   public MockFastpathConnection() throws FastpathConnectionException {
     super(true);
@@ -257,7 +262,7 @@ public class MockFastpathConnection
   }
 
   protected FastpathDriver getNativeApiCaller() {
-    return nativeApiCaller;
+    return testMockSoEnabled? super.getNativeApiCaller() : nativeApiCaller;
   }
 
   private void checkIfExceptionShouldbeThrown() throws FastpathException {
