@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.tools;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +65,8 @@ import static org.apache.hadoop.tools.DistCpConstants
  * Note: The SimpleCopyListing doesn't handle wild-cards in the input-paths.
  */
 public class SimpleCopyListing extends CopyListing {
-  private static final Logger LOG = LoggerFactory.getLogger(SimpleCopyListing.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SimpleCopyListing.class);
 
   public static final int DEFAULT_FILE_STATUS_SIZE = 1000;
   public static final boolean DEFAULT_RANDOMIZE_FILE_LISTING = true;
@@ -601,7 +602,7 @@ public class SimpleCopyListing extends CopyListing {
   }
 
   private void printStats() {
-    LOG.info("Paths (files+dirs) cnt = {}; dirCnt = ", totalPaths, totalDirs);
+    LOG.info("Paths (files+dirs) cnt = {}; dirCnt = {}", totalPaths, totalDirs);
   }
 
   private void maybePrintStats() {

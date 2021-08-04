@@ -27,11 +27,12 @@ import static org.junit.Assert.assertNotEquals;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 public class TestECSchema {
 
   @Rule
-  public Timeout globalTimeout = new Timeout(300000);
+  public Timeout globalTimeout = new Timeout(300000, TimeUnit.MILLISECONDS);
 
   @Test
   public void testGoodSchema() {

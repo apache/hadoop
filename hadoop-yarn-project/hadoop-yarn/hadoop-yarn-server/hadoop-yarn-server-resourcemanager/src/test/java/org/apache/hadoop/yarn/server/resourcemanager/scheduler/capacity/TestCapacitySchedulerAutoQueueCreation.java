@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -77,6 +75,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -141,8 +141,8 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateInitialQueueEntitlement(parentQueue, USER0,
           expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
-      validateUserAndAppLimits(autoCreatedLeafQueue, 1000, 1000);
-      validateContainerLimits(autoCreatedLeafQueue);
+      validateUserAndAppLimits(autoCreatedLeafQueue, 4000, 4000);
+      validateContainerLimits(autoCreatedLeafQueue, 6, 10240);
 
       assertTrue(autoCreatedLeafQueue
           .getOrderingPolicy() instanceof FairOrderingPolicy);
@@ -165,6 +165,35 @@ public class TestCapacitySchedulerAutoQueueCreation
           expectedChildQueueAbsCapacity,
           new HashSet<String>() {{ add(NO_LABEL); }});
 
+    } finally {
+      cleanupQueue(USER0);
+      cleanupQueue(TEST_GROUPUSER);
+    }
+  }
+
+  @Test(timeout = 20000)
+  public void testAutoCreateLeafQueueCreationSchedulerMaximumAllocation()
+      throws Exception {
+    try {
+      // Check the minimum/maximum allocation settings via the
+      // yarn.scheduler.minimum/maximum-allocation-mb/vcore property
+      setSchedulerMinMaxAllocation(cs.getConfiguration());
+      cs.getConfiguration().setAutoCreatedLeafQueueConfigMaximumAllocation(C,
+          "memory-mb=18384,vcores=8");
+      cs.reinitialize(cs.getConfiguration(), mockRM.getRMContext());
+
+      // submit an app
+      submitApp(mockRM, cs.getQueue(PARENT_QUEUE), USER0, USER0, 1, 1);
+
+      // check preconditions
+      List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
+      assertEquals(1, appsInC.size());
+      assertNotNull(cs.getQueue(USER0));
+
+      AutoCreatedLeafQueue autoCreatedLeafQueue =
+          (AutoCreatedLeafQueue) cs.getQueue(USER0);
+
+      validateContainerLimits(autoCreatedLeafQueue, 8, 18384);
     } finally {
       cleanupQueue(USER0);
       cleanupQueue(TEST_GROUPUSER);
@@ -911,7 +940,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       AutoCreatedLeafQueue user0Queue = (AutoCreatedLeafQueue) newCS.getQueue(
           USER1);
       validateCapacities(user0Queue, 0.5f, 0.15f, 1.0f, 0.5f);
-      validateUserAndAppLimits(user0Queue, 1500, 1500);
+      validateUserAndAppLimits(user0Queue, 4000, 4000);
 
       //update leaf queue template capacities
       conf.setAutoCreatedLeafQueueConfigCapacity(C, 30f);
@@ -919,7 +948,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       newCS.reinitialize(conf, newMockRM.getRMContext());
       validateCapacities(user0Queue, 0.3f, 0.09f, 0.4f, 0.2f);
-      validateUserAndAppLimits(user0Queue, 900, 900);
+      validateUserAndAppLimits(user0Queue, 4000, 4000);
 
       //submit app1 as USER3
       submitApp(newMockRM, parentQueue, USER3, USER3, 3, 1);
@@ -927,7 +956,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           (AutoCreatedLeafQueue) newCS.getQueue(USER1);
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
-      validateUserAndAppLimits(user3Queue, 900, 900);
+      validateUserAndAppLimits(user3Queue, 4000, 4000);
 
       //submit app1 as USER1 - is already activated. there should be no diff
       // in capacities
@@ -935,8 +964,8 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
-      validateUserAndAppLimits(user3Queue, 900, 900);
-      validateContainerLimits(user3Queue);
+      validateUserAndAppLimits(user3Queue, 4000, 4000);
+      validateContainerLimits(user3Queue, 6, 10240);
 
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
           (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)

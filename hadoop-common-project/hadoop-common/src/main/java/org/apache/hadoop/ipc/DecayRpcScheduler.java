@@ -193,6 +193,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final String namespace;
   private final int topUsersCount; // e.g., report top 10 users' metrics
   private static final double PRECISION = 0.0001;
+  private final TimeUnit metricsTimeUnit;
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
   private final Map<String, Integer> staticPriorities = new HashMap<>();
@@ -266,6 +267,8 @@ public class DecayRpcScheduler implements RpcScheduler,
         DecayRpcSchedulerDetailedMetrics.create(ns);
     decayRpcSchedulerDetailedMetrics.init(numLevels);
 
+    metricsTimeUnit = RpcMetrics.getMetricsTimeUnit(conf);
+
     // Setup delay timer
     Timer timer = new Timer(true);
     DecayTask task = new DecayTask(this, timer);
@@ -279,6 +282,18 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<CostProvider> providers = conf.getInstances(
         ns + "." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY,
         CostProvider.class);
+
+    if (providers.size() < 1) {
+      String[] nsPort = ns.split("\\.");
+      if (nsPort.length == 2) {
+        // Only if ns is split with ".", we can separate namespace and port.
+        // In the absence of "ipc.<port>.cost-provider.impl" property,
+        // we look up "ipc.cost-provider.impl" property.
+        providers = conf.getInstances(
+            nsPort[0] + "." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY,
+            CostProvider.class);
+      }
+    }
 
     if (providers.size() < 1) {
       LOG.info("CostProvider not specified, defaulting to DefaultCostProvider");
@@ -299,6 +314,18 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<IdentityProvider> providers = conf.getInstances(
       ns + "." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
+
+    if (providers.size() < 1) {
+      String[] nsPort = ns.split("\\.");
+      if (nsPort.length == 2) {
+        // Only if ns is split with ".", we can separate namespace and port.
+        // In the absence of "ipc.<port>.identity-provider.impl" property,
+        // we look up "ipc.identity-provider.impl" property.
+        providers = conf.getInstances(
+            nsPort[0] + "." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
+            IdentityProvider.class);
+      }
+    }
 
     if (providers.size() < 1) {
       LOG.info("IdentityProvider not specified, " +
@@ -628,7 +655,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<AtomicLong> costList = callCosts.get(identity);
     long currentCost = costList == null ? 0 : costList.get(0).get();
     int priority = computePriorityLevel(currentCost, identity);
-    LOG.debug("compute priority for {} priority {}", identity, priority);
+    LOG.debug("compute priority for identity: {}={}", identity,
+        priority);
     return priority;
   }
 
@@ -666,7 +694,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   void setPriorityLevel(UserGroupInformation ugi, int priority) {
     String identity = getIdentity(newSchedulable(ugi));
     priority = Math.min(numLevels - 1, priority);
-    LOG.info("Setting priority for user:" + identity + "=" + priority);
+    LOG.info("Setting priority for user: {}={}", identity, priority);
     staticPriorities.put(identity, priority);
   }
 
@@ -724,8 +752,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
-    long processingTime = details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+    long queueTime = details.get(Timing.QUEUE, metricsTimeUnit);
+    long processingTime = details.get(Timing.PROCESSING,
+        metricsTimeUnit);
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);
@@ -735,11 +764,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     responseTimeCountInCurrWindow.getAndIncrement(priorityLevel);
     responseTimeTotalInCurrWindow.getAndAdd(priorityLevel,
         queueTime+processingTime);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("addResponseTime for call: {}  priority: {} queueTime: {} " +
-          "processingTime: {} ", callName, priorityLevel, queueTime,
-          processingTime);
-    }
+    LOG.debug("addResponseTime for call: {}  priority: {} queueTime: {} " +
+        "processingTime: {} ", callName, priorityLevel, queueTime,
+        processingTime);
   }
 
   // Update the cached average response time at the end of the decay window
@@ -763,10 +790,8 @@ public class DecayRpcScheduler implements RpcScheduler,
         responseTimeAvgInLastWindow.set(i, 0);
       }
       responseTimeCountInLastWindow.set(i, responseTimeCount);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("updateAverageResponseTime queue: {} Average: {} Count: {}",
-            i, averageResponseTime, responseTimeCount);
-      }
+      LOG.debug("updateAverageResponseTime queue: {} Average: {} Count: {}",
+          i, averageResponseTime, responseTimeCount);
       // Reset for next decay window
       responseTimeTotalInCurrWindow.set(i, 0);
       responseTimeCountInCurrWindow.set(i, 0);

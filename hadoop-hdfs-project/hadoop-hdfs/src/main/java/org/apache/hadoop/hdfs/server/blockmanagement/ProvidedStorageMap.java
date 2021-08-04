@@ -75,11 +75,9 @@ public class ProvidedStorageMap {
   private final ProvidedDescriptor providedDescriptor;
   private final DatanodeStorageInfo providedStorageInfo;
   private boolean providedEnabled;
-  private long capacity;
   private int defaultReplication;
 
-  ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf)
-      throws IOException {
+  ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf) {
 
     storageId = conf.get(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID,
         DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT);

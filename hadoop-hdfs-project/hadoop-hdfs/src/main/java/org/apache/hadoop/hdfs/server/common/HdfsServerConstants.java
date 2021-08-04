@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.Validate;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -287,6 +288,10 @@ public interface HdfsServerConstants {
     /** Temporary replica: created for replication and relocation only. */
     TEMPORARY(4);
 
+    // Since ReplicaState (de)serialization depends on ordinal, either adding
+    // new value should be avoided to this enum or newly appended value should
+    // be handled by NameNodeLayoutVersion#Feature.
+
     private static final ReplicaState[] cachedValues = ReplicaState.values();
 
     private final int value;
@@ -299,13 +304,32 @@ public interface HdfsServerConstants {
       return value;
     }
 
+    /**
+     * Retrieve ReplicaState corresponding to given index.
+     *
+     * @param v Index to retrieve {@link ReplicaState}.
+     * @return {@link ReplicaState} object.
+     * @throws IndexOutOfBoundsException if the index is invalid.
+     */
     public static ReplicaState getState(int v) {
+      Validate.validIndex(cachedValues, v, "Index Expected range: [0, "
+          + (cachedValues.length - 1) + "]. Actual value: " + v);
       return cachedValues[v];
     }
 
-    /** Read from in */
+    /**
+     * Retrieve ReplicaState corresponding to index provided in binary stream.
+     *
+     * @param in Index value provided as bytes in given binary stream.
+     * @return {@link ReplicaState} object.
+     * @throws IOException if an I/O error occurs while reading bytes.
+     * @throws IndexOutOfBoundsException if the index is invalid.
+     */
     public static ReplicaState read(DataInput in) throws IOException {
-      return cachedValues[in.readByte()];
+      byte idx = in.readByte();
+      Validate.validIndex(cachedValues, idx, "Index Expected range: [0, "
+          + (cachedValues.length - 1) + "]. Actual value: " + idx);
+      return cachedValues[idx];
     }
 
     /** Write to out */

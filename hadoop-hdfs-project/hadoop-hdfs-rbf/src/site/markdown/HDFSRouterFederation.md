@@ -514,7 +514,10 @@ More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/
 Router Federation Rename
 -------
 
-Enable Router to rename across namespaces. Currently the router federation rename is implemented by distcp. We must set the rpc timeout high enough so it won't timeout.
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
+2. It doesn't support snapshot path.
+3. It doesn't support to rename path with multiple destinations.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |

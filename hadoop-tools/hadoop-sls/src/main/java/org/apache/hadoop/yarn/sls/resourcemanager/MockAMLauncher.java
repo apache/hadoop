@@ -104,7 +104,8 @@ public class MockAMLauncher extends ApplicationMasterLauncher
         LOG.info("Notify AM launcher launched:" + amContainer.getId());
 
         se.getNmMap().get(amContainer.getNodeId())
-            .addNewContainer(amContainer, -1);
+            .addNewContainer(amContainer, -1, appId);
+        ams.getRanNodes().add(amContainer.getNodeId());
         return;
       } catch (Exception e) {
         throw new YarnRuntimeException(e);

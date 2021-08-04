@@ -30,6 +30,9 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Implementation of the node resource monitor. It periodically tracks the
  * resource utilization of the node and reports it to the NM.
@@ -54,8 +57,11 @@ public class NodeResourceMonitorImpl extends AbstractService implements
   private GpuNodeResourceUpdateHandler gpuNodeResourceUpdateHandler;
 
   /** Current <em>resource utilization</em> of the node. */
+
+  private Map<String, Float> customResources = new HashMap<>();
+
   private ResourceUtilization nodeUtilization =
-      ResourceUtilization.newInstance(0, 0, 0f);
+      ResourceUtilization.newInstance(0, 0, 0f, customResources);
   private Context nmContext;
 
   /**
@@ -165,21 +171,25 @@ public class NodeResourceMonitorImpl extends AbstractService implements
             resourceCalculatorPlugin.getVirtualMemorySize()
                 - resourceCalculatorPlugin.getAvailableVirtualMemorySize();
         float vcores = resourceCalculatorPlugin.getNumVCoresUsed();
-        nodeUtilization =
-            ResourceUtilization.newInstance(
-                (int) (pmem >> 20), // B -> MB
-                (int) (vmem >> 20), // B -> MB
-                vcores); // Used Virtual Cores
 
-        float nodeGpuUtilization = 0F;
+        float totalNodeGpuUtilization = 0F;
         try {
           if (gpuNodeResourceUpdateHandler != null) {
-            nodeGpuUtilization =
-                gpuNodeResourceUpdateHandler.getNodeGpuUtilization();
+            totalNodeGpuUtilization =
+                gpuNodeResourceUpdateHandler.getTotalNodeGpuUtilization();
           }
         } catch (Exception e) {
           LOG.error("Get Node GPU Utilization error: " + e);
         }
+
+        customResources.
+            put(ResourceInformation.GPU_URI, totalNodeGpuUtilization);
+        nodeUtilization =
+            ResourceUtilization.newInstance(
+                (int) (pmem >> 20), // B -> MB
+                (int) (vmem >> 20), // B -> MB
+                vcores,     // Used Virtual Cores
+                customResources);  // Used GPUs
 
         // Publish the node utilization metrics to node manager
         // metrics system.
@@ -188,7 +198,7 @@ public class NodeResourceMonitorImpl extends AbstractService implements
           nmMetrics.setNodeUsedMemGB(nodeUtilization.getPhysicalMemory());
           nmMetrics.setNodeUsedVMemGB(nodeUtilization.getVirtualMemory());
           nmMetrics.setNodeCpuUtilization(nodeUtilization.getCPU());
-          nmMetrics.setNodeGpuUtilization(nodeGpuUtilization);
+          nmMetrics.setNodeGpuUtilization(totalNodeGpuUtilization);
         }
 
         try {

@@ -30,8 +30,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -322,7 +322,7 @@ public class ShortCircuitRegistry {
         shm = new RegisteredShm(clientName, shmId, fis, this);
       } finally {
         if (shm == null) {
-          IOUtils.closeQuietly(fis);
+          IOUtils.closeStream(fis);
         }
       }
       info = new NewShmInfo(shmId, fis);
@@ -392,7 +392,7 @@ public class ShortCircuitRegistry {
       if (!enabled) return;
       enabled = false;
     }
-    IOUtils.closeQuietly(watcher);
+    IOUtils.closeStream(watcher);
   }
 
   public static interface Visitor {

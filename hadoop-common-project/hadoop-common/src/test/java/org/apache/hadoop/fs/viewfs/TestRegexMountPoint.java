@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.util.function.Function;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
@@ -63,9 +64,14 @@ public class TestRegexMountPoint {
     inodeTree = new InodeTree<TestRegexMountPointFileSystem>(conf,
         TestRegexMountPoint.class.getName(), null, false) {
       @Override
-      protected TestRegexMountPointFileSystem getTargetFileSystem(
-          final URI uri) {
-        return new TestRegexMountPointFileSystem(uri);
+      protected Function<URI, TestRegexMountPointFileSystem>
+          initAndGetTargetFs() {
+        return new Function<URI, TestRegexMountPointFileSystem>() {
+          @Override
+          public TestRegexMountPointFileSystem apply(URI uri) {
+            return new TestRegexMountPointFileSystem(uri);
+          }
+        };
       }
 
       @Override

@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 import static org.apache.hadoop.fs.shell.find.TestHelper.*;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.shell.PathData;
@@ -34,7 +35,7 @@ public class TestName {
   private Name name;
 
   @Rule
-  public Timeout globalTimeout = new Timeout(10000);
+  public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
   @Before
   public void resetMock() throws IOException {

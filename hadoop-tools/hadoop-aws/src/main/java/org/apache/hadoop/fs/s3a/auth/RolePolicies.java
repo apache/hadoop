@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -248,6 +248,7 @@ public final class RolePolicies {
       Collections.unmodifiableList(Arrays.asList(new String[]{
           S3_ALL_GET,
           S3_PUT_OBJECT,
+          S3_PUT_OBJECT_ACL,
           S3_DELETE_OBJECT,
           S3_ABORT_MULTIPART_UPLOAD,
       }));
@@ -262,6 +263,7 @@ public final class RolePolicies {
   public static final List<String> S3_PATH_WRITE_OPERATIONS =
       Collections.unmodifiableList(Arrays.asList(new String[]{
           S3_PUT_OBJECT,
+          S3_PUT_OBJECT_ACL,
           S3_DELETE_OBJECT,
           S3_ABORT_MULTIPART_UPLOAD
       }));
@@ -274,6 +276,7 @@ public final class RolePolicies {
       Collections.unmodifiableList(Arrays.asList(new String[]{
           S3_ALL_GET,
           S3_PUT_OBJECT,
+          S3_PUT_OBJECT_ACL,
           S3_DELETE_OBJECT,
           S3_ABORT_MULTIPART_UPLOAD,
       }));

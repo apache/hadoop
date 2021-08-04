@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -43,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 /**
@@ -54,7 +56,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
  * use `WriteOperationHelper` directly.
  * @since Hadoop 3.3.0
  */
-public interface WriteOperations {
+public interface WriteOperations extends AuditSpanSource, Closeable {
 
   /**
    * Execute a function with retry processing.
@@ -185,6 +187,16 @@ public interface WriteOperations {
       throws IOException;
 
   /**
+   * Abort multipart uploads under a path: limited to the first
+   * few hundred.
+   * @param prefix prefix for uploads to abort
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  List<MultipartUpload> listMultipartUploads(String prefix)
+      throws IOException;
+
+  /**
    * Abort a multipart commit operation.
    * @param destKey destination key of ongoing operation
    * @param uploadId multipart operation Id
@@ -210,7 +222,7 @@ public interface WriteOperations {
    * @param sourceFile optional source file.
    * @param offset offset in file to start reading.
    * @return the request.
-   * @throws IllegalArgumentException if the parameters are invalid -including
+   * @throws IllegalArgumentException if the parameters are invalid
    * @throws PathIOException if the part number is out of range.
    */
   UploadPartRequest newUploadPartRequest(
@@ -220,7 +232,7 @@ public interface WriteOperations {
       int size,
       InputStream uploadStream,
       File sourceFile,
-      Long offset) throws PathIOException;
+      Long offset) throws IOException;
 
   /**
    * PUT an object directly (i.e. not via the transfer manager).
@@ -338,4 +350,10 @@ public interface WriteOperations {
       SelectObjectContentRequest request,
       String action)
       throws IOException;
+
+  /**
+   * Increment the write operation counter
+   * of the filesystem.
+   */
+  void incrementWriteOperations();
 }

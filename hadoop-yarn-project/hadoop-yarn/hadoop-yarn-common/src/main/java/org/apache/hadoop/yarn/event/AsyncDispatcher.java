@@ -25,7 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -92,6 +96,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       EventTypeMetrics> eventTypeMetricsMap;
 
   private Clock clock = new MonotonicClock();
+
+  private ThreadPoolExecutor printEventDetailsExecutor;
 
   /**
    * The thread name for dispatcher.
@@ -179,6 +185,15 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
                     YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD,
             YarnConfiguration.
                     DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD);
+
+    ThreadFactory threadFactory = new ThreadFactoryBuilder()
+        .setNameFormat("PrintEventDetailsThread #%d")
+        .build();
+    // Thread pool for async print event details,
+    // to prevent wasting too much time for RM.
+    printEventDetailsExecutor = new ThreadPoolExecutor(
+        1, 5, 10, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(), threadFactory);
   }
 
   @Override
@@ -222,6 +237,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         LOG.warn("Interrupted Exception while stopping", ie);
       }
     }
+    printEventDetailsExecutor.shutdownNow();
 
     // stop all the components
     super.serviceStop();
@@ -319,7 +335,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       if (qSize != 0 && qSize % detailsInterval == 0
               && lastEventDetailsQueueSizeLogged != qSize) {
         lastEventDetailsQueueSizeLogged = qSize;
-        printEventQueueDetails();
+        printEventDetailsExecutor.submit(this::printEventQueueDetails);
         printTrigger = true;
       }
       int remCapacity = eventQueue.remainingCapacity();
@@ -392,5 +408,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   public void addMetrics(EventTypeMetrics metrics,
       Class<? extends Enum> eventClass) {
     eventTypeMetricsMap.put(eventClass, metrics);
+  }
+
+  public int getEventQueueSize() {
+    return eventQueue.size();
   }
 }

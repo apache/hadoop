@@ -73,7 +73,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
-  private void updateQuotas(int userLimit, float userLimitFactor,
+  private void updateQuotas(float userLimit, float userLimitFactor,
       int maxAppsForReservation, int maxAppsPerUserForReservation) {
     setUserLimit(userLimit);
     setUserLimitFactor(userLimitFactor);

@@ -172,7 +172,8 @@ public class StreamAMSimulator extends AMSimulator {
               container.getId());
           assignedStreams.put(container.getId(), cs);
           se.getNmMap().get(container.getNodeId()).addNewContainer(container,
-              cs.getLifeTime());
+              cs.getLifeTime(), appId);
+          getRanNodes().add(container.getNodeId());
         }
       }
     }

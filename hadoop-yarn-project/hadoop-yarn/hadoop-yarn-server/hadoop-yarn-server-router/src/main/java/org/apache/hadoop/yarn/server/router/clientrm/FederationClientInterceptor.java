@@ -22,6 +22,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -161,6 +162,7 @@ public class FederationClientInterceptor
   private RouterMetrics routerMetrics;
   private ThreadPoolExecutor executorService;
   private final Clock clock = new MonotonicClock();
+  private boolean returnPartialReport;
 
   @Override
   public void init(String userName) {
@@ -196,6 +198,10 @@ public class FederationClientInterceptor
     clientRMProxies =
         new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
     routerMetrics = RouterMetrics.getMetrics();
+
+    returnPartialReport = conf.getBoolean(
+        YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
   }
 
   @Override
@@ -599,10 +605,44 @@ public class FederationClientInterceptor
     return response;
   }
 
+  /**
+   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * after that it will group all the ApplicationReports by the ApplicationId.
+   *
+   * Possible failure:
+   *
+   * Client: identical behavior as {@code ClientRMService}.
+   *
+   * Router: the Client will timeout and resubmit the request.
+   *
+   * ResourceManager: the Router calls each Yarn RM in parallel. In case a
+   * Yarn RM fails, a single call will timeout. However the Router will
+   * merge the ApplicationReports it got, and provides a partial list to
+   * the client.
+   *
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
   @Override
   public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      RouterServerUtil.logAndThrowException(
+          "Missing getApplications request.",
+          null);
+    }
+    Map<SubClusterId, SubClusterInfo> subclusters =
+        federationFacade.getSubClusters(true);
+    ClientMethod remoteMethod = new ClientMethod("getApplications",
+        new Class[] {GetApplicationsRequest.class}, new Object[] {request});
+    Map<SubClusterId, GetApplicationsResponse> applications =
+        invokeConcurrent(subclusters.keySet(), remoteMethod,
+            GetApplicationsResponse.class);
+
+    // Merge the Application Reports
+    return RouterYarnClientUtils.mergeApplications(applications.values(),
+        returnPartialReport);
   }
 
   @Override
@@ -674,6 +714,12 @@ public class FederationClientInterceptor
       throw new YarnException(e);
     }
     return results;
+  }
+
+  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
+      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
+    ArrayList<SubClusterId> clusterIdList = new ArrayList<>(clusterIds);
+    return invokeConcurrent(clusterIdList, request, clazz);
   }
 
   @Override

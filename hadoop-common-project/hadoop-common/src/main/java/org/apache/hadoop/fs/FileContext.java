@@ -359,11 +359,6 @@ public class FileContext implements PathCapabilities {
   }
   
   /**
-   * Protected Static Factory methods for getting a FileContexts
-   * that take a AbstractFileSystem as input. To be used for testing.
-   */
-
-  /**
    * Create a FileContext with specified FS as default using the specified
    * config.
    * 

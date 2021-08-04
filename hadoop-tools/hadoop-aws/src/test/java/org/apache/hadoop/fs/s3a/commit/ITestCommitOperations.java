@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.amazonaws.services.s3.model.PartETag;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -195,7 +195,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
     setThrottling(FULL_THROTTLE, STANDARD_FAILURE_LIMIT);
   }
 
-  private CommitOperations newCommitOperations() {
+  private CommitOperations newCommitOperations()
+      throws IOException {
     return new CommitOperations(getFileSystem());
   }
 
@@ -673,7 +674,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     Path subdir = new Path(destDir, "subdir");
     // file 2
     Path destFile2 = new Path(subdir, "file2");
-    Path destFile3 = new Path(subdir, "file3");
+    Path destFile3 = new Path(subdir, "file3 with space");
     List<Path> destinations = Lists.newArrayList(destFile1, destFile2,
         destFile3);
     List<SinglePendingCommit> commits = new ArrayList<>(3);

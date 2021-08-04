@@ -448,7 +448,7 @@ use requires the presence of secret credentials, where tests may be slow,
 and where finding out why something failed from nothing but the test output
 is critical.
 
-#### Subclasses Existing Shared Base Blasses
+#### Subclasses Existing Shared Base Classes
 
 There are a set of base classes which should be extended for Azure tests and
 integration tests.
@@ -602,7 +602,7 @@ various test combinations, it will:
 2. Run tests for all combinations
 3. Summarize results across all the test combination runs.
 
-As a pre-requiste step, fill config values for test accounts and credentials
+As a pre-requisite step, fill config values for test accounts and credentials
 needed for authentication in `src/test/resources/azure-auth-keys.xml.template`
 and rename as `src/test/resources/azure-auth-keys.xml`.
 
