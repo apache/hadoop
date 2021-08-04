@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipIfS3GuardAndS3CSEIOE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -27,7 +27,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 
@@ -60,12 +59,9 @@ public abstract class AbstractS3AMockTest {
     Configuration conf = createConfiguration();
     fs = new S3AFileSystem();
     URI uri = URI.create(FS_S3A + "://" + BUCKET);
-    try {
-      fs.initialize(uri, conf);
-    } catch (PathIOException ioe) {
-      // Skip the tests if S3-CSE and S3-Guard are enabled.
-      maybeSkipIfS3GuardAndS3CSEIOE(ioe);
-    }
+    // cut S3Guard and S3CSE props from config to avoid pathIOE.
+    removeBaseAndBucketOverrides(conf, SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    fs.initialize(uri, conf);
     s3 = fs.getAmazonS3ClientForTesting("mocking");
   }
 

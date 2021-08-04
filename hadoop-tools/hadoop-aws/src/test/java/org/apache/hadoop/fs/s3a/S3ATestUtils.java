@@ -244,7 +244,7 @@ public final class S3ATestUtils {
   /**
    * Skip if S3Guard and S3CSE are enabled together.
    *
-   * @param conf Configuration used to verify if S3Guard and S3CSE are enabled.
+   * @param conf Test Configuration.
    */
   private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf) {
     String encryptionMethod =
@@ -261,13 +261,13 @@ public final class S3ATestUtils {
    * incompatibility or throw the PathIOE.
    *
    * @param ioe PathIOE being parsed.
-   * @throws PathIOException Throw the PathIOE if it doesn't relate to S3CSE
+   * @throws PathIOException Throws PathIOE if it doesn't relate to S3CSE
    *                         and S3Guard incompatibility.
    */
   public static void maybeSkipIfS3GuardAndS3CSEIOE(PathIOException ioe)
       throws PathIOException {
     if (ioe.toString().contains(InternalConstants.CSE_S3GUARD_INCOMPATIBLE)) {
-      skip("Skipped if CSE is enabled with S3Guard.");
+      skip("Skipping since CSE is enabled with S3Guard.");
     }
     throw ioe;
   }

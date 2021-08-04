@@ -71,8 +71,6 @@ public class S3AContract extends AbstractBondedFSContract {
   /**
    * Skip S3AFS initialization if S3-CSE and S3Guard are enabled.
    *
-   * @throws IOException throw IOE if it is not due to S3-CSE and S3Guard
-   *                     incompatibility.
    */
   @Override
   public void init() throws IOException {
