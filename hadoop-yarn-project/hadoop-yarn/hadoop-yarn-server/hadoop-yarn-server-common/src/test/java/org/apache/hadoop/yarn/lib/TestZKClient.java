@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.apache.hadoop.net.ServerSocketUtil;
+import com.google.common.net.HostAndPort;
 import org.junit.Assert;
 
 import org.apache.hadoop.yarn.lib.ZKClient;
@@ -86,8 +87,9 @@ public class TestZKClient  {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        String host = hp.split(":")[0];
-        int port = Integer.parseInt(hp.split(":")[1]);
+        HostAndPort hap = HostAndPort.fromString(hp);
+        String host = hap.getHost();
+        int port = hap.getPort();
         send4LetterWord(host, port, "stat");
       } catch (IOException e) {
         return true;
@@ -110,8 +112,9 @@ public class TestZKClient  {
     long start = System.currentTimeMillis();
     while (true) {
       try {
-        String host = hp.split(":")[0];
-        int port = Integer.parseInt(hp.split(":")[1]);
+        HostAndPort hap = HostAndPort.fromString(hp);
+        String host = hap.getHost();
+        int port = hap.getPort();
         // if there are multiple hostports, just take the first one
         String result = send4LetterWord(host, port, "stat");
         if (result.startsWith("Zookeeper version:")) {
@@ -151,14 +154,15 @@ public class TestZKClient  {
     }
     File dataDir = createTmpDir(BASETEST);
     zks = new ZooKeeperServer(dataDir, dataDir, 3000);
-    final int PORT = Integer.parseInt(hostPort.split(":")[1]);
+    HostAndPort hp = HostAndPort.fromString(hostPort);
+    final int port = hp.getPort();
     if (factory == null) {
       factory = new NIOServerCnxnFactory();
-      factory.configure(new InetSocketAddress(PORT), maxCnxns);
+      factory.configure(new InetSocketAddress(port), maxCnxns);
     }
     factory.startup(zks);
     Assert.assertTrue("waiting for server up",
-        waitForServerUp("127.0.0.1:" + PORT,
+        waitForServerUp("127.0.0.1:" + port,
             CONNECTION_TIMEOUT));
     
   }
@@ -172,10 +176,11 @@ public class TestZKClient  {
         zkDb.close();
       } catch (IOException ie) {
       }
-      final int PORT = Integer.parseInt(hostPort.split(":")[1]);
+      HostAndPort hp = HostAndPort.fromString(hostPort);
+      final int port = hp.getPort();
 
       Assert.assertTrue("waiting for server down",
-          waitForServerDown("127.0.0.1:" + PORT,
+          waitForServerDown("127.0.0.1:" + port,
               CONNECTION_TIMEOUT));
     }
 

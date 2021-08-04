@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -105,8 +106,10 @@ public class MockNM {
     this.capability = capability;
     this.resourceTracker = resourceTracker;
     this.version = version;
-    String[] splits = nodeIdStr.split(":");
-    nodeId = BuilderUtils.newNodeId(splits[0], Integer.parseInt(splits[1]));
+    HostAndPort hostAndPort = HostAndPort.fromString(nodeIdStr);
+    String hostPortStr = hostAndPort.toString();
+    String host = hostPortStr.substring(0, hostPortStr.lastIndexOf(":"));
+    nodeId = BuilderUtils.newNodeId(host, hostAndPort.getPort());
   }
 
   public MockNM(String nodeIdStr, Resource capability,

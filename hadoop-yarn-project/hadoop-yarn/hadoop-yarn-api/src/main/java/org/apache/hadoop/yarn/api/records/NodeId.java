@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.util.Records;
+import com.google.common.net.HostAndPort;
 
 /**
  * <p><code>NodeId</code> is the unique identifier for a node.</p>
@@ -116,17 +117,18 @@ public abstract class NodeId implements Comparable<NodeId> {
   @Public
   @Stable
   public static NodeId fromString(String nodeIdStr) {
-    String[] parts = nodeIdStr.split(":");
-    if (parts.length != 2) {
-      throw new IllegalArgumentException("Invalid NodeId [" + nodeIdStr
-          + "]. Expected host:port");
+    HostAndPort hp = HostAndPort.fromString(nodeIdStr);
+    if (!hp.hasPort()) {
+      throw new IllegalArgumentException(
+          "Invalid NodeId [" + nodeIdStr + "]. Expected host:port");
     }
     try {
-      NodeId nodeId =
-          NodeId.newInstance(parts[0].trim(), Integer.parseInt(parts[1]));
+      String hostPortStr = hp.toString();
+      String host = hostPortStr.substring(0, hostPortStr.lastIndexOf(":"));
+      NodeId nodeId = NodeId.newInstance(host, hp.getPort());
       return nodeId;
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException("Invalid port: " + parts[1], e);
+      throw new IllegalArgumentException("Invalid port: " + hp.getPort(), e);
     }
   }
 

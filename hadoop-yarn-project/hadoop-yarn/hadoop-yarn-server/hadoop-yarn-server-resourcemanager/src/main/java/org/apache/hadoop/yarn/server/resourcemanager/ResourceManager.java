@@ -137,6 +137,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.eclipse.jetty.webapp.WebAppContext;
 
+import com.google.common.net.HostAndPort;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -1399,8 +1400,8 @@ public class ResourceManager extends CompositeService
       builder.withAttribute(WebAppProxy.PROXY_CA,
           rmContext.getProxyCAManager().getProxyCA());
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
-      String[] proxyParts = proxyHostAndPort.split(":");
-      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE,
+          HostAndPort.fromString(proxyHostAndPort).getHost());
     }
 
     WebAppContext uiWebAppContext = null;

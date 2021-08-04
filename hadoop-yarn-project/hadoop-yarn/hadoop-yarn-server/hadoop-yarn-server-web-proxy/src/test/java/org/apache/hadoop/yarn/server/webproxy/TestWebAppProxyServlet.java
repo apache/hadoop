@@ -50,6 +50,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer2;
@@ -589,8 +590,7 @@ public class TestWebAppProxyServlet {
       proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE, Boolean.TRUE);
 
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      String[] proxyParts = proxy.split(":");
-      String proxyHost = proxyParts[0];
+      String proxyHost = HostAndPort.fromString(proxy).getHost();
 
       proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
       proxyServer.start();

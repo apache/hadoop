@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import com.google.common.net.HostAndPort;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -64,15 +65,13 @@ public class WebAppUtils {
 
   public static void setRMWebAppPort(Configuration conf, int port) {
     String hostname = getRMWebAppURLWithoutScheme(conf);
-    hostname =
-        (hostname.contains(":")) ? hostname.substring(0, hostname.indexOf(":"))
-            : hostname;
-    setRMWebAppHostnameAndPort(conf, hostname, port);
+    HostAndPort hp = HostAndPort.fromString(hostname);
+    setRMWebAppHostnameAndPort(conf, hp.getHost(), port);
   }
 
   public static void setRMWebAppHostnameAndPort(Configuration conf,
       String hostname, int port) {
-    String resolvedAddress = hostname + ":" + port;
+    String resolvedAddress = HostAndPort.fromParts(hostname, port).toString();
     if (YarnConfiguration.useHttps(conf)) {
       conf.set(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, resolvedAddress);
     } else {
@@ -82,12 +81,11 @@ public class WebAppUtils {
   
   public static void setNMWebAppHostNameAndPort(Configuration conf,
       String hostName, int port) {
+    String hostPortString = HostAndPort.fromParts(hostName, port).toString();
     if (YarnConfiguration.useHttps(conf)) {
-      conf.set(YarnConfiguration.NM_WEBAPP_HTTPS_ADDRESS,
-          hostName + ":" + port);
+      conf.set(YarnConfiguration.NM_WEBAPP_HTTPS_ADDRESS, hostPortString);
     } else {
-      conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS,
-          hostName + ":" + port);
+      conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS, hostPortString);
     }
   }
 
@@ -325,7 +323,8 @@ public class WebAppUtils {
     String host = conf.getTrimmed(hostProperty);
     if (host != null && !host.isEmpty()) {
       if (webAppURLWithoutScheme.contains(":")) {
-        webAppURLWithoutScheme = host + ":" + webAppURLWithoutScheme.split(":")[1];
+        String[] splits = webAppURLWithoutScheme.split(":");
+        webAppURLWithoutScheme = host + ":" + splits[splits.length - 1];
       }
       else {
         throw new YarnRuntimeException("webAppURLWithoutScheme must include port specification but doesn't: " +

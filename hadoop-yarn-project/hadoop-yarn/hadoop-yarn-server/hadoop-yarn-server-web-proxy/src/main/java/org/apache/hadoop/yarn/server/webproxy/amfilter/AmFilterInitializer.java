@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.HostAndPort;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
@@ -38,14 +39,15 @@ public class AmFilterInitializer extends FilterInitializer {
   private static final String FILTER_NAME = "AM_PROXY_FILTER";
   private static final String FILTER_CLASS = AmIpFilter.class.getCanonicalName();
   public static final String RM_HA_URLS = "RM_HA_URLS";
-  
+
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
     Map<String, String> params = new HashMap<>();
     List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
     StringBuilder sb = new StringBuilder();
     for (String proxy : proxies) {
-      sb.append(proxy.split(":")[0]).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
+      sb.append(HostAndPort.fromString(proxy).getHost())
+          .append(AmIpFilter.PROXY_HOSTS_DELIMITER);
     }
     sb.setLength(sb.length() - 1);
     params.put(AmIpFilter.PROXY_HOSTS, sb.toString());

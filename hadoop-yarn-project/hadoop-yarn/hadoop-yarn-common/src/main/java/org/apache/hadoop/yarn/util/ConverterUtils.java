@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
-
+import com.google.common.net.HostAndPort;
 
 /**
  * This class contains a set of utilities which help converting data structures
@@ -114,11 +114,11 @@ public class ConverterUtils {
 
   @Private
   @InterfaceStability.Unstable
-  public static NodeId toNodeIdWithDefaultPort(String nodeIdStr) {
-    if (nodeIdStr.indexOf(":") < 0) {
-      return NodeId.fromString(nodeIdStr + ":0");
-    }
-    return NodeId.fromString(nodeIdStr);
+  public static NodeId toNodeIdWithDefaultPort(
+      String nodeIdStr) {
+    HostAndPort hp = HostAndPort.fromString(nodeIdStr);
+    hp = hp.withDefaultPort(0);
+    return toNodeId(hp.toString());
   }
 
   /*
