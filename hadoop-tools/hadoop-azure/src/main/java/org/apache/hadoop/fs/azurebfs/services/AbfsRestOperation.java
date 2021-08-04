@@ -242,6 +242,7 @@ public class AbfsRestOperation {
           break;
         case SAS:
           // do nothing; the SAS token should already be appended to the query string
+          httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
           break;
         case SharedKey:
           // sign the HTTP request
