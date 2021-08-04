@@ -118,6 +118,8 @@ public class TestContainerLaunchParameterized {
         Arguments.of("%A", asSet()),
         Arguments.of("%A:", asSet()),
         Arguments.of("%A%", asSet("A")),
+        Arguments.of("%:%", asSet(":")),
+        Arguments.of("%:A%", asSet()),
         Arguments.of("%%%A%", asSet("A")),
         Arguments.of("%%C%A%", asSet("A")),
         Arguments.of("%A:~-1%", asSet("A")),
