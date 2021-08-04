@@ -53,10 +53,6 @@ public class BuiltInGzipCompressor implements Compressor {
   private int headerOff = 0;
   private int trailerOff = 0;
 
-  private byte[] userBuf = null;
-  private int userBufOff = 0;
-  private int userBufLen = 0;
-
   private int numBytesWritten = 0;
 
   private int currentBufLen = 0;
@@ -89,7 +85,7 @@ public class BuiltInGzipCompressor implements Compressor {
     // If we are not within uncompressed data yet, output the header.
     if (state != BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM &&
             state != BuiltInGzipDecompressor.GzipStateLabel.TRAILER_CRC) {
-      if (userBufLen <= 0) {
+      if (currentBufLen <= 0) {
         return compressedBytesWritten;
       }
 
@@ -107,19 +103,6 @@ public class BuiltInGzipCompressor implements Compressor {
     }
 
     if (state == BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM) {
-      // hand off user data (or what's left of it) to Deflater--but note that
-      // Deflater may not have consumed all of previous bufferload, in which case
-      // userBufLen will be zero
-      if (userBufLen > 0) {
-        deflater.setInput(userBuf, userBufOff, userBufLen);
-
-        crc.update(userBuf, userBufOff, userBufLen);  // CRC-32 is on uncompressed data
-
-        currentBufLen = userBufLen;
-        userBufOff += userBufLen;
-        userBufLen = 0;
-      }
-
       // now compress it into b[]
       int deflated = deflater.deflate(b, off, len);
 
@@ -180,7 +163,6 @@ public class BuiltInGzipCompressor implements Compressor {
   public void reinit(Configuration conf) {
     init(conf);
     crc.reset();
-    userBufOff = userBufLen = 0;
     numBytesWritten = 0;
     currentBufLen = 0;
     headerOff = trailerOff = 0;
@@ -191,7 +173,6 @@ public class BuiltInGzipCompressor implements Compressor {
     deflater.reset();
     state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
     crc.reset();
-    userBufOff = userBufLen = 0;
     currentBufLen = 0;
     headerOff = trailerOff = 0;
   }
@@ -210,12 +191,12 @@ public class BuiltInGzipCompressor implements Compressor {
       throw new ArrayIndexOutOfBoundsException();
     }
 
-    userBuf = b;
-    userBufOff = off;
-    userBufLen = len;
-
     deflater.reset();
     crc.reset();
+
+    deflater.setInput(b, off, len);
+    crc.update(b, off, len);  // CRC-32 is on uncompressed data
+    currentBufLen = len;
   }
 
   private int writeHeader(byte[] b, int off, int len) {
