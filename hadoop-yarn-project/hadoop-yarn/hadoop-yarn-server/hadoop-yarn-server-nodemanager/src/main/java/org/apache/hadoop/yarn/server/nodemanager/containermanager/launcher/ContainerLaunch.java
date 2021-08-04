@@ -1451,8 +1451,8 @@ public class ContainerLaunch implements Callable<Integer> {
   private static final class WindowsShellScriptBuilder
       extends ShellScriptBuilder {
 
-    private static final Pattern variablePattern = Pattern.compile("%(.*?)%");
-    private static final Pattern splitPattern = Pattern.compile(":");
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("%(.*?)%");
+    private static final Pattern SPLIT_PATTERN = Pattern.compile(":");
 
     private void errorCheck() {
       line("@if %errorlevel% neq 0 exit /b %errorlevel%");
@@ -1546,14 +1546,14 @@ public class ContainerLaunch implements Callable<Integer> {
       }
 
       // Example inputs: %var%, %%, %a:b%
-      Matcher matcher = variablePattern.matcher(envVal);
+      Matcher matcher = VARIABLE_PATTERN.matcher(envVal);
       final Set<String> deps = new HashSet<>();
       while (matcher.find()) {
         String match = matcher.group(1);
         if (match.length() > 0) {
           // Either store the variable name before the : string manipulation
           // character or the whole match. (%var% -> var, %a:b% -> a)
-          String[] split = splitPattern.split(match, 2);
+          String[] split = SPLIT_PATTERN.split(match, 2);
           deps.add(split[0]);
         }
       }
