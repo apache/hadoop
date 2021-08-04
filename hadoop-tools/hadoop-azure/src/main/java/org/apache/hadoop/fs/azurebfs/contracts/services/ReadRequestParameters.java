@@ -18,34 +18,30 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
+import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionMode;
+import org.apache.hadoop.fs.azurebfs.services.AbfsFastpathSessionInfo;
+
 /**
  * Saves the different request parameters for read
  */
 public class ReadRequestParameters {
-  public enum Mode {
-    HTTP_CONNECTION_MODE,
-    FASTPATH_CONNECTION_MODE
-  }
-
+  private static final AbfsConnectionMode DEFAULT_CONNECTION_MODE = AbfsConnectionMode.REST_CONN;
   private final long storeFilePosition;
   private final int bufferOffset;
   private final int readLength;
-  private ReadRequestParameters.Mode mode;
   private final String eTag;
-  private final String fastpathFileHandle;
+  private final AbfsFastpathSessionInfo fastpathSessionInfo;
 
-  public ReadRequestParameters(final ReadRequestParameters.Mode mode,
-      final long storeFilePosition,
+  public ReadRequestParameters(final long storeFilePosition,
       final int bufferOffset,
       final int readLength,
       final String eTag,
-      final String fastpathFileHandle) {
-    this.mode = mode;
+      final AbfsFastpathSessionInfo fastpathSessionInfo) {
     this.storeFilePosition = storeFilePosition;
     this.bufferOffset = bufferOffset;
     this.readLength = readLength;
     this.eTag = eTag;
-    this.fastpathFileHandle = fastpathFileHandle;
+    this.fastpathSessionInfo = fastpathSessionInfo;
   }
 
   public long getStoreFilePosition() {
@@ -64,15 +60,21 @@ public class ReadRequestParameters {
     return this.eTag;
   }
 
-  public ReadRequestParameters.Mode getMode() {
-    return this.mode;
+  public AbfsConnectionMode getAbfsConnectionMode() {
+    if (fastpathSessionInfo == null) {
+      return DEFAULT_CONNECTION_MODE;
+    } else {
+      return fastpathSessionInfo.getConnectionMode();
+    }
   }
 
-  public String getFastpathFileHandle() {
-    return this.fastpathFileHandle;
+  public boolean isFastpathConnection() {
+    return ((fastpathSessionInfo != null)
+        && (AbfsConnectionMode.isFastpathConnection(
+        fastpathSessionInfo.getConnectionMode())));
   }
 
-  public void setMode(final Mode mode) {
-    this.mode = mode;
+  public AbfsFastpathSessionInfo getAbfsFastpathSessionInfo() {
+    return fastpathSessionInfo;
   }
 }

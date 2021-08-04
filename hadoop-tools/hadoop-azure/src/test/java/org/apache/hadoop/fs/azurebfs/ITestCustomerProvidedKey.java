@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionMode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -83,7 +84,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_CPK_ENABLED_SECONDARY_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
-import static org.apache.hadoop.fs.azurebfs.services.FastpathStatus.FASTPATH_DISABLED;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
@@ -120,9 +120,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         tracingContext);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
-    ReadRequestParameters readParams = new ReadRequestParameters(
-        ReadRequestParameters.Mode.HTTP_CONNECTION_MODE,
-        0, 0, length, eTag,
+    ReadRequestParameters readParams = new ReadRequestParameters(0, 0, length, eTag,
         null);
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(fileName,  buffer, null, readParams, tracingContext);
@@ -174,9 +172,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .getPathStatus(fileName, false, tracingContext);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
-    ReadRequestParameters readParams = new ReadRequestParameters(
-        ReadRequestParameters.Mode.HTTP_CONNECTION_MODE,
-        0, 0, length, eTag,
+    ReadRequestParameters readParams = new ReadRequestParameters(0, 0, length, eTag,
         null);
     AbfsRestOperation abfsRestOperation = abfsClient
         .read(fileName,  buffer, null, readParams, tracingContext);

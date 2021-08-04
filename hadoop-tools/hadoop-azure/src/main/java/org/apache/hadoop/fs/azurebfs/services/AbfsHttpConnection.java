@@ -44,7 +44,9 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
   private HttpURLConnection connection;
   protected ListResultSchema listResultSchema = null;
 
-  public AbfsHttpConnection(final URL url, final String method, List<AbfsHttpHeader> requestHeaders) throws IOException {
+  public AbfsHttpConnection(final URL url,
+      final String method,
+      List<AbfsHttpHeader> requestHeaders) throws IOException {
     super(url, method, requestHeaders);
     init(url, method, requestHeaders);
   }
@@ -149,6 +151,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       }
     }
   }
+
   /**
    * Gets and processes the HTTP response.
    *
@@ -225,12 +228,14 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
               }
               totalBytesRead += bytesRead;
             }
+
+            responseContentBuffer = buffer;
           }
           if (!endOfStream && stream.read() != -1) {
             // read and discard
             int bytesRead = 0;
-            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-            while ((bytesRead = stream.read(b)) >= 0) {
+            responseContentBuffer = new byte[this.connection.getContentLength()];
+            while ((bytesRead = stream.read(responseContentBuffer)) >= 0) {
               totalBytesRead += bytesRead;
             }
           }

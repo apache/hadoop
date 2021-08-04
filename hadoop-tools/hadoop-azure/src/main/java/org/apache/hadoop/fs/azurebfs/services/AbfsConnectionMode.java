@@ -18,9 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-public enum FastpathStatus {
-  FASTPATH_DISABLED,
-  FASTPATH,
-  REQ_FAIL_REST_FALLBACK,
-  CONN_FAIL_REST_FALLBACK,
+public enum AbfsConnectionMode {
+  REST_CONN,
+  FASTPATH_CONN,
+  REST_ON_FASTPATH_REQ_FAILURE,
+  REST_ON_FASTPATH_CONN_FAILURE,
+  REST_ON_FASTPATH_SESSION_UPD_FAILURE;
+
+  public static boolean isFastpathConnection(final AbfsConnectionMode mode) {
+    return (mode == FASTPATH_CONN);
+  }
+
+  public static boolean isRESTConnection(final AbfsConnectionMode mode) {
+    return (!isFastpathConnection(mode));
+  }
+
+  public static boolean isErrorConnectionMode(final AbfsConnectionMode mode) {
+    return ((mode == AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE)
+        || (mode == AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE)
+        || (mode == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE));
+  }
+
 }

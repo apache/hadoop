@@ -39,6 +39,7 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_FLUSH = "flush";
   public static final String QUERY_PARAM_CLOSE = "close";
   public static final String QUERY_PARAM_UPN = "upn";
+  public static final String QUERY_PARAM_COMP = "comp";
   public static final String QUERY_PARAM_BLOBTYPE = "blobtype";
 
   private HttpQueryParams() {}

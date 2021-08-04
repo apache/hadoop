@@ -306,9 +306,14 @@ public final class TestAbfsClient {
 
     when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
     when(client.createRequestUrl(any(), any())).thenCallRealMethod();
+    when(client.createRequestUrl(any(), any(), any())).thenCallRealMethod();
     when(client.getAccessToken()).thenCallRealMethod();
     when(client.getSharedKeyCredentials()).thenCallRealMethod();
     when(client.createDefaultHeaders()).thenCallRealMethod();
+    when(client.getBaseUrl()).thenCallRealMethod();
+    when(client.getAbfsConfiguration()).thenCallRealMethod();
+    when(client.getTokenProvider()).thenCallRealMethod();
+    when(client.getAbfsClientContext()).thenCallRealMethod();
 
     // override baseurl
     client = TestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
@@ -317,6 +322,9 @@ public final class TestAbfsClient {
     // override baseurl
     client = TestAbfsClient.setAbfsClientField(client, "baseUrl",
         baseAbfsClientInstance.getBaseUrl());
+
+    client = TestAbfsClient.setAbfsClientField(client, "abfsClientContext",
+        baseAbfsClientInstance.getAbfsClientContext());
 
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {

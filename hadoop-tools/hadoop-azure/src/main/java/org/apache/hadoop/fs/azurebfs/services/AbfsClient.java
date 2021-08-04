@@ -38,8 +38,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.azure.storage.fastpath.exceptions.FastpathRequestException;
-
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -53,10 +51,11 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.azure.storage.fastpath.exceptions.FastpathRequestException;
+
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsFastpathException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
@@ -66,9 +65,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters.Mode;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestIODataParameters;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.IOUtils;
@@ -608,16 +605,15 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(buffer,
-        reqParams.getoffset(),
-        reqParams.getLength());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.Append,
         this,
         HTTP_METHOD_PUT,
         url,
         requestHeaders,
-        ioDataParams,
+        buffer,
+        reqParams.getoffset(),
+        reqParams.getLength(),
         sasTokenForReuse);
     try {
       op.execute(tracingContext);
@@ -631,7 +627,9 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders,
-            ioDataParams,
+            buffer,
+            reqParams.getoffset(),
+            reqParams.getLength(),
             sasTokenForReuse);
         successOp.hardSetResult(HttpURLConnection.HTTP_OK);
         return successOp;
@@ -754,7 +752,31 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  public AbfsRestOperation getReadFastpathSessionToken(final String path, final String eTag,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    String sasTokenForReuse = appendSASTokenToQuery(path,
+        SASTokenProvider.READ_OPERATION,
+        abfsUriQueryBuilder, null);
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, CREATE_FASTPATH_READ_SESSION);
+
+    final URL url = createBlobRequestUrl(path, abfsUriQueryBuilder.toString());
+    final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.GetReadFastpathSessionToken,
+        this,
+        HTTP_METHOD_POST,
+        url,
+        requestHeaders,
+        sasTokenForReuse);
+    op.execute(tracingContext);
+    return op;
+  }
+
   public AbfsRestOperation fastPathOpen(final String path, final String eTag,
+      AbfsFastpathSessionInfo fastpathSessionInfo,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
@@ -766,12 +788,12 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
-    return executeFastpathOpen(url, requestHeaders, sasTokenForReuse,
+    return executeFastpathOpen(url, requestHeaders, fastpathSessionInfo,
         tracingContext);
   }
 
   public AbfsRestOperation fastPathClose(final String path, final String eTag,
-      final String fastpathFileHandle, final TracingContext tracingContext)
+      final AbfsFastpathSessionInfo fastpathsessionInfo, final TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
@@ -782,8 +804,8 @@ public class AbfsClient implements Closeable {
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
-    return executeFastpathClose(url, requestHeaders, sasTokenForReuse,
-        fastpathFileHandle, tracingContext);
+    return executeFastpathClose(url, requestHeaders,
+        fastpathsessionInfo, tracingContext);
 
   }
 
@@ -810,22 +832,19 @@ public class AbfsClient implements Closeable {
 
     AbfsRestOperation op = null;
 
-    if (reqParams.getMode() == Mode.FASTPATH_CONNECTION_MODE) {
+    if (reqParams.isFastpathConnection()) {
       op = executeFastpathRead(path, reqParams, url, requestHeaders, buffer,
           sasTokenForReuse, tracingContext);
     } else {
-      final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(
-          buffer,
-          reqParams.getBufferOffset(),
-          reqParams.getReadLength());
       op = new AbfsRestOperation(
           AbfsRestOperationType.ReadFile,
           this,
           HTTP_METHOD_GET,
           url,
           requestHeaders,
-          ioDataParams,
-          sasTokenForReuse);
+          buffer,
+          reqParams.getBufferOffset(),
+          reqParams.getReadLength(), sasTokenForReuse);
 
       op.execute(tracingContext);
     }
@@ -1119,10 +1138,21 @@ public class AbfsClient implements Closeable {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
+  protected URL createBlobRequestUrl(final String path, final String query)
+      throws AzureBlobFileSystemException {
+    String base = baseUrl.toString();
+    base = base.replaceFirst(".dfs.", ".blob.");
+    return createRequestUrl(base, path, query);
+  }
+
   @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
-          throws AzureBlobFileSystemException {
-    final String base = baseUrl.toString();
+      throws AzureBlobFileSystemException {
+    return createRequestUrl(baseUrl.toString(), path, query);
+  }
+
+  protected URL createRequestUrl(final String base, final String path,
+      final String query) throws AzureBlobFileSystemException {
     String encodedPath = path;
     try {
       encodedPath = urlEncode(path);
@@ -1271,40 +1301,49 @@ public class AbfsClient implements Closeable {
       byte[] buffer,
       String sasTokenForReuse,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final AbfsRestIODataParameters ioDataParams = new AbfsRestIODataParameters(
-        buffer,
-        reqParams.getBufferOffset(),
-        reqParams.getReadLength(),
-        reqParams.getFastpathFileHandle());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.FastpathRead,
         this,
         HTTP_METHOD_GET,
         url,
         requestHeaders,
-        ioDataParams,
-        sasTokenForReuse);
+        buffer,
+        reqParams.getBufferOffset(),
+        reqParams.getReadLength(),
+        reqParams.getAbfsFastpathSessionInfo());
 
     try {
       op.execute(tracingContext);
       return op;
     } catch (AbfsFastpathException ex) {
       // Fastpath threw irrecoverable exception
-        reqParams.setMode(Mode.HTTP_CONNECTION_MODE);
-        if (ex.getCause() instanceof FastpathRequestException) {
-          tracingContext.setFastpathStatus(FastpathStatus.REQ_FAIL_REST_FALLBACK);
-        } else {
-          tracingContext.setFastpathStatus(FastpathStatus.CONN_FAIL_REST_FALLBACK);
-        }
-
-        return read(path, buffer, op.getSasToken(), reqParams, tracingContext);
+      // when FastpathRequestException is received, the request needs to
+      // be retried on REST
+      if (ex.getCause() instanceof FastpathRequestException) {
+        tracingContext.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
+        reqParams.getAbfsFastpathSessionInfo()
+            .setConnectionMode(
+                AbfsConnectionMode.REST_ON_FASTPATH_REQ_FAILURE);
+      } else {
+        // when FastpathConnectionException is received, the request needs to
+        // be retried on REST as well as switch AbfsInputStream to REST for
+        // all future reads in its lifetime
+        tracingContext.setConnectionMode(
+            AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
+        reqParams.getAbfsFastpathSessionInfo()
+            .setConnectionMode(
+                AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
       }
+
+      return read(path, buffer, op.getSasToken(), reqParams, tracingContext);
+    }
   }
 
   @VisibleForTesting
   protected AbfsRestOperation executeFastpathOpen(URL url,
       List<AbfsHttpHeader> requestHeaders,
-      String sasTokenForReuse,
+      AbfsFastpathSessionInfo fastpathSessionInfo,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.FastpathOpen,
@@ -1312,7 +1351,7 @@ public class AbfsClient implements Closeable {
         HTTP_METHOD_GET,
         url,
         requestHeaders,
-        sasTokenForReuse);
+        fastpathSessionInfo);
     op.execute(tracingContext);
     return op;
   }
@@ -1320,8 +1359,7 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   protected AbfsRestOperation executeFastpathClose(URL url,
       List<AbfsHttpHeader> requestHeaders,
-      String sasTokenForReuse,
-      String fastpathFileHandle,
+      AbfsFastpathSessionInfo fastpathSessionInfo,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.FastpathClose,
@@ -1329,8 +1367,7 @@ public class AbfsClient implements Closeable {
         HTTP_METHOD_GET,
         url,
         requestHeaders,
-        sasTokenForReuse,
-        fastpathFileHandle);
+        fastpathSessionInfo);
     op.execute(tracingContext);
     return op;
   }
@@ -1349,4 +1386,7 @@ public class AbfsClient implements Closeable {
   protected AccessTokenProvider getTokenProvider() {
     return tokenProvider;
   }
+
+  @VisibleForTesting
+  protected String getContainerName() { return filesystem; }
 }

@@ -23,16 +23,19 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsConnectionMode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.FastpathStatus;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CORR_INDICATOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FASTPATH_SSN_UPD_FALLBACK_CORR_INDICATOR;
 
 /**
  * The TracingContext class to correlate Store requests using unique
@@ -66,7 +69,7 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
-  private FastpathStatus fastpathStatus = FastpathStatus.FASTPATH_DISABLED;
+  private AbfsConnectionMode connectionMode = AbfsConnectionMode.REST_CONN;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -114,7 +117,7 @@ public class TracingContext {
     this.retryCount = 0;
     this.primaryRequestId = originalTracingContext.primaryRequestId;
     this.format = originalTracingContext.format;
-    this.fastpathStatus = originalTracingContext.fastpathStatus;
+    this.connectionMode = originalTracingContext.connectionMode;
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
@@ -149,8 +152,8 @@ public class TracingContext {
     this.retryCount = retryCount;
   }
 
-  public void setFastpathStatus(FastpathStatus fastpathStatus) {
-    this.fastpathStatus = fastpathStatus;
+  public void setConnectionMode(AbfsConnectionMode connectionMode) {
+    this.connectionMode = connectionMode;
   }
 
   public void setListener(Listener listener) {
@@ -170,7 +173,7 @@ public class TracingContext {
       header =
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
-              + retryCount + ":" + getFastpathStatusIndicator(fastpathStatus);
+              + retryCount + ":" + getConnectionModeIndicator(connectionMode);
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
@@ -192,18 +195,23 @@ public class TracingContext {
     return header;
   }
 
-  public FastpathStatus getFastpathStatus() { return fastpathStatus; }
-
-  private static String getFastpathStatusIndicator(FastpathStatus fastpathStatus) {
-    switch(fastpathStatus) {
-    case FASTPATH:
+  private static String getConnectionModeIndicator(AbfsConnectionMode connectionMode) {
+    switch(connectionMode) {
+    case FASTPATH_CONN:
      return FASTPATH_CORR_INDICATOR;
-    case REQ_FAIL_REST_FALLBACK:
+    case REST_ON_FASTPATH_REQ_FAILURE:
       return FASTPATH_REQ_REST_FALLBACK_CORR_INDICATOR;
-    case CONN_FAIL_REST_FALLBACK:
+    case REST_ON_FASTPATH_CONN_FAILURE:
       return FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
+    case REST_ON_FASTPATH_SESSION_UPD_FAILURE:
+      return FASTPATH_SSN_UPD_FALLBACK_CORR_INDICATOR;
     }
 
     return EMPTY_STRING;
+  }
+
+  @VisibleForTesting
+  public AbfsConnectionMode getConnectionMode() {
+    return connectionMode;
   }
 }

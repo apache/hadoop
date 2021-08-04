@@ -51,10 +51,12 @@ public class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
       TracingContext tracingContext) {
     try {
       MockAbfsClient mockClient = new MockAbfsClient(client);
+      // create instance with fastpath disabled flag. MockAbfsInputStream will setup
+      // a mock session valid for 5 mins
       return new MockAbfsInputStream(mockClient, statistics, path, contentLength,
-          abfsInputStreamContext.withFastpathEnabledState(true), eTag, null);
-    } catch (IOException e) {
-      Assert.fail("Failure in creating MockAbfsInputStream");
+          abfsInputStreamContext.withFastpathEnabledState(false), eTag, null);
+    } catch (Exception e) {
+      Assert.fail("Failure in creating MockAbfsInputStream " + e);
     }
 
     return null;

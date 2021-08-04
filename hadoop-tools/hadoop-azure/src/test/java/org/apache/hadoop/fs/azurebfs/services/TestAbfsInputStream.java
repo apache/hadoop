@@ -102,7 +102,18 @@ public class TestAbfsInputStream extends
     return client;
   }
 
-  private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
+  /**
+   * Returns an AbfsInputStream instance that has
+   * bufferSize and readAheadBufferSize = 1 KB
+   * file size = 3 KB
+   * readAheadQueue depth = 10 - but based on buffer size and file size
+   * only 3 readAheads will be triggered for the read at offset 0
+   * @param mockAbfsClient
+   * @param fileName
+   * @return
+   * @throws IOException
+   */
+  public AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
       String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
     // Create AbfsInputStream with the client instance

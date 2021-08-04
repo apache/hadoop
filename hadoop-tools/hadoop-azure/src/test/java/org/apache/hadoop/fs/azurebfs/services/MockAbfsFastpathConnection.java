@@ -31,25 +31,21 @@ import com.azure.storage.fastpath.responseProviders.FastpathCloseResponse;
 import com.azure.storage.fastpath.responseProviders.FastpathOpenResponse;
 import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-
 public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
 
   int errStatus = 0;
   boolean mockRequestException = false;
   boolean mockConnectionException = false;
 
-  public MockAbfsFastpathConnection(final org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType opType,
+  public MockAbfsFastpathConnection(final AbfsRestOperationType opType,
       final URL url,
       final String method,
       final AuthType authType,
       final String authToken,
       final List<AbfsHttpHeader> requestHeaders,
-      final String fastpathFileHandle,
-      final boolean fastpathMockSoEnabled) throws IOException {
+      final AbfsFastpathSessionInfo fastpathSessionInfo) throws IOException {
     super(opType, url, method, authType, authToken, requestHeaders,
-        fastpathFileHandle);
-    MockFastpathConnection.setTestMock(fastpathMockSoEnabled);
+        fastpathSessionInfo);
   }
 
   protected FastpathOpenResponse triggerOpen(FastpathOpenRequestParams openRequestParams)
