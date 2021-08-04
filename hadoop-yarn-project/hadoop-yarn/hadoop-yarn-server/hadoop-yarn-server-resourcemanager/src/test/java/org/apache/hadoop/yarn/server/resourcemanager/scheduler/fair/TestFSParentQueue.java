@@ -23,9 +23,6 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,7 +31,6 @@ public class TestFSParentQueue {
 
   private FairSchedulerConfiguration conf;
   private QueueManager queueManager;
-  private Set<FSQueue> notEmptyQueues;
 
   @Before
   public void setUp() throws Exception {
@@ -47,13 +43,7 @@ public class TestFSParentQueue {
         new DefaultResourceCalculator());
     SystemClock clock = SystemClock.getInstance();
     when(scheduler.getClock()).thenReturn(clock);
-    notEmptyQueues = new HashSet<FSQueue>();
-    queueManager = new QueueManager(scheduler) {
-      @Override
-      public boolean isEmpty(FSQueue queue) {
-        return !notEmptyQueues.contains(queue);
-      }
-    };
+    queueManager = new QueueManager(scheduler);
     FSQueueMetrics.forQueue("root", null, true, conf);
     queueManager.initialize(conf);
   }
