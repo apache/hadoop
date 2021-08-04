@@ -1550,11 +1550,18 @@ public class ContainerLaunch implements Callable<Integer> {
       final Set<String> deps = new HashSet<>();
       while (matcher.find()) {
         String match = matcher.group(1);
-        if (match.length() > 0) {
-          // Either store the variable name before the : string manipulation
-          // character or the whole match. (%var% -> var, %a:b% -> a)
-          String[] split = SPLIT_PATTERN.split(match, 2);
-          deps.add(split[0]);
+        if (!match.isEmpty()) {
+          if (match.equals(":")) {
+            // Special case, variable name can be a single : character
+            deps.add(match);
+          } else {
+            // Either store the variable name before the : string manipulation
+            // character or the whole match. (%var% -> var, %a:b% -> a)
+            String[] split = SPLIT_PATTERN.split(match, 2);
+            if (!split[0].isEmpty()) {
+              deps.add(split[0]);
+            }
+          }
         }
       }
       return deps;
