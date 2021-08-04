@@ -28,6 +28,11 @@
     <value>false</value>
   </property>
 
+  <property>
+    <name>fs.azure.fastpath.enable</name>
+    <value>false</value>
+  </property>
+
   <!--====================  ABFS CONFIGURATION ====================-->
   <!-- SEE relevant section in "site/markdown/testing_azure.md"-->
   <property>
