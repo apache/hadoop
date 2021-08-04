@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.registry.client.impl.zk;
 
+import org.apache.curator.framework.recipes.cache.CuratorCache;
+import org.apache.curator.framework.recipes.cache.CuratorCacheBridge;
+import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.curator.ensemble.EnsembleProvider;
@@ -28,9 +31,6 @@ import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CreateBuilder;
 import org.apache.curator.framework.api.DeleteBuilder;
 import org.apache.curator.framework.api.GetChildrenBuilder;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -56,6 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 
 /**
@@ -109,9 +110,9 @@ public class CuratorService extends CompositeService
   private EnsembleProvider ensembleProvider;
 
   /**
-   * Registry tree cache.
+   * Registry Curator cache.
    */
-  private TreeCache treeCache;
+  private CuratorCacheBridge curatorCacheBridge;
 
   /**
    * Construct the service.
@@ -189,8 +190,8 @@ public class CuratorService extends CompositeService
   protected void serviceStop() throws Exception {
     IOUtils.closeStream(curator);
 
-    if (treeCache != null) {
-      treeCache.close();
+    if (curatorCacheBridge != null) {
+      curatorCacheBridge.close();
     }
     super.serviceStop();
   }
@@ -824,73 +825,65 @@ public class CuratorService extends CompositeService
    *
    * @param listener the listener.
    * @return a handle allowing for the management of the listener.
-   * @throws Exception if registration fails due to error.
    */
-  public ListenerHandle registerPathListener(final PathListener listener)
-      throws Exception {
+  public ListenerHandle registerPathListener(final PathListener listener) {
 
-    final TreeCacheListener pathChildrenCacheListener =
-        new TreeCacheListener() {
-
-          public void childEvent(CuratorFramework curatorFramework,
-              TreeCacheEvent event)
-              throws Exception {
-            String path = null;
-            if (event != null && event.getData() != null) {
-              path = event.getData().getPath();
-            }
-            assert event != null;
-            switch (event.getType()) {
-            case NODE_ADDED:
-              LOG.info("Informing listener of added node {}", path);
-              listener.nodeAdded(path);
-
-              break;
-
-            case NODE_REMOVED:
-              LOG.info("Informing listener of removed node {}", path);
-              listener.nodeRemoved(path);
-
-              break;
-
-            case NODE_UPDATED:
-              LOG.info("Informing listener of updated node {}", path);
-              listener.nodeAdded(path);
-
-              break;
-
-            default:
-              // do nothing
-              break;
-
-            }
+    CuratorCacheListener cacheListener = CuratorCacheListener.builder()
+        .forCreates(childData -> {
+          final String path = childData.getPath();
+          LOG.info("Informing listener of added node {}", path);
+          try {
+            listener.nodeAdded(path);
+          } catch (IOException e) {
+            LOG.error("Error while processing Curator listener "
+                + "NODE_CREATED event");
+            throw new UncheckedIOException(e);
           }
-        };
-    treeCache.getListenable().addListener(pathChildrenCacheListener);
+        })
+        .forChanges((oldNode, node) -> {
+          final String path = node.getPath();
+          LOG.info("Informing listener of updated node {}", path);
+          try {
+            listener.nodeAdded(path);
+          } catch (IOException e) {
+            LOG.error("Error while processing Curator listener "
+                + "NODE_CHANGED event");
+            throw new UncheckedIOException(e);
+          }
+        })
+        .forDeletes(childData -> {
+          final String path = childData.getPath();
+          LOG.info("Informing listener of removed node {}", path);
+          try {
+            listener.nodeRemoved(path);
+          } catch (IOException e) {
+            LOG.error("Error while processing Curator listener "
+                + "NODE_DELETED event");
+            throw new UncheckedIOException(e);
+          }
+        })
+        .build();
 
-    return new ListenerHandle() {
-      @Override
-      public void remove() {
-        treeCache.getListenable().removeListener(pathChildrenCacheListener);
-      }
-    };
-
+    curatorCacheBridge.listenable().addListener(cacheListener);
+    return () -> curatorCacheBridge.listenable().removeListener(cacheListener);
   }
 
   // TODO: should caches be stopped and then restarted if need be?
 
   /**
-   * Create the tree cache that monitors the registry for node addition, update,
-   * and deletion.
-   *
-   * @throws Exception if any issue arises during monitoring.
+   * Instantiate the Curator cache that monitors the registry for node
+   * addition, update and deletion.
    */
-  public void monitorRegistryEntries()
-      throws Exception {
+  public void instantiateCacheForRegistry() {
     String registryPath =
         getConfig().get(RegistryConstants.KEY_REGISTRY_ZK_ROOT,
             RegistryConstants.DEFAULT_ZK_REGISTRY_ROOT);
-    treeCache = new TreeCache(curator, registryPath);
-    treeCache.start();
+    curatorCacheBridge = CuratorCache.bridgeBuilder(curator, registryPath)
+        .build();
   }
+
+  public void startCache() {
+    curatorCacheBridge.start();
+  }
+
 }
