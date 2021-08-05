@@ -82,13 +82,13 @@ public class BuiltInGzipCompressor implements Compressor {
   public int compress(byte[] b, int off, int len) throws IOException {
     int compressedBytesWritten = 0;
 
+    if (currentBufLen <= 0) {
+      return compressedBytesWritten;
+    }
+
     // If we are not within uncompressed data yet, output the header.
     if (state != BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM &&
             state != BuiltInGzipDecompressor.GzipStateLabel.TRAILER_CRC) {
-      if (currentBufLen <= 0) {
-        return compressedBytesWritten;
-      }
-
       int outputHeaderSize = writeHeader(b, off, len);
       numExtraBytesWritten += outputHeaderSize;
 
