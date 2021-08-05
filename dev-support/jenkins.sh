@@ -21,17 +21,17 @@
 # We use Ubuntu Focal as the main platform for building Hadoop, thus
 # it runs for all the PRs. Additionally, we also ensure that
 # Hadoop builds across the supported platforms whenever there's a change
-# in any of the C++ files, C++ build files or platform changes.
+# in any of the C/C++ files, C/C++ build files or platform changes.
 
-## @description  Check if the given extension is related to C++
+## @description  Check if the given extension is related to C/C++
 ## @param        seeking
 ## @return       0 if yes
 ## @return       1 if no
-is_cpp_extension() {
-  local cpp_extensions=("cc" "cpp" "h" "hpp")
+is_c_cpp_extension() {
+  local c_cpp_extension=("c" "cc" "cpp" "h" "hpp")
   local seeking=$1
 
-  for element in "${cpp_extensions[@]}"; do
+  for element in "${c_cpp_extension[@]}"; do
     if [[ $element == "$seeking" ]]; then
       return 0
     fi
@@ -50,7 +50,7 @@ is_platform_change() {
 
   for path in "${SOURCEDIR}"/dev-support/docker/Dockerfile* "${SOURCEDIR}"/dev-support/docker/pkg-resolver/*.json; do
     if [ "${in_path}" == "${path}" ]; then
-      echo "Found C++ platform related changes in ${in_path}"
+      echo "Found C/C++ platform related changes in ${in_path}"
       return 0
     fi
   done
@@ -58,11 +58,11 @@ is_platform_change() {
 }
 
 ## @description  Checks if the given path corresponds to a change
-##               in C++ files or related to C++ build system
+##               in C/C++ files or related to C/C++ build system
 ## @param        path
 ## @return       0 if yes
 ## @return       1 if no
-is_cpp_change() {
+is_c_cpp_change() {
   shopt -s nocasematch
 
   local path=$1
@@ -70,13 +70,13 @@ is_cpp_change() {
   filename=$(basename -- "${path}")
   extension=${filename##*.}
 
-  if is_cpp_extension "${extension}"; then
-    echo "Found C++ changes in ${path}"
+  if is_c_cpp_extension "${extension}"; then
+    echo "Found C/C++ changes in ${path}"
     return 0
   fi
 
   if [[ $filename =~ CMakeLists\.txt ]]; then
-    echo "Found C++ build related changes in ${path}"
+    echo "Found C/C++ build related changes in ${path}"
     return 0
   fi
   return 1
@@ -84,7 +84,7 @@ is_cpp_change() {
 
 ## @description  Check if the CI needs to be run - CI will always run if
 ##               IS_OPTIONAL is 0, or if there's any change in
-##               C++/C++ build/platform
+##               C/C++ files or C/C++ build or platform
 ## @return       0 if yes
 ## @return       1 if no
 function check_ci_run() {
@@ -94,7 +94,7 @@ function check_ci_run() {
   # Loop over the paths of all the changed files and check if the criteria
   # to run the CI has been satisfied
   for path in $(git --git-dir "${SOURCEDIR}/.git" diff --name-only "${firstCommitOfThisPr}" HEAD); do
-    if is_cpp_change "${path}"; then
+    if is_c_cpp_change "${path}"; then
       return 0
     fi
 
@@ -242,7 +242,7 @@ if [ "$1" == "run_ci" ]; then
   if check_ci_run; then
     run_ci
   else
-    echo "No C++ file/C++ build/platform changes found, will not run CI"
+    echo "No C/C++ file or C/C++ build or platform changes found, will not run CI for this platform"
   fi
 elif [ "$1" == "cleanup_ci_proc" ]; then
   cleanup_ci_proc
