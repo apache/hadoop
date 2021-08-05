@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -186,6 +188,8 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     S3AFileSystem fs1 = new S3AFileSystem();
@@ -229,10 +233,43 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
+  }
+
+  /**
+   * Skip if S3Guard and S3CSE are enabled together.
+   *
+   * @param conf Test Configuration.
+   */
+  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf) {
+    String encryptionMethod =
+        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM, "");
+    String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
+    if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
+        !metaStore.equals(S3GUARD_METASTORE_NULL)) {
+      skip("Skipped if CSE is enabled with S3Guard.");
+    }
+  }
+
+  /**
+   * Either skip if PathIOE occurred due to S3CSE and S3Guard
+   * incompatibility or throw the PathIOE.
+   *
+   * @param ioe PathIOE being parsed.
+   * @throws PathIOException Throws PathIOE if it doesn't relate to S3CSE
+   *                         and S3Guard incompatibility.
+   */
+  public static void maybeSkipIfS3GuardAndS3CSEIOE(PathIOException ioe)
+      throws PathIOException {
+    if (ioe.toString().contains(InternalConstants.CSE_S3GUARD_INCOMPATIBLE)) {
+      skip("Skipping since CSE is enabled with S3Guard.");
+    }
+    throw ioe;
   }
 
   /**

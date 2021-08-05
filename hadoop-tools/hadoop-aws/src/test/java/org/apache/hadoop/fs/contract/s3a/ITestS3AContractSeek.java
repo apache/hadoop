@@ -143,7 +143,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   public void teardown() throws Exception {
     super.teardown();
     S3AFileSystem fs = getFileSystem();
-    if (fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE, false)) {
+    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
+        false)) {
       fs.close();
     }
   }
