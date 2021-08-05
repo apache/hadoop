@@ -196,6 +196,8 @@ public class BuiltInGzipCompressor implements Compressor {
     deflater.setInput(b, off, len);
     crc.update(b, off, len);  // CRC-32 is on uncompressed data
     currentBufLen = len;
+
+    state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
   }
 
   private int writeHeader(byte[] b, int off, int len) {
