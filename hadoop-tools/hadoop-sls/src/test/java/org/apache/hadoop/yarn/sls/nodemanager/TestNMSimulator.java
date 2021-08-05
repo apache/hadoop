@@ -157,13 +157,10 @@ public class TestNMSimulator {
       numClusterNodes = rm.getResourceScheduler().getNumClusterNodes();
     }
 
-    GenericTestUtils.waitFor(new com.google.common.base.Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return rm.getResourceScheduler().getRootQueueMetrics()
-            .getAvailableMB() > 0;
-      }
-    }, 500, 10000);
+    GenericTestUtils.waitFor(() ->
+            rm.getResourceScheduler().getRootQueueMetrics()
+                .getAvailableMB() > 0,
+        500, 10000);
 
     Assert.assertEquals("Node should have no runningApps.",
         node.getNode().getRunningApps().size(), 0);
@@ -207,13 +204,10 @@ public class TestNMSimulator {
       numClusterNodes = rm.getResourceScheduler().getNumClusterNodes();
     }
 
-    GenericTestUtils.waitFor(new com.google.common.base.Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return rm.getResourceScheduler().getRootQueueMetrics()
-            .getAvailableMB() > 0;
-      }
-    }, 500, 10000);
+    GenericTestUtils.waitFor(() ->
+            rm.getResourceScheduler().getRootQueueMetrics()
+                .getAvailableMB() > 0,
+        500, 10000);
 
     Assert.assertEquals("Node should have no runningApps.",
         node.getNode().getRunningApps().size(), 0);
