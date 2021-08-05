@@ -829,25 +829,14 @@ public class CuratorService extends CompositeService
   public ListenerHandle registerPathListener(final PathListener listener) {
 
     CuratorCacheListener cacheListener = CuratorCacheListener.builder()
-        .forCreates(childData -> {
-          final String path = childData.getPath();
-          LOG.info("Informing listener of added node {}", path);
-          try {
-            listener.nodeAdded(path);
-          } catch (IOException e) {
-            LOG.error("Error while processing Curator listener "
-                + "NODE_CREATED event");
-            throw new UncheckedIOException(e);
-          }
-        })
-        .forChanges((oldNode, node) -> {
+        .forCreatesAndChanges((oldNode, node) -> {
           final String path = node.getPath();
-          LOG.info("Informing listener of updated node {}", path);
+          LOG.info("Informing listener of added/updated node {}", path);
           try {
             listener.nodeAdded(path);
           } catch (IOException e) {
             LOG.error("Error while processing Curator listener "
-                + "NODE_CHANGED event");
+                + "NODE_CREATED / NODE_CHANGED event");
             throw new UncheckedIOException(e);
           }
         })
