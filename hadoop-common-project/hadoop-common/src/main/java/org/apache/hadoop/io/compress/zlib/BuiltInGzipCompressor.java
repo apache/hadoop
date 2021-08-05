@@ -87,8 +87,7 @@ public class BuiltInGzipCompressor implements Compressor {
     }
 
     // If we are not within uncompressed data yet, output the header.
-    if (state != BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM &&
-            state != BuiltInGzipDecompressor.GzipStateLabel.TRAILER_CRC) {
+    if (state == BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC) {
       int outputHeaderSize = writeHeader(b, off, len);
       numExtraBytesWritten += outputHeaderSize;
 
