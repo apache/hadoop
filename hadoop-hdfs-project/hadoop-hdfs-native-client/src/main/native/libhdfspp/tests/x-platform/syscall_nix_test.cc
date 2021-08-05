@@ -22,7 +22,6 @@
 
 #include "x-platform/syscall.h"
 
-
 TEST(XPlatformSyscall, FnMatchBasicPath) {
   const std::string pattern("*.doc");
   const std::string str("some/path/abcd.doc");
