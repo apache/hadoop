@@ -43,17 +43,17 @@ public class BuiltInGzipCompressor implements Compressor {
           0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   // The trailer will be overwritten based on crc and output size.
-  private byte[] GZIP_TRAILER = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  private static final byte[] GZIP_TRAILER = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  private final int GZIP_HEADER_LEN = GZIP_HEADER.length;
-  private final int GZIP_TRAILER_LEN = GZIP_TRAILER.length;
+  private static final int GZIP_HEADER_LEN = GZIP_HEADER.length;
+  private static final int GZIP_TRAILER_LEN = GZIP_TRAILER.length;
 
   private Deflater deflater;
 
   private int headerOff = 0;
   private int trailerOff = 0;
 
-  private int numBytesWritten = 0;
+  private int numExtraBytesWritten = 0;
 
   private int currentBufLen = 0;
 
@@ -75,7 +75,7 @@ public class BuiltInGzipCompressor implements Compressor {
       return deflater.needsInput();
     }
 
-    return (state != BuiltInGzipDecompressor.GzipStateLabel.FINISHED);
+    return false;
   }
 
   @Override
@@ -90,7 +90,7 @@ public class BuiltInGzipCompressor implements Compressor {
       }
 
       int outputHeaderSize = writeHeader(b, off, len);
-      numBytesWritten += outputHeaderSize;
+      numExtraBytesWritten += outputHeaderSize;
 
       compressedBytesWritten += outputHeaderSize;
 
@@ -120,7 +120,7 @@ public class BuiltInGzipCompressor implements Compressor {
     }
 
     int outputTrailerSize = writeTrailer(b, off, len);
-    numBytesWritten += outputTrailerSize;
+    numExtraBytesWritten += outputTrailerSize;
 
     compressedBytesWritten += outputTrailerSize;
 
@@ -134,7 +134,7 @@ public class BuiltInGzipCompressor implements Compressor {
 
   @Override
   public long getBytesWritten() {
-    return numBytesWritten + deflater.getTotalOut();
+    return numExtraBytesWritten + deflater.getTotalOut();
   }
 
   @Override
@@ -145,7 +145,6 @@ public class BuiltInGzipCompressor implements Compressor {
   @Override
   public void finish() {
     deflater.finish();
-    state = BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
   }
 
   private void init(Configuration conf) {
@@ -163,7 +162,7 @@ public class BuiltInGzipCompressor implements Compressor {
   public void reinit(Configuration conf) {
     init(conf);
     crc.reset();
-    numBytesWritten = 0;
+    numExtraBytesWritten = 0;
     currentBufLen = 0;
     headerOff = trailerOff = 0;
   }
@@ -173,6 +172,7 @@ public class BuiltInGzipCompressor implements Compressor {
     deflater.reset();
     state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
     crc.reset();
+    numExtraBytesWritten = 0;
     currentBufLen = 0;
     headerOff = trailerOff = 0;
   }
