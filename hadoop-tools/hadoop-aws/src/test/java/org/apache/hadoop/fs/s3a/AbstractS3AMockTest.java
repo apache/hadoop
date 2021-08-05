@@ -59,8 +59,8 @@ public abstract class AbstractS3AMockTest {
     Configuration conf = createConfiguration();
     fs = new S3AFileSystem();
     URI uri = URI.create(FS_S3A + "://" + BUCKET);
-    // cut S3Guard and S3CSE props from config to avoid pathIOE.
-    removeBaseAndBucketOverrides(conf, SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    // unset S3CSE property from config to avoid pathIOE.
+    conf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
     fs.initialize(uri, conf);
     s3 = fs.getAmazonS3ClientForTesting("mocking");
   }
