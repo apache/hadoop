@@ -43,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.NetUtilsTestResolver;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -111,7 +112,7 @@ public class TestNetUtils {
       fail("Should not have connected");
     } catch (UnknownHostException uhe) {
       LOG.info("Got exception: ", uhe);
-      assertEquals("invalid-test-host:0", uhe.getMessage());
+      GenericTestUtils.assertExceptionContains("invalid-test-host:0", uhe);
     }
   }
 
