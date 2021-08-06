@@ -40,10 +40,11 @@ public class BuiltInGzipCompressor implements Compressor {
    * details.
    */
   private static final byte[] GZIP_HEADER = new byte[]{
-          0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+      0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   // The trailer will be overwritten based on crc and output size.
-  private static final byte[] GZIP_TRAILER = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  private static final byte[] GZIP_TRAILER = new byte[]{
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   private static final int GZIP_HEADER_LEN = GZIP_HEADER.length;
   private static final int GZIP_TRAILER_LEN = GZIP_TRAILER.length;
@@ -61,7 +62,9 @@ public class BuiltInGzipCompressor implements Compressor {
 
   private BuiltInGzipDecompressor.GzipStateLabel state;
 
-  public BuiltInGzipCompressor(Configuration conf) { init(conf); }
+  public BuiltInGzipCompressor(Configuration conf) {
+    init(conf);
+  }
 
   @Override
   public boolean finished() {
@@ -164,7 +167,8 @@ public class BuiltInGzipCompressor implements Compressor {
     crc.reset();
     numExtraBytesWritten = 0;
     currentBufLen = 0;
-    headerOff = trailerOff = 0;
+    headerOff = 0;
+    trailerOff = 0;
   }
 
   @Override
@@ -174,7 +178,8 @@ public class BuiltInGzipCompressor implements Compressor {
     crc.reset();
     numExtraBytesWritten = 0;
     currentBufLen = 0;
-    headerOff = trailerOff = 0;
+    headerOff = 0;
+    trailerOff = 0;
   }
 
   @Override
@@ -243,7 +248,8 @@ public class BuiltInGzipCompressor implements Compressor {
     if (trailerOff == GZIP_TRAILER_LEN) {
       state = BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
       currentBufLen = 0;
-      headerOff = trailerOff = 0;
+      headerOff = 0;
+      trailerOff = 0;
     }
 
     return n;

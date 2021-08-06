@@ -862,16 +862,16 @@ public class TestCodec {
     // and try to read it back via the regular GZIPInputStream.
 
     // Use native libs per the parameter
-    Configuration conf = new Configuration();
+    Configuration hadoopConf = new Configuration();
     if (useNative) {
-      assumeTrue(ZlibFactory.isNativeZlibLoaded(conf));
+      assumeTrue(ZlibFactory.isNativeZlibLoaded(hadoopConf));
     } else {
       assertFalse("ZlibFactory is using native libs against request",
-          ZlibFactory.isNativeZlibLoaded(conf));
+          ZlibFactory.isNativeZlibLoaded(hadoopConf));
     }
 
     // Ensure that the CodecPool has a BuiltInZlibDeflater in it.
-    Compressor zlibCompressor = ZlibFactory.getZlibCompressor(conf);
+    Compressor zlibCompressor = ZlibFactory.getZlibCompressor(hadoopConf);
     assertNotNull("zlibCompressor is null!", zlibCompressor);
     assertTrue("ZlibFactory returned unexpected deflator",
           useNative ? zlibCompressor instanceof ZlibCompressor
@@ -880,7 +880,7 @@ public class TestCodec {
     CodecPool.returnCompressor(zlibCompressor);
 
     // Create a GZIP text file via the Compressor interface.
-    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodecFactory ccf = new CompressionCodecFactory(hadoopConf);
     CompressionCodec codec = ccf.getCodec(new Path("foo.gz"));
     assertTrue("Codec for .gz file is not GzipCodec", 
                codec instanceof GzipCodec);
