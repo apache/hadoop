@@ -138,15 +138,17 @@ public class TestShuffleHandler {
   //WARNING: If this is set to true and proxy server is not running, tests will fail!
   private static final boolean USE_PROXY = false;
   private static final int HEADER_WRITE_COUNT = 100000;
+  private static final int ARBITRARY_NEGATIVE_TIMEOUT_SECONDS = -100;
   private static TestExecution TEST_EXECUTION;
 
   private static class TestExecution {
-    private static final int DEFAULT_KEEP_ALIVE_TIMEOUT = -100;
-    private static final int DEBUG_FRIENDLY_KEEP_ALIVE = 1000;
+    private static final int DEFAULT_KEEP_ALIVE_TIMEOUT_SECONDS = 1;
+    private static final int DEBUG_KEEP_ALIVE_SECONDS = 1000;
     private static final int DEFAULT_PORT = 0; //random port
     private static final int FIXED_PORT = 8088;
     private static final String PROXY_HOST = "127.0.0.1";
     private static final int PROXY_PORT = 8888;
+    private static final int CONNECTION_DEBUG_TIMEOUT = 1000000;
     private final boolean debugMode;
     private final boolean useProxy;
 
@@ -157,9 +159,9 @@ public class TestShuffleHandler {
 
     int getKeepAliveTimeout() {
       if (debugMode) {
-        return DEBUG_FRIENDLY_KEEP_ALIVE;
+        return DEBUG_KEEP_ALIVE_SECONDS;
       }
-      return DEFAULT_KEEP_ALIVE_TIMEOUT;
+      return DEFAULT_KEEP_ALIVE_TIMEOUT_SECONDS;
     }
     
     HttpURLConnection openConnection(URL url) throws IOException {
@@ -184,17 +186,14 @@ public class TestShuffleHandler {
     
     void parameterizeConnection(URLConnection conn) {
       if (DEBUG_MODE) {
-        conn.setReadTimeout(1000000);
-        conn.setConnectTimeout(1000000);
+        conn.setReadTimeout(CONNECTION_DEBUG_TIMEOUT);
+        conn.setConnectTimeout(CONNECTION_DEBUG_TIMEOUT);
       }
     }
   }
   
   private static class ResponseConfig {
-    private static final int ONE_HEADER_DISPLACEMENT = 1;
-    
     private final int headerWriteCount;
-    private final long actualHeaderWriteCount;
     private final int mapOutputCount;
     private final int contentLengthOfOneMapOutput;
     private long headerSize;
@@ -207,14 +206,11 @@ public class TestShuffleHandler {
       this.headerWriteCount = headerWriteCount;
       this.mapOutputCount = mapOutputCount;
       this.contentLengthOfOneMapOutput = contentLengthOfOneMapOutput;
-      //MapOutputSender#send will send header N + 1 times
-      //So, (N + 1) * headerSize should be the Content-length header + the expected Content-length as well
-      this.actualHeaderWriteCount = headerWriteCount + ONE_HEADER_DISPLACEMENT;
     }
 
     private void setHeaderSize(long headerSize) {
       this.headerSize = headerSize;
-      long contentLengthOfAllHeaders = actualHeaderWriteCount * headerSize;
+      long contentLengthOfAllHeaders = headerWriteCount * headerSize;
       this.contentLengthOfResponse = computeContentLengthOfResponse(contentLengthOfAllHeaders);
       LOG.debug("Content-length of all headers: {}", contentLengthOfAllHeaders);
       LOG.debug("Content-length of one MapOutput: {}", contentLengthOfOneMapOutput);
@@ -405,7 +401,6 @@ public class TestShuffleHandler {
       LOG.debug("In MapOutputSender#send");
       lastSocketAddress.setAddress(ch.remoteAddress());
       ShuffleHeader header = shuffleHeaderProvider.createNewShuffleHeader();
-      writeOneHeader(ch, header);
       ChannelFuture future = writeHeaderNTimes(ch, header, responseConfig.headerWriteCount);
       // This is the last operation
       // It's safe to increment ShuffleHeader counter for better identification
@@ -414,13 +409,6 @@ public class TestShuffleHandler {
         return additionalMapOutputSenderOperations.perform(ctx, ch);
       }
       return future;
-    }
-    private void writeOneHeader(Channel ch, ShuffleHeader header) throws IOException {
-      DataOutputBuffer dob = new DataOutputBuffer();
-      header.write(dob);
-      LOG.debug("MapOutputSender#writeOneHeader before WriteAndFlush #1");
-      ch.writeAndFlush(wrappedBuffer(dob.getData(), 0, dob.getLength()));
-      LOG.debug("MapOutputSender#writeOneHeader after WriteAndFlush #1. outputBufferSize: " + dob.size());
     }
 
     private ChannelFuture writeHeaderNTimes(Channel ch, ShuffleHeader header, int iterations) throws IOException {
@@ -435,21 +423,20 @@ public class TestShuffleHandler {
 
   private static class ShuffleHeaderProvider {
     private final long attemptId;
-    private final AtomicInteger attemptCounter;
+    private int attemptCounter = 0;
     private int cachedSize = Integer.MIN_VALUE;
 
     public ShuffleHeaderProvider(long attemptId) {
       this.attemptId = attemptId;
-      this.attemptCounter = new AtomicInteger();
     }
 
     ShuffleHeader createNewShuffleHeader() {
-      return new ShuffleHeader(String.format("attempt_%s_1_m_1_0%s", attemptId,
-          attemptCounter.get()), 5678, 5678, 1);
+      return new ShuffleHeader(String.format("attempt_%s_1_m_1_0%s", attemptId, attemptCounter),
+          5678, 5678, 1);
     }
 
     void incrementCounter() {
-      attemptCounter.incrementAndGet();
+      attemptCounter++;
     }
 
     private int getShuffleHeaderSize() throws IOException {
@@ -594,6 +581,7 @@ public class TestShuffleHandler {
 
     private void connectToUrlsInternal(String[] urls, ResponseConfig responseConfig, int expectedHttpStatus) throws IOException {
       int requests = urls.length;
+      int expectedConnections = urls.length;
       LOG.debug("Will connect to URLs: {}", Arrays.toString(urls));
       for (int reqIdx = 0; reqIdx < requests; reqIdx++) {
         String urlString = urls[reqIdx];
@@ -612,7 +600,8 @@ public class TestShuffleHandler {
           try {
             DataInputStream input = new DataInputStream(conn.getInputStream());
           } catch (Exception e) {
-            return;
+            expectedConnections--;
+            continue;
           }
         }
         DataInputStream input = new DataInputStream(conn.getInputStream());
@@ -624,8 +613,8 @@ public class TestShuffleHandler {
         int expectedContentLength =
             Integer.parseInt(conn.getHeaderField(HttpHeader.CONTENT_LENGTH.asString()));
         
-        if (result.totalBytesRead < expectedContentLength) {
-          throw new IOException(String.format("Premature EOF inputStream. " +
+        if (result.totalBytesRead != expectedContentLength) {
+          throw new IOException(String.format("Premature EOF InputStream. " +
               "Expected content-length: %s, " +
               "Actual content-length: %s", expectedContentLength, result.totalBytesRead));
         }
@@ -634,8 +623,7 @@ public class TestShuffleHandler {
         input.close();
         LOG.debug("Finished all interactions with URL: {}. Progress: {}/{}", url, (reqIdx + 1), requests);
       }
-
-      Assert.assertEquals(urls.length, connectionData.size());
+      Assert.assertEquals(expectedConnections, connectionData.size());
     }
 
     void validate(Consumer<HttpConnectionData> connDataValidator) {
@@ -657,7 +645,7 @@ public class TestShuffleHandler {
       int bytesRead;
       int totalBytesRead = 0;
       while ((bytesRead = input.read(buffer)) != -1) {
-        dataStream.write(buffer);
+        dataStream.write(buffer, 0, bytesRead);
         totalBytesRead += bytesRead;
       }
       LOG.debug("Read total bytes: " + totalBytesRead);
@@ -848,6 +836,10 @@ public class TestShuffleHandler {
   }
 
   private static boolean isPortUsed(int port) {
+    if (port == 0) {
+      //Don't check if port is 0
+      return false;
+    }
     try (Socket ignored = new Socket("localhost", port)) {
       return true;
     } catch (IOException e) {
@@ -1172,8 +1164,8 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, TEST_EXECUTION.shuffleHandlerPort());
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
-    // try setting to -ve keep alive timeout.
-    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, -100);
+    // try setting to negative keep alive timeout.
+    conf.setInt(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT, ARBITRARY_NEGATIVE_TIMEOUT_SECONDS);
     HttpURLConnection conn = null;
     MockShuffleHandler2 shuffleHandler = new MockShuffleHandler2();
     AuxiliaryLocalPathHandler pathHandler =
@@ -1906,9 +1898,8 @@ public class TestShuffleHandler {
 
   @Test(timeout = 10000)
   public void testIdleStateHandlingNegativeTimeoutDefaultsTo1Second() throws Exception {
-    int timeoutSeconds = -100;
-    int expectedTimeoutSeconds = 1;
-    testHandlingIdleState(timeoutSeconds, expectedTimeoutSeconds);
+    int expectedTimeoutSeconds = 1; //expected by production code
+    testHandlingIdleState(ARBITRARY_NEGATIVE_TIMEOUT_SECONDS, expectedTimeoutSeconds);
   }
 
   private String getShuffleUrlWithKeepAlive(ShuffleHandler shuffleHandler, long jobId, long... attemptIds) {

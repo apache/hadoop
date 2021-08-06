@@ -80,29 +80,27 @@ class LoggingHttpResponseEncoder extends HttpResponseEncoder {
   }
 
   private void printExecutingMethod() {
-    String methodName = getExecutingMethodName();
+    String methodName = getExecutingMethodName(1);
     LOG.debug("Executing method: {}", methodName);
   }
 
   private String getExecutingMethodName() {
+    return getExecutingMethodName(0);
+  }
+  
+  private String getExecutingMethodName(int additionalSkipFrames) {
     try {
-      StackTraceElement[] stackTrace = Thread.currentThread()
-          .getStackTrace();
+      StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
       // Array items (indices):
       // 0: java.lang.Thread.getStackTrace(...)
-      // 1: TestShuffleHandler$LoggingHttpResponseEncoder
-      // .getExecutingMethodName(...)
-      String methodName = stackTrace[2].getMethodName();
-      //If this method was called from printExecutingMethod, 
-      // we have yet another stack frame
-      if (methodName.endsWith("printExecutingMethod")) {
-        methodName = stackTrace[3].getMethodName();
-      }
+      // 1: TestShuffleHandler$LoggingHttpResponseEncoder.getExecutingMethodName(...)
+      int skipFrames = 2 + additionalSkipFrames;
+      String methodName = stackTrace[skipFrames].getMethodName();
       String className = this.getClass().getSimpleName();
       return className + "#" + methodName;
     } catch (Throwable t) {
       LOG.error("Error while getting execution method name", t);
-      return null;
+      return "unknown";
     }
   }
 }

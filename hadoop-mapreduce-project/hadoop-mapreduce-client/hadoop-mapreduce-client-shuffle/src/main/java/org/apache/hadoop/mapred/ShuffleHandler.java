@@ -309,8 +309,8 @@ public class ShuffleHandler extends AuxiliaryService {
       return ch.writeAndFlush(obj);
     }
 
-    static void writeToChannelAndClose(Channel ch, Object obj) {
-      writeToChannel(ch, obj).addListener(ChannelFutureListener.CLOSE);
+    static ChannelFuture writeToChannelAndClose(Channel ch, Object obj) {
+      return writeToChannel(ch, obj).addListener(ChannelFutureListener.CLOSE);
     }
 
     static ChannelFuture writeToChannelAndAddLastHttpContent(Channel ch, HttpResponse obj) {
@@ -323,13 +323,26 @@ public class ShuffleHandler extends AuxiliaryService {
       return ch.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
     }
 
-    static void closeChannel(Channel ch) {
+    static ChannelFuture closeChannel(Channel ch) {
       LOG.debug("Closing channel, channel id: {}", ch.id());
-      ch.close();
+      return ch.close();
     }
 
     static void closeChannels(ChannelGroup channelGroup) {
       channelGroup.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
+    }
+
+    public static ChannelFuture closeAsIdle(Channel channel, int timeout) {
+      LOG.debug("Closing channel as writer was idle for {} seconds", timeout);
+      return closeChannel(channel);
+    }
+
+    public static void channelActive(Channel ch) {
+      LOG.debug("Executing channelActive, channel id: {}", ch.id());
+    }
+
+    public static void channelInactive(Channel channel) {
+      LOG.debug("Executing channelInactive, channel id: {}", channel.id());
     }
   }
 
@@ -846,7 +859,7 @@ public class ShuffleHandler extends AuxiliaryService {
       //disable reader timeout
       //set writer timeout to configured timeout value
       //disable all idle timeout
-      super(0, connectionKeepAliveTimeOut, 0);
+      super(0, connectionKeepAliveTimeOut, 0, TimeUnit.SECONDS);
       this.connectionKeepAliveTimeOut = connectionKeepAliveTimeOut;
     }
 
@@ -862,13 +875,13 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e) {
       if (e.state() == IdleState.WRITER_IDLE && enabledTimeout) {
-        LOG.debug("Closing channel as writer was idle for {} seconds", connectionKeepAliveTimeOut);
-        closeChannel(ctx.channel());
+        closeAsIdle(ctx.channel(), connectionKeepAliveTimeOut);
       }
     }
   }
 
   class HttpPipelineFactory extends ChannelInitializer<SocketChannel> {
+    private static final int MAX_CONTENT_LENGTH = 1 << 16;
 
     final Shuffle SHUFFLE;
     private SSLFactory sslFactory;
@@ -899,18 +912,11 @@ public class ShuffleHandler extends AuxiliaryService {
         pipeline.addLast("ssl", new SslHandler(sslFactory.createSSLEngine()));
       }
       pipeline.addLast("decoder", new HttpRequestDecoder());
-      pipeline.addLast("aggregator", new HttpObjectAggregator(1 << 16));
-      pipeline.addLast(ENCODER_HANDLER_NAME, new HttpResponseEncoder());
+      pipeline.addLast("aggregator", new HttpObjectAggregator(MAX_CONTENT_LENGTH));
+      pipeline.addLast(ENCODER_HANDLER_NAME, useOutboundLogger ?
+          new LoggingHttpResponseEncoder(false) : new HttpResponseEncoder());
       pipeline.addLast("chunking", new ChunkedWriteHandler());
       pipeline.addLast("shuffle", SHUFFLE);
-      addOutboundHandlersIfRequired(pipeline);
-      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
-      // TODO factor security manager into pipeline
-      // TODO factor out encode/decode to permit binary shuffle
-      // TODO factor out decode of index to permit alt. models
-    }
-
-    private void addOutboundHandlersIfRequired(ChannelPipeline pipeline) {
       if (useOutboundExceptionHandler) {
         //https://stackoverflow.com/questions/50612403/catch-all-exception-handling-for-outbound-channelhandler
         pipeline.addLast("outboundExceptionHandler", new ChannelOutboundHandlerAdapter() {
@@ -921,11 +927,10 @@ public class ShuffleHandler extends AuxiliaryService {
           }
         });
       }
-      if (useOutboundLogger) {
-        //Replace HttpResponseEncoder with LoggingHttpResponseEncoder
-        //Need to use the same name as before, otherwise we would have 2 encoders 
-        pipeline.replace(ENCODER_HANDLER_NAME, ENCODER_HANDLER_NAME, new LoggingHttpResponseEncoder(false));
-      }
+      pipeline.addLast(TIMEOUT_HANDLER, new TimeoutHandler(connectionKeepAliveTimeOut));
+      // TODO factor security manager into pipeline
+      // TODO factor out encode/decode to permit binary shuffle
+      // TODO factor out decode of index to permit alt. models
     }
   }
 
@@ -988,7 +993,7 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelActive(ChannelHandlerContext ctx)
         throws Exception {
-      LOG.debug("channelActive");
+      NettyChannelHelper.channelActive(ctx.channel());
       int numConnections = acceptedConnections.incrementAndGet();
       if ((maxShuffleConnections > 0) && (numConnections >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
@@ -1005,43 +1010,42 @@ public class ShuffleHandler extends AuxiliaryService {
       } else {
         super.channelActive(ctx);
         accepted.add(ctx.channel());
-        LOG.debug("Added channel: {}. Accepted number of connections={}",
-            ctx.channel(), acceptedConnections.get());
+        LOG.debug("Added channel: {}, channel id: {}. Accepted number of connections={}",
+            ctx.channel(), ctx.channel().id(), acceptedConnections.get());
       }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-      LOG.trace("Executing channelInactive");
+      NettyChannelHelper.channelInactive(ctx.channel());
       super.channelInactive(ctx);
-      acceptedConnections.decrementAndGet();
-      LOG.debug("New value of Accepted number of connections={}",
-          acceptedConnections.get());
+      int noOfConnections = acceptedConnections.decrementAndGet();
+      LOG.debug("New value of Accepted number of connections={}", noOfConnections);
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
-      LOG.trace("Executing channelRead");
+      Channel channel = ctx.channel();
+      LOG.trace("Executing channelRead, channel id: {}", channel.id());
       HttpRequest request = (HttpRequest) msg;
-      LOG.debug("Received HTTP request: {}", request);
+      LOG.debug("Received HTTP request: {}, channel id: {}", request, channel.id());
       if (request.method() != GET) {
           sendError(ctx, METHOD_NOT_ALLOWED);
           return;
       }
       // Check whether the shuffle version is compatible
       String shuffleVersion = ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION;
+      String httpHeaderName = ShuffleHeader.HTTP_HEADER_NAME;
       if (request.headers() != null) {
-        shuffleVersion = request.headers()
-            .get(ShuffleHeader.HTTP_HEADER_VERSION);
+        shuffleVersion = request.headers().get(ShuffleHeader.HTTP_HEADER_VERSION);
+        httpHeaderName = request.headers().get(ShuffleHeader.HTTP_HEADER_NAME);
+        LOG.debug("Received from request header: ShuffleVersion={} header name={}, channel id: {}",
+            shuffleVersion, httpHeaderName, channel.id());
       }
-      LOG.debug("Shuffle version: {}", shuffleVersion);
-      if (!ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(
-          request.headers() != null ?
-              request.headers().get(ShuffleHeader.HTTP_HEADER_NAME) : null)
-          || !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(
-              request.headers() != null ?
-                  shuffleVersion : null)) {
+      if (request.headers() == null ||
+          !ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(httpHeaderName) ||
+          !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(shuffleVersion)) {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
       final Map<String,List<String>> q =
@@ -1051,8 +1055,7 @@ public class ShuffleHandler extends AuxiliaryService {
       if (keepAliveList != null && keepAliveList.size() == 1) {
         keepAliveParam = Boolean.valueOf(keepAliveList.get(0));
         if (LOG.isDebugEnabled()) {
-          LOG.debug("KeepAliveParam : " + keepAliveList
-            + " : " + keepAliveParam);
+          LOG.debug("KeepAliveParam: {} : {}, channel id: {}", keepAliveList, keepAliveParam, channel.id());
         }
       }
       final List<String> mapIds = splitMaps(q.get("map"));
@@ -1063,7 +1066,8 @@ public class ShuffleHandler extends AuxiliaryService {
             "\n  mapId: " + mapIds +
             "\n  reduceId: " + reduceQ +
             "\n  jobId: " + jobQ +
-            "\n  keepAlive: " + keepAliveParam);
+            "\n  keepAlive: " + keepAliveParam +
+            "\n  channel id: " + channel.id());
       }
 
       if (mapIds == null || reduceQ == null || jobQ == null) {
@@ -1105,8 +1109,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
       Map<String, MapOutputInfo> mapOutputInfoMap =
           new HashMap<String, MapOutputInfo>();
-      Channel ch = ctx.channel();
-      ChannelPipeline pipeline = ch.pipeline();
+      ChannelPipeline pipeline = channel.pipeline();
       TimeoutHandler timeoutHandler =
           (TimeoutHandler)pipeline.get(TIMEOUT_HANDLER);
       timeoutHandler.setEnabledTimeout(false);
@@ -1123,17 +1126,17 @@ public class ShuffleHandler extends AuxiliaryService {
         // is quite a non-standard way of crafting HTTP responses,
         // but we need to keep backward compatibility.
         // See more details in jira.
-        writeToChannelAndAddLastHttpContent(ch, response);
-        LOG.error("Shuffle error while populating headers", e);
+        writeToChannelAndAddLastHttpContent(channel, response);
+        LOG.error("Shuffle error while populating headers. Channel id: " + channel.id(), e);
         sendError(ctx, getErrorMessage(e) , INTERNAL_SERVER_ERROR);
         return;
       }
-      writeToChannel(ch, response).addListener((ChannelFutureListener) future -> {
+      writeToChannel(channel, response).addListener((ChannelFutureListener) future -> {
         if (future.isSuccess()) {
-          LOG.debug("Written HTTP response object successfully");
+          LOG.debug("Written HTTP response object successfully. Channel id: {}", channel.id());
         } else {
           LOG.error("Error while writing HTTP response object: {}. " +
-              "Cause: {}", response, future.cause());
+              "Cause: {}, channel id: {}", response, future.cause(), channel.id());
         }
       });
       //Initialize one ReduceContext object per channelRead call
@@ -1301,11 +1304,7 @@ public class ShuffleHandler extends AuxiliaryService {
     protected void setResponseHeaders(HttpResponse response,
         boolean keepAliveParam, long contentLength) {
       if (!connectionKeepAliveEnabled && !keepAliveParam) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Setting connection close header...");
-        }
-        response.headers().set(HttpHeader.CONNECTION.asString(),
-            CONNECTION_CLOSE);
+        response.headers().set(HttpHeader.CONNECTION.asString(), CONNECTION_CLOSE);
       } else {
         response.headers().set(HttpHeader.CONTENT_LENGTH.asString(),
           String.valueOf(contentLength));
@@ -1332,25 +1331,26 @@ public class ShuffleHandler extends AuxiliaryService {
         throws IOException {
       SecretKey tokenSecret = secretManager.retrieveTokenSecret(appid);
       if (null == tokenSecret) {
-        LOG.info("Request for unknown token " + appid);
-        throw new IOException("could not find jobid");
+        LOG.info("Request for unknown token {}, channel id: {}", appid, ctx.channel().id());
+        throw new IOException("Could not find jobid");
       }
-      // string to encrypt
-      String enc_str = SecureShuffleUtils.buildMsgFrom(requestUri);
+      // encrypting URL
+      String encryptedURL = SecureShuffleUtils.buildMsgFrom(requestUri);
       // hash from the fetcher
       String urlHashStr =
           request.headers().get(SecureShuffleUtils.HTTP_HEADER_URL_HASH);
       if (urlHashStr == null) {
-        LOG.info("Missing header hash for " + appid);
+        LOG.info("Missing header hash for {}, channel id: {}", appid, ctx.channel().id());
         throw new IOException("fetcher cannot be authenticated");
       }
       if (LOG.isDebugEnabled()) {
         int len = urlHashStr.length();
-        LOG.debug("verifying request. enc_str=" + enc_str + "; hash=..." +
-            urlHashStr.substring(len-len/2, len-1));
+        LOG.debug("Verifying request. encryptedURL:{}, hash:{}, channel id: " +
+                "{}", encryptedURL,
+            urlHashStr.substring(len - len / 2, len - 1), ctx.channel().id());
       }
       // verify - throws exception
-      SecureShuffleUtils.verifyReply(urlHashStr, enc_str, tokenSecret);
+      SecureShuffleUtils.verifyReply(urlHashStr, encryptedURL, tokenSecret);
       // verification passed - encode the reply
       String reply =
         SecureShuffleUtils.generateHash(urlHashStr.getBytes(Charsets.UTF_8), 
@@ -1364,8 +1364,10 @@ public class ShuffleHandler extends AuxiliaryService {
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
       if (LOG.isDebugEnabled()) {
         int len = reply.length();
-        LOG.debug("Fetcher request verfied. enc_str=" + enc_str + ";reply=" +
-            reply.substring(len-len/2, len-1));
+        LOG.debug("Fetcher request verified. " +
+            "encryptedURL: {}, reply: {}, channel id: {}",
+            encryptedURL, reply.substring(len - len / 2, len - 1),
+            ctx.channel().id());
       }
     }
 
@@ -1384,7 +1386,7 @@ public class ShuffleHandler extends AuxiliaryService {
       try {
         spill = SecureIOUtils.openForRandomRead(spillfile, "r", user, null);
       } catch (FileNotFoundException e) {
-        LOG.info(spillfile + " not found");
+        LOG.info("{} not found. Channel id: {}", spillfile, ctx.channel().id());
         return null;
       }
       ChannelFuture writeFuture;
@@ -1449,24 +1451,24 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
         throws Exception {
-      LOG.debug("Executing exceptionCaught");
       Channel ch = ctx.channel();
       if (cause instanceof TooLongFrameException) {
+        LOG.trace("TooLongFrameException, channel id: {}", ch.id());
         sendError(ctx, BAD_REQUEST);
         return;
       } else if (cause instanceof IOException) {
         if (cause instanceof ClosedChannelException) {
-          LOG.debug("Ignoring closed channel error", cause);
+          LOG.debug("Ignoring closed channel error, channel id: " + ch.id(), cause);
           return;
         }
         String message = String.valueOf(cause.getMessage());
         if (IGNORABLE_ERROR_MESSAGE.matcher(message).matches()) {
-          LOG.debug("Ignoring client socket close", cause);
+          LOG.debug("Ignoring client socket close, channel id: " + ch.id(), cause);
           return;
         }
       }
 
-      LOG.error("Shuffle error: ", cause);
+      LOG.error("Shuffle error. Channel id: " + ch.id(), cause);
       if (ch.isActive()) {
         sendError(ctx, INTERNAL_SERVER_ERROR);
       }
