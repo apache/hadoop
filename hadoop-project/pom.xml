@@ -116,7 +116,7 @@
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
-    <commons-compress.version>1.19</commons-compress.version>
+    <commons-compress.version>1.21</commons-compress.version>
     <commons-csv.version>1.0</commons-csv.version>
     <commons-io.version>2.8.0</commons-io.version>
     <commons-lang3.version>3.7</commons-lang3.version>
