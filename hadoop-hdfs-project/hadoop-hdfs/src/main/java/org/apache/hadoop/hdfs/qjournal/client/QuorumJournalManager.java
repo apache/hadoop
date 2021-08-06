@@ -618,8 +618,10 @@ public class QuorumJournalManager implements JournalManager {
     Map<AsyncLogger, RemoteEditLogManifest> resps =
         loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs,
             "selectStreamingInputStreams");
-    LOG.debug("selectStreamingInputStream manifests:\n {}",
-        Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("selectStreamingInputStream manifests:\n {}",
+          Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
+    }
 
     final PriorityQueue<EditLogInputStream> allStreams =
         new PriorityQueue<EditLogInputStream>(64,
