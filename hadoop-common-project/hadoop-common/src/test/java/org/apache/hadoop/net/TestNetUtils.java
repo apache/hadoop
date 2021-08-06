@@ -111,6 +111,7 @@ public class TestNetUtils {
       fail("Should not have connected");
     } catch (UnknownHostException uhe) {
       LOG.info("Got exception: ", uhe);
+      assertEquals("invalid-test-host:0", uhe.getMessage());
     }
   }
 

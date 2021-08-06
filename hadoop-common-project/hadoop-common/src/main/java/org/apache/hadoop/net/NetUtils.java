@@ -588,7 +588,7 @@ public class NetUtils {
     } catch (SocketTimeoutException ste) {
       throw new ConnectTimeoutException(ste.getMessage());
     }  catch (UnresolvedAddressException uae) {
-      throw new UnknownHostException(uae.getMessage());
+      throw new UnknownHostException(endpoint.toString());
     }
 
     // There is a very rare case allowed by the TCP specification, such that
