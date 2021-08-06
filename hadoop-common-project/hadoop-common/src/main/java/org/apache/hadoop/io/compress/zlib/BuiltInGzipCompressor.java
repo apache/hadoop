@@ -78,7 +78,8 @@ public class BuiltInGzipCompressor implements Compressor {
       return deflater.needsInput();
     }
 
-    return false;
+    // After we output the trailer for the current input, we can take another input.
+    return state == BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
   }
 
   @Override
