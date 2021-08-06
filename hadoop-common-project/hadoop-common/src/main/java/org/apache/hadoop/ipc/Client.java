@@ -1052,7 +1052,7 @@ public class Client implements AutoCloseable {
           try {
             wait(timeout);
           } catch (InterruptedException e) {
-            LOG.info("Interrupted while waiting to retrieve RPC response.", e);
+            LOG.trace("Interrupted while waiting to retrieve RPC response.");
             Thread.currentThread().interrupt();
           }
         }
@@ -1386,8 +1386,8 @@ public class Client implements AutoCloseable {
         try {
           emptyCondition.wait();
         } catch (InterruptedException e) {
-          LOG.info("Interrupted while waiting on all connections to be closed.",
-              e);
+          LOG.trace(
+              "Interrupted while waiting on all connections to be closed.");
           Thread.currentThread().interrupt();
         }
       }
