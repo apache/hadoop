@@ -146,6 +146,7 @@ public class TestSecureNNWithQJM {
     }
     FileUtil.fullyDelete(baseDir);
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+    UserGroupInformation.reset();
   }
 
   @Before
