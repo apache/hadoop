@@ -586,7 +586,7 @@ public class QuorumJournalManager implements JournalManager {
         responseCounts.get(responseCounts.size() - loggers.getMajoritySize());
     if (maxAllowedTxns == 0) {
       LOG.debug("No new edits available in logs; requested starting from " +
-          "ID " + fromTxnId);
+          "ID {}", fromTxnId);
       return;
     }
     LogAction logAction = selectInputStreamLogHelper.record(fromTxnId);
@@ -618,9 +618,10 @@ public class QuorumJournalManager implements JournalManager {
     Map<AsyncLogger, RemoteEditLogManifest> resps =
         loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs,
             "selectStreamingInputStreams");
-
-    LOG.debug("selectStreamingInputStream manifests:\n" +
-        Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("selectStreamingInputStream manifests:\n {}",
+          Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
+    }
 
     final PriorityQueue<EditLogInputStream> allStreams =
         new PriorityQueue<EditLogInputStream>(64,
