@@ -106,7 +106,7 @@ public class RegistryDNSServer extends CompositeService {
   private void manageRegistryDNS() {
 
     try {
-      registryOperations.monitorRegistryEntries();
+      registryOperations.instantiateCacheForRegistry();
       registryOperations.registerPathListener(new PathListener() {
         private String registryRoot = getConfig().
             get(RegistryConstants.KEY_REGISTRY_ZK_ROOT,
@@ -157,6 +157,7 @@ public class RegistryDNSServer extends CompositeService {
         }
 
       });
+      registryOperations.startCache();
 
       // create listener for record deletions
 
