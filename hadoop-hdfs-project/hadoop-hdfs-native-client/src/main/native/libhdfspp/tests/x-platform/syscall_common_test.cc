@@ -105,7 +105,7 @@ TEST(XPlatformSyscall, CreateAndOpenTempFileNegative) {
 }
 
 TEST(XPlatformSyscall, CreateTempDirBasic) {
-  std::string pattern("tmp-XXXXXX");
+  std::string pattern("/tmp/tmp-XXXXXX");
   std::vector<char> pattern_vec(pattern.begin(), pattern.end());
   EXPECT_TRUE(XPlatform::Syscall::CreateTempDir(pattern_vec));
 }
