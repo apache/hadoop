@@ -78,8 +78,8 @@ int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
     return -1;
   }
 
-  // Make space for _mktemp_s to add NULL character at the end
-  pattern.resize(pattern.size() + 1);
+  // Append NULL so that _mktemp_s can find the end of string
+  pattern.emplace_back('\0');
   if (_mktemp_s(pattern.data(), pattern.size()) != 0) {
     return -1;
   }
@@ -101,8 +101,8 @@ bool XPlatform::Syscall::CreateTempDir(std::vector<char>& pattern) {
     return false;
   }
 
-  // Make space for mkstemp to add NULL character at the end
-  pattern.resize(pattern.size() + 1);
+  // Append NULL so that _mktemp_s can find the end of string
+  pattern.emplace_back('\0');
   if (_mktemp_s(pattern.data(), pattern.size()) != 0) {
     return false;
   }
