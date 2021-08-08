@@ -280,7 +280,7 @@ net.minidev:accessors-smart:2.4.2
 net.minidev:json-smart:2.4.2
 org.apache.avro:avro:1.7.7
 org.apache.commons:commons-collections4:4.2
-org.apache.commons:commons-compress:1.19
+org.apache.commons:commons-compress:1.21
 org.apache.commons:commons-configuration2:2.1.1
 org.apache.commons:commons-csv:1.0
 org.apache.commons:commons-digester:1.8.1
