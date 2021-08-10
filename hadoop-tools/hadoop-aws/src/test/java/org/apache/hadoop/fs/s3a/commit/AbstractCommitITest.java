@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
@@ -34,8 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
-import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -59,6 +56,11 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractCommitITest.class);
+
+  /**
+   * Helper class for commit operations and assertions.
+   */
+  private CommitterTestHelper testHelper;
 
   /**
    * Creates a configuration for commit operations: commit is enabled in the FS
@@ -92,6 +94,20 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     return LOG;
   }
 
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    testHelper = new CommitterTestHelper(getFileSystem());
+  }
+
+  /**
+   * Get helper class.
+   * @return helper; only valid after setup.
+   */
+  public CommitterTestHelper getTestHelper() {
+    return testHelper;
+  }
+
   /***
    * Bind to the named committer.
    *
@@ -117,7 +133,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     if (dir != null) {
       describe("deleting %s", dir);
       FileSystem fs = dir.getFileSystem(conf);
+
       fs.delete(dir, true);
+
     }
   }
 
@@ -146,22 +164,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @return a count of aborts
    * @throws IOException trouble.
    */
-  protected int abortMultipartUploadsUnderPath(Path path) throws IOException {
-    S3AFileSystem fs = getFileSystem();
-    if (fs != null && path != null) {
-      String key = fs.pathToKey(path);
-      int count = 0;
-      try (AuditSpan span = span()) {
-        WriteOperationHelper writeOps = fs.getWriteOperationHelper();
-        count = writeOps.abortMultipartUploadsUnderPath(key);
-        if (count > 0) {
-          log().info("Multipart uploads deleted: {}", count);
-        }
-      }
-      return count;
-    } else {
-      return 0;
-    }
+  protected void abortMultipartUploadsUnderPath(Path path) throws IOException {
+    getTestHelper()
+        .abortMultipartUploadsUnderPath(path);
   }
 
   /**
@@ -183,10 +188,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   protected void assertNoMultipartUploadsPending(Path path) throws IOException {
     List<String> uploads = listMultipartUploads(getFileSystem(),
         pathToPrefix(path));
-    if (!uploads.isEmpty()) {
-      String result = uploads.stream().collect(Collectors.joining("\n"));
-      fail("Multipart uploads in progress under " + path + " \n" + result);
-    }
+    Assertions.assertThat(uploads)
+        .describedAs("Multipart uploads in progress under " + path)
+        .isEmpty();
   }
 
   /**

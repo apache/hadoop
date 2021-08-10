@@ -158,11 +158,11 @@ public class SuccessData extends PersistentCommitData
   }
 
   @Override
-  public void save(FileSystem fs, Path path, boolean overwrite)
+  public void save(FileSystem fs, Path path)
       throws IOException {
     // always set the name field before being saved.
     name = NAME;
-    serializer().save(fs, path, this, overwrite);
+    saveFile(fs, path, this, serializer(), true);
   }
 
   @Override

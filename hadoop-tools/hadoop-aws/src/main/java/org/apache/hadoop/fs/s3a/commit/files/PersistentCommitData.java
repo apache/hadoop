@@ -21,19 +21,34 @@ package org.apache.hadoop.fs.s3a.commit.files;
 import java.io.IOException;
 import java.io.Serializable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.util.JsonSerialization;
+
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 
 /**
  * Class for single/multiple commit data structures.
+ * The mapreduce hierarchy {@code AbstractManifestData} is a fork
+ * of this; the Success data JSON format must stay the same.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public abstract class PersistentCommitData implements Serializable {
+public abstract class PersistentCommitData
+    implements Serializable, IOStatisticsSource {
+  private static final Logger LOG = LoggerFactory.getLogger(PersistentCommitData.class);
 
   /**
    * Supported version value: {@value}.
@@ -58,12 +73,72 @@ public abstract class PersistentCommitData implements Serializable {
 
   /**
    * Save to a hadoop filesystem.
+   * The destination file is overwritten, and on s3a stores the
+   * performance flag is set to turn off all existence checks and
+   * parent dir cleanup.
+   * The assumption here is: the job knows what it is doing.
    * @param fs filesystem
    * @param path path
-   * @param overwrite should any existing file be overwritten
    * @throws IOException IO exception
    */
-  public abstract void save(FileSystem fs, Path path, boolean overwrite)
+  public abstract void save(FileSystem fs, Path path)
       throws IOException;
+
+  /**
+   * Load an instance from a status, then validate it.
+   * This uses the openFile() API, which S3A supports for
+   * faster load and declaring sequential access, always
+   * @param <T> type of persistent format
+   * @param fs filesystem
+   * @param status status of file to load
+   * @param serializer seralizer to use
+   * @return the loaded instance
+   * @throws IOException IO failure
+   * @throws ValidationFailure if the data is invalid
+   */
+  public static <T extends PersistentCommitData> T load(FileSystem fs,
+      FileStatus status,
+      JsonSerialization<T> serializer)
+      throws IOException {
+    Path path = status.getPath();
+    LOG.debug("Reading commit data from file {}", path);
+    return serializer.load(fs, path,status);
+  }
+
+  /**
+   * Load an instance from a status, then validate it.
+   * This uses the createFile() API, which S3A supports for
+   * faster load and declaring sequential access, always
+   * @param <T> type of persistent format
+   * @param fs filesystem
+   * @param instance data to save
+   * @param serializer seralizer to use
+   * @param performance skip all safety check on the write
+   * @return any IOStatistics from the output stream, or null
+   * @throws IOException IO failure
+   * @throws ValidationFailure if the data is invalid
+   */
+  public static <T extends PersistentCommitData> IOStatistics saveFile(
+      final FileSystem fs,
+      final Path path,
+      final T instance,
+      final JsonSerialization<T> serializer,
+      final boolean performance)
+      throws IOException {
+
+    LOG.debug("saving commit data to file {}", path);
+    FSDataOutputStreamBuilder builder = fs.createFile(path)
+        .create()
+        .recursive()
+        .overwrite(true);
+    builder.opt(FS_S3A_CREATE_PERFORMANCE, performance);
+    FSDataOutputStream dataOutputStream = builder.build();
+    try {
+      dataOutputStream.write(serializer.toBytes(instance));
+    } finally {
+      dataOutputStream.close();
+    }
+    return dataOutputStream.getIOStatistics();
+  }
 
 }

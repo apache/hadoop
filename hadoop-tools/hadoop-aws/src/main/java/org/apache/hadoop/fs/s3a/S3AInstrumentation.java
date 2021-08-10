@@ -1308,8 +1308,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_EXCEPTIONS,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
+
     // merge in all the IOStatistics
-    this.getIOStatistics().aggregate(source.getIOStatistics());
+    final IOStatisticsStore sourceIOStatistics = source.getIOStatistics();
+    this.getIOStatistics().aggregate(sourceIOStatistics);
+
+    // propagate any extra values into the FS-level stats.
+    incrementMutableCounter(OBJECT_PUT_REQUESTS.getSymbol(),
+        sourceIOStatistics.counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
   }
 
   /**
@@ -1367,8 +1373,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           .withDurationTracking(
               ACTION_EXECUTOR_ACQUIRED,
               INVOCATION_ABORT.getSymbol(),
+              MULTIPART_UPLOAD_COMPLETED.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
-              MULTIPART_UPLOAD_COMPLETED.getSymbol())
+              OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
+              OBJECT_PUT_REQUESTS.getSymbol())
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.

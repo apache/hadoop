@@ -112,11 +112,11 @@ public class PendingSet extends PersistentCommitData
   }
 
   /**
-   * Get a JSON serializer for this class.
+   * Get a shared JSON serializer for this class.
    * @return a serializer.
    */
   public static JsonSerialization<PendingSet> serializer() {
-    return new JsonSerialization<>(PendingSet.class, false, true);
+    return new JsonSerialization<>(PendingSet.class, false, false);
   }
 
   /**
@@ -224,9 +224,9 @@ public class PendingSet extends PersistentCommitData
   }
 
   @Override
-  public void save(FileSystem fs, Path path, boolean overwrite)
+  public void save(FileSystem fs, Path path)
       throws IOException {
-    serializer().save(fs, path, this, overwrite);
+    saveFile(fs, path, this, serializer(), true);
   }
 
   /** @return the version marker. */

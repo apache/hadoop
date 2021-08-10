@@ -51,13 +51,21 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
   private final MkdirCallbacks callbacks;
 
+  /**
+   * Should checks for ancestors existing be skipped?
+   * This flag is set when working with magic directories.
+   */
+  private final boolean skipAncestorChecks;
+
   public MkdirOperation(
       final StoreContext storeContext,
       final Path dir,
-      final MkdirCallbacks callbacks) {
+      final MkdirCallbacks callbacks,
+      final boolean skipAncestorChecks) {
     super(storeContext);
     this.dir = dir;
     this.callbacks = callbacks;
+    this.skipAncestorChecks = skipAncestorChecks;
   }
 
   /**
@@ -115,9 +123,9 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
     // if we get here there is no directory at the destination.
     // so create one.
-    String key = getStoreContext().pathToKey(dir);
+
     // Create the marker file, maybe delete the parent entries
-    callbacks.createFakeDirectory(key);
+    callbacks.createFakeDirectory(dir);
     return true;
   }
 
@@ -174,10 +182,11 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     /**
      * Create a fake directory, always ending in "/".
      * Retry policy: retrying; translated.
-     * @param key name of directory object.
+     *
+     * @param dir dir to create
      * @throws IOException IO failure
      */
     @Retries.RetryTranslated
-    void createFakeDirectory(String key) throws IOException;
+    void createFakeDirectory(final Path dir) throws IOException;
   }
 }

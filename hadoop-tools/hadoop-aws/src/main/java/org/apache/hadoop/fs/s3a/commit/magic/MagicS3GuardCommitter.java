@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
+import org.apache.hadoop.fs.s3a.commit.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR;
@@ -109,16 +110,17 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   /**
    * Get the list of pending uploads for this job attempt, by listing
    * all .pendingset files in the job attempt directory.
-   * @param context job context
+   * @param commitContext job context
    * @return a list of pending commits.
    * @throws IOException Any IO failure
    */
   protected ActiveCommit listPendingUploadsToCommit(
-      JobContext context)
+      CommitContext commitContext)
       throws IOException {
     FileSystem fs = getDestFS();
-    return ActiveCommit.fromStatusList(fs,
-        listAndFilter(fs, getJobAttemptPath(context), false,
+    return ActiveCommit.fromStatusIterator(fs,
+        listAndFilter(fs, getJobAttemptPath(commitContext.getJobContext()),
+            false,
             CommitOperations.PENDINGSET_FILTER));
   }
 
@@ -168,8 +170,6 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     } finally {
       // delete the task attempt so there's no possibility of a second attempt
       deleteTaskAttemptPathQuietly(context);
-      destroyThreadPool();
-      resetCommonContext();
     }
     getCommitOperations().taskCompleted(true);
     LOG.debug("aggregate statistics\n{}",
@@ -191,43 +191,46 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     Path taskAttemptPath = getTaskAttemptPath(context);
     // load in all pending commits.
     CommitOperations actions = getCommitOperations();
-    Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
-        loaded = actions.loadSinglePendingCommits(
-            taskAttemptPath, true);
-    PendingSet pendingSet = loaded.getKey();
-    List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
-    if (!failures.isEmpty()) {
-      // At least one file failed to load
-      // revert all which did; report failure with first exception
-      LOG.error("At least one commit file could not be read: failing");
-      abortPendingUploads(context, pendingSet.getCommits(), true);
-      throw failures.get(0).getValue();
-    }
-    // patch in IDs
-    String jobId = getUUID();
-    String taskId = String.valueOf(context.getTaskAttemptID());
-    for (SinglePendingCommit commit : pendingSet.getCommits()) {
-      commit.setJobId(jobId);
-      commit.setTaskId(taskId);
-    }
-    pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
-    pendingSet.setJobId(jobId);
-    Path jobAttemptPath = getJobAttemptPath(context);
-    TaskAttemptID taskAttemptID = context.getTaskAttemptID();
-    Path taskOutcomePath = new Path(jobAttemptPath,
-        taskAttemptID.getTaskID().toString() +
-        CommitConstants.PENDINGSET_SUFFIX);
-    LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
-    LOG.debug("task statistics\n{}",
-        IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
-    try {
-      // We will overwrite if there exists a pendingSet file already
-      pendingSet.save(getDestFS(), taskOutcomePath, true);
-    } catch (IOException e) {
-      LOG.warn("Failed to save task commit data to {} ",
-          taskOutcomePath, e);
-      abortPendingUploads(context, pendingSet.getCommits(), true);
-      throw e;
+    PendingSet pendingSet;
+    try (CommitContext commitContext = initiateTaskOperation(context)) {
+      Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
+          loaded = actions.loadSinglePendingCommits(
+          taskAttemptPath, true, commitContext);
+      pendingSet = loaded.getKey();
+      List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
+      if (!failures.isEmpty()) {
+        // At least one file failed to load
+        // revert all which did; report failure with first exception
+        LOG.error("At least one commit file could not be read: failing");
+        abortPendingUploads(commitContext, pendingSet.getCommits(), true);
+        throw failures.get(0).getValue();
+      }
+      // patch in IDs
+      String jobId = getUUID();
+      String taskId = String.valueOf(context.getTaskAttemptID());
+      for (SinglePendingCommit commit : pendingSet.getCommits()) {
+        commit.setJobId(jobId);
+        commit.setTaskId(taskId);
+      }
+      pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
+      pendingSet.setJobId(jobId);
+      Path jobAttemptPath = getJobAttemptPath(context);
+      TaskAttemptID taskAttemptID = context.getTaskAttemptID();
+      Path taskOutcomePath = new Path(jobAttemptPath,
+          taskAttemptID.getTaskID().toString() +
+              CommitConstants.PENDINGSET_SUFFIX);
+      LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
+      LOG.debug("task statistics\n{}",
+          IOStatisticsLogging.demandStringifyIOStatisticsSource(pendingSet));
+      try {
+        // We will overwrite if there exists a pendingSet file already
+        pendingSet.save(getDestFS(), taskOutcomePath);
+      } catch (IOException e) {
+        LOG.warn("Failed to save task commit data to {} ",
+            taskOutcomePath, e);
+        abortPendingUploads(commitContext, pendingSet.getCommits(), true);
+        throw e;
+      }
     }
     return pendingSet;
   }
@@ -246,14 +249,15 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   public void abortTask(TaskAttemptContext context) throws IOException {
     Path attemptPath = getTaskAttemptPath(context);
     try (DurationInfo d = new DurationInfo(LOG,
-        "Abort task %s", context.getTaskAttemptID())) {
-      getCommitOperations().abortAllSinglePendingCommits(attemptPath, true);
+        "Abort task %s", context.getTaskAttemptID());
+        CommitContext commitContext = initiateTaskOperation(context)) {
+      getCommitOperations().abortAllSinglePendingCommits(attemptPath,
+          commitContext,
+          true);
     } finally {
       deleteQuietly(
           attemptPath.getFileSystem(context.getConfiguration()),
           attemptPath, true);
-      destroyThreadPool();
-      resetCommonContext();
     }
   }
 

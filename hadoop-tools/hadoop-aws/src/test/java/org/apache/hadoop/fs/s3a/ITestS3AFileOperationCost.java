@@ -406,7 +406,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
   /**
    * Use the builder API.
-   * This always looks for a parent unless the caller says otherwise.
+   * on s3a this skips parent checks, always.
    */
   @Test
   public void testCreateBuilder() throws Throwable {
@@ -414,10 +414,12 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path testFile = methodPath();
     dir(testFile.getParent());
 
-    // builder defaults to looking for parent existence (non-recursive)
+    // s3a fs skips the recursive checks to avoid race
+    // conditions with other processes/threads deleting
+    // files and so briefly the path not being present
     buildFile(testFile, false,  false,
-        GET_FILE_STATUS_FNFE                // destination file
-            .plus(FILE_STATUS_DIR_PROBE));  // parent dir
+        GET_FILE_STATUS_FNFE);               // destination file
+
     // recursive = false and overwrite=true:
     // only make sure the dest path isn't a directory.
     buildFile(testFile, true, true,

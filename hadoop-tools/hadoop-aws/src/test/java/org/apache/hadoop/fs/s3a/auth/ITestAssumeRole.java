@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -72,7 +73,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Tests use of assumed roles.
  * Only run if an assumed role is provided.
  */
-@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed", "ThrowableNotThrown"})
+@SuppressWarnings("ThrowableNotThrown")
 public class ITestAssumeRole extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -596,36 +597,35 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
               fullOperations.uploadFileToPendingCommit(src, dest, "",
                   uploadPartSize, progress);
           pending.save(fs, new Path(readOnlyDir,
-              name + CommitConstants.PENDING_SUFFIX), true);
+              name + CommitConstants.PENDING_SUFFIX));
           assertTrue(src.delete());
         }));
     progress.assertCount("progress counter is not expected",
         range);
 
-    try {
+    try(CommitContext commitContext =
+            operations.createCommitContextForTesting(uploadDest,
+                null, 0)) {
       // we expect to be able to list all the files here
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           pendingCommits = operations.loadSinglePendingCommits(readOnlyDir,
-          true);
+          true, commitContext);
 
       // all those commits must fail
       List<SinglePendingCommit> commits = pendingCommits.getLeft().getCommits();
       assertEquals(range, commits.size());
-      try(CommitOperations.CommitContext commitContext
-              = operations.initiateCommitOperation(uploadDest)) {
-        commits.parallelStream().forEach(
-            (c) -> {
-              CommitOperations.MaybeIOE maybeIOE =
-                  commitContext.commit(c, "origin");
-              Path path = c.destinationPath();
-              assertCommitAccessDenied(path, maybeIOE);
-            });
-      }
+      commits.parallelStream().forEach(
+          (c) -> {
+            CommitOperations.MaybeIOE maybeIOE =
+                commitContext.commit(c, "origin");
+            Path path = c.destinationPath();
+            assertCommitAccessDenied(path, maybeIOE);
+          });
 
       // fail of all list and abort of .pending files.
       LOG.info("abortAllSinglePendingCommits({})", readOnlyDir);
       assertCommitAccessDenied(readOnlyDir,
-          operations.abortAllSinglePendingCommits(readOnlyDir, true));
+          operations.abortAllSinglePendingCommits(readOnlyDir, commitContext, true));
 
       // try writing a magic file
       Path magicDestPath = new Path(readOnlyDir,

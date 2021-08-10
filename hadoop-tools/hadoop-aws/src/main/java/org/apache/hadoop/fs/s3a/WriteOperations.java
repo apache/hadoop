@@ -43,6 +43,7 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -138,6 +139,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param length length of the upload
    * @param errorCount a counter incremented by 1 on every error; for
    * use in statistics
+   * @param putOptions put object options
    * @return the result of the operation.
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
@@ -148,7 +150,8 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String uploadId,
       List<PartETag> partETags,
       long length,
-      AtomicInteger errorCount)
+      AtomicInteger errorCount,
+      PutObjectOptions putOptions)
       throws IOException;
 
   /**
@@ -238,26 +241,31 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Byte length is calculated from the file length, or, if there is no
    * file, from the content length of the header.
    * @param putObjectRequest the request
+   * @param putOptions put object options
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  PutObjectResult putObject(PutObjectRequest putObjectRequest)
+  PutObjectResult putObject(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions)
       throws IOException;
 
   /**
    * PUT an object via the transfer manager.
    * @param putObjectRequest the request
+   * @param putOptions put object options
    * @return the result of the operation
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadResult uploadObject(PutObjectRequest putObjectRequest)
+  UploadResult uploadObject(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions)
       throws IOException;
 
   /**
    * Revert a commit by deleting the file.
-   * Relies on retry code in filesystem
+   * No attempt is made to probe for/recreate a parent dir marker
+   * Relies on retry code in filesystem.
    * @throws IOException on problems
    * @param destKey destination key
    */

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -126,7 +127,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
           new ByteArrayInputStream("PUT".getBytes()),
           metadata);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(put));
+          () -> fs.putObjectDirect(put, PutObjectOptions.keepingDirs()));
       assertPathDoesNotExist("put object was created", path);
     }
   }

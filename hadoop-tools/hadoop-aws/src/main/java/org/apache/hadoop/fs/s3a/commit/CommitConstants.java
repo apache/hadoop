@@ -222,13 +222,18 @@ public final class CommitConstants {
   /**
    * Number of threads in committers for parallel operations on files
    * (upload, commit, abort, delete...): {@value}.
+   * Two thread pools this size are created, one for the outer
+   * task-level parallelism, and one for parallel execution
+   * within tasks (POSTs to commit individual uploads)
+   * If the value is negative, it is inverted and then multiplied
+   * by the number of cores in the CPU.
    */
   public static final String FS_S3A_COMMITTER_THREADS =
       "fs.s3a.committer.threads";
   /**
    * Default value for {@link #FS_S3A_COMMITTER_THREADS}: {@value}.
    */
-  public static final int DEFAULT_COMMITTER_THREADS = 8;
+  public static final int DEFAULT_COMMITTER_THREADS = -4;
 
   /**
    * Path  in the cluster filesystem for temporary data: {@value}.
@@ -330,4 +335,14 @@ public final class CommitConstants {
   public static final String XA_MAGIC_MARKER = XA_HEADER_PREFIX
       + X_HEADER_MAGIC_MARKER;
 
+  /**
+   * Task Attempt ID query header: {@value}.
+   */
+  public static final String PARAM_TASK_ATTEMPT_ID = "ta";
+
+  /**
+   * How long threads in the thread pool stay alive when
+   * idle. Value in seconds: {@value}.
+   */
+  static final long THREAD_KEEP_ALIVE_TIME = 60L;
 }

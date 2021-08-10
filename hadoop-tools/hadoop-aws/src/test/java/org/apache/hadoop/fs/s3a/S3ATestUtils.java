@@ -35,8 +35,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
@@ -1300,18 +1298,6 @@ public final class S3ATestUtils {
    */
   public static final DateFormat LISTING_FORMAT = new SimpleDateFormat(
       "yyyy-MM-dd HH:mm:ss");
-
-  /**
-   * Skip a test if the FS isn't marked as supporting magic commits.
-   * @param fs filesystem
-   */
-  public static void assumeMagicCommitEnabled(S3AFileSystem fs)
-      throws IOException {
-    assume("Magic commit option disabled on " + fs,
-        fs.hasPathCapability(
-            fs.getWorkingDirectory(),
-            CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER));
-  }
 
   /**
    * Probe for the configuration containing a specific credential provider.

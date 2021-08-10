@@ -1159,4 +1159,12 @@ public final class Constants {
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
+
+  /**
+   * Flag for create performance.
+   * This is *not* a configuration option; it is only for use in the
+   * {code createFile()} builder.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
 }

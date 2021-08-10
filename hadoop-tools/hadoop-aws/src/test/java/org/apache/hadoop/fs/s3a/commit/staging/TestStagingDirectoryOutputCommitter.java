@@ -29,7 +29,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
+import org.apache.hadoop.fs.s3a.commit.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -75,7 +78,8 @@ public class TestStagingDirectoryOutputCommitter
   }
 
   protected void verifyFailureConflictOutcome() throws Exception {
-    pathIsDirectory(getMockS3A(), outputPath);
+    final S3AFileSystem mockFS = getMockS3A();
+    pathIsDirectory(mockFS, outputPath);
     final DirectoryStagingCommitter committer = newJobCommitter();
 
     // this should fail
@@ -86,20 +90,23 @@ public class TestStagingDirectoryOutputCommitter
 
     // but there are no checks in job commit (HADOOP-15469)
     // this is done by calling the preCommit method directly,
-    committer.preCommitJob(getJob(), AbstractS3ACommitter.ActiveCommit.empty());
 
-    reset(getMockS3A());
-    pathDoesNotExist(getMockS3A(), outputPath);
+    final CommitContext commitContext = new CommitOperations(getWrapperFS()).
+        createCommitContext(getJob(), outputPath, 0);
+    committer.preCommitJob(commitContext, AbstractS3ACommitter.ActiveCommit.empty());
+
+    reset(mockFS);
+    pathDoesNotExist(mockFS, outputPath);
 
     committer.setupJob(getJob());
-    verifyExistenceChecked(getMockS3A(), outputPath);
-    verifyMkdirsInvoked(getMockS3A(), outputPath);
-    verifyNoMoreInteractions(getMockS3A());
+    verifyExistenceChecked(mockFS, outputPath);
+    verifyMkdirsInvoked(mockFS, outputPath);
+    verifyNoMoreInteractions(mockFS);
 
-    reset(getMockS3A());
-    pathDoesNotExist(getMockS3A(), outputPath);
+    reset(mockFS);
+    pathDoesNotExist(mockFS, outputPath);
     committer.commitJob(getJob());
-    verifyCompletion(getMockS3A());
+    verifyCompletion(mockFS);
   }
 
   @Test
