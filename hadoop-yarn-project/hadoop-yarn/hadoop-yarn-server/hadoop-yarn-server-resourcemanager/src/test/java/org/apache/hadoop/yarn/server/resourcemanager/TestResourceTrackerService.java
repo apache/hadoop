@@ -461,6 +461,64 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   /**
+   * Test graceful decommission of node when an AM container is scheduled on a
+   * node just before it is gracefully decommissioned.
+   */
+  @Test
+  public void testGracefulDecommissionAfterAMContainerAlloc() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
+        .getAbsolutePath());
+
+    writeToHostsFile("");
+    rm = new MockRM(conf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 10240);
+    MockNM nm2 = rm.registerNode("host2:5678", 20480);
+    MockNM nm3 = rm.registerNode("host3:4433", 10240);
+
+    NodeId id1 = nm1.getNodeId();
+    NodeId id2 = nm2.getNodeId();
+    NodeId id3 = nm3.getNodeId();
+
+    rm.waitForState(id1, NodeState.RUNNING);
+    rm.waitForState(id2, NodeState.RUNNING);
+    rm.waitForState(id3, NodeState.RUNNING);
+
+    // Create an app and schedule AM on host1.
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
+    MockAM am = MockRM.launchAM(app, rm, nm1);
+
+    // Before sending heartbeat we gracefully decommission the node on which AM
+    // is scheduled to simulate race condition.
+    writeToHostsFile("host1", "host3");
+    rm.getNodesListManager().refreshNodes(conf, true);
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    rm.waitForState(id3, NodeState.DECOMMISSIONING);
+
+    // Heartbeat after the node is in DECOMMISSIONING state. This will be the
+    // first heartbeat containing information about the AM container since the
+    // application was submitted.
+    ApplicationAttemptId aaid = app.getCurrentAppAttempt().getAppAttemptId();
+    nm1.nodeHeartbeat(aaid, 1, ContainerState.RUNNING);
+    nm3.nodeHeartbeat(true);
+
+    // host1 should stay in DECOMMISSIONING as it has container running on it.
+    rm.waitForState(id1, NodeState.DECOMMISSIONING);
+    rm.waitForState(id3, NodeState.DECOMMISSIONED);
+
+    // Go through the normal application flow and wait for it to finish.
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+    MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
+    nm1.nodeHeartbeat(aaid, 1, ContainerState.COMPLETE);
+    rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
+    rm.waitForState(id1, NodeState.DECOMMISSIONED);
+  }
+
+
+  /**
   * Decommissioning using a post-configured include hosts file
   */
   @Test

@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.keyvalue.DefaultMapEntry;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -1353,9 +1354,29 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       boolean isNodeDecommissioning =
           initialState.equals(NodeState.DECOMMISSIONING);
       if (isNodeDecommissioning) {
+        // This check solves the following race condition -
+        // 1. launch AM container on a node with 0 containers.
+        // 2. gracefully decommission this node.
+        // 3. At the same time the node heartbeats to RM.
+        //    rmNode.runningApplications will be empty as this data structure is
+        //    updated later in this method. This will cause the node to be
+        //    deactivated even though container is running on it and hence kill
+        //    all containers running on it.
+        // In order to avoid such race conditions the ground truth is retrieved
+        // from the scheduler before deactivating a DECOMMISSIONING node.
+        // Only AM containers are considered as AM container reattempts can
+        // cause application failures if max attempts is set to 1.
+        boolean hasLaunchedRMMasterContainers = rmNode.context.getScheduler()
+            .getSchedulerNode(rmNode.getNodeID())
+            .getCopiedListOfRunningContainers()
+            .stream().anyMatch(RMContainer::isAMContainer);
+
         List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
         if (rmNode.runningApplications.isEmpty() &&
-            (keepAliveApps == null || keepAliveApps.isEmpty())) {
+            (keepAliveApps == null || keepAliveApps.isEmpty()) &&
+            !hasLaunchedRMMasterContainers) {
+          LOG.info("No containers running on " + rmNode.nodeId + ". "
+              + "Attempting to deactivate decommissioning node.");
           RMNodeImpl.deactivateNode(rmNode, NodeState.DECOMMISSIONED);
           return NodeState.DECOMMISSIONED;
         }
