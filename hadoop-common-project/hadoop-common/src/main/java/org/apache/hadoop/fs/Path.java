@@ -199,8 +199,16 @@ public class Path
     int start = 0;
 
     // parse uri scheme, if any
-    int colon = pathString.indexOf(':');
+    int colon = -1;
     int slash = pathString.indexOf('/');
+    if (StringUtils.countMatches(pathString, ":") > 2) {
+      //In case of IPv6 address, we should be able to parse the scheme
+      // correctly (This will ensure to parse path with & without scheme
+      // correctly in IPv6).
+      colon = pathString.indexOf(":/");
+    } else {
+      colon = pathString.indexOf(':');
+    }
     if ((colon != -1) &&
         ((slash == -1) || (colon < slash))) {     // has a scheme
       scheme = pathString.substring(0, colon);

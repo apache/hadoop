@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
@@ -223,6 +224,22 @@ public class NetUtils {
     }
     target = target.trim();
     boolean hasScheme = target.contains("://");
+    if (StringUtils.countMatches(target, ":") > 2) {
+      // if scheme exists in the target
+      // for example : https://ffff:ffff:ffff:ffff::1:XXXXX
+      // we have to form https://[ffff:ffff:ffff:ffff::1]:XXXXX
+      if (hasScheme) {
+        int i = target.lastIndexOf("/");
+        String scheme = target.substring(0, i + 1);
+        String ipAddrWithPort = target.substring(i + 1);
+        target = scheme + normalizeV6Address(ipAddrWithPort);
+      } else {
+        // if scheme does not exists in the target
+        // for example : ffff:ffff:ffff:ffff::1:XXXXX
+        // we have to form [ffff:ffff:ffff:ffff::1]:XXXXX
+        target = normalizeV6Address(target);
+      }
+    }
     URI uri = createURI(target, hasScheme, helpText, useCacheIfPresent);
 
     String host = uri.getHost();
@@ -273,6 +290,24 @@ public class NetUtils {
       URI_CACHE.put(target, uri);
     }
     return uri;
+  }
+
+  public static String normalizeV6Address(String target) {
+    if (!target.startsWith("[")) {
+      if (target.contains("%")) {
+        int i = target.lastIndexOf('%');
+        target = target.trim();
+        String port = target.substring(target.lastIndexOf(":") + 1);
+        String addr = target.substring(0, i);
+        target = "[" + addr + "]" + ":" + port;
+      } else {
+        int i = target.lastIndexOf(':');
+        String port = target.substring(target.lastIndexOf(":") + 1);
+        String addr = target.substring(0, i);
+        target = "[" + addr + "]" + ":" + port;
+      }
+    }
+    return target;
   }
 
   /**

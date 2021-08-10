@@ -817,4 +817,41 @@ public class TestNetUtils {
     String gotStr = StringUtils.join(got, ", ");
     assertEquals(expectStr, gotStr);
   }
+
+  @Test
+  public void testCreateSocketAddressWithIPV6() throws Throwable {
+    String ipv6Address = "2a03:2880:2130:cf05:face:b00c:0:1";
+    String ipv6WithPort = ipv6Address + ":12345";
+
+    InetSocketAddress addr = NetUtils.createSocketAddr(ipv6WithPort,
+        1000, "myconfig");
+    assertEquals("[" + ipv6Address + "]", addr.getHostName());
+    assertEquals(12345, addr.getPort());
+
+    String ipv6SampleAddressWithScope = ipv6Address + "%2";
+    ipv6WithPort = ipv6SampleAddressWithScope + ":12345";
+    addr = NetUtils.createSocketAddr(ipv6WithPort, 1000, "myconfig");
+    assertEquals("[" + ipv6Address + "]", addr.getHostName());
+    assertEquals(12345, addr.getPort());
+
+    ipv6Address = "[2a03:2880:2130:cf05:face:b00c:0:1]";
+    ipv6WithPort = ipv6Address + ":12345";
+
+    addr = NetUtils.createSocketAddr(ipv6WithPort, 1000, "myconfig");
+    assertEquals(ipv6Address, addr.getHostName());
+    assertEquals(12345, addr.getPort());
+
+    String ipv6AddressWithScheme =
+        "https://2a03:2880:2130:cf05:face:b00c:0:1:12345";
+    addr = NetUtils.createSocketAddr(ipv6AddressWithScheme, 1000,
+        "myconfig");
+    assertEquals(ipv6Address, addr.getHostName());
+    assertEquals(12345, addr.getPort());
+
+    ipv6AddressWithScheme = "https://[2a03:2880:2130:cf05:face:b00c:0:1]:12345";
+    addr = NetUtils.createSocketAddr(ipv6AddressWithScheme, 1000,
+        "myconfig");
+    assertEquals(ipv6Address, addr.getHostName());
+    assertEquals(12345, addr.getPort());
+  }
 }
