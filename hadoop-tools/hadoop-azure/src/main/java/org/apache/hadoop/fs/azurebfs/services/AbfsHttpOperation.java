@@ -78,7 +78,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   protected AuthType authType;
   protected String authToken;
 
-  protected byte[] responseContentBuffer;
+  protected byte[] responseContentBuffer = null;
 
   public AbfsHttpOperation(final AbfsRestOperationType opType,
       final URL url,

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -217,8 +218,15 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
         if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
             && buffer == null) {
           parseListFilesResponse(stream);
-        } else {
-          if (buffer != null) {
+        } else if (AbfsHttpConstants.HTTP_METHOD_POST.equals(this.method)) {
+          int contentLen = this.connection.getContentLength();
+          if (contentLen != 0) {
+            DataInputStream dis = new DataInputStream(stream);
+            responseContentBuffer = new byte[contentLen];
+            dis.readFully(responseContentBuffer);
+            totalBytesRead += contentLen;
+          }
+        } else if (buffer != null) {
             while (totalBytesRead < length) {
               int bytesRead = stream.read(buffer, offset + totalBytesRead,
                   length - totalBytesRead);
@@ -228,16 +236,13 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
               }
               totalBytesRead += bytesRead;
             }
-
-            responseContentBuffer = buffer;
           }
-          if (!endOfStream && stream.read() != -1) {
-            // read and discard
-            int bytesRead = 0;
-            responseContentBuffer = new byte[this.connection.getContentLength()];
-            while ((bytesRead = stream.read(responseContentBuffer)) >= 0) {
-              totalBytesRead += bytesRead;
-            }
+        if (!endOfStream && stream.read() != -1) {
+          // read and discard
+          int bytesRead = 0;
+          byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
+          while ((bytesRead = stream.read(b)) >= 0) {
+            totalBytesRead += bytesRead;
           }
         }
       } catch (IOException ex) {
