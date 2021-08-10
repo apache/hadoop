@@ -22,11 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Stack;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -456,18 +452,23 @@ final class ReadBufferManager {
           buffer.getStream().getPath(),  buffer.getOffset(), result, bytesActuallyRead);
     }
     synchronized (this) {
-      inProgressList.remove(buffer);
-      if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
-        buffer.setStatus(ReadBufferStatus.AVAILABLE);
-        buffer.setLength(bytesActuallyRead);
-      } else {
-        freeList.push(buffer.getBufferindex());
-        // buffer will be deleted as per the eviction policy.
+      // If this buffer has already been purged during
+      // close of InputStream then we don't update the lists.
+      if (inProgressList.contains(buffer)) {
+        inProgressList.remove(buffer);
+        if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
+          buffer.setStatus(ReadBufferStatus.AVAILABLE);
+          buffer.setLength(bytesActuallyRead);
+        } else {
+          freeList.push(buffer.getBufferindex());
+          // buffer will be deleted as per the eviction policy.
+        }
+        // completed list also contains FAILED read buffers
+        // for sending exception message to clients.
+        buffer.setStatus(result);
+        buffer.setTimeStamp(currentTimeMillis());
+        completedReadList.add(buffer);
       }
-
-      buffer.setStatus(result);
-      buffer.setTimeStamp(currentTimeMillis());
-      completedReadList.add(buffer);
     }
 
     //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
@@ -503,8 +504,63 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
+  public LinkedList<ReadBuffer> getCompletedReadListCopy() {
+    return new LinkedList<>(completedReadList);
+  }
+
+  @VisibleForTesting
+  public LinkedList<Integer> getFreeListCopy() {
+    return new LinkedList<>(freeList);
+  }
+
+  @VisibleForTesting
+  public LinkedList<ReadBuffer> getReadAheadQueueCopy() {
+    return new LinkedList<>(readAheadQueue);
+  }
+
+  @VisibleForTesting
+  public LinkedList<ReadBuffer> getInProgressCopiedList() {
+    return new LinkedList<>(inProgressList);
+  }
+
+  @VisibleForTesting
   void callTryEvict() {
     tryEvict();
+  }
+
+
+  /**
+   * Purging the buffers associated with an {@link AbfsInputStream}
+   * from {@link ReadBufferManager} when stream is closed.
+   * @param stream input stream.
+   */
+  public synchronized void purgeBuffersForStream(AbfsInputStream stream) {
+    LOGGER.debug("Purging stale buffers for AbfsInputStream {} ", stream);
+    readAheadQueue.removeIf(readBuffer -> readBuffer.getStream() == stream);
+    purgeList(stream, completedReadList);
+    purgeList(stream, inProgressList);
+  }
+
+  /**
+   * Method to remove buffers associated with a {@link AbfsInputStream}
+   * when its close method is called.
+   * As failed ReadBuffers (bufferIndex = -1) are already pushed to free
+   * list in {@link this#doneReading(ReadBuffer, ReadBufferStatus, int)},
+   * we will skip adding those here again.
+   * @param stream associated input stream.
+   * @param list list of buffers like {@link this#completedReadList}
+   *             or {@link this#inProgressList}.
+   */
+  private void purgeList(AbfsInputStream stream, LinkedList<ReadBuffer> list) {
+    for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext();) {
+      ReadBuffer readBuffer = it.next();
+      if (readBuffer.getStream() == stream) {
+        it.remove();
+        if (readBuffer.getBufferindex() != -1) {
+          freeList.push(readBuffer.getBufferindex());
+        }
+      }
+    }
   }
 
   /**
