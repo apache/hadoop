@@ -23,9 +23,9 @@
 #include <google/protobuf/stubs/common.h>
 
 #include <cstring>
+#include <cstdio>
 #include <chrono>
 #include <exception>
-
 
 static const char *hdfs_11294_core_site_txt =
 "<configuration>\n"
@@ -80,7 +80,7 @@ TEST(ConfigConnectBugs, Test_HDFS_11294) {
   // Directory for hdfs config
   TempDir td;
 
-  const std::string& tempDirPath = td.path;
+  const std::string &tempDirPath = td.GetPath();
   const std::string coreSitePath = tempDirPath + "/core-site.xml";
   const std::string hdfsSitePath = tempDirPath + "/hdfs-site.xml";
 

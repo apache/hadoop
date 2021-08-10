@@ -62,11 +62,17 @@ bool XPlatform::Syscall::StringCompareIgnoreCase(const std::string& a,
 }
 
 int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
-  // Make space for mkstemp to add NULL character at the end
-  pattern.resize(pattern.size() + 1);
+  // Append NULL so that mkstemp can find the end of string
+  pattern.emplace_back('\0');
   return mkstemp(pattern.data());
 }
 
 bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
   return close(file_descriptor) == 0;
+}
+
+bool XPlatform::Syscall::CreateTempDir(std::vector<char>& pattern) {
+  // Append NULL so that mkdtemp can find the end of string
+  pattern.emplace_back('\0');
+  return mkdtemp(pattern.data()) != nullptr;
 }

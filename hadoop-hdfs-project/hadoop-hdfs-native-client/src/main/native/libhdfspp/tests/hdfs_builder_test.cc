@@ -29,7 +29,8 @@ TEST(HdfsBuilderTest, TestStubBuilder) {
   {
     TempDir tempDir1;
 
-    hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
+    hdfsBuilder *builder =
+        hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
     hdfsFreeBuilder(builder);
   }
 
@@ -44,10 +45,11 @@ TEST(HdfsBuilderTest, TestRead)
   // Reading string values
   {
     TempDir tempDir1;
-    TempFile tempFile1(tempDir1.path + "/core-site.xml");
+    TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
     writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
 
-    hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
+    hdfsBuilder *builder =
+        hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
 
     char * readVal = nullptr;
     int result = hdfsBuilderConfGetStr(builder, "key1", &readVal);
@@ -67,10 +69,11 @@ TEST(HdfsBuilderTest, TestRead)
   // Reading int values
   {
     TempDir tempDir1;
-    TempFile tempFile1(tempDir1.path + "/core-site.xml");
+    TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
     writeSimpleConfig(tempFile1.GetFileName(), "key1", "100");
 
-    hdfsBuilder * builder = hdfsNewBuilderFromDirectory(tempDir1.path.c_str());
+    hdfsBuilder *builder =
+        hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
 
     int readVal = -1;
     int result = hdfsBuilderConfGetInt(builder, "key1", &readVal);

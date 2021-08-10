@@ -71,13 +71,13 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   // Search path
   {
     TempDir tempDir;
-    TempFile coreSite(tempDir.path + "/core-site.xml");
+    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.path);
+    loader.SetSearchPath(tempDir.GetPath());
 
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
@@ -88,11 +88,11 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   // Only core-site.xml available
   {
     TempDir tempDir;
-    TempFile coreSite(tempDir.path + "/core-site.xml");
+    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.path);
+    loader.SetSearchPath(tempDir.GetPath());
 
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
@@ -102,11 +102,11 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   // Only hdfs-site available
   {
     TempDir tempDir;
-    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.path);
+    loader.SetSearchPath(tempDir.GetPath());
 
     optional<HdfsConfiguration> config = loader.LoadDefaultResources<HdfsConfiguration>();
     EXPECT_TRUE(config && "Parse streams");
@@ -120,12 +120,12 @@ TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   // Config parser API
   {
     TempDir tempDir;
-    TempFile coreSite(tempDir.path + "/core-site.xml");
+    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
-    ConfigParser parser(tempDir.path);
+    ConfigParser parser(tempDir.GetPath());
 
     EXPECT_EQ("value1", parser.get_string_or("key1", ""));
     EXPECT_EQ("value2", parser.get_string_or("key2", ""));
@@ -141,12 +141,12 @@ TEST(HdfsConfigurationTest, TestConfigParserAPI) {
 
   {
     TempDir tempDir;
-    TempFile coreSite(tempDir.path + "/core-site.xml");
+    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TempFile hdfsSite(tempDir.path + "/hdfs-site.xml");
+    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeDamagedConfig(hdfsSite.GetFileName(), "key2", "value2");
 
-    ConfigParser parser(tempDir.path);
+    ConfigParser parser(tempDir.GetPath());
 
     EXPECT_EQ("value1", parser.get_string_or("key1", ""));
     EXPECT_EQ("", parser.get_string_or("key2", ""));

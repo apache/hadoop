@@ -335,7 +335,7 @@ TEST(ConfigurationTest, TestFileReads)
 
     ConfigurationLoader config_loader;
     config_loader.ClearSearchPath();
-    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempDir.path);
+    optional<Configuration> config = config_loader.LoadFromFile<Configuration>(tempDir.GetPath());
     EXPECT_FALSE(config && "Add directory as file resource");
   }
 
@@ -352,17 +352,18 @@ TEST(ConfigurationTest, TestFileReads)
   // Search path
   {
     TempDir tempDir1;
-    TempFile tempFile1(tempDir1.path + "/file1.xml");
+    TempFile tempFile1(tempDir1.GetPath() + "/file1.xml");
     writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
     TempDir tempDir2;
-    TempFile tempFile2(tempDir2.path + "/file2.xml");
+    TempFile tempFile2(tempDir2.GetPath() + "/file2.xml");
     writeSimpleConfig(tempFile2.GetFileName(), "key2", "value2");
     TempDir tempDir3;
-    TempFile tempFile3(tempDir3.path + "/file3.xml");
+    TempFile tempFile3(tempDir3.GetPath() + "/file3.xml");
     writeSimpleConfig(tempFile3.GetFileName(), "key3", "value3");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir1.path + ":" + tempDir2.path + ":" + tempDir3.path);
+    loader.SetSearchPath(tempDir1.GetPath() + ":" + tempDir2.GetPath() + ":" +
+                         tempDir3.GetPath());
     optional<Configuration> config1 = loader.LoadFromFile<Configuration>("file1.xml");
     EXPECT_TRUE(config1 && "Parse first stream");
     optional<Configuration> config2 = loader.OverlayResourceFile(*config1, "file2.xml");
@@ -379,11 +380,11 @@ TEST(ConfigurationTest, TestDefaultConfigs) {
   // Search path
   {
     TempDir tempDir;
-    TempFile coreSite(tempDir.path + "/core-site.xml");
+    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
 
     ConfigurationLoader loader;
-    loader.SetSearchPath(tempDir.path);
+    loader.SetSearchPath(tempDir.GetPath());
 
     optional<Configuration> config = loader.LoadDefaultResources<Configuration>();
     EXPECT_TRUE(config && "Parse streams");
