@@ -384,6 +384,7 @@ public final class Util {
     List<InetSocketAddress> addrs = Lists.newArrayList();
     for (String addr : parts) {
       if (resolveNeeded) {
+        LOG.info("Resolving journal address: " + addr);
         InetSocketAddress isa = NetUtils.createSocketAddr(
             addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
         // Get multiple hostnames from domain name if needed,
