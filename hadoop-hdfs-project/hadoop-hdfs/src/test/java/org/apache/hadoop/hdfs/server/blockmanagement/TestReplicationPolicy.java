@@ -107,7 +107,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),
-        0L, 0L, 0, 0, null);
+        0L, 0L, 0, 0, null, 0.0f);
   }
 
   private void resetHeartbeatForStorages() {
@@ -115,7 +115,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       updateHeartbeatWithUsage(dataNodes[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L,
-          0, 0);
+          0, 0, 0.0f);
     }
     // No available space in the extra storage of dn0
     updateHeartbeatForExtraStorage(0L, 0L, 0L, 0L);
@@ -149,7 +149,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     updateHeartbeatWithUsage(dataNodes[5],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE)/3, 0L,
-        0L, 0L, 0, 0);
+        0L, 0L, 0, 0, 0.0f);
 
     updateHeartbeatForExtraStorage(
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
@@ -173,7 +173,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     updateHeartbeatWithUsage(dataNodes[5],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE)/3, 0L,
-        0L, 0L, 0, 0);
+        0L, 0L, 0, 0, 0.0f);
 
     updateHeartbeatForExtraStorage(
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
@@ -202,7 +202,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        0L, 0L, 4, 0); // overloaded
+        0L, 0L, 4, 0, 0.0f); // overloaded
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -321,7 +321,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
-        0L, 0L, 0, 0); // no space
+        0L, 0L, 0, 0, 0.0f); // no space
         
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -369,7 +369,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     for(int i=0; i<2; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
       
     DatanodeStorageInfo[] targets;
@@ -457,7 +458,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     bm.getDatanodeManager().getHeartbeatManager().addDatanode(newDn);
     updateHeartbeatWithUsage(newDn,
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+        2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+        0L, 0L, 0L, 0, 0, 0.0f);
 
     // Try picking three nodes. Only two should return.
     excludedNodes.clear();
@@ -505,7 +507,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     for(int i=0; i<2; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
     
     final LogVerificationAppender appender = new LogVerificationAppender();
@@ -1044,7 +1047,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     updateHeartbeatWithUsage(excessSSD.getDatanodeDescriptor(),
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0,
-        0);
+        0, 0.0f);
 
     // use delete hint case.
 
@@ -1671,7 +1674,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       updateHeartbeatWithUsage(dataNodes[i],
           2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L,
           (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE - 1) * BLOCK_SIZE,
-          0L, 0L, 0L, 0, 0);
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
     assertFalse(dnManager.shouldAvoidStaleDataNodesForWrite());
     resetHeartbeatForStorages();

@@ -675,6 +675,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return volumes.getDfsUsed();
   }
 
+  public long setDfsUsed() throws IOException {
+    return volumes.getDfsUsed();
+  }
+
   /**
    * Return the total space used by dfs datanode
    */
@@ -3129,6 +3133,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final String directory;
     final long usedSpace; // size of space used by HDFS
     final long freeSpace; // size of free space excluding reserved space
+    final float volumeUsagePercent; // usage of volume
     final long reservedSpace; // size of space reserved for non-HDFS
     final long reservedSpaceForReplicas; // size of space reserved RBW or
                                     // re-replication
@@ -3139,6 +3144,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       this.directory = v.toString();
       this.usedSpace = usedSpace;
       this.freeSpace = freeSpace;
+      this.volumeUsagePercent = (usedSpace * 100.0f) / (usedSpace + freeSpace);
       this.reservedSpace = v.getReserved();
       this.reservedSpaceForReplicas = v.getReservedForReplicas();
       this.numBlocks = v.getNumBlocks();
@@ -3175,6 +3181,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       final Map<String, Object> innerInfo = new HashMap<String, Object>();
       innerInfo.put("usedSpace", v.usedSpace);
       innerInfo.put("freeSpace", v.freeSpace);
+      innerInfo.put("volumeUsagePercent", v.volumeUsagePercent);
       innerInfo.put("reservedSpace", v.reservedSpace);
       innerInfo.put("reservedSpaceForReplicas", v.reservedSpaceForReplicas);
       innerInfo.put("numBlocks", v.numBlocks);
@@ -3182,6 +3189,26 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       info.put(v.directory, innerInfo);
     }
     return info;
+  }
+
+  @Override
+  public float getVolumeUsageStdDev() {
+    Collection<VolumeInfo> volumes = getVolumeInfo();
+    ArrayList<Float> usages = new ArrayList<Float>();
+    float totalDfsUsed = 0;
+    float dev = 0;
+    for (VolumeInfo v : volumes) {
+      usages.add(v.volumeUsagePercent);
+      totalDfsUsed += v.volumeUsagePercent;
+    }
+
+    totalDfsUsed /= volumes.size();
+    Collections.sort(usages);
+    for (Float usage : usages) {
+      dev += (usage - totalDfsUsed) * (usage - totalDfsUsed);
+    }
+    dev = (float) Math.sqrt(dev / usages.size());
+    return dev;
   }
 
   @Override //FsDatasetSpi

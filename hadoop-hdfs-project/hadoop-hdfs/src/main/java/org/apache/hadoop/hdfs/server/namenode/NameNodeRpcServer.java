@@ -1593,14 +1593,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       int failedVolumes, VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks)
+      @Nonnull SlowDiskReports slowDisks,
+      float volumeUsageStdDev)
           throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease,
-        slowPeers, slowDisks);
+        slowPeers, slowDisks, volumeUsageStdDev);
   }
 
   @Override // DatanodeProtocol
@@ -1727,11 +1728,13 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void sendLifeline(DatanodeRegistration nodeReg, StorageReport[] report,
       long dnCacheCapacity, long dnCacheUsed, int xmitsInProgress,
       int xceiverCount, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) throws IOException {
+      VolumeFailureSummary volumeFailureSummary,
+      float volumeUsageStdDev) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     namesystem.handleLifeline(nodeReg, report, dnCacheCapacity, dnCacheUsed,
-        xceiverCount, xmitsInProgress, failedVolumes, volumeFailureSummary);
+        xceiverCount, xmitsInProgress, failedVolumes, volumeFailureSummary,
+        volumeUsageStdDev);
   }
 
   /** 

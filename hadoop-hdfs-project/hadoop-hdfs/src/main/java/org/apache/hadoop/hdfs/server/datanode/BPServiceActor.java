@@ -536,6 +536,7 @@ class BPServiceActor implements Runnable {
     scheduler.scheduleNextHeartbeat();
     StorageReport[] reports =
         dn.getFSDataset().getStorageReports(bpos.getBlockPoolId());
+    float volumeUsageStdDev = dn.getFSDataset().getVolumeUsageStdDev();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending heartbeat with " + reports.length +
                 " storage reports from service actor: " + this);
@@ -567,7 +568,8 @@ class BPServiceActor implements Runnable {
         volumeFailureSummary,
         requestBlockReportLease,
         slowPeers,
-        slowDisks);
+        slowDisks,
+        volumeUsageStdDev);
 
     if (outliersReportDue) {
       // If the report was due and successfully sent, schedule the next one.
@@ -1117,6 +1119,7 @@ class BPServiceActor implements Runnable {
           .getVolumeFailureSummary();
       int numFailedVolumes = volumeFailureSummary != null ?
           volumeFailureSummary.getFailedStorageLocations().length : 0;
+      float volumeUsageStdDev = dn.getFSDataset().getVolumeUsageStdDev();
       lifelineNamenode.sendLifeline(bpRegistration,
                                     reports,
                                     dn.getFSDataset().getCacheCapacity(),
@@ -1124,7 +1127,8 @@ class BPServiceActor implements Runnable {
                                     dn.getXmitsInProgress(),
                                     dn.getXceiverCount(),
                                     numFailedVolumes,
-                                    volumeFailureSummary);
+                                    volumeFailureSummary,
+                                    volumeUsageStdDev);
     }
   }
 

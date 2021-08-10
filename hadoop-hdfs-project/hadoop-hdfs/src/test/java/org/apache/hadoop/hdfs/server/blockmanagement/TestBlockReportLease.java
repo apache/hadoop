@@ -92,7 +92,7 @@ public class TestBlockReportLease {
       // Send heartbeat and request full block report lease
       HeartbeatResponse hbResponse = rpcServer.sendHeartbeat(
           dnRegistration, storages, 0, 0, 0, 0, 0, null, true,
-              SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+              SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT, 0.0f);
 
       DelayAnswer delayer = new DelayAnswer(BlockManager.LOG);
       doAnswer(delayer).when(spyBlockManager).processReport(

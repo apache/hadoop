@@ -106,6 +106,7 @@
       <th>Directory</th>
       <th>StorageType</th>
       <th>Capacity Used</th>
+      <th>Capacity Used Percent</th>
       <th>Capacity Left</th>
       <th>Capacity Reserved</th>
       <th>Reserved Space for Replicas</th>
@@ -117,6 +118,7 @@
       <td>{name}</td>
       <td>{storageType}</td>
       <td>{usedSpace|fmt_bytes}</td>
+      <td>{volumeUsagePercent|fmt_percentage}</td>
       <td>{freeSpace|fmt_bytes}</td>
       <td>{reservedSpace|fmt_bytes}</td>
       <td>{reservedSpaceForReplicas|fmt_bytes}</td>

@@ -1531,6 +1531,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public float getVolumeUsageStdDev() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public FsVolumeSpi getVolume(ExtendedBlock b) {
     return getStorage(b.getLocalBlock()).getVolume();
   }

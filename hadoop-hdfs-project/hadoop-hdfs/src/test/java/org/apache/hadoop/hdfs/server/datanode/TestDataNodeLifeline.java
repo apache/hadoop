@@ -33,6 +33,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyFloat;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
@@ -171,7 +172,8 @@ public class TestDataNodeLifeline {
             any(),
             anyBoolean(),
             any(SlowPeerReports.class),
-            any(SlowDiskReports.class));
+            any(SlowDiskReports.class),
+            anyFloat());
 
     // Intercept lifeline to trigger latch count-down on each call.
     doAnswer(new LatchCountingAnswer<Void>(lifelinesSent))
@@ -183,7 +185,8 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any());
+            any(),
+            anyFloat());
 
     // While waiting on the latch for the expected number of lifeline messages,
     // poll DataNode tracking information.  Thanks to the lifeline, we expect
@@ -210,7 +213,8 @@ public class TestDataNodeLifeline {
         anyInt(),
         anyInt(),
         anyInt(),
-        any());
+        any(),
+        anyFloat());
 
     // Also verify lifeline call through metrics.  We expect at least
     // numLifelines, guaranteed by waiting on the latch.  There is a small
@@ -240,7 +244,8 @@ public class TestDataNodeLifeline {
             any(),
             anyBoolean(),
             any(SlowPeerReports.class),
-            any(SlowDiskReports.class));
+            any(SlowDiskReports.class),
+            anyFloat());
 
     // While waiting on the latch for the expected number of heartbeat messages,
     // poll DataNode tracking information.  We expect that the DataNode always
@@ -263,7 +268,8 @@ public class TestDataNodeLifeline {
         anyInt(),
         anyInt(),
         anyInt(),
-        any());
+        any(),
+        anyFloat());
 
     // Also verify no lifeline calls through metrics.
     assertEquals("Expect metrics to count no lifeline calls.", 0,

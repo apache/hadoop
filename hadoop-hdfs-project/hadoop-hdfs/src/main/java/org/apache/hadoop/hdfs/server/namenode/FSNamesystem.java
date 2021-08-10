@@ -4363,7 +4363,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks)
+      @Nonnull SlowDiskReports slowDisks,
+      float volumeUsageStdDev)
           throws IOException {
     readLock();
     try {
@@ -4373,7 +4374,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, reports, getBlockPoolId(), cacheCapacity, cacheUsed,
           xceiverCount, maxTransfer, failedVolumes, volumeFailureSummary,
-          slowPeers, slowDisks);
+          slowPeers, slowDisks, volumeUsageStdDev);
       long blockReportLeaseId = 0;
       if (requestFullBlockReportLease) {
         blockReportLeaseId =  blockManager.requestBlockReportLeaseId(nodeReg);
@@ -4410,15 +4411,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param xmitsInProgress count of transfers running at DataNode
    * @param failedVolumes count of failed volumes at DataNode
    * @param volumeFailureSummary info on failed volumes at DataNode
+   * @param volumeUsageStdDev the standard deviation of volume usage
    * @throws IOException if there is an error
    */
   void handleLifeline(DatanodeRegistration nodeReg, StorageReport[] reports,
       long cacheCapacity, long cacheUsed, int xceiverCount, int xmitsInProgress,
-      int failedVolumes, VolumeFailureSummary volumeFailureSummary)
+      int failedVolumes, VolumeFailureSummary volumeFailureSummary,
+      float volumeUsageStdDev)
       throws IOException {
     blockManager.getDatanodeManager().handleLifeline(nodeReg, reports,
         cacheCapacity, cacheUsed, xceiverCount,
-        failedVolumes, volumeFailureSummary);
+        failedVolumes, volumeFailureSummary, volumeUsageStdDev);
   }
 
   /**
@@ -6515,7 +6518,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("nonDfsUsedSpace", node.getNonDfsUsed())
           .put("capacity", node.getCapacity())
           .put("numBlocks", node.numBlocks())
-          .put("version", node.getSoftwareVersion())
+          .put("version", "")
           .put("used", node.getDfsUsed())
           .put("remaining", node.getRemaining())
           .put("blockScheduled", node.getBlocksScheduled())
@@ -6523,7 +6526,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("blockPoolUsedPercent", node.getBlockPoolUsedPercent())
           .put("volfails", node.getVolumeFailures())
           // Block report time in minutes
-          .put("lastBlockReport", getLastBlockReport(node));
+          .put("lastBlockReport", getLastBlockReport(node))
+          .put("volumeUsageStdDev", node.getVolumeUsageStdDev());
       VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
       if (volumeFailureSummary != null) {
         innerinfo

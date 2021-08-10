@@ -223,7 +223,8 @@ class HeartbeatManager implements DatanodeStatistics {
       addDatanode(d);
 
       //update its timestamp
-      d.updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0, null);
+      d.updateHeartbeatState(StorageReport.EMPTY_ARRAY,
+          0L, 0L, 0, 0, null, 0.0f);
       stats.add(d);
     }
   }
@@ -254,24 +255,24 @@ class HeartbeatManager implements DatanodeStatistics {
   synchronized void updateHeartbeat(final DatanodeDescriptor node,
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xceiverCount, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
     stats.subtract(node);
     blockManager.updateHeartbeat(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
+        xceiverCount, failedVolumes, volumeFailureSummary, volumeUsageStdDev);
     stats.add(node);
   }
 
   synchronized void updateLifeline(final DatanodeDescriptor node,
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xceiverCount, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
     stats.subtract(node);
     // This intentionally calls updateHeartbeatState instead of
     // updateHeartbeat, because we don't want to modify the
     // heartbeatedSinceRegistration flag.  Arrival of a lifeline message does
     // not count as arrival of the first heartbeat.
     blockManager.updateHeartbeatState(node, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
+        xceiverCount, failedVolumes, volumeFailureSummary, volumeUsageStdDev);
     stats.add(node);
   }
 

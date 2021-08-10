@@ -198,7 +198,7 @@ public class TestBlockManager {
           2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L);
       dn.updateHeartbeat(
           BlockManagerTestUtil.getStorageReportsForDatanode(dn), 0L, 0L, 0, 0,
-          null);
+          null, 0.0f);
       bm.getDatanodeManager().checkIfClusterIsNowMultiRack(dn);
     }
   }
@@ -1453,7 +1453,7 @@ public class TestBlockManager {
         }
       }
       failedStorageDataNode.updateHeartbeat(reports.toArray(StorageReport
-          .EMPTY_ARRAY), 0L, 0L, 0, 0, null);
+          .EMPTY_ARRAY), 0L, 0L, 0, 0, null, 0.0f);
       ns.writeLock();
       DatanodeStorageInfo corruptStorageInfo= null;
       for(int i=0; i<corruptStorageDataNode.getStorageInfos().length; i++) {

@@ -91,6 +91,11 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
+  public float getVolumeUsageStdDev() {
+    return 0.0f;
+  }
+
+  @Override
   public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
     return null;
   }

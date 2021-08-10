@@ -178,7 +178,8 @@ public class TestBPOfferService {
           Mockito.any(VolumeFailureSummary.class),
           Mockito.anyBoolean(),
           Mockito.any(SlowPeerReports.class),
-          Mockito.any(SlowDiskReports.class));
+          Mockito.any(SlowDiskReports.class),
+          Mockito.anyFloat());
     mockHaStatuses[nnIdx] = new NNHAStatusHeartbeat(HAServiceState.STANDBY, 0);
     datanodeCommands[nnIdx] = new DatanodeCommand[0];
     return mock;
@@ -1131,7 +1132,8 @@ public class TestBPOfferService {
         Mockito.any(VolumeFailureSummary.class),
         Mockito.anyBoolean(),
         Mockito.any(SlowPeerReports.class),
-        Mockito.any(SlowDiskReports.class)))
+        Mockito.any(SlowDiskReports.class),
+        Mockito.anyFloat()))
         //heartbeat to old NN instance
         .thenAnswer(new HeartbeatAnswer(0))
         //heartbeat to new NN instance with Register Command

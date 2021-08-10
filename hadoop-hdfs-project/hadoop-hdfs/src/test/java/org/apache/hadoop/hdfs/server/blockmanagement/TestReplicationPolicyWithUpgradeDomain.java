@@ -85,7 +85,7 @@ public class TestReplicationPolicyWithUpgradeDomain
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        0L, 0L, 4, 0);
+        0L, 0L, 4, 0, 0.0f);
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -118,7 +118,8 @@ public class TestReplicationPolicyWithUpgradeDomain
 
     updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+        0L, 0L, 0L, 0, 0, 0.0f);
   }
 
   /**

@@ -101,11 +101,12 @@ public class TestAvailableSpaceBPPBalanceLocal {
   protected static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
-      int volFailures) {
+      int volFailures, float volumeUsageStdDev) {
     dn.getStorageInfos()[0]
         .setUtilizationForTesting(capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(BlockManagerTestUtil.getStorageReportsForDatanode(dn),
-        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
+        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null,
+        volumeUsageStdDev);
   }
 
   protected static void setupDataNodeCapacity() {
@@ -115,14 +116,14 @@ public class TestAvailableSpaceBPPBalanceLocal {
         updateHeartbeatWithUsage(dataNodes[i],
             4 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L,
             4 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L, 0L,
-            0L, 0, 0);
+            0L, 0, 0, 0.0f);
       } else {
         // remaining 25%
         updateHeartbeatWithUsage(dataNodes[i],
             4 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
             3 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L, 0L, 0L,
-            0, 0);
+            0, 0, 0.0f);
       }
     }
   }

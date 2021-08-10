@@ -112,6 +112,7 @@ public interface DatanodeProtocol {
    * @param slowPeers Details of peer DataNodes that were detected as being
    *                  slow to respond to packet writes. Empty report if no
    *                  slow peers were detected by the DataNode.
+   * @param volumeUsageStdDev the standard deviation of volume usage
    * @throws IOException on error
    */
   @Idempotent
@@ -125,7 +126,8 @@ public interface DatanodeProtocol {
                                        VolumeFailureSummary volumeFailureSummary,
                                        boolean requestFullBlockReportLease,
                                        @Nonnull SlowPeerReports slowPeers,
-                                       @Nonnull SlowDiskReports slowDisks)
+                                       @Nonnull SlowDiskReports slowDisks,
+                                       float volumeUsageStdDev)
       throws IOException;
 
   /**

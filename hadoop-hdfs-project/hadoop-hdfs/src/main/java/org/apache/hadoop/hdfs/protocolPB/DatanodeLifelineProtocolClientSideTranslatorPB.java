@@ -80,11 +80,13 @@ public class DatanodeLifelineProtocolClientSideTranslatorPB implements
   public void sendLifeline(DatanodeRegistration registration,
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xmitsInProgress, int xceiverCount, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) throws IOException {
+      VolumeFailureSummary volumeFailureSummary,
+      float volumeUsageStdDev) throws IOException {
     HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
         .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
-        .setFailedVolumes(failedVolumes);
+        .setFailedVolumes(failedVolumes)
+        .setVolumeUsageStdDev(volumeUsageStdDev);
     builder.addAllReports(PBHelperClient.convertStorageReports(reports));
     if (cacheCapacity != 0) {
       builder.setCacheCapacity(cacheCapacity);

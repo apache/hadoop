@@ -78,17 +78,20 @@ public class TestReplicationPolicyConsiderLoad
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[3]),
           dataNodes[3].getCacheCapacity(),
           dataNodes[3].getCacheUsed(),
-          2, 0, null);
+          2, 0, null,
+          dataNodes[3].getVolumeUsageStdDev());
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[4],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[4]),
           dataNodes[4].getCacheCapacity(),
           dataNodes[4].getCacheUsed(),
-          4, 0, null);
+          4, 0, null,
+          dataNodes[4].getVolumeUsageStdDev());
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[5],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[5]),
           dataNodes[5].getCacheCapacity(),
           dataNodes[5].getCacheUsed(),
-          4, 0, null);
+          4, 0, null,
+          dataNodes[5].getVolumeUsageStdDev());
 
       // value in the above heartbeats
       final int load = 2 + 4 + 4;
@@ -137,33 +140,39 @@ public class TestReplicationPolicyConsiderLoad
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[0]),
           dataNodes[0].getCacheCapacity(),
           dataNodes[0].getCacheUsed(),
-          5, 0, null);
+          5, 0, null,
+          dataNodes[0].getVolumeUsageStdDev());
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[1],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[1]),
           dataNodes[1].getCacheCapacity(),
           dataNodes[1].getCacheUsed(),
-          10, 0, null);
+          10, 0, null,
+          dataNodes[1].getVolumeUsageStdDev());
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[2],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[2]),
           dataNodes[2].getCacheCapacity(),
           dataNodes[2].getCacheUsed(),
-          5, 0, null);
+          5, 0, null,
+          dataNodes[2].getVolumeUsageStdDev());
 
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[3],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[3]),
           dataNodes[3].getCacheCapacity(),
           dataNodes[3].getCacheUsed(),
-          10, 0, null);
+          10, 0, null,
+          dataNodes[3].getVolumeUsageStdDev());
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[4],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[4]),
           dataNodes[4].getCacheCapacity(),
           dataNodes[4].getCacheUsed(),
-          15, 0, null);
+          15, 0, null,
+          dataNodes[4].getVolumeUsageStdDev());
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[5],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[5]),
           dataNodes[5].getCacheCapacity(),
           dataNodes[5].getCacheUsed(),
-          15, 0, null);
+          15, 0, null,
+          dataNodes[5].getVolumeUsageStdDev());
       //Add values in above heartbeats
       double load = 5 + 10 + 15 + 10 + 15 + 5;
       // Call chooseTarget()

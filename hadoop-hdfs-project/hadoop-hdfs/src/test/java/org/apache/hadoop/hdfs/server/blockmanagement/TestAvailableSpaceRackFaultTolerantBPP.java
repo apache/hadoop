@@ -106,11 +106,12 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
   private static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
-      int volFailures) {
+      int volFailures, float volumeUsageStdDev) {
     dn.getStorageInfos()[0]
         .setUtilizationForTesting(capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(BlockManagerTestUtil.getStorageReportsForDatanode(dn),
-        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
+        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null,
+        volumeUsageStdDev);
   }
 
   private static void setupDataNodeCapacity() {
@@ -120,14 +121,14 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
         updateHeartbeatWithUsage(dataNodes[i],
             2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L,
             2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L, 0L,
-            0L, 0, 0);
+            0L, 0, 0, 0.0f);
       } else {
         // remaining 50%
         updateHeartbeatWithUsage(dataNodes[i],
             2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L, 0L, 0L,
-            0, 0);
+            0, 0, 0.0f);
       }
     }
   }

@@ -218,6 +218,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private int volumeFailures = 0;
   private VolumeFailureSummary volumeFailureSummary = null;
+  private float volumeUsageStdDev;
   
   /** 
    * When set to true, the node is not in include list and is not allowed
@@ -340,7 +341,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public void resetBlocks() {
-    updateStorageStats(this.getStorageReports(), 0L, 0L, 0, 0, null);
+    updateStorageStats(this.getStorageReports(), 0L, 0L, 0, 0, null, 0.0f);
     synchronized (invalidateBlocks) {
       this.invalidateBlocks.clear();
     }
@@ -379,9 +380,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void updateHeartbeat(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
-      VolumeFailureSummary volumeFailureSummary) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
     updateHeartbeatState(reports, cacheCapacity, cacheUsed, xceiverCount,
-        volFailures, volumeFailureSummary);
+        volFailures, volumeFailureSummary, volumeUsageStdDev);
     heartbeatedSinceRegistration = true;
   }
 
@@ -390,9 +391,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void updateHeartbeatState(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
-      VolumeFailureSummary volumeFailureSummary) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
     updateStorageStats(reports, cacheCapacity, cacheUsed, xceiverCount,
-        volFailures, volumeFailureSummary);
+        volFailures, volumeFailureSummary, volumeUsageStdDev);
     setLastUpdate(Time.now());
     setLastUpdateMonotonic(Time.monotonicNow());
     rollBlocksScheduled(getLastUpdateMonotonic());
@@ -400,7 +401,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   private void updateStorageStats(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
-      VolumeFailureSummary volumeFailureSummary) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
     long totalCapacity = 0;
     long totalRemaining = 0;
     long totalBlockPoolUsed = 0;
@@ -454,6 +455,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setXceiverCount(xceiverCount);
     this.volumeFailures = volFailures;
     this.volumeFailureSummary = volumeFailureSummary;
+    this.volumeUsageStdDev = volumeUsageStdDev;
     for (StorageReport report : reports) {
 
       DatanodeStorageInfo storage = null;
@@ -943,6 +945,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public VolumeFailureSummary getVolumeFailureSummary() {
     return volumeFailureSummary;
+  }
+
+  /**
+   * @return the standard deviation of volume usage
+   */
+  public float getVolumeUsageStdDev() {
+    return volumeUsageStdDev;
   }
 
   /**

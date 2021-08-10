@@ -38,5 +38,6 @@ public interface DatanodeLifelineProtocol {
   void sendLifeline(DatanodeRegistration registration, StorageReport[] reports,
       long dnCacheCapacity, long dnCacheUsed, int xmitsInProgress,
       int xceiverCount, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) throws IOException;
+      VolumeFailureSummary volumeFailureSummary,
+      float volumeUsageStdDev) throws IOException;
 }

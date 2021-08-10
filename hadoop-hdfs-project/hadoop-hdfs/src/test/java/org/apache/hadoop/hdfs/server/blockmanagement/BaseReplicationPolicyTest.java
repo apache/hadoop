@@ -58,12 +58,13 @@ abstract public class BaseReplicationPolicyTest {
   static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
     long capacity, long dfsUsed, long remaining, long blockPoolUsed,
     long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
-    int volFailures) {
+    int volFailures, float volumeUsageStdDev) {
     dn.getStorageInfos()[0].setUtilizationForTesting(
         capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),
-        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null);
+        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures, null,
+        volumeUsageStdDev);
   }
 
   abstract DatanodeDescriptor[] getDatanodeDescriptors(Configuration conf);
@@ -107,7 +108,8 @@ abstract public class BaseReplicationPolicyTest {
     for (int i=0; i < dataNodes.length; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+          0L, 0L, 0, 0, 0.0f);
     }
   }
 

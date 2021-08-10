@@ -62,7 +62,8 @@ public class DatanodeLifelineProtocolServerSideTranslatorPB implements
       impl.sendLifeline(PBHelper.convert(request.getRegistration()), report,
           request.getCacheCapacity(), request.getCacheUsed(),
           request.getXmitsInProgress(), request.getXceiverCount(),
-          request.getFailedVolumes(), volumeFailureSummary);
+          request.getFailedVolumes(), volumeFailureSummary,
+          request.getVolumeUsageStdDev());
       return VOID_LIFELINE_RESPONSE_PROTO;
     } catch (IOException e) {
       throw new ServiceException(e);

@@ -1751,7 +1751,8 @@ public class DatanodeManager {
       int maxTransfers, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks) throws IOException {
+      @Nonnull SlowDiskReports slowDisks,
+      float volumeUsageStdDev) throws IOException {
     final DatanodeDescriptor nodeinfo;
     try {
       nodeinfo = getDatanode(nodeReg);
@@ -1769,7 +1770,8 @@ public class DatanodeManager {
       return new DatanodeCommand[]{RegisterCommand.REGISTER};
     }
     heartbeatManager.updateHeartbeat(nodeinfo, reports, cacheCapacity,
-        cacheUsed, xceiverCount, failedVolumes, volumeFailureSummary);
+        cacheUsed, xceiverCount, failedVolumes, volumeFailureSummary,
+        volumeUsageStdDev);
 
     // If we are in safemode, do not send back any recovery / replication
     // requests. Don't even drain the existing queue of work.
@@ -1891,12 +1893,15 @@ public class DatanodeManager {
    * @param xceiverCount estimated count of transfer threads running at DataNode
    * @param failedVolumes count of failed volumes at DataNode
    * @param volumeFailureSummary info on failed volumes at DataNode
+   * @param volumeUsageStdDev the standard deviation of volume usage
+   x
    * @throws IOException if there is an error
    */
   public void handleLifeline(DatanodeRegistration nodeReg,
       StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int failedVolumes,
-      VolumeFailureSummary volumeFailureSummary) throws IOException {
+      VolumeFailureSummary volumeFailureSummary,
+      float volumeUsageStdDev) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Received handleLifeline from nodeReg = " + nodeReg);
     }
@@ -1917,7 +1922,7 @@ public class DatanodeManager {
       return;
     }
     heartbeatManager.updateLifeline(nodeinfo, reports, cacheCapacity, cacheUsed,
-        xceiverCount, failedVolumes, volumeFailureSummary);
+        xceiverCount, failedVolumes, volumeFailureSummary, volumeUsageStdDev);
   }
 
   /**

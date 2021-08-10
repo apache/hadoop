@@ -290,7 +290,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        0L, 0L, 4, 0); // overloaded
+        0L, 0L, 4, 0, 0.0f); // overloaded
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -327,7 +327,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+        0L, 0L, 0L, 0, 0, 0.0f);
   }
 
   private void verifyNoTwoTargetsOnSameNodeGroup(DatanodeStorageInfo[] targets) {
@@ -398,7 +399,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
-        0L, 0L, 0, 0); // no space
+        0L, 0L, 0, 0, 0.0f); // no space
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -429,7 +430,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
 
     updateHeartbeatWithUsage(dataNodes[0],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+        HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        0L, 0L, 0, 0, 0.0f);
   }
 
   /**
@@ -447,7 +449,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     for(int i=0; i<3; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
 
     DatanodeStorageInfo[] targets;
@@ -513,7 +516,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     updateHeartbeatWithUsage(dataNodes[7],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
-        0L, 0L, 0, 0); // no space
+        0L, 0L, 0, 0, 0.0f); // no space
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(1, dataNodes[7]);
@@ -709,7 +712,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     for(int i=0; i<dataNodesInBoundaryCase.length; i++) {
       updateHeartbeatWithUsage(dataNodesInBoundaryCase[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
 
     DatanodeStorageInfo[] targets;
@@ -740,7 +744,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     for(int i=0; i<dataNodesInBoundaryCase.length; i++) {
       updateHeartbeatWithUsage(dataNodesInBoundaryCase[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
     List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
     chosenNodes.add(storagesInBoundaryCase[0]);
@@ -778,7 +783,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     for(int i=0; i<dataNodesInMoreTargetsCase.length; i++) {
       updateHeartbeatWithUsage(dataNodesInMoreTargetsCase[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
 
     DatanodeStorageInfo[] targets;
@@ -829,7 +835,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     for(int i=0; i<dataNodesForDependencies.length; i++) {
       updateHeartbeatWithUsage(dataNodesForDependencies[i],
           2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+          2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0, 0.0f);
     }
 
     List<DatanodeStorageInfo> chosenNodes = new ArrayList<>();
@@ -883,7 +890,7 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     updateHeartbeatWithUsage(dataNodes[3],
         2* HdfsServerConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
-        0L, 0L, 0, 0); // no space
+        0L, 0L, 0, 0, 0.0f); // no space
 
     DatanodeStorageInfo[] targets;
     List<DatanodeDescriptor> expectedTargets =

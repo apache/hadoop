@@ -138,13 +138,15 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks)
+      @Nonnull SlowDiskReports slowDisks,
+      float volumeUsageStdDev)
           throws IOException {
     HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
         .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
         .setFailedVolumes(failedVolumes)
-        .setRequestFullBlockReportLease(requestFullBlockReportLease);
+        .setRequestFullBlockReportLease(requestFullBlockReportLease)
+        .setVolumeUsageStdDev(volumeUsageStdDev);
     builder.addAllReports(PBHelperClient.convertStorageReports(reports));
     if (cacheCapacity != 0) {
       builder.setCacheCapacity(cacheCapacity);

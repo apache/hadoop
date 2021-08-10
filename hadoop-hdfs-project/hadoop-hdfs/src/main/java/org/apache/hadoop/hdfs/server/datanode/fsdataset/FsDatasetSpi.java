@@ -230,6 +230,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /** @return a volume information map (name {@literal =>} info). */
   Map<String, Object> getVolumeInfoMap();
 
+  /** @return the standard deviation of a volume usage. */
+  float getVolumeUsageStdDev();
+
   /**
    * Returns info about volume failures.
    *

@@ -105,7 +105,7 @@ public class TestOverReplicatedBlocks {
               datanode.getStorageInfos()[0].setUtilizationForTesting(100L, 100L, 0, 100L);
               datanode.updateHeartbeat(
                   BlockManagerTestUtil.getStorageReportsForDatanode(datanode),
-                  0L, 0L, 0, 0, null);
+                  0L, 0L, 0, 0, null, 0.0f);
             }
           }
 
