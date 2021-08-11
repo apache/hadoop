@@ -19,11 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.slf4j.Logger;
@@ -31,12 +34,9 @@ import org.slf4j.LoggerFactory;
 import org.junit.Assert;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
@@ -46,11 +46,13 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_AUTH;
-import static org.apache.hadoop.fs.azurebfs.utils.SASGenerator.ISO_8601_FORMATTER;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_EXPIRY;
 
 public class MockAbfsInputStream extends AbfsInputStream {
-
+  //Diff between Filetime epoch and Unix epoch (in ms)
+  private static final long FILETIME_EPOCH_DIFF = 11644473600000L;
+  // 1ms in units of nanoseconds
+  private static final long FILETIME_ONE_MILLISECOND = 10 * 1000;
   int errStatus = 0;
   boolean mockRequestException = false;
   boolean mockConnectionException = false;
@@ -212,6 +214,8 @@ public class MockAbfsInputStream extends AbfsInputStream {
     doCallRealMethod().when(mockSession).close();
     doCallRealMethod().when(mockSession)
         .setConnectionMode(any(AbfsConnectionMode.class));
+    doCallRealMethod().when(mockSession)
+        .getExpiry(any(byte[].class), any());
 
     when(mockSession.executeFastpathClose()).thenCallRealMethod();
     when(mockSession.executeFastpathOpen()).thenCallRealMethod();
@@ -227,14 +231,30 @@ public class MockAbfsInputStream extends AbfsInputStream {
       throws IOException {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
-    AbfsConfiguration abfsConfig = client.getAbfsConfiguration();
-    byte[] accountKey = Base64.decode(abfsConfig.getStorageAccountKey());
-    ServiceSASGenerator sasGenerator = new ServiceSASGenerator(accountKey);
-    String se = ISO_8601_FORMATTER.format(java.time.Instant.now().plus(tokenDuration));
-    String auth = sasGenerator.getContainerSASWithFullControl(
-        abfsConfig.getAccountName(), client.getContainerName(), se);
-    when(httpOp.getResponseHeader(X_MS_FASTPATH_SESSION_AUTH)).thenReturn(auth);
+    long w32FileTime =
+        (Instant.now().plus(tokenDuration).toEpochMilli() + FILETIME_EPOCH_DIFF)
+            * FILETIME_ONE_MILLISECOND;
+    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+    buffer.putLong(Long.reverseBytes(w32FileTime));
+    byte[] timeArray = buffer.array();
+    byte[] sessionToken = new byte[token.length + timeArray.length + 8];
+    System.arraycopy(timeArray,0,sessionToken,8,timeArray.length);
+    System.arraycopy(token,0,sessionToken,16,token.length);
+    when(httpOp.getResponseContentBuffer()).thenReturn(sessionToken);
+    when(op.getResult()).thenReturn(httpOp);
+    return op;
+  }
+
+  public static AbfsRestOperation getMockSuccessRestOpWithExpiryHeader(
+      AbfsClient client,
+      byte[] token,
+      Duration tokenDuration) {
+    AbfsRestOperation op = mock(AbfsRestOperation.class);
+    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
     when(httpOp.getResponseContentBuffer()).thenReturn(token);
+    String expiryTime = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(
+        ZoneId.of("Etc/UTC")).format(Instant.now().plus(tokenDuration));
+    when(httpOp.getResponseHeader(X_MS_FASTPATH_SESSION_EXPIRY)).thenReturn(expiryTime);
     when(op.getResult()).thenReturn(httpOp);
     return op;
   }

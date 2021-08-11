@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.nio.ByteBuffer;
+import java.time.format.DateTimeFormatter;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.ZoneOffset;
@@ -28,19 +30,24 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Date;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_AUTH;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_EXPIRY;
 
 public class AbfsFastpathSession {
   protected static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
+  //Diff between Filetime epoch and Unix epoch (in ms)
+  private static final long FILETIME_EPOCH_DIFF = 11644473600000L;
+  // 1ms in units of nanoseconds
+  private static final long FILETIME_ONE_MILLISECOND = 10 * 1000;
+
   protected static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
 
   protected final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
@@ -201,8 +208,8 @@ public class AbfsFastpathSession {
       AbfsRestOperation op = executeFetchFastpathSessionToken();
       byte[] buffer = op.getResult().getResponseContentBuffer();
       updateAbfsFastpathSessionToken(Base64.getEncoder().encodeToString(buffer),
-          CachedSASToken.getExpiry(
-              op.getResult().getResponseHeader(X_MS_FASTPATH_SESSION_AUTH)));
+          getExpiry(buffer,
+              op.getResult().getResponseHeader(X_MS_FASTPATH_SESSION_EXPIRY)));
       return true;
     } catch (AzureBlobFileSystemException e) {
       LOG.debug("Fastpath session token fetch unsuccessful {}", e);
@@ -211,6 +218,21 @@ public class AbfsFastpathSession {
     }
 
     return false;
+  }
+
+  protected OffsetDateTime getExpiry(byte[] tokenBuffer, String expiryHeader) {
+    if (expiryHeader != null && !expiryHeader.isEmpty()) {
+      return OffsetDateTime.parse(expiryHeader, DateTimeFormatter.RFC_1123_DATE_TIME);
+    }
+
+    // if header is absent
+    ByteBuffer bb = ByteBuffer.allocate(tokenBuffer.length).order(
+        java.nio.ByteOrder.LITTLE_ENDIAN);
+    bb.put(tokenBuffer);
+    bb.rewind();
+    long w32FileTime = bb.getLong(8);
+    Date date = new Date((w32FileTime/ FILETIME_ONE_MILLISECOND) - + FILETIME_EPOCH_DIFF);
+    return date.toInstant().atOffset(ZoneOffset.UTC);
   }
 
   @VisibleForTesting
@@ -222,7 +244,7 @@ public class AbfsFastpathSession {
       updateFastpathFileHandle(fileHandle);
       return true;
     } catch (AzureBlobFileSystemException e) {
-      LOG.debug("Fastpath  open failed with {}", e);
+      LOG.debug("Fastpath open failed with {}", e);
       updateConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
     }
 

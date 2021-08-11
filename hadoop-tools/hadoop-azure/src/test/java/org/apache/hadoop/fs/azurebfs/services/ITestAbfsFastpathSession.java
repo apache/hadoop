@@ -259,12 +259,24 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  public void testSessionExpiryReadFromHeader() throws Exception {
+    describe("Tests expiry header read for refresh logic");
+    testMockFastpathSessionRefresh(true, "testSessionExpiryReadFromHeader", true);
+  }
+
+  @Test
   public void testFailedFastpathSessionRefreshOverMock() throws Exception {
     describe("Tests failed session refresh using mocks");
     testMockFastpathSessionRefresh(false, "testFailedFastpathSessionRefreshOverMock");
   }
 
   public void testMockFastpathSessionRefresh(boolean testSuccessfulRefresh, String fileName) throws Exception {
+    testMockFastpathSessionRefresh(testSuccessfulRefresh, fileName, false);
+  }
+
+  public void testMockFastpathSessionRefresh(boolean testSuccessfulRefresh,
+      String fileName,
+      boolean testWithExpiryHeader) throws Exception {
     AbfsClient client = TestAbfsClient.getMockAbfsClient(
         getAbfsClient(getFileSystem()),
         this.getConfiguration());
@@ -294,9 +306,14 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
 
       if (testSuccessfulRefresh) {
         String mockSecondToken = "secondToken";
-        AbfsRestOperation ssnTokenRspOp2
-            = MockAbfsInputStream.getMockSuccessRestOp(client,
-            mockSecondToken.getBytes(), TWO_MIN);
+        AbfsRestOperation ssnTokenRspOp2;
+        if (testWithExpiryHeader) {
+          ssnTokenRspOp2 = MockAbfsInputStream.getMockSuccessRestOpWithExpiryHeader(client,
+              mockSecondToken.getBytes(), TWO_MIN);
+        } else {
+          ssnTokenRspOp2 = MockAbfsInputStream.getMockSuccessRestOp(client,
+              mockSecondToken.getBytes(), TWO_MIN);
+        }
         when(fastpathSsn.executeFetchFastpathSessionToken()).thenReturn(
             ssnTokenRspOp2);
       } else {
