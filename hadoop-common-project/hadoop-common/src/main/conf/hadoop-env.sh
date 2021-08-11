@@ -432,5 +432,8 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 ###
 # Opentelemetry Trace Exporters Configuration
 ###
-export OTEL_TRACES_EXPORTER=none
-export OTEL_METRICS_EXPORTER=none
+export HADOOP_TRACE_OPTS="-javaagent: -Dotel.traces.exporter=jaeger -Dotel.metrics.exporter=none"
+export HDFS_NAMENODE_OPTS="$HDFS_NAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=HDFS_NAMENODE"
+echo "hdfs namenode options: ".$HDFS_HDFS_NAMENODE_OPTS
+export HDFS_DATANODE_OPTS="$HDFS_DATANODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=HDFS_DATANODE"
+export HDFS_SECONDARYNAMENODE_OPTS="$HDFS_SECONDARYNAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=HDFS_SECONDARYNAMENODE"

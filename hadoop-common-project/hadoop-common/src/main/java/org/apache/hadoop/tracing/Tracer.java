@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.tracing;
 
-import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.context.Context;
-import io.opentelemetry.sdk.autoconfigure.OpenTelemetrySdkAutoConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -27,20 +26,15 @@ import org.slf4j.LoggerFactory;
  */
 public class Tracer {
   public static final Logger LOG = LoggerFactory.getLogger(Tracer.class.getName());
+  private static final String INSTRUMENTATION_NAME = "io.opentelemetry.contrib.hadoop";
   // Singleton
   private static Tracer globalTracer = null;
-  io.opentelemetry.api.trace.Tracer OTelTracer;
-  private final NullTraceScope nullTraceScope;
-  private final String name;
+  io.opentelemetry.api.trace.Tracer OTelTracer = GlobalOpenTelemetry.getTracer(INSTRUMENTATION_NAME);
 
   public final static String SPAN_RECEIVER_CLASSES_KEY =
       "span.receiver.classes";
 
-  private Tracer(String name, io.opentelemetry.api.trace.Tracer tracer) {
-    this.name = name;
-    OTelTracer = tracer;
-    nullTraceScope = NullTraceScope.INSTANCE;
-  }
+  private Tracer() {}
 
   // Keeping this function at the moment for HTrace compatiblity,
   // in fact all threads share a single global tracer for OpenTracing.
@@ -84,14 +78,9 @@ public class Tracer {
   public void close() {
   }
 
-  public String getName() {
-    return name;
-  }
-
-
 
   public static class Builder {
-    static Tracer globalTracer;
+    static Tracer globalTracer = new Tracer();
     private String name;
 
     public Builder(final String name) {
@@ -102,33 +91,7 @@ public class Tracer {
       return this;
     }
 
-    static OpenTelemetry initialiseTracer(String name) {
-      //added to avoid test failures
-      setOTelEnvVariables("none", "none");
-      System.setProperty("otel.resource.attributes", String.format("service.name=%s", name));
-      OpenTelemetry openTelemetry = OpenTelemetrySdkAutoConfiguration.initialize();
-      return openTelemetry;
-    }
-
-    //this method is added to set the environment variables for testing
-    private static void setOTelEnvVariables(String metricsExporter, String tracesExporter) {
-      if(System.getenv().get("OTEL_TRACES_EXPORTER") == null){
-        System.setProperty("otel.metrics.exporter", metricsExporter);
-      } else {
-        LOG.info("Tracing Span Exporter set to :" + System.getenv().get("OTEL_TRACES_EXPORTER"));
-      }
-      if(System.getenv().get("OTEL_METRICS_EXPORTER") == null){
-        System.setProperty("otel.traces.exporter", tracesExporter);
-      } else {
-        LOG.info("Tracing Span Exporter set to :" + System.getenv().get("OTEL_METRICS_EXPORTER"));
-      }
-    }
-
     public synchronized Tracer build() {
-      if (globalTracer == null) {
-        globalTracer = new Tracer(name, initialiseTracer(name).getTracer(name));
-        Tracer.globalTracer = globalTracer;
-      }
       return globalTracer;
     }
   }
