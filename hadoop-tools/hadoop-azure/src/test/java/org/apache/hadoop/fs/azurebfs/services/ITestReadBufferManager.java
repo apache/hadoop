@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.conf.Configuration;
@@ -7,14 +25,23 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_BLOCK_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
@@ -30,31 +57,39 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         for (int i=0; i < numBuffers; i++) {
             freeList.add(i);
         }
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
-        for(int i=0; i < 4; i++) {
-            String fileName = methodName.getMethodName() + i;
-            byte[] fileContent = getRandomBytesArray(ONE_MB);
-            Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-            try (FSDataInputStream iStream = fs.open(testFilePath)) {
-                iStream.read();
+        try {
+            for (int i = 0; i < 4; i++) {
+                final String fileName = methodName.getMethodName() + i;
+                executorService.submit((Callable<Void>) () -> {
+                    byte[] fileContent = getRandomBytesArray(ONE_MB);
+                    Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+                    try (FSDataInputStream iStream = fs.open(testFilePath)) {
+                        iStream.read();
+                    }
+                    return null;
+                });
             }
+        } finally {
+            executorService.shutdown();
         }
-        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
-        Assertions.assertThat(bufferManager.getCompletedReadListCopy().size())
-                .describedAs("After closing all streams completed list size should be 0")
-                .isEqualTo(0);
 
-        Assertions.assertThat(bufferManager.getInProgressCopiedList().size())
-                .describedAs("After closing all streams inProgress list size should be 0")
-                .isEqualTo(0);
+        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+        assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
+        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
+        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
         Assertions.assertThat(bufferManager.getFreeListCopy())
                 .describedAs("After closing all streams free list contents should match with " + freeList)
                 .hasSize(numBuffers)
                 .containsExactlyInAnyOrderElementsOf(freeList);
-        Assertions.assertThat(bufferManager.getReadAheadQueueCopy())
-                .describedAs("After closing all stream ReadAheadQueue should be empty")
-                .hasSize(0);
 
+    }
+
+    private void assertListEmpty(String listName, List<ReadBuffer> list) {
+        Assertions.assertThat(list)
+                .describedAs("After closing all streams %s should be empty", listName)
+                .hasSize(0);
     }
 
     @Test
@@ -65,26 +100,43 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         final String fileName = methodName.getMethodName();
         byte[] fileContent = getRandomBytesArray(ONE_MB);
         Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-        AbfsInputStream iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
-        iStream1.read();
-        // closing the stream right away.
-        iStream1.close();
-        AbfsInputStream iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
-        iStream2.read();
+
+        AbfsInputStream iStream1 =  null;
+        // stream1 will be closed right away.
+        try {
+            iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+            // Just reading one byte will trigger all read ahead calls.
+            iStream1.read();
+        } finally {
+            IOUtils.closeStream(iStream1);
+        }
         ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
-        assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream1);
-        assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream1);
-        assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
-        // closing the stream later.
-        iStream2.close();
+        AbfsInputStream iStream2 = null;
+        try {
+            iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+            iStream2.read();
+            // After closing stream1, none of the buffers associated with stream1 should be present.
+            assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream1);
+            assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream1);
+            assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
+        } finally {
+            // closing the stream later.
+            IOUtils.closeStream(iStream2);
+        }
+        // After closing stream2, none of the buffers associated with stream2 should be present.
         assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream2);
         assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream2);
         assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
 
+        // After closing both the streams, all lists should be empty.
+        assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
+        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
+        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
+
     }
 
 
-    private void assertListDoesnotContainBuffersForIstream(LinkedList<ReadBuffer> list,
+    private void assertListDoesnotContainBuffersForIstream(List<ReadBuffer> list,
                                                            AbfsInputStream inputStream) {
         for (ReadBuffer buffer : list) {
             Assertions.assertThat(buffer.getStream())

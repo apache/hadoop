@@ -22,7 +22,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -504,23 +510,23 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  public LinkedList<ReadBuffer> getCompletedReadListCopy() {
-    return new LinkedList<>(completedReadList);
+  public synchronized List<ReadBuffer> getCompletedReadListCopy() {
+    return new ArrayList<>(completedReadList);
   }
 
   @VisibleForTesting
-  public LinkedList<Integer> getFreeListCopy() {
-    return new LinkedList<>(freeList);
+  public synchronized List<Integer> getFreeListCopy() {
+    return new ArrayList<>(freeList);
   }
 
   @VisibleForTesting
-  public LinkedList<ReadBuffer> getReadAheadQueueCopy() {
-    return new LinkedList<>(readAheadQueue);
+  public synchronized List<ReadBuffer> getReadAheadQueueCopy() {
+    return new ArrayList<>(readAheadQueue);
   }
 
   @VisibleForTesting
-  public LinkedList<ReadBuffer> getInProgressCopiedList() {
-    return new LinkedList<>(inProgressList);
+  public synchronized List<ReadBuffer> getInProgressCopiedList() {
+    return new ArrayList<>(inProgressList);
   }
 
   @VisibleForTesting
@@ -544,9 +550,8 @@ final class ReadBufferManager {
   /**
    * Method to remove buffers associated with a {@link AbfsInputStream}
    * when its close method is called.
-   * As failed ReadBuffers (bufferIndex = -1) are already pushed to free
-   * list in {@link this#doneReading(ReadBuffer, ReadBufferStatus, int)},
-   * we will skip adding those here again.
+   * NOTE: This method is not threadsafe and must be called inside a
+   * synchronised block. See caller.
    * @param stream associated input stream.
    * @param list list of buffers like {@link this#completedReadList}
    *             or {@link this#inProgressList}.
@@ -556,6 +561,8 @@ final class ReadBufferManager {
       ReadBuffer readBuffer = it.next();
       if (readBuffer.getStream() == stream) {
         it.remove();
+        // As failed ReadBuffers (bufferIndex = -1) are already pushed to free
+        // list in doneReading method, we will skip adding those here again.
         if (readBuffer.getBufferindex() != -1) {
           freeList.push(readBuffer.getBufferindex());
         }
