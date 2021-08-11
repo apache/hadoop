@@ -37,10 +37,10 @@ import java.util.ArrayList;
 import java.util.Map;
 
 public class TestVolumeUsageStdDev {
-  private final static int numDataNodes = 5;
-  private final static int storagesPerDatanode = 3;
-  private final static int defaultBlockSize = 102400;
-  private final static int bufferLen = 1024;
+  private final static int NUM_DATANODES = 5;
+  private final static int STORAGES_PER_DATANODE = 3;
+  private final static int DEFAULT_BLOCK_SIZE = 102400;
+  private final static int BUFFER_LENGTH = 1024;
   private static Configuration conf;
   private MiniDFSCluster cluster;
   private FileSystem fs;
@@ -48,22 +48,22 @@ public class TestVolumeUsageStdDev {
   @Before
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, defaultBlockSize);
-
-    long capacity = 8 * defaultBlockSize;
-    long[][] capacities = new long[numDataNodes][storagesPerDatanode];
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    // Ensure that each volume capacity is larger than the DEFAULT_BLOCK_SIZE.
+    long capacity = 8 * DEFAULT_BLOCK_SIZE;
+    long[][] capacities = new long[NUM_DATANODES][STORAGES_PER_DATANODE];
     String[] hostnames = new String[5];
-    for (int i = 0; i < numDataNodes; i++) {
+    for (int i = 0; i < NUM_DATANODES; i++) {
       hostnames[i] = i + "." + i + "." + i + "." + i;
-      for(int j=0;j<storagesPerDatanode;j++){
+      for(int j = 0; j < STORAGES_PER_DATANODE; j++){
         capacities[i][j]=capacity;
       }
     }
 
     cluster = new MiniDFSCluster.Builder(conf)
         .hosts(hostnames)
-        .numDataNodes(numDataNodes)
-        .storagesPerDatanode(storagesPerDatanode)
+        .numDataNodes(NUM_DATANODES)
+        .storagesPerDatanode(STORAGES_PER_DATANODE)
         .storageCapacities(capacities).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -82,24 +82,25 @@ public class TestVolumeUsageStdDev {
    * Then, we assert the value of volumeUsageStdDev on namenode
    * and datanode is the same.
    */
+  @SuppressWarnings("unchecked")
   @Test
   public void testVolumeUsageStdDev() throws IOException {
     // Create file for each datanode.
     ArrayList<DataNode> dataNodes = cluster.getDataNodes();
-    DFSTestUtil.createFile(fs, new Path("/file0"), false, bufferLen, 1000,
-        defaultBlockSize, (short) 1, 0, false,
+    DFSTestUtil.createFile(fs, new Path("/file0"), false, BUFFER_LENGTH, 1000,
+        DEFAULT_BLOCK_SIZE, (short) 1, 0, false,
         new InetSocketAddress[]{dataNodes.get(0).getXferAddress()});
-    DFSTestUtil.createFile(fs, new Path("/file1"), false, bufferLen, 2000,
-        defaultBlockSize, (short) 1, 0, false,
+    DFSTestUtil.createFile(fs, new Path("/file1"), false, BUFFER_LENGTH, 2000,
+        DEFAULT_BLOCK_SIZE, (short) 1, 0, false,
         new InetSocketAddress[]{dataNodes.get(1).getXferAddress()});
-    DFSTestUtil.createFile(fs, new Path("/file2"), false, bufferLen, 4000,
-        defaultBlockSize, (short) 1, 0, false,
+    DFSTestUtil.createFile(fs, new Path("/file2"), false, BUFFER_LENGTH, 4000,
+        DEFAULT_BLOCK_SIZE, (short) 1, 0, false,
         new InetSocketAddress[]{dataNodes.get(2).getXferAddress()});
-    DFSTestUtil.createFile(fs, new Path("/file3"), false, bufferLen, 8000,
-        defaultBlockSize, (short) 1, 0, false,
+    DFSTestUtil.createFile(fs, new Path("/file3"), false, BUFFER_LENGTH, 8000,
+        DEFAULT_BLOCK_SIZE, (short) 1, 0, false,
         new InetSocketAddress[]{dataNodes.get(3).getXferAddress()});
-    DFSTestUtil.createFile(fs, new Path("/file4"), false, bufferLen, 16000,
-        defaultBlockSize, (short) 1, 0, false,
+    DFSTestUtil.createFile(fs, new Path("/file4"), false, BUFFER_LENGTH, 16000,
+        DEFAULT_BLOCK_SIZE, (short) 1, 0, false,
         new InetSocketAddress[]{dataNodes.get(4).getXferAddress()});
 
     // Trigger Heartbeats.

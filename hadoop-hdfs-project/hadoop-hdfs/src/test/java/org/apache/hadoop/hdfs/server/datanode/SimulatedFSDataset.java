@@ -1532,7 +1532,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public float getVolumeUsageStdDev() {
-    throw new UnsupportedOperationException();
+    return  0.0f;
   }
 
   @Override

@@ -113,8 +113,8 @@ public class TestAvailableSpaceBlockPlacementPolicy {
       if ((i % 2) == 0) {
         // remaining 100%
         updateHeartbeatWithUsage(dataNodes[i], 2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-          0L, 2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
-          0L, 0L, 0L, 0, 0, 0.0f);
+            0L, 2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            0L, 0L, 0L, 0, 0, 0.0f);
       } else {
         // remaining 50%
         updateHeartbeatWithUsage(dataNodes[i], 2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,

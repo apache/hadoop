@@ -58,7 +58,7 @@ abstract public class BaseReplicationPolicyTest {
   static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
     long capacity, long dfsUsed, long remaining, long blockPoolUsed,
     long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
-    int volFailures, float volumeUsageStdDev) {
+      int volFailures, float volumeUsageStdDev) {
     dn.getStorageInfos()[0].setUtilizationForTesting(
         capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(
