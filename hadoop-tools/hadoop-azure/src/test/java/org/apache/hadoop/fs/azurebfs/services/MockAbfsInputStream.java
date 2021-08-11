@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -43,6 +45,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_EXPIRY;
 
 public class MockAbfsInputStream extends AbfsInputStream {
   //Diff between Filetime epoch and Unix epoch (in ms)
@@ -211,7 +215,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
     doCallRealMethod().when(mockSession)
         .setConnectionMode(any(AbfsConnectionMode.class));
     doCallRealMethod().when(mockSession)
-        .getExpiry(any(byte[].class));
+        .getExpiry(any(byte[].class), any());
 
     when(mockSession.executeFastpathClose()).thenCallRealMethod();
     when(mockSession.executeFastpathOpen()).thenCallRealMethod();
@@ -237,6 +241,20 @@ public class MockAbfsInputStream extends AbfsInputStream {
     System.arraycopy(timeArray,0,sessionToken,8,timeArray.length);
     System.arraycopy(token,0,sessionToken,16,token.length);
     when(httpOp.getResponseContentBuffer()).thenReturn(sessionToken);
+    when(op.getResult()).thenReturn(httpOp);
+    return op;
+  }
+
+  public static AbfsRestOperation getMockSuccessRestOpWithExpiryHeader(
+      AbfsClient client,
+      byte[] token,
+      Duration tokenDuration) {
+    AbfsRestOperation op = mock(AbfsRestOperation.class);
+    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
+    when(httpOp.getResponseContentBuffer()).thenReturn(token);
+    String expiryTime = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(
+        ZoneId.of("Etc/UTC")).format(Instant.now().plus(tokenDuration));
+    when(httpOp.getResponseHeader(X_MS_FASTPATH_SESSION_EXPIRY)).thenReturn(expiryTime);
     when(op.getResult()).thenReturn(httpOp);
     return op;
   }

@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.time.format.DateTimeFormatter;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.ZoneOffset;
@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_EXPIRY;
 
 public class AbfsFastpathSession {
   protected static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
@@ -206,7 +208,8 @@ public class AbfsFastpathSession {
       AbfsRestOperation op = executeFetchFastpathSessionToken();
       byte[] buffer = op.getResult().getResponseContentBuffer();
       updateAbfsFastpathSessionToken(Base64.getEncoder().encodeToString(buffer),
-          getExpiry(buffer));
+          getExpiry(buffer,
+              op.getResult().getResponseHeader(X_MS_FASTPATH_SESSION_EXPIRY)));
       return true;
     } catch (AzureBlobFileSystemException e) {
       LOG.debug("Fastpath session token fetch unsuccessful {}", e);
@@ -217,7 +220,12 @@ public class AbfsFastpathSession {
     return false;
   }
 
-  protected OffsetDateTime getExpiry(byte[] tokenBuffer) {
+  protected OffsetDateTime getExpiry(byte[] tokenBuffer, String expiryHeader) {
+    if (expiryHeader != null && !expiryHeader.isEmpty()) {
+      return OffsetDateTime.parse(expiryHeader, DateTimeFormatter.RFC_1123_DATE_TIME);
+    }
+
+    // if header is absent
     ByteBuffer bb = ByteBuffer.allocate(tokenBuffer.length).order(
         java.nio.ByteOrder.LITTLE_ENDIAN);
     bb.put(tokenBuffer);

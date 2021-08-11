@@ -226,7 +226,8 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
             dis.readFully(responseContentBuffer);
             totalBytesRead += contentLen;
           }
-        } else if (buffer != null) {
+        } else {
+          if (buffer != null) {
             while (totalBytesRead < length) {
               int bytesRead = stream.read(buffer, offset + totalBytesRead,
                   length - totalBytesRead);
@@ -237,12 +238,13 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
               totalBytesRead += bytesRead;
             }
           }
-        if (!endOfStream && stream.read() != -1) {
-          // read and discard
-          int bytesRead = 0;
-          byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-          while ((bytesRead = stream.read(b)) >= 0) {
-            totalBytesRead += bytesRead;
+          if (!endOfStream && stream.read() != -1) {
+            // read and discard
+            int bytesRead = 0;
+            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
+            while ((bytesRead = stream.read(b)) >= 0) {
+              totalBytesRead += bytesRead;
+            }
           }
         }
       } catch (IOException ex) {
