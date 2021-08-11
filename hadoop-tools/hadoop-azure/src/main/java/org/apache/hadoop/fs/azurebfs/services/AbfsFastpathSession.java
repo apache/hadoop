@@ -218,10 +218,11 @@ public class AbfsFastpathSession {
   }
 
   protected OffsetDateTime getExpiry(byte[] tokenBuffer) {
-    ByteBuffer bb = ByteBuffer.allocate(tokenBuffer.length).order(ByteOrder.BIG_ENDIAN);
+    ByteBuffer bb = ByteBuffer.allocate(tokenBuffer.length).order(
+        java.nio.ByteOrder.LITTLE_ENDIAN);
     bb.put(tokenBuffer);
     bb.rewind();
-    long w32FileTime = Long.reverseBytes(bb.getLong(8));
+    long w32FileTime = bb.getLong(8);
     Date date = new Date((w32FileTime/ FILETIME_ONE_MILLISECOND) - + FILETIME_EPOCH_DIFF);
     return date.toInstant().atOffset(ZoneOffset.UTC);
   }
