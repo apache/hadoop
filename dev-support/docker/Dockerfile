@@ -66,6 +66,7 @@ RUN apt-get -q update \
         libssl-dev \
         libsnappy-dev \
         libtool \
+        libzstd1-dev \
         locales \
         make \
         pinentry-curses \
