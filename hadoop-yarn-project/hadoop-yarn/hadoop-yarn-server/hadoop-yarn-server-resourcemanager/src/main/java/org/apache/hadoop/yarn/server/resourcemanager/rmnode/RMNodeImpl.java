@@ -1424,11 +1424,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      * @return true if node has any AM scheduled on it.
      */
     private boolean hasScheduledAMContainers(RMNodeImpl rmNode) {
-      ResourceScheduler resourceScheduler = rmNode.context.getScheduler();
-      // Some UTs have scheduler set to null.
-      if (resourceScheduler == null) {
-        return false;
-      }
       return rmNode.context.getScheduler()
           .getSchedulerNode(rmNode.getNodeID())
           .getCopiedListOfRunningContainers()
