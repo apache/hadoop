@@ -213,6 +213,7 @@
     <json-smart.version>2.4.2</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
     <opentelemetry.version>1.3.0</opentelemetry.version>
+    <opentelemetry-instrumentation.version>1.3.0</opentelemetry-instrumentation.version>
   </properties>
 
   <dependencyManagement>
@@ -1758,14 +1759,10 @@
         <version>${lz4-java.version}</version>
       </dependency>
       <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-exporter-jaeger</artifactId>
-        <version>${opentelemetry.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.grpc</groupId>
-        <artifactId>grpc-netty-shaded</artifactId>
-        <version>1.26.0</version>
+        <groupId>io.opentelemetry.javaagent</groupId>
+        <artifactId>opentelemetry-javaagent</artifactId>
+        <version>${opentelemetry-instrumentation.version}</version>
+        <classifier>all</classifier>
       </dependency>
     </dependencies>
   </dependencyManagement>
