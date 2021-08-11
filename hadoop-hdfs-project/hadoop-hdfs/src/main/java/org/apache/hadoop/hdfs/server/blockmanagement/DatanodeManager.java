@@ -1894,7 +1894,7 @@ public class DatanodeManager {
    * @param failedVolumes count of failed volumes at DataNode
    * @param volumeFailureSummary info on failed volumes at DataNode
    * @param volumeUsageStdDev the standard deviation of volume usage
-   x
+   *
    * @throws IOException if there is an error
    */
   public void handleLifeline(DatanodeRegistration nodeReg,
