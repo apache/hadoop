@@ -3193,16 +3193,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override
   public float getVolumeUsageStdDev() {
-    Collection<VolumeInfo> volumes = getVolumeInfo();
+    Collection<VolumeInfo> volumeInfos = getVolumeInfo();
     ArrayList<Float> usages = new ArrayList<Float>();
     float totalDfsUsed = 0;
     float dev = 0;
-    for (VolumeInfo v : volumes) {
+    for (VolumeInfo v : volumeInfos) {
       usages.add(v.volumeUsagePercent);
       totalDfsUsed += v.volumeUsagePercent;
     }
 
-    totalDfsUsed /= volumes.size();
+    totalDfsUsed /= volumeInfos.size();
     Collections.sort(usages);
     for (Float usage : usages) {
       dev += (usage - totalDfsUsed) * (usage - totalDfsUsed);

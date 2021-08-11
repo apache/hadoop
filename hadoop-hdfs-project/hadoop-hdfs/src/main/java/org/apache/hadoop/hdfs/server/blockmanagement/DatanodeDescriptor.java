@@ -380,9 +380,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void updateHeartbeat(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
-      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageSD) {
     updateHeartbeatState(reports, cacheCapacity, cacheUsed, xceiverCount,
-        volFailures, volumeFailureSummary, volumeUsageStdDev);
+        volFailures, volumeFailureSummary, volumeUsageSD);
     heartbeatedSinceRegistration = true;
   }
 
@@ -391,9 +391,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void updateHeartbeatState(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
-      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageSD) {
     updateStorageStats(reports, cacheCapacity, cacheUsed, xceiverCount,
-        volFailures, volumeFailureSummary, volumeUsageStdDev);
+        volFailures, volumeFailureSummary, volumeUsageSD);
     setLastUpdate(Time.now());
     setLastUpdateMonotonic(Time.monotonicNow());
     rollBlocksScheduled(getLastUpdateMonotonic());
@@ -401,7 +401,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   private void updateStorageStats(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
-      VolumeFailureSummary volumeFailureSummary, float volumeUsageStdDev) {
+      VolumeFailureSummary volumeFailureSummary, float volumeUsageSD) {
     long totalCapacity = 0;
     long totalRemaining = 0;
     long totalBlockPoolUsed = 0;
@@ -455,7 +455,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setXceiverCount(xceiverCount);
     this.volumeFailures = volFailures;
     this.volumeFailureSummary = volumeFailureSummary;
-    this.volumeUsageStdDev = volumeUsageStdDev;
+    this.volumeUsageStdDev = volumeUsageSD;
     for (StorageReport report : reports) {
 
       DatanodeStorageInfo storage = null;
