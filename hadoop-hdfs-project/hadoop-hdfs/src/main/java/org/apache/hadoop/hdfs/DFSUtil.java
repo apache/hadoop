@@ -1835,6 +1835,7 @@ public class DFSUtil {
    * Throw if the given directory has any non-empty protected descendants
    * (including itself).
    *
+   * @param fsd the namespace tree.
    * @param iip directory whose descendants are to be checked.
    * @throws AccessControlException if a non-empty protected descendant
    *                                was found.
