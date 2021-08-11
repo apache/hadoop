@@ -1030,6 +1030,11 @@ public class DFSUtil {
       authority = substituteForWildcardAddress(authority,
           namenodeAddr.getHostName());
     }
+    //Normalize if it IPv6 address and IP doesn't enclosed with []
+    if (!authority.startsWith("[")
+        && StringUtils.countMatches(authority, ":") > 2) {
+      authority = NetUtils.normalizeV6Address(authority);
+    }
     return URI.create(scheme + "://" + authority);
   }
 
