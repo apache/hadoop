@@ -161,57 +161,32 @@ public class TestDFSMkdirs {
         new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     DistributedFileSystem dfs = cluster.getFileSystem();
     try {
+      Path dir1 = new Path("/mkdir-1");
+      Path file1 = new Path(dir1, "file1");
+      Path deleteDir = new Path("/deleteDir");
+      Path deleteFile = new Path(dir1, "deleteFile");
       // Create a dir in root dir, should succeed
-      assertTrue(dfs.mkdir(new Path("/mkdir-1"), FsPermission.getDefault()));
-      dfs.mkdir(new Path("/mkdir-2"), FsPermission.getDefault());
-      dfs.mkdir(new Path("/mkdir-3"), FsPermission.getDefault());
-      DFSTestUtil.writeFile(dfs, new Path("/mkdir-1/file1"), "hello world");
+      assertTrue(dfs.mkdir(dir1, FsPermission.getDefault()));
+      dfs.mkdir(deleteDir, FsPermission.getDefault());
+      assertTrue(dfs.exists(deleteDir));
+      dfs.delete(deleteDir, true);
+      assertTrue(!dfs.exists(deleteDir));
+
+      DFSTestUtil.writeFile(dfs, file1, "hello world");
+      DFSTestUtil.writeFile(dfs, deleteFile, "hello world");
+      int totalFiles = getFileCount(dfs);
+      //Before deletion there are 2 files
+      assertTrue("Incorrect file count", 2 == totalFiles);
+      dfs.delete(deleteFile, false);
+      totalFiles = getFileCount(dfs);
+      //After deletion, left with 1 file
+      assertTrue("Incorrect file count", 1 == totalFiles);
+
       cluster.restartNameNodes();
       dfs = cluster.getFileSystem();
-      assertTrue(dfs.exists(new Path("/mkdir-1")));
-      assertTrue(dfs.exists(new Path("/mkdir-2")));
-      assertTrue(dfs.exists(new Path("/mkdir-3")));
-      assertTrue(dfs.exists(new Path("/mkdir-1/file1")));
-    } finally {
-      dfs.close();
-      cluster.shutdown();
-    }
-  }
-
-  @Test
-  public void testMkdirWithDelete() throws IOException {
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = cluster.getFileSystem();
-    // Create a dir in root dir, should succeed
-    String dirA = "/A";
-    String dirB = "/B";
-
-    String fileA = "/a";
-    String fileB = "/b";
-
-    try {
-      FsPermission fsP = FsPermission.getDefault();
-      dfs.mkdir(new Path(dirA), fsP);
-      dfs.mkdir(new Path(dirB), fsP);
-      dfs.mkdirs(new Path(dirB + "/B1/B2/B3"), fsP);
-
-      DFSTestUtil.writeFile(dfs, new Path(dirA + fileA), "hello world");
-      //Overwrite existing file
-      DFSTestUtil.writeFile(dfs, new Path(dirA + fileA), "hello world");
-      DFSTestUtil.writeFile(dfs, new Path(dirB + fileB), "hello world");
-
-      //non-existing DIRS
-      DFSTestUtil.writeFile(dfs, new Path(dirA + "/non-existing" + fileA),
-          "hello " + "world");
-
-      int totalFiles = getFileCount(dfs);
-      assertTrue("Incorrect file count", 3 == totalFiles);
-
-      dfs.delete(new Path(dirA + fileA), false);
-      totalFiles = getFileCount(dfs);
-      assertTrue("Incorrect file count", 2 == totalFiles);
-      dfs.delete(new Path(dirA), true);
+      assertTrue(dfs.exists(dir1));
+      assertTrue(!dfs.exists(deleteDir));
+      assertTrue(dfs.exists(file1));
       totalFiles = getFileCount(dfs);
       assertTrue("Incorrect file count", 1 == totalFiles);
     } finally {

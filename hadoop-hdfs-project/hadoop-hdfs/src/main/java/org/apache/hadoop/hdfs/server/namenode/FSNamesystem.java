@@ -1787,7 +1787,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Override
   public boolean hasWriteLock() {
     return this.fsLock.isWriteLockedByCurrentThread() ||
-        fsLock.haswWriteChildLock();
+        fsLock.hasWriteChildLock();
   }
   @Override
   public boolean hasReadLock() {

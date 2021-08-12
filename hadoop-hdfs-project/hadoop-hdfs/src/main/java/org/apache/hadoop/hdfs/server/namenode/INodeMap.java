@@ -153,7 +153,8 @@ public class INodeMap {
 
     @Override
     protected boolean hasWriteChildLock() {
-      return this.childLock.isWriteLockedByCurrentThread();
+      return this.childLock.isWriteLockedByCurrentThread() || namesystem
+          .getFSLock().hasWriteChildLock();
     }
 
     @Override
