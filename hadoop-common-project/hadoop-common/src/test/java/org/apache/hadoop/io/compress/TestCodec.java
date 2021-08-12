@@ -912,19 +912,24 @@ public class TestCodec {
     // to write files we can then read back with Java's gzip tools.
     OutputStream os = new CompressorStream(new FileOutputStream(fileName),
         gzipCompressor);
-    w = new BufferedWriter(new OutputStreamWriter(os));
-    w.write(msg);
+
+    // Call `write` multiple times.
+    int bufferSize = 10000;
+    char[] inputBuffer = new char[bufferSize];
+    Random rand = new Random();
+    for (int i = 0; i < bufferSize; i++) {
+      inputBuffer[i] = (char) ('a' + rand.nextInt(26));
+    }
+    w = new BufferedWriter(new OutputStreamWriter(os), bufferSize);
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < 10; i++) {
+      w.write(inputBuffer);
+      sb.append(inputBuffer);
+    }
     w.close();
     CodecPool.returnCompressor(gzipCompressor);
-    verifyGzipFile(fileName, msg);
+    verifyGzipFile(fileName, sb.toString());
 
-    // Create a gzip text file via codec.getOutputStream().
-    w = new BufferedWriter(new OutputStreamWriter(
-        codec.createOutputStream(new FileOutputStream(fileName))));
-    w.write(msg);
-    w.close();
-
-    verifyGzipFile(fileName, msg);
   }
 
   @Test

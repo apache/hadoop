@@ -174,23 +174,25 @@ public class BuiltInGzipCompressor implements Compressor {
   @Override
   public void reinit(Configuration conf) {
     init(conf);
-    crc.reset();
     numExtraBytesWritten = 0;
     currentBufLen = 0;
     headerOff = 0;
     trailerOff = 0;
+    crc.reset();
+    accuButLen = 0;
   }
 
   @Override
   public void reset() {
     deflater.reset();
     state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
-    crc.reset();
     numExtraBytesWritten = 0;
     currentBufLen = 0;
     headerOff = 0;
     trailerOff = 0;
     finished = false;
+    crc.reset();
+    accuButLen = 0;
   }
 
   @Override
@@ -206,9 +208,6 @@ public class BuiltInGzipCompressor implements Compressor {
     if (off < 0 || len < 0 || off > b.length - len) {
       throw new ArrayIndexOutOfBoundsException();
     }
-
-    deflater.reset();
-    crc.reset();
 
     deflater.setInput(b, off, len);
     crc.update(b, off, len);  // CRC-32 is on uncompressed data
@@ -246,6 +245,7 @@ public class BuiltInGzipCompressor implements Compressor {
       GZIP_TRAILER[6] = (byte) ((accuButLen & 0x00ff0000) >> 16);
       GZIP_TRAILER[7] = (byte) ((accuButLen & 0xff000000) >> 24);
 
+      crc.reset();
       accuButLen = 0;
     }
   }
