@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   // Need to track first token fetch otherwise will get counted as a retry too.
-  private static boolean isThisFirstTokenFetch = true;
-  public static int reTryCount = 0;
+  public boolean isThisFirstTokenFetch = true;
+  public int reTryCount = 0;
 
   private static final Logger LOG = LoggerFactory
       .getLogger(RetryTestTokenProvider.class);
@@ -43,7 +43,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   }
 
-  public static void ResetStatusToFirstTokenFetch() {
+  public void ResetStatusToFirstTokenFetch() {
     isThisFirstTokenFetch = true;
     reTryCount = 0;
   }
@@ -63,5 +63,9 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
   @Override
   public Date getExpiryTime() {
     return new Date();
+  }
+
+  public static RetryTestTokenProvider getCurrentRetryTestProviderInstance(AccessTokenProvider customTokenProvider) {
+    return (RetryTestTokenProvider)((CustomTokenProviderAdapter)customTokenProvider).getCustomTokenProviderAdaptee();
   }
 }

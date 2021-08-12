@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
@@ -111,7 +110,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config);
-    RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
+    RetryTestTokenProvider retryTestTokenProvider
+        = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
+        getAccessTokenProvider(fs1));
+    retryTestTokenProvider.ResetStatusToFirstTokenFetch();
 
     intercept(Exception.class,
         ()-> {
@@ -120,9 +122,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
     // Number of retries done should be as configured
     Assert.assertTrue(
-        "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
+        "Number of token fetch retries (" + retryTestTokenProvider.reTryCount
             + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
-            + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
+            + ")", retryTestTokenProvider.reTryCount == numOfRetries);
   }
 
   @Test

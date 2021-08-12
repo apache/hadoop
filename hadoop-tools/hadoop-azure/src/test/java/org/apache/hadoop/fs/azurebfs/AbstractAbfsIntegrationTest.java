@@ -44,12 +44,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -441,6 +443,10 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public AbfsClient getAbfsClient(final AzureBlobFileSystem fs) {
     return fs.getAbfsStore().getClient();
+  }
+
+  public AccessTokenProvider getAccessTokenProvider(final AzureBlobFileSystem fs) {
+    return TestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
   }
 
   public Path makeQualified(Path path) throws java.io.IOException {
