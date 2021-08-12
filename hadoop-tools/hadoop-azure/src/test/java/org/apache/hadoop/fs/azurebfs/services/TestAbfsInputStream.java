@@ -795,4 +795,15 @@ public class TestAbfsInputStream extends
     // by successive tests can lead to OOM based on the dev VM/machine capacity.
     System.gc();
   }
+
+  public static boolean isFastpathEnabled(AbfsInputStream inStream) {
+    if ((inStream.getFastpathSession() != null)
+      && (inStream.getFastpathSession().fastpathSessionInfo != null)
+        && (inStream.getFastpathSession().fastpathSessionInfo.getConnectionMode()
+            == AbfsConnectionMode.FASTPATH_CONN)) {
+      return true;
+    }
+
+    return false;
+  }
 }
