@@ -51,15 +51,13 @@ public class BuiltInGzipCompressor implements Compressor {
 
   private Deflater deflater;
 
-  private boolean finished;
-
   private int headerOff = 0;
   private int trailerOff = 0;
 
   private int numExtraBytesWritten = 0;
 
   private int currentBufLen = 0;
-  private int accuButLen = 0;
+  private int accuBufLen = 0;
 
   private final Checksum crc = DataChecksum.newCrc32();
 
@@ -72,17 +70,12 @@ public class BuiltInGzipCompressor implements Compressor {
   @Override
   public boolean finished() {
     // Only if the trailer is also written, it is thought as finished.
-    return finished && state == BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
+    return state == BuiltInGzipDecompressor.GzipStateLabel.FINISHED && deflater.finished();
   }
 
   @Override
   public boolean needsInput() {
-    if (state == BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM) {
-      return deflater.needsInput();
-    }
-
-    // After we output the trailer for the current input, we can take another input.
-    return state == BuiltInGzipDecompressor.GzipStateLabel.FINISHED && !finished;
+    return deflater.needsInput() && state != BuiltInGzipDecompressor.GzipStateLabel.TRAILER_CRC;
   }
 
   @Override
@@ -122,7 +115,7 @@ public class BuiltInGzipCompressor implements Compressor {
       len -= deflated;
 
       // All current input are processed. And `finished` is called. Going to output trailer.
-      if (finished && deflater.finished()) {
+      if (deflater.finished()) {
         state = BuiltInGzipDecompressor.GzipStateLabel.TRAILER_CRC;
         fillTrailer();
       } else {
@@ -156,7 +149,6 @@ public class BuiltInGzipCompressor implements Compressor {
   @Override
   public void finish() {
     deflater.finish();
-    finished = true;
   }
 
   private void init(Configuration conf) {
@@ -168,7 +160,6 @@ public class BuiltInGzipCompressor implements Compressor {
     deflater.setStrategy(strategy.compressionStrategy());
 
     state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
-    finished = false;
   }
 
   @Override
@@ -179,7 +170,7 @@ public class BuiltInGzipCompressor implements Compressor {
     headerOff = 0;
     trailerOff = 0;
     crc.reset();
-    accuButLen = 0;
+    accuBufLen = 0;
   }
 
   @Override
@@ -190,9 +181,8 @@ public class BuiltInGzipCompressor implements Compressor {
     currentBufLen = 0;
     headerOff = 0;
     trailerOff = 0;
-    finished = false;
     crc.reset();
-    accuButLen = 0;
+    accuBufLen = 0;
   }
 
   @Override
@@ -212,7 +202,7 @@ public class BuiltInGzipCompressor implements Compressor {
     deflater.setInput(b, off, len);
     crc.update(b, off, len);  // CRC-32 is on uncompressed data
     currentBufLen = len;
-    accuButLen += currentBufLen;
+    accuBufLen += currentBufLen;
   }
 
   private int writeHeader(byte[] b, int off, int len) {
@@ -240,13 +230,13 @@ public class BuiltInGzipCompressor implements Compressor {
       GZIP_TRAILER[2] = (byte) ((streamCrc & 0x00ff0000) >> 16);
       GZIP_TRAILER[3] = (byte) ((streamCrc & 0xff000000) >> 24);
 
-      GZIP_TRAILER[4] = (byte) (accuButLen & 0x000000ff);
-      GZIP_TRAILER[5] = (byte) ((accuButLen & 0x0000ff00) >> 8);
-      GZIP_TRAILER[6] = (byte) ((accuButLen & 0x00ff0000) >> 16);
-      GZIP_TRAILER[7] = (byte) ((accuButLen & 0xff000000) >> 24);
+      GZIP_TRAILER[4] = (byte) (accuBufLen & 0x000000ff);
+      GZIP_TRAILER[5] = (byte) ((accuBufLen & 0x0000ff00) >> 8);
+      GZIP_TRAILER[6] = (byte) ((accuBufLen & 0x00ff0000) >> 16);
+      GZIP_TRAILER[7] = (byte) ((accuBufLen & 0xff000000) >> 24);
 
       crc.reset();
-      accuButLen = 0;
+      accuBufLen = 0;
     }
   }
 

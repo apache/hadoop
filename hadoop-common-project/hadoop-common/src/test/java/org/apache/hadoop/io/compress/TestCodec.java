@@ -902,7 +902,6 @@ public class TestCodec {
     assertTrue("Codec for .gz file is not GzipCodec", 
                codec instanceof GzipCodec);
 
-    final String msg = "This is the message we are going to compress.";
     final String fileName = new Path(GenericTestUtils.getTempPath(
         "testGzipCodecWrite.txt.gz")).toString();
 
