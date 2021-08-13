@@ -149,7 +149,7 @@ class FSNamesystemLock {
     return partitionLocks.get().remove(lock);
   }
 
-  boolean haswWriteChildLock() {
+  boolean hasWriteChildLock() {
     Iterator<INodeMapLock> iter = partitionLocks.get().iterator();
     // FSNamesystem.LOG.debug("partitionLocks.size = {}", partitionLocks.get().size());
     while(iter.hasNext()) {

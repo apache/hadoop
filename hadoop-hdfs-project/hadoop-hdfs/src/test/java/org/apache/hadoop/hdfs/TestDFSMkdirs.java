@@ -25,6 +25,8 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -151,5 +153,56 @@ public class TestDFSMkdirs {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testMkDirsWithRestart() throws IOException {
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    try {
+      Path dir1 = new Path("/mkdir-1");
+      Path file1 = new Path(dir1, "file1");
+      Path deleteDir = new Path("/deleteDir");
+      Path deleteFile = new Path(dir1, "deleteFile");
+      // Create a dir in root dir, should succeed
+      assertTrue(dfs.mkdir(dir1, FsPermission.getDefault()));
+      dfs.mkdir(deleteDir, FsPermission.getDefault());
+      assertTrue(dfs.exists(deleteDir));
+      dfs.delete(deleteDir, true);
+      assertTrue(!dfs.exists(deleteDir));
+
+      DFSTestUtil.writeFile(dfs, file1, "hello world");
+      DFSTestUtil.writeFile(dfs, deleteFile, "hello world");
+      int totalFiles = getFileCount(dfs);
+      //Before deletion there are 2 files
+      assertTrue("Incorrect file count", 2 == totalFiles);
+      dfs.delete(deleteFile, false);
+      totalFiles = getFileCount(dfs);
+      //After deletion, left with 1 file
+      assertTrue("Incorrect file count", 1 == totalFiles);
+
+      cluster.restartNameNodes();
+      dfs = cluster.getFileSystem();
+      assertTrue(dfs.exists(dir1));
+      assertTrue(!dfs.exists(deleteDir));
+      assertTrue(dfs.exists(file1));
+      totalFiles = getFileCount(dfs);
+      assertTrue("Incorrect file count", 1 == totalFiles);
+    } finally {
+      dfs.close();
+      cluster.shutdown();
+    }
+  }
+
+  private int getFileCount(DistributedFileSystem dfs) throws IOException {
+    RemoteIterator<LocatedFileStatus> fileItr =
+        dfs.listFiles(new Path("/"), true);
+    int totalFiles = 0;
+    while (fileItr.hasNext()) {
+      fileItr.next();
+      totalFiles++;
+    }
+    return totalFiles;
   }
 }

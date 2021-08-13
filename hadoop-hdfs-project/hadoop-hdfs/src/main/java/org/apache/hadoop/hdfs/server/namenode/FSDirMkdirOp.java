@@ -70,7 +70,7 @@ class FSDirMkdirOp {
         // create multiple inodes.
         fsn.checkFsObjectLimit();
 
-        iip = createMissingDirs(fsd, iip, permissions);
+        iip = createMissingDirs(fsd, iip, permissions, false);
       }
       return fsd.getAuditFileInfo(iip);
     } finally {
@@ -78,11 +78,14 @@ class FSDirMkdirOp {
     }
   }
 
-  static INodesInPath createMissingDirs(FSDirectory fsd,
-      INodesInPath iip, PermissionStatus permissions) throws IOException {
+  static INodesInPath createMissingDirs(FSDirectory fsd, INodesInPath iip,
+      PermissionStatus permissions, boolean inheritPerms) throws IOException {
+    PermissionStatus basePerm = inheritPerms ?
+        iip.getExistingINodes().getLastINode().getPermissionStatus() :
+        permissions;
     // create all missing directories along the path,
     // but don't add them to the INodeMap yet
-    permissions = addImplicitUwx(permissions, permissions); // SHV !!!
+    permissions = addImplicitUwx(basePerm, permissions);
     INode[] missing = createPathDirectories(fsd, iip, permissions);
     iip = iip.getExistingINodes();
     if (missing.length == 0) {
@@ -90,8 +93,15 @@ class FSDirMkdirOp {
     }
     // switch the locks
     fsd.getINodeMap().latchWriteLock(iip, missing);
+    int counter = 0;
     // Add missing inodes to the INodeMap
     for (INode dir : missing) {
+      if (counter++ == missing.length - 1) {
+        //Last folder in the path, use the user given permission
+        //For MKDIR - refers to the permission given by the user
+        //For create - refers to the parent directory permission.
+        permissions = basePerm;
+      }
       iip = addSingleDirectory(fsd, iip, dir, permissions);
       assert iip != null : "iip should not be null";
     }
@@ -279,13 +289,10 @@ class FSDirMkdirOp {
     // create the missing directories along the path
     INode[] missing = new INode[numMissing];
     final int last = iip.length();
-    INode parent = existing.getLastINode();
     for (int i = existing.length();  i < last; i++) {
       byte[] component = iip.getPathComponent(i);
       missing[i - existing.length()] =
           createDirectoryINode(fsd, existing, component, perm);
-      missing[i - existing.length()].setParent(parent.asDirectory());
-      parent = missing[i - existing.length()];
     }
     return missing;
   }
