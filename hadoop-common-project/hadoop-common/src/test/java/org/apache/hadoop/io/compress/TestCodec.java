@@ -929,6 +929,15 @@ public class TestCodec {
     CodecPool.returnCompressor(gzipCompressor);
     verifyGzipFile(fileName, sb.toString());
 
+
+    // Create a gzip text file via codec.getOutputStream().
+    w = new BufferedWriter(new OutputStreamWriter(
+            codec.createOutputStream(new FileOutputStream(fileName))));
+    for (int i = 0; i < 10; i++) {
+      w.write(inputBuffer);
+    }
+    w.close();
+    verifyGzipFile(fileName, sb.toString());
   }
 
   @Test
