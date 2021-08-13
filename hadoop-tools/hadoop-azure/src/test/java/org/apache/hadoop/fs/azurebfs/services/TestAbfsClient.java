@@ -406,4 +406,8 @@ public final class TestAbfsClient {
         url,
         requestHeaders);
   }
+
+  public static AccessTokenProvider getAccessTokenProvider(AbfsClient client) {
+    return client.getTokenProvider();
+  }
 }

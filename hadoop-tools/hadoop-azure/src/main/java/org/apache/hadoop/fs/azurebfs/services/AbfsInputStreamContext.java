@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FASTPATH_READ_BUFFER_SIZE;
+
 /**
  * Class to hold extra input stream configs.
  */
@@ -162,5 +164,17 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return bufferedPreadDisabled;
   }
 
-  public boolean isFastpathEnabled() { return isFastpathEnabled; }
+  public boolean isFastpathEnabled() {
+    if ((isFastpathEnabled)
+        && ((readBufferSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE) ||
+        (readAheadBlockSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE))) {
+      LOG.debug("fs.azure.read.request.size[={}] or "
+          + "fs.azure.read.readahead.blocksize[={}] is configured "
+          + "different to allowed buffer size of Fastpath. Disabling "
+          + "Fastpath.", readBufferSize, readAheadBlockSize);
+      return false;
+    }
+
+    return isFastpathEnabled;
+  }
 }

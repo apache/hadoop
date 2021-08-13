@@ -115,6 +115,7 @@ public final class FileSystemConfigurations {
   public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_FASTPATH_ENABLE = false;
+  public static final int DEFAULT_FASTPATH_READ_BUFFER_SIZE = 4 * ONE_MB;
 
   private FileSystemConfigurations() {}
 }

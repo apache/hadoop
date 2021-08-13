@@ -44,12 +44,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -64,6 +66,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FASTPATH_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
@@ -443,6 +446,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getAbfsStore().getClient();
   }
 
+  public AccessTokenProvider getAccessTokenProvider(final AzureBlobFileSystem fs) {
+    return TestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
+  }
+
   public Path makeQualified(Path path) throws java.io.IOException {
     return getFileSystem().makeQualified(path);
   }
@@ -518,6 +525,12 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public FSDataInputStream openMockAbfsInputStream(AzureBlobFileSystem fs,
       FSDataInputStream in) throws IOException {
+    if (!bufferSizeCorrectForFastpath(fs)) {
+      LOG.debug("Creating non-Mock AbfsInputStream with Fastpath ON");
+      fs.getAbfsStore().getAbfsConfiguration().setEnableFastpath(true);
+      AbfsInputStream srcStream = (AbfsInputStream) in.getWrappedStream();
+      return fs.open(new Path(srcStream.getPath()));
+    }
     return new FSDataInputStream(new MockAbfsInputStream(fs.getAbfsClient(),
         (AbfsInputStream) in.getWrappedStream()));
   }
@@ -540,6 +553,11 @@ public abstract class AbstractAbfsIntegrationTest extends
     fs = (AzureBlobFileSystem) FileSystem.get(fs.getUri(), conf);
     Path qualifiedPath = makeQualified(testFilePath);
     AzureBlobFileSystemStore store = fs.getAbfsStore();
+    if (!bufferSizeCorrectForFastpath(fs)) {
+      LOG.debug("Creating non-Mock AbfsInputStream with Fastpath ON");
+      return store.openFileForRead(qualifiedPath, opt, fs.getFsStatistics(),
+          getTestTracingContext(fs, false));
+    }
     MockAzureBlobFileSystemStore mockStore = new MockAzureBlobFileSystemStore(
         fs.getUri(), fs.isSecureScheme(), fs.getConf(),
         store.getAbfsCounters());
@@ -547,6 +565,19 @@ public abstract class AbstractAbfsIntegrationTest extends
         opt, fs.getFsStatistics(), getTestTracingContext(fs, false));
     return inputStream;
   }
+
+  private boolean bufferSizeCorrectForFastpath(AzureBlobFileSystem fs) {
+    if ((fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize()
+        != DEFAULT_FASTPATH_READ_BUFFER_SIZE)
+        || (fs.getAbfsStore().getAbfsConfiguration().getReadBufferSize()
+        != DEFAULT_FASTPATH_READ_BUFFER_SIZE)) {
+      LOG.debug("Buffer size not valid for fastpath. AbfsInputStream needs to "
+          + "fallback to REST.");
+      return false;
+    }
+    return true;
+  }
+
   protected void addToTestTearDownCleanupList(String fileName) {
     mockFastpathFilesToRegister.add(fileName);
   }

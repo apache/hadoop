@@ -24,6 +24,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FASTPATH_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -38,9 +39,9 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testMockFastpathFileDeleted() throws Exception {
-    AzureBlobFileSystem fs = getAbfsFileSystem(2, MIN_BUFFER_SIZE, 0);
+    AzureBlobFileSystem fs = getAbfsFileSystem(2, DEFAULT_FASTPATH_READ_BUFFER_SIZE, 0);
     AbfsInputStream inStream = createTestfileAndGetInputStream(fs,
-        this.methodName.getMethodName(), 4 * MIN_BUFFER_SIZE);
+        this.methodName.getMethodName(), DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     ((MockAbfsInputStream) inStream).induceError(404);
     Map<String, Long> metricMap;
     metricMap = fs.getInstrumentationMap();
@@ -88,9 +89,9 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testThrottled() throws Exception {
-    AzureBlobFileSystem fs = getAbfsFileSystem(2, MIN_BUFFER_SIZE, 0);
+    AzureBlobFileSystem fs = getAbfsFileSystem(2, DEFAULT_FASTPATH_READ_BUFFER_SIZE, 0);
     AbfsInputStream inStream = createTestfileAndGetInputStream(fs,
-        this.methodName.getMethodName(), 4 * MIN_BUFFER_SIZE);
+        this.methodName.getMethodName(), DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     ((MockAbfsInputStream) inStream).induceError(503);
     Map<String, Long> metricMap;
     metricMap = fs.getInstrumentationMap();
@@ -111,11 +112,11 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testFastpathRequestFailure() throws IOException {
-    AzureBlobFileSystem fs = getAbfsFileSystem(2, MIN_BUFFER_SIZE, 0);
+    AzureBlobFileSystem fs = getAbfsFileSystem(2, DEFAULT_FASTPATH_READ_BUFFER_SIZE, 0);
     AbfsInputStream inStream = createTestfileAndGetInputStream(fs,
-        this.methodName.getMethodName(), 4 * MIN_BUFFER_SIZE);
+        this.methodName.getMethodName(), 4 * DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     ((MockAbfsInputStream) inStream).induceRequestException();
-    byte[] readBuffer = new byte[MIN_BUFFER_SIZE];
+    byte[] readBuffer = new byte[DEFAULT_FASTPATH_READ_BUFFER_SIZE];
     Map<String, Long> metricMap;
     metricMap = fs.getInstrumentationMap();
     long expectedConnectionsMade = metricMap.get(
@@ -123,13 +124,13 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
     long expectedGetResponses = metricMap.get(GET_RESPONSES.getStatName());
     // read will attempt over fastpath, but will fail with exception => 1+conn 0+getresp
     // will attempt on http connection => 1+conn 1+getrsp
-    inStream.read(readBuffer, 0, MIN_BUFFER_SIZE);
+    inStream.read(readBuffer, 0, DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     // move out of buffered range
-    inStream.seek(3 * MIN_BUFFER_SIZE);
+    inStream.seek(3 * DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     // input stream still on fast path as earlier it was request failure
     // read will attempt over fastpath, but will fail with exception => 1+conn 0+getresp
     // will attempt on http connection => 1+conn 1+getrsp
-    inStream.read(readBuffer, 0, MIN_BUFFER_SIZE);
+    inStream.read(readBuffer, 0, DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     expectedConnectionsMade += 4;
     expectedGetResponses += 2;
     metricMap = fs.getInstrumentationMap();
@@ -141,11 +142,11 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testFastpathConnectionFailure() throws IOException {
-    AzureBlobFileSystem fs = getAbfsFileSystem(2, MIN_BUFFER_SIZE, 0);
+    AzureBlobFileSystem fs = getAbfsFileSystem(2, DEFAULT_FASTPATH_READ_BUFFER_SIZE, 0);
     AbfsInputStream inStream = createTestfileAndGetInputStream(fs,
-        this.methodName.getMethodName(), 4 * MIN_BUFFER_SIZE);
+        this.methodName.getMethodName(), 4 * DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     ((MockAbfsInputStream) inStream).induceConnectionException();
-    byte[] readBuffer = new byte[MIN_BUFFER_SIZE];
+    byte[] readBuffer = new byte[DEFAULT_FASTPATH_READ_BUFFER_SIZE];
     Map<String, Long> metricMap;
     metricMap = fs.getInstrumentationMap();
     long expectedConnectionsMade = metricMap.get(
@@ -153,12 +154,12 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
     long expectedGetResponses = metricMap.get(GET_RESPONSES.getStatName());
     // read will attempt over fastpath, but will fail with exception => 1+conn 0+getresp
     // will attempt on http connection => 1+conn 1+getrsp
-    inStream.read(readBuffer, 0, MIN_BUFFER_SIZE);
+    inStream.read(readBuffer, 0, DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     // move out of buffered range
-    inStream.seek(3 * MIN_BUFFER_SIZE);
+    inStream.seek(3 * DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     // input stream will have switched to http permanentely due to conn failure
     // next read direct on http => 1+conn 1+getrsp
-    inStream.read(readBuffer, 0, MIN_BUFFER_SIZE);
+    inStream.read(readBuffer, 0, DEFAULT_FASTPATH_READ_BUFFER_SIZE);
     expectedConnectionsMade += 3;
     expectedGetResponses += 2;
     metricMap = fs.getInstrumentationMap();
