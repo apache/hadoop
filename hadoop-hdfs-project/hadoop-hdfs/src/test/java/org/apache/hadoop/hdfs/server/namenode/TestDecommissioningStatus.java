@@ -323,6 +323,16 @@ public class TestDecommissioningStatus {
     AdminStatesBaseTest.cleanupFile(fileSys, file2);
   }
 
+  // Why do we verify initial state of DataNodes here?
+  // Before we start actual decommission testing, we should ensure that
+  // total 8 blocks (original 4 blocks of 2 files and 4 replicas) are
+  // present over two Datanodes available. If we don't wait until all 8 blocks
+  // are reported live by BlockManager, we might get to a situation
+  // where one of the replicas might not yet been present on any of Datanodes
+  // and we start decommissioning process, and then it would result in
+  // flaky test because total (no of under replicated blocks, no of outOfService
+  // only replicas, no of under replicated in open files) counts would be
+  // incorrect.
   protected void verifyInitialState(FSNamesystem fsn, DatanodeManager dm)
       throws InterruptedException {
     dm.getDatanodes().forEach(datanodeDescriptor -> {
