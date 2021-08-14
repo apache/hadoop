@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -39,10 +37,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
@@ -67,7 +64,7 @@ public class TestDFSHAAdminMiniCluster {
 
   private int nn1Port;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -81,7 +78,7 @@ public class TestDFSHAAdminMiniCluster {
     nn1Port = cluster.getNameNodePort(0);
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -170,9 +167,9 @@ public class TestDFSHAAdminMiniCluster {
 
     NameNodeAdapter.enterSafeMode(cluster.getNameNode(0), false);
     assertEquals(-1, runTool("-failover", "nn2", "nn1"));
-    assertTrue("Bad output: " + errOutput,
-        errOutput.contains("is not ready to become active: " +
-            "The NameNode is in safemode"));
+      assertTrue(
+              errOutput.contains("is not ready to become active: " +
+                      "The NameNode is in safemode"), "Bad output: " + errOutput);
   }
     
   /**
@@ -277,8 +274,8 @@ public class TestDFSHAAdminMiniCluster {
     runTool("-transitionToActive", "nn1");
     runTool("-transitionToActive", "nn2");
 
-    assertFalse("Both namenodes cannot be active", nn1.isActiveState() 
-        && nn2.isActiveState());
+      assertFalse(nn1.isActiveState()
+              && nn2.isActiveState(), "Both namenodes cannot be active");
    
     /*  In this test case, we have deliberately shut down nn1 and this will
         cause HAAAdmin#isOtherTargetNodeActive to throw an Exception 
@@ -294,7 +291,7 @@ public class TestDFSHAAdminMiniCluster {
     assertFalse(cluster.isNameNodeUp(0));
     
     runTool("-transitionToActive", "nn2", "--forceactive");
-    assertTrue("Namenode nn2 should be active", nn2.isActiveState());
+      assertTrue(nn2.isActiveState(), "Namenode nn2 should be active");
   }
   
   private int runTool(String ... args) throws Exception {

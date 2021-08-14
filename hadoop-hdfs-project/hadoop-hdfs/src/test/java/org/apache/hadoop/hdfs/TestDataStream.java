@@ -27,15 +27,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public class TestDataStream {
   static MiniDFSCluster cluster;
   static int PACKET_SIZE = 1024;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     Configuration conf = new Configuration();
     conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
@@ -77,7 +77,7 @@ public class TestDataStream {
         "Slow ReadProcessor read fields for block");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     cluster.shutdown();
   }

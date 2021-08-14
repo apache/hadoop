@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -85,8 +85,8 @@ public class TestFileLimit {
       // check that / exists
       //
       Path path = new Path("/");
-      assertTrue("/ should be a directory", 
-                 fs.getFileStatus(path).isDirectory());
+        assertTrue(
+                fs.getFileStatus(path).isDirectory(), "/ should be a directory");
       currentNodes = 1;          // root inode
 
       // verify that we can create the specified number of files. We leave
@@ -108,7 +108,7 @@ public class TestFileLimit {
       } catch (IOException e) {
         hitException = true;
       }
-      assertTrue("Was able to exceed file limit", hitException);
+        assertTrue(hitException, "Was able to exceed file limit");
 
       // delete one file
       Path file0 = new Path("/filestatus0");
@@ -148,7 +148,7 @@ public class TestFileLimit {
       } catch (IOException e) {
         hitException = true;
       }
-      assertTrue("Was able to exceed dir limit", hitException);
+        assertTrue(hitException, "Was able to exceed dir limit");
 
     } finally {
       fs.close();

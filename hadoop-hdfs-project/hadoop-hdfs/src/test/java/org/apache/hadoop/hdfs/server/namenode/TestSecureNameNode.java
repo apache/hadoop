@@ -17,9 +17,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -35,9 +34,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.junit.Assert;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -146,8 +145,8 @@ public class TestSecureNameNode extends SaslDataTransferTestCase {
 
       boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
               "SecurityEnabled");
-      Assert.assertFalse(securityEnabled);
-      Assert.assertEquals(namenode.isSecurityEnabled(), securityEnabled);
+      Assertions.assertFalse(securityEnabled);
+      Assertions.assertEquals(namenode.isSecurityEnabled(), securityEnabled);
     }
 
     // get attribute "SecurityEnabled" with secure configuration
@@ -162,8 +161,8 @@ public class TestSecureNameNode extends SaslDataTransferTestCase {
 
       boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
               "SecurityEnabled");
-      Assert.assertTrue(securityEnabled);
-      Assert.assertEquals(namenode.isSecurityEnabled(), securityEnabled);
+      Assertions.assertTrue(securityEnabled);
+      Assertions.assertEquals(namenode.isSecurityEnabled(), securityEnabled);
     }
   }
 

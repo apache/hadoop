@@ -26,8 +26,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -60,41 +60,41 @@ public class TestNameNodeStatusMXBean {
 
       // Get attribute "NNRole"
       String nnRole = (String)mbs.getAttribute(mxbeanName, "NNRole");
-      Assert.assertEquals(nn.getNNRole(), nnRole);
+      Assertions.assertEquals(nn.getNNRole(), nnRole);
 
       // Get attribute "State"
       String state = (String)mbs.getAttribute(mxbeanName, "State");
-      Assert.assertEquals(nn.getState(), state);
+      Assertions.assertEquals(nn.getState(), state);
 
       // Get attribute "HostAndPort"
       String hostAndPort = (String)mbs.getAttribute(mxbeanName, "HostAndPort");
-      Assert.assertEquals(nn.getHostAndPort(), hostAndPort);
+      Assertions.assertEquals(nn.getHostAndPort(), hostAndPort);
 
       // Get attribute "SecurityEnabled"
       boolean securityEnabled = (boolean)mbs.getAttribute(mxbeanName,
           "SecurityEnabled");
-      Assert.assertEquals(nn.isSecurityEnabled(), securityEnabled);
+      Assertions.assertEquals(nn.isSecurityEnabled(), securityEnabled);
 
       // Get attribute "LastHATransitionTime"
       long lastHATransitionTime = (long)mbs.getAttribute(mxbeanName,
           "LastHATransitionTime");
-      Assert.assertEquals(nn.getLastHATransitionTime(), lastHATransitionTime);
+      Assertions.assertEquals(nn.getLastHATransitionTime(), lastHATransitionTime);
 
       // Get attribute "BytesWithFutureGenerationStamps"
       long bytesWithFutureGenerationStamps = (long)mbs.getAttribute(
           mxbeanName, "BytesWithFutureGenerationStamps");
-      Assert.assertEquals(nn.getBytesWithFutureGenerationStamps(),
+      Assertions.assertEquals(nn.getBytesWithFutureGenerationStamps(),
           bytesWithFutureGenerationStamps);
 
       // Get attribute "SlowPeersReport"
       String slowPeersReport = (String)mbs.getAttribute(mxbeanName,
           "SlowPeersReport");
-      Assert.assertEquals(nn.getSlowPeersReport(), slowPeersReport);
+      Assertions.assertEquals(nn.getSlowPeersReport(), slowPeersReport);
 
       // Get attribute "SlowDisksReport"
       String slowDisksReport = (String)mbs.getAttribute(mxbeanName,
           "SlowDisksReport");
-      Assert.assertEquals(nn.getSlowDisksReport(), slowDisksReport);
+      Assertions.assertEquals(nn.getSlowDisksReport(), slowDisksReport);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -115,7 +115,7 @@ public class TestNameNodeStatusMXBean {
 
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
-      Assert.assertEquals(datanodes.size(), 1);
+      Assertions.assertEquals(datanodes.size(), 1);
       DataNode datanode = datanodes.get(0);
       String slowDiskPath = "test/data1/slowVolume";
       datanode.getDiskMetrics().addSlowDiskForTesting(slowDiskPath, null);
@@ -137,9 +137,9 @@ public class TestNameNodeStatusMXBean {
 
       String slowDisksReport = (String)mbs.getAttribute(
           mxbeanName, "SlowDisksReport");
-      Assert.assertEquals(datanodeManager.getSlowDisksReport(),
+      Assertions.assertEquals(datanodeManager.getSlowDisksReport(),
           slowDisksReport);
-      Assert.assertTrue(slowDisksReport.contains(slowDiskPath));
+      Assertions.assertTrue(slowDisksReport.contains(slowDiskPath));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,9 +35,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
@@ -63,7 +59,7 @@ public class TestNameEditsConfigs {
   private final File base_dir = new File(
       PathUtils.getTestDir(TestNameEditsConfigs.class), "dfs");
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     if(base_dir.exists() && !FileUtil.fullyDelete(base_dir)) {
       throw new IOException("Cannot remove directory " + base_dir);
@@ -77,17 +73,17 @@ public class TestNameEditsConfigs {
     FSImageTransactionalStorageInspector ins = inspect(dir);
 
     if (shouldHaveImages) {
-      assertTrue("Expect images in " + dir, ins.foundImages.size() > 0);
+        assertTrue(ins.foundImages.size() > 0, "Expect images in " + dir);
     } else {
-      assertTrue("Expect no images in " + dir, ins.foundImages.isEmpty());      
+        assertTrue(ins.foundImages.isEmpty(), "Expect no images in " + dir);      
     }
 
     List<FileJournalManager.EditLogFile> editlogs 
       = FileJournalManager.matchEditLogs(new File(dir, "current").listFiles()); 
     if (shouldHaveEdits) {
-      assertTrue("Expect edits in " + dir, editlogs.size() > 0);
+        assertTrue(editlogs.size() > 0, "Expect edits in " + dir);
     } else {
-      assertTrue("Expect no edits in " + dir, editlogs.isEmpty());
+        assertTrue(editlogs.isEmpty(), "Expect no edits in " + dir);
     }
   }
 
@@ -95,9 +91,9 @@ public class TestNameEditsConfigs {
       throws IOException {
     assertTrue(fileSys.exists(name));
     int replication = fileSys.getFileStatus(name).getReplication();
-    assertEquals("replication for " + name, repl, replication);
+      assertEquals(repl, replication, "replication for " + name);
     long size = fileSys.getContentSummary(name).getLength();
-    assertEquals("file size for " + name, size, FILE_SIZE);
+      assertEquals(size, FILE_SIZE, "file size for " + name);
   }
 
   private void cleanupFile(FileSystem fileSys, Path name)
@@ -602,14 +598,14 @@ public class TestNameEditsConfigs {
       cluster.waitActive();
       secondary = startSecondaryNameNode(conf);
       secondary.doCheckpoint();
-      assertTrue(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + " must be trimmed ",
-          checkpointNameDir1.exists());
-      assertTrue(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + " must be trimmed ",
-          checkpointNameDir2.exists());
-      assertTrue(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY
-          + " must be trimmed ", checkpointEditsDir1.exists());
-      assertTrue(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY
-          + " must be trimmed ", checkpointEditsDir2.exists());
+        assertTrue(
+                checkpointNameDir1.exists(), DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + " must be trimmed ");
+        assertTrue(
+                checkpointNameDir2.exists(), DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + " must be trimmed ");
+        assertTrue(checkpointEditsDir1.exists(), DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY
+                + " must be trimmed ");
+        assertTrue(checkpointEditsDir2.exists(), DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY
+                + " must be trimmed ");
     } finally {
       secondary.shutdown();
       cluster.shutdown();

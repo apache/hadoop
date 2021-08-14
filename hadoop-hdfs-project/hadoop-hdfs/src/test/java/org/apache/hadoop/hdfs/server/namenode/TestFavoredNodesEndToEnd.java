@@ -18,8 +18,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,10 +44,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 
 
 public class TestFavoredNodesEndToEnd {
@@ -64,7 +64,7 @@ public class TestFavoredNodesEndToEnd {
   private static DistributedFileSystem dfs;
   private static ArrayList<DataNode> datanodes;
   
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
@@ -74,7 +74,7 @@ public class TestFavoredNodesEndToEnd {
     datanodes = cluster.getDataNodes();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (cluster != null) { 
       cluster.shutdown();
@@ -150,15 +150,15 @@ public class TestFavoredNodesEndToEnd {
     d.stopDecommission();
 
     BlockLocation[] locations = getBlockLocations(p);
-    Assert.assertEquals(replication, locations[0].getNames().length);;
+    Assertions.assertEquals(replication, locations[0].getNames().length);;
     //also make sure that the datanode[0] is not in the list of hosts
     for (int i = 0; i < replication; i++) {
       final String loc = locations[0].getNames()[i];
       int j = 0;
       for(; j < hosts.length && !loc.equals(hosts[j]); j++);
-      Assert.assertTrue("j=" + j, j > 0);
-      Assert.assertTrue("loc=" + loc + " not in host list "
-          + Arrays.asList(hosts) + ", j=" + j, j < hosts.length);
+        Assertions.assertTrue(j > 0, "j=" + j);
+        Assertions.assertTrue(j < hosts.length, "loc=" + loc + " not in host list "
+                + Arrays.asList(hosts) + ", j=" + j);
     }
   }
 

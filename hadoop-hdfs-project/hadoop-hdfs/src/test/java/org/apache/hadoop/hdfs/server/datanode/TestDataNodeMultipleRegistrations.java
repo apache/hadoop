@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -44,16 +41,16 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestDataNodeMultipleRegistrations {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDataNodeMultipleRegistrations.class);
   Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
   }
@@ -73,8 +70,8 @@ public class TestDataNodeMultipleRegistrations {
       cluster.waitActive();
       NameNode nn1 = cluster.getNameNode(0);
       NameNode nn2 = cluster.getNameNode(1);
-      assertNotNull("cannot create nn1", nn1);
-      assertNotNull("cannot create nn2", nn2);
+        assertNotNull(nn1, "cannot create nn1");
+        assertNotNull(nn2, "cannot create nn2");
 
       String bpid1 = FSImageTestUtil.getFSImage(nn1).getBlockPoolID();
       String bpid2 = FSImageTestUtil.getFSImage(nn2).getBlockPoolID();
@@ -84,7 +81,7 @@ public class TestDataNodeMultipleRegistrations {
       int lv2 = FSImageTestUtil.getFSImage(nn2).getLayoutVersion();
       int ns1 = FSImageTestUtil.getFSImage(nn1).getNamespaceID();
       int ns2 = FSImageTestUtil.getFSImage(nn2).getNamespaceID();
-      assertNotSame("namespace ids should be different", ns1, ns2);
+        assertNotSame(ns1, ns2, "namespace ids should be different");
       LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";bpid=" + bpid1 + ";uri="
           + nn1.getNameNodeAddress());
       LOG.info("nn2: lv=" + lv2 + ";cid=" + cid2 + ";bpid=" + bpid2 + ";uri="
@@ -93,15 +90,15 @@ public class TestDataNodeMultipleRegistrations {
       // check number of volumes in fsdataset
       DataNode dn = cluster.getDataNodes().get(0);
       final Map<String, Object> volInfos = dn.data.getVolumeInfoMap();
-      Assert.assertTrue("No volumes in the fsdataset", volInfos.size() > 0);
+        Assertions.assertTrue(volInfos.size() > 0, "No volumes in the fsdataset");
       int i = 0;
       for (Map.Entry<String, Object> e : volInfos.entrySet()) {
         LOG.info("vol " + i++ + ") " + e.getKey() + ": " + e.getValue());
       }
-      // number of volumes should be 2 - [data1, data2]
-      assertEquals("number of volumes is wrong",
-          cluster.getFsDatasetTestUtils(0).getDefaultNumOfDataDirs(),
-          volInfos.size());
+        // number of volumes should be 2 - [data1, data2]
+        assertEquals(
+                cluster.getFsDatasetTestUtils(0).getDefaultNumOfDataDirs(),
+                volInfos.size(), "number of volumes is wrong");
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
         LOG.info("BP: " + bpos);
@@ -117,18 +114,18 @@ public class TestDataNodeMultipleRegistrations {
         bpos2 = tmp;
       }
 
-      assertEquals("wrong nn address", getNNSocketAddress(bpos1),
-          nn1.getNameNodeAddress());
-      assertEquals("wrong nn address", getNNSocketAddress(bpos2),
-          nn2.getNameNodeAddress());
-      assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
-      assertEquals("wrong bpid", bpos2.getBlockPoolId(), bpid2);
-      assertEquals("wrong cid", dn.getClusterId(), cid1);
-      assertEquals("cid should be same", cid2, cid1);
-      assertEquals("namespace should be same",
-          bpos1.bpNSInfo.namespaceID, ns1);
-      assertEquals("namespace should be same",
-          bpos2.bpNSInfo.namespaceID, ns2);
+        assertEquals(getNNSocketAddress(bpos1),
+                nn1.getNameNodeAddress(), "wrong nn address");
+        assertEquals(getNNSocketAddress(bpos2),
+                nn2.getNameNodeAddress(), "wrong nn address");
+        assertEquals(bpos1.getBlockPoolId(), bpid1, "wrong bpid");
+        assertEquals(bpos2.getBlockPoolId(), bpid2, "wrong bpid");
+        assertEquals(dn.getClusterId(), cid1, "wrong cid");
+        assertEquals(cid2, cid1, "cid should be same");
+        assertEquals(
+                bpos1.bpNSInfo.namespaceID, ns1, "namespace should be same");
+        assertEquals(
+                bpos2.bpNSInfo.namespaceID, ns2, "namespace should be same");
     } finally {
       cluster.shutdown();
     }
@@ -151,7 +148,7 @@ public class TestDataNodeMultipleRegistrations {
         .nameNodePort(9927).build();
     try {
       NameNode nn1 = cluster.getNameNode();
-      assertNotNull("cannot create nn1", nn1);
+        assertNotNull(nn1, "cannot create nn1");
 
       String bpid1 = FSImageTestUtil.getFSImage(nn1).getBlockPoolID();
       String cid1 = FSImageTestUtil.getFSImage(nn1).getClusterID();
@@ -162,15 +159,15 @@ public class TestDataNodeMultipleRegistrations {
       // check number of vlumes in fsdataset
       DataNode dn = cluster.getDataNodes().get(0);
       final Map<String, Object> volInfos = dn.data.getVolumeInfoMap();
-      Assert.assertTrue("No volumes in the fsdataset", volInfos.size() > 0);
+        Assertions.assertTrue(volInfos.size() > 0, "No volumes in the fsdataset");
       int i = 0;
       for (Map.Entry<String, Object> e : volInfos.entrySet()) {
         LOG.info("vol " + i++ + ") " + e.getKey() + ": " + e.getValue());
       }
-      // number of volumes should be 2 - [data1, data2]
-      assertEquals("number of volumes is wrong",
-          cluster.getFsDatasetTestUtils(0).getDefaultNumOfDataDirs(),
-          volInfos.size());
+        // number of volumes should be 2 - [data1, data2]
+        assertEquals(
+                cluster.getFsDatasetTestUtils(0).getDefaultNumOfDataDirs(),
+                volInfos.size(), "number of volumes is wrong");
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
         LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration + "; sid="
@@ -182,11 +179,11 @@ public class TestDataNodeMultipleRegistrations {
       BPOfferService bpos1 = dn.getAllBpOs().get(0);
       bpos1.triggerBlockReportForTests();
 
-      assertEquals("wrong nn address",
-          getNNSocketAddress(bpos1),
-          nn1.getNameNodeAddress());
-      assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
-      assertEquals("wrong cid", dn.getClusterId(), cid1);
+        assertEquals(
+                getNNSocketAddress(bpos1),
+                nn1.getNameNodeAddress(), "wrong nn address");
+        assertEquals(bpos1.getBlockPoolId(), bpid1, "wrong bpid");
+        assertEquals(dn.getClusterId(), cid1, "wrong cid");
       cluster.shutdown();
       
       // Ensure all the BPOfferService threads are shutdown
@@ -210,25 +207,25 @@ public class TestDataNodeMultipleRegistrations {
       DataNode dn = cluster.getDataNodes().get(0);
       List<BPOfferService> bposs = dn.getAllBpOs();
       LOG.info("dn bpos len (should be 2):" + bposs.size());
-      Assert.assertEquals("should've registered with two namenodes", bposs.size(),2);
+        Assertions.assertEquals(bposs.size(), 2, "should've registered with two namenodes");
       
       // add another namenode
       cluster.addNameNode(conf, 9938);
       Thread.sleep(500);// lets wait for the registration to happen
       bposs = dn.getAllBpOs(); 
       LOG.info("dn bpos len (should be 3):" + bposs.size());
-      Assert.assertEquals("should've registered with three namenodes", bposs.size(),3);
+        Assertions.assertEquals(bposs.size(), 3, "should've registered with three namenodes");
       
       // change cluster id and another Namenode
       StartupOption.FORMAT.setClusterId("DifferentCID");
       cluster.addNameNode(conf, 9948);
       NameNode nn4 = cluster.getNameNode(3);
-      assertNotNull("cannot create nn4", nn4);
+        assertNotNull(nn4, "cannot create nn4");
 
       Thread.sleep(500);// lets wait for the registration to happen
       bposs = dn.getAllBpOs(); 
       LOG.info("dn bpos len (still should be 3):" + bposs.size());
-      Assert.assertEquals("should've registered with three namenodes", 3, bposs.size());
+        Assertions.assertEquals(3, bposs.size(), "should've registered with three namenodes");
     } finally {
         cluster.shutdown();
     }
@@ -254,9 +251,9 @@ public class TestDataNodeMultipleRegistrations {
       // let the initialization be complete
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      assertTrue("Datanode should be running", dn.isDatanodeUp());
-      assertEquals("Only one BPOfferService should be running", 1,
-          dn.getAllBpOs().size());
+        assertTrue(dn.isDatanodeUp(), "Datanode should be running");
+        assertEquals(1,
+                dn.getAllBpOs().size(), "Only one BPOfferService should be running");
     } finally {
       cluster.shutdown();
     }
@@ -278,9 +275,9 @@ public class TestDataNodeMultipleRegistrations {
       // let the initialization be complete
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      assertTrue("Datanode should be running", dn.isDatanodeUp());
-      assertEquals("BPOfferService should be running", 1,
-          dn.getAllBpOs().size());
+        assertTrue(dn.isDatanodeUp(), "Datanode should be running");
+        assertEquals(1,
+                dn.getAllBpOs().size(), "BPOfferService should be running");
       DataNodeProperties dnProp = cluster.stopDataNode(0);
 
       cluster.getNameNode(0).stop();
@@ -328,12 +325,12 @@ public class TestDataNodeMultipleRegistrations {
     // add a node
     try {
       cluster.waitActive();
-      Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
+        Assertions.assertEquals(2, cluster.getNumNameNodes(), "(1)Should be 2 namenodes");
 
       cluster.addNameNode(conf, 0);
-      Assert.assertEquals("(1)Should be 3 namenodes", 3, cluster.getNumNameNodes());
+        Assertions.assertEquals(3, cluster.getNumNameNodes(), "(1)Should be 3 namenodes");
     } catch (IOException ioe) {
-      Assert.fail("Failed to add NN to cluster:" + StringUtils.stringifyException(ioe));
+      Assertions.fail("Failed to add NN to cluster:" + StringUtils.stringifyException(ioe));
     } finally {
       cluster.shutdown();
     }
@@ -345,15 +342,15 @@ public class TestDataNodeMultipleRegistrations {
       .build();
     
     try {
-      Assert.assertNotNull(cluster);
+      Assertions.assertNotNull(cluster);
       cluster.waitActive();
-      Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
+        Assertions.assertEquals(1, cluster.getNumNameNodes(), "(2)Should be 1 namenodes");
     
       // add a node
       cluster.addNameNode(conf, 0);
-      Assert.assertEquals("(2)Should be 2 namenodes", 2, cluster.getNumNameNodes());
+        Assertions.assertEquals(2, cluster.getNumNameNodes(), "(2)Should be 2 namenodes");
     } catch (IOException ioe) {
-      Assert.fail("Failed to add NN to cluster:" + StringUtils.stringifyException(ioe));
+      Assertions.fail("Failed to add NN to cluster:" + StringUtils.stringifyException(ioe));
     } finally {
       cluster.shutdown();
     }
@@ -365,15 +362,15 @@ public class TestDataNodeMultipleRegistrations {
     // add a node
     try {
       cluster.waitActive();
-      Assert.assertNotNull(cluster);
-      Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
+      Assertions.assertNotNull(cluster);
+        Assertions.assertEquals(1, cluster.getNumNameNodes(), "(2)Should be 1 namenodes");
 
       cluster.addNameNode(conf, 9929);
-      Assert.fail("shouldn't be able to add another NN to non federated cluster");
+      Assertions.fail("shouldn't be able to add another NN to non federated cluster");
     } catch (IOException e) {
       // correct 
-      Assert.assertTrue(e.getMessage().startsWith("cannot add namenode"));
-      Assert.assertEquals("(3)Should be 1 namenodes", 1, cluster.getNumNameNodes());
+      Assertions.assertTrue(e.getMessage().startsWith("cannot add namenode"));
+        Assertions.assertEquals(1, cluster.getNumNameNodes(), "(3)Should be 1 namenodes");
     } finally {
       cluster.shutdown();
     }

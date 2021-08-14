@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,10 +44,10 @@ import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.util.Sets;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestHdfsAdmin {
   
@@ -60,7 +58,7 @@ public class TestHdfsAdmin {
   private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setUpCluster() throws IOException {
     conf.setLong(
         DFSConfigKeys.DFS_NAMENODE_LIST_OPENFILES_NUM_RESPONSES,
@@ -69,7 +67,7 @@ public class TestHdfsAdmin {
     cluster.waitActive();
   }
   
-  @After
+  @AfterEach
   public void shutDownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -182,9 +180,9 @@ public class TestHdfsAdmin {
       policyNamesSet2.add(policy.getName());
     }
     // Ensure that we got the same set of policies in both cases.
-    Assert.assertTrue(
+    Assertions.assertTrue(
         Sets.difference(policyNamesSet1, policyNamesSet2).isEmpty());
-    Assert.assertTrue(
+    Assertions.assertTrue(
         Sets.difference(policyNamesSet2, policyNamesSet1).isEmpty());
   }
 
@@ -200,8 +198,8 @@ public class TestHdfsAdmin {
   @Test
   public void testGetKeyProvider() throws IOException {
     HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    Assert.assertNull("should return null for an non-encrypted cluster",
-        hdfsAdmin.getKeyProvider());
+      Assertions.assertNull(
+              hdfsAdmin.getKeyProvider(), "should return null for an non-encrypted cluster");
 
     shutDownCluster();
 
@@ -213,8 +211,8 @@ public class TestHdfsAdmin {
     cluster.waitActive();
     hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
 
-    Assert.assertNotNull("should not return null for an encrypted cluster",
-        hdfsAdmin.getKeyProvider());
+      Assertions.assertNotNull(
+              hdfsAdmin.getKeyProvider(), "should not return null for an encrypted cluster");
   }
 
   @Test(timeout = 120000L)
@@ -260,10 +258,10 @@ public class TestHdfsAdmin {
       HashSet<Path> openFiles) throws IOException {
     while (openFilesRemoteItr.hasNext()) {
       String filePath = openFilesRemoteItr.next().getFilePath();
-      assertFalse(filePath + " should not be listed under open files!",
-          closedFiles.contains(new Path(filePath)));
-      assertTrue(filePath + " is not listed under open files!",
-          openFiles.remove(new Path(filePath)));
+        assertFalse(
+                closedFiles.contains(new Path(filePath)), filePath + " should not be listed under open files!");
+        assertTrue(
+                openFiles.remove(new Path(filePath)), filePath + " is not listed under open files!");
     }
   }
 
@@ -275,7 +273,7 @@ public class TestHdfsAdmin {
         hdfsAdmin.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
             OpenFilesIterator.FILTER_PATH_DEFAULT);
     verifyOpenFilesHelper(openFilesRemoteItr, closedFiles, openFiles);
-    assertTrue("Not all open files are listed!", openFiles.isEmpty());
+      assertTrue(openFiles.isEmpty(), "Not all open files are listed!");
   }
 
   /**
@@ -289,6 +287,6 @@ public class TestHdfsAdmin {
     RemoteIterator<OpenFileEntry> openFilesRemoteItr =
         hdfsAdmin.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES));
     verifyOpenFilesHelper(openFilesRemoteItr, closedFiles, openFiles);
-    assertTrue("Not all open files are listed!", openFiles.isEmpty());
+      assertTrue(openFiles.isEmpty(), "Not all open files are listed!");
   }
 }

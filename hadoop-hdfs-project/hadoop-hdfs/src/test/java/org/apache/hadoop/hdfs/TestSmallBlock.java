@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the creation of files with block-size
@@ -44,9 +44,9 @@ public class TestSmallBlock {
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+        assertEquals(
+                actual[idx], expected[from + idx], message + " byte " + (from + idx) + " differs. expected " +
+                expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }
@@ -55,7 +55,7 @@ public class TestSmallBlock {
       throws IOException {
     BlockLocation[] locations = fileSys.getFileBlockLocations(
         fileSys.getFileStatus(name), 0, fileSize);
-    assertEquals("Number of blocks", fileSize, locations.length);
+      assertEquals(fileSize, locations.length, "Number of blocks");
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[fileSize];
     if (simulatedStorage) {

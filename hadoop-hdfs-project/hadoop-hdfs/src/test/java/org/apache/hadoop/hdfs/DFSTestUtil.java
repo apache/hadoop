@@ -25,10 +25,7 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -190,8 +187,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.VersionInfo;
-import org.junit.Assert;
-import org.junit.Assume;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -1672,15 +1669,15 @@ public class DFSTestUtil {
   }
 
   public static void checkComponentsEquals(byte[][] expected, byte[][] actual) {
-    assertEquals("expected: " + DFSUtil.byteArray2PathString(expected)
-        + ", actual: " + DFSUtil.byteArray2PathString(actual), expected.length,
-        actual.length);
+      assertEquals(expected.length,
+              actual.length, "expected: " + DFSUtil.byteArray2PathString(expected)
+              + ", actual: " + DFSUtil.byteArray2PathString(actual));
     int i = 0;
     for (byte[] e : expected) {
       byte[] actualComponent = actual[i++];
-      assertTrue("expected: " + DFSUtil.bytes2String(e) + ", actual: "
-          + DFSUtil.bytes2String(actualComponent),
-          Arrays.equals(e, actualComponent));
+        assertTrue(
+                Arrays.equals(e, actualComponent), "expected: " + DFSUtil.bytes2String(e) + ", actual: "
+                + DFSUtil.bytes2String(actualComponent));
     }
   }
 
@@ -1699,7 +1696,7 @@ public class DFSTestUtil {
       this.sockDir = new TemporarySocketDirectory();
       DomainSocket.disableBindPathValidation();
       formerTcpReadsDisabled = DFSInputStream.tcpReadsDisabledForTesting;
-      Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+      Assumptions.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
     }
     
     public Configuration newConfiguration() {
@@ -1737,7 +1734,7 @@ public class DFSTestUtil {
     try (FSDataInputStream in1 = fs.open(p1);
          FSDataInputStream in2 = fs.open(p2)) {
       for (int i = 0; i < len; i++) {
-        assertEquals("Mismatch at byte " + i, in1.read(), in2.read());
+          assertEquals(in1.read(), in2.read(), "Mismatch at byte " + i);
       }
     }
   }
@@ -1813,32 +1810,32 @@ public class DFSTestUtil {
         client.getReplicatedBlockStats();
     ECBlockGroupStats ecBlockGroupStats = client.getECBlockGroupStats();
 
-    assertEquals("Under replicated stats not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
-        aggregatedStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX]);
-    assertEquals("Low redundancy stats not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
-        replicatedBlockStats.getLowRedundancyBlocks() +
-            ecBlockGroupStats.getLowRedundancyBlockGroups());
-    assertEquals("Corrupt blocks stats not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX],
-        replicatedBlockStats.getCorruptBlocks() +
-            ecBlockGroupStats.getCorruptBlockGroups());
-    assertEquals("Missing blocks stats not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX],
-        replicatedBlockStats.getMissingReplicaBlocks() +
-            ecBlockGroupStats.getMissingBlockGroups());
-    assertEquals("Missing blocks with replication factor one not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX],
-        replicatedBlockStats.getMissingReplicationOneBlocks());
-    assertEquals("Bytes in future blocks stats not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX],
-        replicatedBlockStats.getBytesInFutureBlocks() +
-            ecBlockGroupStats.getBytesInFutureBlockGroups());
-    assertEquals("Pending deletion blocks stats not matching!",
-        aggregatedStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX],
-        replicatedBlockStats.getPendingDeletionBlocks() +
-            ecBlockGroupStats.getPendingDeletionBlocks());
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
+              aggregatedStats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX], "Under replicated stats not matching!");
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_LOW_REDUNDANCY_IDX],
+              replicatedBlockStats.getLowRedundancyBlocks() +
+                      ecBlockGroupStats.getLowRedundancyBlockGroups(), "Low redundancy stats not matching!");
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX],
+              replicatedBlockStats.getCorruptBlocks() +
+                      ecBlockGroupStats.getCorruptBlockGroups(), "Corrupt blocks stats not matching!");
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX],
+              replicatedBlockStats.getMissingReplicaBlocks() +
+                      ecBlockGroupStats.getMissingBlockGroups(), "Missing blocks stats not matching!");
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX],
+              replicatedBlockStats.getMissingReplicationOneBlocks(), "Missing blocks with replication factor one not matching!");
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_BYTES_IN_FUTURE_BLOCKS_IDX],
+              replicatedBlockStats.getBytesInFutureBlocks() +
+                      ecBlockGroupStats.getBytesInFutureBlockGroups(), "Bytes in future blocks stats not matching!");
+      assertEquals(
+              aggregatedStats[ClientProtocol.GET_STATS_PENDING_DELETION_BLOCKS_IDX],
+              replicatedBlockStats.getPendingDeletionBlocks() +
+                      ecBlockGroupStats.getPendingDeletionBlocks(), "Pending deletion blocks stats not matching!");
   }
 
   /**
@@ -1884,8 +1881,8 @@ public class DFSTestUtil {
       ExtendedBlock blk) {
     BlockManager bm0 = nn.getNamesystem().getBlockManager();
     BlockInfo storedBlock = bm0.getStoredBlock(blk.getLocalBlock());
-    assertTrue("Block " + blk + " should be under construction, " +
-        "got: " + storedBlock, !storedBlock.isComplete());
+      assertTrue(!storedBlock.isComplete(), "Block " + blk + " should be under construction, " +
+              "got: " + storedBlock);
     // We expect that the replica with the most recent heart beat will be
     // the one to be in charge of the synchronization / recovery protocol.
     final DatanodeStorageInfo[] storages = storedBlock
@@ -1933,8 +1930,8 @@ public class DFSTestUtil {
     }
     assertEquals(retcode, ret);
     if (contain != null) {
-      assertTrue("The real output is: " + output + ".\n It should contain: "
-          + contain, output.contains(contain));
+        assertTrue(output.contains(contain), "The real output is: " + output + ".\n It should contain: "
+                + contain);
     }
   }
 
@@ -2338,23 +2335,23 @@ public class DFSTestUtil {
 
   public static void verifyDelete(FsShell shell, FileSystem fs, Path path,
       Path trashPath, boolean shouldExistInTrash) throws Exception {
-    assertTrue(path + " file does not exist", fs.exists(path));
+      assertTrue(fs.exists(path), path + " file does not exist");
 
     // Verify that trashPath has a path component named ".Trash"
     Path checkTrash = trashPath;
     while (!checkTrash.isRoot() && !checkTrash.getName().equals(".Trash")) {
       checkTrash = checkTrash.getParent();
     }
-    assertEquals("No .Trash component found in trash path " + trashPath,
-        ".Trash", checkTrash.getName());
+      assertEquals(
+              ".Trash", checkTrash.getName(), "No .Trash component found in trash path " + trashPath);
 
     String[] argv = new String[]{"-rm", "-r", path.toString()};
     int res = ToolRunner.run(shell, argv);
-    assertEquals("rm failed", 0, res);
+      assertEquals(0, res, "rm failed");
     if (shouldExistInTrash) {
-      assertTrue("File not in trash : " + trashPath, fs.exists(trashPath));
+        assertTrue(fs.exists(trashPath), "File not in trash : " + trashPath);
     } else {
-      assertFalse("File in trash : " + trashPath, fs.exists(trashPath));
+        assertFalse(fs.exists(trashPath), "File in trash : " + trashPath);
     }
   }
 
@@ -2563,7 +2560,7 @@ public class DFSTestUtil {
       Path filePath, int namenodeCount, boolean createMoverPath)
           throws IOException {
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-    Assert.assertEquals(namenodeCount, namenodes.size());
+    Assertions.assertEquals(namenodeCount, namenodes.size());
     NameNodeConnector.checkOtherInstanceRunning(createMoverPath);
     while (true) {
       try {

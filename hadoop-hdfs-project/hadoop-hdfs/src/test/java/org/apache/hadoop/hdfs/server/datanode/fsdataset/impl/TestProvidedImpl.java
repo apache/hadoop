@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -81,8 +78,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -311,7 +308,7 @@ public class TestProvidedImpl {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     datanode = mock(DataNode.class);
     storage = mock(DataStorage.class);
@@ -496,20 +493,20 @@ public class TestProvidedImpl {
     // all these blocks can belong to the provided volume
     int blocksFound = getBlocksInProvidedVolumes(providedBasePath + "/test1/",
         expectedBlocks, minId);
-    assertEquals(
-        "Number of blocks in provided volumes should be " + expectedBlocks,
-        expectedBlocks, blocksFound);
+      assertEquals(
+              expectedBlocks, blocksFound,
+              "Number of blocks in provided volumes should be " + expectedBlocks);
     blocksFound = getBlocksInProvidedVolumes(
         "file:/" + providedBasePath + "/test1/", expectedBlocks, minId);
-    assertEquals(
-        "Number of blocks in provided volumes should be " + expectedBlocks,
-        expectedBlocks, blocksFound);
+      assertEquals(
+              expectedBlocks, blocksFound,
+              "Number of blocks in provided volumes should be " + expectedBlocks);
     // use a path that is entirely different from the providedBasePath
     // none of these blocks can belong to the volume
     blocksFound =
         getBlocksInProvidedVolumes("randomtest1/", expectedBlocks, minId);
-    assertEquals("Number of blocks in provided volumes should be 0", 0,
-        blocksFound);
+      assertEquals(0,
+              blocksFound, "Number of blocks in provided volumes should be 0");
   }
 
   @Test

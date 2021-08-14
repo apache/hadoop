@@ -23,16 +23,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTPS_BIND_HOST_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_RPC_BIND_HOST_KEY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.http.HttpConfig;
@@ -44,7 +42,8 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 
@@ -67,12 +66,12 @@ public class TestJournalNodeRespectsBindHostKeys {
   private MiniJournalCluster jCluster;
   private JournalNode jn;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new HdfsConfiguration();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (jCluster != null) {
       jCluster.shutdown();
@@ -122,8 +121,8 @@ public class TestJournalNodeRespectsBindHostKeys {
         .numJournalNodes(NUM_JN).build();
     jn = jCluster.getJournalNode(0);
     String address = jn.getHttpAddress().toString();
-    assertFalse("HTTP Bind address not expected to be wildcard by default.",
-        address.startsWith(WILDCARD_ADDRESS));
+      assertFalse(
+              address.startsWith(WILDCARD_ADDRESS), "HTTP Bind address not expected to be wildcard by default.");
 
     LOG.info("Testing with " + DFS_JOURNALNODE_HTTP_BIND_HOST_KEY);
 
@@ -136,8 +135,8 @@ public class TestJournalNodeRespectsBindHostKeys {
         .numJournalNodes(NUM_JN).build();
     jn = jCluster.getJournalNode(0);
     address = jn.getHttpAddress().toString();
-    assertTrue("HTTP Bind address " + address + " is not wildcard.",
-        address.startsWith(WILDCARD_ADDRESS));
+      assertTrue(
+              address.startsWith(WILDCARD_ADDRESS), "HTTP Bind address " + address + " is not wildcard.");
   }
 
   private static final String BASEDIR = System.getProperty("test.build.dir",
@@ -180,8 +179,8 @@ public class TestJournalNodeRespectsBindHostKeys {
         .numJournalNodes(NUM_JN).build();
     jn = jCluster.getJournalNode(0);
     String address = jn.getHttpsAddress().toString();
-    assertFalse("HTTP Bind address not expected to be wildcard by default.",
-        address.startsWith(WILDCARD_ADDRESS));
+      assertFalse(
+              address.startsWith(WILDCARD_ADDRESS), "HTTP Bind address not expected to be wildcard by default.");
 
     LOG.info("Testing behavior with " + DFS_JOURNALNODE_HTTPS_BIND_HOST_KEY);
 
@@ -194,7 +193,7 @@ public class TestJournalNodeRespectsBindHostKeys {
         .numJournalNodes(NUM_JN).build();
     jn = jCluster.getJournalNode(0);
     address = jn.getHttpsAddress().toString();
-    assertTrue("HTTP Bind address " + address + " is not wildcard.",
-        address.startsWith(WILDCARD_ADDRESS));
+      assertTrue(
+              address.startsWith(WILDCARD_ADDRESS), "HTTP Bind address " + address + " is not wildcard.");
   }
 }

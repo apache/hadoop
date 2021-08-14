@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -77,9 +73,9 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,9 +102,9 @@ public class TestDecommission extends AdminStatesBaseTest {
   private static String checkFile(FileSystem fileSys, Path name, int repl,
     String downnode, int numDatanodes) throws IOException {
     boolean isNodeDown = (downnode != null);
-    // need a raw stream
-    assertTrue("Not HDFS:"+fileSys.getUri(),
-        fileSys instanceof DistributedFileSystem);
+      // need a raw stream
+      assertTrue(
+              fileSys instanceof DistributedFileSystem, "Not HDFS:" + fileSys.getUri());
     HdfsDataInputStream dis = (HdfsDataInputStream)
         fileSys.open(name);
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
@@ -223,8 +219,8 @@ public class TestDecommission extends AdminStatesBaseTest {
 
     // Ensure decommissioned datanode is not automatically shutdown
     DFSClient client = getDfsClient(0);
-    assertEquals("All datanodes must be alive", numDatanodes,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
     assertNull(checkFile(fileSys, file1, replicas, decomNode.getXferAddr(),
         numDatanodes));
     cleanupFile(fileSys, file1);
@@ -397,8 +393,8 @@ public class TestDecommission extends AdminStatesBaseTest {
 
         // Ensure decommissioned datanode is not automatically shutdown
         DFSClient client = getDfsClient(i);
-        assertEquals("All datanodes must be alive", numDatanodes, 
-            client.datanodeReport(DatanodeReportType.LIVE).length);
+          assertEquals(numDatanodes,
+                  client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
         // wait for the block to be replicated
         int tries = 0;
         while (tries++ < 20) {
@@ -411,8 +407,8 @@ public class TestDecommission extends AdminStatesBaseTest {
           } catch (InterruptedException ie) {
           }
         }
-        assertTrue("Checked if block was replicated after decommission, tried "
-            + tries + " times.", tries < 20);
+          assertTrue(tries < 20, "Checked if block was replicated after decommission, tried "
+                  + tries + " times.");
         cleanupFile(fileSys, file1);
       }
     }
@@ -445,8 +441,8 @@ public class TestDecommission extends AdminStatesBaseTest {
 
       // Decommission one of the datanodes with a replica
       BlockLocation loc = fileSys.getFileBlockLocations(file1, 0, 1)[0];
-      assertEquals("Unexpected number of replicas from getFileBlockLocations",
-          replicas, loc.getHosts().length);
+        assertEquals(
+                replicas, loc.getHosts().length, "Unexpected number of replicas from getFileBlockLocations");
       final String toDecomHost = loc.getNames()[0];
       String toDecomUuid = null;
       for (DataNode d : getCluster().getDataNodes()) {
@@ -455,7 +451,7 @@ public class TestDecommission extends AdminStatesBaseTest {
           break;
         }
       }
-      assertNotNull("Could not find a dn with the block!", toDecomUuid);
+        assertNotNull(toDecomUuid, "Could not find a dn with the block!");
       final DatanodeInfo decomNode = takeNodeOutofService(0, toDecomUuid,
           0, decommissionedNodes, AdminStates.DECOMMISSIONED);
       decommissionedNodes.add(decomNode);
@@ -467,8 +463,8 @@ public class TestDecommission extends AdminStatesBaseTest {
 
       // Ensure decommissioned datanode is not automatically shutdown
       DFSClient client = getDfsClient(0);
-      assertEquals("All datanodes must be alive", numDatanodes,
-          client.datanodeReport(DatanodeReportType.LIVE).length);
+        assertEquals(numDatanodes,
+                client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
 
       // wait for the block to be replicated
       final ExtendedBlock b = DFSTestUtil.getFirstBlock(fileSys, file1);
@@ -557,7 +553,7 @@ public class TestDecommission extends AdminStatesBaseTest {
         break;
       }
     }
-    assertNotNull("Could not find decomNode in cluster!", decomNode);
+      assertNotNull(decomNode, "Could not find decomNode in cluster!");
     return decomNode;
   }
 
@@ -603,14 +599,14 @@ public class TestDecommission extends AdminStatesBaseTest {
         Thread.sleep(HEARTBEAT_INTERVAL * 1000);
         info = client.datanodeReport(DatanodeReportType.LIVE);
       }
-      assertEquals("Number of live nodes should be 0", 0, info.length);
+        assertEquals(0, info.length, "Number of live nodes should be 0");
       
       // Test that bogus hostnames are considered "dead".
       // The dead report should have an entry for the bogus entry in the hosts
       // file.  The original datanode is excluded from the report because it
       // is no longer in the included list.
       info = client.datanodeReport(DatanodeReportType.DEAD);
-      assertEquals("There should be 1 dead node", 1, info.length);
+        assertEquals(1, info.length, "There should be 1 dead node");
       assertEquals(bogusIp, info[0].getHostName());
     }
   }
@@ -926,7 +922,7 @@ public class TestDecommission extends AdminStatesBaseTest {
           OpenFilesIterator.FILTER_PATH_DEFAULT);
       assertEquals(0, batchedListEntries.size());
     } catch (NullPointerException e) {
-      Assert.fail("Should not throw NPE when the file is not under " +
+      Assertions.fail("Should not throw NPE when the file is not under " +
           "construction but has lease!");
     }
     initExcludeHost("");
@@ -1152,20 +1148,20 @@ public class TestDecommission extends AdminStatesBaseTest {
     getCluster().startDataNodes(getConf(), 1, true, null, null, null, null);
     numDatanodes+=1;
 
-    assertEquals("Number of datanodes should be 2 ", 2,
-        getCluster().getDataNodes().size());
+      assertEquals(2,
+              getCluster().getDataNodes().size(), "Number of datanodes should be 2 ");
     //Restart the namenode
     getCluster().restartNameNode();
     DatanodeInfo datanodeInfo = NameNodeAdapter.getDatanode(
         getCluster().getNamesystem(), excludedDatanodeID);
     waitNodeState(datanodeInfo, AdminStates.DECOMMISSIONED);
 
-    // Ensure decommissioned datanode is not automatically shutdown
-    assertEquals("All datanodes must be alive", numDatanodes, 
-        client.datanodeReport(DatanodeReportType.LIVE).length);
-    assertTrue("Checked if block was replicated after decommission.",
-        checkFile(fileSys, file1, replicas, datanodeInfo.getXferAddr(),
-        numDatanodes) == null);
+      // Ensure decommissioned datanode is not automatically shutdown
+      assertEquals(numDatanodes,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
+      assertTrue(
+              checkFile(fileSys, file1, replicas, datanodeInfo.getXferAddr(),
+                      numDatanodes) == null, "Checked if block was replicated after decommission.");
 
     cleanupFile(fileSys, file1);
     // Restart the cluster and ensure recommissioned datanodes
@@ -1203,10 +1199,10 @@ public class TestDecommission extends AdminStatesBaseTest {
     //Restart the namenode
     getCluster().restartNameNode();
 
-    assertEquals("There should be one node alive", 1,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
-    assertEquals("There should be one node dead", 1,
-        client.datanodeReport(DatanodeReportType.DEAD).length);
+      assertEquals(1,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "There should be one node alive");
+      assertEquals(1,
+              client.datanodeReport(DatanodeReportType.DEAD).length, "There should be one node dead");
   }
 
   /**
@@ -1223,7 +1219,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * It is not recommended to use a registration name which is not also a
    * valid DNS hostname for the DataNode.  See HDFS-5237 for background.
    */
-  @Ignore
+  @Disabled
   @Test(timeout=360000)
   public void testIncludeByRegistrationName() throws Exception {
     // Any IPv4 address starting with 127 functions as a "loopback" address
@@ -1277,8 +1273,8 @@ public class TestDecommission extends AdminStatesBaseTest {
         try {
           DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.LIVE);
           if (info.length == 1) {
-            Assert.assertFalse(info[0].isDecommissioned());
-            Assert.assertFalse(info[0].isDecommissionInProgress());
+            Assertions.assertFalse(info[0].isDecommissioned());
+            Assertions.assertFalse(info[0].isDecommissionInProgress());
             assertEquals(registrationName, info[0].getHostName());
             return true;
           }
@@ -1334,8 +1330,8 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
     // Run decom scan and check
     BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-    assertEquals("Unexpected # of nodes checked", expectedNumCheckedNodes, 
-        decomManager.getNumNodesChecked());
+      assertEquals(expectedNumCheckedNodes,
+              decomManager.getNumNodesChecked(), "Unexpected # of nodes checked");
     // Recommission all nodes
     for (DatanodeInfo dn : decommissionedNodes) {
       putNodeInService(0, dn);
@@ -1446,10 +1442,10 @@ public class TestDecommission extends AdminStatesBaseTest {
 
   private void assertTrackedAndPending(DatanodeAdminManager decomManager,
       int tracked, int pending) {
-    assertEquals("Unexpected number of tracked nodes", tracked,
-        decomManager.getNumTrackedNodes());
-    assertEquals("Unexpected number of pending nodes", pending,
-        decomManager.getNumPendingNodes());
+      assertEquals(tracked,
+              decomManager.getNumTrackedNodes(), "Unexpected number of tracked nodes");
+      assertEquals(pending,
+              decomManager.getNumPendingNodes(), "Unexpected number of pending nodes");
   }
 
   /**
@@ -1604,12 +1600,12 @@ public class TestDecommission extends AdminStatesBaseTest {
     long newTotalCapacity = datanodeStatistics.getCapacityTotal();
     long newBlockPoolUsed = datanodeStatistics.getBlockPoolUsed();
 
-    assertTrue("DfsUsedCapacity should not be the same after a node has " +
-        "been decommissioned!", initialUsedCapacity != newUsedCapacity);
-    assertTrue("TotalCapacity should not be the same after a node has " +
-        "been decommissioned!", initialTotalCapacity != newTotalCapacity);
-    assertTrue("BlockPoolUsed should not be the same after a node has " +
-        "been decommissioned!",initialBlockPoolUsed != newBlockPoolUsed);
+      assertTrue(initialUsedCapacity != newUsedCapacity, "DfsUsedCapacity should not be the same after a node has " +
+              "been decommissioned!");
+      assertTrue(initialTotalCapacity != newTotalCapacity, "TotalCapacity should not be the same after a node has " +
+              "been decommissioned!");
+      assertTrue(initialBlockPoolUsed != newBlockPoolUsed, "BlockPoolUsed should not be the same after a node has " +
+              "been decommissioned!");
   }
 
   /**

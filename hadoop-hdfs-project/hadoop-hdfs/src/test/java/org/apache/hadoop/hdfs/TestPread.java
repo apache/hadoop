@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -50,9 +50,9 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -77,7 +77,7 @@ public class TestPread {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestPread.class.getName());
 
-  @Before
+  @BeforeEach
   public void setup() {
     simulatedStorage = false;
     isHedgedRead = false;
@@ -98,10 +98,10 @@ public class TestPread {
       // should throw an exception
       res = e;
     }
-    assertTrue("Error reading beyond file boundary.", res != null);
+      assertTrue(res != null, "Error reading beyond file boundary.");
     in.close();
     if (!fileSys.delete(name, true))
-      assertTrue("Cannot delete file", false);
+        assertTrue(false, "Cannot delete file");
     
     // now create the real file
     DFSTestUtil.createFile(fileSys, name, fileSize, fileSize,
@@ -110,9 +110,9 @@ public class TestPread {
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+        assertEquals(
+                actual[idx], expected[from + idx], message + " byte " + (from + idx) + " differs. expected " +
+                expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }
@@ -131,17 +131,17 @@ public class TestPread {
     while (nread < length) {
       int nbytes =
           stm.read(position + nread, buffer, offset + nread, length - nread);
-      assertTrue("Error in pread", nbytes > 0);
+        assertTrue(nbytes > 0, "Error in pread");
       nread += nbytes;
     }
 
     if (dfstm != null) {
       if (isHedgedRead) {
-        assertTrue("Expected read statistic to be incremented", length <= dfstm
-            .getReadStatistics().getTotalBytesRead() - totalRead);
+          assertTrue(length <= dfstm
+                  .getReadStatistics().getTotalBytesRead() - totalRead, "Expected read statistic to be incremented");
       } else {
-        assertEquals("Expected read statistic to be incremented", length, dfstm
-            .getReadStatistics().getTotalBytesRead() - totalRead);
+          assertEquals(length, dfstm
+                  .getReadStatistics().getTotalBytesRead() - totalRead, "Expected read statistic to be incremented");
       }
     }
   }
@@ -212,7 +212,7 @@ public class TestPread {
       // should throw an exception
       res = e;
     }
-    assertTrue("Error reading beyond file boundary.", res != null);
+      assertTrue(res != null, "Error reading beyond file boundary.");
     
     stm.close();
   }
@@ -544,9 +544,9 @@ public class TestPread {
       });
       try {
         future.get(4, TimeUnit.SECONDS);
-        Assert.fail();
+        Assertions.fail();
       } catch (ExecutionException ee) {
-        assertTrue(ee.toString(), ee.getCause() instanceof EOFException);
+          assertTrue(ee.getCause() instanceof EOFException, ee.toString());
       } finally {
         future.cancel(true);
         executor.shutdown();
@@ -601,7 +601,7 @@ public class TestPread {
       byte[] buffer = new byte[64 * 1024];
       input = dfsClient.open(filename);
       input.read(0, buffer, 0, 1024);
-      Assert.fail("Reading the block should have thrown BlockMissingException");
+      Assertions.fail("Reading the block should have thrown BlockMissingException");
     } catch (BlockMissingException e) {
       assertEquals(3, input.getHedgedReadOpsLoopNumForTesting());
       assertTrue(metrics.getHedgedReadOps() == 0);
@@ -760,10 +760,10 @@ public class TestPread {
       byte[] buf = new byte[1024];
       int n = din.read(0, buf, 0, data.length());
       assertEquals(data.length(), n);
-      assertEquals("Data should be read", data, new String(buf, 0, n));
-      assertTrue("Read should complete with maximum " + maxFailures
-              + " failures, but completed with " + din.failures,
-          din.failures <= maxFailures);
+        assertEquals(data, new String(buf, 0, n), "Data should be read");
+        assertTrue(
+                din.failures <= maxFailures, "Read should complete with maximum " + maxFailures
+                + " failures, but completed with " + din.failures);
       DFSClient.LOG.info("Read completed");
     }
   }

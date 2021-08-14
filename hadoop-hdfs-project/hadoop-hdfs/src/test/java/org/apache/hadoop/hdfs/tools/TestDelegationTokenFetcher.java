@@ -19,9 +19,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -45,9 +43,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.FakeRenewer;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,19 +88,19 @@ public class TestDelegationTokenFetcher {
 
     Credentials creds = Credentials.readTokenStorageFile(p, conf);
     Iterator<Token<?>> itr = creds.getAllTokens().iterator();
-    assertTrue("token not exist error", itr.hasNext());
+      assertTrue(itr.hasNext(), "token not exist error");
 
     Token<?> fetchedToken = itr.next();
-    Assert.assertArrayEquals("token wrong identifier error",
-        testToken.getIdentifier(), fetchedToken.getIdentifier());
-    Assert.assertArrayEquals("token wrong password error",
-        testToken.getPassword(), fetchedToken.getPassword());
+      Assertions.assertArrayEquals(
+              testToken.getIdentifier(), fetchedToken.getIdentifier(), "token wrong identifier error");
+      Assertions.assertArrayEquals(
+              testToken.getPassword(), fetchedToken.getPassword(), "token wrong password error");
 
     DelegationTokenFetcher.renewTokens(conf, p);
-    Assert.assertEquals(testToken, FakeRenewer.getLastRenewed());
+    Assertions.assertEquals(testToken, FakeRenewer.getLastRenewed());
 
     DelegationTokenFetcher.cancelTokens(conf, p);
-    Assert.assertEquals(testToken, FakeRenewer.getLastCanceled());
+    Assertions.assertEquals(testToken, FakeRenewer.getLastCanceled());
   }
 
   /**
@@ -116,7 +114,7 @@ public class TestDelegationTokenFetcher {
     Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
     // When Token returned is null, TokenFile should not exist
-    Assert.assertFalse(p.getFileSystem(conf).exists(p));
+    Assertions.assertFalse(p.getFileSystem(conf).exists(p));
 
   }
 
@@ -135,18 +133,18 @@ public class TestDelegationTokenFetcher {
       DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
       Credentials creds = Credentials.readTokenStorageFile(p, conf);
       Iterator<Token<?>> itr = creds.getAllTokens().iterator();
-      assertTrue("token not exist error", itr.hasNext());
+        assertTrue(itr.hasNext(), "token not exist error");
       final Token token = itr.next();
-      assertNotNull("Token should be there without renewer", token);
+        assertNotNull(token, "Token should be there without renewer");
 
       // Test compatibility of DelegationTokenFetcher.printTokensToString
       String expectedNonVerbose = "Token (HDFS_DELEGATION_TOKEN token 1 for " +
           System.getProperty("user.name") + " with renewer ) for";
       String resNonVerbose =
           DelegationTokenFetcher.printTokensToString(conf, p, false);
-      assertTrue("The non verbose output is expected to start with \""
-          + expectedNonVerbose +"\"",
-          resNonVerbose.startsWith(expectedNonVerbose));
+        assertTrue(
+                resNonVerbose.startsWith(expectedNonVerbose), "The non verbose output is expected to start with \""
+                + expectedNonVerbose + "\"");
       LOG.info(resNonVerbose);
       LOG.info(
           DelegationTokenFetcher.printTokensToString(conf, p, true));

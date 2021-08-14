@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 
@@ -36,9 +36,9 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.StandbyException;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestQuotasWithHA {
   private static final Path TEST_DIR = new Path("/test");
@@ -54,7 +54,7 @@ public class TestQuotasWithHA {
   private NameNode nn1;
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
@@ -76,7 +76,7 @@ public class TestQuotasWithHA {
     cluster.transitionToActive(0);
   }
   
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

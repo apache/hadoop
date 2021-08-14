@@ -19,11 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -41,10 +37,10 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -84,7 +80,7 @@ public class TestDFSInputStreamBlockLocations {
     enableBlkExpiration = enableExpiration;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new HdfsConfiguration();
     conf.setBoolean(
@@ -119,7 +115,7 @@ public class TestDFSInputStreamBlockLocations {
     fs = dfsCluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (dfsClient != null) {
       dfsClient.close();
@@ -172,21 +168,21 @@ public class TestDFSInputStreamBlockLocations {
       DatanodeInfo[] firstBlkDNInfos = firstLocatedBlk.getLocations();
       while (fin.getPos() < firstBlockMark) {
         bytesRead = fin.read(readBuffer);
-        Assert.assertTrue("Unexpected number of read bytes",
-            chunkReadSize >= bytesRead);
+          Assertions.assertTrue(
+                  chunkReadSize >= bytesRead, "Unexpected number of read bytes");
         if (currDNInfo == null) {
           currDNInfo = fin.getCurrentDatanode();
-          assertNotNull("current FIS datanode is null", currDNInfo);
+            assertNotNull(currDNInfo, "current FIS datanode is null");
           continue;
         }
         prevDNInfo = currDNInfo;
         currDNInfo = fin.getCurrentDatanode();
-        assertEquals("the DFSInput stream does not read from same node",
-            prevDNInfo, currDNInfo);
+          assertEquals(
+                  prevDNInfo, currDNInfo, "the DFSInput stream does not read from same node");
       }
 
-      assertEquals("InputStream exceeds expected position",
-          firstBlockMark, fin.getPos());
+        assertEquals(
+                firstBlockMark, fin.getPos(), "InputStream exceeds expected position");
       // get the second block locations
       LocatedBlock secondLocatedBlk =
           fin.locatedBlocks.getLocatedBlocks().get(1);
@@ -216,23 +212,23 @@ public class TestDFSInputStreamBlockLocations {
       }
       while (fin.getPos() < secondBlockMark) {
         bytesRead = fin.read(readBuffer);
-        assertTrue("dead node used to read at position: " + fin.getPos(),
-            fin.deadNodesContain(deadNodeInfo));
-        Assert.assertTrue("Unexpected number of read bytes",
-            chunkReadSize >= bytesRead);
+          assertTrue(
+                  fin.deadNodesContain(deadNodeInfo), "dead node used to read at position: " + fin.getPos());
+          Assertions.assertTrue(
+                  chunkReadSize >= bytesRead, "Unexpected number of read bytes");
         prevDNInfo = currDNInfo;
         currDNInfo = fin.getCurrentDatanode();
         assertNotEquals(deadNodeInfo, currDNInfo);
         if (firstIteration) {
-          // currDNInfo has to be different unless first block locs is different
-          assertFalse("FSInputStream should pick a different DN",
-              firstBlkDNInfos[0].equals(deadNodeInfo)
-                  && prevDNInfo.equals(currDNInfo));
+            // currDNInfo has to be different unless first block locs is different
+            assertFalse(
+                    firstBlkDNInfos[0].equals(deadNodeInfo)
+                            && prevDNInfo.equals(currDNInfo), "FSInputStream should pick a different DN");
           firstIteration = false;
         }
       }
-      assertEquals("InputStream exceeds expected position",
-          secondBlockMark, fin.getPos());
+        assertEquals(
+                secondBlockMark, fin.getPos(), "InputStream exceeds expected position");
       // restart the dead node with the same port
       assertTrue(dfsCluster.restartDataNode(stoppedDNProps, true));
       dfsCluster.waitActive();
@@ -244,13 +240,13 @@ public class TestDFSInputStreamBlockLocations {
       while (fin.getPos() < thirdBlockMark) {
         bytesRead = fin.read(readBuffer);
         if (this.enableBlkExpiration) {
-          assertEquals("node is removed from deadNodes after 1st iteration",
-              firstIteration, fin.deadNodesContain(deadNodeInfo));
+            assertEquals(
+                    firstIteration, fin.deadNodesContain(deadNodeInfo), "node is removed from deadNodes after 1st iteration");
         } else {
           assertTrue(fin.deadNodesContain(deadNodeInfo));
         }
-        Assert.assertTrue("Unexpected number of read bytes",
-            chunkReadSize >= bytesRead);
+          Assertions.assertTrue(
+                  chunkReadSize >= bytesRead, "Unexpected number of read bytes");
         prevDNInfo = currDNInfo;
         currDNInfo = fin.getCurrentDatanode();
         if (!this.enableBlkExpiration) {
@@ -266,8 +262,8 @@ public class TestDFSInputStreamBlockLocations {
           }
         }
       }
-      assertEquals("InputStream exceeds expected position",
-          thirdBlockMark, fin.getPos());
+        assertEquals(
+                thirdBlockMark, fin.getPos(), "InputStream exceeds expected position");
     } finally {
       if (fout != null) {
         fout.close();

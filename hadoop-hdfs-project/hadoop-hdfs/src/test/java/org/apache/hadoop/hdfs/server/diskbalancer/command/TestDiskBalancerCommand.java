@@ -31,9 +31,9 @@ import static org.apache.hadoop.hdfs.tools.DiskBalancerCLI.SKIPDATECHECK;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -66,10 +66,10 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 
 /**
@@ -88,7 +88,7 @@ public class TestDiskBalancerCommand {
   private final static long CAPCACITY = 300 * 1024;
   private final static long[] CAPACITIES = new long[] {CAPCACITY, CAPCACITY};
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
@@ -99,7 +99,7 @@ public class TestDiskBalancerCommand {
         "/diskBalancer/data-cluster-64node-3disk.json").toURI();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       // Just make sure we can shutdown datanodes.
@@ -372,11 +372,11 @@ public class TestDiskBalancerCommand {
     /* get path of plan file*/
     final String planFileName = dn.getDatanodeUuid();
 
-    /* verify plan command */
-    assertEquals(
-        "There must be two lines: the 1st is writing plan to...,"
-            + " the 2nd is actual full path of plan file.",
-        2, outputs.size());
+      /* verify plan command */
+      assertEquals(
+              2, outputs.size(),
+              "There must be two lines: the 1st is writing plan to...,"
+                      + " the 2nd is actual full path of plan file.");
     assertThat(outputs.get(1), containsString(planFileName));
 
     /* get full path of plan file*/
@@ -758,11 +758,11 @@ public class TestDiskBalancerCommand {
           parent,
           miniCluster.getDataNodes().get(0).getDatanodeUuid()).toString();
 
-      /* verify the path of plan */
-      assertEquals(
-          "There must be two lines: the 1st is writing plan to,"
-              + " the 2nd is actual full path of plan file.",
-          2, outputs.size());
+        /* verify the path of plan */
+        assertEquals(
+                2, outputs.size(),
+                "There must be two lines: the 1st is writing plan to,"
+                        + " the 2nd is actual full path of plan file.");
       assertThat(outputs.get(0), containsString("Writing plan to"));
       assertThat(outputs.get(1), containsString(planFileFullName));
     } finally {

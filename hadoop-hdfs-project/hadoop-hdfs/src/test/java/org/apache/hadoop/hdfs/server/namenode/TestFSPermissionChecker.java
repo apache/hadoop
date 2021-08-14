@@ -32,8 +32,8 @@ import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.fs.permission.FsAction.WRITE;
 import static org.apache.hadoop.fs.permission.FsAction.WRITE_EXECUTE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -52,10 +52,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
 /**
  * Unit tests covering FSPermissionChecker.  All tests in this suite have been
  * cross-validated against Linux setfacl/getfacl to check for consistency of the
@@ -76,7 +77,7 @@ public class TestFSPermissionChecker {
   private FSDirectory dir;
   private INodeDirectory inodeRoot;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration conf = new Configuration();
     FSNamesystem fsn = mock(FSNamesystem.class);
@@ -418,11 +419,11 @@ public class TestFSPermissionChecker {
       fail("expected AccessControlException for user + " + user + ", path = " +
         path + ", access = " + access);
     } catch (AccessControlException e) {
-      assertTrue("Permission denied messages must carry the username",
-              e.getMessage().contains(user.getUserName().toString()));
-      assertTrue("Permission denied messages must carry the path parent",
-              e.getMessage().contains(
-                  new Path(path).getParent().toUri().getPath()));
+        assertTrue(
+                e.getMessage().contains(user.getUserName().toString()), "Permission denied messages must carry the username");
+        assertTrue(
+                e.getMessage().contains(
+                        new Path(path).getParent().toUri().getPath()), "Permission denied messages must carry the path parent");
     }
   }
 

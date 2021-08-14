@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
@@ -50,11 +48,11 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -68,7 +66,7 @@ public class TestDiskspaceQuotaUpdate {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
@@ -77,7 +75,7 @@ public class TestDiskspaceQuotaUpdate {
     cluster.waitActive();
   }
 
-  @Before
+  @BeforeEach
   public void resetCluster() throws Exception {
     if (!cluster.isClusterUp()) {
       // Previous test seems to have left cluster in a bad state;
@@ -89,7 +87,7 @@ public class TestDiskspaceQuotaUpdate {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -250,7 +248,7 @@ public class TestDiskspaceQuotaUpdate {
         .getSpaceConsumed().getStorageSpace();
     try {
       DFSTestUtil.appendFile(getDFS(), file, BLOCKSIZE);
-      Assert.fail("append didn't fail");
+      Assertions.fail("append didn't fail");
     } catch (DSQuotaExceededException e) {
       // ignore
     }
@@ -258,9 +256,9 @@ public class TestDiskspaceQuotaUpdate {
     LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     // check that the file exists, isn't UC, and has no dangling lease
     INodeFile inode = getFSDirectory().getINode(file.toString()).asFile();
-    Assert.assertNotNull(inode);
-    Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", lm.getLease(inode));
+    Assertions.assertNotNull(inode);
+      Assertions.assertFalse(inode.isUnderConstruction(), "should not be UC");
+      Assertions.assertNull(lm.getLease(inode), "should not have a lease");
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -293,7 +291,7 @@ public class TestDiskspaceQuotaUpdate {
         .getSpaceConsumed().getStorageSpace();
     try {
       DFSTestUtil.appendFile(getDFS(), file, BLOCKSIZE);
-      Assert.fail("append didn't fail");
+      Assertions.fail("append didn't fail");
     } catch (QuotaByStorageTypeExceededException e) {
       //ignore
     }
@@ -301,9 +299,9 @@ public class TestDiskspaceQuotaUpdate {
     // check that the file exists, isn't UC, and has no dangling lease
     LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     INodeFile inode = getFSDirectory().getINode(file.toString()).asFile();
-    Assert.assertNotNull(inode);
-    Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", lm.getLease(inode));
+    Assertions.assertNotNull(inode);
+      Assertions.assertFalse(inode.isUnderConstruction(), "should not be UC");
+      Assertions.assertNull(lm.getLease(inode), "should not have a lease");
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();
@@ -333,7 +331,7 @@ public class TestDiskspaceQuotaUpdate {
         .getSpaceConsumed().getStorageSpace();
     try {
       getDFS().truncate(file, BLOCKSIZE / 2 - 1);
-      Assert.fail("truncate didn't fail");
+      Assertions.fail("truncate didn't fail");
     } catch (RemoteException e) {
       assertTrue(e.getClassName().contains("DSQuotaExceededException"));
     }
@@ -341,9 +339,9 @@ public class TestDiskspaceQuotaUpdate {
     // check that the file exists, isn't UC, and has no dangling lease
     LeaseManager lm = cluster.getNamesystem().getLeaseManager();
     INodeFile inode = getFSDirectory().getINode(file.toString()).asFile();
-    Assert.assertNotNull(inode);
-    Assert.assertFalse("should not be UC", inode.isUnderConstruction());
-    Assert.assertNull("should not have a lease", lm.getLease(inode));
+    Assertions.assertNotNull(inode);
+      Assertions.assertFalse(inode.isUnderConstruction(), "should not be UC");
+      Assertions.assertNull(lm.getLease(inode), "should not have a lease");
     // make sure the quota usage is unchanged
     final long newSpaceUsed = dirNode.getDirectoryWithQuotaFeature()
         .getSpaceConsumed().getStorageSpace();

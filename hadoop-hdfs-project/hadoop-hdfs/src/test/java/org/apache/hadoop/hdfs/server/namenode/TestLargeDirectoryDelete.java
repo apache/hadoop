@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -77,11 +77,11 @@ public class TestLargeDirectoryDelete {
   }
   
   private int getBlockCount() {
-    Assert.assertNotNull("Null cluster", mc);
-    Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
+      Assertions.assertNotNull(mc, "Null cluster");
+      Assertions.assertNotNull(mc.getNameNode(), "No Namenode in cluster");
     FSNamesystem namesystem = mc.getNamesystem();
-    Assert.assertNotNull("Null Namesystem in cluster", namesystem);
-    Assert.assertNotNull("Null Namesystem.blockmanager", namesystem.getBlockManager());
+      Assertions.assertNotNull(namesystem, "Null Namesystem in cluster");
+      Assertions.assertNotNull(namesystem.getBlockManager(), "Null Namesystem.blockmanager");
     return (int) namesystem.getBlocksTotal();
   }
 
@@ -146,7 +146,7 @@ public class TestLargeDirectoryDelete {
     LOG.info("Deletion took " + (end - start) + "msecs");
     LOG.info("createOperations " + createOps);
     LOG.info("lockOperations " + lockOps);
-    Assert.assertTrue(lockOps + createOps > 0);
+    Assertions.assertTrue(lockOps + createOps > 0);
     threads[0].rethrow();
     threads[1].rethrow();
   }
@@ -215,9 +215,9 @@ public class TestLargeDirectoryDelete {
     mc = new MiniDFSCluster.Builder(CONF).build();
     try {
       mc.waitActive();
-      Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());
+        Assertions.assertNotNull(mc.getNameNode(), "No Namenode in cluster");
       createFiles();
-      Assert.assertEquals(TOTAL_BLOCKS, getBlockCount());
+      Assertions.assertEquals(TOTAL_BLOCKS, getBlockCount());
       runThreads();
     } finally {
       mc.shutdown();

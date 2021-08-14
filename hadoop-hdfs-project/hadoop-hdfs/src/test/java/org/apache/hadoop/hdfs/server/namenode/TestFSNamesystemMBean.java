@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.lang.management.ManagementFactory;
 import java.util.HashSet;
@@ -155,8 +155,8 @@ public class TestFSNamesystemMBean {
       MBeanClient client = new MBeanClient();
       client.start();
       client.join(20000);
-      assertTrue("JMX calls are blocked when FSNamesystem's writerlock" +
-          "is owned by another thread", client.succeeded);
+        assertTrue(client.succeeded, "JMX calls are blocked when FSNamesystem's writerlock" +
+                "is owned by another thread");
       client.interrupt();
     } finally {
       if (fsn != null && fsn.hasWriteLock()) {
@@ -185,8 +185,8 @@ public class TestFSNamesystemMBean {
         MBeanClient client = new MBeanClient();
         client.start();
         client.join(20000);
-        assertTrue("JMX calls are blocked when FSEditLog" +
-            " is synchronized by another thread", client.succeeded);
+          assertTrue(client.succeeded, "JMX calls are blocked when FSEditLog" +
+                  " is synchronized by another thread");
         client.interrupt();
       }
     } finally {

@@ -20,9 +20,8 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -55,10 +54,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.After;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
@@ -78,7 +77,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   @Rule
   public Timeout timeout = new Timeout(60000);
 
-  @After
+  @AfterEach
   public void shutdown() {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
@@ -142,7 +141,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
         LoggerFactory.getLogger(DataNode.class));
     try {
       doTest(clientConf);
-      Assert.fail("Should fail if SASL data transfer protection is not " +
+      Assertions.fail("Should fail if SASL data transfer protection is not " +
           "configured or not supported in client");
     } catch (IOException e) {
       GenericTestUtils.assertMatches(e.getMessage(), 
@@ -252,7 +251,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       Peer peer = DFSUtilClient.peerFromSocketAndKey(saslClient, socket,
           dataEncKeyFactory, new Token(), fakeDatanodeId, 1);
       peer.close();
-      Assert.fail("Expected DFSClient#peerFromSocketAndKey to time out.");
+      Assertions.fail("Expected DFSClient#peerFromSocketAndKey to time out.");
     } catch (SocketTimeoutException e) {
       GenericTestUtils.assertExceptionContains("Read timed out", e);
     } finally {
@@ -303,7 +302,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
           null, null);
 
-      Assert.fail("Expected IOException from "
+      Assertions.fail("Expected IOException from "
           + "SaslDataTransferClient#checkTrustAndSend");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Encryption enabled", e);
@@ -352,7 +351,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
       saslClient.socketSend(socket, null, null, dataEncryptionKeyFactory,
           null, null);
 
-      Assert.fail("Expected IOException from "
+      Assertions.fail("Expected IOException from "
           + "SaslDataTransferClient#checkTrustAndSend");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Encryption enabled", e);

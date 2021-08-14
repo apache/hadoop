@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -45,9 +43,9 @@ import org.apache.hadoop.util.Lists;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
 import static org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager.QJM_RPC_MAX_TXNS_KEY;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +64,7 @@ public class TestStandbyInProgressTail {
   private NameNode nn0;
   private NameNode nn1;
 
-  @Before
+  @BeforeEach
   public void startUp() throws IOException {
     conf = new Configuration();
     // Set period of tail edits to a large value (20 mins) for test purposes
@@ -85,7 +83,7 @@ public class TestStandbyInProgressTail {
     nn1 = cluster.getNameNode(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();

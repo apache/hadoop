@@ -19,9 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.util.function.Supplier;
@@ -243,9 +241,9 @@ public class TestReplication {
     int blockFilesCorrupted =
         corruptBlockByDeletingBlockFile?
             cluster.corruptBlockOnDataNodesByDeletingBlockFile(block) :
-              cluster.corruptBlockOnDataNodes(block);       
+              cluster.corruptBlockOnDataNodes(block);
 
-    assertEquals("Corrupted too few blocks", replFactor, blockFilesCorrupted); 
+      assertEquals(replFactor, blockFilesCorrupted, "Corrupted too few blocks"); 
 
     // Increase replication factor, this should invoke transfer request
     // Receiving datanode fails on checksum and reports it to namenode
@@ -310,7 +308,7 @@ public class TestReplication {
       replicaCount = dfsClient.getNamenode()
           .getBlockLocations(file1.toString(), 0, Long.MAX_VALUE).get(0)
           .getLocations().length;
-      assertEquals("replication should not success", 1, replicaCount);
+        assertEquals(1, replicaCount, "replication should not success");
     } finally {
       cluster.shutdown();
     }
@@ -351,7 +349,7 @@ public class TestReplication {
     DFSClient client = new DFSClient(addr, conf);
     
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", numDatanodes, info.length);
+      assertEquals(numDatanodes, info.length, "Number of Datanodes ");
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("/smallblocktest.dat");

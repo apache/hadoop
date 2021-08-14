@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -36,9 +34,9 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -65,7 +63,7 @@ public class TestHDFSTrash {
   private static UserGroupInformation user1;
   private static UserGroupInformation user2;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fs = FileSystem.get(conf);
@@ -92,7 +90,7 @@ public class TestHDFSTrash {
         null, FsAction.ALL, FsAction.ALL, FsAction.ALL);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) { cluster.shutdown(); }
   }
@@ -141,13 +139,13 @@ public class TestHDFSTrash {
     fs.mkdirs(user1Tmp);
     Trash u1Trash = getPerUserTrash(user1, fs, testConf);
     Path u1t = u1Trash.getCurrentTrashDir(user1Tmp);
-    assertTrue(String.format("Failed to move %s to trash", user1Tmp),
-        u1Trash.moveToTrash(user1Tmp));
-    assertTrue(
-        String.format(
-            "%s should be allowed to remove its own trash directory %s",
-            user1.getUserName(), u1t),
-        fs.delete(u1t, true));
+      assertTrue(
+              u1Trash.moveToTrash(user1Tmp), String.format("Failed to move %s to trash", user1Tmp));
+      assertTrue(
+              fs.delete(u1t, true),
+              String.format(
+                      "%s should be allowed to remove its own trash directory %s",
+                      user1.getUserName(), u1t));
     assertFalse(fs.exists(u1t));
 
     // login as user2, move something to trash
@@ -165,8 +163,8 @@ public class TestHDFSTrash {
               USER1_NAME, USER2_NAME));
     } catch (AccessControlException e) {
       assertTrue(e instanceof AccessControlException);
-      assertTrue("Permission denied messages must carry the username",
-          e.getMessage().contains(USER1_NAME));
+        assertTrue(
+                e.getMessage().contains(USER1_NAME), "Permission denied messages must carry the username");
     }
   }
 

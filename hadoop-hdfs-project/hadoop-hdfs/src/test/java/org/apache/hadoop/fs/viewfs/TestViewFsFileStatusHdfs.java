@@ -23,8 +23,8 @@ package org.apache.hadoop.fs.viewfs;
  * Since viewfs has overlayed ViewFsFileStatus, we ran into
  * serialization problems. THis test is test the fix.
  */
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.net.URI;
@@ -43,9 +43,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestViewFsFileStatusHdfs {
   
@@ -59,7 +59,7 @@ public class TestViewFsFileStatusHdfs {
   private static FileSystem fHdfs;
   private static FileSystem vfs;
   
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
@@ -108,15 +108,15 @@ public class TestViewFsFileStatusHdfs {
     // Get checksum of different file in HDFS
     FileChecksum otherHdfsFileCheckSum = fHdfs.getFileChecksum(
       new Path(someFile+"other"));
-    // Checksums of the same file (got through HDFS and ViewFS should be same)
-    assertEquals("HDFS and ViewFS checksums were not the same", viewFSCheckSum,
-      hdfsCheckSum);
-    // Checksum of different files should be different.
-    assertFalse("Some other HDFS file which should not have had the same " +
-      "checksum as viewFS did!", viewFSCheckSum.equals(otherHdfsFileCheckSum));
+      // Checksums of the same file (got through HDFS and ViewFS should be same)
+      assertEquals(viewFSCheckSum,
+              hdfsCheckSum, "HDFS and ViewFS checksums were not the same");
+      // Checksum of different files should be different.
+      assertFalse(viewFSCheckSum.equals(otherHdfsFileCheckSum), "Some other HDFS file which should not have had the same " +
+              "checksum as viewFS did!");
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     fHdfs.delete(new Path(testfilename), true);
     fHdfs.delete(new Path(someFile), true);

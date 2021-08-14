@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.URI;
@@ -38,9 +38,9 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.event.Level;
 
 /**
@@ -84,7 +84,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     return e;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClassSetup() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.set(FsPermission.UMASK_LABEL, "000");
@@ -94,7 +94,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     dfs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClassTeardown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

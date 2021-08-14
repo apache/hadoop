@@ -27,9 +27,10 @@ import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.iq80.leveldb.DBException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,7 +51,7 @@ public class TestLevelDbMockAliasMapClient {
   private InMemoryAliasMap aliasMapMock;
   private final String bpid = "BPID-0";
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     aliasMapMock = mock(InMemoryAliasMap.class);
     when(aliasMapMock.getBlockPoolId()).thenReturn(bpid);
@@ -72,7 +73,7 @@ public class TestLevelDbMockAliasMapClient {
     inMemoryLevelDBAliasMapClient.setConf(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     levelDBAliasMapServer.close();
     inMemoryLevelDBAliasMapClient.close();

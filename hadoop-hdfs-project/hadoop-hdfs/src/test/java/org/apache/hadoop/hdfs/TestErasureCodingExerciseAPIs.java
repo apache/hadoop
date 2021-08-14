@@ -33,9 +33,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +58,7 @@ import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.FsAction.NONE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test after enable Erasure Coding on cluster, exercise Java API make sure they
@@ -82,7 +82,7 @@ public class TestErasureCodingExerciseAPIs {
       LoggerFactory.getLogger(TestErasureCodingExerciseAPIs.class);
 
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws IOException {
     ecPolicy = getEcPolicy();
     conf = new HdfsConfiguration();
@@ -252,8 +252,8 @@ public class TestErasureCodingExerciseAPIs {
     AclStatus as = fs.getAclStatus(p);
 
     for (AclEntry entry : aclSpec) {
-      assertTrue(String.format("as: %s, entry: %s", as, entry),
-          as.getEntries().contains(entry));
+        assertTrue(
+                as.getEntries().contains(entry), String.format("as: %s, entry: %s", as, entry));
     }
     List<AclEntry> maclSpec = Lists.newArrayList(
         aclEntry(ACCESS, USER, "bar", READ_EXECUTE),
@@ -262,8 +262,8 @@ public class TestErasureCodingExerciseAPIs {
 
     as = fs.getAclStatus(p);
     for (AclEntry entry : maclSpec) {
-      assertTrue(String.format("as: %s, entry: %s", as, entry),
-          as.getEntries().contains(entry));
+        assertTrue(
+                as.getEntries().contains(entry), String.format("as: %s, entry: %s", as, entry));
     }
 
     fs.removeAclEntries(p, maclSpec);
@@ -539,7 +539,7 @@ public class TestErasureCodingExerciseAPIs {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,10 +29,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.util.ThreadUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 
 /**
@@ -44,13 +44,13 @@ public class TestDFSClientExcludedNodes {
   private MiniDFSCluster cluster;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     cluster = null;
     conf = new HdfsConfiguration();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -122,8 +122,8 @@ public class TestDFSClientExcludedNodes {
 
     // Bring back the older DNs, since they are gonna be forgiven only
     // afterwards of this previous block write.
-    Assert.assertEquals(true, cluster.restartDataNode(one, true));
-    Assert.assertEquals(true, cluster.restartDataNode(two, true));
+    Assertions.assertEquals(true, cluster.restartDataNode(one, true));
+    Assertions.assertEquals(true, cluster.restartDataNode(two, true));
     cluster.waitActive();
 
     // Sleep for 5s, to let the excluded nodes be expired

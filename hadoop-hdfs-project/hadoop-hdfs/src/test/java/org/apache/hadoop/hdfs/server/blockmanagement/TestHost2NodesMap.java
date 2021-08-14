@@ -18,20 +18,17 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestHost2NodesMap {
   private final Host2NodesMap map = new Host2NodesMap();
   private DatanodeDescriptor dataNodes[];
   
-  @Before
+  @BeforeEach
   public void setup() {
     dataNodes = new DatanodeDescriptor[] {
         DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),

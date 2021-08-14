@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -49,9 +46,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestClusterId {
   private static final Logger LOG =
@@ -77,7 +74,7 @@ public class TestClusterId {
     return cid;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     ExitUtil.disableSystemExit();
 
@@ -98,7 +95,7 @@ public class TestClusterId {
     config.set(DFS_NAMENODE_NAME_DIR_KEY, hdfsDir.getPath());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
       throw new IOException("Could not tearDown test directory '" + hdfsDir
@@ -114,21 +111,21 @@ public class TestClusterId {
     NameNode.format(config);
     // see if cluster id not empty.
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")) );
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
 
     // 2. successful format with given clusterid
     StartupOption.FORMAT.setClusterId("mycluster");
     NameNode.format(config);
     // see if cluster id matches with given clusterid.
     cid = getClusterId(config);
-    assertTrue("ClusterId didn't match", cid.equals("mycluster"));
+      assertTrue(cid.equals("mycluster"), "ClusterId didn't match");
 
     // 3. format without any clusterid again. It should generate new
     //clusterid.
     StartupOption.FORMAT.setClusterId("");
     NameNode.format(config);
     String newCid = getClusterId(config);
-    assertFalse("ClusterId should not be the same", newCid.equals(cid));
+      assertFalse(newCid.equals(cid), "ClusterId should not be the same");
   }
 
   /**
@@ -143,11 +140,11 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")));
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
   }
 
   /**
@@ -168,11 +165,11 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")));
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
   }
 
   /**
@@ -193,11 +190,11 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")));
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
   }
 
   /**
@@ -219,11 +216,11 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cId = getClusterId(config);
-    assertEquals("ClusterIds do not match", myId, cId);
+      assertEquals(myId, cId, "ClusterIds do not match");
   }
 
   /**
@@ -251,7 +248,7 @@ public class TestClusterId {
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
-    assertFalse("Check version should not exist", version.exists());
+      assertFalse(version.exists(), "Check version should not exist");
   }
 
   /**
@@ -279,7 +276,7 @@ public class TestClusterId {
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
-    assertFalse("Check version should not exist", version.exists());
+      assertFalse(version.exists(), "Check version should not exist");
   }
 
   /**
@@ -308,7 +305,7 @@ public class TestClusterId {
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
-    assertFalse("Check version should not exist", version.exists());
+      assertFalse(version.exists(), "Check version should not exist");
   }
 
   /**
@@ -331,13 +328,13 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have been aborted with exit code 1", 1,
-          e.status);
+        assertEquals(1,
+                e.status, "Format should have been aborted with exit code 1");
     }
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
-    assertFalse("Check version should not exist", version.exists());
+      assertFalse(version.exists(), "Check version should not exist");
   }
 
   /**
@@ -355,11 +352,11 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")));
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
   }
 
   /**
@@ -380,11 +377,11 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")));
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
   }
 
   /**
@@ -415,13 +412,13 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should have succeeded", 0, e.status);
+        assertEquals(0, e.status, "Format should have succeeded");
     }
 
     System.setIn(origIn);
 
     String cid = getClusterId(config);
-    assertTrue("Didn't get new ClusterId", (cid != null && !cid.equals("")));
+      assertTrue((cid != null && !cid.equals("")), "Didn't get new ClusterId");
   }
 
   /**
@@ -451,14 +448,14 @@ public class TestClusterId {
       NameNode.createNameNode(argv, config);
       fail("createNameNode() did not call System.exit()");
     } catch (ExitException e) {
-      assertEquals("Format should not have succeeded", 1, e.status);
+        assertEquals(1, e.status, "Format should not have succeeded");
     }
 
     System.setIn(origIn);
 
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
-    assertFalse("Check version should not exist", version.exists());
+      assertFalse(version.exists(), "Check version should not exist");
   }
 
   /**

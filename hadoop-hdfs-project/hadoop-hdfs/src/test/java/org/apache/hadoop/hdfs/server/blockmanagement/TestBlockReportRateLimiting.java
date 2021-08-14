@@ -31,10 +31,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.After;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
@@ -53,12 +53,12 @@ public class TestBlockReportRateLimiting {
     LOG.error("Test error: " + what);
   }
 
-  @After
+  @AfterEach
   public void restoreNormalBlockManagerFaultInjector() {
     BlockManagerFaultInjector.instance = new BlockManagerFaultInjector();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void raiseBlockManagerLogLevels() {
     GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(BlockReportLeaseManager.LOG, Level.TRACE);
@@ -155,7 +155,7 @@ public class TestBlockReportRateLimiting {
       }, 25, 50000);
     }
     cluster.shutdown();
-    Assert.assertEquals("", failure.get());
+    Assertions.assertEquals("", failure.get());
   }
 
   /**
@@ -207,9 +207,9 @@ public class TestBlockReportRateLimiting {
       BlockManagerFaultInjector.instance = injector;
       cluster.set(new MiniDFSCluster.Builder(conf).numDataNodes(2).build());
       cluster.get().waitActive();
-      Assert.assertNotNull(cluster.get().stopDataNode(datanodeToStop.get()));
+      Assertions.assertNotNull(cluster.get().stopDataNode(datanodeToStop.get()));
       gotFbrSem.acquire();
-      Assert.assertNull(failure.get());
+      Assertions.assertNull(failure.get());
     } finally {
       if (cluster.get() != null) {
         cluster.get().shutdown();

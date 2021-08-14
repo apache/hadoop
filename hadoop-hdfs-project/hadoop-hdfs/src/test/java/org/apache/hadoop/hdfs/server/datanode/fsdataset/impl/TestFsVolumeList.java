@@ -38,8 +38,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosing
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -55,11 +55,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -74,7 +70,7 @@ public class TestFsVolumeList {
   private String baseDir;
   private BlockScanner blockScanner;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     dataset = mock(FsDatasetImpl.class);
     baseDir = new FileSystemTestHelper().getTestRootDir();
@@ -163,7 +159,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 100L, volume.getReserved());
+      assertEquals(100L, volume.getReserved(), "");
     // when storage type reserved is configured.
     conf.setLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY + "."
@@ -181,7 +177,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 1L, volume1.getReserved());
+      assertEquals(1L, volume1.getReserved(), "");
     FsVolumeImpl volume2 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -189,7 +185,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 2L, volume2.getReserved());
+      assertEquals(2L, volume2.getReserved(), "");
     FsVolumeImpl volume3 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -197,7 +193,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 100L, volume3.getReserved());
+      assertEquals(100L, volume3.getReserved(), "");
     FsVolumeImpl volume4 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -205,7 +201,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 100L, volume4.getReserved());
+      assertEquals(100L, volume4.getReserved(), "");
     FsVolumeImpl volume5 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -405,10 +401,10 @@ public class TestFsVolumeList {
     // It will create BlockPoolSlice.AddReplicaProcessor task's and lunch in
     // ForkJoinPool recursively
     vol.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
-    assertTrue("Failed to add all the replica to map", volumeMap.replicas(bpid)
-        .size() == 1000);
-    assertEquals("Fork pool should be initialize with configured pool size",
-        poolSize, BlockPoolSlice.getAddReplicaForkPoolSize());
+      assertTrue(volumeMap.replicas(bpid)
+              .size() == 1000, "Failed to add all the replica to map");
+      assertEquals(
+              poolSize, BlockPoolSlice.getAddReplicaForkPoolSize(), "Fork pool should be initialize with configured pool size");
   }
 
   @Test(timeout = 60000)
@@ -427,9 +423,9 @@ public class TestFsVolumeList {
           cluster.getNamesystem(0).getBlockPoolId()).getAddReplicaThreadPool();
       ForkJoinPool threadPool2 = vol.getBlockPoolSlice(
           cluster.getNamesystem(1).getBlockPoolId()).getAddReplicaThreadPool();
-      assertEquals(
-          "Thread pool instance should be same in all the BlockPoolSlice",
-          threadPool1, threadPool2);
+        assertEquals(
+                threadPool1, threadPool2,
+                "Thread pool instance should be same in all the BlockPoolSlice");
     }
   }
 

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +25,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Scanner;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -43,10 +43,10 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests HDFS commands with ViewFileSystemOverloadScheme with configured mount
@@ -71,7 +71,7 @@ public class TestViewFileSystemOverloadSchemeWithFSCommands {
   /**
    * Sets up the configurations and starts the MiniDFSCluster.
    */
-  @Before
+  @BeforeEach
   public void startCluster() throws IOException {
     conf = new Configuration();
     conf.setInt(
@@ -86,10 +86,10 @@ public class TestViewFileSystemOverloadSchemeWithFSCommands {
     defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     localTargetDir = new File(TEST_ROOT_DIR, "/root/");
-    Assert.assertEquals(HDFS_SCHEME, defaultFSURI.getScheme()); // hdfs scheme.
+    Assertions.assertEquals(HDFS_SCHEME, defaultFSURI.getScheme()); // hdfs scheme.
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     try {
       System.out.flush();
@@ -165,7 +165,7 @@ public class TestViewFileSystemOverloadSchemeWithFSCommands {
       String msg =
           "DF was not calculated on all mounts. The left out mounts are: "
               + mounts;
-      assertEquals(msg, 0, mounts.size());
+        assertEquals(0, mounts.size(), msg);
     } finally {
       fsShell.close();
     }

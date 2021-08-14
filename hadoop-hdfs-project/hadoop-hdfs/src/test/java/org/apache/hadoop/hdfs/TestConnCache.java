@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,8 +27,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the client connection caching in a single node
@@ -52,7 +52,7 @@ public class TestConnCache {
                      int length,
                      byte[] authenticData)
       throws IOException {
-    Assert.assertTrue("Test buffer too small", buffer.length >= offset + length);
+      Assertions.assertTrue(buffer.length >= offset + length, "Test buffer too small");
 
     if (pos >= 0)
       in.seek(pos);
@@ -62,7 +62,7 @@ public class TestConnCache {
 
     while (length > 0) {
       int cnt = in.read(buffer, offset, length);
-      Assert.assertTrue("Error in read", cnt > 0);
+        Assertions.assertTrue(cnt > 0, "Error in read");
       offset += cnt;
       length -= cnt;
     }
@@ -71,9 +71,9 @@ public class TestConnCache {
     for (int i = 0; i < length; ++i) {
       byte actual = buffer[i];
       byte expect = authenticData[(int)pos + i];
-      assertEquals("Read data mismatch at file offset " + (pos + i) +
-                   ". Expects " + expect + "; got " + actual,
-                   actual, expect);
+        assertEquals(
+                actual, expect, "Read data mismatch at file offset " + (pos + i) +
+                ". Expects " + expect + "; got " + actual);
     }
   }
 
@@ -116,7 +116,7 @@ public class TestConnCache {
 
     in.close();
     client.close();
-    Assert.assertEquals(1,
+    Assertions.assertEquals(1,
         ClientContext.getFromConf(configuration).getPeerCache().size());
   }
 }

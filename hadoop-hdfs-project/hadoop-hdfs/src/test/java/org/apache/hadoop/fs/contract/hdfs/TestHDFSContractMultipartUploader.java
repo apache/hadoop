@@ -19,14 +19,14 @@ package org.apache.hadoop.fs.contract.hdfs;
 
 import java.io.IOException;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.jupiter.api.AfterAll;
 
 /**
  * Test MultipartUploader tests on HDFS.
@@ -37,12 +37,12 @@ public class TestHDFSContractMultipartUploader extends
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestHDFSContractMultipartUploader.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void createCluster() throws IOException {
     HDFSContract.createCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() throws IOException {
     HDFSContract.destroyCluster();
   }

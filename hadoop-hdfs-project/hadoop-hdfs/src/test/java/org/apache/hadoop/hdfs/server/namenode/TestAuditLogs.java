@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -56,9 +56,9 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -112,7 +112,7 @@ public class TestAuditLogs {
   Configuration conf;
   UserGroupInformation userGroupInfo;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     // must configure prior to instantiating the namesystem because it
     // will reconfigure the logger if async is enabled
@@ -141,7 +141,7 @@ public class TestAuditLogs {
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
  }
 
-  @After
+  @AfterEach
   public void teardownCluster() throws Exception {
     util.cleanup(fs, "/srcdat");
     if (fs != null) {
@@ -165,7 +165,7 @@ public class TestAuditLogs {
     int val = istream.read();
     istream.close();
     verifyAuditLogs(true);
-    assertTrue("failed to read from file", val >= 0);
+      assertTrue(val >= 0, "failed to read from file");
   }
 
   /** test that allowed stat puts proper entry in audit log */
@@ -177,7 +177,7 @@ public class TestAuditLogs {
     setupAuditLogs();
     FileStatus st = userfs.getFileStatus(file);
     verifyAuditLogs(true);
-    assertTrue("failed to stat file", st != null && st.isFile());
+      assertTrue(st != null && st.isFile(), "failed to stat file");
   }
 
   /** test that denied operation puts proper entry in audit log */
@@ -216,7 +216,7 @@ public class TestAuditLogs {
     istream.close();
 
     verifyAuditLogsRepeat(true, 3);
-    assertTrue("failed to read from file", val >= 0);
+      assertTrue(val >= 0, "failed to read from file");
   }
 
   /** test that stat via webhdfs puts proper entry in audit log */
@@ -233,7 +233,7 @@ public class TestAuditLogs {
     FileStatus st = webfs.getFileStatus(file);
 
     verifyAuditLogs(true);
-    assertTrue("failed to stat file", st != null && st.isFile());
+      assertTrue(st != null && st.isFile(), "failed to stat file");
   }
 
   /** test that denied access via webhdfs puts proper entry in audit log */
@@ -334,12 +334,12 @@ public class TestAuditLogs {
       for (int i = 0; i < ndupe; i++) {
         line = reader.readLine();
         assertNotNull(line);
-        assertTrue("Expected audit event not found in audit log",
-            auditPattern.matcher(line).matches());
+          assertTrue(
+                  auditPattern.matcher(line).matches(), "Expected audit event not found in audit log");
         ret &= successPattern.matcher(line).matches();
       }
-      assertNull("Unexpected event in audit log", reader.readLine());
-      assertTrue("Expected success=" + expectSuccess, ret == expectSuccess);
+        assertNull(reader.readLine(), "Unexpected event in audit log");
+        assertTrue(ret == expectSuccess, "Expected success=" + expectSuccess);
     } finally {
       reader.close();
     }
@@ -371,9 +371,9 @@ public class TestAuditLogs {
           patternMatches |= pattern.matcher(line).matches();
           ret &= successPattern.matcher(line).matches();
         }
-        assertNull("Unexpected event in audit log", reader.readLine());
-        assertTrue("Expected audit event not found in audit log", patternMatches);
-        assertTrue("Expected success=" + expectSuccess, ret == expectSuccess);
+        assertNull(reader.readLine(), "Unexpected event in audit log");
+        assertTrue(patternMatches, "Expected audit event not found in audit log");
+        assertTrue(ret == expectSuccess, "Expected success=" + expectSuccess);
       } finally {
         reader.close();
       }

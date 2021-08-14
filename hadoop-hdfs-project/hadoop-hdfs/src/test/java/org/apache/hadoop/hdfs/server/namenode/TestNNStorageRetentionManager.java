@@ -45,9 +45,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -62,7 +62,7 @@ public class TestNNStorageRetentionManager {
    * For the purpose of this test, purge as many edits as we can 
    * with no extra "safety cushion"
    */
-  @Before
+  @BeforeEach
   public void setNoExtraEditRetention() {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
   }
@@ -310,27 +310,27 @@ public class TestNNStorageRetentionManager {
     for (FSImageFile captured : imagesPurgedCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
     }
-    Assert.assertEquals("Image file check.",
-      Joiner.on(",").join(filesToPaths(tc.expectedPurgedImages)),
-      Joiner.on(",").join(capturedPaths));
+      Assertions.assertEquals(
+              Joiner.on(",").join(filesToPaths(tc.expectedPurgedImages)),
+              Joiner.on(",").join(capturedPaths), "Image file check.");
 
     capturedPaths.clear();
     // Check edit logs, and also in progress edits older than minTxIdToKeep
     for (EditLogFile captured : logsPurgedCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
     }
-    Assert.assertEquals("Check old edits are removed.",
-      Joiner.on(",").join(filesToPaths(tc.expectedPurgedLogs)),
-      Joiner.on(",").join(capturedPaths));
+      Assertions.assertEquals(
+              Joiner.on(",").join(filesToPaths(tc.expectedPurgedLogs)),
+              Joiner.on(",").join(capturedPaths), "Check old edits are removed.");
 
     capturedPaths.clear();
     // Check in progress edits to keep are marked as stale
     for (EditLogFile captured : staleLogsCaptor.getAllValues()) {
       capturedPaths.add(fileToPath(captured.getFile()));
     }
-    Assert.assertEquals("Check unnecessary but kept edits are marked stale",
-      Joiner.on(",").join(filesToPaths(tc.expectedStaleLogs)),
-      Joiner.on(",").join(capturedPaths));
+      Assertions.assertEquals(
+              Joiner.on(",").join(filesToPaths(tc.expectedStaleLogs)),
+              Joiner.on(",").join(capturedPaths), "Check unnecessary but kept edits are marked stale");
   }
 
   private class TestCaseDescription {

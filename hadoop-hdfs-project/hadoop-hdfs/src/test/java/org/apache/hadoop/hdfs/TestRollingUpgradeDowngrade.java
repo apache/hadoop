@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class TestRollingUpgradeDowngrade {
 
@@ -64,7 +64,7 @@ public class TestRollingUpgradeDowngrade {
       // start rolling upgrade
       RollingUpgradeInfo info = dfs
           .rollingUpgrade(RollingUpgradeAction.PREPARE);
-      Assert.assertTrue(info.isStarted());
+      Assertions.assertTrue(info.isStarted());
       dfs.mkdirs(bar);
 
       TestRollingUpgrade.queryForPreparation(dfs);
@@ -72,15 +72,15 @@ public class TestRollingUpgradeDowngrade {
 
       dfsCluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
       // Once downgraded, there should be no more fsimage for rollbacks.
-      Assert.assertFalse(dfsCluster.getNamesystem(0).getFSImage()
+      Assertions.assertFalse(dfsCluster.getNamesystem(0).getFSImage()
           .hasRollbackFSImage());
       // shutdown NN1
       dfsCluster.shutdownNameNode(1);
       dfsCluster.transitionToActive(0);
 
       dfs = dfsCluster.getFileSystem(0);
-      Assert.assertTrue(dfs.exists(foo));
-      Assert.assertTrue(dfs.exists(bar));
+      Assertions.assertTrue(dfs.exists(foo));
+      Assertions.assertTrue(dfs.exists(bar));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

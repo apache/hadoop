@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,10 +41,10 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestFetchImage {
   
@@ -58,17 +58,17 @@ public class TestFetchImage {
   private NameNode nn1 = null;
   private Configuration conf = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupImageDir() {
     FETCHED_IMAGE_FILE.mkdirs();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() {
     FileUtil.fullyDelete(FETCHED_IMAGE_FILE);
   }
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws IOException, URISyntaxException {
     conf = new Configuration();
     conf.setInt(DFS_HEARTBEAT_INTERVAL_KEY, 1);

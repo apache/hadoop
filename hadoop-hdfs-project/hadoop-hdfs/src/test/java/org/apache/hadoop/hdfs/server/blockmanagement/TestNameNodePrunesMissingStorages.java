@@ -45,8 +45,8 @@ import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.event.Level;
 
 import java.io.BufferedReader;
@@ -60,12 +60,9 @@ import java.io.Writer;
 import java.util.Iterator;
 import java.util.UUID;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 public class TestNameNodePrunesMissingStorages {
@@ -207,7 +204,7 @@ public class TestNameNodePrunesMissingStorages {
       int datanodeToRemoveStorageFromIdx = 0;
       while (true) {
         if (datanodeToRemoveStorageFromIdx >= cluster.getDataNodes().size()) {
-          Assert.fail("failed to find datanode with uuid " + datanodeUuid);
+          Assertions.fail("failed to find datanode with uuid " + datanodeUuid);
           datanodeToRemoveStorageFrom = null;
           break;
         }

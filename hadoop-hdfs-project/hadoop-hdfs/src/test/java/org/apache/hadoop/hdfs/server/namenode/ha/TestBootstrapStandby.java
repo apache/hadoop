@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,10 +42,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 public class TestBootstrapStandby {
@@ -60,7 +57,7 @@ public class TestBootstrapStandby {
   private MiniDFSCluster cluster;
   private NameNode nn0;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws IOException {
     Configuration conf = new Configuration();
 
@@ -87,7 +84,7 @@ public class TestBootstrapStandby {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();

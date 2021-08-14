@@ -40,10 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBER
 
 import java.lang.reflect.Field;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -68,8 +65,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -116,8 +111,11 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.slf4j.event.Level;
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -150,14 +148,14 @@ public class TestBalancer {
   private AtomicLong startGetBlocksTime;
   private AtomicLong endGetBlocksTime;
 
-  @Before
+  @BeforeEach
   public void setup() {
     numGetBlocksCalls = new AtomicInteger(0);
     startGetBlocksTime = new AtomicLong(Long.MAX_VALUE);
     endGetBlocksTime = new AtomicLong(Long.MIN_VALUE);
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -230,8 +228,8 @@ public class TestBalancer {
         UserGroupInformation.AuthenticationMethod.KERBEROS, conf);
     UserGroupInformation.setConfiguration(conf);
     KerberosName.resetDefaultRealm();
-    assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
+      assertTrue(
+              UserGroupInformation.isSecurityEnabled(), "Expected configuration to enable security");
 
     keytabFile = new File(baseDir, username + ".keytab");
     String keytab = keytabFile.getAbsolutePath();
@@ -270,7 +268,7 @@ public class TestBalancer {
     initConf(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
@@ -911,7 +909,7 @@ public class TestBalancer {
     tool.setConf(conf);
     final int r = tool.run(args.toArray(new String[0])); // start rebalancing
 
-    assertEquals("Tools should exit 0 on success", 0, r);
+      assertEquals(0, r, "Tools should exit 0 on success");
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
     LOG.info("Rebalancing with default ctor.");
     waitForBalancer(totalUsedSpace, totalCapacity, client, cluster, p, expectedExcludedNodes);
@@ -1263,7 +1261,7 @@ public class TestBalancer {
       Object hotBlockTimeInterval = field1.get(dispatcher);
       assertEquals(1000, (long)hotBlockTimeInterval);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
   }
 
@@ -1575,25 +1573,25 @@ public class TestBalancer {
         .create(Balancer.BALANCER_ID_PATH, false);
     out.writeBytes(InetAddress.getLocalHost().getHostName());
     out.hflush();
-    assertTrue("'balancer.id' file doesn't exist!",
-        fs.exists(Balancer.BALANCER_ID_PATH));
+      assertTrue(
+              fs.exists(Balancer.BALANCER_ID_PATH), "'balancer.id' file doesn't exist!");
 
     // start second balancer
     final String[] args = { "-policy", "datanode" };
     final Tool tool = new Cli();
     tool.setConf(conf);
     int exitCode = tool.run(args); // start balancing
-    assertEquals("Exit status code mismatches",
-        ExitStatus.IO_EXCEPTION.getExitCode(), exitCode);
+      assertEquals(
+              ExitStatus.IO_EXCEPTION.getExitCode(), exitCode, "Exit status code mismatches");
 
     // Case2: Release lease so that another balancer would be able to
     // perform balancing.
     out.close();
-    assertTrue("'balancer.id' file doesn't exist!",
-        fs.exists(Balancer.BALANCER_ID_PATH));
+      assertTrue(
+              fs.exists(Balancer.BALANCER_ID_PATH), "'balancer.id' file doesn't exist!");
     exitCode = tool.run(args); // start balancing
-    assertEquals("Exit status code mismatches",
-        ExitStatus.SUCCESS.getExitCode(), exitCode);
+      assertEquals(
+              ExitStatus.SUCCESS.getExitCode(), exitCode, "Exit status code mismatches");
   }
 
   public void integrationTestWithStripedFile(Configuration conf) throws Exception {
@@ -1742,15 +1740,15 @@ public class TestBalancer {
         // also includes the time it took to perform the block move ops in the
         // first iteration
         new PortNumberBasedNodes(1, 0, 0), false, false, true, 0.5);
-    assertTrue("Number of getBlocks should be not less than " +
-        getBlocksMaxQps, numGetBlocksCalls.get() >= getBlocksMaxQps);
+      assertTrue(numGetBlocksCalls.get() >= getBlocksMaxQps, "Number of getBlocks should be not less than " +
+              getBlocksMaxQps);
     long durationMs = 1 + endGetBlocksTime.get() - startGetBlocksTime.get();
     int durationSec = (int) Math.ceil(durationMs / 1000.0);
     LOG.info("Balancer executed {} getBlocks in {} msec (round up to {} sec)",
         numGetBlocksCalls.get(), durationMs, durationSec);
     long getBlockCallsPerSecond = numGetBlocksCalls.get() / durationSec;
-    assertTrue("Expected balancer getBlocks calls per second <= " +
-        getBlocksMaxQps, getBlockCallsPerSecond <= getBlocksMaxQps);
+      assertTrue(getBlockCallsPerSecond <= getBlocksMaxQps, "Expected balancer getBlocks calls per second <= " +
+              getBlocksMaxQps);
   }
 
   /**

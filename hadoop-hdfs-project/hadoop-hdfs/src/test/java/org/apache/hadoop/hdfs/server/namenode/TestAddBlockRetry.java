@@ -19,9 +19,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import org.slf4j.Logger;
@@ -36,9 +35,9 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
@@ -54,7 +53,7 @@ public class TestAddBlockRetry {
   private Configuration conf;
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -63,7 +62,7 @@ public class TestAddBlockRetry {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -103,18 +102,18 @@ public class TestAddBlockRetry {
     }
     DatanodeStorageInfo targets[] = FSDirWriteFileOp.chooseTargetForNewBlock(
         ns.getBlockManager(), src, null, null, null, r);
-    assertNotNull("Targets must be generated", targets);
+      assertNotNull(targets, "Targets must be generated");
 
     // run second addBlock()
     LOG.info("Starting second addBlock for " + src);
     nn.addBlock(src, "clientName", null, null,
                 HdfsConstants.GRANDFATHER_INODE_ID, null, null);
-    assertTrue("Penultimate block must be complete",
-               checkFileProgress(src, false));
+      assertTrue(
+              checkFileProgress(src, false), "Penultimate block must be complete");
     LocatedBlocks lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
-    assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
+      assertEquals(1, lbs.getLocatedBlocks().size(), "Must be one block");
     LocatedBlock lb2 = lbs.get(0);
-    assertEquals("Wrong replication", REPLICATION, lb2.getLocations().length);
+      assertEquals(REPLICATION, lb2.getLocations().length, "Wrong replication");
 
     // continue first addBlock()
     ns.writeLock();
@@ -125,14 +124,14 @@ public class TestAddBlockRetry {
     } finally {
       ns.writeUnlock();
     }
-    assertEquals("Blocks are not equal", lb2.getBlock(), newBlock.getBlock());
+      assertEquals(lb2.getBlock(), newBlock.getBlock(), "Blocks are not equal");
 
     // check locations
     lbs = nn.getBlockLocations(src, 0, Long.MAX_VALUE);
-    assertEquals("Must be one block", 1, lbs.getLocatedBlocks().size());
+      assertEquals(1, lbs.getLocatedBlocks().size(), "Must be one block");
     LocatedBlock lb1 = lbs.get(0);
-    assertEquals("Wrong replication", REPLICATION, lb1.getLocations().length);
-    assertEquals("Blocks are not equal", lb1.getBlock(), lb2.getBlock());
+      assertEquals(REPLICATION, lb1.getLocations().length, "Wrong replication");
+      assertEquals(lb1.getBlock(), lb2.getBlock(), "Blocks are not equal");
   }
 
   boolean checkFileProgress(String src, boolean checkall) throws IOException {
@@ -163,14 +162,14 @@ public class TestAddBlockRetry {
     LOG.info("Starting first addBlock for " + src);
     LocatedBlock lb1 = nameNodeRpc.addBlock(src, "clientName", null, null,
         HdfsConstants.GRANDFATHER_INODE_ID, null, null);
-    assertTrue("Block locations should be present",
-        lb1.getLocations().length > 0);
+      assertTrue(
+              lb1.getLocations().length > 0, "Block locations should be present");
 
     cluster.restartNameNode();
     nameNodeRpc = cluster.getNameNodeRpc();
     LocatedBlock lb2 = nameNodeRpc.addBlock(src, "clientName", null, null,
         HdfsConstants.GRANDFATHER_INODE_ID, null, null);
-    assertEquals("Blocks are not equal", lb1.getBlock(), lb2.getBlock());
-    assertTrue("Wrong locations with retry", lb2.getLocations().length > 0);
+      assertEquals(lb1.getBlock(), lb2.getBlock(), "Blocks are not equal");
+      assertTrue(lb2.getLocations().length > 0, "Wrong locations with retry");
   }
 }

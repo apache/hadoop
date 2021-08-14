@@ -19,10 +19,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +30,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys
     .DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys
     .DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -48,9 +46,9 @@ import org.apache.hadoop.util.FakeTimer;
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +87,7 @@ public class TestSlowDiskTracker {
     conf.setTimeDuration(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         OUTLIERS_REPORT_INTERVAL, TimeUnit.MILLISECONDS);
   }
-  @Before
+  @BeforeEach
   public void setup() {
     timer = new FakeTimer();
     tracker = new SlowDiskTracker(conf, timer);

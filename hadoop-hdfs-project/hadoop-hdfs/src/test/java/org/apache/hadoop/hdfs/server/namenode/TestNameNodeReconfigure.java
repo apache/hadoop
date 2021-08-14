@@ -21,11 +21,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 
 import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +61,7 @@ public class TestNameNodeReconfigure {
   private MiniDFSCluster cluster;
   private final int customizedBlockInvalidateLimit = 500;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFS_BLOCK_INVALIDATE_LIMIT_KEY,
@@ -91,22 +91,22 @@ public class TestNameNodeReconfigure {
     // revert to default
     nameNode.reconfigureProperty(HADOOP_CALLER_CONTEXT_ENABLED_KEY, null);
 
-    // verify default
-    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", false,
-        nameSystem.getCallerContextEnabled());
-    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value", null,
-        nameNode.getConf().get(HADOOP_CALLER_CONTEXT_ENABLED_KEY));
+      // verify default
+      assertEquals(false,
+              nameSystem.getCallerContextEnabled(), HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
+      assertEquals(null,
+              nameNode.getConf().get(HADOOP_CALLER_CONTEXT_ENABLED_KEY), HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
   }
 
   void verifyReconfigureCallerContextEnabled(final NameNode nameNode,
       final FSNamesystem nameSystem, boolean expected) {
-    assertEquals(HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
-        expected, nameNode.getNamesystem().getCallerContextEnabled());
-    assertEquals(
-        HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value",
-        expected,
-        nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-            HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT));
+      assertEquals(
+              expected, nameNode.getNamesystem().getCallerContextEnabled(), HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
+      assertEquals(
+              expected,
+              nameNode.getConf().getBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+                      HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT),
+              HADOOP_CALLER_CONTEXT_ENABLED_KEY + " has wrong value");
   }
 
   /**
@@ -136,18 +136,18 @@ public class TestNameNodeReconfigure {
 
     // revert to default
     nameNode.reconfigureProperty(ipcClientRPCBackoffEnable, null);
-    assertEquals(ipcClientRPCBackoffEnable + " has wrong value", false,
-        nnrs.getClientRpcServer().isClientBackoffEnabled());
-    assertEquals(ipcClientRPCBackoffEnable + " has wrong value", null,
-        nameNode.getConf().get(ipcClientRPCBackoffEnable));
+      assertEquals(false,
+              nnrs.getClientRpcServer().isClientBackoffEnabled(), ipcClientRPCBackoffEnable + " has wrong value");
+      assertEquals(null,
+              nameNode.getConf().get(ipcClientRPCBackoffEnable), ipcClientRPCBackoffEnable + " has wrong value");
   }
 
   void verifyReconfigureIPCBackoff(final NameNode nameNode,
       final NameNodeRpcServer nnrs, String property, boolean expected) {
-    assertEquals(property + " has wrong value", expected, nnrs
-        .getClientRpcServer().isClientBackoffEnabled());
-    assertEquals(property + " has wrong value", expected, nameNode.getConf()
-        .getBoolean(property, IPC_BACKOFF_ENABLE_DEFAULT));
+      assertEquals(expected, nnrs
+              .getClientRpcServer().isClientBackoffEnabled(), property + " has wrong value");
+      assertEquals(expected, nameNode.getConf()
+              .getBoolean(property, IPC_BACKOFF_ENABLE_DEFAULT), property + " has wrong value");
   }
 
   /**
@@ -178,52 +178,52 @@ public class TestNameNodeReconfigure {
       assertTrue(expected.getCause() instanceof NumberFormatException);
     }
 
-    // verify change
-    assertEquals(
-        DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
-        6,
-        nameNode.getConf().getLong(DFS_HEARTBEAT_INTERVAL_KEY,
-            DFS_HEARTBEAT_INTERVAL_DEFAULT));
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value", 6,
-        datanodeManager.getHeartbeatInterval());
+      // verify change
+      assertEquals(
+              6,
+              nameNode.getConf().getLong(DFS_HEARTBEAT_INTERVAL_KEY,
+                      DFS_HEARTBEAT_INTERVAL_DEFAULT),
+              DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
+      assertEquals(6,
+              datanodeManager.getHeartbeatInterval(), DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
 
-    assertEquals(
-        DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY + " has wrong value",
-        10 * 60 * 1000,
-        nameNode.getConf().getInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
-            DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
-        + " has wrong value", 10 * 60 * 1000,
-        datanodeManager.getHeartbeatRecheckInterval());
+      assertEquals(
+              10 * 60 * 1000,
+              nameNode.getConf().getInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+                      DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT),
+              DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY + " has wrong value");
+      assertEquals(10 * 60 * 1000,
+              datanodeManager.getHeartbeatRecheckInterval(), DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
+              + " has wrong value");
 
     // change to a value with time unit
     nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, "1m");
 
-    assertEquals(
-        DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
-        60,
-        nameNode.getConf().getLong(DFS_HEARTBEAT_INTERVAL_KEY,
-            DFS_HEARTBEAT_INTERVAL_DEFAULT));
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value", 60,
-        datanodeManager.getHeartbeatInterval());
+      assertEquals(
+              60,
+              nameNode.getConf().getLong(DFS_HEARTBEAT_INTERVAL_KEY,
+                      DFS_HEARTBEAT_INTERVAL_DEFAULT),
+              DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
+      assertEquals(60,
+              datanodeManager.getHeartbeatInterval(), DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
 
     // revert to defaults
     nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY, null);
     nameNode.reconfigureProperty(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
         null);
 
-    // verify defaults
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value", null,
-        nameNode.getConf().get(DFS_HEARTBEAT_INTERVAL_KEY));
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value",
-        DFS_HEARTBEAT_INTERVAL_DEFAULT, datanodeManager.getHeartbeatInterval());
+      // verify defaults
+      assertEquals(null,
+              nameNode.getConf().get(DFS_HEARTBEAT_INTERVAL_KEY), DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
+      assertEquals(
+              DFS_HEARTBEAT_INTERVAL_DEFAULT, datanodeManager.getHeartbeatInterval(), DFS_HEARTBEAT_INTERVAL_KEY + " has wrong value");
 
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
-        + " has wrong value", null,
-        nameNode.getConf().get(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
-        + " has wrong value", DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT,
-        datanodeManager.getHeartbeatRecheckInterval());
+      assertEquals(null,
+              nameNode.getConf().get(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY), DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
+              + " has wrong value");
+      assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT,
+              datanodeManager.getHeartbeatRecheckInterval(), DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY
+              + " has wrong value");
   }
 
   /**
@@ -251,17 +251,17 @@ public class TestNameNodeReconfigure {
     nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
 
-    // Since DFS_STORAGE_POLICY_ENABLED_KEY is disabled, SPS can't be enabled.
-    assertNull("SPS shouldn't start as "
-        + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled",
-            nameNode.getNamesystem().getBlockManager().getSPSManager());
+      // Since DFS_STORAGE_POLICY_ENABLED_KEY is disabled, SPS can't be enabled.
+      assertNull(
+              nameNode.getNamesystem().getBlockManager().getSPSManager(), "SPS shouldn't start as "
+              + DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY + " is disabled");
     verifySPSEnabled(nameNode, DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL, false);
 
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
-        StoragePolicySatisfierMode.EXTERNAL.toString(), nameNode.getConf()
-            .get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-            DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
+      assertEquals(
+              StoragePolicySatisfierMode.EXTERNAL.toString(), nameNode.getConf()
+              .get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+                      DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT), DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value");
   }
 
   /**
@@ -295,13 +295,13 @@ public class TestNameNodeReconfigure {
     // enable external SPS
     nameNode.reconfigureProperty(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
-        false, nameNode.getNamesystem().getBlockManager().getSPSManager()
-            .isSatisfierRunning());
-    assertEquals(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value",
-        StoragePolicySatisfierMode.EXTERNAL.toString(),
-        nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
-            DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT));
+      assertEquals(
+              false, nameNode.getNamesystem().getBlockManager().getSPSManager()
+              .isSatisfierRunning(), DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value");
+      assertEquals(
+              StoragePolicySatisfierMode.EXTERNAL.toString(),
+              nameNode.getConf().get(DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+                      DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT), DFS_STORAGE_POLICY_SATISFIER_MODE_KEY + " has wrong value");
   }
 
   /**
@@ -340,11 +340,11 @@ public class TestNameNodeReconfigure {
             .getNamesystem().getBlockManager().getSPSManager();
     boolean isSPSRunning = spsMgr != null ? spsMgr.isSatisfierRunning()
         : false;
-    assertEquals(property + " has wrong value", isSPSRunning, isSPSRunning);
+      assertEquals(isSPSRunning, isSPSRunning, property + " has wrong value");
     String actual = nameNode.getConf().get(property,
         DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT);
-    assertEquals(property + " has wrong value", expected,
-        StoragePolicySatisfierMode.fromString(actual));
+      assertEquals(expected,
+              StoragePolicySatisfierMode.fromString(actual), property + " has wrong value");
   }
 
   @Test
@@ -354,29 +354,29 @@ public class TestNameNodeReconfigure {
     final DatanodeManager datanodeManager = nameNode.namesystem
         .getBlockManager().getDatanodeManager();
 
-    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not correctly set",
-        customizedBlockInvalidateLimit,
-        datanodeManager.getBlockInvalidateLimit());
+      assertEquals(
+              customizedBlockInvalidateLimit,
+              datanodeManager.getBlockInvalidateLimit(), DFS_BLOCK_INVALIDATE_LIMIT_KEY + " is not correctly set");
 
     nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY,
         Integer.toString(6));
 
-    // 20 * 6 = 120 < 500
-    // Invalid block limit should stay same as before after reconfiguration.
-    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY
-            + " is not honored after reconfiguration",
-        customizedBlockInvalidateLimit,
-        datanodeManager.getBlockInvalidateLimit());
+      // 20 * 6 = 120 < 500
+      // Invalid block limit should stay same as before after reconfiguration.
+      assertEquals(
+              customizedBlockInvalidateLimit,
+              datanodeManager.getBlockInvalidateLimit(), DFS_BLOCK_INVALIDATE_LIMIT_KEY
+              + " is not honored after reconfiguration");
 
     nameNode.reconfigureProperty(DFS_HEARTBEAT_INTERVAL_KEY,
         Integer.toString(50));
 
-    // 20 * 50 = 1000 > 500
-    // Invalid block limit should be reset to 1000
-    assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY
-            + " is not reconfigured correctly",
-        1000,
-        datanodeManager.getBlockInvalidateLimit());
+      // 20 * 50 = 1000 > 500
+      // Invalid block limit should be reset to 1000
+      assertEquals(
+              1000,
+              datanodeManager.getBlockInvalidateLimit(), DFS_BLOCK_INVALIDATE_LIMIT_KEY
+              + " is not reconfigured correctly");
   }
 
   @Test
@@ -394,7 +394,7 @@ public class TestNameNodeReconfigure {
     assertEquals(true, FSImageFormatProtobuf.getEnableParallelLoad());
   }
 
-  @After
+  @AfterEach
   public void shutDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

@@ -20,12 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.lang.management.ManagementFactory;
@@ -56,11 +51,11 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 /**
@@ -92,7 +87,7 @@ public class TestDataNodeVolumeFailureReporting {
   @Rule
   public Timeout timeout = new Timeout(120 * 1000);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // These tests use DataNodeTestUtils#injectDataDirFailure() to simulate
     // volume failures which is currently not supported on Windows.
@@ -101,7 +96,7 @@ public class TestDataNodeVolumeFailureReporting {
     initCluster(1, 2, 1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     IOUtils.cleanupWithLogger(LOG, fs);
     if (cluster != null) {
@@ -156,9 +151,9 @@ public class TestDataNodeVolumeFailureReporting {
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file1, (short)3);
     ArrayList<DataNode> dns = cluster.getDataNodes();
-    assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
-    assertTrue("DN2 should be up", dns.get(1).isDatanodeUp());
-    assertTrue("DN3 should be up", dns.get(2).isDatanodeUp());
+      assertTrue(dns.get(0).isDatanodeUp(), "DN1 should be up");
+      assertTrue(dns.get(1).isDatanodeUp(), "DN2 should be up");
+      assertTrue(dns.get(2).isDatanodeUp(), "DN3 should be up");
 
     /*
      * The metrics should confirm the volume failures.
@@ -186,7 +181,7 @@ public class TestDataNodeVolumeFailureReporting {
     Path file2 = new Path("/test2");
     DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
     DFSTestUtil.waitReplication(fs, file2, (short)3);
-    assertTrue("DN3 should still be up", dns.get(2).isDatanodeUp());
+      assertTrue(dns.get(2).isDatanodeUp(), "DN3 should still be up");
     checkFailuresAtDataNode(dns.get(2), 1, true, dn3Vol1.getAbsolutePath());
 
     DataNodeTestUtils.triggerHeartbeat(dns.get(2));
@@ -338,9 +333,9 @@ public class TestDataNodeVolumeFailureReporting {
     DFSTestUtil.waitReplication(fs, file2, (short)3);
 
     ArrayList<DataNode> dns = cluster.getDataNodes();
-    assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
-    assertTrue("DN2 should be up", dns.get(1).isDatanodeUp());
-    assertTrue("DN3 should be up", dns.get(2).isDatanodeUp());
+      assertTrue(dns.get(0).isDatanodeUp(), "DN1 should be up");
+      assertTrue(dns.get(1).isDatanodeUp(), "DN2 should be up");
+      assertTrue(dns.get(2).isDatanodeUp(), "DN3 should be up");
 
     checkFailuresAtDataNode(dns.get(0), 1, true, dn1Vol1.getAbsolutePath(),
         dn1Vol2.getAbsolutePath());
@@ -387,9 +382,9 @@ public class TestDataNodeVolumeFailureReporting {
     DFSTestUtil.waitReplication(fs, file1, (short)2);
 
     ArrayList<DataNode> dns = cluster.getDataNodes();
-    assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
-    assertTrue("DN2 should be up", dns.get(1).isDatanodeUp());
-    assertTrue("DN3 should be up", dns.get(2).isDatanodeUp());
+      assertTrue(dns.get(0).isDatanodeUp(), "DN1 should be up");
+      assertTrue(dns.get(1).isDatanodeUp(), "DN2 should be up");
+      assertTrue(dns.get(2).isDatanodeUp(), "DN3 should be up");
 
     checkFailuresAtDataNode(dns.get(0), 1, true, dn1Vol1.getAbsolutePath());
     checkFailuresAtDataNode(dns.get(1), 1, true, dn2Vol1.getAbsolutePath());
@@ -478,8 +473,8 @@ public class TestDataNodeVolumeFailureReporting {
     cluster.waitActive();
     ArrayList<DataNode> dns = cluster.getDataNodes();
     DataNode dn = dns.get(0);
-    assertFalse("DataNode should not reformat if VERSION is missing",
-        currentVersion.exists());
+      assertFalse(
+              currentVersion.exists(), "DataNode should not reformat if VERSION is missing");
 
     // Make sure DN's JMX sees the failed volume
     final String[] expectedFailedVolumes = {dn1Vol1.getAbsolutePath()};
@@ -516,8 +511,8 @@ public class TestDataNodeVolumeFailureReporting {
     assertTrue(cluster.restartDataNodes(true));
     // the DN should tolerate one volume failure.
     cluster.waitActive();
-    assertFalse("DataNode should not reformat if VERSION is missing",
-        currentVersion.exists());
+      assertFalse(
+              currentVersion.exists(), "DataNode should not reformat if VERSION is missing");
   }
 
   /**
@@ -538,7 +533,7 @@ public class TestDataNodeVolumeFailureReporting {
         "Hadoop:service=DataNode,name=FSDatasetState-" + dn0.getDatanodeUuid());
     int numFailedVolumes = (int) mbs.getAttribute(mxbeanName,
         "NumFailedVolumes");
-    Assert.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 0, false, new String[] {});
 
@@ -548,8 +543,8 @@ public class TestDataNodeVolumeFailureReporting {
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol1));
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assert.assertEquals(1, numFailedVolumes);
-    Assert.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    Assertions.assertEquals(1, numFailedVolumes);
+    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
             numFailedVolumes);
     checkFailuresAtDataNode(dn0, 1, true,
         new String[] {dn0Vol1.getAbsolutePath()});
@@ -561,12 +556,12 @@ public class TestDataNodeVolumeFailureReporting {
           oldDataDirs);
       fail("Reconfigure with failed disk should throw exception.");
     } catch (ReconfigurationException e) {
-      Assert.assertTrue("Reconfigure exception doesn't have expected path!",
-          e.getCause().getMessage().contains(dn0Vol1.getAbsolutePath()));
+        Assertions.assertTrue(
+                e.getCause().getMessage().contains(dn0Vol1.getAbsolutePath()), "Reconfigure exception doesn't have expected path!");
     }
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assert.assertEquals(1, numFailedVolumes);
-    Assert.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    Assertions.assertEquals(1, numFailedVolumes);
+    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 1, true,
         new String[] {dn0Vol1.getAbsolutePath()});
@@ -577,8 +572,8 @@ public class TestDataNodeVolumeFailureReporting {
     dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
             dataDirs);
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assert.assertEquals(0, numFailedVolumes);
-    Assert.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    Assertions.assertEquals(0, numFailedVolumes);
+    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
             numFailedVolumes);
     checkFailuresAtDataNode(dn0, 0, true, new String[] {});
 
@@ -588,8 +583,8 @@ public class TestDataNodeVolumeFailureReporting {
     dn0.reconfigurePropertyImpl(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
             oldDataDirs);
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assert.assertEquals(0, numFailedVolumes);
-    Assert.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    Assertions.assertEquals(0, numFailedVolumes);
+    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 0, true, new String[] {});
 
@@ -599,8 +594,8 @@ public class TestDataNodeVolumeFailureReporting {
     DataNodeTestUtils.waitForDiskError(dn0,
         DataNodeTestUtils.getVolume(dn0, dn0Vol2));
     numFailedVolumes = (int) mbs.getAttribute(mxbeanName, "NumFailedVolumes");
-    Assert.assertEquals(1, numFailedVolumes);
-    Assert.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
+    Assertions.assertEquals(1, numFailedVolumes);
+    Assertions.assertEquals(dn0.getFSDataset().getNumFailedVolumes(),
         numFailedVolumes);
     checkFailuresAtDataNode(dn0, 1, true,
         new String[] {dn0Vol2.getAbsolutePath()});
@@ -658,9 +653,9 @@ public class TestDataNodeVolumeFailureReporting {
     LOG.info(strBuilder.toString());
     final long actualVolumeFailures =
         getLongCounter("VolumeFailures", getMetrics(dn.getMetrics().name()));
-    assertTrue("Actual async detected volume failures should be greater or " +
-        "equal than " + expectedFailedVolumes,
-        actualVolumeFailures >= expectedVolumeFailuresCounter);
+      assertTrue(
+              actualVolumeFailures >= expectedVolumeFailuresCounter, "Actual async detected volume failures should be greater or " +
+              "equal than " + expectedFailedVolumes);
     assertEquals(expectedFailedVolumes.length, fsd.getNumFailedVolumes());
     assertArrayEquals(expectedFailedVolumes,
         convertToAbsolutePaths(fsd.getFailedStorageLocations()));

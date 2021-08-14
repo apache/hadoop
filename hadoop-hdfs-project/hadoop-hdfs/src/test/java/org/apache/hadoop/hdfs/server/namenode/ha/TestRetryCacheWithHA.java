@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -89,9 +89,9 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
 import org.apache.hadoop.util.LightWeightCache;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestRetryCacheWithHA {
   private static final Logger LOG =
@@ -137,7 +137,7 @@ public class TestRetryCacheWithHA {
     }
   }
   
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BlockSize);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, ResponseSize);
@@ -154,7 +154,7 @@ public class TestRetryCacheWithHA {
     dfs = (DistributedFileSystem) HATestUtil.configureFailoverFs(cluster, conf);
   }
   
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -176,7 +176,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn0 = cluster.getNamesystem(0);
     LightWeightCache<CacheEntry, CacheEntry> cacheSet = 
         (LightWeightCache<CacheEntry, CacheEntry>) fsn0.getRetryCache().getCacheSet();
-    assertEquals("Retry cache size is wrong", 39, cacheSet.size());
+      assertEquals(39, cacheSet.size(), "Retry cache size is wrong");
     
     Map<CacheEntry, CacheEntry> oldEntries = 
         new HashMap<CacheEntry, CacheEntry>();
@@ -197,7 +197,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn1 = cluster.getNamesystem(1);
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) fsn1
         .getRetryCache().getCacheSet();
-    assertEquals("Retry cache size is wrong", 39, cacheSet.size());
+      assertEquals(39, cacheSet.size(), "Retry cache size is wrong");
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();
@@ -1319,11 +1319,11 @@ public class TestRetryCacheWithHA {
         }
       }
     }.start();
-    
-    // make sure the client's call has actually been handled by the active NN
-    assertTrue("After waiting the operation " + op.name
-        + " still has not taken effect on NN yet",
-        op.checkNamenodeBeforeReturn());
+
+      // make sure the client's call has actually been handled by the active NN
+      assertTrue(
+              op.checkNamenodeBeforeReturn(), "After waiting the operation " + op.name
+              + " still has not taken effect on NN yet");
     
     // force the failover
     cluster.transitionToStandby(0);
@@ -1351,8 +1351,8 @@ public class TestRetryCacheWithHA {
       return (hitsNN[0] + hitsNN[1]) > 0;
     }, 5, 10000);
 
-    assertTrue("CacheHit: " + hitsNN[0] + ", " + hitsNN[1],
-        +hitsNN[0] + hitsNN[1] > 0);
+      assertTrue(
+              +hitsNN[0] + hitsNN[1] > 0, "CacheHit: " + hitsNN[0] + ", " + hitsNN[1]);
     final long[] updatesNN = new long[]{0, 0};
     GenericTestUtils.waitFor(() -> {
       updatesNN[0] = cluster.getNamesystem(0).getRetryCache()
@@ -1363,16 +1363,16 @@ public class TestRetryCacheWithHA {
           .getCacheUpdated();
       return updatesNN[0] > 0 && updatesNN[1] > 0;
     }, 5, 10000);
-    // Cache updated metrics on NN0 should be >0 since the op was process on NN0
-    assertTrue("CacheUpdated on NN0: " + updatesNN[0], updatesNN[0] > 0);
-    // Cache updated metrics on NN0 should be >0 since NN1 applied the editlog
-    assertTrue("CacheUpdated on NN1: " + updatesNN[1], updatesNN[1] > 0);
+      // Cache updated metrics on NN0 should be >0 since the op was process on NN0
+      assertTrue(updatesNN[0] > 0, "CacheUpdated on NN0: " + updatesNN[0]);
+      // Cache updated metrics on NN0 should be >0 since NN1 applied the editlog
+      assertTrue(updatesNN[1] > 0, "CacheUpdated on NN1: " + updatesNN[1]);
     long expectedUpdateCount = op.getExpectedCacheUpdateCount();
     if (expectedUpdateCount > 0) {
-      assertEquals("CacheUpdated on NN0: " + updatesNN[0], expectedUpdateCount,
-          updatesNN[0]);
-      assertEquals("CacheUpdated on NN0: " + updatesNN[1], expectedUpdateCount,
-          updatesNN[1]);
+        assertEquals(expectedUpdateCount,
+                updatesNN[0], "CacheUpdated on NN0: " + updatesNN[0]);
+        assertEquals(expectedUpdateCount,
+                updatesNN[1], "CacheUpdated on NN0: " + updatesNN[1]);
     }
   }
 
@@ -1431,7 +1431,7 @@ public class TestRetryCacheWithHA {
     for (int i=0; i<poolCount; i++) {
       CachePoolEntry pool = pools.next();
       String pollName = pool.getInfo().getPoolName();
-      assertTrue("The pool name should be expected", tmpNames.remove(pollName));
+        assertTrue(tmpNames.remove(pollName), "The pool name should be expected");
       if (i % 2 == 0) {
         int standby = active;
         active = (standby == 0) ? 1 : 0;
@@ -1440,7 +1440,7 @@ public class TestRetryCacheWithHA {
         cluster.waitActive(active);
       }
     }
-    assertTrue("All pools must be found", tmpNames.isEmpty());
+      assertTrue(tmpNames.isEmpty(), "All pools must be found");
   }
 
   @SuppressWarnings("unchecked")
@@ -1452,7 +1452,7 @@ public class TestRetryCacheWithHA {
     for (int i=0; i<poolCount; i++) {
       CacheDirectiveEntry directive = directives.next();
       String pollName = directive.getInfo().getPool();
-      assertTrue("The pool name should be expected", tmpNames.remove(pollName));
+        assertTrue(tmpNames.remove(pollName), "The pool name should be expected");
       if (i % 2 == 0) {
         int standby = active;
         active = (standby == 0) ? 1 : 0;
@@ -1461,6 +1461,6 @@ public class TestRetryCacheWithHA {
         cluster.waitActive(active);
       }
     }
-    assertTrue("All pools must be found", tmpNames.isEmpty());
+      assertTrue(tmpNames.isEmpty(), "All pools must be found");
   }
 }

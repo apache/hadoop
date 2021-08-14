@@ -23,10 +23,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -43,7 +43,7 @@ public class TestErasureCodeBenchmarkThroughput {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     conf = new HdfsConfiguration();
     int numDN = ErasureCodeBenchmarkThroughput.getEcPolicy().getNumDataUnits() +
@@ -55,7 +55,7 @@ public class TestErasureCodeBenchmarkThroughput {
         ErasureCodeBenchmarkThroughput.getEcPolicy().getName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown(true);
@@ -63,9 +63,9 @@ public class TestErasureCodeBenchmarkThroughput {
   }
 
   private static void runBenchmark(String[] args) throws Exception {
-    Assert.assertNotNull(conf);
-    Assert.assertNotNull(fs);
-    Assert.assertEquals(0, ToolRunner.run(conf,
+    Assertions.assertNotNull(conf);
+    Assertions.assertNotNull(fs);
+    Assertions.assertEquals(0, ToolRunner.run(conf,
         new ErasureCodeBenchmarkThroughput(fs), args));
   }
 
@@ -80,7 +80,7 @@ public class TestErasureCodeBenchmarkThroughput {
             ErasureCodeBenchmarkThroughput.getFilePath(dataSize, isEc));
       }
     });
-    Assert.assertEquals(numFile, statuses.length);
+    Assertions.assertEquals(numFile, statuses.length);
   }
 
   @Test

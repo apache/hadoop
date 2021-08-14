@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,8 +27,8 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.Time;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestLightWeightLinkedSet {
 
@@ -42,7 +39,7 @@ public class TestLightWeightLinkedSet {
   private LightWeightLinkedSet<Integer> set;
   private Random rand;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     float maxF = LightWeightLinkedSet.DEFAULT_MAX_LOAD_FACTOR;
     float minF = LightWeightLinkedSet.DEFAUT_MIN_LOAD_FACTOR;

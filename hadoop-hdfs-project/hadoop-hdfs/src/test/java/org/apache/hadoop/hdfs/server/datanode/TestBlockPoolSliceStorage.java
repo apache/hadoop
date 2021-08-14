@@ -27,13 +27,13 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * Test that BlockPoolSliceStorage can correctly generate trash and
  * restore directories for a given block file path.
-*/
+ */
 public class TestBlockPoolSliceStorage {
 
   public static final Logger LOG = LoggerFactory

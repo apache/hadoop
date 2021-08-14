@@ -38,13 +38,14 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounterWithoutCheck;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+
 import java.io.IOException;
 
 /**
@@ -67,7 +68,7 @@ public class TestDataNodeErasureCodingMetrics {
   private Configuration conf;
   private DistributedFileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
@@ -81,7 +82,7 @@ public class TestDataNodeErasureCodingMetrics {
         StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -90,26 +91,26 @@ public class TestDataNodeErasureCodingMetrics {
 
   @Test(timeout = 120000)
   public void testFullBlock() throws Exception {
-    Assert.assertEquals(0, getLongMetric("EcReconstructionReadTimeMillis"));
-    Assert.assertEquals(0, getLongMetric("EcReconstructionDecodingTimeMillis"));
-    Assert.assertEquals(0, getLongMetric("EcReconstructionWriteTimeMillis"));
+    Assertions.assertEquals(0, getLongMetric("EcReconstructionReadTimeMillis"));
+    Assertions.assertEquals(0, getLongMetric("EcReconstructionDecodingTimeMillis"));
+    Assertions.assertEquals(0, getLongMetric("EcReconstructionWriteTimeMillis"));
 
     doTest("/testEcMetrics", blockGroupSize, 0);
 
-    Assert.assertEquals("EcReconstructionTasks should be ",
-        1, getLongMetric("EcReconstructionTasks"));
-    Assert.assertEquals("EcFailedReconstructionTasks should be ",
-        0, getLongMetric("EcFailedReconstructionTasks"));
-    Assert.assertTrue(getLongMetric("EcDecodingTimeNanos") > 0);
-    Assert.assertEquals("EcReconstructionBytesRead should be ",
-        blockGroupSize, getLongMetric("EcReconstructionBytesRead"));
-    Assert.assertEquals("EcReconstructionBytesWritten should be ",
-        blockSize, getLongMetric("EcReconstructionBytesWritten"));
-    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
-        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
-    Assert.assertTrue(getLongMetric("EcReconstructionReadTimeMillis") > 0);
-    Assert.assertTrue(getLongMetric("EcReconstructionDecodingTimeMillis") > 0);
-    Assert.assertTrue(getLongMetric("EcReconstructionWriteTimeMillis") > 0);
+      Assertions.assertEquals(
+              1, getLongMetric("EcReconstructionTasks"), "EcReconstructionTasks should be ");
+      Assertions.assertEquals(
+              0, getLongMetric("EcFailedReconstructionTasks"), "EcFailedReconstructionTasks should be ");
+    Assertions.assertTrue(getLongMetric("EcDecodingTimeNanos") > 0);
+      Assertions.assertEquals(
+              blockGroupSize, getLongMetric("EcReconstructionBytesRead"), "EcReconstructionBytesRead should be ");
+      Assertions.assertEquals(
+              blockSize, getLongMetric("EcReconstructionBytesWritten"), "EcReconstructionBytesWritten should be ");
+      Assertions.assertEquals(
+              0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"), "EcReconstructionRemoteBytesRead should be ");
+    Assertions.assertTrue(getLongMetric("EcReconstructionReadTimeMillis") > 0);
+    Assertions.assertTrue(getLongMetric("EcReconstructionDecodingTimeMillis") > 0);
+    Assertions.assertTrue(getLongMetric("EcReconstructionWriteTimeMillis") > 0);
   }
 
   // A partial block, reconstruct the partial block
@@ -118,12 +119,12 @@ public class TestDataNodeErasureCodingMetrics {
     final int fileLen = blockSize / 10;
     doTest("/testEcBytes", fileLen, 0);
 
-    Assert.assertEquals("EcReconstructionBytesRead should be ",
-        fileLen,  getLongMetric("EcReconstructionBytesRead"));
-    Assert.assertEquals("EcReconstructionBytesWritten should be ",
-        fileLen, getLongMetric("EcReconstructionBytesWritten"));
-    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
-        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
+      Assertions.assertEquals(
+              fileLen,  getLongMetric("EcReconstructionBytesRead"), "EcReconstructionBytesRead should be ");
+      Assertions.assertEquals(
+              fileLen, getLongMetric("EcReconstructionBytesWritten"), "EcReconstructionBytesWritten should be ");
+      Assertions.assertEquals(
+              0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"), "EcReconstructionRemoteBytesRead should be ");
   }
 
   // 1 full block + 5 partial block, reconstruct the full block
@@ -132,13 +133,13 @@ public class TestDataNodeErasureCodingMetrics {
     final int fileLen = cellSize * dataBlocks + cellSize + cellSize / 10;
     doTest("/testEcBytes", fileLen, 0);
 
-    Assert.assertEquals("ecReconstructionBytesRead should be ",
-        cellSize * dataBlocks + cellSize + cellSize / 10,
-        getLongMetric("EcReconstructionBytesRead"));
-    Assert.assertEquals("EcReconstructionBytesWritten should be ",
-        blockSize, getLongMetric("EcReconstructionBytesWritten"));
-    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
-        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
+      Assertions.assertEquals(
+              cellSize * dataBlocks + cellSize + cellSize / 10,
+              getLongMetric("EcReconstructionBytesRead"), "ecReconstructionBytesRead should be ");
+      Assertions.assertEquals(
+              blockSize, getLongMetric("EcReconstructionBytesWritten"), "EcReconstructionBytesWritten should be ");
+      Assertions.assertEquals(
+              0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"), "EcReconstructionRemoteBytesRead should be ");
   }
 
   // 1 full block + 5 partial block, reconstruct the partial block
@@ -147,14 +148,14 @@ public class TestDataNodeErasureCodingMetrics {
     final int fileLen = cellSize * dataBlocks + cellSize + cellSize / 10;
     doTest("/testEcBytes", fileLen, 1);
 
-    Assert.assertEquals("ecReconstructionBytesRead should be ",
-        cellSize * dataBlocks + (cellSize / 10) * 2 ,
-        getLongMetric("EcReconstructionBytesRead"));
-    Assert.assertEquals("ecReconstructionBytesWritten should be ",
-        cellSize + cellSize / 10,
-        getLongMetric("EcReconstructionBytesWritten"));
-    Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
-        0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
+      Assertions.assertEquals(
+              cellSize * dataBlocks + (cellSize / 10) * 2,
+              getLongMetric("EcReconstructionBytesRead"), "ecReconstructionBytesRead should be ");
+      Assertions.assertEquals(
+              cellSize + cellSize / 10,
+              getLongMetric("EcReconstructionBytesWritten"), "ecReconstructionBytesWritten should be ");
+      Assertions.assertEquals(
+              0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"), "EcReconstructionRemoteBytesRead should be ");
   }
 
   private long getLongMetric(String metricName) {
@@ -195,14 +196,14 @@ public class TestDataNodeErasureCodingMetrics {
     final DataNode toCorruptDn = cluster.getDataNode(
         lastBlock.getLocations()[deadNodeIndex].getIpcPort());
     LOG.info("Datanode to be corrupted: " + toCorruptDn);
-    assertNotNull("Failed to find a datanode to be corrupted", toCorruptDn);
+      assertNotNull(toCorruptDn, "Failed to find a datanode to be corrupted");
     toCorruptDn.shutdown();
     setDataNodeDead(toCorruptDn.getDatanodeId());
     DFSTestUtil.waitForDatanodeState(cluster, toCorruptDn.getDatanodeUuid(),
         false, 10000);
 
     final int workCount = getComputedDatanodeWork();
-    assertTrue("Wrongly computed block reconstruction work", workCount > 0);
+      assertTrue(workCount > 0, "Wrongly computed block reconstruction work");
     cluster.triggerHeartbeats();
     int totalBlocks =  (fileLen / blockGroupSize) * groupSize;
     final int remainder = fileLen % blockGroupSize;

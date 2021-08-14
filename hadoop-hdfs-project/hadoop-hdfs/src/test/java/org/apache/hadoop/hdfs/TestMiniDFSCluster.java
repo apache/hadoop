@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,9 +39,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Before;
 import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
@@ -58,7 +57,7 @@ public class TestMiniDFSCluster {
   private static final String CLUSTER_4 = "cluster4";
   private static final String CLUSTER_5 = "cluster5";
   protected File testDataPath;
-  @Before
+  @BeforeEach
   public void setUp() {
     testDataPath = new File(PathUtils.getTestDir(getClass()), "miniclusters");
   }
@@ -232,8 +231,8 @@ public class TestMiniDFSCluster {
           .numDataNodes(1)
           .checkDataNodeHostConfig(true)
           .build()) {
-      assertEquals("DataNode hostname config not respected", "MYHOST",
-          cluster5.getDataNodes().get(0).getDatanodeId().getHostName());
+        assertEquals("MYHOST",
+                cluster5.getDataNodes().get(0).getDatanodeId().getHostName(), "DataNode hostname config not respected");
     }
   }
 

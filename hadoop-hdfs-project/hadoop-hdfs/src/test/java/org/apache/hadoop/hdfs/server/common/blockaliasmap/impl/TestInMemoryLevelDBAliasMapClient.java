@@ -29,18 +29,13 @@ import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,10 +60,7 @@ public class TestInMemoryLevelDBAliasMapClient {
   private Configuration conf;
   private final static String BPID = "BPID-0";
 
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     int port = 9876;
@@ -87,7 +79,7 @@ public class TestInMemoryLevelDBAliasMapClient {
     inMemoryLevelDBAliasMapClient = new InMemoryLevelDBAliasMapClient();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     levelDBAliasMapServer.close();
     inMemoryLevelDBAliasMapClient.close();

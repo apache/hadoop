@@ -23,22 +23,22 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestQuotaAllowOwner {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
@@ -47,7 +47,7 @@ public class TestQuotaAllowOwner {
     restartCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() {
     if (cluster != null) {
       cluster.shutdown();
@@ -96,8 +96,8 @@ public class TestQuotaAllowOwner {
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         userName,  new String[]{groupName});
     ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
-      assertEquals("Not running as new user", userName,
-          UserGroupInformation.getCurrentUser().getShortUserName());
+        assertEquals(userName,
+                UserGroupInformation.getCurrentUser().getShortUserName(), "Not running as new user");
       DFSAdmin userAdmin = new DFSAdmin(conf);
 
       String[] args2 = new String[]{"-setQuota", "5", subDir};
@@ -106,18 +106,18 @@ public class TestQuotaAllowOwner {
       TestQuota.runCommand(userAdmin, args2, false);
 
       ContentSummary c = dfs.getContentSummary(new Path(subDir));
-      assertEquals("Not same with setting quota",
-          5, c.getQuota());
-      assertEquals("Not same with setting space quota",
-          64, c.getSpaceQuota());
+        assertEquals(
+                5, c.getQuota(), "Not same with setting quota");
+        assertEquals(
+                64, c.getSpaceQuota(), "Not same with setting space quota");
       args2 = new String[]{"-clrQuota", subDir};
       TestQuota.runCommand(userAdmin, args2, false);
       args2 = new String[]{"-clrSpaceQuota", subDir};
       TestQuota.runCommand(userAdmin, args2, false);
       c = dfs.getContentSummary(new Path(subDir));
-      assertEquals("Not clean quota", -1, c.getQuota());
-      assertEquals("Not clean space quota",
-          -1, c.getSpaceQuota());
+        assertEquals(-1, c.getQuota(), "Not clean quota");
+        assertEquals(
+                -1, c.getSpaceQuota(), "Not clean space quota");
       return null;
     });
   }
@@ -138,8 +138,8 @@ public class TestQuotaAllowOwner {
     UserGroupInformation ugi2 = UserGroupInformation.createUserForTesting(
         userName,  new String[]{groupName});
     ugi2.doAs((PrivilegedExceptionAction<Object>) () -> {
-      assertEquals("Not running as new user", userName,
-          UserGroupInformation.getCurrentUser().getShortUserName());
+        assertEquals(userName,
+                UserGroupInformation.getCurrentUser().getShortUserName(), "Not running as new user");
       DFSAdmin userAdmin = new DFSAdmin(conf);
 
       String[] args2 = new String[]{"-setQuota", "5", subDir};
@@ -167,8 +167,8 @@ public class TestQuotaAllowOwner {
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         userOther, new String[]{groupOther});
     ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
-      assertEquals("Not running as new user", userOther,
-          UserGroupInformation.getCurrentUser().getShortUserName());
+        assertEquals(userOther,
+                UserGroupInformation.getCurrentUser().getShortUserName(), "Not running as new user");
       DFSAdmin userAdmin = new DFSAdmin(conf);
 
       String[] args2 = new String[]{"-setQuota", "5", subDir.toString()};
@@ -196,8 +196,8 @@ public class TestQuotaAllowOwner {
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         userOther, new String[]{groupName});
     ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
-      assertEquals("Not running as new user", userOther,
-          UserGroupInformation.getCurrentUser().getShortUserName());
+        assertEquals(userOther,
+                UserGroupInformation.getCurrentUser().getShortUserName(), "Not running as new user");
       DFSAdmin userAdmin = new DFSAdmin(conf);
 
       String[] args2 = new String[]{"-setQuota", "5", subDir.toString()};
@@ -228,8 +228,8 @@ public class TestQuotaAllowOwner {
       UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
           userName, new String[]{groupName});
       ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
-        assertEquals("Not running as new user", userName,
-            UserGroupInformation.getCurrentUser().getShortUserName());
+          assertEquals(userName,
+                  UserGroupInformation.getCurrentUser().getShortUserName(), "Not running as new user");
 
         DFSAdmin userAdmin = new DFSAdmin(conf);
 

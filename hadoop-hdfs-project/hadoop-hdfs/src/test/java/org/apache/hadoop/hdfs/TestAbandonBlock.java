@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -30,10 +30,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test abandoning blocks, which clients do on pipeline creation failure.
@@ -48,14 +48,14 @@ public class TestAbandonBlock {
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     fs = cluster.getFileSystem();
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fs != null) {
       fs.close();
@@ -100,8 +100,8 @@ public class TestAbandonBlock {
     cluster.restartNameNode();
     blocks = dfsclient.getNamenode().getBlockLocations(src, 0,
         Integer.MAX_VALUE);
-    Assert.assertEquals("Blocks " + b + " has not been abandoned.",
-        orginalNumBlocks, blocks.locatedBlockCount() + 1);
+      Assertions.assertEquals(
+              orginalNumBlocks, blocks.locatedBlockCount() + 1, "Blocks " + b + " has not been abandoned.");
   }
 
   @Test

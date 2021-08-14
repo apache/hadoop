@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
 
 public class TestSymlinkHdfsFileContext extends TestSymlinkHdfs {
 
   private static FileContext fc;
 
-  @BeforeClass
+  @BeforeAll
   public static void testSetup() throws Exception {
     fc = FileContext.getFileContext(cluster.getURI(0));
     wrapper = new FileContextTestWrapper(fc, "/tmp/TestSymlinkHdfsFileContext");

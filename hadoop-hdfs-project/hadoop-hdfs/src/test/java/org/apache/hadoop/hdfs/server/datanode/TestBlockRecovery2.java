@@ -47,11 +47,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -76,7 +76,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -117,7 +117,7 @@ public class TestBlockRecovery2 {
    * Starts an instance of DataNode.
    * @throws IOException
    */
-  @Before
+  @BeforeEach
   public void startUp() throws IOException {
     tearDownDone = false;
     conf = new HdfsConfiguration();
@@ -167,7 +167,7 @@ public class TestBlockRecovery2 {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assert.assertEquals(NN_ADDR, nnAddr);
+        Assertions.assertEquals(NN_ADDR, nnAddr);
         return namenode;
       }
     };
@@ -191,15 +191,15 @@ public class TestBlockRecovery2 {
     } catch (InterruptedException e) {
       LOG.warn("InterruptedException while waiting to see active NN", e);
     }
-    Assert.assertNotNull("Failed to get ActiveNN",
-        dn.getAllBpOs().get(0).getActiveNN());
+      Assertions.assertNotNull(
+              dn.getAllBpOs().get(0).getActiveNN(), "Failed to get ActiveNN");
   }
 
   /**
    * Cleans the resources and closes the instance of datanode.
    * @throws IOException if an error occurred
    */
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (!tearDownDone && dn != null) {
       try {
@@ -209,8 +209,8 @@ public class TestBlockRecovery2 {
       } finally {
         File dir = new File(DATA_DIR);
         if (dir.exists()) {
-          Assert.assertTrue(
-              "Cannot delete data-node dirs", FileUtil.fullyDelete(dir));
+            Assertions.assertTrue(FileUtil.fullyDelete(dir),
+                    "Cannot delete data-node dirs");
         }
       }
       tearDownDone = true;
@@ -265,13 +265,13 @@ public class TestBlockRecovery2 {
       try {
         out.close();
       } catch (IOException e) {
-        Assert.assertTrue("Writing should fail",
-            e.getMessage().contains("are bad. Aborting..."));
+          Assertions.assertTrue(
+                  e.getMessage().contains("are bad. Aborting..."), "Writing should fail");
       } finally {
         recoveryThread.join();
       }
-      Assert.assertTrue("Recovery should be initiated successfully",
-          recoveryInitResult.get());
+        Assertions.assertTrue(
+                recoveryInitResult.get(), "Recovery should be initiated successfully");
 
       dataNode.updateReplicaUnderRecovery(block.getBlock(), block.getBlock()
               .getGenerationStamp() + 1, block.getBlock().getBlockId(),

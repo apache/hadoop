@@ -29,9 +29,9 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Make sure that ViewFileSystem works when the root of an FS is mounted to a
@@ -48,7 +48,7 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
     return new FileSystemTestHelper("/tmp/TestViewFileSystemAtHdfsRoot");
   }
   
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
@@ -63,7 +63,7 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
     fHdfs = cluster.getFileSystem();
   }
       
-  @AfterClass
+  @AfterAll
   public static void clusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -71,7 +71,7 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fHdfs;
     super.setUp();

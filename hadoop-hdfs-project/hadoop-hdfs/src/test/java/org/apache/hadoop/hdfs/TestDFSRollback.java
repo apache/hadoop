@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,16 +38,15 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
-* This test ensures the appropriate response (successful or failure) from
-* the system when the system is rolled back under various storage state and
-* version conditions.
-*/
+ * This test ensures the appropriate response (successful or failure) from
+ * the system when the system is rolled back under various storage state and
+ * version conditions.
+ */
 public class TestDFSRollback {
  
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -127,8 +126,8 @@ public class TestDFSRollback {
   void startBlockPoolShouldFail(StartupOption operation, String bpid)
       throws IOException {
     cluster.startDataNodes(conf, 1, false, operation, null); // should fail
-    assertFalse("Block pool " + bpid + " should have failed to start", 
-        cluster.getDataNodes().get(0).isBPServiceAlive(bpid));
+      assertFalse(
+              cluster.getDataNodes().get(0).isBPServiceAlive(bpid), "Block pool " + bpid + " should have failed to start");
   }
  
   /**
@@ -344,7 +343,7 @@ public class TestDFSRollback {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) {

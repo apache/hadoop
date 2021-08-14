@@ -28,15 +28,12 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HostRestrictingAuthorizationFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestHostRestrictingAuthorizationFilterHandler {
 
@@ -55,12 +52,12 @@ public class TestHostRestrictingAuthorizationFilterHandler {
         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
             HttpMethod.GET,
             WebHdfsFileSystem.PATH_PREFIX + "/user/myName/fooFile?op=OPEN");
-    // we will send back an error so ensure our write returns false
-    assertFalse("Should get error back from handler for rejected request",
-        channel.writeInbound(httpRequest));
+      // we will send back an error so ensure our write returns false
+      assertFalse(
+              channel.writeInbound(httpRequest), "Should get error back from handler for rejected request");
     DefaultHttpResponse channelResponse =
         (DefaultHttpResponse) channel.outboundMessages().poll();
-    assertNotNull("Expected response to exist.", channelResponse);
+      assertNotNull(channelResponse, "Expected response to exist.");
     assertEquals(HttpResponseStatus.FORBIDDEN, channelResponse.getStatus());
     assertFalse(channel.isOpen());
   }
@@ -89,12 +86,12 @@ public class TestHostRestrictingAuthorizationFilterHandler {
         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
             HttpMethod.GET,
             WebHdfsFileSystem.PATH_PREFIX + "/allowed/file_three?op=OPEN");
-    assertTrue("Should successfully accept request",
-        channel.writeInbound(allowedHttpRequest));
-    assertTrue("Should successfully accept request, second time",
-        channel.writeInbound(allowedHttpRequest2));
-    assertTrue("Should successfully accept request, third time",
-        channel.writeInbound(allowedHttpRequest3));
+      assertTrue(
+              channel.writeInbound(allowedHttpRequest), "Should successfully accept request");
+      assertTrue(
+              channel.writeInbound(allowedHttpRequest2), "Should successfully accept request, second time");
+      assertTrue(
+              channel.writeInbound(allowedHttpRequest3), "Should successfully accept request, third time");
   }
 
   /*
@@ -125,15 +122,15 @@ public class TestHostRestrictingAuthorizationFilterHandler {
         new DefaultFullHttpRequest(HttpVersion.HTTP_1_1,
             HttpMethod.GET,
             WebHdfsFileSystem.PATH_PREFIX + "/allowed/file_three?op=OPEN");
-    assertTrue("Should successfully accept request",
-        channel1.writeInbound(allowedHttpRequest));
-    assertTrue("Should successfully accept request, second time",
-        channel2.writeInbound(allowedHttpRequest2));
+      assertTrue(
+              channel1.writeInbound(allowedHttpRequest), "Should successfully accept request");
+      assertTrue(
+              channel2.writeInbound(allowedHttpRequest2), "Should successfully accept request, second time");
 
     // verify closing one channel does not affect remaining channels
     channel1.close();
-    assertTrue("Should successfully accept request, third time",
-        channel3.writeInbound(allowedHttpRequest3));
+      assertTrue(
+              channel3.writeInbound(allowedHttpRequest3), "Should successfully accept request, third time");
   }
 
   /*
@@ -148,8 +145,8 @@ public class TestHostRestrictingAuthorizationFilterHandler {
             HttpMethod.GET,
             WebHdfsFileSystem.PATH_PREFIX + "/user/myName/fooFile?op" +
                 "=GETFILECHECKSUM");
-    assertTrue("Should successfully accept request",
-        channel.writeInbound(httpRequest));
+      assertTrue(
+              channel.writeInbound(httpRequest), "Should successfully accept request");
   }
 
   /*

@@ -18,12 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
@@ -46,10 +41,10 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestHDFSConcat {
   public static final Logger LOG =
@@ -71,18 +66,18 @@ public class TestHDFSConcat {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
   }
   
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
     nn = cluster.getNameNodeRpc();
-    assertNotNull("Failed to get NameNode", nn);
+      assertNotNull(nn, "Failed to get NameNode");
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if(dfs != null) {
       dfs.close();
@@ -209,7 +204,7 @@ public class TestHDFSConcat {
     // 3. removal of the src file
     for(Path p: files) {
       fStatus = nn.getFileInfo(p.toUri().getPath());
-      assertNull("File " + p + " still exists", fStatus); // file shouldn't exist
+        assertNull(fStatus, "File " + p + " still exists"); // file shouldn't exist
       // try to create fie with the same name
       DFSTestUtil.createFile(dfs, p, fileLen, REPL_FACTOR, 1); 
     }
@@ -290,7 +285,7 @@ public class TestHDFSConcat {
       if(mismatch)
         break;
     }
-    assertFalse("File content of concatenated file is different", mismatch);
+      assertFalse(mismatch, "File content of concatenated file is different");
   }
 
   // test case when final block is not of a full length
@@ -360,7 +355,7 @@ public class TestHDFSConcat {
     
     // 3. removal of the src file
     fStatus = nn.getFileInfo(name2);
-    assertNull("File "+name2+ "still exists", fStatus); // file shouldn't exist
+      assertNull(fStatus, "File " + name2 + "still exists"); // file shouldn't exist
   
     // 4. content
     checkFileContent(byteFileConcat, new byte [] [] {byteFile1, byteFile2});
@@ -445,14 +440,14 @@ public class TestHDFSConcat {
     }
 
     ContentSummary summary = dfs.getContentSummary(foo);
-    Assert.assertEquals(11, summary.getFileCount());
-    Assert.assertEquals(blockSize * REPL_FACTOR +
+    Assertions.assertEquals(11, summary.getFileCount());
+    Assertions.assertEquals(blockSize * REPL_FACTOR +
             blockSize * 2 * srcRepl * srcNum, summary.getSpaceConsumed());
 
     dfs.concat(target, srcs);
     summary = dfs.getContentSummary(foo);
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, summary.getFileCount());
+    Assertions.assertEquals(
         blockSize * REPL_FACTOR + blockSize * 2 * REPL_FACTOR * srcNum,
         summary.getSpaceConsumed());
   }
@@ -476,22 +471,22 @@ public class TestHDFSConcat {
     }
 
     ContentSummary summary = dfs.getContentSummary(bar);
-    Assert.assertEquals(11, summary.getFileCount());
-    Assert.assertEquals(dsQuota, summary.getSpaceConsumed());
+    Assertions.assertEquals(11, summary.getFileCount());
+    Assertions.assertEquals(dsQuota, summary.getSpaceConsumed());
 
     try {
       dfs.concat(target, srcs);
       fail("QuotaExceededException expected");
     } catch (RemoteException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.unwrapRemoteException() instanceof QuotaExceededException);
     }
 
     dfs.setQuota(foo, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
     dfs.concat(target, srcs);
     summary = dfs.getContentSummary(bar);
-    Assert.assertEquals(1, summary.getFileCount());
-    Assert.assertEquals(blockSize * repl * (srcNum + 1),
+    Assertions.assertEquals(1, summary.getFileCount());
+    Assertions.assertEquals(blockSize * repl * (srcNum + 1),
         summary.getSpaceConsumed());
   }
 
@@ -519,7 +514,7 @@ public class TestHDFSConcat {
     DFSTestUtil.createFile(dfs, src, blockSize, REPL_FACTOR, 1);
     try {
       dfs.concat(trg, new Path[] { src });
-      Assert.fail("Must throw Exception!");
+      Assertions.fail("Must throw Exception!");
     } catch (IOException e) {
       String errMsg = "Concat operation doesn't support "
           + FSDirectory.DOT_RESERVED_STRING + " relative path : " + trg;

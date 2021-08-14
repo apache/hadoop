@@ -27,8 +27,8 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSe
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,9 +36,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test Planner.
@@ -55,7 +53,7 @@ public class TestPlanner {
         null);
     DiskBalancerCluster cluster = new DiskBalancerCluster(jsonConnector);
     cluster.readClusterInfo();
-    Assert.assertEquals(3, cluster.getNodes().size());
+    Assertions.assertEquals(3, cluster.getNodes().size());
     cluster.setNodesToProcess(cluster.getNodes());
     DiskBalancerDataNode node = cluster.getNodes().get(0);
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
@@ -72,10 +70,10 @@ public class TestPlanner {
         null);
     DiskBalancerCluster cluster = new DiskBalancerCluster(jsonConnector);
     cluster.readClusterInfo();
-    Assert.assertEquals(3, cluster.getNodes().size());
+    Assertions.assertEquals(3, cluster.getNodes().size());
     cluster.setNodesToProcess(cluster.getNodes());
     List<NodePlan> plan = cluster.computePlan(10.0f);
-    Assert.assertNotNull(plan);
+    Assertions.assertNotNull(plan);
   }
 
   private DiskBalancerVolume createVolume(String path, int capacityInGB,
@@ -115,7 +113,7 @@ public class TestPlanner {
     node.addVolume(volume30);
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(),
@@ -142,7 +140,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(5.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeUUID(),
@@ -183,7 +181,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(5.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeUUID(),
@@ -219,7 +217,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(),
@@ -250,7 +248,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(),
@@ -289,7 +287,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(10.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(),
@@ -348,7 +346,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner newPlanner = new GreedyPlanner(01.0f, node);
     NodePlan newPlan = new NodePlan(node.getDataNodeName(), node
@@ -421,12 +419,12 @@ public class TestPlanner {
     newPlanner.balanceVolumeSet(node, node.getVolumeSets().get("SSD"),
         newPlan);
 
-    // Assuming that our random disks at least generated one step
-    assertTrue("No Steps Generated from random disks, very unlikely",
-        newPlan.getVolumeSetPlans().size() > 0);
+      // Assuming that our random disks at least generated one step
+      assertTrue(
+              newPlan.getVolumeSetPlans().size() > 0, "No Steps Generated from random disks, very unlikely");
 
-    assertTrue("Steps Generated less than disk count - false",
-        newPlan.getVolumeSetPlans().size() < diskCount);
+      assertTrue(
+              newPlan.getVolumeSetPlans().size() < diskCount, "Steps Generated less than disk count - false");
     LOG.info("Number of steps are : %d%n", newPlan.getVolumeSetPlans().size());
 
   }
@@ -501,7 +499,7 @@ public class TestPlanner {
 
     nullConnector.addNode(node);
     cluster.readClusterInfo();
-    Assert.assertEquals(1, cluster.getNodes().size());
+    Assertions.assertEquals(1, cluster.getNodes().size());
 
     GreedyPlanner planner = new GreedyPlanner(1.0f, node);
     NodePlan plan = new NodePlan(node.getDataNodeName(),

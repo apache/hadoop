@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -29,9 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -60,7 +60,7 @@ public class TestStartupOptionUpgrade {
     this.startOpt = startOption;
   }
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     startOpt.setClusterId(null);
@@ -69,7 +69,7 @@ public class TestStartupOptionUpgrade {
       Collections.<URI>emptyList());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     conf = null;
     startOpt = null;
@@ -86,8 +86,8 @@ public class TestStartupOptionUpgrade {
   public void testStartupOptUpgradeFrom204() throws Exception {
     layoutVersion = Feature.RESERVED_REL20_204.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertTrue("Clusterid should start with CID", storage.getClusterID()
-        .startsWith("CID"));
+      assertTrue(storage.getClusterID()
+              .startsWith("CID"), "Clusterid should start with CID");
   }
 
   /**
@@ -102,8 +102,8 @@ public class TestStartupOptionUpgrade {
     startOpt.setClusterId("cid");
     layoutVersion = Feature.RESERVED_REL22.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the given clusterid",
-        "cid", storage.getClusterID());
+      assertEquals(
+              "cid", storage.getClusterID(), "Clusterid should match with the given clusterid");
   }
 
   /**
@@ -120,8 +120,8 @@ public class TestStartupOptionUpgrade {
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the existing one",
-        "currentcid", storage.getClusterID());
+      assertEquals(
+              "currentcid", storage.getClusterID(), "Clusterid should match with the existing one");
   }
 
   /**
@@ -138,8 +138,8 @@ public class TestStartupOptionUpgrade {
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the existing one",
-        "currentcid", storage.getClusterID());
+      assertEquals(
+              "currentcid", storage.getClusterID(), "Clusterid should match with the existing one");
   }
 
   /**
@@ -156,7 +156,7 @@ public class TestStartupOptionUpgrade {
     storage.setClusterID("currentcid");
     layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-    assertEquals("Clusterid should match with the existing one",
-        "currentcid", storage.getClusterID());
+      assertEquals(
+              "currentcid", storage.getClusterID(), "Clusterid should match with the existing one");
   }
 }

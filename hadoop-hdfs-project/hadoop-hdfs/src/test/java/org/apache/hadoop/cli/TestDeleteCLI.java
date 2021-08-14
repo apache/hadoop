@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.cli;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
@@ -27,16 +27,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestDeleteCLI extends CLITestHelperDFS {
   protected MiniDFSCluster dfsCluster = null;
   protected FileSystem fs = null;
   protected String namenode = null;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -49,11 +49,11 @@ public class TestDeleteCLI extends CLITestHelperDFS {
     namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
 
     fs = dfsCluster.getFileSystem();
-    assertTrue("Not an HDFS: " + fs.getUri(),
-        fs instanceof DistributedFileSystem);
+      assertTrue(
+              fs instanceof DistributedFileSystem, "Not an HDFS: " + fs.getUri());
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     if (fs != null) {

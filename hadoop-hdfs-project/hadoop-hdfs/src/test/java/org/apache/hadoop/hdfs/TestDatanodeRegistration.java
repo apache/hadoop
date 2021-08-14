@@ -39,7 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Supplier;
 
@@ -47,7 +47,7 @@ import java.net.InetSocketAddress;
 import java.security.Permission;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -88,7 +88,7 @@ public class TestDatanodeRegistration {
       cluster.waitActive();
       
       int initialLookups = sm.lookups;
-      assertTrue("dns security manager is active", initialLookups != 0);
+        assertTrue(initialLookups != 0, "dns security manager is active");
       
       DatanodeManager dm =
           cluster.getNamesystem().getBlockManager().getDatanodeManager();
@@ -198,7 +198,7 @@ public class TestDatanodeRegistration {
       rpcServer.registerDatanode(dnReg);
 
       DatanodeInfo[] report = client.datanodeReport(DatanodeReportType.ALL);
-      assertEquals("Expected a registered datanode", 1, report.length);
+        assertEquals(1, report.length, "Expected a registered datanode");
 
       // register the same datanode again with a different storage ID
       dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
@@ -209,8 +209,8 @@ public class TestDatanodeRegistration {
       rpcServer.registerDatanode(dnReg);
 
       report = client.datanodeReport(DatanodeReportType.ALL);
-      assertEquals("Datanode with changed storage ID not recognized",
-          1, report.length);
+        assertEquals(
+                1, report.length, "Datanode with changed storage ID not recognized");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -366,16 +366,16 @@ public class TestDatanodeRegistration {
       waitForHeartbeat(dn, dnd);
       assertTrue(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
-      assertTrue("block report is not processed for DN " + dnd,
-          waitForBlockReport(dn, dnd));
+        assertTrue(
+                waitForBlockReport(dn, dnd), "block report is not processed for DN " + dnd);
       assertTrue(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
 
       // check that block report is not processed and registration didn't
       // change.
       dnd.setForceRegistration(true);
-      assertFalse("block report is processed for DN " + dnd,
-          waitForBlockReport(dn, dnd));
+        assertFalse(
+                waitForBlockReport(dn, dnd), "block report is processed for DN " + dnd);
       assertFalse(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
 
@@ -386,8 +386,8 @@ public class TestDatanodeRegistration {
       newReg = dn.getDNRegistrationForBP(bpId);
       assertNotSame(lastReg, newReg);
       lastReg = newReg;
-      assertTrue("block report is not processed for DN " + dnd,
-          waitForBlockReport(dn, dnd));
+        assertTrue(
+                waitForBlockReport(dn, dnd), "block report is not processed for DN " + dnd);
       assertTrue(dnd.isRegistered());
       assertSame(lastReg, dn.getDNRegistrationForBP(bpId));
 
@@ -407,7 +407,7 @@ public class TestDatanodeRegistration {
       } catch (NullPointerException npe) {
         failed = true;
       }
-      assertTrue("didn't fail", failed);
+        assertTrue(failed, "didn't fail");
       assertFalse(dnd.isRegistered());
 
       // should remain unregistered until next heartbeat.

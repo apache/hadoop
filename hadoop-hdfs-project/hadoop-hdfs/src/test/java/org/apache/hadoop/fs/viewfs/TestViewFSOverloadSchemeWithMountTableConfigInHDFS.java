@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Tests ViewFileSystemOverloadScheme with configured mount links.
@@ -35,7 +35,7 @@ public class TestViewFSOverloadSchemeWithMountTableConfigInHDFS
   private Path oldVersionMountTablePath;
   private Path newVersionMountTablePath;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws IOException {
     super.setUp();

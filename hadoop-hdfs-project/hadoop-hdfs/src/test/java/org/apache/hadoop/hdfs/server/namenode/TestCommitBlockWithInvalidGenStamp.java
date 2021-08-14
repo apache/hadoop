@@ -29,10 +29,10 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -43,7 +43,7 @@ public class TestCommitBlockWithInvalidGenStamp {
   private FSDirectory dir;
   private DistributedFileSystem dfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     final Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -54,7 +54,7 @@ public class TestCommitBlockWithInvalidGenStamp {
     dfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -83,9 +83,9 @@ public class TestCommitBlockWithInvalidGenStamp {
       try{
         dfs.getClient().getNamenode().complete(file.toString(),
             dfs.getClient().getClientName(), previous, fileNode.getId());
-        Assert.fail("should throw exception because invalid genStamp");
+        Assertions.fail("should throw exception because invalid genStamp");
       } catch (IOException e) {
-        Assert.assertTrue(e.toString().contains(
+        Assertions.assertTrue(e.toString().contains(
             "Commit block with mismatching GS. NN has " +
             newBlock + ", client submits " + newBlockClone));
       }
@@ -93,7 +93,7 @@ public class TestCommitBlockWithInvalidGenStamp {
           newBlock);
       boolean complete =  dfs.getClient().getNamenode().complete(file.toString(),
       dfs.getClient().getClientName(), previous, fileNode.getId());
-      Assert.assertTrue("should complete successfully", complete);
+        Assertions.assertTrue(complete, "should complete successfully");
     } finally {
       IOUtils.cleanupWithLogger(null, out);
     }

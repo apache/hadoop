@@ -18,10 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -46,11 +43,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test for viewfs with LinkFallback mount table entries.
@@ -62,7 +59,7 @@ public class TestViewFsLinkFallback {
   private static URI viewFsDefaultClusterUri;
   private Path targetTestRoot;
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning()
       throws IOException, URISyntaxException {
     int nameSpacesCount = 3;
@@ -88,14 +85,14 @@ public class TestViewFsLinkFallback {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fsDefault;
     initializeTargetTestRoot();
@@ -295,7 +292,7 @@ public class TestViewFsLinkFallback {
       // attempt to create in fallback.
       vfs.mkdir(nextLevelToInternalDir, FsPermission.getDirDefault(),
           false);
-      Assert.fail("It should throw IOE when fallback fs not available.");
+      Assertions.fail("It should throw IOE when fallback fs not available.");
     } catch (IOException e) {
       cluster.restartNameNodes();
       // should succeed when fallback fs is back to normal.
@@ -570,7 +567,7 @@ public class TestViewFsLinkFallback {
     fs.rename(src, dst, Options.Rename.OVERWRITE);
     LambdaTestUtils
         .intercept(FileNotFoundException.class, () -> fs.getFileStatus(src));
-    Assert.assertNotNull(fs.getFileStatus(dst));
+    Assertions.assertNotNull(fs.getFileStatus(dst));
   }
 
 }

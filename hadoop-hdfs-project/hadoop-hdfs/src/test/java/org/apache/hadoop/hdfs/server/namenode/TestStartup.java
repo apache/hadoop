@@ -22,11 +22,8 @@ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,9 +72,9 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -98,7 +95,7 @@ public class TestStartup {
   static final int fileSize = 8192;
   private long editsLength=0, fsimageLength=0;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     ExitUtil.disableSystemExit();
     ExitUtil.resetFirstExitException();
@@ -127,7 +124,7 @@ public class TestStartup {
   /**
    * clean up
    */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
       throw new IOException("Could not delete hdfs directory in tearDown '" + hdfsDir + "'");
@@ -428,7 +425,7 @@ public class TestStartup {
     } catch (ExitException ee) {
       GenericTestUtils.assertExceptionContains(
           ExitUtil.EXIT_EXCEPTION_MESSAGE, ee);
-      assertTrue("Didn't terminate properly ", ExitUtil.terminateCalled());
+        assertTrue(ExitUtil.terminateCalled(), "Didn't terminate properly ");
     }
   }
 
@@ -657,8 +654,8 @@ public class TestStartup {
         Thread.sleep(HEARTBEAT_INTERVAL * 1000);
         info = nn.getDatanodeReport(DatanodeReportType.LIVE);
       }
-      assertEquals("Number of live nodes should be "+numDatanodes, numDatanodes, 
-          info.length);
+        assertEquals(numDatanodes,
+                info.length, "Number of live nodes should be " + numDatanodes);
       
     } catch (IOException e) {
       fail(StringUtils.stringifyException(e));
@@ -727,19 +724,19 @@ public class TestStartup {
       final Collection<URI> nnDirs = FSNamesystem.getNamespaceDirs(config);
       assertNotNull(nnDirs);
       assertTrue(nnDirs.iterator().hasNext());
-      assertEquals(
-          "NN dir should be created after NN startup.",
-          new File(nnDirStr),
-          new File(nnDirs.iterator().next().getPath()));
+        assertEquals(
+                new File(nnDirStr),
+                new File(nnDirs.iterator().next().getPath()),
+                "NN dir should be created after NN startup.");
       final File nnDir = new File(nnDirStr);
       assertTrue(nnDir.exists());
       assertTrue(nnDir.isDirectory());
 
       try {
-        /* set read only */
-        assertTrue(
-            "Setting NN dir read only should succeed.",
-            FileUtil.setWritable(nnDir, false));
+          /* set read only */
+          assertTrue(
+                  FileUtil.setWritable(nnDir, false),
+                  "Setting NN dir read only should succeed.");
         cluster.restartNameNodes();
         fail("Restarting NN should fail on read only NN dir.");
       } catch (InconsistentFSStateException e) {
@@ -750,9 +747,9 @@ public class TestStartup {
             containsString(
                 "storage directory does not exist or is not accessible."))));
       } finally {
-        /* set back to writable in order to clean it */
-        assertTrue("Setting NN dir should succeed.",
-            FileUtil.setWritable(nnDir, true));
+          /* set back to writable in order to clean it */
+          assertTrue(
+                  FileUtil.setWritable(nnDir, true), "Setting NN dir should succeed.");
       }
     }
   }

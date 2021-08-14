@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Tests NameNode interaction for all ACL modification APIs.  This test suite
@@ -26,7 +26,7 @@ import org.junit.BeforeClass;
  */
 public class TestNameNodeAcl extends FSAclBaseTest {
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new Configuration();
     startCluster();

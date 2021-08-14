@@ -21,8 +21,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEF
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -38,21 +38,21 @@ import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestNNHealthCheck {
 
   private MiniDFSCluster cluster;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new Configuration();
   }
 
-  @After
+  @AfterEach
   public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -96,9 +96,9 @@ public class TestNNHealthCheck {
         DFSUtil.getNamenodeNameServiceId(conf), "nn1");
     final String expectedTargetString = haTarget.getAddress().toString();
 
-    assertTrue("Expected haTarget " + haTarget + " containing " +
-            expectedTargetString,
-        haTarget.toString().contains(expectedTargetString));
+      assertTrue(
+              haTarget.toString().contains(expectedTargetString), "Expected haTarget " + haTarget + " containing " +
+              expectedTargetString);
     HAServiceProtocol rpc = haTarget.getHealthMonitorProxy(conf, 5000);
 
     LambdaTestUtils.intercept(RemoteException.class,
@@ -121,9 +121,9 @@ public class TestNNHealthCheck {
     } else {
       expectedTargetString = haTarget.getAddress().toString();
     }
-    assertTrue("Expected haTarget " + haTarget + " containing " +
-        expectedTargetString,
-        haTarget.toString().contains(expectedTargetString));
+      assertTrue(
+              haTarget.toString().contains(expectedTargetString), "Expected haTarget " + haTarget + " containing " +
+              expectedTargetString);
     HAServiceProtocol rpc = haTarget.getHealthMonitorProxy(conf, conf.getInt(
         HA_HM_RPC_TIMEOUT_KEY, HA_HM_RPC_TIMEOUT_DEFAULT));
 

@@ -42,15 +42,15 @@ import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper for writing snapshot related tests
@@ -153,9 +153,9 @@ public class SnapshotTestHelper {
     // Compare the snapshot with the current dir
     FileStatus[] currentFiles = hdfs.listStatus(snapshottedDir);
     FileStatus[] snapshotFiles = hdfs.listStatus(snapshotRoot);
-    assertEquals("snapshottedDir=" + snapshottedDir
-        + ", snapshotRoot=" + snapshotRoot,
-        currentFiles.length, snapshotFiles.length);
+      assertEquals(
+              currentFiles.length, snapshotFiles.length, "snapshottedDir=" + snapshottedDir
+              + ", snapshotRoot=" + snapshotRoot);
   }
   
   /**
@@ -247,8 +247,8 @@ public class SnapshotTestHelper {
         }
         assertEquals(line1.trim(), line2.trim());
       }
-      Assert.assertNull(reader1.readLine());
-      Assert.assertNull(reader2.readLine());
+      Assertions.assertNull(reader1.readLine());
+      Assertions.assertNull(reader2.readLine());
     } finally {
       reader1.close();
       reader2.close();

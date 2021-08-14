@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.fs;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.junit.jupiter.api.Test;
 
 public class TestHdfsNativeCodeLoader {
   static final Logger LOG =

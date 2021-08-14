@@ -29,12 +29,7 @@ import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkStatistics;
 import static org.apache.hadoop.hdfs.TestDistributedFileSystem.getOpStatistics;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.EOFException;
 import java.io.File;
@@ -80,7 +75,6 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -137,9 +131,9 @@ import org.slf4j.event.Level;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -164,7 +158,7 @@ public class TestWebHDFS {
 
   private static MiniDFSCluster cluster = null;
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (null != cluster) {
       cluster.shutdown();
@@ -225,7 +219,7 @@ public class TestWebHDFS {
     final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
         WebHdfsConstants.WEBHDFS_SCHEME);
     final Path dir = new Path("/test/largeFile");
-    Assert.assertTrue(fs.mkdirs(dir));
+    Assertions.assertTrue(fs.mkdirs(dir));
 
     final byte[] data = new byte[1 << 20];
     RANDOM.nextBytes(data);
@@ -251,7 +245,7 @@ public class TestWebHDFS {
     }
     t.end(fileLength);
 
-    Assert.assertEquals(fileLength, fs.getFileStatus(p).getLen());
+    Assertions.assertEquals(fileLength, fs.getFileStatus(p).getLen());
 
     final long smallOffset = RANDOM.nextInt(1 << 20) + (1 << 20);
     final long largeOffset = fileLength - smallOffset;
@@ -269,7 +263,7 @@ public class TestWebHDFS {
       int j = (int)(offset % actual.length);
       for(int i = 0; i < n; i++) {
         if (expected[j] != actual[i]) {
-          Assert.fail("expected[" + j + "]=" + expected[j]
+          Assertions.fail("expected[" + j + "]=" + expected[j]
               + " != actual[" + i + "]=" + actual[i]
               + ", offset=" + offset + ", remaining=" + remaining + ", n=" + n);
         }
@@ -363,12 +357,12 @@ public class TestWebHDFS {
             FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
                 WebHdfsConstants.WEBHDFS_SCHEME);
             Path d = new Path("/my-dir");
-            Assert.assertTrue(fs.mkdirs(d));
+            Assertions.assertTrue(fs.mkdirs(d));
             // Iterator should have no items when dir is empty
             RemoteIterator<FileStatus> it = fs.listStatusIterator(d);
             assertFalse(it.hasNext());
             Path p = new Path(d, "file-" + 0);
-            Assert.assertTrue(fs.createNewFile(p));
+            Assertions.assertTrue(fs.createNewFile(p));
             // Iterator should have an item when dir is not empty
             it = fs.listStatusIterator(d);
             assertTrue(it.hasNext());
@@ -376,11 +370,11 @@ public class TestWebHDFS {
             assertFalse(it.hasNext());
             for (int i = 1; i < listLimit * 3; i++) {
               p = new Path(d, "file-" + i);
-              Assert.assertTrue(fs.createNewFile(p));
+              Assertions.assertTrue(fs.createNewFile(p));
             }
             // Check the FileStatus[] listing
             FileStatus[] statuses = fs.listStatus(d);
-            Assert.assertEquals(listLimit * 3, statuses.length);
+            Assertions.assertEquals(listLimit * 3, statuses.length);
             // Check the iterator-based listing
             GenericTestUtils.setLogLevel(WebHdfsFileSystem.LOG, Level.TRACE);
             GenericTestUtils.setLogLevel(NamenodeWebHdfsMethods.LOG,
@@ -389,18 +383,18 @@ public class TestWebHDFS {
             int count = 0;
             while (it.hasNext()) {
               FileStatus stat = it.next();
-              assertEquals("FileStatuses not equal", statuses[count], stat);
+                assertEquals(statuses[count], stat, "FileStatuses not equal");
               count++;
             }
-            assertEquals("Different # of statuses!", statuses.length, count);
+              assertEquals(statuses.length, count, "Different # of statuses!");
             // Do some more basic iterator tests
             it = fs.listStatusIterator(d);
             // Try advancing the iterator without calling hasNext()
             for (int i = 0; i < statuses.length; i++) {
               FileStatus stat = it.next();
-              assertEquals("FileStatuses not equal", statuses[i], stat);
+                assertEquals(statuses[i], stat, "FileStatuses not equal");
             }
-            assertFalse("No more items expected", it.hasNext());
+              assertFalse(it.hasNext(), "No more items expected");
             // Try doing next when out of items
             try {
               it.next();
@@ -488,7 +482,7 @@ public class TestWebHDFS {
             FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
                 WebHdfsConstants.WEBHDFS_SCHEME);
             Path d = new Path("/my-dir");
-            Assert.assertTrue(fs.mkdirs(d));
+            Assertions.assertTrue(fs.mkdirs(d));
             // Test also specifying a default ACL with a numeric username
             // and another of a groupname with '@'
             fs.modifyAclEntries(d, ImmutableList.of(new AclEntry.Builder()
@@ -515,7 +509,7 @@ public class TestWebHDFS {
       FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
           WebHdfsConstants.WEBHDFS_SCHEME);
       fs.create(new Path("/testnodatanode"));
-      Assert.fail("No exception was thrown");
+      Assertions.fail("No exception was thrown");
     } catch (IOException ex) {
       GenericTestUtils.assertExceptionContains("Failed to find datanode", ex);
     }
@@ -544,7 +538,7 @@ public class TestWebHDFS {
     assertTrue(webHdfs.getFileStatus(bar).isSnapshotEnabled());
     webHdfs.createSnapshot(bar, "s1");
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(bar, "s1");
-    Assert.assertTrue(webHdfs.exists(s1path));
+    Assertions.assertTrue(webHdfs.exists(s1path));
     SnapshottableDirectoryStatus[] snapshottableDirs =
         dfs.getSnapshottableDirListing();
     assertEquals(1, snapshottableDirs.length);
@@ -605,43 +599,43 @@ public class TestWebHDFS {
 
     FileStatus expectedECDirStatus = dfs.getFileStatus(ecDir);
     FileStatus actualECDirStatus = webHdfs.getFileStatus(ecDir);
-    Assert.assertEquals(expectedECDirStatus.isErasureCoded(),
+    Assertions.assertEquals(expectedECDirStatus.isErasureCoded(),
         actualECDirStatus.isErasureCoded());
-    ContractTestUtils.assertErasureCoded(dfs, ecDir);
-    assertTrue(
-        ecDir + " should have erasure coding set in "
-            + "FileStatus#toString(): " + actualECDirStatus,
-        actualECDirStatus.toString().contains("isErasureCoded=true"));
+    Assertions.assertErasureCoded(dfs, ecDir);
+      assertTrue(
+              actualECDirStatus.toString().contains("isErasureCoded=true"),
+              ecDir + " should have erasure coding set in "
+                      + "FileStatus#toString(): " + actualECDirStatus);
 
     FileStatus expectedECFileStatus = dfs.getFileStatus(ecFile);
     FileStatus actualECFileStatus = webHdfs.getFileStatus(ecFile);
-    Assert.assertEquals(expectedECFileStatus.isErasureCoded(),
+    Assertions.assertEquals(expectedECFileStatus.isErasureCoded(),
         actualECFileStatus.isErasureCoded());
-    ContractTestUtils.assertErasureCoded(dfs, ecFile);
-    assertTrue(
-        ecFile + " should have erasure coding set in "
-            + "FileStatus#toString(): " + actualECFileStatus,
-        actualECFileStatus.toString().contains("isErasureCoded=true"));
+    Assertions.assertErasureCoded(dfs, ecFile);
+      assertTrue(
+              actualECFileStatus.toString().contains("isErasureCoded=true"),
+              ecFile + " should have erasure coding set in "
+                      + "FileStatus#toString(): " + actualECFileStatus);
 
     FileStatus expectedNormalDirStatus = dfs.getFileStatus(normalDir);
     FileStatus actualNormalDirStatus = webHdfs.getFileStatus(normalDir);
-    Assert.assertEquals(expectedNormalDirStatus.isErasureCoded(),
+    Assertions.assertEquals(expectedNormalDirStatus.isErasureCoded(),
         actualNormalDirStatus.isErasureCoded());
-    ContractTestUtils.assertNotErasureCoded(dfs, normalDir);
-    assertTrue(
-        normalDir + " should have erasure coding unset in "
-            + "FileStatus#toString(): " + actualNormalDirStatus,
-        actualNormalDirStatus.toString().contains("isErasureCoded=false"));
+    Assertions.assertNotErasureCoded(dfs, normalDir);
+      assertTrue(
+              actualNormalDirStatus.toString().contains("isErasureCoded=false"),
+              normalDir + " should have erasure coding unset in "
+                      + "FileStatus#toString(): " + actualNormalDirStatus);
 
     FileStatus expectedNormalFileStatus = dfs.getFileStatus(normalFile);
     FileStatus actualNormalFileStatus = webHdfs.getFileStatus(normalDir);
-    Assert.assertEquals(expectedNormalFileStatus.isErasureCoded(),
+    Assertions.assertEquals(expectedNormalFileStatus.isErasureCoded(),
         actualNormalFileStatus.isErasureCoded());
-    ContractTestUtils.assertNotErasureCoded(dfs, normalFile);
-    assertTrue(
-        normalFile + " should have erasure coding unset in "
-            + "FileStatus#toString(): " + actualNormalFileStatus,
-        actualNormalFileStatus.toString().contains("isErasureCoded=false"));
+    Assertions.assertNotErasureCoded(dfs, normalFile);
+      assertTrue(
+              actualNormalFileStatus.toString().contains("isErasureCoded=false"),
+              normalFile + " should have erasure coding unset in "
+                      + "FileStatus#toString(): " + actualNormalFileStatus);
   }
 
   /**
@@ -674,9 +668,9 @@ public class TestWebHDFS {
     // create snapshot without specifying name
     final Path spath = webHdfs.createSnapshot(foo, null);
 
-    Assert.assertTrue(webHdfs.exists(spath));
+    Assertions.assertTrue(webHdfs.exists(spath));
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
-    Assert.assertTrue(webHdfs.exists(s1path));
+    Assertions.assertTrue(webHdfs.exists(s1path));
   }
 
   /**
@@ -697,16 +691,16 @@ public class TestWebHDFS {
 
     webHdfs.createSnapshot(foo, "s1");
     final Path spath = webHdfs.createSnapshot(foo, null);
-    Assert.assertTrue(webHdfs.exists(spath));
+    Assertions.assertTrue(webHdfs.exists(spath));
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
-    Assert.assertTrue(webHdfs.exists(s1path));
+    Assertions.assertTrue(webHdfs.exists(s1path));
 
     // delete operation snapshot name as null
     try {
       webHdfs.deleteSnapshot(foo, null);
       fail("Expected IllegalArgumentException");
     } catch (RemoteException e) {
-      Assert.assertEquals("Required param snapshotname for "
+      Assertions.assertEquals("Required param snapshotname for "
           + "op: DELETESNAPSHOT is null or empty", e.getLocalizedMessage());
     }
 
@@ -741,7 +735,7 @@ public class TestWebHDFS {
     dfs.allowSnapshot(foo);
     webHdfs.createSnapshot(foo, "s1");
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
-    Assert.assertTrue(webHdfs.exists(s1path));
+    Assertions.assertTrue(webHdfs.exists(s1path));
 
     Path file3 = new Path(foo, "file3");
     DFSTestUtil.createFile(dfs, file3, 100, (short) 1, 0);
@@ -754,9 +748,9 @@ public class TestWebHDFS {
     SnapshotDiffReport diffReport =
         webHdfs.getSnapshotDiffReport(foo, "s1", "s2");
 
-    Assert.assertEquals("/foo", diffReport.getSnapshotRoot());
-    Assert.assertEquals("s1", diffReport.getFromSnapshot());
-    Assert.assertEquals("s2", diffReport.getLaterSnapshotName());
+    Assertions.assertEquals("/foo", diffReport.getSnapshotRoot());
+    Assertions.assertEquals("s1", diffReport.getFromSnapshot());
+    Assertions.assertEquals("s2", diffReport.getLaterSnapshotName());
     DiffReportEntry entry0 =
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes(""));
     DiffReportEntry entry1 =
@@ -767,18 +761,18 @@ public class TestWebHDFS {
         DFSUtil.string2Bytes("file2"), DFSUtil.string2Bytes("file4"));
     DiffReportEntry entry4 =
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file3"));
-    Assert.assertTrue(diffReport.getDiffList().contains(entry0));
-    Assert.assertTrue(diffReport.getDiffList().contains(entry1));
-    Assert.assertTrue(diffReport.getDiffList().contains(entry2));
-    Assert.assertTrue(diffReport.getDiffList().contains(entry3));
-    Assert.assertTrue(diffReport.getDiffList().contains(entry4));
-    Assert.assertEquals(diffReport.getDiffList().size(), 5);
+    Assertions.assertTrue(diffReport.getDiffList().contains(entry0));
+    Assertions.assertTrue(diffReport.getDiffList().contains(entry1));
+    Assertions.assertTrue(diffReport.getDiffList().contains(entry2));
+    Assertions.assertTrue(diffReport.getDiffList().contains(entry3));
+    Assertions.assertTrue(diffReport.getDiffList().contains(entry4));
+    Assertions.assertEquals(diffReport.getDiffList().size(), 5);
 
     // Test with fromSnapshot and toSnapshot as null.
     diffReport = webHdfs.getSnapshotDiffReport(foo, null, "s2");
-    Assert.assertEquals(diffReport.getDiffList().size(), 0);
+    Assertions.assertEquals(diffReport.getDiffList().size(), 0);
     diffReport = webHdfs.getSnapshotDiffReport(foo, "s1", null);
-    Assert.assertEquals(diffReport.getDiffList().size(), 5);
+    Assertions.assertEquals(diffReport.getDiffList().size(), 5);
   }
 
   /**
@@ -798,7 +792,7 @@ public class TestWebHDFS {
     dfs.mkdirs(bar);
     SnapshottableDirectoryStatus[] statuses =
         webHdfs.getSnapshottableDirectoryList();
-    Assert.assertNull(statuses);
+    Assertions.assertNull(statuses);
     dfs.allowSnapshot(foo);
     dfs.allowSnapshot(bar);
     Path file0 = new Path(foo, "file0");
@@ -810,37 +804,37 @@ public class TestWebHDFS {
         dfs.getSnapshottableDirListing();
 
     for (int i = 0; i < dfsStatuses.length; i++) {
-      Assert.assertEquals(statuses[i].getSnapshotNumber(),
+      Assertions.assertEquals(statuses[i].getSnapshotNumber(),
           dfsStatuses[i].getSnapshotNumber());
-      Assert.assertEquals(statuses[i].getSnapshotQuota(),
+      Assertions.assertEquals(statuses[i].getSnapshotQuota(),
           dfsStatuses[i].getSnapshotQuota());
-      Assert.assertTrue(Arrays.equals(statuses[i].getParentFullPath(),
+      Assertions.assertTrue(Arrays.equals(statuses[i].getParentFullPath(),
           dfsStatuses[i].getParentFullPath()));
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getChildrenNum(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getChildrenNum(),
           statuses[i].getDirStatus().getChildrenNum());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getModificationTime(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getModificationTime(),
           statuses[i].getDirStatus().getModificationTime());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().isDir(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().isDir(),
           statuses[i].getDirStatus().isDir());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getAccessTime(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getAccessTime(),
           statuses[i].getDirStatus().getAccessTime());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getPermission(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getPermission(),
           statuses[i].getDirStatus().getPermission());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getOwner(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getOwner(),
           statuses[i].getDirStatus().getOwner());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getGroup(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getGroup(),
           statuses[i].getDirStatus().getGroup());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getPath(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getPath(),
           statuses[i].getDirStatus().getPath());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().getFileId(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().getFileId(),
           statuses[i].getDirStatus().getFileId());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().hasAcl(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().hasAcl(),
           statuses[i].getDirStatus().hasAcl());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().isEncrypted(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().isEncrypted(),
           statuses[i].getDirStatus().isEncrypted());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().isErasureCoded(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().isErasureCoded(),
           statuses[i].getDirStatus().isErasureCoded());
-      Assert.assertEquals(dfsStatuses[i].getDirStatus().isSnapshotEnabled(),
+      Assertions.assertEquals(dfsStatuses[i].getDirStatus().isSnapshotEnabled(),
           statuses[i].getDirStatus().isSnapshotEnabled());
     }
   }
@@ -864,37 +858,37 @@ public class TestWebHDFS {
       SnapshotStatus[] dfsStatuses = dfs.getSnapshotListing(foo);
 
       for (int i = 0; i < dfsStatuses.length; i++) {
-        Assert.assertEquals(statuses[i].getSnapshotID(),
+        Assertions.assertEquals(statuses[i].getSnapshotID(),
             dfsStatuses[i].getSnapshotID());
-        Assert.assertEquals(statuses[i].isDeleted(),
+        Assertions.assertEquals(statuses[i].isDeleted(),
             dfsStatuses[i].isDeleted());
-        Assert.assertTrue(Arrays.equals(statuses[i].getParentFullPath(),
+        Assertions.assertTrue(Arrays.equals(statuses[i].getParentFullPath(),
             dfsStatuses[i].getParentFullPath()));
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getChildrenNum(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getChildrenNum(),
             statuses[i].getDirStatus().getChildrenNum());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getModificationTime(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getModificationTime(),
             statuses[i].getDirStatus().getModificationTime());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().isDir(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().isDir(),
             statuses[i].getDirStatus().isDir());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getAccessTime(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getAccessTime(),
             statuses[i].getDirStatus().getAccessTime());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getPermission(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getPermission(),
             statuses[i].getDirStatus().getPermission());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getOwner(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getOwner(),
             statuses[i].getDirStatus().getOwner());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getGroup(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getGroup(),
             statuses[i].getDirStatus().getGroup());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getPath(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getPath(),
             statuses[i].getDirStatus().getPath());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().getFileId(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().getFileId(),
             statuses[i].getDirStatus().getFileId());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().hasAcl(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().hasAcl(),
             statuses[i].getDirStatus().hasAcl());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().isEncrypted(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().isEncrypted(),
             statuses[i].getDirStatus().isEncrypted());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().isErasureCoded(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().isErasureCoded(),
             statuses[i].getDirStatus().isErasureCoded());
-        Assert.assertEquals(dfsStatuses[i].getDirStatus().isSnapshotEnabled(),
+        Assertions.assertEquals(dfsStatuses[i].getDirStatus().isSnapshotEnabled(),
             statuses[i].getDirStatus().isSnapshotEnabled());
       }
     } finally {
@@ -942,14 +936,14 @@ public class TestWebHDFS {
 
     webHdfs.createSnapshot(foo, "s1");
     final Path s1path = SnapshotTestHelper.getSnapshotRoot(foo, "s1");
-    Assert.assertTrue(webHdfs.exists(s1path));
+    Assertions.assertTrue(webHdfs.exists(s1path));
 
     // rename s1 to s2 with oldsnapshotName as null
     try {
       webHdfs.renameSnapshot(foo, null, "s2");
       fail("Expected IllegalArgumentException");
     } catch (RemoteException e) {
-      Assert.assertEquals("Required param oldsnapshotname for "
+      Assertions.assertEquals("Required param oldsnapshotname for "
           + "op: RENAMESNAPSHOT is null or empty", e.getLocalizedMessage());
     }
 
@@ -957,7 +951,7 @@ public class TestWebHDFS {
     webHdfs.renameSnapshot(foo, "s1", "s2");
     assertFalse(webHdfs.exists(s1path));
     final Path s2path = SnapshotTestHelper.getSnapshotRoot(foo, "s2");
-    Assert.assertTrue(webHdfs.exists(s2path));
+    Assertions.assertTrue(webHdfs.exists(s2path));
 
     webHdfs.deleteSnapshot(foo, "s2");
     assertFalse(webHdfs.exists(s2path));
@@ -998,7 +992,7 @@ public class TestWebHDFS {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     final FileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
         WebHdfsConstants.WEBHDFS_SCHEME);
-    Assert.assertNull(webHdfs.getDelegationToken(null));
+    Assertions.assertNull(webHdfs.getDelegationToken(null));
   }
 
   @Test
@@ -1011,7 +1005,7 @@ public class TestWebHDFS {
       webHdfs.getDelegationToken(null);
       fail("No exception is thrown.");
     } catch (AccessControlException ace) {
-      Assert.assertTrue(ace.getMessage().startsWith(
+      Assertions.assertTrue(ace.getMessage().startsWith(
           WebHdfsFileSystem.CANT_FALLBACK_TO_INSECURE_MSG));
     }
   }
@@ -1037,12 +1031,12 @@ public class TestWebHDFS {
                 new LengthParam((long) LENGTH)));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setInstanceFollowRedirects(true);
-    Assert.assertEquals(LENGTH, conn.getContentLength());
+    Assertions.assertEquals(LENGTH, conn.getContentLength());
     byte[] subContents = new byte[LENGTH];
     byte[] realContents = new byte[LENGTH];
     System.arraycopy(CONTENTS, OFFSET, subContents, 0, LENGTH);
     IOUtils.readFully(conn.getInputStream(), realContents);
-    Assert.assertArrayEquals(subContents, realContents);
+    Assertions.assertArrayEquals(subContents, realContents);
   }
 
   @Test
@@ -1056,7 +1050,7 @@ public class TestWebHDFS {
     dfs.mkdirs(path);
     dfs.setQuotaByStorageType(path, StorageType.DISK, 100000);
     ContentSummary contentSummary = webHdfs.getContentSummary(path);
-    Assert
+    Assertions
         .assertTrue((contentSummary.getTypeQuota(StorageType.DISK) == 100000));
   }
 
@@ -1193,16 +1187,16 @@ public class TestWebHDFS {
       byte[] buf = new byte[1024];
       try {
         in.readFully(1020, buf, 0, 5);
-        Assert.fail("EOF expected");
+        Assertions.fail("EOF expected");
       } catch (EOFException ignored) {}
 
       // mix pread with stateful read
       int length = in.read(buf, 0, 512);
       in.readFully(100, new byte[1024], 0, 100);
       int preadLen = in.read(200, new byte[1024], 0, 200);
-      Assert.assertTrue(preadLen > 0);
+      Assertions.assertTrue(preadLen > 0);
       IOUtils.readFully(in, buf, length, 1024 - length);
-      Assert.assertArrayEquals(content, buf);
+      Assertions.assertArrayEquals(content, buf);
     } finally {
       if (in != null) {
         in.close();
@@ -1254,7 +1248,7 @@ public class TestWebHDFS {
     BlockLocation[] locations = fs.getFileBlockLocations(PATH, OFFSET, LENGTH);
     for (BlockLocation location : locations) {
       StorageType[] storageTypes = location.getStorageTypes();
-      Assert.assertTrue(storageTypes != null && storageTypes.length > 0
+      Assertions.assertTrue(storageTypes != null && storageTypes.length > 0
           && storageTypes[0] == StorageType.DISK);
     }
   }
@@ -1362,19 +1356,19 @@ public class TestWebHDFS {
     for(int i=0; i<locations1.length; i++) {
       BlockLocation location1 = locations1[i];
       BlockLocation location2 = locations2[i];
-      Assert.assertEquals(location1.getLength(),
+      Assertions.assertEquals(location1.getLength(),
           location2.getLength());
-      Assert.assertEquals(location1.getOffset(),
+      Assertions.assertEquals(location1.getOffset(),
           location2.getOffset());
-      Assert.assertArrayEquals(location1.getCachedHosts(),
+      Assertions.assertArrayEquals(location1.getCachedHosts(),
           location2.getCachedHosts());
-      Assert.assertArrayEquals(location1.getHosts(),
+      Assertions.assertArrayEquals(location1.getHosts(),
           location2.getHosts());
-      Assert.assertArrayEquals(location1.getNames(),
+      Assertions.assertArrayEquals(location1.getNames(),
           location2.getNames());
-      Assert.assertArrayEquals(location1.getTopologyPaths(),
+      Assertions.assertArrayEquals(location1.getTopologyPaths(),
           location2.getTopologyPaths());
-      Assert.assertArrayEquals(location1.getStorageTypes(),
+      Assertions.assertArrayEquals(location1.getStorageTypes(),
           location2.getStorageTypes());
     }
   }
@@ -1438,18 +1432,18 @@ public class TestWebHDFS {
 
     // get file status and check that it was written properly.
     final FileStatus s1 = fs.getFileStatus(file1);
-    assertEquals("Write failed for file " + file1, length, s1.getLen());
+      assertEquals(length, s1.getLen(), "Write failed for file " + file1);
 
     // Ensure file can be read through WebHdfsInputStream
     FSDataInputStream in = fs.open(file1);
-    assertTrue("Input stream is not an instance of class WebHdfsInputStream",
-        in.getWrappedStream() instanceof WebHdfsInputStream);
+      assertTrue(
+              in.getWrappedStream() instanceof WebHdfsInputStream, "Input stream is not an instance of class WebHdfsInputStream");
     int count = 0;
     for (; in.read() != -1; count++)
       ;
-    assertEquals("Read failed for file " + file1, s1.getLen(), count);
-    assertEquals("Sghould not be able to read beyond end of file", in.read(),
-        -1);
+      assertEquals(s1.getLen(), count, "Read failed for file " + file1);
+      assertEquals(in.read(),
+              -1, "Sghould not be able to read beyond end of file");
     in.close();
     try {
       in.read();
@@ -1538,9 +1532,9 @@ public class TestWebHDFS {
     } catch (Exception e) {
       assertTrue(e.getMessage().contains(msg));
     }
-    assertEquals(msg + ": Read should " + (shouldAttemptRetry ? "" : "not ")
-                + "have called shouldRetry. ",
-        attemptedRetry, shouldAttemptRetry);
+      assertEquals(
+              attemptedRetry, shouldAttemptRetry, msg + ": Read should " + (shouldAttemptRetry ? "" : "not ")
+              + "have called shouldRetry. ");
 
     verify(rr, times(numTimesTried)).getResponse((HttpURLConnection) any());
     webIn.close();
@@ -1554,21 +1548,21 @@ public class TestWebHDFS {
     conn.setInstanceFollowRedirects(false);
     String response = IOUtils.toString(conn.getInputStream());
     LOG.info("Response was : " + response);
-    Assert.assertEquals(
-      "Response wasn't " + HttpURLConnection.HTTP_OK,
-      HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      Assertions.assertEquals(
+              HttpURLConnection.HTTP_OK, conn.getResponseCode(),
+              "Response wasn't " + HttpURLConnection.HTTP_OK);
 
     JSONObject responseJson = new JSONObject(response);
-    Assert.assertTrue("Response didn't give us a location. " + response,
-      responseJson.has("Location"));
+      Assertions.assertTrue(
+              responseJson.has("Location"), "Response didn't give us a location. " + response);
 
     //Test that the DN allows CORS on Create
     if(TYPE.equals("CREATE")) {
       URL dnLocation = new URL(responseJson.getString("Location"));
       HttpURLConnection dnConn = (HttpURLConnection) dnLocation.openConnection();
       dnConn.setRequestMethod("OPTIONS");
-      Assert.assertEquals("Datanode url : " + dnLocation + " didn't allow "
-        + "CORS", HttpURLConnection.HTTP_OK, dnConn.getResponseCode());
+        Assertions.assertEquals(HttpURLConnection.HTTP_OK, dnConn.getResponseCode(), "Datanode url : " + dnLocation + " didn't allow "
+                + "CORS");
     }
   }
 
@@ -1720,7 +1714,7 @@ public class TestWebHDFS {
         WebHdfsConstants.WEBHDFS_SCHEME);
 
     // test getAllStoragePolicies
-    Assert.assertTrue(Arrays.equals(dfs.getAllStoragePolicies().toArray(),
+    Assertions.assertTrue(Arrays.equals(dfs.getAllStoragePolicies().toArray(),
         webHdfs.getAllStoragePolicies().toArray()));
 
     // test get/set/unset policies
@@ -1733,12 +1727,12 @@ public class TestWebHDFS {
     BlockStoragePolicySpi dfsPolicy = dfs.getStoragePolicy(path);
     // get policy from webhdfs
     BlockStoragePolicySpi webHdfsPolicy = webHdfs.getStoragePolicy(path);
-    Assert.assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME.toString(),
+    Assertions.assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME.toString(),
         webHdfsPolicy.getName());
-    Assert.assertEquals(webHdfsPolicy, dfsPolicy);
+    Assertions.assertEquals(webHdfsPolicy, dfsPolicy);
     // unset policy
     webHdfs.unsetStoragePolicy(path);
-    Assert.assertEquals(defaultdfsPolicy, webHdfs.getStoragePolicy(path));
+    Assertions.assertEquals(defaultdfsPolicy, webHdfs.getStoragePolicy(path));
   }
 
   @Test
@@ -1755,7 +1749,7 @@ public class TestWebHDFS {
           HdfsConstants.COLD_STORAGE_POLICY_NAME);
       fail("Should throw exception, when storage policy disabled");
     } catch (IOException e) {
-      Assert.assertTrue(e.getMessage().contains(
+      Assertions.assertTrue(e.getMessage().contains(
           "Failed to set storage policy since"));
     }
   }
@@ -1769,14 +1763,14 @@ public class TestWebHDFS {
       if (policy.getPolicy().getName().equals(ecpolicy)) {
         found = true;
         if (state.equals("disable")) {
-          Assert.assertTrue(policy.isDisabled());
+          Assertions.assertTrue(policy.isDisabled());
         } else if (state.equals("enable")) {
-          Assert.assertTrue(policy.isEnabled());
+          Assertions.assertTrue(policy.isEnabled());
         }
         break;
       }
     }
-    Assert.assertTrue(found);
+    Assertions.assertTrue(found);
   }
 
   // Test For Enable/Disable EC Policy in DFS.
@@ -1925,36 +1919,36 @@ public class TestWebHDFS {
 
   private void compareFsServerDefaults(FsServerDefaults serverDefaults1,
       FsServerDefaults serverDefaults2) throws Exception {
-    Assert.assertEquals("Block size is different",
-        serverDefaults1.getBlockSize(),
-        serverDefaults2.getBlockSize());
-    Assert.assertEquals("Bytes per checksum are different",
-        serverDefaults1.getBytesPerChecksum(),
-        serverDefaults2.getBytesPerChecksum());
-    Assert.assertEquals("Write packet size is different",
-        serverDefaults1.getWritePacketSize(),
-        serverDefaults2.getWritePacketSize());
-    Assert.assertEquals("Default replication is different",
-        serverDefaults1.getReplication(),
-        serverDefaults2.getReplication());
-    Assert.assertEquals("File buffer size are different",
-        serverDefaults1.getFileBufferSize(),
-        serverDefaults2.getFileBufferSize());
-    Assert.assertEquals("Encrypt data transfer key is different",
-        serverDefaults1.getEncryptDataTransfer(),
-        serverDefaults2.getEncryptDataTransfer());
-    Assert.assertEquals("Trash interval is different",
-        serverDefaults1.getTrashInterval(),
-        serverDefaults2.getTrashInterval());
-    Assert.assertEquals("Checksum type is different",
-        serverDefaults1.getChecksumType(),
-        serverDefaults2.getChecksumType());
-    Assert.assertEquals("Key provider uri is different",
-        serverDefaults1.getKeyProviderUri(),
-        serverDefaults2.getKeyProviderUri());
-    Assert.assertEquals("Default storage policy is different",
-        serverDefaults1.getDefaultStoragePolicyId(),
-        serverDefaults2.getDefaultStoragePolicyId());
+      Assertions.assertEquals(
+              serverDefaults1.getBlockSize(),
+              serverDefaults2.getBlockSize(), "Block size is different");
+      Assertions.assertEquals(
+              serverDefaults1.getBytesPerChecksum(),
+              serverDefaults2.getBytesPerChecksum(), "Bytes per checksum are different");
+      Assertions.assertEquals(
+              serverDefaults1.getWritePacketSize(),
+              serverDefaults2.getWritePacketSize(), "Write packet size is different");
+      Assertions.assertEquals(
+              serverDefaults1.getReplication(),
+              serverDefaults2.getReplication(), "Default replication is different");
+      Assertions.assertEquals(
+              serverDefaults1.getFileBufferSize(),
+              serverDefaults2.getFileBufferSize(), "File buffer size are different");
+      Assertions.assertEquals(
+              serverDefaults1.getEncryptDataTransfer(),
+              serverDefaults2.getEncryptDataTransfer(), "Encrypt data transfer key is different");
+      Assertions.assertEquals(
+              serverDefaults1.getTrashInterval(),
+              serverDefaults2.getTrashInterval(), "Trash interval is different");
+      Assertions.assertEquals(
+              serverDefaults1.getChecksumType(),
+              serverDefaults2.getChecksumType(), "Checksum type is different");
+      Assertions.assertEquals(
+              serverDefaults1.getKeyProviderUri(),
+              serverDefaults2.getKeyProviderUri(), "Key provider uri is different");
+      Assertions.assertEquals(
+              serverDefaults1.getDefaultStoragePolicyId(),
+              serverDefaults2.getDefaultStoragePolicyId(), "Default storage policy is different");
   }
 
   /**
@@ -1974,7 +1968,7 @@ public class TestWebHDFS {
         .thenThrow(new UnsupportedOperationException());
     try {
       webfs.getServerDefaults();
-      Assert.fail("should have thrown UnSupportedOperationException.");
+      Assertions.fail("should have thrown UnSupportedOperationException.");
     } catch (UnsupportedOperationException uoe) {
       // Expected exception.
     }
@@ -2008,7 +2002,7 @@ public class TestWebHDFS {
 
     // get file status and check that it was written properly.
     final FileStatus s1 = fs.getFileStatus(file1);
-    assertEquals("Write failed for file " + file1, length, s1.getLen());
+      assertEquals(length, s1.getLen(), "Write failed for file " + file1);
 
     FSDataInputStream in = fs.open(file1);
     in.read(); // Connection is made only when the first read() occurs.
@@ -2073,21 +2067,21 @@ public class TestWebHDFS {
     conn.setInstanceFollowRedirects(false);
     String listStatusResponse = IOUtils.toString(conn.getInputStream(),
         StandardCharsets.UTF_8);
-    Assert.assertEquals("Response wasn't " + HttpURLConnection.HTTP_OK,
-        HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      Assertions.assertEquals(
+              HttpURLConnection.HTTP_OK, conn.getResponseCode(), "Response wasn't " + HttpURLConnection.HTTP_OK);
 
     // Verify that ecPolicy is set in the ListStatus response for ec file
     String ecpolicyForECfile = getECPolicyFromFileStatusJson(
         getFileStatusJson(listStatusResponse, ecFile.getName()));
-    assertEquals("EC policy for ecFile should match the set EC policy",
-        ecpolicyForECfile, ecPolicyName);
+      assertEquals(
+              ecpolicyForECfile, ecPolicyName, "EC policy for ecFile should match the set EC policy");
 
     // Verify that ecPolicy is not set in the ListStatus response for non-ec
     // file
     String ecPolicyForNonECfile = getECPolicyFromFileStatusJson(
         getFileStatusJson(listStatusResponse, nonEcFile.getName()));
-    assertEquals("EC policy for nonEcFile should be null (not set)",
-        ecPolicyForNonECfile, null);
+      assertEquals(
+              ecPolicyForNonECfile, null, "EC policy for nonEcFile should be null (not set)");
 
     // Query webhdfs REST API to get fileStatus for ecFile
     URL getFileStatusUrl = new URL("http", addr.getHostString(), addr.getPort(),
@@ -2099,15 +2093,15 @@ public class TestWebHDFS {
     conn.setInstanceFollowRedirects(false);
     String getFileStatusResponse = IOUtils.toString(conn.getInputStream(),
         StandardCharsets.UTF_8);
-    Assert.assertEquals("Response wasn't " + HttpURLConnection.HTTP_OK,
-        HttpURLConnection.HTTP_OK, conn.getResponseCode());
+      Assertions.assertEquals(
+              HttpURLConnection.HTTP_OK, conn.getResponseCode(), "Response wasn't " + HttpURLConnection.HTTP_OK);
 
     // Verify that ecPolicy is set in getFileStatus response for ecFile
     JSONObject fileStatusObject = new JSONObject(getFileStatusResponse)
         .getJSONObject("FileStatus");
     ecpolicyForECfile = getECPolicyFromFileStatusJson(fileStatusObject);
-    assertEquals("EC policy for ecFile should match the set EC policy",
-        ecpolicyForECfile, ecPolicyName);
+      assertEquals(
+              ecpolicyForECfile, ecPolicyName, "EC policy for ecFile should match the set EC policy");
   }
 
   @Test

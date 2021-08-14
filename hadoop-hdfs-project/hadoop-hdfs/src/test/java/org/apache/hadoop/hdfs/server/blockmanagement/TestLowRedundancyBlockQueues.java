@@ -26,14 +26,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test {@link LowRedundancyBlocks}.
@@ -76,31 +73,31 @@ public class TestLowRedundancyBlockQueues {
       int corruptReplicationOneCount, int lowRedundancyStripedCount,
       int corruptStripedCount, int highestPriorityReplicatedBlockCount,
       int highestPriorityECBlockCount) {
-    assertEquals("Low redundancy replica count incorrect!",
-        lowRedundancyReplicaCount, queues.getLowRedundancyBlocks());
-    assertEquals("Corrupt replica count incorrect!",
-        corruptReplicaCount, queues.getCorruptBlocks());
-    assertEquals("Corrupt replica one count incorrect!",
-        corruptReplicationOneCount,
-        queues.getCorruptReplicationOneBlocks());
-    assertEquals("Low redundancy striped blocks count incorrect!",
-        lowRedundancyStripedCount, queues.getLowRedundancyECBlockGroups());
-    assertEquals("Corrupt striped blocks count incorrect!",
-        corruptStripedCount, queues.getCorruptECBlockGroups());
-    assertEquals("Low Redundancy count incorrect!",
-        lowRedundancyReplicaCount + lowRedundancyStripedCount,
-        queues.getLowRedundancyBlockCount());
-    assertEquals("LowRedundancyBlocks queue size incorrect!",
-        (lowRedundancyReplicaCount + corruptReplicaCount +
-        lowRedundancyStripedCount + corruptStripedCount), queues.size());
-    assertEquals("Highest priority replicated low redundancy " +
-            "blocks count is incorrect!",
-        highestPriorityReplicatedBlockCount,
-        queues.getHighestPriorityReplicatedBlockCount());
-    assertEquals("Highest priority erasure coded low redundancy " +
-            "blocks count is incorrect!",
-        highestPriorityECBlockCount,
-        queues.getHighestPriorityECBlockCount());
+      assertEquals(
+              lowRedundancyReplicaCount, queues.getLowRedundancyBlocks(), "Low redundancy replica count incorrect!");
+      assertEquals(
+              corruptReplicaCount, queues.getCorruptBlocks(), "Corrupt replica count incorrect!");
+      assertEquals(
+              corruptReplicationOneCount,
+              queues.getCorruptReplicationOneBlocks(), "Corrupt replica one count incorrect!");
+      assertEquals(
+              lowRedundancyStripedCount, queues.getLowRedundancyECBlockGroups(), "Low redundancy striped blocks count incorrect!");
+      assertEquals(
+              corruptStripedCount, queues.getCorruptECBlockGroups(), "Corrupt striped blocks count incorrect!");
+      assertEquals(
+              lowRedundancyReplicaCount + lowRedundancyStripedCount,
+              queues.getLowRedundancyBlockCount(), "Low Redundancy count incorrect!");
+      assertEquals(
+              (lowRedundancyReplicaCount + corruptReplicaCount +
+                      lowRedundancyStripedCount + corruptStripedCount), queues.size(), "LowRedundancyBlocks queue size incorrect!");
+      assertEquals(
+              highestPriorityReplicatedBlockCount,
+              queues.getHighestPriorityReplicatedBlockCount(), "Highest priority replicated low redundancy " +
+              "blocks count is incorrect!");
+      assertEquals(
+              highestPriorityECBlockCount,
+              queues.getHighestPriorityECBlockCount(), "Highest priority erasure coded low redundancy " +
+              "blocks count is incorrect!");
   }
 
   /**
@@ -292,11 +289,11 @@ public class TestLowRedundancyBlockQueues {
                            int curReplicas,
                            int decommissionedReplicas,
                            int expectedReplicas) {
-    assertTrue("Failed to add " + block,
-               queues.add(block,
-                          curReplicas, 0,
-                          decommissionedReplicas,
-                          expectedReplicas));
+      assertTrue(
+              queues.add(block,
+                      curReplicas, 0,
+                      decommissionedReplicas,
+                      expectedReplicas), "Failed to add " + block);
   }
 
   /**
@@ -329,7 +326,7 @@ public class TestLowRedundancyBlockQueues {
     neededReconstruction.add(block, 2, 0, 1, 3);
     neededReconstruction.add(block, 0, 0, 0, 3);
     neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
-    assertFalse("Should not contain the block.",
-        neededReconstruction.contains(block));
+      assertFalse(
+              neededReconstruction.contains(block), "Should not contain the block.");
   }
 }

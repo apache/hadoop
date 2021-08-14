@@ -28,10 +28,10 @@ import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,7 +55,7 @@ public class TestEncryptionZonesWithHA {
   protected static final EnumSet< CreateEncryptionZoneFlag > NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
@@ -87,7 +87,7 @@ public class TestEncryptionZonesWithHA {
     fs.getClient().setKeyProvider(nn0Provider);
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -115,12 +115,12 @@ public class TestEncryptionZonesWithHA {
     cluster.shutdownNameNode(0);
     cluster.transitionToActive(1);
 
-    Assert.assertEquals("Got unexpected ez path", dir.toString(),
-        dfsAdmin1.getEncryptionZoneForPath(dir).getPath().toString());
-    Assert.assertEquals("Got unexpected ez path", dir.toString(),
-        dfsAdmin1.getEncryptionZoneForPath(dirChild).getPath().toString());
-    Assert.assertEquals("File contents after failover were changed",
-        contents, DFSTestUtil.readFile(fs, dirFile));
+      Assertions.assertEquals(dir.toString(),
+              dfsAdmin1.getEncryptionZoneForPath(dir).getPath().toString(), "Got unexpected ez path");
+      Assertions.assertEquals(dir.toString(),
+              dfsAdmin1.getEncryptionZoneForPath(dirChild).getPath().toString(), "Got unexpected ez path");
+      Assertions.assertEquals(
+              contents, DFSTestUtil.readFile(fs, dirFile), "File contents after failover were changed");
   }
 
 }

@@ -45,8 +45,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,9 +54,7 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestReconstructStripedBlocks {
   public static final Logger LOG = LoggerFactory.getLogger(
@@ -167,8 +165,8 @@ public class TestReconstructStripedBlocks {
       DataNode lastDn = cluster.getDataNodes().get(groupSize);
       DatanodeDescriptor last =
           bm.getDatanodeManager().getDatanode(lastDn.getDatanodeId());
-      assertEquals("Counting the number of outstanding EC tasks", numBlocks,
-          last.getNumberOfBlocksToBeErasureCoded());
+        assertEquals(numBlocks,
+                last.getNumberOfBlocksToBeErasureCoded(), "Counting the number of outstanding EC tasks");
       List<BlockECReconstructionInfo> reconstruction =
           last.getErasureCodeCommand(numBlocks);
       for (BlockECReconstructionInfo info : reconstruction) {
@@ -348,7 +346,7 @@ public class TestReconstructStripedBlocks {
           Thread.sleep(1000);
         }
       }
-      Assert.assertTrue(reconstructed);
+      Assertions.assertTrue(reconstructed);
 
       blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
       block = (LocatedStripedBlock) blks.getLastLocatedBlock();
@@ -357,7 +355,7 @@ public class TestReconstructStripedBlocks {
         bitSet.set(index);
       }
       for (int i = 0; i < groupSize; i++) {
-        Assert.assertTrue(bitSet.get(i));
+        Assertions.assertTrue(bitSet.get(i));
       }
     } finally {
       cluster.shutdown();

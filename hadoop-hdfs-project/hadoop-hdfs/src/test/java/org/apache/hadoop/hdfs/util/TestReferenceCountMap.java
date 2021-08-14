@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs.util;
 
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verify ReferenceCount map in concurrent scenarios.
@@ -37,28 +37,28 @@ public class TestReferenceCountMap {
     ReferenceCountMap<AclFeature> countMap = new ReferenceCountMap<>();
     countMap.put(aclFeature1);
     countMap.put(aclFeature2);
-    Assert.assertEquals(1, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(1, countMap.getReferenceCount(aclFeature2));
+    Assertions.assertEquals(1, countMap.getReferenceCount(aclFeature1));
+    Assertions.assertEquals(1, countMap.getReferenceCount(aclFeature2));
 
     countMap.put(aclFeature1);
     countMap.put(aclFeature2);
-    Assert.assertEquals(2, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2, countMap.getReferenceCount(aclFeature2));
+    Assertions.assertEquals(2, countMap.getReferenceCount(aclFeature1));
+    Assertions.assertEquals(2, countMap.getReferenceCount(aclFeature2));
 
     countMap.put(aclFeature1);
-    Assert.assertEquals(3, countMap.getReferenceCount(aclFeature1));
+    Assertions.assertEquals(3, countMap.getReferenceCount(aclFeature1));
     countMap.put(aclFeature1);
-    Assert.assertEquals(4, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2, countMap.getReferenceCount(aclFeature2));
+    Assertions.assertEquals(4, countMap.getReferenceCount(aclFeature1));
+    Assertions.assertEquals(2, countMap.getReferenceCount(aclFeature2));
 
     //Delete operations:
     countMap.remove(aclFeature1);
     countMap.remove(aclFeature2);
-    Assert.assertEquals(3, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(1, countMap.getReferenceCount(aclFeature2));
+    Assertions.assertEquals(3, countMap.getReferenceCount(aclFeature1));
+    Assertions.assertEquals(1, countMap.getReferenceCount(aclFeature2));
 
     //Verify unique elements in map
-    Assert.assertEquals(2, countMap.getUniqueElementsSize());
+    Assertions.assertEquals(2, countMap.getUniqueElementsSize());
   }
 
   @Test
@@ -73,15 +73,15 @@ public class TestReferenceCountMap {
 
     putThread1.join();
     putThread2.join();
-    Assert.assertEquals(2 * LOOP_COUNTER,
+    Assertions.assertEquals(2 * LOOP_COUNTER,
         countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(2 * LOOP_COUNTER,
+    Assertions.assertEquals(2 * LOOP_COUNTER,
         countMap.getReferenceCount(aclFeature2));
 
     removeThread1.start();
     removeThread1.join();
-    Assert.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature1));
-    Assert.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
+    Assertions.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature1));
+    Assertions.assertEquals(LOOP_COUNTER, countMap.getReferenceCount(aclFeature2));
   }
 
   class PutThread extends Thread {

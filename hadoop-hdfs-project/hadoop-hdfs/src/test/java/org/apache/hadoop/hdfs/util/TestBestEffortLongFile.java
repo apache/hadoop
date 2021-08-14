@@ -23,17 +23,18 @@ import java.util.Random;
 
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestBestEffortLongFile {
 
   private static final File FILE = new File(MiniDFSCluster.getBaseDirectory() +
       File.separatorChar + "TestBestEffortLongFile");
 
-  @Before
+  @BeforeEach
   public void cleanup() {
     if (FILE.exists()) {
       assertTrue(FILE.delete());

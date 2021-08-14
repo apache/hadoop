@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertTrue;
-
 import java.util.function.Supplier;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
 import org.apache.hadoop.crypto.key.kms.LoadBalancingKMSClientProvider;
@@ -34,10 +35,10 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.util.Arrays;
@@ -53,18 +54,18 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
         miniKMS.getKMSUrl().toExternalForm().replace("://", "@");
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     File kmsDir = new File("target/test-classes/" +
         UUID.randomUUID().toString());
-    Assert.assertTrue(kmsDir.mkdirs());
+    Assertions.assertTrue(kmsDir.mkdirs());
     MiniKMS.Builder miniKMSBuilder = new MiniKMS.Builder();
     miniKMS = miniKMSBuilder.setKmsConfDir(kmsDir).build();
     miniKMS.start();
     super.setup();
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     super.teardown();
     miniKMS.stop();
@@ -100,13 +101,13 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     Credentials creds = new Credentials();
     Token<?> tokens[] = fs.addDelegationTokens(renewer, creds);
     LOG.debug("Delegation tokens: " + Arrays.asList(tokens));
-    Assert.assertEquals(2, tokens.length);
-    Assert.assertEquals(2, creds.numberOfTokens());
+    Assertions.assertEquals(2, tokens.length);
+    Assertions.assertEquals(2, creds.numberOfTokens());
     
     // If the dt exists, will not get again
     tokens = fs.addDelegationTokens(renewer, creds);
-    Assert.assertEquals(0, tokens.length);
-    Assert.assertEquals(2, creds.numberOfTokens());
+    Assertions.assertEquals(0, tokens.length);
+    Assertions.assertEquals(2, creds.numberOfTokens());
   }
 
   @Test(timeout = 120000)
@@ -122,8 +123,8 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
 
     @SuppressWarnings("unchecked")
     KMSClientProvider spy = getKMSClientProvider();
-    assertTrue("key queue is empty after creating encryption zone",
-        spy.getEncKeyQueueSize(TEST_KEY) > 0);
+      assertTrue(
+              spy.getEncKeyQueueSize(TEST_KEY) > 0, "key queue is empty after creating encryption zone");
 
     conf.setInt(
         DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_KEY, 0);
@@ -151,9 +152,9 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
     Credentials creds = new Credentials();
     final Token<?>[] tokens = webfs.addDelegationTokens("JobTracker", creds);
 
-    Assert.assertEquals(2, tokens.length);
-    Assert.assertEquals(KMSDelegationToken.TOKEN_KIND_STR,
+    Assertions.assertEquals(2, tokens.length);
+    Assertions.assertEquals(KMSDelegationToken.TOKEN_KIND_STR,
         tokens[1].getKind().toString());
-    Assert.assertEquals(2, creds.numberOfTokens());
+    Assertions.assertEquals(2, creds.numberOfTokens());
   }
 }

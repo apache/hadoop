@@ -22,11 +22,11 @@ import java.io.FileWriter;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test for JSON based HostsFileReader.
@@ -44,11 +44,11 @@ public class TestCombinedHostsFileReader {
   private final File legacyFile =
       new File(TESTCACHEDATADIR, "legacy.dfs.hosts.json");
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Delete test file after running tests
     newFile.delete();

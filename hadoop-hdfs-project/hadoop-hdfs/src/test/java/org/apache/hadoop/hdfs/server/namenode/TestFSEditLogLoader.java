@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -67,8 +64,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.FakeTimer;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -131,7 +128,7 @@ public class TestFSEditLogLoader {
     cluster.shutdown();
 
     File editFile = FSImageTestUtil.findLatestEditsLog(sd).getFile();
-    assertTrue("Should exist: " + editFile, editFile.exists());
+      assertTrue(editFile.exists(), "Should exist: " + editFile);
 
     // Corrupt the edits file.
     long fileLen = editFile.length();
@@ -151,8 +148,8 @@ public class TestFSEditLogLoader {
           .enableManagedDfsDirsRedundancy(false).format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
-      assertTrue("error message contains opcodes message",
-          e.getMessage().matches(bld.toString()));
+        assertTrue(
+                e.getMessage().matches(bld.toString()), "error message contains opcodes message");
     }
   }
   
@@ -331,7 +328,7 @@ public class TestFSEditLogLoader {
       // disable that here.
       doNothing().when(spyLog).endCurrentLogSegment(true);
       spyLog.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
-      assertTrue("should exist: " + inProgressFile, inProgressFile.exists());
+        assertTrue(inProgressFile.exists(), "should exist: " + inProgressFile);
       
       for (int i = 0; i < numTx; i++) {
         long trueOffset = getNonTrailerLength(inProgressFile);
@@ -396,8 +393,8 @@ public class TestFSEditLogLoader {
           Long.MAX_VALUE, true);
       long expectedEndTxId = (txId == (NUM_TXNS + 1)) ?
           NUM_TXNS : (NUM_TXNS + 1);
-      assertEquals("Failed when corrupting txn opcode at " + txOffset,
-          expectedEndTxId, validation.getEndTxId());
+        assertEquals(
+                expectedEndTxId, validation.getEndTxId(), "Failed when corrupting txn opcode at " + txOffset);
       assertTrue(!validation.hasCorruptHeader());
     }
 
@@ -414,8 +411,8 @@ public class TestFSEditLogLoader {
           Long.MAX_VALUE, true);
       long expectedEndTxId = (txId == 0) ?
           HdfsServerConstants.INVALID_TXID : (txId - 1);
-      assertEquals("Failed when corrupting txid " + txId + " txn opcode " +
-        "at " + txOffset, expectedEndTxId, validation.getEndTxId());
+        assertEquals(expectedEndTxId, validation.getEndTxId(), "Failed when corrupting txid " + txId + " txn opcode " +
+                "at " + txOffset);
       assertTrue(!validation.hasCorruptHeader());
     }
   }
@@ -451,15 +448,15 @@ public class TestFSEditLogLoader {
     //try all codes
     for(FSEditLogOpCodes c : FSEditLogOpCodes.values()) {
       final byte code = c.getOpCode();
-      assertEquals("c=" + c + ", code=" + code,
-          c, FSEditLogOpCodes.fromByte(code));
+        assertEquals(
+                c, FSEditLogOpCodes.fromByte(code), "c=" + c + ", code=" + code);
     }
 
     //try all byte values
     for(int b = 0; b < (1 << Byte.SIZE); b++) {
       final byte code = (byte)b;
-      assertEquals("b=" + b + ", code=" + code,
-          fromByte(code), FSEditLogOpCodes.fromByte(code));
+        assertEquals(
+                fromByte(code), FSEditLogOpCodes.fromByte(code), "b=" + b + ", code=" + code);
     }
   }
 

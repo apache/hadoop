@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -67,8 +64,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.Whitebox;
 import org.slf4j.event.Level;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -287,12 +284,12 @@ public class TestSaveNamespace {
       // since it's not traversable.
       LOG.info("Doing the first savenamespace.");
       fsn.saveNamespace(0, 0);
-      LOG.info("First savenamespace sucessful.");      
-      
-      assertTrue("Savenamespace should have marked one directory as bad." +
-                 " But found " + storage.getRemovedStorageDirs().size() +
-                 " bad directories.", 
-                   storage.getRemovedStorageDirs().size() == 1);
+      LOG.info("First savenamespace sucessful.");
+
+        assertTrue(
+                storage.getRemovedStorageDirs().size() == 1, "Savenamespace should have marked one directory as bad." +
+                " But found " + storage.getRemovedStorageDirs().size() +
+                " bad directories.");
 
       fs.setPermission(rootPath, permissionAll);
 
@@ -302,11 +299,11 @@ public class TestSaveNamespace {
       LOG.info("Doing the second savenamespace.");
       fsn.saveNamespace(0, 0);
       LOG.warn("Second savenamespace sucessful.");
-      assertTrue("Savenamespace should have been successful in removing " +
-                 " bad directories from Image."  +
-                 " But found " + storage.getRemovedStorageDirs().size() +
-                 " bad directories.", 
-                 storage.getRemovedStorageDirs().size() == 0);
+        assertTrue(
+                storage.getRemovedStorageDirs().size() == 0, "Savenamespace should have been successful in removing " +
+                " bad directories from Image."  +
+                " But found " + storage.getRemovedStorageDirs().size() +
+                " bad directories.");
 
       // Now shut down and restart the namesystem
       LOG.info("Shutting down fsimage.");
@@ -673,9 +670,9 @@ public class TestSaveNamespace {
       file.addSnapshotFeature(null).getDiffs()
           .saveSelf2Snapshot(-1, file, null, false);
 
-      // make sure it has a diff
-      assertTrue("Snapshot fileDiff is missing.",
-          file.getFileWithSnapshotFeature().getDiffs() != null);
+        // make sure it has a diff
+        assertTrue(
+                file.getFileWithSnapshotFeature().getDiffs() != null, "Snapshot fileDiff is missing.");
 
       // saveNamespace
       fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
@@ -687,10 +684,10 @@ public class TestSaveNamespace {
       dir = cluster.getNamesystem().getFSDirectory();
       file = dir.getINode(path).asFile();
 
-      // there should be no snapshot feature for the inode, when there is
-      // no snapshot.
-      assertTrue("There should be no snapshot feature for this INode.",
-          file.getFileWithSnapshotFeature() == null);
+        // there should be no snapshot feature for the inode, when there is
+        // no snapshot.
+        assertTrue(
+                file.getFileWithSnapshotFeature() == null, "There should be no snapshot feature for this INode.");
     } finally {
       cluster.shutdown();
     }
@@ -717,7 +714,7 @@ public class TestSaveNamespace {
 
       // make sure no new checkpoint was done
       long after = fsimage.getStorage().getMostRecentCheckpointTxId();
-      Assert.assertEquals(before, after);
+      Assertions.assertEquals(before, after);
 
       Thread.sleep(1000);
       // do another checkpoint. this time set the timewindow to 1s
@@ -726,7 +723,7 @@ public class TestSaveNamespace {
       fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
       after = fsimage.getStorage().getMostRecentCheckpointTxId();
-      Assert.assertTrue(after > before);
+      Assertions.assertTrue(after > before);
 
       fs.mkdirs(new Path("/foo/bar/baz")); // 3 new tx
 
@@ -734,11 +731,11 @@ public class TestSaveNamespace {
       cluster.getNameNodeRpc().saveNamespace(3600, 5); // 3 + end/start segment
       long after2 = fsimage.getStorage().getMostRecentCheckpointTxId();
       // no checkpoint should be made
-      Assert.assertEquals(after, after2);
+      Assertions.assertEquals(after, after2);
       cluster.getNameNodeRpc().saveNamespace(3600, 3);
       after2 = fsimage.getStorage().getMostRecentCheckpointTxId();
       // a new checkpoint should be done
-      Assert.assertTrue(after2 > after);
+      Assertions.assertTrue(after2 > after);
     } finally {
       cluster.shutdown();
     }

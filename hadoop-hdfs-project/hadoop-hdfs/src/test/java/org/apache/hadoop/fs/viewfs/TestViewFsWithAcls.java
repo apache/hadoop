@@ -29,11 +29,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
+
 import java.util.List;
 
 import java.io.IOException;
@@ -44,8 +41,8 @@ import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.fs.permission.FsAction.NONE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Verify ACL through ViewFs functionality.
@@ -61,7 +58,7 @@ public class TestViewFsWithAcls {
   private FileContextTestHelper fileContextTestHelper =
       new FileContextTestHelper("/tmp/TestViewFsWithAcls");
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning() throws IOException {
     clusterConf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(clusterConf)
@@ -74,14 +71,14 @@ public class TestViewFsWithAcls {
     fc2 = FileContext.getFileContext(cluster.getURI(1), clusterConf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fcTarget = fc;
     fcTarget2 = fc2;
@@ -105,7 +102,7 @@ public class TestViewFsWithAcls {
     ConfigUtil.addLink(fsViewConf, mountOnNn2.toString(), targetTestRoot2.toUri());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fcTarget.delete(fileContextTestHelper.getTestRootPath(fcTarget), true);
     fcTarget2.delete(fileContextTestHelper.getTestRootPath(fcTarget2), true);

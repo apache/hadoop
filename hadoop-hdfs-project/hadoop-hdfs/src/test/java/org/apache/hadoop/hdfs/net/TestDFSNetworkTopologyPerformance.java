@@ -24,10 +24,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +37,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Performance test of the new DFSNetworkTopology chooseRandom.
@@ -49,7 +49,7 @@ import static org.junit.Assert.assertTrue;
  * tests without something reading the value. So disabled the tests to for now,
  * anyone interested in looking at the numbers can enable them.
  */
-@Ignore
+@Disabled
 public class TestDFSNetworkTopologyPerformance {
   public static final Logger LOG =
       LoggerFactory.getLogger(TestDFSNetworkTopologyPerformance.class);
@@ -83,7 +83,7 @@ public class TestDFSNetworkTopologyPerformance {
   private long localEnd;
 
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     racks = new String[NODE_NUM];
     hosts = new String[NODE_NUM];
@@ -95,7 +95,7 @@ public class TestDFSNetworkTopologyPerformance {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     cluster = NetworkTopology.getInstance(new Configuration());
     dfscluster = DFSNetworkTopology.getInstance(new Configuration());

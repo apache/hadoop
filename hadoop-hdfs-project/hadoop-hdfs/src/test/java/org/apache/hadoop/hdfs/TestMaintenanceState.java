@@ -21,10 +21,8 @@ import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -56,8 +54,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -344,16 +342,16 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     DFSTestUtil.waitForDatanodeState(
         getCluster(), nodeOutofService.getDatanodeUuid(), false, 20000);
     DFSClient client = getDfsClient(0);
-    assertEquals("maintenance node shouldn't be live", numDatanodes - 1,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes - 1,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "maintenance node shouldn't be live");
     assertEquals(1, ns.getNumEnteringMaintenanceDataNodes());
 
     getCluster().restartDataNode(dnProp, true);
     getCluster().waitActive();
     waitNodeState(nodeOutofService, AdminStates.ENTERING_MAINTENANCE);
     assertEquals(1, ns.getNumEnteringMaintenanceDataNodes());
-    assertEquals("maintenance node should be live", numDatanodes,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "maintenance node should be live");
 
     cleanupFile(fileSys, file);
   }
@@ -479,7 +477,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     int fileBlockReplication = maintenanceMinRepl + 1;
     int numAddedDataNodes = 1;
     int numInitialDataNodes = (maintenanceMinRepl * 2 - numAddedDataNodes);
-    Assert.assertTrue(maintenanceMinRepl <= defaultReplication);
+    Assertions.assertTrue(maintenanceMinRepl <= defaultReplication);
     testFileBlockReplicationImpl(maintenanceMinRepl,
         numInitialDataNodes, numAddedDataNodes, fileBlockReplication);
 
@@ -557,8 +555,8 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
         AdminStates.IN_MAINTENANCE);
 
     DFSClient client = getDfsClient(0);
-    assertEquals("All datanodes must be alive", numDatanodes,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
 
     // test 1, verify the replica in IN_MAINTENANCE state isn't in LocatedBlock
     checkWithRetry(ns, fileSys, file, replicas - 1,
@@ -784,14 +782,14 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
         nodeOutofService);
 
     final DFSClient client = getDfsClient(0);
-    assertEquals("All datanodes must be alive", numDatanodes,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
 
     getCluster().stopDataNode(nodeOutofService.getXferAddr());
     DFSTestUtil.waitForDatanodeState(
         getCluster(), nodeOutofService.getDatanodeUuid(), false, 20000);
-    assertEquals("maintenance node shouldn't be alive", numDatanodes - 1,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes - 1,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "maintenance node shouldn't be alive");
 
     // Dead maintenance node's blocks should remain in block map.
     checkWithRetry(ns, fileSys, file, replicas - 1,
@@ -840,15 +838,15 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
         nodeOutofService);
 
     DFSClient client = getDfsClient(0);
-    assertEquals("All datanodes must be alive", numDatanodes,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "All datanodes must be alive");
 
     MiniDFSCluster.DataNodeProperties dnProp =
         getCluster().stopDataNode(nodeOutofService.getXferAddr());
     DFSTestUtil.waitForDatanodeState(
         getCluster(), nodeOutofService.getDatanodeUuid(), false, 20000);
-    assertEquals("maintenance node shouldn't be alive", numDatanodes - 1,
-        client.datanodeReport(DatanodeReportType.LIVE).length);
+      assertEquals(numDatanodes - 1,
+              client.datanodeReport(DatanodeReportType.LIVE).length, "maintenance node shouldn't be alive");
 
     // Dead maintenance node's blocks should remain in block map.
     checkWithRetry(ns, fileSys, file, replicas - 1,
@@ -1025,9 +1023,9 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
   static String checkFile(FSNamesystem ns, FileSystem fileSys,
       Path name, int repl, DatanodeInfo expectedExcludedNode,
       DatanodeInfo expectedMaintenanceNode) throws IOException {
-    // need a raw stream
-    assertTrue("Not HDFS:"+fileSys.getUri(),
-        fileSys instanceof DistributedFileSystem);
+      // need a raw stream
+      assertTrue(
+              fileSys instanceof DistributedFileSystem, "Not HDFS:" + fileSys.getUri());
     HdfsDataInputStream dis = (HdfsDataInputStream)fileSys.open(name);
     BlockManager bm = ns.getBlockManager();
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
@@ -1126,9 +1124,9 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
   static private DatanodeInfo[] getFirstBlockReplicasDatanodeInfos(
       FileSystem fileSys, Path name) throws IOException {
-    // need a raw stream
-    assertTrue("Not HDFS:"+fileSys.getUri(),
-        fileSys instanceof DistributedFileSystem);
+      // need a raw stream
+      assertTrue(
+              fileSys instanceof DistributedFileSystem, "Not HDFS:" + fileSys.getUri());
     HdfsDataInputStream dis = (HdfsDataInputStream)fileSys.open(name);
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
     if (dinfo.iterator().hasNext()) { // for the first block

@@ -32,15 +32,15 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestNameNodeMetadataConsistency {
   private static final Path filePath1 = new Path("/testdata1.txt");
@@ -52,7 +52,7 @@ public class TestNameNodeMetadataConsistency {
   MiniDFSCluster cluster;
   HdfsConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void InitTest() throws IOException {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
@@ -62,7 +62,7 @@ public class TestNameNodeMetadataConsistency {
         .build();
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();

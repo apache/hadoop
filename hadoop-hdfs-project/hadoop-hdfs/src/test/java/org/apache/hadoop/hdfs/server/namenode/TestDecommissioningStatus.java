@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -57,9 +57,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -123,13 +123,13 @@ public class TestDecommissioningStatus {
         .setHeartbeatExpireInterval(3000);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setupConfig();
     createCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (hostsFileWriter != null) {
       hostsFileWriter.cleanup();
@@ -166,16 +166,16 @@ public class TestDecommissioningStatus {
   protected void checkDecommissionStatus(DatanodeDescriptor decommNode,
       int expectedUnderRep, int expectedDecommissionOnly,
       int expectedUnderRepInOpenFiles) {
-    assertEquals("Unexpected num under-replicated blocks",
-        expectedUnderRep,
-        decommNode.getLeavingServiceStatus().getUnderReplicatedBlocks());
-    assertEquals("Unexpected number of decom-only replicas",
-        expectedDecommissionOnly,
-        decommNode.getLeavingServiceStatus().getOutOfServiceOnlyReplicas());
-    assertEquals(
-        "Unexpected number of replicas in under-replicated open files",
-        expectedUnderRepInOpenFiles,
-        decommNode.getLeavingServiceStatus().getUnderReplicatedInOpenFiles());
+      assertEquals(
+              expectedUnderRep,
+              decommNode.getLeavingServiceStatus().getUnderReplicatedBlocks(), "Unexpected num under-replicated blocks");
+      assertEquals(
+              expectedDecommissionOnly,
+              decommNode.getLeavingServiceStatus().getOutOfServiceOnlyReplicas(), "Unexpected number of decom-only replicas");
+      assertEquals(
+              expectedUnderRepInOpenFiles,
+              decommNode.getLeavingServiceStatus().getUnderReplicatedInOpenFiles(),
+              "Unexpected number of replicas in under-replicated open files");
   }
 
   protected void checkDFSAdminDecommissionStatus(
@@ -202,21 +202,21 @@ public class TestDecommissioningStatus {
           count++;
         }
       }
-      assertTrue("No decommissioning output", num != null);
-      assertEquals("Unexpected number of decomming DNs", expectedDecomm.size(),
-          num.intValue());
-      assertEquals("Unexpected number of decomming DNs", expectedDecomm.size(),
-          count);
+        assertTrue(num != null, "No decommissioning output");
+        assertEquals(expectedDecomm.size(),
+                num.intValue(), "Unexpected number of decomming DNs");
+        assertEquals(expectedDecomm.size(),
+                count, "Unexpected number of decomming DNs");
 
       // Check Java API for correct contents
       List<DatanodeInfo> decomming =
           new ArrayList<DatanodeInfo>(Arrays.asList(dfs
               .getDataNodeStats(DatanodeReportType.DECOMMISSIONING)));
-      assertEquals("Unexpected number of decomming DNs", expectedDecomm.size(),
-          decomming.size());
+        assertEquals(expectedDecomm.size(),
+                decomming.size(), "Unexpected number of decomming DNs");
       for (DatanodeID id : expectedDecomm) {
-        assertTrue("Did not find expected decomming DN " + id,
-            decomming.contains(id));
+          assertTrue(
+                  decomming.contains(id), "Did not find expected decomming DN " + id);
       }
     } finally {
       System.setOut(oldOut);
@@ -249,7 +249,7 @@ public class TestDecommissioningStatus {
         .getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", 2, info.length);
+      assertEquals(2, info.length, "Number of Datanodes ");
     DistributedFileSystem fileSys = cluster.getFileSystem();
     DFSAdmin admin = new DFSAdmin(cluster.getConfiguration(0));
 
@@ -355,13 +355,13 @@ public class TestDecommissioningStatus {
     BlockManagerTestUtil.recheckDecommissionState(dm);
     // Block until the admin's monitor updates the number of tracked nodes.
     waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 1);
-    // Verify that the DN remains in DECOMMISSION_INPROGRESS state.
-    assertTrue("the node should be DECOMMISSION_IN_PROGRESSS",
-        dead.get(0).isDecommissionInProgress());
+      // Verify that the DN remains in DECOMMISSION_INPROGRESS state.
+      assertTrue(
+              dead.get(0).isDecommissionInProgress(), "the node should be DECOMMISSION_IN_PROGRESSS");
     // Check DatanodeManager#getDecommissionNodes, make sure it returns
     // the node as decommissioning, even if it's dead
     List<DatanodeDescriptor> decomlist = dm.getDecommissioningNodes();
-    assertTrue("The node should be be decommissioning", decomlist.size() == 1);
+      assertTrue(decomlist.size() == 1, "The node should be be decommissioning");
     
     // Delete the under-replicated file, which should let the 
     // DECOMMISSION_IN_PROGRESS node become DECOMMISSIONED
@@ -369,8 +369,8 @@ public class TestDecommissioningStatus {
     BlockManagerTestUtil.recheckDecommissionState(dm);
     // Block until the admin's monitor updates the number of tracked nodes.
     waitForDecommissionedNodes(dm.getDatanodeAdminManager(), 0);
-    assertTrue("the node should be decommissioned",
-        dead.get(0).isDecommissioned());
+      assertTrue(
+              dead.get(0).isDecommissioned(), "the node should be decommissioned");
 
     // Add the node back
     cluster.restartDataNode(dataNodeProperties, true);

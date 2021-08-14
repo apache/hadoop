@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -96,7 +96,7 @@ public class TestDatanodeDeath {
           checkFile(fs, filename, replication, numBlocks, fileSize, myseed);
         } catch (Throwable e) {
           System.out.println("Workload exception " + e);
-          assertTrue(e.toString(), false);
+            assertTrue(false, e.toString());
         }
 
         // increment the stamp to indicate that another file is done.
@@ -148,9 +148,9 @@ public class TestDatanodeDeath {
     int attempt = 0;
 
     long len = fileSys.getFileStatus(name).getLen();
-    assertTrue(name + " should be of size " + filesize +
-               " but found to be of size " + len, 
-               len == filesize);
+      assertTrue(
+              len == filesize, name + " should be of size " + filesize +
+              " but found to be of size " + len);
 
     // wait till all full blocks are confirmed by the datanodes.
     while (!done) {
@@ -198,9 +198,9 @@ public class TestDatanodeDeath {
 
   private static void checkData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+        assertEquals(
+                actual[idx], expected[from + idx], message + " byte " + (from + idx) + " differs. expected " +
+                expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }
@@ -259,7 +259,7 @@ public class TestDatanodeDeath {
             // cluster.startDataNodes(conf, 1, true, null, null);
           } catch (IOException e) {
             System.out.println("TestDatanodeDeath Modify exception " + e);
-            assertTrue("TestDatanodeDeath Modify exception " + e, false);
+              assertTrue(false, "TestDatanodeDeath Modify exception " + e);
             running = false;
           }
         }
@@ -399,7 +399,7 @@ public class TestDatanodeDeath {
     } catch (Throwable e) {
       System.out.println("Simple Workload exception " + e);
       e.printStackTrace();
-      assertTrue(e.toString(), false);
+        assertTrue(false, e.toString());
     } finally {
       fs.close();
       cluster.shutdown();

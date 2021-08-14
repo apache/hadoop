@@ -36,11 +36,11 @@ import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.TestName;
 
 import java.io.File;
@@ -65,7 +65,7 @@ public class TestJournalNodeSync {
   @Rule
   public TestName testName = new TestName();
 
-  @Before
+  @BeforeEach
   public void setUpMiniCluster() throws IOException {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, true);
@@ -87,7 +87,7 @@ public class TestJournalNodeSync {
     namesystem = dfsCluster.getNamesystem(0);
   }
 
-  @After
+  @AfterEach
   public void shutDownMiniCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
@@ -99,7 +99,7 @@ public class TestJournalNodeSync {
 
     //As by default 3 journal nodes are started;
     for(int i=0; i<3; i++) {
-      Assert.assertEquals(true,
+      Assertions.assertEquals(true,
           jCluster.getJournalNode(i).getJournalSyncerStatus("ns1"));
     }
 
@@ -309,9 +309,9 @@ public class TestJournalNodeSync {
     // JournalNodeSyncer alone (as the edit log queueing has been disabled)
     long numEditLogsSynced = jCluster.getJournalNode(0).getOrCreateJournal(jid)
         .getMetrics().getNumEditLogsSynced().value();
-    Assert.assertTrue("Edit logs downloaded outside syncer. Expected 8 or " +
-            "more downloads, got " + numEditLogsSynced + " downloads instead",
-        numEditLogsSynced >= 8);
+      Assertions.assertTrue(
+              numEditLogsSynced >= 8, "Edit logs downloaded outside syncer. Expected 8 or " +
+              "more downloads, got " + numEditLogsSynced + " downloads instead");
   }
 
   // Test JournalNode Sync when a JN is formatted while NN is actively writing
@@ -382,13 +382,13 @@ public class TestJournalNodeSync {
           HdfsConstants.RollingUpgradeAction.PREPARE);
 
     //query rolling upgrade
-    Assert.assertEquals(info, dfsActive.rollingUpgrade(
+    Assertions.assertEquals(info, dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.QUERY));
 
     // Restart the Standby NN with rollingUpgrade option
     dfsCluster.restartNameNode(standbyNNindex, true,
         "-rollingUpgrade", "started");
-    Assert.assertEquals(info, dfsActive.rollingUpgrade(
+    Assertions.assertEquals(info, dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.QUERY));
 
     // Do some edits and delete some edit logs
@@ -410,13 +410,13 @@ public class TestJournalNodeSync {
     standbyNNindex=((activeNNindex+1)%2);
     dfsActive = dfsCluster.getFileSystem(activeNNindex);
 
-    Assert.assertTrue(dfsCluster.getNameNode(activeNNindex).isActiveState());
-    Assert.assertFalse(dfsCluster.getNameNode(standbyNNindex).isActiveState());
+    Assertions.assertTrue(dfsCluster.getNameNode(activeNNindex).isActiveState());
+    Assertions.assertFalse(dfsCluster.getNameNode(standbyNNindex).isActiveState());
 
     // Restart the current standby NN (previously active)
     dfsCluster.restartNameNode(standbyNNindex, true,
         "-rollingUpgrade", "started");
-    Assert.assertEquals(info, dfsActive.rollingUpgrade(
+    Assertions.assertEquals(info, dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.QUERY));
     dfsCluster.waitActive();
 
@@ -429,12 +429,12 @@ public class TestJournalNodeSync {
     //finalize rolling upgrade
     final RollingUpgradeInfo finalize = dfsActive.rollingUpgrade(
         HdfsConstants.RollingUpgradeAction.FINALIZE);
-    Assert.assertTrue(finalize.isFinalized());
+    Assertions.assertTrue(finalize.isFinalized());
 
     // Check the missing edit logs exist after finalizing rolling upgrade
     for (File editLog : missingLogs) {
-      Assert.assertTrue("Edit log missing after finalizing rolling upgrade",
-          editLog.exists());
+        Assertions.assertTrue(
+                editLog.exists(), "Edit log missing after finalizing rolling upgrade");
     }
   }
 
@@ -446,7 +446,7 @@ public class TestJournalNodeSync {
       logFile = getLogFile(currentDir, startTxId);
     }
     File deleteFile = logFile.getFile();
-    Assert.assertTrue("Couldn't delete edit log file", deleteFile.delete());
+      Assertions.assertTrue(deleteFile.delete(), "Couldn't delete edit log file");
 
     return deleteFile;
   }
@@ -521,7 +521,7 @@ public class TestJournalNodeSync {
     long lastWrittenTxId = dfsCluster.getNameNode(activeNNindex).getFSImage()
         .getEditLog().getLastWrittenTxId();
     for (int i = 1; i <= numEdits; i++) {
-      Assert.assertTrue("Failed to do an edit", doAnEdit());
+        Assertions.assertTrue(doAnEdit(), "Failed to do an edit");
     }
     dfsCluster.getNameNode(activeNNindex).getRpcServer().rollEditLog();
     return lastWrittenTxId;

@@ -31,13 +31,13 @@ import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.StorageType.DISK;
 import static org.apache.hadoop.fs.StorageType.SSD;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.anyByte;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -75,8 +75,8 @@ public class TestFileWithSnapshotFeature {
         bsps, collectedBlocks, removedINodes, null);
     sf.updateQuotaAndCollectBlocks(ctx, file, diff);
     QuotaCounts counts = ctx.quotaDelta().getCountsCopy();
-    Assert.assertEquals(0, counts.getStorageSpace());
-    Assert.assertTrue(counts.getTypeSpaces().allLessOrEqual(0));
+    Assertions.assertEquals(0, counts.getStorageSpace());
+    Assertions.assertTrue(counts.getTypeSpaces().allLessOrEqual(0));
 
     // INode only exists in the snapshot
     INodeFile snapshotINode = mock(INodeFile.class);
@@ -91,10 +91,10 @@ public class TestFileWithSnapshotFeature {
     blocks[0].setReplication(REPL_3);
     sf.updateQuotaAndCollectBlocks(ctx, file, diff);
     counts = ctx.quotaDelta().getCountsCopy();
-    Assert.assertEquals((REPL_3 - REPL_1) * BLOCK_SIZE,
+    Assertions.assertEquals((REPL_3 - REPL_1) * BLOCK_SIZE,
                         counts.getStorageSpace());
-    Assert.assertEquals(BLOCK_SIZE, counts.getTypeSpaces().get(DISK));
-    Assert.assertEquals(-BLOCK_SIZE, counts.getTypeSpaces().get(SSD));
+    Assertions.assertEquals(BLOCK_SIZE, counts.getTypeSpaces().get(DISK));
+    Assertions.assertEquals(-BLOCK_SIZE, counts.getTypeSpaces().get(SSD));
   }
 
   /**

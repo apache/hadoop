@@ -41,8 +41,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -54,8 +54,8 @@ import java.util.Random;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base class for test striped file write operation.
@@ -95,7 +95,7 @@ public class TestDFSStripedOutputStreamWithFailureBase {
   /*
    * Initialize erasure coding policy.
    */
-  @Before
+  @BeforeEach
   public void init() {
     ecPolicy = new ErasureCodingPolicy(getEcSchema(), cellSize);
     dataBlocks = ecPolicy.getNumDataUnits();
@@ -245,7 +245,7 @@ public class TestDFSStripedOutputStreamWithFailureBase {
         final String err = "failed, dn=" + dn + ", length=" + length
             + StringUtils.stringifyException(e);
         LOG.error(err);
-        Assert.fail(err);
+        Assertions.fail(err);
       } finally {
         tearDown();
       }
@@ -389,15 +389,15 @@ public class TestDFSStripedOutputStreamWithFailureBase {
       }
 
       if (datanodes != null) {
-        Assert.assertEquals(1, datanodes.length);
-        Assert.assertNotNull(datanodes[0]);
+        Assertions.assertEquals(1, datanodes.length);
+        Assertions.assertNotNull(datanodes[0]);
         return datanodes[0];
       }
 
       try {
         Thread.sleep(100);
       } catch (InterruptedException ie) {
-        Assert.fail(StringUtils.stringifyException(ie));
+        Assertions.fail(StringUtils.stringifyException(ie));
         return null;
       }
     }

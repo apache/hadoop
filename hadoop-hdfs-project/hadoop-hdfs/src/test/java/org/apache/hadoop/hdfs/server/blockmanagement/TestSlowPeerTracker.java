@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.blockmanagement.SlowPeerTracker
     .ReportForJson;
 import org.apache.hadoop.util.FakeTimer;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +36,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Set;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link SlowPeerTracker}.
@@ -61,7 +61,7 @@ public class TestSlowPeerTracker {
   private static final ObjectReader READER =
       new ObjectMapper().readerFor(new TypeReference<Set<ReportForJson>>() {});
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new HdfsConfiguration();
     timer = new FakeTimer();

@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,9 +47,8 @@ import org.apache.hadoop.hdfs.util.BestEffortLongFile;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
@@ -65,7 +61,7 @@ public class TestDFSUpgradeWithHA {
   
   private Configuration conf;
   
-  @Before
+  @BeforeEach
   public void createConfiguration() {
     conf = new HdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
@@ -121,8 +117,8 @@ public class TestDFSUpgradeWithHA {
           PersistentLongFile prevLongFile = new PersistentLongFile(prevFile, -10);
           PersistentLongFile currLongFile = new PersistentLongFile(new File(currDir,
               fileName), -11);
-          assertTrue("Value in " + fileName + " has decreased on upgrade in "
-              + journalDir, prevLongFile.get() <= currLongFile.get());
+            assertTrue(prevLongFile.get() <= currLongFile.get(), "Value in " + fileName + " has decreased on upgrade in "
+                    + journalDir);
         }
       }
     }
@@ -132,9 +128,9 @@ public class TestDFSUpgradeWithHA {
       boolean shouldExist) {
     File previousDir = new File(rootDir, "previous");
     if (shouldExist) {
-      assertTrue(previousDir + " does not exist", previousDir.exists());
+        assertTrue(previousDir.exists(), previousDir + " does not exist");
     } else {
-      assertFalse(previousDir + " does exist", previousDir.exists());
+        assertFalse(previousDir.exists(), previousDir + " does exist");
     }
   }
   

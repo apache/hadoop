@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 public class TestMiniJournalCluster {

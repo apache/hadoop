@@ -19,13 +19,13 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
-import static org.junit.Assert.fail;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -39,10 +39,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests whether FileContext can resolve an hdfs path that has a symlink to
@@ -53,7 +53,7 @@ public class TestResolveHdfsSymlink {
   private static final FileContextTestHelper helper = new FileContextTestHelper();
   private static MiniDFSCluster cluster = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(
@@ -63,7 +63,7 @@ public class TestResolveHdfsSymlink {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -100,11 +100,11 @@ public class TestResolveHdfsSymlink {
 
     Set<AbstractFileSystem> afsList = fcHdfs
         .resolveAbstractFileSystems(alphaHdfsPathViaLink);
-    Assert.assertEquals(2, afsList.size());
+    Assertions.assertEquals(2, afsList.size());
     for (AbstractFileSystem afs : afsList) {
       if ((!afs.equals(fcHdfs.getDefaultFileSystem()))
           && (!afs.equals(fcLocal.getDefaultFileSystem()))) {
-        Assert.fail("Failed to resolve AFS correctly");
+        Assertions.fail("Failed to resolve AFS correctly");
       }
     }
   }

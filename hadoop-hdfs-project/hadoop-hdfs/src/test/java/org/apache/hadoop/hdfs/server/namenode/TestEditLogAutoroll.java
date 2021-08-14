@@ -39,9 +39,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -76,7 +76,7 @@ public class TestEditLogAutoroll {
 
   public static final Logger LOG = LoggerFactory.getLogger(FSEditLog.class);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     // Stall the standby checkpointer in two ways
@@ -119,7 +119,7 @@ public class TestEditLogAutoroll {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (fs != null) {
       fs.close();

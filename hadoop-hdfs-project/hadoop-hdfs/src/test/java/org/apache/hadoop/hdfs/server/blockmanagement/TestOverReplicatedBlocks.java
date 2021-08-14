@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 
@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestOverReplicatedBlocks {
   /** Test processOverReplicatedBlock can handle corrupt replicas fine.
@@ -75,8 +75,8 @@ public class TestOverReplicatedBlocks {
           "scanner.cursor");
       //wait for one minute for deletion to succeed;
       for(int i = 0; !scanCursor.delete(); i++) {
-        assertTrue("Could not delete " + scanCursor.getAbsolutePath() +
-            " in one minute", i < 60);
+          assertTrue(i < 60, "Could not delete " + scanCursor.getAbsolutePath() +
+                  " in one minute");
         try {
           Thread.sleep(1000);
         } catch (InterruptedException ignored) {}
@@ -183,12 +183,12 @@ public class TestOverReplicatedBlocks {
       // And should not actually be deleted, because lastDN does not heartbeat.
       namesystem.readLock();
       final int dnBlocks = bm.getExcessSize4Testing(dnReg.getDatanodeUuid());
-      assertEquals("Replicas on node " + lastDNid + " should have been deleted",
-          SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks);
+        assertEquals(
+                SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks, "Replicas on node " + lastDNid + " should have been deleted");
       namesystem.readUnlock();
       for(BlockLocation location : locs)
-        assertEquals("Block should still have 4 replicas",
-            4, location.getNames().length);
+          assertEquals(
+                  4, location.getNames().length, "Block should still have 4 replicas");
     } finally {
       if(fs != null) fs.close();
       if(cluster != null) cluster.shutdown();
@@ -215,8 +215,8 @@ public class TestOverReplicatedBlocks {
       fs.setReplication(p, (short) 1);
       out.close();
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, p);
-      assertEquals("Expected only one live replica for the block", 1, bm
-          .countNodes(bm.getStoredBlock(block.getLocalBlock())).liveReplicas());
+        assertEquals(1, bm
+                .countNodes(bm.getStoredBlock(block.getLocalBlock())).liveReplicas(), "Expected only one live replica for the block");
     } finally {
       cluster.shutdown();
     }

@@ -41,12 +41,13 @@ import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StopWatch;
-import org.junit.After;
-import org.junit.Assert;
-import static org.junit.Assert.*;
-import org.junit.Before;
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
@@ -78,7 +79,7 @@ public class TestJournalNode {
     DefaultMetricsSystem.setMiniClusterMode(true);
   }
   
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     File editsDir = new File(MiniDFSCluster.getBaseDirectory() +
         File.separator + "TestJournalNode");
@@ -188,7 +189,7 @@ public class TestJournalNode {
         "qjournal://journalnode0:9900;journalnode1:9901/test-journalid-ns2");
   }
   
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     jn.stop(0);
   }
@@ -316,9 +317,9 @@ public class TestJournalNode {
     
     // Check default servlets.
     String pageContents = DFSTestUtil.urlGet(new URL(urlRoot + "/jmx"));
-    assertTrue("Bad contents: " + pageContents,
-        pageContents.contains(
-            "Hadoop:service=JournalNode,name=JvmMetrics"));
+      assertTrue(
+              pageContents.contains(
+                      "Hadoop:service=JournalNode,name=JvmMetrics"), "Bad contents: " + pageContents);
 
     // Create some edits on server side
     byte[] EDITS_DATA = QJMTestUtil.createTxnData(1, 3);
@@ -509,17 +510,17 @@ public class TestJournalNode {
     //JournalSyncer will not be started, as journalsync is not enabled
     conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, false);
     jn.getOrCreateJournal(journalId);
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
     //Trying by passing nameserviceId still journalnodesyncer should not start
     // IstriedJournalSyncerStartWithnsId should also be false
     jn.getOrCreateJournal(journalId, "mycluster");
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
   }
@@ -530,9 +531,9 @@ public class TestJournalNode {
     //JournalSyncer will not be started,
     // as shared edits hostnames are not resolved
     jn.getOrCreateJournal(journalId);
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
     //Trying by passing nameserviceId, now
@@ -540,9 +541,9 @@ public class TestJournalNode {
     // but journalnode syncer will not be started,
     // as hostnames are not resolved
     jn.getOrCreateJournal(journalId, "mycluster");
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
   }
@@ -553,9 +554,9 @@ public class TestJournalNode {
     //JournalSyncer will not be started,
     // as shared edits hostnames are not resolved
     jn.getOrCreateJournal(journalId);
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
     //Trying by passing nameserviceId and resolve hostnames
@@ -563,9 +564,9 @@ public class TestJournalNode {
     // and also journalnode syncer will also be started
     setupStaticHostResolution(2, "jn");
     jn.getOrCreateJournal(journalId, "mycluster");
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
   }
@@ -578,9 +579,9 @@ public class TestJournalNode {
     // but configured shared edits dir is appended with nameserviceId
     setupStaticHostResolution(2, "journalnode");
     jn.getOrCreateJournal(journalId);
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
     //Trying by passing nameserviceId and resolve hostnames
@@ -588,9 +589,9 @@ public class TestJournalNode {
     // and also journalnode syncer will also be started
 
     jn.getOrCreateJournal(journalId, "ns1");
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
   }
 
@@ -602,9 +603,9 @@ public class TestJournalNode {
     // namenodeId
     setupStaticHostResolution(2, "journalnode");
     jn.getOrCreateJournal(journalId);
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
     //Trying by passing nameserviceId and resolve hostnames
@@ -612,9 +613,9 @@ public class TestJournalNode {
     // and also journalnode syncer will also be started
 
     jn.getOrCreateJournal(journalId, "ns1");
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
   }
 
@@ -627,9 +628,9 @@ public class TestJournalNode {
     // namenodeId
     setupStaticHostResolution(2, "journalnode");
     jn.getOrCreateJournal(journalId);
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
 
     //Trying by passing nameserviceId and resolve hostnames
@@ -638,9 +639,9 @@ public class TestJournalNode {
     // as for each nnId, different shared Edits dir value is configured
 
     jn.getOrCreateJournal(journalId, "ns1");
-    Assert.assertEquals(false,
+    Assertions.assertEquals(false,
         jn.getJournalSyncerStatus(journalId));
-    Assert.assertEquals(true,
+    Assertions.assertEquals(true,
         jn.getJournal(journalId).getTriedJournalSyncerStartedwithnsId());
   }
 

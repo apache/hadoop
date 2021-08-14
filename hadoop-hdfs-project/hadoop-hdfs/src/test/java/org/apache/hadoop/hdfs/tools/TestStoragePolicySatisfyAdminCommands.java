@@ -34,9 +34,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.sps.Context;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test StoragePolicySatisfy admin commands.
@@ -50,7 +50,7 @@ public class TestStoragePolicySatisfyAdminCommands {
   private DistributedFileSystem dfs = null;
   private StoragePolicySatisfier externalSps = null;
 
-  @Before
+  @BeforeEach
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
@@ -74,7 +74,7 @@ public class TestStoragePolicySatisfyAdminCommands {
     externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
   }
 
-  @After
+  @AfterEach
   public void clusterShutdown() throws IOException{
     if(dfs != null) {
       dfs.close();

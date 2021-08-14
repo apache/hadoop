@@ -19,11 +19,7 @@
 package org.apache.hadoop.hdfs.security.token.block;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -87,10 +83,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -125,7 +121,7 @@ public class TestBlockToken {
   final ExtendedBlock block2 = new ExtendedBlock("10", 10L);
   final ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
 
-  @Before
+  @BeforeEach
   public void disableKerberos() {
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
@@ -152,12 +148,12 @@ public class TestBlockToken {
           (GetReplicaVisibleLengthRequestProto) args[1];
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
-      assertEquals("Only one BlockTokenIdentifier expected", 1, tokenIds.size());
+        assertEquals(1, tokenIds.size(), "Only one BlockTokenIdentifier expected");
       long result = 0;
       for (TokenIdentifier tokenId : tokenIds) {
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
         LOG.info("Got: " + id.toString());
-        assertTrue("Received BlockTokenIdentifier is wrong", ident.equals(id));
+          assertTrue(ident.equals(id), "Received BlockTokenIdentifier is wrong");
         sm.checkAccess(id, null, PBHelperClient.convert(req.getBlock()),
             BlockTokenIdentifier.AccessMode.WRITE,
             new StorageType[]{StorageType.DEFAULT}, null);
@@ -376,7 +372,7 @@ public class TestBlockToken {
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
-    Assume.assumeTrue(FD_DIR.exists());
+    Assumptions.assumeTrue(FD_DIR.exists());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
         blockKeyUpdateInterval, blockTokenLifetime, 0, 1, "fake-pool", null,
         enableProtobuf);
@@ -534,7 +530,7 @@ public class TestBlockToken {
       }
       Token<BlockTokenIdentifier> token = locatedBlocks.getLastLocatedBlock()
           .getBlockToken();
-      Assert.assertEquals(BlockTokenIdentifier.KIND_NAME, token.getKind());
+      Assertions.assertEquals(BlockTokenIdentifier.KIND_NAME, token.getKind());
       out.close();
     } finally {
       cluster.shutdown();
@@ -866,10 +862,10 @@ public class TestBlockToken {
       int rangeStart = nnIdx * interval;
       for(int i = 0; i < interval * 3; i++) {
         int serialNo = sm.getSerialNoForTesting();
-        assertTrue(
-            "serialNo " + serialNo + " is not in the designated range: [" +
-                rangeStart + ", " + (rangeStart + interval) + ")",
-                serialNo >= rangeStart && serialNo < (rangeStart + interval));
+          assertTrue(
+                  serialNo >= rangeStart && serialNo < (rangeStart + interval),
+                  "serialNo " + serialNo + " is not in the designated range: [" +
+                          rangeStart + ", " + (rangeStart + interval) + ")");
         sm.updateKeys();
       }
     }
@@ -958,10 +954,10 @@ public class TestBlockToken {
       byte[] readData = new byte[data.length];
       long startTime = System.currentTimeMillis();
       in.read(readData);
-      // DFSInputStream#refetchLocations() minimum wait for 1sec to refetch
-      // complete located blocks.
-      assertTrue("Should not wait for refetch complete located blocks",
-          1000L > (System.currentTimeMillis() - startTime));
+        // DFSInputStream#refetchLocations() minimum wait for 1sec to refetch
+        // complete located blocks.
+        assertTrue(
+                1000L > (System.currentTimeMillis() - startTime), "Should not wait for refetch complete located blocks");
     }
   }
 }

@@ -32,8 +32,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /** Test reading from hdfs while a file is being written. */
@@ -149,11 +149,11 @@ public class TestReadWhileWriting {
     final HdfsDataInputStream in = (HdfsDataInputStream)fs.open(p);
 
     //Check visible length
-    Assert.assertTrue(in.getVisibleLength() >= expectedsize);
+    Assertions.assertTrue(in.getVisibleLength() >= expectedsize);
 
     //Able to read?
     for(int i = 0; i < expectedsize; i++) {
-      Assert.assertEquals((byte)i, (byte)in.read());  
+      Assertions.assertEquals((byte)i, (byte)in.read());  
     }
 
     in.close();

@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.Test;
 import org.slf4j.event.Level;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Makes sure that standby doesn't do the unnecessary block management such as

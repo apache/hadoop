@@ -33,10 +33,10 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestHttpsFileSystem {
   private static final String BASEDIR =
@@ -49,7 +49,7 @@ public class TestHttpsFileSystem {
   private static String sslConfDir;
   private static String nnAddr;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HttpConfig.Policy.HTTPS_ONLY.name());
@@ -78,7 +78,7 @@ public class TestHttpsFileSystem {
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, nnAddr);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -94,9 +94,9 @@ public class TestHttpsFileSystem {
     FSDataOutputStream os = fs.create(f);
     os.write(23);
     os.close();
-    Assert.assertTrue(fs.exists(f));
+    Assertions.assertTrue(fs.exists(f));
     InputStream is = fs.open(f);
-    Assert.assertEquals(23, is.read());
+    Assertions.assertEquals(23, is.read());
     is.close();
     fs.close();
   }

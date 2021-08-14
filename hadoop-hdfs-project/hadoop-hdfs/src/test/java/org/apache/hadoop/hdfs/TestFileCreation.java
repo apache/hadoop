@@ -34,11 +34,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.BufferedReader;
@@ -89,8 +86,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.event.Level;
 
 /**
@@ -349,9 +346,9 @@ public class TestFileCreation {
       //
       Path path = new Path("/");
       System.out.println("Path : \"" + path.toString() + "\"");
-      System.out.println(fs.getFileStatus(path).isDirectory()); 
-      assertTrue("/ should be a directory", 
-                 fs.getFileStatus(path).isDirectory());
+      System.out.println(fs.getFileStatus(path).isDirectory());
+        assertTrue(
+                fs.getFileStatus(path).isDirectory(), "/ should be a directory");
 
       //
       // Create a directory inside /, then try to overwrite it
@@ -363,7 +360,7 @@ public class TestFileCreation {
       try {
         fs.create(dir1, true); // Create path, overwrite=true
         fs.close();
-        assertTrue("Did not prevent directory from being overwritten.", false);
+          assertTrue(false, "Did not prevent directory from being overwritten.");
       } catch (FileAlreadyExistsException e) {
         // expected
       }
@@ -378,9 +375,9 @@ public class TestFileCreation {
       dfs.setQuota(file1.getParent(), 100L, blockSize*5);
       FSDataOutputStream stm = createFile(fs, file1, 1);
 
-      // verify that file exists in FS namespace
-      assertTrue(file1 + " should be a file", 
-                 fs.getFileStatus(file1).isFile());
+        // verify that file exists in FS namespace
+        assertTrue(
+                fs.getFileStatus(file1).isFile(), file1 + " should be a file");
       System.out.println("Path : \"" + file1 + "\"");
 
       // write to file
@@ -390,14 +387,14 @@ public class TestFileCreation {
 
       // verify that file size has changed to the full size
       long len = fs.getFileStatus(file1).getLen();
-      assertTrue(file1 + " should be of size " + fileSize +
-                 " but found to be of size " + len, 
-                  len == fileSize);
+        assertTrue(
+                len == fileSize, file1 + " should be of size " + fileSize +
+                " but found to be of size " + len);
       
       // verify the disk space the file occupied
       long diskSpace = dfs.getContentSummary(file1.getParent()).getLength();
-      assertEquals(file1 + " should take " + fileSize + " bytes disk space " +
-          "but found to take " + diskSpace + " bytes", fileSize, diskSpace);
+        assertEquals(fileSize, diskSpace, file1 + " should take " + fileSize + " bytes disk space " +
+                "but found to take " + diskSpace + " bytes");
       
       // Check storage usage 
       // can't check capacities for real storage since the OS file system may be changing under us.
@@ -461,12 +458,12 @@ public class TestFileCreation {
       fs = cluster.getFileSystem();
       localfs = FileSystem.getLocal(conf);
 
-      assertTrue(file1 + " still exists inspite of deletOnExit set.",
-                 !fs.exists(file1));
-      assertTrue(file2 + " still exists inspite of deletOnExit set.",
-                 !fs.exists(file2));
-      assertTrue(file3 + " still exists inspite of deletOnExit set.",
-                 !localfs.exists(file3));
+        assertTrue(
+                !fs.exists(file1), file1 + " still exists inspite of deletOnExit set.");
+        assertTrue(
+                !fs.exists(file2), file2 + " still exists inspite of deletOnExit set.");
+        assertTrue(
+                !localfs.exists(file3), file3 + " still exists inspite of deletOnExit set.");
       System.out.println("DeleteOnExit successful.");
 
     } finally {
@@ -560,9 +557,9 @@ public class TestFileCreation {
       Path file1 = new Path("/filestatus.dat");
       FSDataOutputStream stm = createFile(fs, file1, 1);
 
-      // verify that file exists in FS namespace
-      assertTrue(file1 + " should be a file", 
-                 fs.getFileStatus(file1).isFile());
+        // verify that file exists in FS namespace
+        assertTrue(
+                fs.getFileStatus(file1).isFile(), file1 + " should be a file");
       System.out.println("Path : \"" + file1 + "\"");
 
       // kill the datanode
@@ -598,8 +595,8 @@ public class TestFileCreation {
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
-      assertTrue("Error blocks were not cleaned up",
-                 locations.locatedBlockCount() == 0);
+        assertTrue(
+                locations.locatedBlockCount() == 0, "Error blocks were not cleaned up");
     } finally {
       cluster.shutdown();
       client.close();
@@ -734,14 +731,14 @@ public class TestFileCreation {
       HdfsDataOutputStream stm = create(fs, file1, 1);
       System.out.println("testFileCreationNamenodeRestart: "
                          + "Created file " + file1);
-      assertEquals(file1 + " should be replicated to 1 datanode.", 1,
-          stm.getCurrentBlockReplication());
+        assertEquals(1,
+                stm.getCurrentBlockReplication(), file1 + " should be replicated to 1 datanode.");
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
       stm.hflush();
-      assertEquals(file1 + " should still be replicated to 1 datanode.", 1,
-          stm.getCurrentBlockReplication());
+        assertEquals(1,
+                stm.getCurrentBlockReplication(), file1 + " should still be replicated to 1 datanode.");
 
       // rename file wile keeping it open.
       Path fileRenamed = new Path("/filestatusRenamed.dat");
@@ -838,15 +835,15 @@ public class TestFileCreation {
       LocatedBlocks locations = client.getNamenode().getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
-      assertTrue("Error blocks were not cleaned up for file " + file1,
-                 locations.locatedBlockCount() == 3);
+        assertTrue(
+                locations.locatedBlockCount() == 3, "Error blocks were not cleaned up for file " + file1);
 
       // verify filestatus2.dat
       locations = client.getNamenode().getBlockLocations(
                                   file2.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
-      assertTrue("Error blocks were not cleaned up for file " + file2,
-                 locations.locatedBlockCount() == 1);
+        assertTrue(
+                locations.locatedBlockCount() == 1, "Error blocks were not cleaned up for file " + file2);
     } finally {
       IOUtils.closeStream(fs);
       cluster.shutdown();
@@ -882,9 +879,9 @@ public class TestFileCreation {
       // This should close all existing file.
       dfsclient.close();
 
-      // reopen file system and verify that file exists.
-      assertTrue(file1 + " does not exist.", 
-          AppendTestUtil.createHdfsWithDifferentUsername(conf).exists(file1));
+        // reopen file system and verify that file exists.
+        assertTrue(
+                AppendTestUtil.createHdfsWithDifferentUsername(conf).exists(file1), file1 + " does not exist.");
     } finally {
       cluster.shutdown();
     }
@@ -926,19 +923,19 @@ public class TestFileCreation {
     // Create a file when parent dir exists as file, should fail
     expectedException = createNonRecursive(fs, new Path(path, "Create"), 1, createFlag);
 
-    assertTrue("Create a file when parent directory exists as a file"
-        + " should throw ParentNotDirectoryException ",
-        expectedException != null
-            && expectedException instanceof ParentNotDirectoryException);
+      assertTrue(
+              expectedException != null
+                      && expectedException instanceof ParentNotDirectoryException, "Create a file when parent directory exists as a file"
+              + " should throw ParentNotDirectoryException ");
     fs.delete(path, true);
     // Create a file in a non-exist directory, should fail
     final Path path2 = new Path(nonExistDir + "/testCreateNonRecursive");
     expectedException =  createNonRecursive(fs, path2, 1, createFlag);
 
-    assertTrue("Create a file in a non-exist dir using"
-        + " createNonRecursive() should throw FileNotFoundException ",
-        expectedException != null
-            && expectedException instanceof FileNotFoundException);
+      assertTrue(
+              expectedException != null
+                      && expectedException instanceof FileNotFoundException, "Create a file in a non-exist dir using"
+              + " createNonRecursive() should throw FileNotFoundException ");
 
     EnumSet<CreateFlag> overwriteFlag =
       EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
@@ -948,20 +945,20 @@ public class TestFileCreation {
     // Overwrite a file when parent dir exists as file, should fail
     expectedException = createNonRecursive(fs, new Path(path, "Overwrite"), 1, overwriteFlag);
 
-    assertTrue("Overwrite a file when parent directory exists as a file"
-        + " should throw ParentNotDirectoryException ",
-        expectedException != null
-            && expectedException instanceof ParentNotDirectoryException);
+      assertTrue(
+              expectedException != null
+                      && expectedException instanceof ParentNotDirectoryException, "Overwrite a file when parent directory exists as a file"
+              + " should throw ParentNotDirectoryException ");
     fs.delete(path, true);
 
     // Overwrite a file in a non-exist directory, should fail
     final Path path3 = new Path(nonExistDir + "/testOverwriteNonRecursive");
     expectedException = createNonRecursive(fs, path3, 1, overwriteFlag);
 
-    assertTrue("Overwrite a file in a non-exist dir using"
-        + " createNonRecursive() should throw FileNotFoundException ",
-        expectedException != null
-            && expectedException instanceof FileNotFoundException);
+      assertTrue(
+              expectedException != null
+                      && expectedException instanceof FileNotFoundException, "Overwrite a file in a non-exist dir using"
+              + " createNonRecursive() should throw FileNotFoundException ");
   }
 
   // Attempts to create and close a file using FileSystem.createNonRecursive(),
@@ -1090,8 +1087,8 @@ public class TestFileCreation {
       out.write("something".getBytes());
       out.hflush();
       int actualRepl = out.getCurrentBlockReplication();
-      assertTrue(f + " should be replicated to " + DATANODE_NUM + " datanodes.",
-                 actualRepl == DATANODE_NUM);
+        assertTrue(
+                actualRepl == DATANODE_NUM, f + " should be replicated to " + DATANODE_NUM + " datanodes.");
 
       // set the soft and hard limit to be 1 second so that the
       // namenode triggers lease recovery
@@ -1190,7 +1187,7 @@ public class TestFileCreation {
       } catch (IOException e) {
         hasException = true;
       }
-      assertTrue("Failed to close file after cluster shutdown", hasException);
+        assertTrue(hasException, "Failed to close file after cluster shutdown");
     } finally {
       System.out.println("testFsCloseAfterClusterShutdown successful");
       if (cluster != null) {
@@ -1376,7 +1373,7 @@ public class TestFileCreation {
       } finally {
         in.close();
       }
-      Assert.assertArrayEquals(newData, result);
+      Assertions.assertArrayEquals(newData, result);
       
       // Case 2: Restart NN, check the file
       cluster.restartNameNode();
@@ -1387,7 +1384,7 @@ public class TestFileCreation {
       } finally {
         in.close();
       }
-      Assert.assertArrayEquals(newData, result);
+      Assertions.assertArrayEquals(newData, result);
       
       // Case 3: Save new checkpoint and restart NN, check the file
       NameNodeAdapter.enterSafeMode(nn, false);
@@ -1401,7 +1398,7 @@ public class TestFileCreation {
       } finally {
         in.close();
       }
-      Assert.assertArrayEquals(newData, result);
+      Assertions.assertArrayEquals(newData, result);
     } finally {
       if (dfs != null) {
         dfs.close();
