@@ -19,6 +19,8 @@
 #include "configuration_test.h"
 #include "common/configuration.h"
 #include "common/configuration_loader.h"
+#include "utils/temp-file.h"
+
 #include <gmock/gmock.h>
 #include <cstdio>
 #include <fstream>

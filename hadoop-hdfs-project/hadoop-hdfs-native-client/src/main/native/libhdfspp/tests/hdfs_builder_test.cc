@@ -18,6 +18,8 @@
 
 #include "hdfspp/hdfs_ext.h"
 #include "configuration_test.h"
+#include "utils/temp-file.h"
+
 #include <gmock/gmock.h>
 #include <google/protobuf/stubs/common.h>
 

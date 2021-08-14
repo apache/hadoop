@@ -115,54 +115,6 @@ void writeDamagedConfig(const std::string& filename, Args... args) {
   out << stream.rdbuf();
 }
 
-// TempDir: is deleted on destruction
-class TempFile {
- public:
-  TempFile() {
-    std::vector<char> tmp_buf(filename_.begin(), filename_.end());
-    fd_ = XPlatform::Syscall::CreateAndOpenTempFile(tmp_buf);
-    EXPECT_NE(fd_, -1);
-    filename_.assign(tmp_buf.data());
-  }
-
-  TempFile(std::string fn) : filename_(std::move(fn)) {}
-
-  TempFile(const TempFile& other) = default;
-
-  TempFile(TempFile&& other) noexcept
-      : filename_{std::move(other.filename_)}, fd_{other.fd_} {}
-
-  TempFile& operator=(const TempFile& other) {
-    if (&other != this) {
-      filename_ = other.filename_;
-      fd_ = other.fd_;
-    }
-    return *this;
-  }
-
-  TempFile& operator=(TempFile&& other) noexcept {
-    if (&other != this) {
-      filename_ = std::move(other.filename_);
-      fd_ = other.fd_;
-    }
-    return *this;
-  }
-
-  [[nodiscard]] const std::string& GetFileName() const { return filename_; }
-
-  ~TempFile() {
-    if (-1 != fd_) {
-      EXPECT_NE(XPlatform::Syscall::CloseFile(fd_), -1);
-    }
-
-    unlink(filename_.c_str());
-  }
-
- private:
-  std::string filename_{"/tmp/test_XXXXXXXXXX"};
-  int fd_{-1};
-};
-
 // Callback to remove a directory in the nftw visitor
 int nftw_remove(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
