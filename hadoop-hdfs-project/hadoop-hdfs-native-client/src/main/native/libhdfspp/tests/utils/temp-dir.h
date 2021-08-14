@@ -24,11 +24,10 @@
 #include <sys/stat.h>
 
 namespace TestUtils {
-// Callback to remove a directory in the nftw visitor
-int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
-                struct FTW *ftwbuf);
-
-// TempDir: is created in ctor and recursively deletes in dtor
+/*
+ * Creates a temporary directory and deletes its contents recursively
+ * upon destruction of its instance.
+ */
 class TempDir {
 public:
   TempDir();

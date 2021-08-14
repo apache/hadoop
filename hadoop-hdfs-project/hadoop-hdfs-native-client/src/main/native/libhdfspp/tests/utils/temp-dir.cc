@@ -27,6 +27,12 @@
 #include "x-platform/syscall.h"
 
 namespace TestUtils {
+/*
+ * Callback to remove a directory in the nftw visitor.
+ */
+int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
+                struct FTW *ftwbuf);
+
 TempDir::TempDir() {
   std::vector<char> path_pattern(path_.begin(), path_.end());
   is_path_init_ = XPlatform::Syscall::CreateTempDir(path_pattern);
