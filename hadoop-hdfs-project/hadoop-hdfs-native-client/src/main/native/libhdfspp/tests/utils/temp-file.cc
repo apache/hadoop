@@ -24,6 +24,7 @@
 #include "utils/temp-file.h"
 #include "x-platform/syscall.h"
 
+namespace TestUtils {
 TempFile::TempFile() {
   std::vector tmp_buf(filename_.begin(), filename_.end());
   fd_ = XPlatform::Syscall::CreateAndOpenTempFile(tmp_buf);
@@ -59,3 +60,4 @@ TempFile::~TempFile() {
 
   unlink(filename_.c_str());
 }
+} // namespace TestUtils

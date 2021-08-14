@@ -21,6 +21,7 @@
 
 #include <string>
 
+namespace TestUtils {
 /**
  * Creates a temporary file and deletes it
  * upon destruction of the TempFile instance.
@@ -50,5 +51,6 @@ private:
   std::string filename_{"/tmp/test_XXXXXXXXXX"};
   int fd_{-1};
 };
+} // namespace TestUtils
 
 #endif

@@ -80,7 +80,7 @@ namespace hdfs {
 // Make sure we can set up a mini-cluster and connect to it
 TEST(ConfigConnectBugs, Test_HDFS_11294) {
   // Directory for hdfs config
-  TempDir td;
+  TestUtils::TempDir td;
 
   const std::string &tempDirPath = td.GetPath();
   const std::string coreSitePath = tempDirPath + "/core-site.xml";

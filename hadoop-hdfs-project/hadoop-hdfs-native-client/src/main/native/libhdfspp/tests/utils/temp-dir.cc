@@ -26,16 +26,7 @@
 #include "utils/temp-dir.h"
 #include "x-platform/syscall.h"
 
-int nftw_remove(const char *fpath, const struct stat *sb, int typeflag, FTW *ftwbuf) {
-  (void)sb;
-  (void)typeflag;
-  (void)ftwbuf;
-
-  int rv = remove(fpath);
-  EXPECT_EQ(0, rv);
-  return rv;
-}
-
+namespace TestUtils {
 TempDir::TempDir() {
   std::vector<char> path_pattern(path_.begin(), path_.end());
   is_path_init_ = XPlatform::Syscall::CreateTempDir(path_pattern);
@@ -64,3 +55,15 @@ TempDir::~TempDir() {
     nftw(path_.c_str(), nftw_remove, 64, FTW_DEPTH | FTW_PHYS);
   }
 }
+
+int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
+                FTW *ftwbuf) {
+  (void)sb;
+  (void)typeflag;
+  (void)ftwbuf;
+
+  int rv = remove(fpath);
+  EXPECT_EQ(0, rv);
+  return rv;
+}
+} // namespace TestUtils

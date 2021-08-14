@@ -23,6 +23,7 @@
 
 #include <sys/stat.h>
 
+namespace TestUtils {
 // Callback to remove a directory in the nftw visitor
 int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
                 struct FTW *ftwbuf);
@@ -48,5 +49,6 @@ private:
   std::string path_{"/tmp/test_dir_XXXXXXXXXX"};
   bool is_path_init_{false};
 };
+} // namespace TestUtils
 
 #endif

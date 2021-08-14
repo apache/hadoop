@@ -30,7 +30,7 @@ using namespace hdfs;
 
 TEST(HdfsBuilderTest, TestStubBuilder) {
   {
-    TempDir tempDir1;
+    TestUtils::TempDir tempDir1;
 
     hdfsBuilder *builder =
         hdfsNewBuilderFromDirectory(tempDir1.GetPath().c_str());
@@ -47,8 +47,8 @@ TEST(HdfsBuilderTest, TestRead)
 {
   // Reading string values
   {
-    TempDir tempDir1;
-    TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
+    TestUtils::TempDir tempDir1;
+    TestUtils::TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
     writeSimpleConfig(tempFile1.GetFileName(), "key1", "value1");
 
     hdfsBuilder *builder =
@@ -71,8 +71,8 @@ TEST(HdfsBuilderTest, TestRead)
 
   // Reading int values
   {
-    TempDir tempDir1;
-    TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
+    TestUtils::TempDir tempDir1;
+    TestUtils::TempFile tempFile1(tempDir1.GetPath() + "/core-site.xml");
     writeSimpleConfig(tempFile1.GetFileName(), "key1", "100");
 
     hdfsBuilder *builder =
