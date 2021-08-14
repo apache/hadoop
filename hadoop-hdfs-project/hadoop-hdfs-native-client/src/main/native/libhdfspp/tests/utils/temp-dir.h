@@ -21,12 +21,12 @@
 
 #include <string>
 
-#include <sys/stat.h>
-
 namespace TestUtils {
 /*
  * Creates a temporary directory and deletes its contents recursively
  * upon destruction of its instance.
+ *
+ * Creates a directory in /tmp by default.
  */
 class TempDir {
 public:
