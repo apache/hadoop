@@ -34,7 +34,7 @@ int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
                 struct FTW *ftwbuf);
 
 TempDir::TempDir() {
-  std::vector<char> path_pattern(path_.begin(), path_.end());
+  std::vector path_pattern(path_.begin(), path_.end());
   is_path_init_ = XPlatform::Syscall::CreateTempDir(path_pattern);
   EXPECT_TRUE(is_path_init_);
   path_.assign(path_pattern.data());
