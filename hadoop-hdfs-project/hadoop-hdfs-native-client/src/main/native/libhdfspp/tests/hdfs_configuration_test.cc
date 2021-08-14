@@ -19,6 +19,7 @@
 #include "common/hdfs_configuration.h"
 #include "configuration_test.h"
 #include "utils/temp-file.h"
+#include "utils/temp-dir.h"
 
 #include <gmock/gmock.h>
 #include <iostream>

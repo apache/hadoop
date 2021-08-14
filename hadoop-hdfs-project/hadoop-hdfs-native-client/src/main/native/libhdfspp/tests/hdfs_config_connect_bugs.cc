@@ -27,6 +27,8 @@
 #include <chrono>
 #include <exception>
 
+#include "utils/temp-dir.h"
+
 static const char *hdfs_11294_core_site_txt =
 "<configuration>\n"
 "  <property name=\"fs.defaultFS\" value=\"hdfs://NAMESERVICE1\"/>\n"
