@@ -464,7 +464,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Test graceful decommission of node when an AM container is scheduled on a
    * node just before it is gracefully decommissioned.
    */
-  @Test
+  @Test (timeout = 60000)
   public void testGracefulDecommissionAfterAMContainerAlloc() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
