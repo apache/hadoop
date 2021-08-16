@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -39,10 +39,10 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 /** Testing nested snapshots. */
 public class TestNestedSnapshots {
@@ -67,7 +67,7 @@ public class TestNestedSnapshots {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem hdfs;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.setInt(DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, SNAPSHOTLIMIT);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
@@ -76,7 +76,7 @@ public class TestNestedSnapshots {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -141,14 +141,14 @@ public class TestNestedSnapshots {
     cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(false);
     try {
       hdfs.allowSnapshot(rootPath);
-      Assert.fail();
+      Assertions.fail();
     } catch (SnapshotException se) {
       assertNestedSnapshotException(
           se, "subdirectory");
     }
     try {
       hdfs.allowSnapshot(foo);
-      Assert.fail();
+      Assertions.fail();
     } catch (SnapshotException se) {
       assertNestedSnapshotException(
           se, "subdirectory");
@@ -159,14 +159,14 @@ public class TestNestedSnapshots {
     hdfs.mkdirs(sub2Bar);
     try {
       hdfs.allowSnapshot(sub1Bar);
-      Assert.fail();
+      Assertions.fail();
     } catch (SnapshotException se) {
       assertNestedSnapshotException(
           se, "ancestor");
     }
     try {
       hdfs.allowSnapshot(sub2Bar);
-      Assert.fail();
+      Assertions.fail();
     } catch (SnapshotException se) {
       assertNestedSnapshotException(
           se, "ancestor");
@@ -174,9 +174,9 @@ public class TestNestedSnapshots {
   }
   
   static void assertNestedSnapshotException(SnapshotException se, String substring) {
-    Assert.assertTrue(se.getMessage().startsWith(
+    Assertions.assertTrue(se.getMessage().startsWith(
         "Nested snapshottable directories not allowed"));
-    Assert.assertTrue(se.getMessage().contains(substring));
+    Assertions.assertTrue(se.getMessage().contains(substring));
   }
 
   private static void print(String message) throws UnresolvedLinkException {
@@ -190,10 +190,10 @@ public class TestNestedSnapshots {
         new Path(s1, "bar/" + file.getName()),
         new Path(s2, file.getName())
     };
-    Assert.assertEquals(expected.length, paths.length);
+    Assertions.assertEquals(expected.length, paths.length);
     for(int i = 0; i < paths.length; i++) {
       final boolean computed = hdfs.exists(paths[i]);
-      Assert.assertEquals("Failed on " + paths[i], expected[i], computed);
+        Assertions.assertEquals(expected[i], computed, "Failed on " + paths[i]);
     }
   }
 
@@ -224,7 +224,7 @@ public class TestNestedSnapshots {
 
     try {
       hdfs.createSnapshot(dir, "s" + s);
-      Assert.fail("Expected to fail to create snapshot, but didn't.");
+      Assertions.fail("Expected to fail to create snapshot, but didn't.");
     } catch(IOException ioe) {
       SnapshotTestHelper.LOG.info("The exception is expected.", ioe);
     }
@@ -235,7 +235,7 @@ public class TestNestedSnapshots {
       for(; s < SNAPSHOTLIMIT; s += RANDOM.nextInt(step)) {
         final Path p = SnapshotTestHelper.getSnapshotPath(dir, "s" + s, file);
         //the file #f exists in snapshot #s iff s > f.
-        Assert.assertEquals(s > f, hdfs.exists(p));
+        Assertions.assertEquals(s > f, hdfs.exists(p));
       }
     }
   }
@@ -260,13 +260,13 @@ public class TestNestedSnapshots {
       final Path snapshotPath = hdfs.createSnapshot(dir);
 
       //check snapshot path and the default snapshot name
-      final String snapshotName = snapshotPath.getName(); 
-      Assert.assertTrue("snapshotName=" + snapshotName, Pattern.matches(
-          "s\\d\\d\\d\\d\\d\\d\\d\\d-\\d\\d\\d\\d\\d\\d\\.\\d\\d\\d",
-          snapshotName));
+      final String snapshotName = snapshotPath.getName();
+        Assertions.assertTrue(Pattern.matches(
+                "s\\d\\d\\d\\d\\d\\d\\d\\d-\\d\\d\\d\\d\\d\\d\\.\\d\\d\\d",
+                snapshotName), "snapshotName=" + snapshotName);
       final Path parent = snapshotPath.getParent();
-      Assert.assertEquals(HdfsConstants.DOT_SNAPSHOT_DIR, parent.getName());
-      Assert.assertEquals(dir, parent.getParent());
+      Assertions.assertEquals(HdfsConstants.DOT_SNAPSHOT_DIR, parent.getName());
+      Assertions.assertEquals(dir, parent.getParent());
     }
   }
 
@@ -287,18 +287,18 @@ public class TestNestedSnapshots {
       new Snapshot(2, "s2", snapshottable),
     };
 
-    Assert.assertEquals(0, Snapshot.ID_COMPARATOR.compare(null, null));
+    Assertions.assertEquals(0, Snapshot.ID_COMPARATOR.compare(null, null));
     for(Snapshot s : snapshots) {
-      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) > 0);
-      Assert.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) < 0);
+      Assertions.assertTrue(Snapshot.ID_COMPARATOR.compare(null, s) > 0);
+      Assertions.assertTrue(Snapshot.ID_COMPARATOR.compare(s, null) < 0);
       
       for(Snapshot t : snapshots) {
         final int expected = s.getRoot().getLocalName().compareTo(
             t.getRoot().getLocalName());
         final int computed = Snapshot.ID_COMPARATOR.compare(s, t);
-        Assert.assertEquals(expected > 0, computed > 0);
-        Assert.assertEquals(expected == 0, computed == 0);
-        Assert.assertEquals(expected < 0, computed < 0);
+        Assertions.assertEquals(expected > 0, computed > 0);
+        Assertions.assertEquals(expected == 0, computed == 0);
+        Assertions.assertEquals(expected < 0, computed < 0);
       }
     }
   }

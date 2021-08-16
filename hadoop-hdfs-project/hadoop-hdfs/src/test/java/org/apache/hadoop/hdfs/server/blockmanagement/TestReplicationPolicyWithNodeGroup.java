@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +40,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
 import org.apache.hadoop.net.Node;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTest {
@@ -895,10 +893,10 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     favouredNodes.add(dataNodes[3]);
     favouredNodes.add(dataNodes[0]);
     targets = chooseTarget(2, dataNodes[7], null, favouredNodes);
-    assertTrue("1st Replica is incorrect",
-      expectedTargets.contains(targets[0].getDatanodeDescriptor()));
-    assertTrue("2nd Replica is incorrect",
-      expectedTargets.contains(targets[1].getDatanodeDescriptor()));
+      assertTrue(
+              expectedTargets.contains(targets[0].getDatanodeDescriptor()), "1st Replica is incorrect");
+      assertTrue(
+              expectedTargets.contains(targets[1].getDatanodeDescriptor()), "2nd Replica is incorrect");
   }
 
   /**
@@ -928,8 +926,8 @@ public class TestReplicationPolicyWithNodeGroup extends BaseReplicationPolicyTes
     favouredNodes.add(dataNodes[2]);
     targets = chooseTarget(3, dataNodes[3], null, favouredNodes);
     for (int i = 0; i < targets.length; i++) {
-      assertTrue("Target should be a part of Expected Targets",
-          expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+        assertTrue(
+                expectedTargets.contains(targets[i].getDatanodeDescriptor()), "Target should be a part of Expected Targets");
     }
   }
 }

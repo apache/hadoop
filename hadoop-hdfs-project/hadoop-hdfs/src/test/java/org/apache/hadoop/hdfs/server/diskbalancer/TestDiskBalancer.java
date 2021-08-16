@@ -48,8 +48,8 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -65,11 +65,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 
@@ -275,9 +273,9 @@ public class TestDiskBalancer {
       // Expect return sleep delay in Milliseconds. sleep value = bytesCopied /
       // (1024*1024*bandwidth in MB/milli) - timeUsed;
       long val = diskBalancerMover.computeDelay(20 * 1024 * 1024, 1200, item);
-      Assert.assertEquals(val, (long) 800);
+      Assertions.assertEquals(val, (long) 800);
     } catch (Exception e) {
-      Assert.fail("Unexpected exception: " + e);
+      Assertions.fail("Unexpected exception: " + e);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -335,8 +333,8 @@ public class TestDiskBalancer {
       dataMover.verifyAllVolumesHaveData(false);
     } finally {
       String logOut = logCapturer.getOutput();
-      Assert.assertTrue("Wrong log: " + logOut, logOut.contains(
-          "NextBlock call returned null. No valid block to copy."));
+        Assertions.assertTrue(logOut.contains(
+                "NextBlock call returned null. No valid block to copy."), "Wrong log: " + logOut);
       cluster.shutdown();
     }
   }
@@ -423,7 +421,7 @@ public class TestDiskBalancer {
       dataMover.verifyAllVolumesHaveData(true);
       dataMover.verifyTolerance(plan, 0, sourceDiskIndex, 10);
     } catch (Exception e) {
-      Assert.fail("Unexpected exception: " + e);
+      Assertions.fail("Unexpected exception: " + e);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -733,7 +731,7 @@ public class TestDiskBalancer {
             LOG.info("Removed disk!");
             removeDiskLatch.countDown();
           } catch (ReconfigurationException | InterruptedException e) {
-            Assert.fail("Unexpected error while reconfiguring: " + e);
+            Assertions.fail("Unexpected error while reconfiguring: " + e);
           }
         }
       };
@@ -757,8 +755,8 @@ public class TestDiskBalancer {
         }
       }, 1000, 100000);
 
-      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <=
-          DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT);
+        assertTrue(errorCount.get() <=
+                DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT, "Disk balancer operation hit max errors!");
       createWorkPlanLatch.await();
       removeDiskLatch.await();
     }

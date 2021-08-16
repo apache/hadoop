@@ -49,12 +49,9 @@ import org.apache.hadoop.security.NullGroupsMapping;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.*;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of HDFS with
@@ -77,7 +74,7 @@ public class TestRollingFileSystemSinkWithSecureHdfs
    *
    * @throws Exception thrown if the KDC setup fails
    */
-  @BeforeClass
+  @BeforeAll
   public static void initKdc() throws Exception {
     Properties kdcConf = MiniKdc.createConf();
     kdc = new MiniKdc(kdcConf, ROOT_TEST_DIR);
@@ -101,7 +98,7 @@ public class TestRollingFileSystemSinkWithSecureHdfs
    *
    * @throws Exception thrown if the cluster setup fails
    */
-  @Before
+  @BeforeEach
   public void initCluster() throws Exception {
     HdfsConfiguration conf = createSecureConfig("authentication,privacy");
 
@@ -117,7 +114,7 @@ public class TestRollingFileSystemSinkWithSecureHdfs
   /**
    * Stop the mini-DFS cluster.
    */
-  @After
+  @AfterEach
   public void stopCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -132,7 +129,7 @@ public class TestRollingFileSystemSinkWithSecureHdfs
   /**
    * Stop the mini-KDC.
    */
-  @AfterClass
+  @AfterAll
   public static void shutdownKdc() {
     if (kdc != null) {
       kdc.stop();
@@ -175,9 +172,9 @@ public class TestRollingFileSystemSinkWithSecureHdfs
 
     initMetricsSystem(path, true, false);
 
-    assertTrue("No exception was generated initializing the sink against a "
-        + "secure cluster even though the principal and keytab properties "
-        + "were missing", MockSink.errored);
+      assertTrue(MockSink.errored, "No exception was generated initializing the sink against a "
+              + "secure cluster even though the principal and keytab properties "
+              + "were missing");
   }
 
   /**

@@ -32,8 +32,8 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
@@ -86,7 +86,7 @@ public class TestDNFencingWithReplication {
             try {
               cluster.waitActive();
               BlockLocation[] blocks = fs.getFileBlockLocations(path, 0, 10);
-              Assert.assertEquals(1, blocks.length);
+              Assertions.assertEquals(1, blocks.length);
               return blocks[0].getHosts().length == replicas;
             } catch (IOException e) {
               throw new RuntimeException(e);

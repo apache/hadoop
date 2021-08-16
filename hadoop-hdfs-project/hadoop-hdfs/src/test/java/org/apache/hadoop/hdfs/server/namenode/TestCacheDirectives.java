@@ -25,12 +25,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.protocol.CachePoolInfo.RELATIVE_EXPIRY_NEVER;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -90,10 +85,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import java.util.function.Supplier;
@@ -142,7 +137,7 @@ public class TestCacheDirectives {
     return this.conf;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = createCachingConf();
     cluster =
@@ -163,7 +158,7 @@ public class TestCacheDirectives {
     return (DistributedFileSystem) FileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     // Remove cache directives left behind by tests so that we release mmaps.
     RemoteIterator<CacheDirectiveEntry> iter = dfs.listCacheDirectives(null);
@@ -378,7 +373,7 @@ public class TestCacheDirectives {
 
     dfs.removeCachePool(poolName);
     iter = dfs.listCachePools();
-    assertFalse("expected no cache pools after deleting pool", iter.hasNext());
+      assertFalse(iter.hasNext(), "expected no cache pools after deleting pool");
 
     proto.listCachePools(null);
 
@@ -400,18 +395,18 @@ public class TestCacheDirectives {
     }
 
     iter = dfs.listCachePools();
-    assertFalse("expected no cache pools after deleting pool", iter.hasNext());
+      assertFalse(iter.hasNext(), "expected no cache pools after deleting pool");
   }
 
   private static void validateListAll(
       RemoteIterator<CacheDirectiveEntry> iter,
       Long... ids) throws Exception {
     for (Long id: ids) {
-      assertTrue("Unexpectedly few elements", iter.hasNext());
-      assertEquals("Unexpected directive ID", id,
-          iter.next().getInfo().getId());
+        assertTrue(iter.hasNext(), "Unexpectedly few elements");
+        assertEquals(id,
+                iter.next().getInfo().getId(), "Unexpected directive ID");
     }
-    assertFalse("Unexpectedly many list elements", iter.hasNext());
+      assertFalse(iter.hasNext(), "Unexpectedly many list elements");
   }
 
   private static long addAsUnprivileged(
@@ -456,9 +451,9 @@ public class TestCacheDirectives {
 
     long alphaId = addAsUnprivileged(alpha);
     long alphaId2 = addAsUnprivileged(alpha);
-    assertFalse("Expected to get unique directives when re-adding an "
-        + "existing CacheDirectiveInfo",
-        alphaId == alphaId2);
+      assertFalse(
+              alphaId == alphaId2, "Expected to get unique directives when re-adding an "
+              + "existing CacheDirectiveInfo");
     long betaId = addAsUnprivileged(beta);
 
     try {
@@ -650,14 +645,14 @@ public class TestCacheDirectives {
           .setLimit(limit)
           .setMaxRelativeExpiryMs(maxExpiry));
       RemoteIterator<CachePoolEntry> pit = dfs.listCachePools();
-      assertTrue("No cache pools found", pit.hasNext());
+        assertTrue(pit.hasNext(), "No cache pools found");
       CachePoolInfo info = pit.next().getInfo();
       assertEquals(pool, info.getPoolName());
       assertEquals(groupName, info.getGroupName());
       assertEquals(mode, info.getMode());
       assertEquals(limit, (long)info.getLimit());
       assertEquals(maxExpiry, (long)info.getMaxRelativeExpiryMs());
-      assertFalse("Unexpected # of cache pools found", pit.hasNext());
+        assertFalse(pit.hasNext(), "Unexpected # of cache pools found");
     
       // Create some cache entries
       int numEntries = 10;
@@ -675,13 +670,13 @@ public class TestCacheDirectives {
       RemoteIterator<CacheDirectiveEntry> dit
           = dfs.listCacheDirectives(null);
       for (int i=0; i<numEntries; i++) {
-        assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
+          assertTrue(dit.hasNext(), "Unexpected # of cache entries: " + i);
         CacheDirectiveInfo cd = dit.next().getInfo();
         assertEquals(i+1, cd.getId().longValue());
         assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
         assertEquals(pool, cd.getPool());
       }
-      assertFalse("Unexpected # of cache directives found", dit.hasNext());
+        assertFalse(dit.hasNext(), "Unexpected # of cache directives found");
       
       // Checkpoint once to set some cache pools and directives on 2NN side
       secondary.doCheckpoint();
@@ -699,8 +694,8 @@ public class TestCacheDirectives {
 
       // Checkpoint again forcing a reload of FSN state
       boolean fetchImage = secondary.doCheckpoint();
-      assertTrue("Secondary should have fetched a new fsimage from NameNode",
-          fetchImage);
+        assertTrue(
+                fetchImage, "Secondary should have fetched a new fsimage from NameNode");
 
       // Remove temp pool and directive
       dfs.removeCachePool(imagePool);
@@ -710,7 +705,7 @@ public class TestCacheDirectives {
     
       // Check that state came back up
       pit = dfs.listCachePools();
-      assertTrue("No cache pools found", pit.hasNext());
+        assertTrue(pit.hasNext(), "No cache pools found");
       info = pit.next().getInfo();
       assertEquals(pool, info.getPoolName());
       assertEquals(pool, info.getPoolName());
@@ -718,18 +713,18 @@ public class TestCacheDirectives {
       assertEquals(mode, info.getMode());
       assertEquals(limit, (long)info.getLimit());
       assertEquals(maxExpiry, (long)info.getMaxRelativeExpiryMs());
-      assertFalse("Unexpected # of cache pools found", pit.hasNext());
+        assertFalse(pit.hasNext(), "Unexpected # of cache pools found");
     
       dit = dfs.listCacheDirectives(null);
       for (int i=0; i<numEntries; i++) {
-        assertTrue("Unexpected # of cache entries: " + i, dit.hasNext());
+          assertTrue(dit.hasNext(), "Unexpected # of cache entries: " + i);
         CacheDirectiveInfo cd = dit.next().getInfo();
         assertEquals(i+1, cd.getId().longValue());
         assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
         assertEquals(pool, cd.getPool());
         assertEquals(expiry.getTime(), cd.getExpiration().getMillis());
       }
-      assertFalse("Unexpected # of cache directives found", dit.hasNext());
+        assertFalse(dit.hasNext(), "Unexpected # of cache directives found");
   
       long nextId = dfs.addCacheDirective(
             new CacheDirectiveInfo.Builder().
@@ -817,7 +812,7 @@ public class TestCacheDirectives {
           fail("got IOException while calling " +
               "listCacheDirectives: " + e.getMessage());
         }
-        Assert.assertNotNull(entry);
+        Assertions.assertNotNull(entry);
         CacheDirectiveStats stats = entry.getStats();
         if ((targetBytesNeeded == stats.getBytesNeeded()) &&
             (targetBytesCached == stats.getBytesCached()) &&
@@ -914,8 +909,8 @@ public class TestCacheDirectives {
       // round it up to full blocks
       final long numBlocks = (len + blockSize - 1) / blockSize;
       BlockLocation[] locs = dfs.getFileBlockLocations(p, 0, len);
-      assertEquals("Unexpected number of block locations for path " + p,
-          numBlocks, locs.length);
+        assertEquals(
+                numBlocks, locs.length, "Unexpected number of block locations for path " + p);
       for (BlockLocation l: locs) {
         if (l.getCachedHosts().length > 0) {
           numCachedBlocks++;
@@ -926,10 +921,10 @@ public class TestCacheDirectives {
     LOG.info("Found " + numCachedBlocks + " of " + expectedBlocks + " blocks");
     LOG.info("Found " + numCachedReplicas + " of " + expectedReplicas
         + " replicas");
-    assertEquals("Unexpected number of cached blocks", expectedBlocks,
-        numCachedBlocks);
-    assertEquals("Unexpected number of cached replicas", expectedReplicas,
-        numCachedReplicas);
+      assertEquals(expectedBlocks,
+              numCachedBlocks, "Unexpected number of cached blocks");
+      assertEquals(expectedReplicas,
+              numCachedReplicas, "Unexpected number of cached replicas");
   }
 
   @Test(timeout=120000)
@@ -985,17 +980,17 @@ public class TestCacheDirectives {
 
     // Check that the datanodes have the right cache values
     DatanodeInfo[] live = dfs.getDataNodeStats(DatanodeReportType.LIVE);
-    assertEquals("Unexpected number of live nodes", NUM_DATANODES, live.length);
+      assertEquals(NUM_DATANODES, live.length, "Unexpected number of live nodes");
     long totalUsed = 0;
     for (DatanodeInfo dn : live) {
       final long cacheCapacity = dn.getCacheCapacity();
       final long cacheUsed = dn.getCacheUsed();
       final long cacheRemaining = dn.getCacheRemaining();
-      assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
-      assertEquals("Capacity not equal to used + remaining",
-          cacheCapacity, cacheUsed + cacheRemaining);
-      assertEquals("Remaining not equal to capacity - used",
-          cacheCapacity - cacheUsed, cacheRemaining);
+        assertEquals(CACHE_CAPACITY, cacheCapacity, "Unexpected cache capacity");
+        assertEquals(
+                cacheCapacity, cacheUsed + cacheRemaining, "Capacity not equal to used + remaining");
+        assertEquals(
+                cacheCapacity - cacheUsed, cacheRemaining, "Remaining not equal to capacity - used");
       totalUsed += cacheUsed;
     }
     assertEquals(expected*BLOCK_SIZE, totalUsed);
@@ -1174,11 +1169,11 @@ public class TestCacheDirectives {
     RemoteIterator<CachePoolEntry> it = myDfs.listCachePools();
     CachePoolInfo info = it.next().getInfo();
     assertFalse(it.hasNext());
-    assertEquals("Expected pool name", poolName, info.getPoolName());
-    assertNull("Unexpected owner name", info.getOwnerName());
-    assertNull("Unexpected group name", info.getGroupName());
-    assertNull("Unexpected mode", info.getMode());
-    assertNull("Unexpected limit", info.getLimit());
+      assertEquals(poolName, info.getPoolName(), "Expected pool name");
+      assertNull(info.getOwnerName(), "Unexpected owner name");
+      assertNull(info.getGroupName(), "Unexpected group name");
+      assertNull(info.getMode(), "Unexpected mode");
+      assertNull(info.getLimit(), "Unexpected limit");
     // Modify the pool so myuser is now the owner
     final long limit = 99;
     dfs.modifyCachePool(new CachePoolInfo(poolName)
@@ -1188,13 +1183,13 @@ public class TestCacheDirectives {
     it = myDfs.listCachePools();
     info = it.next().getInfo();
     assertFalse(it.hasNext());
-    assertEquals("Expected pool name", poolName, info.getPoolName());
-    assertEquals("Mismatched owner name", myUser.getShortUserName(),
-        info.getOwnerName());
-    assertNotNull("Expected group name", info.getGroupName());
-    assertEquals("Mismatched mode", (short) 0700,
-        info.getMode().toShort());
-    assertEquals("Mismatched limit", limit, (long)info.getLimit());
+      assertEquals(poolName, info.getPoolName(), "Expected pool name");
+      assertEquals(myUser.getShortUserName(),
+              info.getOwnerName(), "Mismatched owner name");
+      assertNotNull(info.getGroupName(), "Expected group name");
+      assertEquals((short) 0700,
+              info.getMode().toShort(), "Mismatched mode");
+      assertEquals(limit, (long) info.getLimit(), "Mismatched limit");
   }
 
   @Test(timeout=120000)
@@ -1221,8 +1216,8 @@ public class TestCacheDirectives {
     CacheDirectiveEntry ent = it.next();
     assertFalse(it.hasNext());
     Date entryExpiry = new Date(ent.getInfo().getExpiration().getMillis());
-    assertTrue("Directive should have expired",
-        entryExpiry.before(new Date()));
+      assertTrue(
+              entryExpiry.before(new Date()), "Directive should have expired");
     // Change it back to expire later
     dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder().setId(id)
         .setExpiration(Expiration.newRelative(120000)).build());
@@ -1231,8 +1226,8 @@ public class TestCacheDirectives {
     ent = it.next();
     assertFalse(it.hasNext());
     entryExpiry = new Date(ent.getInfo().getExpiration().getMillis());
-    assertTrue("Directive should not have expired",
-        entryExpiry.after(new Date()));
+      assertTrue(
+              entryExpiry.after(new Date()), "Directive should not have expired");
     // Verify that setting a negative TTL throws an error
     try {
       dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder().setId(id)
@@ -1293,10 +1288,10 @@ public class TestCacheDirectives {
         1, 0,
         poolInfo, "testLimit:2");
     RemoteIterator<CachePoolEntry> it = dfs.listCachePools();
-    assertTrue("Expected a cache pool", it.hasNext());
+      assertTrue(it.hasNext(), "Expected a cache pool");
     CachePoolStats stats = it.next().getStats();
-    assertEquals("Overlimit bytes should be difference of needed and limit",
-        BLOCK_SIZE, stats.getBytesOverlimit());
+      assertEquals(
+              BLOCK_SIZE, stats.getBytesOverlimit(), "Overlimit bytes should be difference of needed and limit");
     // Moving a directive to a pool without enough limit should fail
     CachePoolInfo inadequate =
         new CachePoolInfo("poolofinadequacy").setLimit(BLOCK_SIZE);
@@ -1340,9 +1335,9 @@ public class TestCacheDirectives {
     dfs.addCachePool(coolPool.setMaxRelativeExpiryMs(poolExpiration));
     RemoteIterator<CachePoolEntry> poolIt = dfs.listCachePools();
     CachePoolInfo listPool = poolIt.next().getInfo();
-    assertFalse("Should only be one pool", poolIt.hasNext());
-    assertEquals("Expected max relative expiry to match set value",
-        poolExpiration, listPool.getMaxRelativeExpiryMs().longValue());
+      assertFalse(poolIt.hasNext(), "Should only be one pool");
+      assertEquals(
+              poolExpiration, listPool.getMaxRelativeExpiryMs().longValue(), "Expected max relative expiry to match set value");
     // Test that negative and really big max expirations can't be modified
     try {
       dfs.addCachePool(coolPool.setMaxRelativeExpiryMs(-1l));
@@ -1366,11 +1361,11 @@ public class TestCacheDirectives {
     RemoteIterator<CacheDirectiveEntry> dirIt =
         dfs.listCacheDirectives(defaultExpiry);
     CacheDirectiveInfo listInfo = dirIt.next().getInfo();
-    assertFalse("Should only have one entry in listing", dirIt.hasNext());
+      assertFalse(dirIt.hasNext(), "Should only have one entry in listing");
     long listExpiration = listInfo.getExpiration().getAbsoluteMillis()
         - new Date().getTime();
-    assertTrue("Directive expiry should be approximately the pool's max expiry",
-        Math.abs(listExpiration - poolExpiration) < 10*1000);
+      assertTrue(
+              Math.abs(listExpiration - poolExpiration) < 10 * 1000, "Directive expiry should be approximately the pool's max expiry");
     // Test that the max is enforced on add for relative and absolute
     CacheDirectiveInfo.Builder builder = new CacheDirectiveInfo.Builder()
         .setPath(new Path("/lolcat"))
@@ -1474,9 +1469,9 @@ public class TestCacheDirectives {
     listInfo = dirIt.next().getInfo();
     listExpiration = listInfo.getExpiration().getAbsoluteMillis()
         - new Date().getTime();
-    assertTrue("Unexpected relative expiry " + listExpiration
-        + " expected approximately " + poolExpiration/2,
-        Math.abs(poolExpiration/2 - listExpiration) < 10*1000);
+      assertTrue(
+              Math.abs(poolExpiration / 2 - listExpiration) < 10 * 1000, "Unexpected relative expiry " + listExpiration
+              + " expected approximately " + poolExpiration / 2);
     // Test that cache pool and directive expiry can be modified back to never
     dfs.modifyCachePool(destPool
         .setMaxRelativeExpiryMs(CachePoolInfo.RELATIVE_EXPIRY_NEVER));
@@ -1485,9 +1480,9 @@ public class TestCacheDirectives {
     while (!listPool.getPoolName().equals(destPool.getPoolName())) {
       listPool = poolIt.next().getInfo();
     }
-    assertEquals("Expected max relative expiry to match set value",
-        CachePoolInfo.RELATIVE_EXPIRY_NEVER,
-        listPool.getMaxRelativeExpiryMs().longValue());
+      assertEquals(
+              CachePoolInfo.RELATIVE_EXPIRY_NEVER,
+              listPool.getMaxRelativeExpiryMs().longValue(), "Expected max relative expiry to match set value");
     dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder()
         .setId(listInfo.getId())
         .setExpiration(Expiration.newRelative(RELATIVE_EXPIRY_NEVER))
@@ -1512,10 +1507,10 @@ public class TestCacheDirectives {
       for (DataNode dn : cluster.getDataNodes()) {
         DatanodeDescriptor descriptor =
             datanodeManager.getDatanode(dn.getDatanodeId());
-        Assert.assertTrue("Pending cached list of " + descriptor +
-                " is not empty, "
-                + Arrays.toString(descriptor.getPendingCached().toArray()), 
-            descriptor.getPendingCached().isEmpty());
+          Assertions.assertTrue(
+                  descriptor.getPendingCached().isEmpty(), "Pending cached list of " + descriptor +
+                  " is not empty, "
+                  + Arrays.toString(descriptor.getPendingCached().toArray()));
       }
     } finally {
       cluster.getNamesystem().readUnlock();

@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.web;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_BROWSER_USERAGENTS_REGEX_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_WEBHDFS_REST_CSRF_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPSERVER_FILTER_HANDLERS;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,10 +36,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -87,7 +87,7 @@ public class TestWebHdfsWithRestCsrfPreventionFilter {
         {false, false, true}});
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     Configuration nnConf = new Configuration();
     nnConf.setBoolean(DFS_WEBHDFS_REST_CSRF_ENABLED_KEY, nnRestCsrf);
@@ -113,7 +113,7 @@ public class TestWebHdfsWithRestCsrfPreventionFilter {
         NetUtils.getHostPortString(addr)), clientConf);
   }
 
-  @After
+  @AfterEach
   public void after() {
     IOUtils.closeStream(webhdfs);
     IOUtils.closeStream(fs);

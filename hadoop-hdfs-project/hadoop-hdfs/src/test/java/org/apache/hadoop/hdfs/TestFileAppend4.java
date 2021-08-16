@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -47,8 +45,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.event.Level;
 
 /* File Append tests for HDFS-200 & HDFS-142, specifically focused on:
@@ -72,7 +70,7 @@ public class TestFileAppend4 {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.conf = new Configuration();
 
@@ -379,7 +377,7 @@ public class TestFileAppend4 {
       FSDirectory dir = cluster.getNamesystem().getFSDirectory();
       final INodeFile inode = INodeFile.
           valueOf(dir.getINode("/testAppend"), "/testAppend");
-      assertTrue("File should remain closed", !inode.isUnderConstruction());
+        assertTrue(!inode.isUnderConstruction(), "File should remain closed");
     } finally {
       if (null != fileSystem) {
         fileSystem.close();

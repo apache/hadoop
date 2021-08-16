@@ -20,9 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getServiceState;
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -66,11 +64,7 @@ import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +83,7 @@ public class TestObserverNode {
 
   private final Path testPath= new Path("/TestObserverNode");
 
-  @BeforeClass
+  @BeforeAll
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
@@ -101,23 +95,23 @@ public class TestObserverNode {
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setObserverRead(true);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     dfs.delete(testPath, true);
-    assertEquals("NN[0] should be active", HAServiceState.ACTIVE,
-        getServiceState(dfsCluster.getNameNode(0)));
-    assertEquals("NN[1] should be standby", HAServiceState.STANDBY,
-        getServiceState(dfsCluster.getNameNode(1)));
-    assertEquals("NN[2] should be observer", HAServiceState.OBSERVER,
-        getServiceState(dfsCluster.getNameNode(2)));
+      assertEquals(HAServiceState.ACTIVE,
+              getServiceState(dfsCluster.getNameNode(0)), "NN[0] should be active");
+      assertEquals(HAServiceState.STANDBY,
+              getServiceState(dfsCluster.getNameNode(1)), "NN[1] should be standby");
+      assertEquals(HAServiceState.OBSERVER,
+              getServiceState(dfsCluster.getNameNode(2)), "NN[2] should be observer");
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDownCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
@@ -449,16 +443,16 @@ public class TestObserverNode {
     dfsCluster.rollEditLogAndTail(0);
     // No Observers present, should still go to Active
     dfsCluster.transitionToStandby(2);
-    assertEquals("NN[2] should be standby", HAServiceState.STANDBY,
-        getServiceState(dfsCluster.getNameNode(2)));
+      assertEquals(HAServiceState.STANDBY,
+              getServiceState(dfsCluster.getNameNode(2)), "NN[2] should be standby");
     newFs.open(testFile).close();
     assertSentTo(0);
     // Restore Observer
     int newObserver = 1;
     dfsCluster.transitionToObserver(newObserver);
-    assertEquals("NN[" + newObserver + "] should be observer",
-        HAServiceState.OBSERVER,
-        getServiceState(dfsCluster.getNameNode(newObserver)));
+      assertEquals(
+              HAServiceState.OBSERVER,
+              getServiceState(dfsCluster.getNameNode(newObserver)), "NN[" + newObserver + "] should be observer");
     long startTime = Time.monotonicNow();
     try {
       while(Time.monotonicNow() - startTime <= 5000) {
@@ -547,19 +541,19 @@ public class TestObserverNode {
         LOG.warn("MkDirRunner thread failed", e.getCause());
       }
     }
-    assertTrue("Not all threads finished", finished);
+      assertTrue(finished, "Not all threads finished");
     threadPool.shutdown();
 
-    assertEquals("Active and Observer stateIds don't match",
-        dfsCluster.getNameNode(0).getFSImage().getLastAppliedOrWrittenTxId(),
-        dfsCluster.getNameNode(2).getFSImage().getLastAppliedOrWrittenTxId());
+      assertEquals(
+              dfsCluster.getNameNode(0).getFSImage().getLastAppliedOrWrittenTxId(),
+              dfsCluster.getNameNode(2).getFSImage().getLastAppliedOrWrittenTxId(), "Active and Observer stateIds don't match");
     for (int i = 0; i < numThreads; i++) {
-      assertTrue("Client #" + i
-          + " lastSeenStateId=" + clientStates[i].lastSeenStateId
-          + " activStateId=" + activStateId
-          + "\n" + clientStates[i].fnfe,
-          clientStates[i].lastSeenStateId >= activStateId &&
-          clientStates[i].fnfe == null);
+        assertTrue(
+                clientStates[i].lastSeenStateId >= activStateId &&
+                        clientStates[i].fnfe == null, "Client #" + i
+                + " lastSeenStateId=" + clientStates[i].lastSeenStateId
+                + " activStateId=" + activStateId
+                + "\n" + clientStates[i].fnfe);
     }
 
     // Restore edit log
@@ -593,7 +587,7 @@ public class TestObserverNode {
 
         FileStatus stat = fs.getFileStatus(DIR_PATH);
         assertSentTo(fs, 2);
-        assertTrue("Should be a directory", stat.isDirectory());
+          assertTrue(stat.isDirectory(), "Should be a directory");
       } catch (FileNotFoundException ioe) {
         clientState.fnfe = ioe;
       } catch (Exception e) {
@@ -604,13 +598,13 @@ public class TestObserverNode {
 
   private static void assertSentTo(DistributedFileSystem fs, int nnIdx)
       throws IOException {
-    assertTrue("Request was not sent to the expected namenode " + nnIdx,
-        HATestUtil.isSentToAnyOfNameNodes(fs, dfsCluster, nnIdx));
+      assertTrue(
+              HATestUtil.isSentToAnyOfNameNodes(fs, dfsCluster, nnIdx), "Request was not sent to the expected namenode " + nnIdx);
   }
 
   private void assertSentTo(int nnIdx) throws IOException {
-    assertTrue("Request was not sent to the expected namenode " + nnIdx,
-        HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx));
+      assertTrue(
+              HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIdx), "Request was not sent to the expected namenode " + nnIdx);
   }
 
   private static void setObserverRead(boolean flag) throws Exception {

@@ -38,13 +38,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_P
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -81,9 +76,9 @@ import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Sets;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestDFSUtil {
 
@@ -96,7 +91,7 @@ public class TestDFSUtil {
   /**
    * Reset to default UGI settings since some tests change them.
    */
-  @Before
+  @BeforeEach
   public void resetUGI() {
     UserGroupInformation.setConfiguration(new Configuration());
   }
@@ -127,8 +122,8 @@ public class TestDFSUtil {
 
     BlockLocation[] bs = DFSUtilClient.locatedBlocks2Locations(lbs);
 
-    assertTrue("expected 2 blocks but got " + bs.length,
-               bs.length == 2);
+      assertTrue(
+              bs.length == 2, "expected 2 blocks but got " + bs.length);
 
     int corruptCount = 0;
     for (BlockLocation b: bs) {
@@ -137,8 +132,8 @@ public class TestDFSUtil {
       }
     }
 
-    assertTrue("expected 1 corrupt files but got " + corruptCount,
-        corruptCount == 1);
+      assertTrue(
+              corruptCount == 1, "expected 1 corrupt files but got " + corruptCount);
 
     // test an empty location
     bs = DFSUtilClient.locatedBlocks2Locations(new LocatedBlocks());
@@ -684,11 +679,11 @@ public class TestDFSUtil {
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
 
     Collection<URI> uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 2, uris.size());
-    assertTrue("Missing URI for name service ns1",
-        uris.contains(new URI("hdfs://" + NS1_NN1_ADDR)));
-    assertTrue("Missing URI for service address",
-        uris.contains(new URI("hdfs://" + NN2_ADDR)));
+      assertEquals(2, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NS1_NN1_ADDR)), "Missing URI for name service ns1");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN2_ADDR)), "Missing URI for service address");
 
     conf = new HdfsConfiguration();
     conf.set(DFS_NAMESERVICES, "ns1,ns2");
@@ -721,15 +716,15 @@ public class TestDFSUtil {
         + "IPFailoverProxyProvider");
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 3, uris.size());
-    assertTrue("Missing URI for RPC address",
-        uris.contains(new URI("hdfs://" + NN1_ADDR)));
-    assertTrue("Missing URI for name service ns2",
-        uris.contains(new URI(HdfsConstants.HDFS_URI_SCHEME + "://" +
-            NS1_NN_ADDR)));
-    assertTrue("Missing URI for name service ns2",
-        uris.contains(new URI(HdfsConstants.HDFS_URI_SCHEME + "://" +
-            NS2_NN_ADDR)));
+      assertEquals(3, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_ADDR)), "Missing URI for RPC address");
+      assertTrue(
+              uris.contains(new URI(HdfsConstants.HDFS_URI_SCHEME + "://" +
+                      NS1_NN_ADDR)), "Missing URI for name service ns2");
+      assertTrue(
+              uris.contains(new URI(HdfsConstants.HDFS_URI_SCHEME + "://" +
+                      NS2_NN_ADDR)), "Missing URI for name service ns2");
 
     /**
      * Second, test ns1 with {@link ConfiguredFailoverProxyProvider} which does
@@ -740,57 +735,57 @@ public class TestDFSUtil {
         + "ConfiguredFailoverProxyProvider");
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 3, uris.size());
-    assertTrue("Missing URI for name service ns1",
-        uris.contains(new URI("hdfs://ns1")));
-    assertTrue("Missing URI for name service ns2",
-        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue("Missing URI for RPC address",
-        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+      assertEquals(3, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://ns1")), "Missing URI for name service ns1");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NS2_NN_ADDR)), "Missing URI for name service ns2");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_ADDR)), "Missing URI for RPC address");
 
     // Make sure that non-HDFS URIs in fs.defaultFS don't get included.
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
         "viewfs://vfs-name.example.com");
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 3, uris.size());
-    assertTrue("Missing URI for name service ns1",
-        uris.contains(new URI("hdfs://ns1")));
-    assertTrue("Missing URI for name service ns2",
-        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue("Missing URI for RPC address",
-        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+      assertEquals(3, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://ns1")), "Missing URI for name service ns1");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NS2_NN_ADDR)), "Missing URI for name service ns2");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_ADDR)), "Missing URI for RPC address");
 
     // Make sure that an HA URI being the default URI doesn't result in multiple
     // entries being returned.
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://ns1");
     
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 3, uris.size());
-    assertTrue("Missing URI for name service ns1",
-        uris.contains(new URI("hdfs://ns1")));
-    assertTrue("Missing URI for name service ns2",
-        uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
-    assertTrue("Missing URI for RPC address",
-        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+      assertEquals(3, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://ns1")), "Missing URI for name service ns1");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NS2_NN_ADDR)), "Missing URI for name service ns2");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_ADDR)), "Missing URI for RPC address");
 
     // Check that the default URI is returned if there's nothing else to return.
     conf = new HdfsConfiguration();
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 1, uris.size());
-    assertTrue("Missing URI for RPC address (defaultFS)",
-        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+      assertEquals(1, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_ADDR)), "Missing URI for RPC address (defaultFS)");
 
     // Check that the RPC address is the only address returned when the RPC
     // and the default FS is given.
     conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, NN2_ADDR);
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 1, uris.size());
-    assertTrue("Missing URI for RPC address",
-        uris.contains(new URI("hdfs://" + NN2_ADDR)));
+      assertEquals(1, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN2_ADDR)), "Missing URI for RPC address");
 
     // Make sure that when a service RPC address is used that is distinct from
     // the client RPC address, and that client RPC address is also used as the
@@ -799,9 +794,9 @@ public class TestDFSUtil {
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_ADDR);
 
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 1, uris.size());
-    assertTrue("Missing URI for service ns1",
-        uris.contains(new URI("hdfs://" + NN1_ADDR)));
+      assertEquals(1, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_ADDR)), "Missing URI for service ns1");
 
     // Check that when the default FS and service address are given, but
     // the RPC address isn't, that only the service address is returned.
@@ -810,9 +805,9 @@ public class TestDFSUtil {
     conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_SRVC_ADDR);
     
     uris = DFSUtil.getInternalNsRpcUris(conf);
-    assertEquals("Incorrect number of URIs returned", 1, uris.size());
-    assertTrue("Missing URI for service address",
-        uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)));
+      assertEquals(1, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)), "Missing URI for service address");
   }
 
   @Test
@@ -840,9 +835,9 @@ public class TestDFSUtil {
 
     Collection<URI> uris = DFSUtil.getInternalNsRpcUris(conf);
 
-    assertEquals("Incorrect number of URIs returned", 1, uris.size());
-    assertTrue("Missing URI for name service ns1",
-        uris.contains(new URI("hdfs://ns1")));
+      assertEquals(1, uris.size(), "Incorrect number of URIs returned");
+      assertTrue(
+              uris.contains(new URI("hdfs://ns1")), "Missing URI for name service ns1");
   }
 
   @Test (timeout=15000)
@@ -877,19 +872,19 @@ public class TestDFSUtil {
     HdfsConfiguration conf = new HdfsConfiguration();
     String defaultKey = "default.spengo.key";
     conf.unset(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
-    assertEquals("Test spnego key in config is null", defaultKey,
-        DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+      assertEquals(defaultKey,
+              DFSUtil.getSpnegoKeytabKey(conf, defaultKey), "Test spnego key in config is null");
 
     conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY, "");
-    assertEquals("Test spnego key is empty", defaultKey,
-        DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+      assertEquals(defaultKey,
+              DFSUtil.getSpnegoKeytabKey(conf, defaultKey), "Test spnego key is empty");
 
     String spengoKey = "spengo.key";
     conf.set(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
         spengoKey);
-    assertEquals("Test spnego key is NOT null",
-        DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-        DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+      assertEquals(
+              DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+              DFSUtil.getSpnegoKeytabKey(conf, defaultKey), "Test spnego key is NOT null");
   }
 
   @Test(timeout=10000)
@@ -1016,15 +1011,15 @@ public class TestDFSUtil {
         DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY).getCredential());
 
     // use WebAppUtils as would be used by loadSslConfiguration
-    Assert.assertEquals("keypass",
+    Assertions.assertEquals("keypass",
         DFSUtil.getPassword(conf, DFS_SERVER_HTTPS_KEYPASSWORD_KEY));
-    Assert.assertEquals("storepass",
+    Assertions.assertEquals("storepass",
         DFSUtil.getPassword(conf, DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY));
-    Assert.assertEquals("trustpass",
+    Assertions.assertEquals("trustpass",
         DFSUtil.getPassword(conf, DFS_SERVER_HTTPS_TRUSTSTORE_PASSWORD_KEY));
 
     // let's make sure that a password that doesn't exist returns null
-    Assert.assertEquals(null, DFSUtil.getPassword(conf,"invalid-alias"));
+    Assertions.assertEquals(null, DFSUtil.getPassword(conf,"invalid-alias"));
   }
 
   @Test
@@ -1065,20 +1060,20 @@ public class TestDFSUtil {
   public void testEncryptionProbe() throws Throwable {
     Configuration conf = new Configuration(false);
     conf.unset(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
-    assertFalse("encryption enabled on no provider key",
-        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+      assertFalse(
+              DFSUtilClient.isHDFSEncryptionEnabled(conf), "encryption enabled on no provider key");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "");
-    assertFalse("encryption enabled on empty provider key",
-        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+      assertFalse(
+              DFSUtilClient.isHDFSEncryptionEnabled(conf), "encryption enabled on empty provider key");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "\n\t\n");
-    assertFalse("encryption enabled on whitespace provider key",
-        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+      assertFalse(
+              DFSUtilClient.isHDFSEncryptionEnabled(conf), "encryption enabled on whitespace provider key");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         "http://hadoop.apache.org");
-    assertTrue("encryption disabled on valid provider key",
-        DFSUtilClient.isHDFSEncryptionEnabled(conf));
+      assertTrue(
+              DFSUtilClient.isHDFSEncryptionEnabled(conf), "encryption disabled on valid provider key");
 
   }
 

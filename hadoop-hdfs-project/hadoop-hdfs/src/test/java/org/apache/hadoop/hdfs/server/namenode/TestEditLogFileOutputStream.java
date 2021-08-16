@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,10 +28,10 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the EditLogFileOutputStream
@@ -45,21 +45,21 @@ public class TestEditLogFileOutputStream {
 
   private Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void disableFsync() {
     // No need to fsync for the purposes of tests. This makes
     // the tests run much faster.
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
   }
 
-  @Before
-  @After
+  @BeforeEach
+  @AfterEach
   public void deleteEditsFile() {
     if (TEST_EDITS.exists())
       TEST_EDITS.delete();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
   }
@@ -137,7 +137,7 @@ public class TestEditLogFileOutputStream {
       editLogStream.close();
     } catch (IOException ioe) {
       String msg = StringUtils.stringifyException(ioe);
-      assertTrue(msg, msg.contains("Trying to use aborted output stream"));
+        assertTrue(msg.contains("Trying to use aborted output stream"), msg);
     }
   }
 

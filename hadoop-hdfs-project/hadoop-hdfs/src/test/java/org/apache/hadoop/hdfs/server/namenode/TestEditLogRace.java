@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_OWNER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
@@ -263,7 +261,7 @@ public class TestEditLogRace {
         assertEquals(previousLogTxId, nextLog);
         
         File expectedLog = NNStorage.getInProgressEditsFile(sd, previousLogTxId);
-        assertTrue("Expect " + expectedLog + " to exist", expectedLog.exists());
+          assertTrue(expectedLog.exists(), "Expect " + expectedLog + " to exist");
       }
     } finally {
       stopTransactionWorkers();
@@ -638,7 +636,7 @@ public class TestEditLogRace {
                 LOG.info("thread[" + ii +"] edits=" + i);
               }
             }
-            assertTrue("too many edits", done.get());
+              assertTrue(done.get(), "too many edits");
             return null;
           }
         });

@@ -28,14 +28,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This class tests the DFS positional read functionality on a single node
@@ -55,7 +52,7 @@ public class TestByteBufferPread {
   private static final int BLOCK_SIZE = 4096;
   private static final int FILE_SIZE = 12 * BLOCK_SIZE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     // Setup the cluster with a small block size so we can create small files
     // that span multiple blocks
@@ -278,7 +275,7 @@ public class TestByteBufferPread {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws IOException {
     try {
       fs.delete(testFile, false);

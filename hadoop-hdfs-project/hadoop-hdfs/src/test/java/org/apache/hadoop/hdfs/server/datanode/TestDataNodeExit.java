@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,9 +28,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /** 
@@ -44,7 +41,7 @@ public class TestDataNodeExit {
   Configuration conf;
   MiniDFSCluster cluster = null;
   
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
@@ -57,7 +54,7 @@ public class TestDataNodeExit {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -78,8 +75,8 @@ public class TestDataNodeExit {
       Thread.sleep(WAIT_TIME_IN_MILLIS);
       iterations--;
     }
-    assertEquals("Mismatch in number of BPServices running", expected,
-        dn.getBpOsCount());
+      assertEquals(expected,
+              dn.getBpOsCount(), "Mismatch in number of BPServices running");
   }
 
   @Test
@@ -100,9 +97,9 @@ public class TestDataNodeExit {
   public void testBPServiceExit() throws Exception {
     DataNode dn = cluster.getDataNodes().get(0);
     stopBPServiceThreads(1, dn);
-    assertTrue("DataNode should not exit", dn.isDatanodeUp());
+      assertTrue(dn.isDatanodeUp(), "DataNode should not exit");
     stopBPServiceThreads(2, dn);
-    assertFalse("DataNode should exit", dn.isDatanodeUp());
+      assertFalse(dn.isDatanodeUp(), "DataNode should exit");
   }
 
   @Test

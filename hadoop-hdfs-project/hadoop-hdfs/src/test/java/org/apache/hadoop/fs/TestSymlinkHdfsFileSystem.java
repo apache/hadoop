@@ -17,28 +17,27 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
-import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 
 public class TestSymlinkHdfsFileSystem extends TestSymlinkHdfs {
 
-  @BeforeClass
+  @BeforeAll
   public static void testSetup() throws Exception {
     wrapper = new FileSystemTestWrapper(dfs, "/tmp/TestSymlinkHdfsFileSystem");
   }
 
   @Override
-  @Ignore("FileSystem adds missing authority in absolute URIs")
+  @Disabled("FileSystem adds missing authority in absolute URIs")
   @Test(timeout=10000)
   public void testCreateWithPartQualPathFails() throws IOException {}
 
-  @Ignore("FileSystem#create creates parent directories," +
+  @Disabled("FileSystem#create creates parent directories," +
       " so dangling links to directories are created")
   @Override
   @Test(timeout=10000)
@@ -56,7 +55,7 @@ public class TestSymlinkHdfsFileSystem extends TestSymlinkHdfs {
     wrapper.createSymlink(file, link, false);
     // Attempt recoverLease through a symlink
     boolean closed = dfs.recoverLease(link);
-    assertTrue("Expected recoverLease to return true", closed);
+      assertTrue(closed, "Expected recoverLease to return true");
   }
 
   @Test(timeout=10000)
@@ -69,7 +68,7 @@ public class TestSymlinkHdfsFileSystem extends TestSymlinkHdfs {
     wrapper.createSymlink(file, link, false);
     // Attempt recoverLease through a symlink
     boolean closed = dfs.isFileClosed(link);
-    assertTrue("Expected isFileClosed to return true", closed);
+      assertTrue(closed, "Expected isFileClosed to return true");
   }
 
   @Test(timeout=10000)

@@ -43,9 +43,9 @@ import org.apache.hadoop.io.nativeio.NativeIOException;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 
 public class TestCachingStrategy {
   private static final Logger LOG =
@@ -56,7 +56,7 @@ public class TestCachingStrategy {
   private final static TestRecordingCacheTracker tracker =
       new TestRecordingCacheTracker();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
@@ -239,7 +239,7 @@ public class TestCachingStrategy {
       // read file
       readHdfsFile(fs, new Path(TEST_PATH), Long.MAX_VALUE, true);
       // verify that we dropped everything from the cache.
-      Assert.assertNotNull(stats);
+      Assertions.assertNotNull(stats);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
     } finally {
       if (cluster != null) {
@@ -284,7 +284,7 @@ public class TestCachingStrategy {
       // read file
       readHdfsFile(fs, new Path(TEST_PATH), Long.MAX_VALUE, null);
       // verify that we dropped everything from the cache.
-      Assert.assertNotNull(stats);
+      Assertions.assertNotNull(stats);
       stats.assertDroppedInRange(0, TEST_PATH_LEN - WRITE_PACKET_SIZE);
     } finally {
       if (cluster != null) {
@@ -361,7 +361,7 @@ public class TestCachingStrategy {
           TEST_PATH, 0, Long.MAX_VALUE).get(0).getBlock();
       String fadvisedFileName = cluster.getBlockFile(0, block).getName();
       Stats stats = tracker.getStats(fadvisedFileName);
-      Assert.assertNull(stats);
+      Assertions.assertNull(stats);
       
       // read file
       readHdfsFile(fs, new Path(TEST_PATH), Long.MAX_VALUE, false);
@@ -388,7 +388,7 @@ public class TestCachingStrategy {
       createHdfsFile(fs, new Path(TEST_PATH), TEST_PATH_LEN, false);
       // verify that we can seek after setDropBehind
       try (FSDataInputStream fis = fs.open(new Path(TEST_PATH))) {
-        Assert.assertTrue(fis.read() != -1); // create BlockReader
+        Assertions.assertTrue(fis.read() != -1); // create BlockReader
         fis.setDropBehind(false); // clear BlockReader
         fis.seek(2); // seek
       }

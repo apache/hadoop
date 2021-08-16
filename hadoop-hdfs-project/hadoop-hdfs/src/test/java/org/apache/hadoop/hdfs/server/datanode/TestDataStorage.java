@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -37,9 +37,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestDataStorage {
   private final static String DEFAULT_BPID = "bp-0";
@@ -55,18 +53,18 @@ public class TestDataStorage {
   private NamespaceInfo nsInfo;
   private DataStorage storage;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
     storage = new DataStorage();
     nsInfo = new NamespaceInfo(0, CLUSTER_ID, DEFAULT_BPID, CTIME,
         BUILD_VERSION, SOFTWARE_VERSION);
     FileUtil.fullyDelete(TEST_DIR);
-    assertTrue("Failed to make test dir.", TEST_DIR.mkdirs());
+      assertTrue(TEST_DIR.mkdirs(), "Failed to make test dir.");
     Mockito.when(mockDN.getConf()).thenReturn(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     storage.unlockAll();
     FileUtil.fullyDelete(TEST_DIR);
@@ -206,7 +204,7 @@ public class TestDataStorage {
     // create a fake directory under current/
     File currentDir = new File(sd.getCurrentDir(),
         "BP-787466439-172.26.24.43-1462305406642");
-    assertTrue("unable to mkdir " + currentDir.getName(), currentDir.mkdirs());
+      assertTrue(currentDir.mkdirs(), "unable to mkdir " + currentDir.getName());
 
     // Add volumes for multiple namespaces.
     List<NamespaceInfo> namespaceInfos = createNamespaceInfos(numNamespace);
@@ -214,8 +212,8 @@ public class TestDataStorage {
       storage.addStorageLocations(mockDN, ni, locations, START_OPT);
     }
 
-    // It should not format the directory because VERSION is missing.
-    assertTrue("Storage directory was formatted", currentDir.exists());
+      // It should not format the directory because VERSION is missing.
+      assertTrue(currentDir.exists(), "Storage directory was formatted");
   }
 
   @Test

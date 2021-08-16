@@ -45,9 +45,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.event.Level;
 
 import java.io.ByteArrayInputStream;
@@ -60,7 +60,7 @@ import java.util.Collection;
 import java.util.HashSet;
 
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.OBSERVER_PROBE_RETRY_PERIOD_KEY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test case for client support of delegation tokens in an HA cluster.
@@ -79,7 +79,7 @@ public class TestDelegationTokensWithHA {
 
   private volatile boolean catchup = false;
   
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     SecurityUtilTestHelper.setTokenServiceUseIp(true);
     
@@ -107,7 +107,7 @@ public class TestDelegationTokensWithHA {
         nn0.getNamesystem());
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

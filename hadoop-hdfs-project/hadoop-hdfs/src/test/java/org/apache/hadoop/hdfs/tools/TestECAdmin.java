@@ -21,10 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests some ECAdmin scenarios that are hard to test from
@@ -70,13 +68,13 @@ public class TestECAdmin {
   public Timeout globalTimeout =
       new Timeout(300000, TimeUnit.MILLISECONDS);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       System.out.flush();
@@ -101,7 +99,7 @@ public class TestECAdmin {
 
     cluster = DFSTestUtil.setupCluster(conf, numDataNodes, numRacks, 0);
     int ret = runCommandWithParams("-verifyClusterSetup");
-    assertEquals("Return value of the command is not successful", 2, ret);
+      assertEquals(2, ret, "Return value of the command is not successful");
     assertNotEnoughDataNodesMessage(RS_6_3, numDataNodes, expectedNumDataNodes);
   }
 
@@ -116,7 +114,7 @@ public class TestECAdmin {
     cluster.getFileSystem().disableErasureCodingPolicy(RS_6_3);
     cluster.getFileSystem().enableErasureCodingPolicy(testPolicy);
     int ret = runCommandWithParams("-verifyClusterSetup");
-    assertEquals("Return value of the command is not successful", 2, ret);
+      assertEquals(2, ret, "Return value of the command is not successful");
     assertNotEnoughRacksMessage(testPolicy, numRacks, expectedNumRacks);
   }
 
@@ -131,7 +129,7 @@ public class TestECAdmin {
     cluster.getFileSystem().disableErasureCodingPolicy(RS_6_3);
     cluster.getFileSystem().enableErasureCodingPolicy(testPolicy);
     int ret = runCommandWithParams("-verifyClusterSetup");
-    assertEquals("Return value of the command is not successful", 2, ret);
+      assertEquals(2, ret, "Return value of the command is not successful");
     assertNotEnoughRacksMessage(testPolicy, numRacks, expectedNumRacks);
   }
 
@@ -146,7 +144,7 @@ public class TestECAdmin {
     cluster.getFileSystem().disableErasureCodingPolicy(RS_6_3);
     cluster.getFileSystem().enableErasureCodingPolicy(testPolicy);
     int ret = runCommandWithParams("-verifyClusterSetup");
-    assertEquals("Return value of the command is not successful", 2, ret);
+      assertEquals(2, ret, "Return value of the command is not successful");
     assertNotEnoughRacksMessage(testPolicy, numRacks, expectedNumRacks);
   }
 
@@ -154,11 +152,11 @@ public class TestECAdmin {
   public void testRS63Good() throws Exception {
     cluster = DFSTestUtil.setupCluster(conf, 9, 3, 0);
     int ret = runCommandWithParams("-verifyClusterSetup");
-    assertEquals("Return value of the command is successful", 0, ret);
-    assertTrue("Result of cluster topology verify " +
-        "should be logged correctly", out.toString().contains(
-        "The cluster setup can support EC policies: " + RS_6_3));
-    assertTrue("Error output should be empty", err.toString().isEmpty());
+      assertEquals(0, ret, "Return value of the command is successful");
+      assertTrue(out.toString().contains(
+              "The cluster setup can support EC policies: " + RS_6_3), "Result of cluster topology verify " +
+              "should be logged correctly");
+      assertTrue(err.toString().isEmpty(), "Error output should be empty");
   }
 
   @Test
@@ -166,11 +164,11 @@ public class TestECAdmin {
     cluster = DFSTestUtil.setupCluster(conf, 9, 3, 0);
     cluster.getFileSystem().disableErasureCodingPolicy(RS_6_3);
     int ret = runCommandWithParams("-verifyClusterSetup");
-    assertEquals("Return value of the command is successful", 0, ret);
-    assertTrue("Result of cluster topology verify " +
-            "should be logged correctly",
-        out.toString().contains("No erasure coding policy is given"));
-    assertTrue("Error output should be empty", err.toString().isEmpty());
+      assertEquals(0, ret, "Return value of the command is successful");
+      assertTrue(
+              out.toString().contains("No erasure coding policy is given"), "Result of cluster topology verify " +
+              "should be logged correctly");
+      assertTrue(err.toString().isEmpty(), "Error output should be empty");
   }
 
   @Test
@@ -184,16 +182,16 @@ public class TestECAdmin {
     final int ret = runCommandWithParams("-enablePolicy", "-policy",
         testPolicy);
 
-    assertEquals("Return value of the command is successful", 0, ret);
-    assertTrue("Enabling policy should be logged", out.toString()
-        .contains("Erasure coding policy " + testPolicy + " is enabled"));
-    assertTrue("Warning about cluster topology should be printed",
-        err.toString().contains("Warning: The cluster setup does not support " +
-        "EC policy " + testPolicy + ". Reason:"));
-    assertTrue("Warning about cluster topology should be printed",
-        err.toString()
-            .contains(" racks are required for the erasure coding policies: " +
-                testPolicy));
+      assertEquals(0, ret, "Return value of the command is successful");
+      assertTrue(out.toString()
+              .contains("Erasure coding policy " + testPolicy + " is enabled"), "Enabling policy should be logged");
+      assertTrue(
+              err.toString().contains("Warning: The cluster setup does not support " +
+                      "EC policy " + testPolicy + ". Reason:"), "Warning about cluster topology should be printed");
+      assertTrue(
+              err.toString()
+                      .contains(" racks are required for the erasure coding policies: " +
+                              testPolicy), "Warning about cluster topology should be printed");
   }
 
   @Test
@@ -204,12 +202,12 @@ public class TestECAdmin {
     final int ret = runCommandWithParams("-enablePolicy", "-policy",
         testPolicy);
 
-    assertEquals("Return value of the command is successful", 0, ret);
-    assertTrue("Enabling policy should be logged", out.toString()
-        .contains("Erasure coding policy " + testPolicy + " is enabled"));
-    assertFalse("Warning about cluster topology should not be printed",
-        out.toString().contains("Warning: The cluster setup does not support"));
-    assertTrue("Error output should be empty", err.toString().isEmpty());
+      assertEquals(0, ret, "Return value of the command is successful");
+      assertTrue(out.toString()
+              .contains("Erasure coding policy " + testPolicy + " is enabled"), "Enabling policy should be logged");
+      assertFalse(
+              out.toString().contains("Warning: The cluster setup does not support"), "Warning about cluster topology should not be printed");
+      assertTrue(err.toString().isEmpty(), "Error output should be empty");
   }
 
   @Test
@@ -219,12 +217,12 @@ public class TestECAdmin {
     final int ret = runCommandWithParams("-enablePolicy", "-policy",
         "NonExistentPolicy");
 
-    assertEquals("Return value of the command is unsuccessful", 2, ret);
-    assertFalse("Enabling policy should not be logged when " +
-        "it was unsuccessful", out.toString().contains("is enabled"));
-    assertTrue("Error message should be printed",
-        err.toString().contains("RemoteException: The policy name " +
-            "NonExistentPolicy does not exist"));
+      assertEquals(2, ret, "Return value of the command is unsuccessful");
+      assertFalse(out.toString().contains("is enabled"), "Enabling policy should not be logged when " +
+              "it was unsuccessful");
+      assertTrue(
+              err.toString().contains("RemoteException: The policy name " +
+                      "NonExistentPolicy does not exist"), "Error message should be printed");
   }
 
   @Test
@@ -234,30 +232,30 @@ public class TestECAdmin {
     cluster = DFSTestUtil.setupCluster(conf, numDataNodes, numRacks, 0);
 
     int ret = runCommandWithParams("-verifyClusterSetup", "-policy", RS_3_2);
-    assertEquals("Return value of the command is not successful", 2, ret);
+      assertEquals(2, ret, "Return value of the command is not successful");
     assertNotEnoughRacksMessage(RS_3_2, numRacks, 3);
 
     resetOutputs();
     ret = runCommandWithParams("-verifyClusterSetup", "-policy",
         RS_10_4, RS_3_2);
-    assertEquals("Return value of the command is not successful", 2, ret);
+      assertEquals(2, ret, "Return value of the command is not successful");
     assertNotEnoughDataNodesMessage(RS_10_4 + ", " + RS_3_2,
         numDataNodes, 14);
 
     resetOutputs();
     ret = runCommandWithParams("-verifyClusterSetup", "-policy",
         "invalidPolicy");
-    assertEquals("Return value of the command is not successful", -1, ret);
-    assertTrue("Error message should be logged", err.toString()
-        .contains("The given erasure coding policy invalidPolicy " +
-            "does not exist."));
+      assertEquals(-1, ret, "Return value of the command is not successful");
+      assertTrue(err.toString()
+              .contains("The given erasure coding policy invalidPolicy " +
+                      "does not exist."), "Error message should be logged");
 
     resetOutputs();
     ret = runCommandWithParams("-verifyClusterSetup", "-policy");
-    assertEquals("Return value of the command is not successful", -1, ret);
-    assertTrue("Error message should be logged", err.toString()
-        .contains("NotEnoughArgumentsException: Not enough arguments: " +
-            "expected 1 but got 0"));
+      assertEquals(-1, ret, "Return value of the command is not successful");
+      assertTrue(err.toString()
+              .contains("NotEnoughArgumentsException: Not enough arguments: " +
+                      "expected 1 but got 0"), "Error message should be logged");
   }
 
   private void resetOutputs() {
@@ -268,25 +266,25 @@ public class TestECAdmin {
   private void assertNotEnoughDataNodesMessage(String policy,
                                                int numDataNodes,
                                                int expectedNumDataNodes) {
-    assertTrue("Result of cluster topology verify " +
-        "should be logged correctly", out.toString()
-        .contains(expectedNumDataNodes + " DataNodes are required " +
-            "for the erasure coding policies: " +
-            policy + ". The number of DataNodes is only " + numDataNodes));
-    assertTrue("Error output should be empty",
-        err.toString().isEmpty());
+      assertTrue(out.toString()
+              .contains(expectedNumDataNodes + " DataNodes are required " +
+                      "for the erasure coding policies: " +
+                      policy + ". The number of DataNodes is only " + numDataNodes), "Result of cluster topology verify " +
+              "should be logged correctly");
+      assertTrue(
+              err.toString().isEmpty(), "Error output should be empty");
   }
 
   private void assertNotEnoughRacksMessage(String policy,
                                            int numRacks,
                                            int expectedNumRacks) {
-    assertTrue("Result of cluster topology verify " +
-        "should be logged correctly", out.toString()
-        .contains(expectedNumRacks + " racks are required for " +
-            "the erasure coding policies: " +
-            policy + ". The number of racks is only " + numRacks));
-    assertTrue("Error output should be empty",
-        err.toString().isEmpty());
+      assertTrue(out.toString()
+              .contains(expectedNumRacks + " racks are required for " +
+                      "the erasure coding policies: " +
+                      policy + ". The number of racks is only " + numRacks), "Result of cluster topology verify " +
+              "should be logged correctly");
+      assertTrue(
+              err.toString().isEmpty(), "Error output should be empty");
   }
 
   private int runCommandWithParams(String... args) throws Exception{

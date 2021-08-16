@@ -18,12 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -872,10 +867,10 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       // Lets wait for the replication interval
       Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
 
-      // Check replication completed successfully. Need not wait till it process
-      // all the 100 normal blocks.
-      assertFalse("Not able to clear the element from high priority list",
-          neededReconstruction.iterator(HIGH_PRIORITY).hasNext());
+        // Check replication completed successfully. Need not wait till it process
+        // all the 100 normal blocks.
+        assertFalse(
+                neededReconstruction.iterator(HIGH_PRIORITY).hasNext(), "Not able to clear the element from high priority list");
     } finally {
       cluster.shutdown();
     }
@@ -945,11 +940,11 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       List<List<BlockInfo>> chosenBlocks, int... expectedSizes) {
     int i = 0;
     for(; i < chosenBlocks.size(); i++) {
-      assertEquals("Not returned the expected number for i=" + i,
-          expectedSizes[i], chosenBlocks.get(i).size());
+        assertEquals(
+                expectedSizes[i], chosenBlocks.get(i).size(), "Not returned the expected number for i=" + i);
     }
     for(; i < expectedSizes.length; i++) {
-      assertEquals("Expected size is non-zero for i=" + i, 0, expectedSizes[i]);
+        assertEquals(0, expectedSizes[i], "Expected size is non-zero for i=" + i);
     }
   }
   
@@ -1525,8 +1520,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     targets = chooseTarget(5, dataNodes[2], null, favouredNodes);
     assertEquals(targets.length, 5);
     for (int i = 0; i < targets.length; i++) {
-      assertTrue("Target should be a part of Expected Targets",
-          expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+        assertTrue(
+                expectedTargets.contains(targets[i].getDatanodeDescriptor()), "Target should be a part of Expected Targets");
     }
   }
 
@@ -1545,8 +1540,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
           favouredNodes);
       assertEquals(targets.length, 2);
       for (int i = 0; i < targets.length; i++) {
-        assertTrue("Target should be a part of Expected Targets",
-            expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+          assertTrue(
+                  expectedTargets.contains(targets[i].getDatanodeDescriptor()), "Target should be a part of Expected Targets");
       }
     } finally {
       ((BlockPlacementPolicyDefault) replicator).setPreferLocalNode(true);

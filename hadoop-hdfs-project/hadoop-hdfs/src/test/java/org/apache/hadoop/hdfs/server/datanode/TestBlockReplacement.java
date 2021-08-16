@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -229,7 +226,7 @@ public class TestBlockReplacement {
 
       LocatedBlock lb = dfs.getClient().getLocatedBlocks(fileName, 0).get(0);
       DatanodeInfo[] oldNodes = lb.getLocations();
-      assertEquals("Wrong block locations", oldNodes.length, 1);
+        assertEquals(oldNodes.length, 1, "Wrong block locations");
       DatanodeInfo source = oldNodes[0];
       ExtendedBlock b = lb.getBlock();
 
@@ -243,10 +240,10 @@ public class TestBlockReplacement {
         }
       }
 
-      assertNotNull("Failed to choose destination datanode!", destin);
+        assertNotNull(destin, "Failed to choose destination datanode!");
 
-      assertFalse("Source and destin datanode should be different",
-          source.equals(destin));
+        assertFalse(
+                source.equals(destin), "Source and destin datanode should be different");
 
       // Mock FsDatasetSpi#getPinning to show that the block is pinned.
       for (int i = 0; i < cluster.getDataNodes().size(); i++) {
@@ -255,10 +252,10 @@ public class TestBlockReplacement {
         InternalDataNodeTestUtils.mockDatanodeBlkPinning(dn, true);
       }
 
-      // Block movement to a different datanode should fail as the block is
-      // pinned.
-      assertTrue("Status code mismatches!", replaceBlock(b, source, source,
-          destin, StorageType.ARCHIVE, Status.ERROR_BLOCK_PINNED));
+        // Block movement to a different datanode should fail as the block is
+        // pinned.
+        assertTrue(replaceBlock(b, source, source,
+                destin, StorageType.ARCHIVE, Status.ERROR_BLOCK_PINNED), "Status code mismatches!");
     } finally {
       cluster.shutdown();
     }
@@ -299,10 +296,10 @@ public class TestBlockReplacement {
       locatedBlocks = dfs.getClient().getLocatedBlocks(file.toString(), 0);
       // get the current 
       locatedBlock = locatedBlocks.get(0);
-      assertEquals("Storage should be only one", 1,
-          locatedBlock.getLocations().length);
-      assertTrue("Block should be moved to ARCHIVE", locatedBlock
-          .getStorageTypes()[0] == StorageType.ARCHIVE);
+        assertEquals(1,
+                locatedBlock.getLocations().length, "Storage should be only one");
+        assertTrue(locatedBlock
+                .getStorageTypes()[0] == StorageType.ARCHIVE, "Block should be moved to ARCHIVE");
     } finally {
       cluster.shutdown();
     }
@@ -398,14 +395,14 @@ public class TestBlockReplacement {
     DFSClient client = null;
     try {
       cluster.waitActive();
-      assertEquals("Number of namenodes is not 2", 2,
-          cluster.getNumNameNodes());
+        assertEquals(2,
+                cluster.getNumNameNodes(), "Number of namenodes is not 2");
       // Transitioning the namenode 0 to active.
       cluster.transitionToActive(0);
-      assertTrue("Namenode 0 should be in active state",
-          cluster.getNameNode(0).isActiveState());
-      assertTrue("Namenode 1 should be in standby state",
-          cluster.getNameNode(1).isStandbyState());
+        assertTrue(
+                cluster.getNameNode(0).isActiveState(), "Namenode 0 should be in active state");
+        assertTrue(
+                cluster.getNameNode(1).isStandbyState(), "Namenode 1 should be in standby state");
 
       // Trigger heartbeat to mark DatanodeStorageInfo#heartbeatedSinceFailover
       // to true.
@@ -430,8 +427,8 @@ public class TestBlockReplacement {
 
       // add a second datanode to the cluster
       cluster.startDataNodes(conf, 1, true, null, null, null, null);
-      assertEquals("Number of datanodes should be 2", 2,
-          cluster.getDataNodes().size());
+        assertEquals(2,
+                cluster.getDataNodes().size(), "Number of datanodes should be 2");
 
       DataNode dn0 = cluster.getDataNodes().get(0);
       DataNode dn1 = cluster.getDataNodes().get(1);
@@ -464,10 +461,10 @@ public class TestBlockReplacement {
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
 
-      assertTrue("Namenode 1 should be in active state",
-         cluster.getNameNode(1).isActiveState());
-      assertTrue("Namenode 0 should be in standby state",
-         cluster.getNameNode(0).isStandbyState());
+        assertTrue(
+                cluster.getNameNode(1).isActiveState(), "Namenode 1 should be in active state");
+        assertTrue(
+                cluster.getNameNode(0).isStandbyState(), "Namenode 0 should be in standby state");
       client.close();
 
       // Opening a new client for new active  namenode
@@ -476,8 +473,8 @@ public class TestBlockReplacement {
           .getBlockLocations("/tmp.txt", 0, 10L).getLocatedBlocks();
 
       assertEquals(1, locatedBlocks1.size());
-      assertEquals("The block should be only on 1 datanode ", 1,
-          locatedBlocks1.get(0).getLocations().length);
+        assertEquals(1,
+                locatedBlocks1.get(0).getLocations().length, "The block should be only on 1 datanode ");
     } finally {
       IOUtils.cleanupWithLogger(null, client);
       cluster.shutdown();

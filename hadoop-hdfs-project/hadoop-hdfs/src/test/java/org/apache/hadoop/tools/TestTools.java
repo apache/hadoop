@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.tools;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PipedInputStream;
@@ -30,8 +31,8 @@ import org.apache.hadoop.hdfs.tools.JMXGet;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.ExitUtil.ExitException;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.thirdparty.com.google.common.io.ByteStreams;
 
@@ -41,7 +42,7 @@ public class TestTools {
   private final static String INVALID_OPTION = "-invalidOption";
   private static final String[] OPTIONS = new String[2];
 
-  @BeforeClass
+  @BeforeAll
   public static void before() {
     ExitUtil.disableSystemExit();
     OPTIONS[1] = INVALID_OPTION;

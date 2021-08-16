@@ -18,10 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,9 +32,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 /**
  * Tests if a data-node can startup depending on configuration parameters.
@@ -47,7 +45,7 @@ public class TestDatanodeConfig {
 
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     clearBaseDir();
     Configuration conf = new HdfsConfiguration();
@@ -59,7 +57,7 @@ public class TestDatanodeConfig {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if(cluster != null)
       cluster.shutdown();
@@ -95,7 +93,7 @@ public class TestDatanodeConfig {
         dn.shutdown();
       }
     }
-    assertNull("Data-node startup should have failed.", dn);
+      assertNull(dn, "Data-node startup should have failed.");
 
     // 2. Test "file:" ecPolicy and no ecPolicy (path-only). Both should work.
     String dnDir1 = fileAsURI(dataDir).toString() + "1";
@@ -106,7 +104,7 @@ public class TestDatanodeConfig {
                 dnDir1 + "," + dnDir2 + "," + dnDir3);
     try {
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-      assertTrue("Data-node should startup.", cluster.isDataNodeUp());
+        assertTrue(cluster.isDataNodeUp(), "Data-node should startup.");
     } finally {
       if (cluster != null) {
         cluster.shutdownDataNodes();

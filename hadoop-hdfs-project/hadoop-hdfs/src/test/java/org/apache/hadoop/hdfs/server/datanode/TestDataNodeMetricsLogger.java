@@ -19,9 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,10 +46,10 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.After;
-import org.junit.Assert;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import java.util.function.Supplier;
@@ -100,7 +98,7 @@ public class TestDataNodeMetricsLogger {
    * @throws IOException
    *           if an error occurred
    */
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (dn != null) {
       try {
@@ -110,8 +108,8 @@ public class TestDataNodeMetricsLogger {
       } finally {
         File dir = new File(DATA_DIR);
         if (dir.exists())
-          Assert.assertTrue("Cannot delete data-node dirs",
-              FileUtil.fullyDelete(dir));
+            Assertions.assertTrue(
+                    FileUtil.fullyDelete(dir), "Cannot delete data-node dirs");
       }
     }
     dn = null;

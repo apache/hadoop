@@ -30,8 +30,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.net.Node;
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,9 +42,7 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test to ensure that the StorageType and StorageID sent from Namenode
@@ -58,7 +56,7 @@ public class TestNamenodeStorageDirectives {
 
   private MiniDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void tearDown() {
     shutdown();
   }

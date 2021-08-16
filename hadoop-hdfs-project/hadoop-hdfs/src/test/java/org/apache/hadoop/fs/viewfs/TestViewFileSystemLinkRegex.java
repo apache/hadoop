@@ -36,16 +36,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.viewfs.RegexMountPoint.INTERCEPTOR_INTERNAL_SEP;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Test linkRegex node type for view file system.
@@ -73,7 +69,7 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
     return new FileSystemTestHelper(TEST_BASE_PATH);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning() throws IOException {
     SupportsBlocks = true;
     clusterConfig = ViewFileSystemTestSetup.createConfig();
@@ -91,7 +87,7 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
     fsDefault = FS_HDFS[FS_INDEX_DEFAULT];
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -99,7 +95,7 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fsDefault;
     super.setUp();
@@ -157,7 +153,7 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
   private void createDirWithChildren(
       FileSystem fileSystem, Path dir, List<Path> childrenFiles)
       throws IOException {
-    Assert.assertTrue(fileSystem.mkdirs(dir));
+    Assertions.assertTrue(fileSystem.mkdirs(dir));
     int index = 0;
     for (Path childFile : childrenFiles) {
       createFile(fileSystem, childFile, index, true);
@@ -224,11 +220,11 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
     URI viewFsUri = new URI(
         FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
     try (FileSystem vfs = FileSystem.get(viewFsUri, config)) {
-      Assert.assertEquals(expectedResolveResult.toString(),
+      Assertions.assertEquals(expectedResolveResult.toString(),
           vfs.resolvePath(dirPathBeforeMountPoint).toString());
-      Assert.assertTrue(
+      Assertions.assertTrue(
           vfs.getFileStatus(dirPathBeforeMountPoint).isDirectory());
-      Assert.assertEquals(
+      Assertions.assertEquals(
           childrenFilesCnt, vfs.listStatus(dirPathBeforeMountPoint).length);
 
       // Test Inner cache, the resolved result's filesystem should be the same.

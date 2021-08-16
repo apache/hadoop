@@ -26,12 +26,13 @@ import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestProvidedImpl;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.util.RwLock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,7 +47,7 @@ public class TestProvidedStorageMap {
   private String providedStorageID;
   private String blockPoolID;
 
-  @Before
+  @BeforeEach
   public void setup() {
     providedStorageID = DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT;
     conf = new HdfsConfiguration();
@@ -92,15 +93,15 @@ public class TestProvidedStorageMap {
         providedMap.getStorage(dn1, dn1ProvidedStorage);
     DatanodeStorageInfo dns1Disk = providedMap.getStorage(dn1, dn1DiskStorage);
 
-    assertTrue("The provided storages should be equal",
-        dns1Provided == providedMapStorage);
-    assertTrue("Disk storage has not yet been registered with block manager",
-        dns1Disk == null);
+      assertTrue(
+              dns1Provided == providedMapStorage, "The provided storages should be equal");
+      assertTrue(
+              dns1Disk == null, "Disk storage has not yet been registered with block manager");
     // add the disk storage to the datanode.
     DatanodeStorageInfo dnsDisk = new DatanodeStorageInfo(dn1, dn1DiskStorage);
     dn1.injectStorage(dnsDisk);
-    assertTrue("Disk storage must match the injected storage info",
-        dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage));
+      assertTrue(
+              dnsDisk == providedMap.getStorage(dn1, dn1DiskStorage), "Disk storage must match the injected storage info");
 
     // create a 2nd datanode
     DatanodeDescriptor dn2 = createDatanodeDescriptor(5010);
@@ -112,9 +113,9 @@ public class TestProvidedStorageMap {
 
     DatanodeStorageInfo dns2Provided = providedMap.getStorage(
         dn2, dn2ProvidedStorage);
-    assertTrue("The provided storages should be equal",
-        dns2Provided == providedMapStorage);
-    assertTrue("The DatanodeDescriptor should contain the provided storage",
-        dn2.getStorageInfo(providedStorageID) == providedMapStorage);
+      assertTrue(
+              dns2Provided == providedMapStorage, "The provided storages should be equal");
+      assertTrue(
+              dn2.getStorageInfo(providedStorageID) == providedMapStorage, "The DatanodeDescriptor should contain the provided storage");
   }
 }

@@ -22,10 +22,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 import static org.apache.hadoop.test.GenericTestUtils.assertExists;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,18 +42,17 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
-* This test ensures the appropriate response (successful or failure) from
-* the system when the system is upgraded under various storage state and
-* version conditions.
-*/
+ * This test ensures the appropriate response (successful or failure) from
+ * the system when the system is upgraded under various storage state and
+ * version conditions.
+ */
 public class TestDFSUpgrade {
  
   // TODO: Avoid hard-coding expected_txid. The test should be more robust.
@@ -171,16 +167,16 @@ public class TestDFSUpgrade {
     } catch (Exception e) {
       // expect exception
       if (exceptionClass != null) {
-        assertTrue("Caught exception is not of expected class "
-            + exceptionClass.getSimpleName() + ": "
-            + StringUtils.stringifyException(e), 
-            exceptionClass.isInstance(e));
+          assertTrue(
+                  exceptionClass.isInstance(e), "Caught exception is not of expected class "
+                  + exceptionClass.getSimpleName() + ": "
+                  + StringUtils.stringifyException(e));
       }
       if (messagePattern != null) {
-        assertTrue("Caught exception message string does not match expected pattern \""
-            + messagePattern.pattern() + "\" : "
-            + StringUtils.stringifyException(e), 
-            messagePattern.matcher(e.getMessage()).find());
+          assertTrue(
+                  messagePattern.matcher(e.getMessage()).find(), "Caught exception message string does not match expected pattern \""
+                  + messagePattern.pattern() + "\" : "
+                  + StringUtils.stringifyException(e));
       }
       LOG.info("Successfully detected expected NameNode startup failure.");
     }
@@ -195,8 +191,8 @@ public class TestDFSUpgrade {
    */
   void startBlockPoolShouldFail(StartupOption operation, String bpid) throws IOException {
     cluster.startDataNodes(conf, 1, false, operation, null); // should fail
-    assertFalse("Block pool " + bpid + " should have failed to start",
-        cluster.getDataNodes().get(0).isBPServiceAlive(bpid));
+      assertFalse(
+              cluster.getDataNodes().get(0).isBPServiceAlive(bpid), "Block pool " + bpid + " should have failed to start");
   }
  
   /**
@@ -212,7 +208,7 @@ public class TestDFSUpgrade {
                                            .build();
   }
   
-  @BeforeClass
+  @BeforeAll
   public static void initialize() throws Exception {
     UpgradeUtilities.initialize();
   }
@@ -404,7 +400,7 @@ public class TestDFSUpgrade {
    * Stand-alone test to detect failure of one SD during parallel upgrade.
    * At this time, can only be done with manual hack of {@link FSImage.doUpgrade()}
    */
-  @Ignore
+  @Disabled
   public void testUpgrade4() throws Exception {
     int numDirs = 4;
     conf = new HdfsConfiguration();
@@ -432,7 +428,7 @@ public class TestDFSUpgrade {
       File currentDir = new File(baseDir, "current");
       for (File f : currentDir.listFiles()) {
         if (f.getName().startsWith(prefix)) {
-          assertTrue("Deleting " + f, f.delete());
+            assertTrue(f.delete(), "Deleting " + f);
         }
       }
     }
@@ -446,7 +442,7 @@ public class TestDFSUpgrade {
     fail("Expected IOException is not thrown");
   }
   
-  @Ignore
+  @Disabled
   public void test203LayoutVersion() {
     for (int lv : Storage.LAYOUT_VERSIONS_203) {
       assertTrue(Storage.is203LayoutVersion(lv));

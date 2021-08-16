@@ -17,8 +17,8 @@
 */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test ensures that the balancer bandwidth is dynamically adjusted
@@ -131,11 +131,11 @@ public class TestBalancerBandwidth {
     try {
       System.setOut(outStream);
       int exitCode = admin.run(args);
-      assertEquals("DFSAdmin should return 0", 0, exitCode);
+        assertEquals(0, exitCode, "DFSAdmin should return 0");
       String bandwidthOutMsg = "Balancer bandwidth is " + expectedBandwidth
           + " bytes per second.";
       String strOut = new String(outContent.toByteArray(), UTF8);
-      assertTrue("Wrong balancer bandwidth!", strOut.contains(bandwidthOutMsg));
+        assertTrue(strOut.contains(bandwidthOutMsg), "Wrong balancer bandwidth!");
     } finally {
       System.setOut(initialStdOut);
     }

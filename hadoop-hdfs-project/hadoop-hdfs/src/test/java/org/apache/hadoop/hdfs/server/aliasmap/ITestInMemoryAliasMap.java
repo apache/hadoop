@@ -22,13 +22,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +44,7 @@ public class ITestInMemoryAliasMap {
   private File tempDirectory;
   private static String bpid = "bpid-0";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     File temp = Files.createTempDirectory("seagull").toFile();
@@ -57,7 +55,7 @@ public class ITestInMemoryAliasMap {
     aliasMap = InMemoryAliasMap.init(conf, bpid);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     aliasMap.close();
     FileUtils.deleteDirectory(tempDirectory);

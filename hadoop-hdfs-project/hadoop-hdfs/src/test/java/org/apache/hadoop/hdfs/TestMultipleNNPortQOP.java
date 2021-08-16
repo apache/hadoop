@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_PROTECTION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
@@ -40,7 +40,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SEND_QOP_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_NEW_QOP_KEY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 /**
@@ -57,7 +57,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
 
   private static HdfsConfiguration clusterConf;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     clusterConf = createSecureConfig(
         "authentication,integrity,privacy");
@@ -254,11 +254,11 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
           .map(dn -> dn.getSaslClient().getTargetQOP())
           .filter("auth"::equals)
           .count();
-      // For each datanode pipeline, targetQOPs of sasl clients in the first two
-      // datanodes become equal to auth.
-      // Note that it is not necessarily the case for all datanodes,
-      // since a datanode may be always at the last position in pipelines.
-      assertTrue("At least two qops should be auth", count >= 2);
+        // For each datanode pipeline, targetQOPs of sasl clients in the first two
+        // datanodes become equal to auth.
+        // Note that it is not necessarily the case for all datanodes,
+        // since a datanode may be always at the last position in pipelines.
+        assertTrue(count >= 2, "At least two qops should be auth");
 
       clientConf.set(HADOOP_RPC_PROTECTION, "integrity");
       FileSystem fsIntegrity = FileSystem.get(uriIntegrityPort, clientConf);
@@ -267,7 +267,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
           .map(dn -> dn.getSaslClient().getTargetQOP())
           .filter("auth"::equals)
           .count();
-      assertTrue("At least two qops should be auth", count >= 2);
+        assertTrue(count >= 2, "At least two qops should be auth");
 
       clientConf.set(HADOOP_RPC_PROTECTION, "authentication");
       FileSystem fsAuth = FileSystem.get(uriAuthPort, clientConf);
@@ -276,7 +276,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
           .map(dn -> dn.getSaslServer().getNegotiatedQOP())
           .filter("auth"::equals)
           .count();
-      assertEquals("All qops should be auth", 3, count);
+        assertEquals(3, count, "All qops should be auth");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

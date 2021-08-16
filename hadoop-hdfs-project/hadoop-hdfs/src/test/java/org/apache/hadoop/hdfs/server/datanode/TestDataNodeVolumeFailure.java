@@ -20,13 +20,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,10 +79,10 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,7 +118,7 @@ public class TestDataNodeVolumeFailure {
   @Rule
   public Timeout timeout = new Timeout(120 * 1000);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // bring up a cluster of 2
     conf = new HdfsConfiguration();
@@ -138,7 +134,7 @@ public class TestDataNodeVolumeFailure {
     dataDir = new File(cluster.getDataDirectory());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if(data_fail != null) {
       FileUtil.setWritable(data_fail, true);
@@ -552,8 +548,8 @@ public class TestDataNodeVolumeFailure {
     assumeNotWindows();
 
     failedDir = new File(dataDir, "failedDir");
-    assertTrue("Failed to fail a volume by setting it non-writable",
-        failedDir.mkdir() && failedDir.setReadOnly());
+      assertTrue(
+              failedDir.mkdir() && failedDir.setReadOnly(), "Failed to fail a volume by setting it non-writable");
 
     startNewDataNodeWithDiskFailure(new File(failedDir, "newDir1"), false);
   }
@@ -569,8 +565,8 @@ public class TestDataNodeVolumeFailure {
     assumeNotWindows();
 
     failedDir = new File(dataDir, "failedDir");
-    assertTrue("Failed to fail a volume by setting it non-writable",
-        failedDir.mkdir() && failedDir.setReadOnly());
+      assertTrue(
+              failedDir.mkdir() && failedDir.setReadOnly(), "Failed to fail a volume by setting it non-writable");
 
     startNewDataNodeWithDiskFailure(new File(failedDir, "newDir1"), true);
   }
@@ -584,8 +580,8 @@ public class TestDataNodeVolumeFailure {
     assumeNotWindows();
 
     final File readOnlyDir = new File(dataDir, "nonWritable");
-    assertTrue("Set the data dir permission non-writable",
-        readOnlyDir.mkdir() && readOnlyDir.setReadOnly());
+      assertTrue(
+              readOnlyDir.mkdir() && readOnlyDir.setReadOnly(), "Set the data dir permission non-writable");
 
     startNewDataNodeWithDiskFailure(new File(readOnlyDir, "newDir1"), false);
   }
@@ -600,8 +596,8 @@ public class TestDataNodeVolumeFailure {
     assumeNotWindows();
 
     final File readOnlyDir = new File(dataDir, "nonWritable");
-    assertTrue("Set the data dir permission non-writable",
-        readOnlyDir.mkdir() && readOnlyDir.setReadOnly());
+      assertTrue(
+              readOnlyDir.mkdir() && readOnlyDir.setReadOnly(), "Set the data dir permission non-writable");
     startNewDataNodeWithDiskFailure(new File(readOnlyDir, "newDir1"), true);
   }
 
@@ -624,9 +620,9 @@ public class TestDataNodeVolumeFailure {
 
     try {
       cluster.startDataNodes(newConf, 1, false, null, null);
-      assertTrue("Failed to get expected IOException", tolerated);
+        assertTrue(tolerated, "Failed to get expected IOException");
     } catch (IOException ioe) {
-      assertFalse("Unexpected IOException " + ioe, tolerated);
+        assertFalse(tolerated, "Unexpected IOException " + ioe);
       return;
     }
 
@@ -659,14 +655,14 @@ public class TestDataNodeVolumeFailure {
 
     for(String bid : block_map.keySet()) {
       BlockLocs bl = block_map.get(bid);
-      // System.out.println(bid + "->" + bl.num_files + "vs." + bl.num_locs);
-      // number of physical files (1 or 2) should be same as number of datanodes
-      // in the list of the block locations
-      assertEquals("Num files should match num locations",
-          bl.num_files, bl.num_locs);
+        // System.out.println(bid + "->" + bl.num_files + "vs." + bl.num_locs);
+        // number of physical files (1 or 2) should be same as number of datanodes
+        // in the list of the block locations
+        assertEquals(
+                bl.num_files, bl.num_locs, "Num files should match num locations");
     }
-    assertEquals("Num physical blocks should match num stored in the NN",
-        totalReal, totalNN);
+      assertEquals(
+              totalReal, totalNN, "Num physical blocks should match num stored in the NN");
 
     // now check the number of under-replicated blocks
     FSNamesystem fsn = cluster.getNamesystem();
@@ -682,9 +678,9 @@ public class TestDataNodeVolumeFailure {
     System.out.println("total blocks (real and replicating):" + 
         (totalReal + totalRepl) + " vs. all files blocks " + blocks_num*2);
 
-    // together all the blocks should be equal to all real + all underreplicated
-    assertEquals("Incorrect total block count",
-        totalReal + totalRepl, blocks_num * repl);
+      // together all the blocks should be equal to all real + all underreplicated
+      assertEquals(
+              totalReal + totalRepl, blocks_num * repl, "Incorrect total block count");
   }
   
   /**
@@ -843,8 +839,8 @@ public class TestDataNodeVolumeFailure {
         //int ii = 0;
         for(File f: res) {
           String s = f.getName();
-          // cut off "blk_-" at the beginning and ".meta" at the end
-          assertNotNull("Block file name should not be null", s);
+            // cut off "blk_-" at the beginning and ".meta" at the end
+            assertNotNull(s, "Block file name should not be null");
           String bid = s.substring(s.indexOf("_")+1, s.lastIndexOf("_"));
           //System.out.println(ii++ + ". block " + s + "; id=" + bid);
           BlockLocs val = map.get(bid);

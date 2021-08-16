@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that we can start several and run with namenodes on the same minicluster
@@ -92,10 +92,10 @@ public class TestSeveralNameNodes {
           }
         }
       }
-      assertEquals(
-          "Some writers didn't complete in expected runtime! Current writer state:"
-              + writers, 0,
-          writers.size());
+        assertEquals(0,
+                writers.size(),
+                "Some writers didn't complete in expected runtime! Current writer state:"
+                        + writers);
 
       harness.stopThreads();
     } finally {

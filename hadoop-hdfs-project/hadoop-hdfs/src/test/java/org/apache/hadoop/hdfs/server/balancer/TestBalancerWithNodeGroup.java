@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
+import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
@@ -195,8 +192,8 @@ public class TestBalancerWithNodeGroup {
     // start rebalancing
     Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
     final int r = Balancer.run(namenodes, BalancerParameters.DEFAULT, conf);
-    assertEquals("Balancer did not exit with NO_MOVE_PROGRESS",
-        ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r);
+      assertEquals(
+              ExitStatus.NO_MOVE_PROGRESS.getExitCode(), r, "Balancer did not exit with NO_MOVE_PROGRESS");
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     LOG.info("Rebalancing with default factor.");
   }
@@ -218,8 +215,8 @@ public class TestBalancerWithNodeGroup {
     NetworkTopology topology =
         cluster.getNamesystem().getBlockManager().getDatanodeManager().
             getNetworkTopology();
-    assertTrue("must be an instance of NetworkTopologyWithNodeGroup",
-        topology instanceof NetworkTopologyWithNodeGroup);
+      assertTrue(
+              topology instanceof NetworkTopologyWithNodeGroup, "must be an instance of NetworkTopologyWithNodeGroup");
   }
 
   private void verifyProperBlockPlacement(String file,
@@ -228,13 +225,13 @@ public class TestBalancerWithNodeGroup {
         cluster.getNamesystem().getBlockManager().getBlockPlacementPolicy();
     List<LocatedBlock> locatedBlocks = client.
         getBlockLocations(file, 0, length).getLocatedBlocks();
-    assertFalse("No blocks found for file " + file, locatedBlocks.isEmpty());
+      assertFalse(locatedBlocks.isEmpty(), "No blocks found for file " + file);
     for (LocatedBlock locatedBlock : locatedBlocks) {
       BlockPlacementStatus status = placementPolicy.verifyBlockPlacement(
           locatedBlock.getLocations(), numOfReplicas);
-      assertTrue("Block placement policy was not satisfied for block " +
-          locatedBlock.getBlock().getBlockId(),
-          status.isPlacementPolicySatisfied());
+        assertTrue(
+                status.isPlacementPolicySatisfied(), "Block placement policy was not satisfied for block " +
+                locatedBlock.getBlock().getBlockId());
     }
   }
 

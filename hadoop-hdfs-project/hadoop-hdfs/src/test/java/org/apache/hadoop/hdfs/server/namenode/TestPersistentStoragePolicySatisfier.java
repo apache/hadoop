@@ -43,7 +43,8 @@ import java.io.IOException;
 import java.util.List;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test persistence of satisfying files/directories.
@@ -449,8 +450,8 @@ public class TestPersistentStoragePolicySatisfier {
       FSNamesystem namesystem = cluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode("/parent");
       XAttrFeature f = inode.getXAttrFeature();
-      assertTrue("SPS xAttr should be exist",
-          f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null);
+        assertTrue(
+                f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null, "SPS xAttr should be exist");
 
       // check for the child, SPS xAttr should not be there
       for (int i = 0; i < 5; i++) {
@@ -497,8 +498,8 @@ public class TestPersistentStoragePolicySatisfier {
       FSNamesystem namesystem = cluster.getNamesystem();
       INode inode = namesystem.getFSDirectory().getINode("/file");
       XAttrFeature f = inode.getXAttrFeature();
-      assertTrue("SPS xAttr should be exist",
-          f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null);
+        assertTrue(
+                f.getXAttr(XATTR_SATISFY_STORAGE_POLICY) != null, "SPS xAttr should be exist");
 
       cluster.restartDataNode(stopDataNode, false);
 

@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,10 +47,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Testing random FileSystem operations with random Snapshot operations.
@@ -178,7 +175,7 @@ public class TestRandomOpsWithSnapshots {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     CONFIG.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
     cluster = new MiniDFSCluster.Builder(CONFIG).numDataNodes(REPL).
@@ -190,7 +187,7 @@ public class TestRandomOpsWithSnapshots {
     hdfs.mkdirs(WITNESSDIR);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -283,7 +280,7 @@ public class TestRandomOpsWithSnapshots {
           break;
 
         default:
-          assertNull("Invalid FileSystem operation", fsOperation);
+            assertNull(fsOperation, "Invalid FileSystem operation");
           break;
         }
       }
@@ -308,7 +305,7 @@ public class TestRandomOpsWithSnapshots {
           break;
 
         default:
-          assertNull("Invalid Snapshot operation", snapshotOperation);
+            assertNull(snapshotOperation, "Invalid Snapshot operation");
           break;
         }
       }
@@ -331,7 +328,7 @@ public class TestRandomOpsWithSnapshots {
               TESTDIRSTRING, WITNESSDIRSTRING));
         }
         hdfs.mkdirs(newDir);
-        assertTrue("Directory exists", hdfs.exists(newDir));
+          assertTrue(hdfs.exists(newDir), "Directory exists");
         LOG.info("Directory created: " + newDir);
         numberDirectoryCreated++;
       }
@@ -353,7 +350,7 @@ public class TestRandomOpsWithSnapshots {
                 TESTDIRSTRING, WITNESSDIRSTRING));
           }
           hdfs.delete(deleteDir, true);
-          assertFalse("Directory does not exist", hdfs.exists(deleteDir));
+            assertFalse(hdfs.exists(deleteDir), "Directory does not exist");
           if (!isWitnessDir) {
             snapshottableDirectories.remove(deleteDir);
           }
@@ -380,9 +377,9 @@ public class TestRandomOpsWithSnapshots {
                 TESTDIRSTRING, WITNESSDIRSTRING));
           }
           hdfs.rename(oldDir, newDir, Options.Rename.OVERWRITE);
-          assertTrue("Target directory exists", hdfs.exists(newDir));
-          assertFalse("Source directory does not exist",
-              hdfs.exists(oldDir));
+            assertTrue(hdfs.exists(newDir), "Target directory exists");
+            assertFalse(
+                    hdfs.exists(oldDir), "Source directory does not exist");
 
           if (dir == OperationDirectories.TestDir) {
             snapshottableDirectories.remove(oldDir);
@@ -482,7 +479,7 @@ public class TestRandomOpsWithSnapshots {
               TESTDIRSTRING, WITNESSDIRSTRING));
         }
         hdfs.createNewFile(newFile);
-        assertTrue("File exists", hdfs.exists(newFile));
+          assertTrue(hdfs.exists(newFile), "File exists");
         LOG.info("createTestFile, file created: " + newFile);
         numberFileCreated++;
       }
@@ -505,8 +502,8 @@ public class TestRandomOpsWithSnapshots {
                   TESTDIRSTRING, WITNESSDIRSTRING));
             }
             hdfs.delete(deleteFile, false);
-            assertFalse("File does not exists",
-                hdfs.exists(deleteFile));
+              assertFalse(
+                      hdfs.exists(deleteFile), "File does not exists");
             LOG.info("deleteTestFile, file deleted: " + deleteFile);
             numberFileDeleted++;
           }
@@ -536,8 +533,8 @@ public class TestRandomOpsWithSnapshots {
             }
 
             hdfs.rename(oldFile, newFile, Options.Rename.OVERWRITE);
-            assertTrue("Target file exists", hdfs.exists(newFile));
-            assertFalse("Source file does not exist", hdfs.exists(oldFile));
+              assertTrue(hdfs.exists(newFile), "Target file exists");
+              assertFalse(hdfs.exists(oldFile), "Source file does not exist");
             LOG.info("Renamed file: " + oldFile + " to file: " + newFile);
             numberFileRenamed++;
           }
@@ -597,9 +594,9 @@ public class TestRandomOpsWithSnapshots {
       }
     }, 10, 100000);
 
-    assertTrue("NameNode is up", cluster.getNameNode().isActiveState());
-    assertTrue("DataNode is up and running", cluster.isDataNodeUp());
-    assertTrue("Cluster is up and running", cluster.isClusterUp());
+      assertTrue(cluster.getNameNode().isActiveState(), "NameNode is up");
+      assertTrue(cluster.isDataNodeUp(), "DataNode is up and running");
+      assertTrue(cluster.isClusterUp(), "Cluster is up and running");
     LOG.info("checkClusterHealth, cluster is healthy.");
 
     printOperationStats();
@@ -639,14 +636,14 @@ public class TestRandomOpsWithSnapshots {
       }
       filename += "file" + i;
       createFile(filename, fileLength, true);
-      assertTrue("Test file created", hdfs.exists(new Path(filename)));
+        assertTrue(hdfs.exists(new Path(filename)), "Test file created");
       LOG.info("createFiles, file: " + filename + "was created");
 
       String witnessFile =
           filename.replaceAll(TESTDIRSTRING, WITNESSDIRSTRING);
       createFile(witnessFile, fileLength, false);
-      assertTrue("Witness file exists",
-          hdfs.exists(new Path(witnessFile)));
+        assertTrue(
+                hdfs.exists(new Path(witnessFile)), "Witness file exists");
       LOG.info("createFiles, file: " + witnessFile + "was created");
     }
   }

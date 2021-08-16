@@ -29,10 +29,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests AvailableSpaceRackFaultTolerant block placement policy.
@@ -60,7 +60,7 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
   private static BlockPlacementPolicy placementPolicy;
   private static NetworkTopology cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     conf = new HdfsConfiguration();
     conf.setFloat(
@@ -139,7 +139,7 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
    */
   @Test
   public void testPolicyReplacement() {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         (placementPolicy instanceof
             AvailableSpaceRackFaultTolerantBlockPlacementPolicy));
   }
@@ -159,7 +159,7 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
                   new ArrayList<DatanodeStorageInfo>(), false, null, BLOCK_SIZE,
                   TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-      Assert.assertTrue(targets.length == REPLICA);
+      Assertions.assertTrue(targets.length == REPLICA);
       for (int j = 0; j < REPLICA; j++) {
         total++;
         if (targets[j].getDatanodeDescriptor().getRemainingPercent() > 60) {
@@ -167,10 +167,10 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
         }
       }
     }
-    Assert.assertTrue(total == REPLICA * CHOOSE_TIMES);
+    Assertions.assertTrue(total == REPLICA * CHOOSE_TIMES);
     double possibility = 1.0 * moreRemainingNode / total;
-    Assert.assertTrue(possibility > 0.52);
-    Assert.assertTrue(possibility < 0.55);
+    Assertions.assertTrue(possibility > 0.52);
+    Assertions.assertTrue(possibility < 0.55);
   }
 
   @Test
@@ -184,7 +184,7 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
             .chooseDataNode("~", allNodes);
       }
     } catch (NullPointerException npe) {
-      Assert.fail("NPE should not be thrown");
+      Assertions.fail("NPE should not be thrown");
     }
   }
 
@@ -206,7 +206,7 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
     assertEquals(REPLICA, racks.size());
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() {
     if (namenode != null) {
       namenode.stop();

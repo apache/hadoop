@@ -19,10 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,15 +30,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
-* This test ensures the appropriate response (successful or failure) from
-* the system when the system is started under various storage state and
-* version conditions.
-*/
+ * This test ensures the appropriate response (successful or failure) from
+ * the system when the system is started under various storage state and
+ * version conditions.
+ */
 public class TestDFSStorageStateRecovery {
  
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -443,13 +440,13 @@ public class TestDFSStorageStateRecovery {
     } // end numDirs loop
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     LOG.info("Setting up the directory structures.");
     UpgradeUtilities.initialize();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) {

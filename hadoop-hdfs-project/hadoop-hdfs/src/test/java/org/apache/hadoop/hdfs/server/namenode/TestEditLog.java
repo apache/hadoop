@@ -23,11 +23,7 @@ import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -93,7 +89,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -353,8 +349,8 @@ public class TestEditLog {
                 1, expectedTxns);
         File editFile1 = NNStorage.getFinalizedEditsFile(it.next(),
                 203, 404);
-        assertTrue("Expect " + editFile + " exists", editFile.exists());
-        assertTrue("Expect " + editFile1 + " exists", editFile1.exists());
+          assertTrue(editFile.exists(), "Expect " + editFile + " exists");
+          assertTrue(editFile1.exists(), "Expect " + editFile1 + " exists");
         EditLogFileInputStream editLogFileInputStream1 =
                 new EditLogFileInputStream(editFile, 1, 202, false);
         EditLogFileInputStream editLogFileInputStream2 =
@@ -454,7 +450,7 @@ public class TestEditLog {
     NNStorage storage = cluster.getNamesystem().getFSImage().getStorage();
     for (StorageDirectory sd : storage.dirIterable(dirType)) {
       File f = new File(sd.getCurrentDir(), filename);
-      assertTrue("Expect that " + f + " exists", f.exists());
+        assertTrue(f.exists(), "Expect that " + f + " exists");
     }
   }
   
@@ -536,7 +532,7 @@ public class TestEditLog {
         
         File editFile = NNStorage.getFinalizedEditsFile(it.next(), 3,
             3 + expectedTxns - 1);
-        assertTrue("Expect " + editFile + " exists", editFile.exists());
+          assertTrue(editFile.exists(), "Expect " + editFile + " exists");
         
         System.out.println("Verifying file: " + editFile);
         long numEdits = loader.loadFSEdits(
@@ -544,10 +540,10 @@ public class TestEditLog {
         int numLeases = namesystem.leaseManager.countLease();
         System.out.println("Number of outstanding leases " + numLeases);
         assertEquals(0, numLeases);
-        assertTrue("Verification for " + editFile + " failed. " +
-                   "Expected " + expectedTxns + " transactions. "+
-                   "Found " + numEdits + " transactions.",
-                   numEdits == expectedTxns);
+          assertTrue(
+                  numEdits == expectedTxns, "Verification for " + editFile + " failed. " +
+                  "Expected " + expectedTxns + " transactions. " +
+                  "Found " + numEdits + " transactions.");
   
       }
     } finally {
@@ -617,29 +613,29 @@ public class TestEditLog {
       FSImage fsimage = namesystem.getFSImage();
       final FSEditLog editLog = fsimage.getEditLog();
 
-      assertEquals("should start with only the BEGIN_LOG_SEGMENT txn synced",
-        1, editLog.getSyncTxId());
+        assertEquals(
+                1, editLog.getSyncTxId(), "should start with only the BEGIN_LOG_SEGMENT txn synced");
       
       // Log an edit from thread A
       doLogEdit(threadA, editLog, "thread-a 1");
-      assertEquals("logging edit without syncing should do not affect txid",
-        1, editLog.getSyncTxId());
+        assertEquals(
+                1, editLog.getSyncTxId(), "logging edit without syncing should do not affect txid");
 
       // Log an edit from thread B
       doLogEdit(threadB, editLog, "thread-b 1");
-      assertEquals("logging edit without syncing should do not affect txid",
-        1, editLog.getSyncTxId());
+        assertEquals(
+                1, editLog.getSyncTxId(), "logging edit without syncing should do not affect txid");
 
       // Now ask to sync edit from B, which should sync both edits.
       doCallLogSync(threadB, editLog);
-      assertEquals("logSync from second thread should bump txid up to 3",
-        3, editLog.getSyncTxId());
+        assertEquals(
+                3, editLog.getSyncTxId(), "logSync from second thread should bump txid up to 3");
 
       // Now ask to sync edit from A, which was already batched in - thus
       // it should increment the batch count metric
       doCallLogSync(threadA, editLog);
-      assertEquals("logSync from first thread shouldn't change txid",
-        3, editLog.getSyncTxId());
+        assertEquals(
+                3, editLog.getSyncTxId(), "logSync from first thread shouldn't change txid");
 
       //Should have incremented the batch count exactly once
       assertCounter("TransactionsBatchedInSync", 1L, 
@@ -685,13 +681,13 @@ public class TestEditLog {
       // async log is doing batched syncs in background.  logSync just ensures
       // the edit is durable, so the txid may increase prior to sync
       if (!useAsyncEditLog) {
-        assertEquals("logging edit without syncing should do not affect txid",
-            1, editLog.getSyncTxId());
+          assertEquals(
+                  1, editLog.getSyncTxId(), "logging edit without syncing should do not affect txid");
       }
       // logSyncAll in Thread B
       doCallLogSyncAll(threadB, editLog);
-      assertEquals("logSyncAll should sync thread A's transaction",
-        2, editLog.getSyncTxId());
+        assertEquals(
+                2, editLog.getSyncTxId(), "logSyncAll should sync thread A's transaction");
 
       // Close edit log
       editLog.close();
@@ -748,10 +744,10 @@ public class TestEditLog {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
-      // expected
-      assertNotNull("Cause of exception should be ChecksumException", e.getCause());
-      assertEquals("Cause of exception should be ChecksumException",
-          ChecksumException.class, e.getCause().getClass());
+        // expected
+        assertNotNull(e.getCause(), "Cause of exception should be ChecksumException");
+        assertEquals(
+                ChecksumException.class, e.getCause().getClass(), "Cause of exception should be ChecksumException");
     }
   }
 
@@ -826,11 +822,11 @@ public class TestEditLog {
         // We should see the file as in-progress
         File editsFile = new File(currentDir,
             NNStorage.getInProgressEditsFileName(1));
-        assertTrue("Edits file " + editsFile + " should exist", editsFile.exists());        
+        assertTrue(editsFile.exists(), "Edits file " + editsFile + " should exist");        
         
         File imageFile = FSImageTestUtil.findNewestImageFile(
             currentDir.getAbsolutePath());
-        assertNotNull("No image found in " + nameDir, imageFile);
+        assertNotNull(imageFile, "No image found in " + nameDir);
         assertEquals(NNStorage.getImageFileName(0), imageFile.getName());
         // Try to start a new cluster
         LOG.info("\n===========================================\n" +
@@ -858,7 +854,7 @@ public class TestEditLog {
         }
         imageFile = FSImageTestUtil.findNewestImageFile(
             currentDir.getAbsolutePath());
-        assertNotNull("No image found in " + nameDir, imageFile);
+        assertNotNull(imageFile, "No image found in " + nameDir);
         assertEquals(NNStorage.getImageFileName(expectedTxId),
                      imageFile.getName());
         
@@ -1200,7 +1196,7 @@ public class TestEditLog {
       String[] logSpecs = dirSpec.split("\\|");
       for (String logSpec : logSpecs) {
         Matcher m = Pattern.compile("\\[(\\d+),(\\d+)?\\]").matcher(logSpec);
-        assertTrue("bad spec: " + logSpec, m.matches());
+          assertTrue(m.matches(), "bad spec: " + logSpec);
         if (m.group(2) == null) {
           files.add(NNStorage.getInProgressEditsFileName(
               Long.parseLong(m.group(1))));

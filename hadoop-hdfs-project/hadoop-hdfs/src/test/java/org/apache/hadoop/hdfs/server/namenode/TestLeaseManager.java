@@ -18,9 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -52,7 +51,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 public class TestLeaseManager {
@@ -175,8 +173,8 @@ public class TestLeaseManager {
       // Check whether the lease manager has the lease
       dir = cluster.getNamesystem().getFSDirectory();
       file = dir.getINode(path).asFile();
-      assertTrue("Lease should exist.",
-          cluster.getNamesystem().leaseManager.getLease(file) != null);
+        assertTrue(
+                cluster.getNamesystem().leaseManager.getLease(file) != null, "Lease should exist.");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

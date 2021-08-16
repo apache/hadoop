@@ -18,11 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.DataOutput;
@@ -81,11 +77,9 @@ import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
-
-import static org.junit.Assert.assertArrayEquals;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 
 public class TestFSImage {
 
@@ -112,7 +106,7 @@ public class TestFSImage {
 
   @Test
   public void testNativeCompression() throws IOException {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
     setCompressCodec(conf, "org.apache.hadoop.io.compress.Lz4Codec");
@@ -167,7 +161,7 @@ public class TestFSImage {
       assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
       // check lease manager
       Lease lease = fsn.leaseManager.getLease(file2Node);
-      Assert.assertNotNull(lease);
+      Assertions.assertNotNull(lease);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -464,8 +458,8 @@ public class TestFSImage {
     try {
       FileSystem fs = cluster.getFileSystem();
       Path testPath = new Path("/tmp/zeroBlockFile");
-      assertTrue("File /tmp/zeroBlockFile doesn't exist ", fs.exists(testPath));
-      assertTrue("Name node didn't come up", cluster.isNameNodeUp(0));
+        assertTrue(fs.exists(testPath), "File /tmp/zeroBlockFile doesn't exist ");
+        assertTrue(cluster.isNameNodeUp(0), "Name node didn't come up");
     } finally {
       cluster.shutdown();
       //Clean up
@@ -801,15 +795,15 @@ public class TestFSImage {
       assertTrue(fs.exists(replicaFile1));
       assertTrue(fs.exists(replicaFile2));
 
-      // check directories
-      assertEquals("Directory should have default EC policy.",
-          defaultEcPolicy, fs.getErasureCodingPolicy(ecDir));
-      assertEquals("Directory should hide replication EC policy.",
-          null, fs.getErasureCodingPolicy(replicaDir));
+        // check directories
+        assertEquals(
+                defaultEcPolicy, fs.getErasureCodingPolicy(ecDir), "Directory should have default EC policy.");
+        assertEquals(
+                null, fs.getErasureCodingPolicy(replicaDir), "Directory should hide replication EC policy.");
 
-      // check file1
-      assertEquals("File should not have EC policy.", null,
-          fs.getErasureCodingPolicy(replicaFile1));
+        // check file1
+        assertEquals(null,
+                fs.getErasureCodingPolicy(replicaFile1), "File should not have EC policy.");
       // check internals of file2
       INodeFile file2Node =
           fsn.dir.getINode4Write(replicaFile2.toString()).asFile();
@@ -818,13 +812,13 @@ public class TestFSImage {
       BlockInfo[] blks = file2Node.getBlocks();
       assertEquals(1, blks.length);
       assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
-      assertEquals("File should return expected replication factor.",
-          2, blks[0].getReplication());
-      assertEquals("File should not have EC policy.", null,
-          fs.getErasureCodingPolicy(replicaFile2));
+        assertEquals(
+                2, blks[0].getReplication(), "File should return expected replication factor.");
+        assertEquals(null,
+                fs.getErasureCodingPolicy(replicaFile2), "File should not have EC policy.");
       // check lease manager
       Lease lease = fsn.leaseManager.getLease(file2Node);
-      Assert.assertNotNull(lease);
+      Assertions.assertNotNull(lease);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -854,9 +848,9 @@ public class TestFSImage {
       cluster.restartNameNodes();
       cluster.waitActive();
 
-      assertEquals("Erasure coding policy number should match",
-          SystemErasureCodingPolicies.getPolicies().size(),
-          ErasureCodingPolicyManager.getInstance().getPolicies().length);
+        assertEquals(
+                SystemErasureCodingPolicies.getPolicies().size(),
+                ErasureCodingPolicyManager.getInstance().getPolicies().length, "Erasure coding policy number should match");
 
       // Add new erasure coding policy
       ECSchema newSchema = new ECSchema("rs", 5, 4);
@@ -877,17 +871,17 @@ public class TestFSImage {
       cluster.restartNameNodes();
       cluster.waitActive();
 
-      assertEquals("Erasure coding policy number should match",
-          SystemErasureCodingPolicies.getPolicies().size() + 1,
-          ErasureCodingPolicyManager.getInstance().getPolicies().length);
+        assertEquals(
+                SystemErasureCodingPolicies.getPolicies().size() + 1,
+                ErasureCodingPolicyManager.getInstance().getPolicies().length, "Erasure coding policy number should match");
       ErasureCodingPolicy ecPolicy =
           ErasureCodingPolicyManager.getInstance().getByID(newPolicy.getId());
-      assertEquals("Newly added erasure coding policy is not found",
-          newPolicy, ecPolicy);
-      assertEquals(
-          "Newly added erasure coding policy should be of disabled state",
-          ErasureCodingPolicyState.DISABLED,
-          DFSTestUtil.getECPolicyState(ecPolicy));
+        assertEquals(
+                newPolicy, ecPolicy, "Newly added erasure coding policy is not found");
+        assertEquals(
+                ErasureCodingPolicyState.DISABLED,
+                DFSTestUtil.getECPolicyState(ecPolicy),
+                "Newly added erasure coding policy should be of disabled state");
 
       // Test enable/disable/remove user customized erasure coding policy
       testChangeErasureCodingPolicyState(cluster, blockSize, newPolicy, false);
@@ -926,13 +920,13 @@ public class TestFSImage {
     cluster.waitActive();
     ErasureCodingPolicy ecPolicy =
         ErasureCodingPolicyManager.getInstance().getByID(targetPolicy.getId());
-    assertEquals("The erasure coding policy is not found",
-        targetPolicy, ecPolicy);
-    assertEquals("The erasure coding policy should be of enabled state",
-        ErasureCodingPolicyState.ENABLED,
-        DFSTestUtil.getECPolicyState(ecPolicy));
-    assertTrue("Policy should be in disabled state in FSImage!",
-        isPolicyEnabledInFsImage(targetPolicy));
+      assertEquals(
+              targetPolicy, ecPolicy, "The erasure coding policy is not found");
+      assertEquals(
+              ErasureCodingPolicyState.ENABLED,
+              DFSTestUtil.getECPolicyState(ecPolicy), "The erasure coding policy should be of enabled state");
+      assertTrue(
+              isPolicyEnabledInFsImage(targetPolicy), "Policy should be in disabled state in FSImage!");
 
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
@@ -948,19 +942,19 @@ public class TestFSImage {
     cluster.waitActive();
     ecPolicy =
         ErasureCodingPolicyManager.getInstance().getByID(targetPolicy.getId());
-    assertEquals("The erasure coding policy is not found",
-        targetPolicy, ecPolicy);
+      assertEquals(
+              targetPolicy, ecPolicy, "The erasure coding policy is not found");
     ErasureCodingPolicyState ecPolicyState =
         DFSTestUtil.getECPolicyState(ecPolicy);
     if (isDefault) {
-      assertEquals("The erasure coding policy should be of " +
-              "enabled state", ErasureCodingPolicyState.ENABLED, ecPolicyState);
+        assertEquals(ErasureCodingPolicyState.ENABLED, ecPolicyState, "The erasure coding policy should be of " +
+                "enabled state");
     } else {
-      assertEquals("The erasure coding policy should be of " +
-          "disabled state", ErasureCodingPolicyState.DISABLED, ecPolicyState);
+        assertEquals(ErasureCodingPolicyState.DISABLED, ecPolicyState, "The erasure coding policy should be of " +
+                "disabled state");
     }
-    assertFalse("Policy should be in disabled state in FSImage!",
-        isPolicyEnabledInFsImage(targetPolicy));
+      assertFalse(
+              isPolicyEnabledInFsImage(targetPolicy), "Policy should be in disabled state in FSImage!");
 
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
@@ -969,9 +963,9 @@ public class TestFSImage {
     try {
       fs.removeErasureCodingPolicy(ecPolicy.getName());
     } catch (RemoteException e) {
-      // built-in policy cannot been removed
-      assertTrue("Built-in policy cannot be removed",
-          ecPolicy.isSystemPolicy());
+        // built-in policy cannot been removed
+        assertTrue(
+                ecPolicy.isSystemPolicy(), "Built-in policy cannot be removed");
       assertExceptionContains("System erasure coding policy", e);
       return;
     }
@@ -986,11 +980,11 @@ public class TestFSImage {
     cluster.waitActive();
     ecPolicy = ErasureCodingPolicyManager.getInstance().getByID(
         targetPolicy.getId());
-    assertEquals("The erasure coding policy saved into and loaded from " +
-        "fsImage is bad", targetPolicy, ecPolicy);
-    assertEquals("The erasure coding policy should be of removed state",
-        ErasureCodingPolicyState.REMOVED,
-        DFSTestUtil.getECPolicyState(ecPolicy));
+      assertEquals(targetPolicy, ecPolicy, "The erasure coding policy saved into and loaded from " +
+              "fsImage is bad");
+      assertEquals(
+              ErasureCodingPolicyState.REMOVED,
+              DFSTestUtil.getECPolicyState(ecPolicy), "The erasure coding policy should be of removed state");
     // Read file regardless of the erasure coding policy state
     DFSTestUtil.readFileAsBytes(fs, filePath);
     fs.delete(dirPath, true);

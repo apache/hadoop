@@ -21,18 +21,18 @@ import static org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase.*;
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressTestHelper.*;
 import static org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType.*;
 import static org.apache.hadoop.test.MetricsAsserts.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestStartupProgressMetrics {
 
   private StartupProgress startupProgress;
   private StartupProgressMetrics metrics;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     mockMetricsSystem();
     startupProgress = new StartupProgress();

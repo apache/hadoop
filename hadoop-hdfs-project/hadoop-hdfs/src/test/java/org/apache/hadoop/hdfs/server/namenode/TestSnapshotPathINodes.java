@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -34,11 +32,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 /** Test snapshot related operations. */
@@ -57,7 +55,7 @@ public class TestSnapshotPathINodes {
 
   static private DistributedFileSystem hdfs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -71,13 +69,13 @@ public class TestSnapshotPathINodes {
     hdfs = cluster.getFileSystem();
   }
 
-  @Before
+  @BeforeEach
   public void reset() throws Exception {
     DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, file2, 1024, REPLICATION, seed);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -91,20 +89,20 @@ public class TestSnapshotPathINodes {
     final INode before = fsdir.getINode(pathStr);
     
     // Before a directory is snapshottable
-    Assert.assertFalse(before.asDirectory().isSnapshottable());
+    Assertions.assertFalse(before.asDirectory().isSnapshottable());
 
     // After a directory is snapshottable
     final Path path = new Path(pathStr);
     hdfs.allowSnapshot(path);
     {
       final INode after = fsdir.getINode(pathStr);
-      Assert.assertTrue(after.asDirectory().isSnapshottable());
+      Assertions.assertTrue(after.asDirectory().isSnapshottable());
     }
     
     hdfs.disallowSnapshot(path);
     {
       final INode after = fsdir.getINode(pathStr);
-      Assert.assertFalse(after.asDirectory().isSnapshottable());
+      Assertions.assertFalse(after.asDirectory().isSnapshottable());
     }
   }
   
@@ -155,9 +153,9 @@ public class TestSnapshotPathINodes {
       assertEquals(components[i], nodesInPath.getPathComponent(i));
     }
 
-    // The last INode should be associated with file1
-    assertTrue("file1=" + file1 + ", nodesInPath=" + nodesInPath,
-        nodesInPath.getINode(components.length - 1) != null);
+      // The last INode should be associated with file1
+      assertTrue(
+              nodesInPath.getINode(components.length - 1) != null, "file1=" + file1 + ", nodesInPath=" + nodesInPath);
     assertEquals(nodesInPath.getINode(components.length - 1).getFullPathName(),
         file1.toString());
     assertEquals(nodesInPath.getINode(components.length - 2).getFullPathName(),
@@ -244,7 +242,7 @@ public class TestSnapshotPathINodes {
       invalidPath = new Path(invalidPath, invalidPathComponent[i]);
       try {
         hdfs.getFileStatus(invalidPath);
-        Assert.fail();
+        Assertions.fail();
       } catch(FileNotFoundException fnfe) {
         System.out.println("The exception is expected: " + fnfe);
       }
@@ -433,7 +431,7 @@ public class TestSnapshotPathINodes {
     assertEquals(newNodesInPath.getINode(last).getFullPathName(),
         file1.toString());
     // The modification time of the INode for file3 should have been changed
-    Assert.assertFalse(modTime == newNodesInPath.getINode(last).getModificationTime());
+    Assertions.assertFalse(modTime == newNodesInPath.getINode(last).getModificationTime());
     hdfs.deleteSnapshot(sub1, "s3");
     hdfs.disallowSnapshot(sub1);
   }

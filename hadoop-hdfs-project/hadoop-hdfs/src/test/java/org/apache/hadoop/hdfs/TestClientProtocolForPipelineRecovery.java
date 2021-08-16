@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +29,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.function.Supplier;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -54,8 +55,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,9 +85,9 @@ public class TestClientProtocolForPipelineRecovery {
       // test getNewStampAndToken on a finalized block
       try {
         namenode.updateBlockForPipeline(firstBlock, "");
-        Assert.fail("Can not get a new GS from a finalized block");
+        Assertions.fail("Can not get a new GS from a finalized block");
       } catch (IOException e) {
-        Assert.assertTrue(e.getMessage().contains(
+        Assertions.assertTrue(e.getMessage().contains(
             "not " + BlockUCState.UNDER_CONSTRUCTION));
       }
       
@@ -96,9 +97,9 @@ public class TestClientProtocolForPipelineRecovery {
         ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getBlockPoolId(),
             newBlockId, 0, firstBlock.getGenerationStamp());
         namenode.updateBlockForPipeline(newBlock, "");
-        Assert.fail("Cannot get a new GS from a non-existent block");
+        Assertions.fail("Cannot get a new GS from a non-existent block");
       } catch (IOException e) {
-        Assert.assertTrue(e.getMessage().contains("does not exist"));
+        Assertions.assertTrue(e.getMessage().contains("does not exist"));
       }
 
       
@@ -122,17 +123,17 @@ public class TestClientProtocolForPipelineRecovery {
         DFSClient dfs = ((DistributedFileSystem)fileSys).dfs;
         try {
           namenode.updateBlockForPipeline(firstBlock, "test" + dfs.clientName);
-          Assert.fail("Cannot get a new GS for a non lease holder");
+          Assertions.fail("Cannot get a new GS for a non lease holder");
         } catch (LeaseExpiredException e) {
-          Assert.assertTrue(e.getMessage().startsWith("Lease mismatch"));
+          Assertions.assertTrue(e.getMessage().startsWith("Lease mismatch"));
         }
 
         // test null lease holder
         try {
           namenode.updateBlockForPipeline(firstBlock, null);
-          Assert.fail("Cannot get a new GS for a null lease holder");
+          Assertions.fail("Cannot get a new GS for a null lease holder");
         } catch (LeaseExpiredException e) {
-          Assert.assertTrue(e.getMessage().startsWith("Lease mismatch"));
+          Assertions.assertTrue(e.getMessage().startsWith("Lease mismatch"));
         }
 
         // test getNewStampAndToken on a rbw block
@@ -177,7 +178,7 @@ public class TestClientProtocolForPipelineRecovery {
         // Test will fail with BlockMissingException if NN does not update the
         // replica state based on the latest report.
       } catch (org.apache.hadoop.hdfs.BlockMissingException bme) {
-        Assert.fail("Block is missing because the file was closed with"
+        Assertions.fail("Block is missing because the file was closed with"
             + " corrupt replicas.");
       }
     } finally {
@@ -239,7 +240,7 @@ public class TestClientProtocolForPipelineRecovery {
           contains = true;
         }
       }
-      Assert.assertTrue(contains);
+      Assertions.assertTrue(contains);
     } finally {
       DataNodeFaultInjector.set(oldDnInjector);
       if (cluster != null) {
@@ -322,7 +323,7 @@ public class TestClientProtocolForPipelineRecovery {
       final String dnAddr = dn.getDatanodeId().getIpcAddr(false);
       // issue shutdown to the datanode.
       final String[] args1 = {"-shutdownDatanode", dnAddr, "upgrade" };
-      Assert.assertEquals(0, dfsadmin.run(args1));
+      Assertions.assertEquals(0, dfsadmin.run(args1));
       // Wait long enough to receive an OOB ack before closing the file.
       GenericTestUtils.waitForThreadTermination(
           "Async datanode shutdown thread", 100, 10000);
@@ -358,23 +359,23 @@ public class TestClientProtocolForPipelineRecovery {
       // get nodes in the pipeline
       DFSOutputStream dfsOut = (DFSOutputStream)out.getWrappedStream();
       DatanodeInfo[] nodes = dfsOut.getPipeline();
-      Assert.assertEquals(2, nodes.length);
+      Assertions.assertEquals(2, nodes.length);
       String dnAddr = nodes[1].getIpcAddr(false);
 
       // evict the writer from the second datanode and wait until
       // the pipeline is rebuilt.
       DFSAdmin dfsadmin = new DFSAdmin(conf);
       final String[] args1 = {"-evictWriters", dnAddr };
-      Assert.assertEquals(0, dfsadmin.run(args1));
+      Assertions.assertEquals(0, dfsadmin.run(args1));
       out.write(0x31);
       out.hflush();
 
       // get the new pipline and check the node is not in there.
       nodes = dfsOut.getPipeline();
       try {
-        Assert.assertTrue(nodes.length > 0 );
+        Assertions.assertTrue(nodes.length > 0 );
         for (int i = 0; i < nodes.length; i++) {
-          Assert.assertFalse(dnAddr.equals(nodes[i].getIpcAddr(false)));
+          Assertions.assertFalse(dnAddr.equals(nodes[i].getIpcAddr(false)));
         }
       } finally {
         out.close();
@@ -410,7 +411,7 @@ public class TestClientProtocolForPipelineRecovery {
       final String dnAddr1 = dn.getDatanodeId().getIpcAddr(false);
       // issue shutdown to the datanode.
       final String[] args1 = {"-shutdownDatanode", dnAddr1, "upgrade" };
-      Assert.assertEquals(0, dfsadmin.run(args1));
+      Assertions.assertEquals(0, dfsadmin.run(args1));
       GenericTestUtils.waitForThreadTermination(
           "Async datanode shutdown thread", 100, 10000);
       // This should succeed without restarting the node. The restart will
@@ -427,7 +428,7 @@ public class TestClientProtocolForPipelineRecovery {
       final String dnAddr2 = dn.getDatanodeId().getIpcAddr(false);
       // issue shutdown to the datanode.
       final String[] args2 = {"-shutdownDatanode", dnAddr2, "upgrade" };
-      Assert.assertEquals(0, dfsadmin.run(args2));
+      Assertions.assertEquals(0, dfsadmin.run(args2));
       GenericTestUtils.waitForThreadTermination(
           "Async datanode shutdown thread", 100, 10000);
       try {
@@ -480,8 +481,8 @@ public class TestClientProtocolForPipelineRecovery {
           return out.getBlock().getGenerationStamp() > oldGs;
         }
       }, 100, 10000);
-      Assert.assertEquals("The pipeline recovery count shouldn't increase",
-          0, out.getStreamer().getPipelineRecoveryCount());
+        Assertions.assertEquals(
+                0, out.getStreamer().getPipelineRecoveryCount(), "The pipeline recovery count shouldn't increase");
       out.write(1);
       out.close();
       // Ensure that subsequent closes are idempotent and do not throw errors
@@ -539,7 +540,7 @@ public class TestClientProtocolForPipelineRecovery {
       Thread.sleep(1000);
       DatanodeInfo[] pipeline = out.getPipeline();
       for (DatanodeInfo node : pipeline) {
-        assertFalse("Write should be going on", failed.get());
+          assertFalse(failed.get(), "Write should be going on");
         ArrayList<DataNode> dataNodes = cluster.getDataNodes();
         int indexToShutdown = 0;
         for (int i = 0; i < dataNodes.size(); i++) {
@@ -564,15 +565,15 @@ public class TestClientProtocolForPipelineRecovery {
             return out.getBlock().getGenerationStamp() > oldGs;
           }
         }, 100, 10000);
-        Assert.assertEquals("The pipeline recovery count shouldn't increase", 0,
-            out.getStreamer().getPipelineRecoveryCount());
+          Assertions.assertEquals(0,
+                  out.getStreamer().getPipelineRecoveryCount(), "The pipeline recovery count shouldn't increase");
       }
-      assertFalse("Write should be going on", failed.get());
+        assertFalse(failed.get(), "Write should be going on");
       running.set(false);
       t.join();
       out.write("testagain".getBytes());
-      assertTrue("There should be atleast 2 nodes in pipeline still", out
-          .getPipeline().length >= 2);
+        assertTrue(out
+                .getPipeline().length >= 2, "There should be atleast 2 nodes in pipeline still");
       out.close();
     } finally {
       DFSClientFaultInjector.set(old);
@@ -723,7 +724,7 @@ public class TestClientProtocolForPipelineRecovery {
         o.hflush();
       }
 
-      assertTrue("Expected a failure in the pipeline", failed.get());
+        assertTrue(failed.get(), "Expected a failure in the pipeline");
       DatanodeInfo[] newNodes = dfsO.getStreamer().getNodes();
       o.close();
       // Trigger block report to NN

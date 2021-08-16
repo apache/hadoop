@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,8 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -173,9 +173,9 @@ public class TestReplicationPolicyConsiderLoad
               new ArrayList<DatanodeStorageInfo>(), false, null,
               1024, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
       for(DatanodeStorageInfo info : targets) {
-        assertTrue("The node "+info.getDatanodeDescriptor().getName()+
-                " has higher load and should not have been picked!",
-            info.getDatanodeDescriptor().getXceiverCount() <= (load/6)*1.2);
+          assertTrue(
+                  info.getDatanodeDescriptor().getXceiverCount() <= (load / 6) * 1.2, "The node " + info.getDatanodeDescriptor().getName() +
+                  " has higher load and should not have been picked!");
       }
     } finally {
       namenode.getNamesystem().writeUnlock();

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,9 +35,9 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.util.Sets;
 
-import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -74,7 +75,7 @@ public class TestHDFSPolicyProvider {
 
   private final Class<?> rpcServerClass;
 
-  @BeforeClass
+  @BeforeAll
   public static void initialize() {
     Service[] services = new HDFSPolicyProvider().getServices();
     policyProviderProtocols = new HashSet<>(services.length);
@@ -109,15 +110,15 @@ public class TestHDFSPolicyProvider {
     LOG.info("Running test {} for RPC server {}.  Found server protocols {} "
         + "and policy provider protocols {}.", testName.getMethodName(),
         rpcServerClass.getName(), serverProtocols, policyProviderProtocols);
-    assertFalse("Expected to find at least one protocol in server.",
-        serverProtocols.isEmpty());
+      assertFalse(
+              serverProtocols.isEmpty(), "Expected to find at least one protocol in server.");
     final Set<Class<?>> differenceSet =
         Sets.difference(serverProtocols, policyProviderProtocols);
-    assertTrue(
-        String.format("Following protocols for server %s are not defined in "
-            + "%s: %s",
-            rpcServerClass.getName(), HDFSPolicyProvider.class.getName(),
-            Arrays.toString(differenceSet.toArray())),
-        differenceSet.isEmpty());
+      assertTrue(
+              differenceSet.isEmpty(),
+              String.format("Following protocols for server %s are not defined in "
+                      + "%s: %s",
+                      rpcServerClass.getName(), HDFSPolicyProvider.class.getName(),
+                      Arrays.toString(differenceSet.toArray())));
   }
 }

@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,8 +30,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Time;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -43,7 +41,7 @@ import org.slf4j.event.Level;
  * This class is marked as @Ignore so that junit doesn't try to execute the
  * tests in here directly.  They are executed from subclasses.
  */
-@Ignore
+@Disabled
 public class TestParallelReadUtil {
 
   static final Logger LOG = LoggerFactory.getLogger(TestParallelReadUtil.class);
@@ -260,9 +258,9 @@ public class TestParallelReadUtil {
      * Seek to somewhere random and read.
      */
     private void read(int start, int len) throws Exception {
-      assertTrue(
-          "Bad args: " + start + " + " + len + " should be <= " + fileSize,
-          start + len <= fileSize);
+        assertTrue(
+                start + len <= fileSize,
+                "Bad args: " + start + " + " + len + " should be <= " + fileSize);
       readCount++;
       DFSInputStream dis = testInfo.dis;
 
@@ -276,9 +274,9 @@ public class TestParallelReadUtil {
      * Positional read.
      */
     private void pRead(int start, int len) throws Exception {
-      assertTrue(
-          "Bad args: " + start + " + " + len + " should be <= " + fileSize,
-          start + len <= fileSize);
+        assertTrue(
+                start + len <= fileSize,
+                "Bad args: " + start + " + " + len + " should be <= " + fileSize);
       DFSInputStream dis = testInfo.dis;
 
       byte buf[] = new byte[len];

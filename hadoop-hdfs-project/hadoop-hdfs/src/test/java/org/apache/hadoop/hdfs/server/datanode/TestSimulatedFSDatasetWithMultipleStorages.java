@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 /**
@@ -35,7 +35,7 @@ public class TestSimulatedFSDatasetWithMultipleStorages
     super(2);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     conf.set(DFS_DATANODE_DATA_DIR_KEY, "data1,data2");

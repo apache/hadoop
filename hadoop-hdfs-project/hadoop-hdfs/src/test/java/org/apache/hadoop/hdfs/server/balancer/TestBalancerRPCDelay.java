@@ -18,10 +18,10 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 /**
@@ -34,13 +34,13 @@ public class TestBalancerRPCDelay {
 
   private TestBalancer testBalancer;
 
-  @Before
+  @BeforeEach
   public void setup() {
     testBalancer = new TestBalancer();
     testBalancer.setup();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (testBalancer != null) {
       testBalancer.shutdown();

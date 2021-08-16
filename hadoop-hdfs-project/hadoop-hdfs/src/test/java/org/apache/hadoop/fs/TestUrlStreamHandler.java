@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,8 +32,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.PathUtils;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test of the URL stream handler.
@@ -48,7 +46,7 @@ public class TestUrlStreamHandler {
   private static final FsUrlStreamHandlerFactory HANDLER_FACTORY
       = new FsUrlStreamHandlerFactory();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupHandler() {
 
     // Setup our own factory
@@ -166,20 +164,20 @@ public class TestUrlStreamHandler {
 
   @Test
   public void testHttpDefaultHandler() throws Throwable {
-    assertNull("Handler for HTTP is the Hadoop one",
-        HANDLER_FACTORY.createURLStreamHandler("http"));
+      assertNull(
+              HANDLER_FACTORY.createURLStreamHandler("http"), "Handler for HTTP is the Hadoop one");
   }
 
   @Test
   public void testHttpsDefaultHandler() throws Throwable {
-    assertNull("Handler for HTTPS is the Hadoop one",
-        HANDLER_FACTORY.createURLStreamHandler("https"));
+      assertNull(
+              HANDLER_FACTORY.createURLStreamHandler("https"), "Handler for HTTPS is the Hadoop one");
   }
 
   @Test
   public void testUnknownProtocol() throws Throwable {
-    assertNull("Unknown protocols are not handled",
-        HANDLER_FACTORY.createURLStreamHandler("gopher"));
+      assertNull(
+              HANDLER_FACTORY.createURLStreamHandler("gopher"), "Unknown protocols are not handled");
   }
 
 }

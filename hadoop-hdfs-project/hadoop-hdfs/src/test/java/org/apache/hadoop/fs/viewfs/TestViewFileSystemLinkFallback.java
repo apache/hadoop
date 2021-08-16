@@ -18,11 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,11 +41,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,7 +75,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     return new FileSystemTestHelper(TEST_BASE_PATH);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
@@ -100,7 +96,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, "/", null, null);
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -108,7 +104,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fsDefault;
     super.setUp();
@@ -179,10 +175,10 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     FileStatus baseFileRelStat = vfs.getFileStatus(new Path(viewFsUri.toString()
         + testBaseFileRelative.toUri().toString()));
     LOG.info("BaseFileRelStat: " + baseFileRelStat);
-    Assert.assertEquals("Unexpected file length for " + testBaseFile,
-        1, baseFileStat.getLen());
-    Assert.assertEquals("Unexpected file length for " + testBaseFileRelative,
-        baseFileStat.getLen(), baseFileRelStat.getLen());
+      Assertions.assertEquals(
+              1, baseFileStat.getLen(), "Unexpected file length for " + testBaseFile);
+      Assertions.assertEquals(
+              baseFileStat.getLen(), baseFileRelStat.getLen(), "Unexpected file length for " + testBaseFileRelative);
     FileStatus level2FileStat = vfs.getFileStatus(new Path(viewFsUri.toString()
         + testLevel2File.toUri().toString()));
     LOG.info("Level2FileStat: " + level2FileStat);
@@ -228,8 +224,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     FileStatus baseFileStat = vfs.getFileStatus(
         new Path(viewFsUri.toString() + testBaseFile.toUri().toString()));
     LOG.info("BaseFileStat: " + baseFileStat);
-    Assert.assertEquals("Unexpected file length for " + testBaseFile,
-        0, baseFileStat.getLen());
+      Assertions.assertEquals(
+              0, baseFileStat.getLen(), "Unexpected file length for " + testBaseFile);
     FileStatus level2FileStat = vfs.getFileStatus(new Path(viewFsUri.toString()
         + testLevel2File.toUri().toString()));
     LOG.info("Level2FileStat: " + level2FileStat);
@@ -240,8 +236,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
 
     FileStatus level2FileStatAfterWrite = vfs.getFileStatus(
         new Path(viewFsUri.toString() + testLevel2File.toUri().toString()));
-    Assert.assertTrue("Unexpected file length for " + testLevel2File,
-        level2FileStatAfterWrite.getLen() > level2FileStat.getLen());
+      Assertions.assertTrue(
+              level2FileStatAfterWrite.getLen() > level2FileStat.getLen(), "Unexpected file length for " + testLevel2File);
 
     vfs.close();
   }
@@ -265,8 +261,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       FileSystem.get(viewFsUri, conf);
       fail("Shouldn't allow linkMergeSlash to take extra mount points!");
     } catch (IOException e) {
-      assertTrue("Unexpected error: " + e.getMessage(),
-          e.getMessage().contains(expectedErrorMsg));
+        assertTrue(
+                e.getMessage().contains(expectedErrorMsg), "Unexpected error: " + e.getMessage());
     }
   }
 
@@ -299,13 +295,13 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         afterFallback.add(stat.getPath());
       }
       afterFallback.removeAll(beforeFallback);
-      assertTrue("Listing didn't include fallback link",
-          afterFallback.size() == 1);
+        assertTrue(
+                afterFallback.size() == 1, "Listing didn't include fallback link");
       Path[] fallbackArray = new Path[afterFallback.size()];
       afterFallback.toArray(fallbackArray);
       Path expected = new Path(viewFsUri.toString(), "dir1");
-      assertEquals("Path did not match",
-          expected, fallbackArray[0]);
+        assertEquals(
+                expected, fallbackArray[0], "Path did not match");
 
       // Create a directory using the returned fallback path and verify
       Path childDir = new Path(fallbackArray[0], "child");
@@ -349,13 +345,13 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         afterFallback.add(stat.getPath());
       }
       afterFallback.removeAll(beforeFallback);
-      assertEquals("The same directory name in fallback link should be shaded",
-          1, afterFallback.size());
+        assertEquals(
+                1, afterFallback.size(), "The same directory name in fallback link should be shaded");
       Path[] fallbackArray = new Path[afterFallback.size()];
       // Only user1 should be listed as fallback link
       Path expected = new Path(viewFsDefaultClusterUri.toString(), "user1");
-      assertEquals("Path did not match",
-          expected, afterFallback.toArray(fallbackArray)[0]);
+        assertEquals(
+                expected, afterFallback.toArray(fallbackArray)[0], "Path did not match");
 
       // Create a directory using the returned fallback path and verify
       Path childDir = new Path(fallbackArray[0], "child");
@@ -430,8 +426,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       }
       //viewfs://default/user1/hive/warehouse
       afterFallback.removeAll(beforeFallback);
-      assertEquals("The same directory name in fallback link should be shaded",
-          1, afterFallback.size());
+        assertEquals(
+                1, afterFallback.size(), "The same directory name in fallback link should be shaded");
     }
   }
 
@@ -502,8 +498,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         }
       }
       afterFallback.removeAll(beforeFallback);
-      assertEquals("Just to make sure paths are same.", 0,
-          afterFallback.size());
+        assertEquals(0,
+                afterFallback.size(), "Just to make sure paths are same.");
     }
   }
 
@@ -559,14 +555,14 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
           assertEquals(FsPermission.valueOf("-rwxr--rw-"),
               stat.getPermission());
         } else {
-          assertEquals("Path is: " + stat.getPath(),
-              FsPermission.valueOf("-rwxr--r--"), stat.getPermission());
+            assertEquals(
+                    FsPermission.valueOf("-rwxr--r--"), stat.getPermission(), "Path is: " + stat.getPath());
         }
       }
       afterFallback.removeAll(beforeFallback);
       assertEquals(1, afterFallback.size());
-      assertEquals("/user2 dir from fallback should be listed.", "user2",
-          afterFallback.iterator().next().getName());
+        assertEquals("user2",
+                afterFallback.iterator().next().getName(), "/user2 dir from fallback should be listed.");
     }
   }
 
@@ -908,7 +904,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       assertFalse(fsTarget.exists(Path.mergePaths(fallbackTarget, vfsTestDir)));
       try {
         vfs.create(vfsTestDir);
-        Assert.fail("Should fail to create file as this is an internal dir.");
+        Assertions.fail("Should fail to create file as this is an internal dir.");
       } catch (NotInMountpointException e){
         // This tree is part of internal tree. The above exception will be
         // thrown from getDefaultReplication, getDefaultBlockSize APIs which was

@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
@@ -132,19 +130,19 @@ public class TestLayoutVersion {
         NameNodeLayoutVersion.Feature.SNAPSHOT_MODIFICATION_TIME,
         NameNodeLayoutVersion.Feature.NVDIMM_SUPPORT);
     for (LayoutFeature f : compatibleFeatures) {
-      assertEquals(String.format("Expected minimum compatible layout version " +
-          "%d for feature %s.", baseLV, f), baseLV,
-          f.getInfo().getMinimumCompatibleLayoutVersion());
+        assertEquals(baseLV,
+                f.getInfo().getMinimumCompatibleLayoutVersion(), String.format("Expected minimum compatible layout version " +
+                "%d for feature %s.", baseLV, f));
     }
     List<LayoutFeature> features = new ArrayList<>();
     features.addAll(EnumSet.allOf(LayoutVersion.Feature.class));
     features.addAll(EnumSet.allOf(NameNodeLayoutVersion.Feature.class));
     for (LayoutFeature f : features) {
       if (!compatibleFeatures.contains(f)) {
-        assertEquals(String.format("Expected feature %s to have minimum " +
-            "compatible layout version set to itself.", f),
-            f.getInfo().getLayoutVersion(),
-            f.getInfo().getMinimumCompatibleLayoutVersion());
+          assertEquals(
+                  f.getInfo().getLayoutVersion(),
+                  f.getInfo().getMinimumCompatibleLayoutVersion(), String.format("Expected feature %s to have minimum " +
+                  "compatible layout version set to itself.", f));
       }
     }
   }
@@ -161,10 +159,10 @@ public class TestLayoutVersion {
     LayoutFeature prevF = null;
     for (LayoutFeature f : EnumSet.allOf(NameNodeLayoutVersion.Feature.class)) {
       if (prevF != null) {
-        assertTrue(String.format("Features %s and %s not listed in order of " +
-            "minimum compatible layout version.", prevF, f),
-            f.getInfo().getMinimumCompatibleLayoutVersion() <=
-            prevF.getInfo().getMinimumCompatibleLayoutVersion());
+          assertTrue(
+                  f.getInfo().getMinimumCompatibleLayoutVersion() <=
+                          prevF.getInfo().getMinimumCompatibleLayoutVersion(), String.format("Features %s and %s not listed in order of " +
+                  "minimum compatible layout version.", prevF, f));
       } else {
         prevF = f;
       }
@@ -201,10 +199,10 @@ public class TestLayoutVersion {
         .getLayoutVersion();
     int actualMinCompatLV = LayoutVersion.getMinimumCompatibleLayoutVersion(
         NameNodeLayoutVersion.Feature.values());
-    assertEquals("The minimum compatible layout version has changed.  " +
-        "Downgrade to prior versions is no longer possible.  Please either " +
-        "restore compatibility, or if the incompatibility is intentional, " +
-        "then update this assertion.", expectedMinCompatLV, actualMinCompatLV);
+      assertEquals(expectedMinCompatLV, actualMinCompatLV, "The minimum compatible layout version has changed.  " +
+              "Downgrade to prior versions is no longer possible.  Please either " +
+              "restore compatibility, or if the incompatibility is intentional, " +
+              "then update this assertion.");
   }
 
   /**
@@ -218,9 +216,9 @@ public class TestLayoutVersion {
     SortedSet<LayoutFeature> ancestorSet = NameNodeLayoutVersion.getFeatures(ancestorLV);
     assertNotNull(ancestorSet);
     for (LayoutFeature  feature : ancestorSet) {
-      assertTrue("LV " + lv + " does nto support " + feature
-          + " supported by the ancestor LV " + info.getAncestorLayoutVersion(),
-          NameNodeLayoutVersion.supports(feature, lv));
+        assertTrue(
+                NameNodeLayoutVersion.supports(feature, lv), "LV " + lv + " does nto support " + feature
+                + " supported by the ancestor LV " + info.getAncestorLayoutVersion());
     }
   }
   

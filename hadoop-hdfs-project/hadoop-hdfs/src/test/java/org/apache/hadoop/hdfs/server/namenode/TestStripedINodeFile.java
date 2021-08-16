@@ -43,10 +43,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
@@ -54,10 +54,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This class tests INodeFile with striped feature.
@@ -89,7 +86,7 @@ public class TestStripedINodeFile {
   @Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void init() throws IOException {
     Configuration conf = new HdfsConfiguration();
     ErasureCodingPolicyManager.getInstance().init(conf);
@@ -169,8 +166,8 @@ public class TestStripedINodeFile {
         null, perm, 0L, 0L, null, null /*replication*/, ecPolicyID,
         1024L, HdfsConstants.WARM_STORAGE_POLICY_ID, STRIPED);
 
-    Assert.assertTrue(inodeFile.isStriped());
-    Assert.assertEquals(ecPolicyID.byteValue(),
+    Assertions.assertTrue(inodeFile.isStriped());
+    Assertions.assertEquals(ecPolicyID.byteValue(),
         inodeFile.getErasureCodingPolicyID());
   }
 
@@ -339,37 +336,37 @@ public class TestStripedINodeFile {
       // Case-1: Verify the behavior of striped blocks
       // Get blocks of striped file
       INode inodeStriped = fsd.getINode("/parentDir/ecDir/ecFile");
-      assertTrue("Failed to get INodeFile for /parentDir/ecDir/ecFile",
-          inodeStriped instanceof INodeFile);
+        assertTrue(
+                inodeStriped instanceof INodeFile, "Failed to get INodeFile for /parentDir/ecDir/ecFile");
       INodeFile inodeStripedFile = (INodeFile) inodeStriped;
       BlockInfo[] stripedBlks = inodeStripedFile.getBlocks();
       for (BlockInfo blockInfo : stripedBlks) {
-        assertFalse("Mistakenly marked the block as deleted!",
-            blockInfo.isDeleted());
+          assertFalse(
+                  blockInfo.isDeleted(), "Mistakenly marked the block as deleted!");
       }
 
       // delete directory with erasure coding policy
       dfs.delete(ecDir, true);
       for (BlockInfo blockInfo : stripedBlks) {
-        assertTrue("Didn't mark the block as deleted!", blockInfo.isDeleted());
+          assertTrue(blockInfo.isDeleted(), "Didn't mark the block as deleted!");
       }
 
       // Case-2: Verify the behavior of contiguous blocks
       // Get blocks of contiguous file
       INode inode = fsd.getINode("/parentDir/someFile");
-      assertTrue("Failed to get INodeFile for /parentDir/someFile",
-          inode instanceof INodeFile);
+        assertTrue(
+                inode instanceof INodeFile, "Failed to get INodeFile for /parentDir/someFile");
       INodeFile inodeFile = (INodeFile) inode;
       BlockInfo[] contiguousBlks = inodeFile.getBlocks();
       for (BlockInfo blockInfo : contiguousBlks) {
-        assertFalse("Mistakenly marked the block as deleted!",
-            blockInfo.isDeleted());
+          assertFalse(
+                  blockInfo.isDeleted(), "Mistakenly marked the block as deleted!");
       }
 
       // delete parent directory
       dfs.delete(parentDir, true);
       for (BlockInfo blockInfo : contiguousBlks) {
-        assertTrue("Didn't mark the block as deleted!", blockInfo.isDeleted());
+          assertTrue(blockInfo.isDeleted(), "Didn't mark the block as deleted!");
       }
     } finally {
       if (cluster != null) {
@@ -446,7 +443,7 @@ public class TestStripedINodeFile {
           fileLen);
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
         for (StorageType type : lb.getStorageTypes()) {
-          Assert.assertEquals(StorageType.DISK, type);
+          Assertions.assertEquals(StorageType.DISK, type);
         }
       }
 

@@ -35,8 +35,8 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class FsDatasetTestUtil {
 
@@ -104,9 +104,9 @@ public class FsDatasetTestUtil {
     try (RandomAccessFile raf = new RandomAccessFile(lockFile, "rws");
         FileChannel channel = raf.getChannel()) {
       FileLock lock = channel.tryLock();
-      assertNotNull(String.format(
-          "Lock file at %s appears to be held by a different process.",
-          lockFile.getAbsolutePath()), lock);
+        assertNotNull(lock, String.format(
+                "Lock file at %s appears to be held by a different process.",
+                lockFile.getAbsolutePath()));
       if (lock != null) {
         try {
           lock.release();

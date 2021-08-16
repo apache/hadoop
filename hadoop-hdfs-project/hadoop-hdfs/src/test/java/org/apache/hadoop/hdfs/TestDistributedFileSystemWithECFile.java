@@ -28,10 +28,10 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
@@ -39,9 +39,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Testing correctness of FileSystem.getFileBlockLocations and
@@ -69,7 +67,7 @@ public class TestDistributedFileSystemWithECFile {
   @Rule
   public final Timeout globalTimeout = new Timeout(60000 * 3);
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     ecPolicy = getEcPolicy();
     cellSize = ecPolicy.getCellSize();
@@ -92,7 +90,7 @@ public class TestDistributedFileSystemWithECFile {
         ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

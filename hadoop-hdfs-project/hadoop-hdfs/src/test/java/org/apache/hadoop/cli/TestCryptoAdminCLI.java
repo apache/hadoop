@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.cli.util.CLICommand;
 import org.apache.hadoop.cli.util.CLICommandCryptoAdmin;
@@ -45,9 +45,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.CryptoAdmin;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.xml.sax.SAXException;
 
 public class TestCryptoAdminCLI extends CLITestHelperDFS {
@@ -56,7 +56,7 @@ public class TestCryptoAdminCLI extends CLITestHelperDFS {
   protected String namenode = null;
   private static File tmpDir;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -78,11 +78,11 @@ public class TestCryptoAdminCLI extends CLITestHelperDFS {
     username = System.getProperty("user.name");
 
     fs = dfsCluster.getFileSystem();
-    assertTrue("Not an HDFS: " + fs.getUri(),
-        fs instanceof DistributedFileSystem);
+      assertTrue(
+              fs instanceof DistributedFileSystem, "Not an HDFS: " + fs.getUri());
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     if (fs != null) {

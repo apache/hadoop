@@ -41,10 +41,10 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -54,11 +54,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -99,7 +95,7 @@ public class TestRenameWithSnapshots {
     assertEquals(deletedSize, diff.getDeletedUnmodifiable().size());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL).format(true)
@@ -112,7 +108,7 @@ public class TestRenameWithSnapshots {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -149,20 +145,20 @@ public class TestRenameWithSnapshots {
     
     final INode fooRef = fsdir.getINode(
         SnapshotTestHelper.getSnapshotPath(abc, "s0", "foo").toString());
-    Assert.assertTrue(fooRef.isReference());
-    Assert.assertTrue(fooRef.asReference() instanceof INodeReference.WithName);
+    Assertions.assertTrue(fooRef.isReference());
+    Assertions.assertTrue(fooRef.asReference() instanceof INodeReference.WithName);
 
     final INodeReference.WithCount withCount
         = (INodeReference.WithCount)fooRef.asReference().getReferredINode();
-    Assert.assertEquals(2, withCount.getReferenceCount());
+    Assertions.assertEquals(2, withCount.getReferenceCount());
 
     final INode barRef = fsdir.getINode(bar.toString());
-    Assert.assertTrue(barRef.isReference());
+    Assertions.assertTrue(barRef.isReference());
 
-    Assert.assertSame(withCount, barRef.asReference().getReferredINode());
+    Assertions.assertSame(withCount, barRef.asReference().getReferredINode());
     
     hdfs.delete(bar, false);
-    Assert.assertEquals(1, withCount.getReferenceCount());
+    Assertions.assertEquals(1, withCount.getReferenceCount());
   }
   
   private static boolean existsInDiffReport(List<DiffReportEntry> entries,
@@ -344,10 +340,10 @@ public class TestRenameWithSnapshots {
             .asReference();
     INodeReference.WithCount withCount = (WithCount) ref
             .getReferredINode();
-    Assert.assertEquals(withCount.getReferenceCount(), 1);
+    Assertions.assertEquals(withCount.getReferenceCount(), 1);
     // Ensure name list is empty for the reference sub3file3Inode
-    Assert.assertNull(withCount.getLastWithName());
-    Assert.assertTrue(sub3file3Inode.isInCurrentState());
+    Assertions.assertNull(withCount.getLastWithName());
+    Assertions.assertTrue(sub3file3Inode.isInCurrentState());
   }
 
   /**
@@ -2207,8 +2203,8 @@ public class TestRenameWithSnapshots {
     
     final Path foo_s0 = SnapshotTestHelper.getSnapshotPath(test, "s0",
         "dir2/foo");
-    assertTrue("the snapshot path " + foo_s0 + " should exist",
-        hdfs.exists(foo_s0));
+      assertTrue(
+              hdfs.exists(foo_s0), "the snapshot path " + foo_s0 + " should exist");
     
     // delete snapshot s0. The deletion will first go down through dir1, and 
     // find foo in the created list of dir1. Then it will use null as the prior
@@ -2216,13 +2212,13 @@ public class TestRenameWithSnapshots {
     // foo. We need to make sure the snapshot s0 can be deleted cleanly in the
     // foo subtree.
     hdfs.deleteSnapshot(test, "s0");
-    // check the internal
-    assertFalse("after deleting s0, " + foo_s0 + " should not exist",
-        hdfs.exists(foo_s0));
+      // check the internal
+      assertFalse(
+              hdfs.exists(foo_s0), "after deleting s0, " + foo_s0 + " should not exist");
     INodeDirectory dir2Node = fsdir.getINode4Write(dir2.toString())
         .asDirectory();
-    assertTrue("the diff list of " + dir2
-        + " should be empty after deleting s0", !dir2Node.isWithSnapshot());
+      assertTrue(!dir2Node.isWithSnapshot(), "the diff list of " + dir2
+              + " should be empty after deleting s0");
     
     assertTrue(hdfs.exists(newfoo));
     INode fooRefNode = fsdir.getINode4Write(newfoo.toString());

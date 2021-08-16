@@ -20,12 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -124,10 +119,10 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -184,14 +179,14 @@ public class TestFsck {
   private MiniDFSCluster cluster = null;
   private Configuration conf = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
         false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     shutdownCluster();
   }
@@ -277,14 +272,14 @@ public class TestFsck {
       for (int i = 0; i < 2; i++) {
         line = reader.readLine();
         assertNotNull(line);
-        assertTrue("Expected getfileinfo event not found in audit log",
-            GET_FILE_INFO_PATTERN.matcher(line).matches());
+          assertTrue(
+                  GET_FILE_INFO_PATTERN.matcher(line).matches(), "Expected getfileinfo event not found in audit log");
       }
       line = reader.readLine();
       assertNotNull(line);
-      assertTrue("Expected fsck event not found in audit log", FSCK_PATTERN
-          .matcher(line).matches());
-      assertNull("Unexpected event in audit log", reader.readLine());
+        assertTrue(FSCK_PATTERN
+                .matcher(line).matches(), "Expected fsck event not found in audit log");
+        assertNull(reader.readLine(), "Unexpected event in audit log");
     } finally {
       // Close the reader and remove the appender to release the audit log file
       // handle after verifying the content of the file.
@@ -1149,8 +1144,8 @@ public class TestFsck {
         }
         for (File metadataFile : metadataFiles) {
           File blockFile = Block.metaToBlockFile(metadataFile);
-          assertTrue("Cannot remove file.", blockFile.delete());
-          assertTrue("Cannot remove file.", metadataFile.delete());
+            assertTrue(blockFile.delete(), "Cannot remove file.");
+            assertTrue(metadataFile.delete(), "Cannot remove file.");
         }
       }
     }
@@ -1230,10 +1225,10 @@ public class TestFsck {
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(numReplicas).build();
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     // Create a file that will be intentionally under-replicated
     final String pathString = new String("/testfile");
@@ -1292,10 +1287,10 @@ public class TestFsck {
     File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
     cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(numDn).hosts(hosts).racks(racks).build();
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     // Create a file that will be intentionally under-replicated
     final String pathString = new String("/testfile");
@@ -1467,10 +1462,10 @@ public class TestFsck {
     cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(numDn).hosts(hosts).racks(racks).build();
 
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
@@ -1522,10 +1517,10 @@ public class TestFsck {
     cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(numDn).hosts(hosts).racks(racks).build();
 
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
@@ -1610,10 +1605,10 @@ public class TestFsck {
         .racks(racks)
         .build();
 
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
@@ -1729,10 +1724,10 @@ public class TestFsck {
     cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(numDn).hosts(hosts).racks(racks).build();
 
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
@@ -1842,10 +1837,10 @@ public class TestFsck {
     cluster = new MiniDFSCluster.Builder(conf, builderBaseDir)
         .numDataNodes(numDn).hosts(hosts).racks(racks).build();
 
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
@@ -1927,10 +1922,10 @@ public class TestFsck {
         .racks(racks)
         .build();
 
-    assertNotNull("Failed Cluster Creation", cluster);
+      assertNotNull(cluster, "Failed Cluster Creation");
     cluster.waitClusterUp();
     dfs = cluster.getFileSystem();
-    assertNotNull("Failed to get FileSystem", dfs);
+      assertNotNull(dfs, "Failed to get FileSystem");
 
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
@@ -2133,8 +2128,8 @@ public class TestFsck {
         }
         for (File metadataFile : metadataFiles) {
           File blockFile = Block.metaToBlockFile(metadataFile);
-          assertTrue("Cannot remove file.", blockFile.delete());
-          assertTrue("Cannot remove file.", metadataFile.delete());
+            assertTrue(blockFile.delete(), "Cannot remove file.");
+            assertTrue(metadataFile.delete(), "Cannot remove file.");
         }
       }
     }
@@ -2233,7 +2228,7 @@ public class TestFsck {
             }
           }
           if (numCorrupt == null) {
-            Assert.fail("Cannot find corrupt blocks count in fsck output.");
+            Assertions.fail("Cannot find corrupt blocks count in fsck output.");
           }
           if (Integer.parseInt(numCorrupt) == ctf.getTotalMissingBlocks()) {
             assertTrue(str.contains(NamenodeFsck.CORRUPT_STATUS));
@@ -2241,7 +2236,7 @@ public class TestFsck {
           }
         } catch (Exception e) {
           LOG.error("Exception caught", e);
-          Assert.fail("Caught unexpected exception.");
+          Assertions.fail("Caught unexpected exception.");
         }
         return false;
       }
@@ -2265,7 +2260,7 @@ public class TestFsck {
     for (LocatedFileStatus lfs: retVal) {
       totalLength += lfs.getLen();
     }
-    Assert.assertTrue("Nothing is moved to lost+found!", totalLength > 0);
+      Assertions.assertTrue(totalLength > 0, "Nothing is moved to lost+found!");
     util.cleanup(dfs, srcDir);
   }
 
@@ -2375,7 +2370,7 @@ public class TestFsck {
       File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
       File blkFile = MiniDFSCluster.getBlockFile(storageDir,
           blks[i].getBlock());
-      Assert.assertTrue("Block file does not exist", blkFile.exists());
+        Assertions.assertTrue(blkFile.exists(), "Block file does not exist");
 
       FileOutputStream out = new FileOutputStream(blkFile);
       out.write("corruption".getBytes());
@@ -2465,7 +2460,7 @@ public class TestFsck {
           }
         } catch (Exception e) {
           LOG.error("Exception caught", e);
-          Assert.fail("Caught unexpected exception.");
+          Assertions.fail("Caught unexpected exception.");
         }
         return false;
       }
@@ -2486,7 +2481,7 @@ public class TestFsck {
       Path fileName = new Path(filePath);
       DFSTestUtil.createFile(fs, fileName, 512, (short) 2, 0);
       DFSTestUtil.waitReplication(fs, fileName, (short) 2);
-      Assert.assertTrue("File not created", fs.exists(fileName));
+        Assertions.assertTrue(fs.exists(fileName), "File not created");
       cluster.getDataNodes().get(1).shutdown();
       DFSTestUtil.appendFile(fs, fileName, "appendCorruptBlock");
       cluster.restartDataNode(1, true);

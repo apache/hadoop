@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,10 +43,10 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_PROTECTED_DIRECTORIES;
 
 /**
@@ -238,22 +238,22 @@ public class TestProtectedDirectories {
     nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, protectedPathsStrNew);
 
     FSDirectory fsDirectory = nn.getNamesystem().getFSDirectory();
-    // verify change
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        protectedPathsNew, fsDirectory.getProtectedDirectories());
+      // verify change
+      assertEquals(
+              protectedPathsNew, fsDirectory.getProtectedDirectories(), String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
 
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        protectedPathsStrNew, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
+      assertEquals(
+              protectedPathsStrNew, nn.getConf().get(FS_PROTECTED_DIRECTORIES), String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
 
     // revert to default
     nn.reconfigureProperty(FS_PROTECTED_DIRECTORIES, null);
 
-    // verify default
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        new TreeSet<String>(), fsDirectory.getProtectedDirectories());
+      // verify default
+      assertEquals(
+              new TreeSet<String>(), fsDirectory.getProtectedDirectories(), String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
 
-    assertEquals(String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES),
-        null, nn.getConf().get(FS_PROTECTED_DIRECTORIES));
+      assertEquals(
+              null, nn.getConf().get(FS_PROTECTED_DIRECTORIES), String.format("%s has wrong value", FS_PROTECTED_DIRECTORIES));
   }
 
   @Test

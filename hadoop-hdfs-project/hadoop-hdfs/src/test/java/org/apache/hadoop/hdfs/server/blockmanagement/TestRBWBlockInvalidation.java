@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -112,8 +112,8 @@ public class TestRBWBlockInvalidation {
         }
         Thread.sleep(100);
       }
-      assertEquals("There should be less than 2 replicas in the "
-          + "liveReplicasMap", 1, liveReplicas);
+        assertEquals(1, liveReplicas, "There should be less than 2 replicas in the "
+                + "liveReplicasMap");
       
       while (true) {
         if ((liveReplicas =
@@ -124,7 +124,7 @@ public class TestRBWBlockInvalidation {
         }
         Thread.sleep(100);
       }
-      assertEquals("There should be two live replicas", 2, liveReplicas);
+        assertEquals(2, liveReplicas, "There should be two live replicas");
 
       while (true) {
         Thread.sleep(100);

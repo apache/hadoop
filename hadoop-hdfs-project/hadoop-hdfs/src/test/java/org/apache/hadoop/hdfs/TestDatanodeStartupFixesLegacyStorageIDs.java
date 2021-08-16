@@ -29,9 +29,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage.ClusterVerifier;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**

@@ -39,18 +39,16 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test DN & NN communication in secured hdfs with alias map.
@@ -66,7 +64,7 @@ public class TestSecureAliasMap {
   private HdfsConfiguration conf;
   private FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     baseDir =
         GenericTestUtils.getTestDir(TestSecureAliasMap.class.getSimpleName());
@@ -81,8 +79,8 @@ public class TestSecureAliasMap {
     SecurityUtil.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.KERBEROS, baseConf);
     UserGroupInformation.setConfiguration(baseConf);
-    assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
+      assertTrue(
+              UserGroupInformation.isSecurityEnabled(), "Expected configuration to enable security");
 
     String userName = UserGroupInformation.getLoginUser().getShortUserName();
     File keytabFile = new File(baseDir, userName + ".keytab");
@@ -98,7 +96,7 @@ public class TestSecureAliasMap {
         kdc.getRealm(), keytab, keystoresDir, sslConfDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void destroy() throws Exception {
     if (kdc != null) {
       kdc.stop();
@@ -107,7 +105,7 @@ public class TestSecureAliasMap {
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws IOException {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {
@@ -146,10 +144,10 @@ public class TestSecureAliasMap {
     }
 
     String[] bps = providedVolume.getBlockPoolList();
-    assertEquals("Missing provided volume", 1, bps.length);
+      assertEquals(1, bps.length, "Missing provided volume");
 
     BlockAliasMap aliasMap = blockManager.getProvidedStorageMap().getAliasMap();
     BlockAliasMap.Reader reader = aliasMap.getReader(null, bps[0]);
-    assertNotNull("Failed to create blockAliasMap reader", reader);
+      assertNotNull(reader, "Failed to create blockAliasMap reader");
   }
 }

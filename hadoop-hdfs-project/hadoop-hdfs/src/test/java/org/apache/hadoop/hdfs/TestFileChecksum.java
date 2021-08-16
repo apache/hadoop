@@ -30,11 +30,11 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -100,7 +100,7 @@ public class TestFileChecksum {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
     conf = new Configuration();
@@ -124,7 +124,7 @@ public class TestFileChecksum {
     GenericTestUtils.setLogLevel(FileChecksumHelper.LOG, Level.DEBUG);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -194,9 +194,9 @@ public class TestFileChecksum {
     LOG.info("stripedFileChecksum2:" + stripedFileChecksum2);
     LOG.info("stripedFileChecksum3:" + stripedFileChecksum3);
 
-    Assert.assertTrue(stripedFileChecksum1.equals(stripedFileChecksum2));
+    Assertions.assertTrue(stripedFileChecksum1.equals(stripedFileChecksum2));
     if (range1 >=0 && range1 != range2) {
-      Assert.assertFalse(stripedFileChecksum1.equals(stripedFileChecksum3));
+      Assertions.assertFalse(stripedFileChecksum1.equals(stripedFileChecksum3));
     }
   }
 
@@ -209,9 +209,9 @@ public class TestFileChecksum {
         10, false);
 
     if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
-      Assert.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
+      Assertions.assertEquals(stripedFileChecksum1, replicatedFileChecksum);
     } else {
-      Assert.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
+      Assertions.assertNotEquals(stripedFileChecksum1, replicatedFileChecksum);
     }
   }
 
@@ -228,9 +228,9 @@ public class TestFileChecksum {
     FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
 
     if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
-      Assert.assertEquals(checksum1, checksum2);
+      Assertions.assertEquals(checksum1, checksum2);
     } else {
-      Assert.assertNotEquals(checksum1, checksum2);
+      Assertions.assertNotEquals(checksum1, checksum2);
     }
   }
 
@@ -245,8 +245,8 @@ public class TestFileChecksum {
     LOG.info("stripedFileChecksum1:" + stripedFileChecksum1);
     LOG.info("stripedFileChecksumRecon:" + stripedFileChecksumRecon);
 
-    Assert.assertTrue("Checksum mismatches!",
-        stripedFileChecksum1.equals(stripedFileChecksumRecon));
+      Assertions.assertTrue(
+              stripedFileChecksum1.equals(stripedFileChecksumRecon), "Checksum mismatches!");
   }
 
   @Test(timeout = 90000)
@@ -263,12 +263,12 @@ public class TestFileChecksum {
     LOG.info("stripedFileChecksum2:" + stripedFileChecksum1);
     LOG.info("stripedFileChecksum2Recon:" + stripedFileChecksum2Recon);
 
-    Assert.assertTrue("Checksum mismatches!",
-        stripedFileChecksum1.equals(stripedFileChecksum2));
-    Assert.assertTrue("Checksum mismatches!",
-        stripedFileChecksum1.equals(stripedFileChecksum2Recon));
-    Assert.assertTrue("Checksum mismatches!",
-        stripedFileChecksum2.equals(stripedFileChecksum2Recon));
+      Assertions.assertTrue(
+              stripedFileChecksum1.equals(stripedFileChecksum2), "Checksum mismatches!");
+      Assertions.assertTrue(
+              stripedFileChecksum1.equals(stripedFileChecksum2Recon), "Checksum mismatches!");
+      Assertions.assertTrue(
+              stripedFileChecksum2.equals(stripedFileChecksum2Recon), "Checksum mismatches!");
   }
 
   private void testStripedFileChecksumWithMissedDataBlocksRangeQuery(
@@ -284,8 +284,8 @@ public class TestFileChecksum {
     LOG.info("stripedFileChecksum1:" + stripedFileChecksum1);
     LOG.info("stripedFileChecksumRecon:" + stripedFileChecksumRecon);
 
-    Assert.assertTrue("Checksum mismatches!",
-        stripedFileChecksum1.equals(stripedFileChecksumRecon));
+      Assertions.assertTrue(
+              stripedFileChecksum1.equals(stripedFileChecksumRecon), "Checksum mismatches!");
   }
 
   /**
@@ -544,8 +544,8 @@ public class TestFileChecksum {
       // getting result.
       FileChecksum fileChecksum1 = getFileChecksum(stripedFile4, -1, true);
 
-      Assert.assertEquals("checksum should be same", fileChecksum,
-          fileChecksum1);
+        Assertions.assertEquals(fileChecksum,
+                fileChecksum1, "checksum should be same");
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }
@@ -578,7 +578,7 @@ public class TestFileChecksum {
       DFSTestUtil.writeFile(fs, new Path(replicatedFile2), fileData);
       FileChecksum checksum1 = getFileChecksum(replicatedFile1, -1, false);
       FileChecksum checksum2 = getFileChecksum(replicatedFile2, -1, false);
-      Assert.assertEquals(checksum1, checksum2);
+      Assertions.assertEquals(checksum1, checksum2);
     } else {
       exception.expect(IOException.class);
       FileChecksum checksum = getFileChecksum(replicatedFile1, -1, false);

@@ -76,9 +76,9 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -97,17 +97,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_MS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -201,7 +194,7 @@ public class TestFsDatasetImpl {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     datanode = mock(DataNode.class);
     storage = mock(DataStorage.class);
@@ -605,10 +598,10 @@ public class TestFsDatasetImpl {
     volReferences.close();
     dataset.removeVolumes(volumesToRemove, true);
     int expectedNumVolumes = dataDirs.length - 1;
-    assertEquals("The volume has been removed from the volumeList.",
-        expectedNumVolumes, getNumVolumes());
-    assertEquals("The volume has been removed from the storageMap.",
-        expectedNumVolumes, dataset.storageMap.size());
+      assertEquals(
+              expectedNumVolumes, getNumVolumes(), "The volume has been removed from the volumeList.");
+      assertEquals(
+              expectedNumVolumes, dataset.storageMap.size(), "The volume has been removed from the storageMap.");
 
     // DataNode.notifyNamenodeDeletedBlock() should be called 50 times
     // as we deleted one volume that has 50 blocks
@@ -631,9 +624,9 @@ public class TestFsDatasetImpl {
     for (String bpid : dataset.volumeMap.getBlockPoolList()) {
       totalNumReplicas += dataset.volumeMap.size(bpid);
     }
-    assertEquals("The replica infos on this volume has been removed from the "
-                 + "volumeMap.", numBlocks / NUM_INIT_VOLUMES,
-                 totalNumReplicas);
+      assertEquals(numBlocks / NUM_INIT_VOLUMES,
+              totalNumReplicas, "The replica infos on this volume has been removed from the "
+              + "volumeMap.");
   }
 
   @Test(timeout = 30000)
@@ -675,10 +668,10 @@ public class TestFsDatasetImpl {
 
     dataset.removeVolumes(volumesToRemove, true);
     int expectedNumVolumes = dataDirs.length - 2;
-    assertEquals("The volume has been removed from the volumeList.",
-        expectedNumVolumes, getNumVolumes());
-    assertEquals("The volume has been removed from the storageMap.",
-        expectedNumVolumes, dataset.storageMap.size());
+      assertEquals(
+              expectedNumVolumes, getNumVolumes(), "The volume has been removed from the volumeList.");
+      assertEquals(
+              expectedNumVolumes, dataset.storageMap.size(), "The volume has been removed from the storageMap.");
 
     // DataNode.notifyNamenodeDeletedBlock() should be called 100 times
     // as we deleted 2 volumes that have 100 blocks totally
@@ -703,8 +696,8 @@ public class TestFsDatasetImpl {
     for (String bpid : dataset.volumeMap.getBlockPoolList()) {
       totalNumReplicas += dataset.volumeMap.size(bpid);
     }
-    assertEquals("The replica infos on this volume has been removed from the "
-        + "volumeMap.", 0, totalNumReplicas);
+      assertEquals(0, totalNumReplicas, "The replica infos on this volume has been removed from the "
+              + "volumeMap.");
   }
 
   @Test(timeout = 5000)
@@ -1000,7 +993,7 @@ public class TestFsDatasetImpl {
           volumesToRemove.add(dataset.getVolume(eb).getStorageLocation());
         } catch (Exception e) {
           LOG.info("Problem preparing volumes to remove: ", e);
-          Assert.fail("Exception in remove volume thread, check log for " +
+          Assertions.fail("Exception in remove volume thread, check log for " +
               "details.");
         }
         LOG.info("Removing volume " + volumesToRemove);
@@ -1082,8 +1075,8 @@ public class TestFsDatasetImpl {
         finalizedDir.setExecutable(false);
         assertTrue(FileUtil.setWritable(finalizedDir, false));
       }
-      Assert.assertTrue("Reference count for the volume should be greater "
-          + "than 0", volume.getReferenceCount() > 0);
+        Assertions.assertTrue(volume.getReferenceCount() > 0, "Reference count for the volume should be greater "
+                + "than 0");
       // Invoke the synchronous checkDiskError method
       dataNode.checkDiskError();
       // Sleep for 1 second so that datanode can interrupt and cluster clean up
@@ -1096,7 +1089,7 @@ public class TestFsDatasetImpl {
 
       try {
         out.close();
-        Assert.fail("This is not a valid code path. "
+        Assertions.fail("This is not a valid code path. "
             + "out.close should have thrown an exception.");
       } catch (IOException ioe) {
         GenericTestUtils.assertExceptionContains(info.getXferAddr(), ioe);
@@ -1117,7 +1110,7 @@ public class TestFsDatasetImpl {
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
       cluster.waitActive();
 
-      Assert.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
+      Assertions.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
       DataNode dataNode = cluster.getDataNodes().get(0);
       ExtendedBlock block =
           new ExtendedBlock(cluster.getNamesystem().getBlockPoolId(), 0);
@@ -1128,8 +1121,8 @@ public class TestFsDatasetImpl {
         threwException = true;
       }
       Thread.sleep(3000);
-      Assert.assertFalse(threwException);
-      Assert.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
+      Assertions.assertFalse(threwException);
+      Assertions.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
 
       FileSystem fs = cluster.getFileSystem();
       Path filePath = new Path("testData");
@@ -1143,7 +1136,7 @@ public class TestFsDatasetImpl {
       BlockManagerTestUtil.updateState(cluster.getNamesystem()
           .getBlockManager());
       // Verify the bad block has been reported to namenode
-      Assert.assertEquals(1, cluster.getNamesystem().getCorruptReplicaBlocks());
+      Assertions.assertEquals(1, cluster.getNamesystem().getCorruptReplicaBlocks());
     } finally {
       cluster.shutdown();
     }
@@ -1605,7 +1598,7 @@ public class TestFsDatasetImpl {
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
       ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
       FsVolumeSpi destVolume = getDestinationVolume(block, fsDataSetImpl);
-      assertNotNull("Destination volume should not be null.", destVolume);
+        assertNotNull(destVolume, "Destination volume should not be null.");
       fsDataSetImpl.moveBlock(block, replicaInfo,
           destVolume.obtainReference(), false);
       // Trigger block report to update block info in NN

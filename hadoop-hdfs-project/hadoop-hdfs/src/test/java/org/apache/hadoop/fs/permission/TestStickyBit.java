@@ -22,10 +22,7 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -45,10 +42,10 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +63,7 @@ public class TestStickyBit {
   private static FileSystem hdfsAsUser1;
   private static FileSystem hdfsAsUser2;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
@@ -85,7 +82,7 @@ public class TestStickyBit {
     assertTrue(hdfsAsUser2 instanceof DistributedFileSystem);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     if (hdfs != null) {
       for (FileStatus stat: hdfs.listStatus(new Path("/"))) {
@@ -94,7 +91,7 @@ public class TestStickyBit {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     IOUtils.cleanupWithLogger(null, hdfs, hdfsAsUser1, hdfsAsUser2);
     if (cluster != null) {

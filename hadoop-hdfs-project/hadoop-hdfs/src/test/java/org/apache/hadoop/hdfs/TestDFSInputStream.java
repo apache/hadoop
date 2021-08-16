@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_READ_USE_CACHE_PRIORITY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,8 +44,8 @@ import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Retry;
 
-import org.junit.Assume;
 import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
 
 public class TestDFSInputStream {
   private void testSkipInner(MiniDFSCluster cluster) throws IOException {
@@ -108,7 +105,7 @@ public class TestDFSInputStream {
 
   @Test(timeout=60000)
   public void testSkipWithLocalBlockReader() throws IOException {
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assumptions.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
     DomainSocket.disableBindPathValidation();
     Configuration conf = new Configuration();
@@ -218,10 +215,10 @@ public class TestDFSInputStream {
       final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
       cluster.getNameNode().getNamesystem().getBlockManager()
           .getDatanodeManager().fetchDatanodes(live, null, false);
-      assertTrue("DN start should be success and live dn should be 2",
-          live.size() == 2);
-      assertTrue("File size should be " + chunkSize,
-          fs.getFileStatus(file).getLen() == chunkSize);
+        assertTrue(
+                live.size() == 2, "DN start should be success and live dn should be 2");
+        assertTrue(
+                fs.getFileStatus(file).getLen() == chunkSize, "File size should be " + chunkSize);
     } finally {
       cluster.shutdown();
     }

@@ -40,9 +40,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.Before;
 import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import org.slf4j.Logger;
@@ -70,11 +69,7 @@ import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 
@@ -90,7 +85,7 @@ public class TestAuditLogger {
 
   private static final short TEST_PERMISSION = (short) 0654;
 
-  @Before
+  @BeforeEach
   public void setup() {
     DummyAuditLogger.initialized = false;
     DummyAuditLogger.logCount = 0;
@@ -138,9 +133,9 @@ public class TestAuditLogger {
       List<AuditLogger> auditLoggers =
           cluster.getNameNode().getNamesystem().getAuditLoggers();
       for (AuditLogger auditLogger : auditLoggers) {
-        assertFalse(
-            "top audit logger is still hooked in after it is disabled",
-            auditLogger instanceof TopAuditLogger);
+          assertFalse(
+                  auditLogger instanceof TopAuditLogger,
+                  "top audit logger is still hooked in after it is disabled");
       }
     } finally {
       cluster.shutdown();

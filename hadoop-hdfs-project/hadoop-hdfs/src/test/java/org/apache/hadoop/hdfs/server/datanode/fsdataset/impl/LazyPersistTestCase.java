@@ -30,10 +30,10 @@ import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.util.Shell.getMemlockLimit;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,8 +80,8 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.rules.Timeout;
 import org.slf4j.event.Level;
 
@@ -129,7 +129,7 @@ public abstract class LazyPersistTestCase {
   protected JMXGet jmx;
   protected TemporarySocketDirectory sockDir;
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws Exception {
 
     // Dump all RamDisk JMX metrics before shutdown the cluster

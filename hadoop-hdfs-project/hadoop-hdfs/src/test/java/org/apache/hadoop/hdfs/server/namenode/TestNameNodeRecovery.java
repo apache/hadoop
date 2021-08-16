@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
@@ -584,7 +582,7 @@ public class TestNameNodeRecovery {
     }
 
     File editFile = FSImageTestUtil.findLatestEditsLog(sd).getFile();
-    assertTrue("Should exist: " + editFile, editFile.exists());
+      assertTrue(editFile.exists(), "Should exist: " + editFile);
 
     // Corrupt the edit log
     LOG.info("corrupting edit log file '" + editFile + "'");

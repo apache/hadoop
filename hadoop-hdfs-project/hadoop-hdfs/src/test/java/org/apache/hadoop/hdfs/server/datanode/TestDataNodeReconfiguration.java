@@ -20,9 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,10 +34,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test to reconfigure some parameters for DataNode without restart
@@ -54,12 +52,12 @@ public class TestDataNodeReconfiguration {
   private final int NUM_DATA_NODE = 10;
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void Setup() throws IOException {
     startDFSCluster(NUM_NAME_NODE, NUM_DATA_NODE);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -68,8 +66,8 @@ public class TestDataNodeReconfiguration {
 
     File dir = new File(DATA_DIR);
     if (dir.exists())
-      Assert.assertTrue("Cannot delete data-node dirs",
-          FileUtil.fullyDelete(dir));
+        Assertions.assertTrue(
+                FileUtil.fullyDelete(dir), "Cannot delete data-node dirs");
   }
 
   private void startDFSCluster(int numNameNodes, int numDataNodes)
@@ -117,8 +115,8 @@ public class TestDataNodeReconfiguration {
             DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, "text");
         fail("ReconfigurationException expected");
       } catch (ReconfigurationException expected) {
-        assertTrue("expecting NumberFormatException",
-            expected.getCause() instanceof NumberFormatException);
+          assertTrue(
+                  expected.getCause() instanceof NumberFormatException, "expecting NumberFormatException");
       }
       try {
         dn.reconfigureProperty(
@@ -126,8 +124,8 @@ public class TestDataNodeReconfiguration {
             String.valueOf(-1));
         fail("ReconfigurationException expected");
       } catch (ReconfigurationException expected) {
-        assertTrue("expecting IllegalArgumentException",
-            expected.getCause() instanceof IllegalArgumentException);
+          assertTrue(
+                  expected.getCause() instanceof IllegalArgumentException, "expecting IllegalArgumentException");
       }
       try {
         dn.reconfigureProperty(
@@ -135,37 +133,37 @@ public class TestDataNodeReconfiguration {
             String.valueOf(0));
         fail("ReconfigurationException expected");
       } catch (ReconfigurationException expected) {
-        assertTrue("expecting IllegalArgumentException",
-            expected.getCause() instanceof IllegalArgumentException);
+          assertTrue(
+                  expected.getCause() instanceof IllegalArgumentException, "expecting IllegalArgumentException");
       }
 
       // change properties
       dn.reconfigureProperty(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
           String.valueOf(maxConcurrentMovers));
 
-      // verify change
-      assertEquals(String.format("%s has wrong value",
-          DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY),
-          maxConcurrentMovers, dn.xserver.balanceThrottler.getMaxConcurrentMovers());
+        // verify change
+        assertEquals(
+                maxConcurrentMovers, dn.xserver.balanceThrottler.getMaxConcurrentMovers(), String.format("%s has wrong value",
+                DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY));
 
-      assertEquals(String.format("%s has wrong value",
-          DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY),
-          maxConcurrentMovers, Integer.parseInt(dn.getConf().get(
-              DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY)));
+        assertEquals(
+                maxConcurrentMovers, Integer.parseInt(dn.getConf().get(
+                DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY)), String.format("%s has wrong value",
+                DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY));
 
       // revert to default
       dn.reconfigureProperty(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
           null);
 
-      // verify default
-      assertEquals(String.format("%s has wrong value",
-          DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY),
-          DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT,
-          dn.xserver.balanceThrottler.getMaxConcurrentMovers());
+        // verify default
+        assertEquals(
+                DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT,
+                dn.xserver.balanceThrottler.getMaxConcurrentMovers(), String.format("%s has wrong value",
+                DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY));
 
-      assertEquals(String.format("expect %s is not configured",
-          DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY), null, dn
-          .getConf().get(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY));
+        assertEquals(null, dn
+                .getConf().get(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY), String.format("expect %s is not configured",
+                DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY));
     }
   }
 
@@ -216,7 +214,7 @@ public class TestDataNodeReconfiguration {
       // Attempt to set new maximum to 1
       final boolean success =
           dataNode.xserver.updateBalancerMaxConcurrentMovers(1);
-      Assert.assertFalse(success);
+      Assertions.assertFalse(success);
     } finally {
       dataNode.shutdown();
     }
@@ -244,9 +242,9 @@ public class TestDataNodeReconfiguration {
       dataNode.reconfigurePropertyImpl(
           DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, "1");
     } catch (ReconfigurationException e) {
-      Assert.assertEquals(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+      Assertions.assertEquals(DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
           e.getProperty());
-      Assert.assertEquals("1", e.getNewValue());
+      Assertions.assertEquals("1", e.getNewValue());
       throw e;
     } finally {
       dataNode.shutdown();
@@ -263,12 +261,12 @@ public class TestDataNodeReconfiguration {
     /** Test that the default setup is working */
 
     for (int i = 0; i < defaultMaxThreads; i++) {
-      assertEquals("should be able to get thread quota", true,
-          dataNode.xserver.balanceThrottler.acquire());
+        assertEquals(true,
+                dataNode.xserver.balanceThrottler.acquire(), "should be able to get thread quota");
     }
 
-    assertEquals("should not be able to get thread quota", false,
-        dataNode.xserver.balanceThrottler.acquire());
+      assertEquals(false,
+              dataNode.xserver.balanceThrottler.acquire(), "should not be able to get thread quota");
 
     // Give back the threads
     for (int i = 0; i < defaultMaxThreads; i++) {
@@ -282,15 +280,15 @@ public class TestDataNodeReconfiguration {
         DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
         String.valueOf(maxConcurrentMovers));
 
-    assertEquals("thread quota is wrong", maxConcurrentMovers,
-        dataNode.xserver.balanceThrottler.getMaxConcurrentMovers());
+      assertEquals(maxConcurrentMovers,
+              dataNode.xserver.balanceThrottler.getMaxConcurrentMovers(), "thread quota is wrong");
 
     for (int i = 0; i < maxConcurrentMovers; i++) {
-      assertEquals("should be able to get thread quota", true,
-          dataNode.xserver.balanceThrottler.acquire());
+        assertEquals(true,
+                dataNode.xserver.balanceThrottler.acquire(), "should be able to get thread quota");
     }
 
-    assertEquals("should not be able to get thread quota", false,
-        dataNode.xserver.balanceThrottler.acquire());
+      assertEquals(false,
+              dataNode.xserver.balanceThrottler.acquire(), "should not be able to get thread quota");
   }
 }

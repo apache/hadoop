@@ -31,17 +31,15 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockIdManager;
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.*;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Need to cover the following combinations:
@@ -100,7 +98,7 @@ public class TestStripedBlockUtil {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @Before
+  @BeforeEach
   public void setup(){
     blockGroupSizes = new int[]{1, getDelta(cellSize), cellSize,
         getDelta(dataBlocks) * cellSize,
@@ -285,8 +283,8 @@ public class TestStripedBlockUtil {
             if (hashIntToByte(brStart + i) != assembled.get(i)) {
               System.out.println("Oops");
             }
-            assertEquals("Byte at " + (brStart + i) + " should be the same",
-                hashIntToByte(brStart + i), assembled.get(i));
+              assertEquals(
+                      hashIntToByte(brStart + i), assembled.get(i), "Byte at " + (brStart + i) + " should be the same");
           }
         }
       }

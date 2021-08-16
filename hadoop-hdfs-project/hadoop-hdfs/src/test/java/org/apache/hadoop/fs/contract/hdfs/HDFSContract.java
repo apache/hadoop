@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.contract.ContractOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 
@@ -73,14 +73,14 @@ public class HDFSContract extends AbstractFSContract {
   @Override
   public void init() throws IOException {
     super.init();
-    Assert.assertTrue("contract options not loaded",
-                      isSupported(ContractOptions.IS_CASE_SENSITIVE, false));
+      Assertions.assertTrue(
+              isSupported(ContractOptions.IS_CASE_SENSITIVE, false), "contract options not loaded");
   }
 
   @Override
   public FileSystem getTestFileSystem() throws IOException {
-    //assumes cluster is not null
-    Assert.assertNotNull("cluster not created", cluster);
+      //assumes cluster is not null
+      Assertions.assertNotNull(cluster, "cluster not created");
     return cluster.getFileSystem();
   }
 

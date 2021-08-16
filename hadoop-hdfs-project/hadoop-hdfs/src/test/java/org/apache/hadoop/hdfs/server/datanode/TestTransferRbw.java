@@ -38,8 +38,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
@@ -68,9 +68,9 @@ public class TestTransferRbw {
       LOG.info("wait since replicas.size() == 0; i=" + i);
       Thread.sleep(1000);
     }
-    Assert.assertEquals(1, replicas.size());
+    Assertions.assertEquals(1, replicas.size());
     final ReplicaInfo r = replicas.iterator().next();
-    Assert.assertEquals(expectedState, r.getState());
+    Assertions.assertEquals(expectedState, r.getState());
     return (LocalReplicaInPipeline)r;
   }
 
@@ -106,7 +106,7 @@ public class TestTransferRbw {
         final DataNode oldnode = cluster.getDataNodes().get(0);
         // DataXceiverServer#writeThrottler is null if
         // dfs.datanode.data.write.bandwidthPerSec default value is 0.
-        Assert.assertNull(oldnode.xserver.getWriteThrottler());
+        Assertions.assertNull(oldnode.xserver.getWriteThrottler());
         oldrbw = getRbw(oldnode, bpid);
         LOG.info("oldrbw = " + oldrbw);
         
@@ -118,17 +118,17 @@ public class TestTransferRbw {
         // DataXceiverServer#writeThrottler#balancer is equal to
         // dfs.datanode.data.write.bandwidthPerSec value if
         // dfs.datanode.data.write.bandwidthPerSec value is not zero.
-        Assert.assertEquals(1024 * 1024 * 8,
+        Assertions.assertEquals(1024 * 1024 * 8,
             newnode.xserver.getWriteThrottler().getBandwidth());
         final DatanodeInfo oldnodeinfo;
         {
           final DatanodeInfo[] datatnodeinfos = cluster.getNameNodeRpc(
               ).getDatanodeReport(DatanodeReportType.LIVE);
-          Assert.assertEquals(2, datatnodeinfos.length);
+          Assertions.assertEquals(2, datatnodeinfos.length);
           int i = 0;
           for(DatanodeRegistration dnReg = newnode.getDNRegistrationForBP(bpid);
               i < datatnodeinfos.length && !datatnodeinfos[i].equals(dnReg); i++);
-          Assert.assertTrue(i < datatnodeinfos.length);
+          Assertions.assertTrue(i < datatnodeinfos.length);
           newnodeinfo = datatnodeinfos[i];
           oldnodeinfo = datatnodeinfos[1 - i];
         }
@@ -138,15 +138,15 @@ public class TestTransferRbw {
             oldrbw.getGenerationStamp());
         final BlockOpResponseProto s = DFSTestUtil.transferRbw(
             b, DFSClientAdapter.getDFSClient(fs), oldnodeinfo, newnodeinfo);
-        Assert.assertEquals(Status.SUCCESS, s.getStatus());
+        Assertions.assertEquals(Status.SUCCESS, s.getStatus());
       }
 
       //check new rbw
       final ReplicaBeingWritten newrbw = getRbw(newnode, bpid);
       LOG.info("newrbw = " + newrbw);
-      Assert.assertEquals(oldrbw.getBlockId(), newrbw.getBlockId());
-      Assert.assertEquals(oldrbw.getGenerationStamp(), newrbw.getGenerationStamp());
-      Assert.assertEquals(oldrbw.getVisibleLength(), newrbw.getVisibleLength());
+      Assertions.assertEquals(oldrbw.getBlockId(), newrbw.getBlockId());
+      Assertions.assertEquals(oldrbw.getGenerationStamp(), newrbw.getGenerationStamp());
+      Assertions.assertEquals(oldrbw.getVisibleLength(), newrbw.getVisibleLength());
 
       LOG.info("DONE");
     } finally {

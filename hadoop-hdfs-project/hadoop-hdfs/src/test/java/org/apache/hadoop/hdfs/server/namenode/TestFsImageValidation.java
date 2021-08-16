@@ -21,8 +21,8 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -51,7 +51,7 @@ public class TestFsImageValidation {
 
     try {
       final int errorCount = FsImageValidation.newInstance().run();
-      Assert.assertEquals("Error Count: " + errorCount, 0, errorCount);
+        Assertions.assertEquals(0, errorCount, "Error Count: " + errorCount);
     } catch (HadoopIllegalArgumentException e) {
       LOG.warn("The environment variable {} is not set: {}",
           FsImageValidation.FS_IMAGE, e);
@@ -63,7 +63,7 @@ public class TestFsImageValidation {
     final Configuration conf = new Configuration();
     final String nsId = "cluster0";
     FsImageValidation.setHaConf(nsId, conf);
-    Assert.assertTrue(HAUtil.isHAEnabled(conf, nsId));
+    Assertions.assertTrue(HAUtil.isHAEnabled(conf, nsId));
   }
 
   @Test
@@ -81,14 +81,14 @@ public class TestFsImageValidation {
     LOG.info("{} ?= {}", n, s);
     for(int i = s.length(); i > 0;) {
       for(int j = 0; j < 3 && i > 0; j++) {
-        Assert.assertTrue(Character.isDigit(s.charAt(--i)));
+        Assertions.assertTrue(Character.isDigit(s.charAt(--i)));
       }
       if (i > 0) {
-        Assert.assertEquals(',', s.charAt(--i));
+        Assertions.assertEquals(',', s.charAt(--i));
       }
     }
 
-    Assert.assertNotEquals(0, s.length()%4);
-    Assert.assertEquals(n, Long.parseLong(s.replaceAll(",", "")));
+    Assertions.assertNotEquals(0, s.length()%4);
+    Assertions.assertEquals(n, Long.parseLong(s.replaceAll(",", "")));
   }
 }

@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestDFSRemove {
   final Path dir = new Path("/test/remove/");
@@ -80,8 +80,8 @@ public class TestDFSRemove {
         Thread.sleep(3 * DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000);
         // all blocks should be gone now.
         long dfsUsedFinal = getTotalDfsUsed(cluster);
-        assertEquals("All blocks should be gone. start=" + dfsUsedStart
-            + " max=" + dfsUsedMax + " final=" + dfsUsedFinal, dfsUsedStart, dfsUsedFinal);
+          assertEquals(dfsUsedStart, dfsUsedFinal, "All blocks should be gone. start=" + dfsUsedStart
+                  + " max=" + dfsUsedMax + " final=" + dfsUsedFinal);
       }
 
       fs.delete(dir, true);

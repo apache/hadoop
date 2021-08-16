@@ -25,10 +25,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.event.Level;
 
 import java.io.File;
@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test FSImage correctness with ordered snapshot deletion.
@@ -60,7 +60,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
@@ -71,7 +71,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -189,7 +189,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     output.println(b);
 
     final String s = NamespacePrintVisitor.print2Sting(fsn);
-    Assert.assertEquals(b, s);
+    Assertions.assertEquals(b, s);
     return b;
   }
 

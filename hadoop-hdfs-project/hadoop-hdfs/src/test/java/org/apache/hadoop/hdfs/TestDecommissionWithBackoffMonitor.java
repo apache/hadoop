@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement
     .DatanodeAdminMonitorInterface;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 

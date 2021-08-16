@@ -36,8 +36,8 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test checks correctness of port usage by hdfs components:
@@ -280,7 +280,7 @@ public class TestHDFSServerPorts {
       started = canStartNameNode(conf2);
 
       if (withService) {
-        assertFalse("Should've failed on service port", started);
+          assertFalse(started, "Should've failed on service port");
 
         // reset conf2 since NameNode modifies it
         FileSystem.setDefaultUri(conf2, "hdfs://" + THIS_HOST);
@@ -379,8 +379,8 @@ public class TestHDFSServerPorts {
         LOG.info("= Starting 1 on: " + backup_config.get(
             DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
 
-        assertFalse("Backup started on same port as Namenode", 
-                           canStartBackupNode(backup_config)); // should fail
+          assertFalse(
+                  canStartBackupNode(backup_config), "Backup started on same port as Namenode"); // should fail
 
         // reset namenode backup address because Windows does not release
         // port used previously properly.
@@ -394,7 +394,7 @@ public class TestHDFSServerPorts {
             DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY));
 
         boolean started = canStartBackupNode(backup_config);
-        assertTrue("Backup Namenode should've started", started); // should start now
+          assertTrue(started, "Backup Namenode should've started"); // should start now
       } finally {
         stopNameNode(nn);
       }

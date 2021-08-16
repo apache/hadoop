@@ -28,12 +28,12 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
@@ -44,9 +44,9 @@ import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test Lazy persist behavior with short-circuit reads. These tests
@@ -55,16 +55,16 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestScrLazyPersistFiles extends LazyPersistTestCase {
 
-  @BeforeClass
+  @BeforeAll
   public static void init() {
     DomainSocket.disableBindPathValidation();
   }
 
-  @Before
+  @BeforeEach
   public void before() {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
     assumeNotWindows();
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assumptions.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
 
     final long osPageSize = NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();
     Preconditions.checkState(BLOCK_SIZE >= osPageSize);
@@ -97,9 +97,9 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
     try {
       byte[] buf = new byte[BUFFER_LENGTH];
       fis.read(0, buf, 0, BUFFER_LENGTH);
-      Assert.assertEquals(BUFFER_LENGTH,
+      Assertions.assertEquals(BUFFER_LENGTH,
         fis.getReadStatistics().getTotalBytesRead());
-      Assert.assertEquals(BUFFER_LENGTH,
+      Assertions.assertEquals(BUFFER_LENGTH,
         fis.getReadStatistics().getTotalShortCircuitBytesRead());
     } finally {
       fis.close();
@@ -162,7 +162,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
     // subsequent legacy short-circuit reads in the ClientContext.
     // Assert that it didn't get disabled.
     ClientContext clientContext = client.getClientContext();
-    Assert.assertFalse(clientContext.getDisableLegacyBlockReaderLocal());
+    Assertions.assertFalse(clientContext.getDisableLegacyBlockReaderLocal());
   }
 
   private void doShortCircuitReadAfterEvictionTest() throws IOException,

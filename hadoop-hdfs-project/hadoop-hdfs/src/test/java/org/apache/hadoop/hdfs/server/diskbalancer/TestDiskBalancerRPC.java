@@ -37,11 +37,10 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.GreedyPlanner;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.HashMap;
@@ -51,20 +50,18 @@ import java.util.Random;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_DONE;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_UNDER_PROGRESS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test DiskBalancer RPC.
  */
 public class TestDiskBalancerRPC {
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   private static final String PLAN_FILE = "/system/current.plan.json";
   private MiniDFSCluster cluster;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_DISK_BALANCER_ENABLED, true);
@@ -72,7 +69,7 @@ public class TestDiskBalancerRPC {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -176,14 +173,14 @@ public class TestDiskBalancerRPC {
     DataNode dataNode = cluster.getDataNodes().get(dnIndex);
     String volumeNameJson = dataNode.getDiskBalancerSetting(
         DiskBalancerConstants.DISKBALANCER_VOLUME_NAME);
-    Assert.assertNotNull(volumeNameJson);
+    Assertions.assertNotNull(volumeNameJson);
     ObjectMapper mapper = new ObjectMapper();
 
     @SuppressWarnings("unchecked")
     Map<String, String> volumemap =
         mapper.readValue(volumeNameJson, HashMap.class);
 
-    Assert.assertEquals(2, volumemap.size());
+    Assertions.assertEquals(2, volumemap.size());
   }
 
   @Test
@@ -209,7 +206,7 @@ public class TestDiskBalancerRPC {
     String bandwidthString = dataNode.getDiskBalancerSetting(
         DiskBalancerConstants.DISKBALANCER_BANDWIDTH);
     long value = Long.decode(bandwidthString);
-    Assert.assertEquals(10L, value);
+    Assertions.assertEquals(10L, value);
   }
 
   @Test
@@ -223,7 +220,7 @@ public class TestDiskBalancerRPC {
     dataNode.submitDiskBalancerPlan(planHash, planVersion, PLAN_FILE,
         plan.toJson(), false);
     DiskBalancerWorkStatus status = dataNode.queryDiskBalancerPlan();
-    Assert.assertTrue(status.getResult() == PLAN_UNDER_PROGRESS ||
+    Assertions.assertTrue(status.getResult() == PLAN_UNDER_PROGRESS ||
         status.getResult() == PLAN_DONE);
   }
 
@@ -233,7 +230,7 @@ public class TestDiskBalancerRPC {
     DataNode dataNode = rpcTestHelper.getDataNode();
 
     DiskBalancerWorkStatus status = dataNode.queryDiskBalancerPlan();
-    Assert.assertTrue(status.getResult() == NO_PLAN);
+    Assertions.assertTrue(status.getResult() == NO_PLAN);
   }
 
   @Test
@@ -307,7 +304,7 @@ public class TestDiskBalancerRPC {
       DiskBalancerCluster diskBalancerCluster =
           new DiskBalancerCluster(nameNodeConnector);
       diskBalancerCluster.readClusterInfo();
-      Assert.assertEquals(cluster.getDataNodes().size(),
+      Assertions.assertEquals(cluster.getDataNodes().size(),
           diskBalancerCluster.getNodes().size());
       diskBalancerCluster.setNodesToProcess(diskBalancerCluster.getNodes());
       dataNode = cluster.getDataNodes().get(dnIndex);

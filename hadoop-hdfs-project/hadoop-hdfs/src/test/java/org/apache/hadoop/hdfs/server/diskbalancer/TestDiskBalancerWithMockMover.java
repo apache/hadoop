@@ -43,10 +43,9 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Step;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
@@ -55,9 +54,7 @@ import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests diskbalancer with a mock mover.
@@ -65,9 +62,6 @@ import static org.junit.Assert.assertTrue;
 public class TestDiskBalancerWithMockMover {
   static final Logger LOG =
       LoggerFactory.getLogger(TestDiskBalancerWithMockMover.class);
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   private static final String PLAN_FILE = "/system/current.plan.json";
   private MiniDFSCluster cluster;
@@ -318,7 +312,7 @@ public class TestDiskBalancerWithMockMover {
   }
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new HdfsConfiguration();
     final int numStoragesPerDn = 2;
@@ -339,7 +333,7 @@ public class TestDiskBalancerWithMockMover {
     references.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

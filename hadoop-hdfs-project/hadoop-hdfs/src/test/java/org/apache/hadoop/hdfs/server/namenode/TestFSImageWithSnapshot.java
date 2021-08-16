@@ -38,10 +38,10 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.event.Level;
 
 import java.io.File;
@@ -52,8 +52,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test FSImage save/load when Snapshot is supported
@@ -78,7 +78,7 @@ public class TestFSImageWithSnapshot {
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
@@ -88,7 +88,7 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -199,8 +199,8 @@ public class TestFSImageWithSnapshot {
     
     INodeDirectory rootNode = fsn.dir.getINode4Write(root.toString())
         .asDirectory();
-    assertTrue("The children list of root should be empty", 
-        rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
+      assertTrue(
+              rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty(), "The children list of root should be empty");
     // one snapshot on root: s1
     DiffList<DirectoryDiff> diffList = rootNode.getDiffs().asList();
     assertEquals(1, diffList.size());
@@ -322,15 +322,15 @@ public class TestFSImageWithSnapshot {
     long numSnapshotAfter = fsn.getNumSnapshots();
     SnapshottableDirectoryStatus[] dirAfter = hdfs.getSnapshottableDirListing();
     
-    Assert.assertEquals(numSdirBefore, numSdirAfter);
-    Assert.assertEquals(numSnapshotBefore, numSnapshotAfter);
-    Assert.assertEquals(dirBefore.length, dirAfter.length);
+    Assertions.assertEquals(numSdirBefore, numSdirAfter);
+    Assertions.assertEquals(numSnapshotBefore, numSnapshotAfter);
+    Assertions.assertEquals(dirBefore.length, dirAfter.length);
     List<String> pathListBefore = new ArrayList<String>();
     for (SnapshottableDirectoryStatus sBefore : dirBefore) {
       pathListBefore.add(sBefore.getFullPath().toString());
     }
     for (SnapshottableDirectoryStatus sAfter : dirAfter) {
-      Assert.assertTrue(pathListBefore.contains(sAfter.getFullPath().toString()));
+      Assertions.assertTrue(pathListBefore.contains(sAfter.getFullPath().toString()));
     }
   }
   
@@ -610,7 +610,7 @@ public class TestFSImageWithSnapshot {
     output.println(b);
 
     final String s = NamespacePrintVisitor.print2Sting(fsn);
-    Assert.assertEquals(b, s);
+    Assertions.assertEquals(b, s);
     return b;
   }
 

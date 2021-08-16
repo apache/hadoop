@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -72,8 +73,8 @@ public class TestQuorumCall {
         "f1", SettableFuture.<String>create());
 
     QuorumCall<String, String> q = QuorumCall.create(futures);
-    assertEquals("The number of quorum calls for which a response has been"
-            + " received should be 0", 0, q.countResponses());
+      assertEquals(0, q.countResponses(), "The number of quorum calls for which a response has been"
+              + " received should be 0");
 
     try {
       q.waitFor(0, 1, 100, 10, "test");

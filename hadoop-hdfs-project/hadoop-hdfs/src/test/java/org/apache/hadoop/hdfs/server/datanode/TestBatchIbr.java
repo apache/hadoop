@@ -45,8 +45,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test verifies that incremental block reports are sent in batch mode
@@ -161,7 +161,7 @@ public class TestBatchIbr {
         });
       }
       for(int i = 0; i < NUM_FILES; i++) {
-        Assert.assertTrue(verifyService.take().get());
+        Assertions.assertTrue(verifyService.take().get());
       }
       final long testEndTime = Time.monotonicNow();
 
@@ -247,7 +247,7 @@ public class TestBatchIbr {
       for(int i = 0; i < numBlocks; i++) {
         in.read(computed);
         nextBytes(i, seed, expected);
-        Assert.assertArrayEquals(expected, computed);
+        Assertions.assertArrayEquals(expected, computed);
       }
       return true;
     } catch(Exception e) {

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -152,16 +152,16 @@ public class TestUnderReplicatedBlocks {
       DFSTestUtil.verifyClientStats(conf, cluster);
 
       bm.computeDatanodeWork();
-      assertTrue("The number of replication work pending before targets are " +
-              "determined should be non-negative.",
-          (Integer)Whitebox.getInternalState(secondDn,
-              "pendingReplicationWithoutTargets") >= 0);
+        assertTrue(
+                (Integer) Whitebox.getInternalState(secondDn,
+                        "pendingReplicationWithoutTargets") >= 0, "The number of replication work pending before targets are " +
+                "determined should be non-negative.");
 
       BlockManagerTestUtil.updateState(bm);
-      assertTrue("The number of blocks to be replicated should be less than "
-          + "or equal to " + bm.replicationStreamsHardLimit,
-          secondDn.getNumberOfBlocksToBeReplicated()
-          <= bm.replicationStreamsHardLimit);
+        assertTrue(
+                secondDn.getNumberOfBlocksToBeReplicated()
+                        <= bm.replicationStreamsHardLimit, "The number of blocks to be replicated should be less than "
+                + "or equal to " + bm.replicationStreamsHardLimit);
       DFSTestUtil.verifyClientStats(conf, cluster);
     } finally {
       cluster.shutdown();

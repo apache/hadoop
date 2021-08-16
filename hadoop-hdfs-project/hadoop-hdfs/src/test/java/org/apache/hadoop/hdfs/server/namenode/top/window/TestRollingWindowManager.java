@@ -26,14 +26,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.top.TopConf;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.Op;
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.TopWindow;
 import static org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager.User;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRollingWindowManager {
 
@@ -47,7 +47,7 @@ public class TestRollingWindowManager {
   final int N_TOP_USERS = 10;
   final int BUCKET_LEN = WINDOW_LEN_MS / BUCKET_CNT;
 
-  @Before
+  @BeforeEach
   public void init() {
     conf = new Configuration();
     conf.setInt(DFSConfigKeys.NNTOP_BUCKETS_PER_WINDOW_KEY, BUCKET_CNT);
@@ -70,40 +70,40 @@ public class TestRollingWindowManager {
     time++;
     TopWindow tops = manager.snapshot(time);
 
-    assertEquals("Unexpected number of ops", 3, tops.getOps().size());
+      assertEquals(3, tops.getOps().size(), "Unexpected number of ops");
     assertEquals(TopConf.ALL_CMDS, tops.getOps().get(0).getOpType());
     for (Op op : tops.getOps()) {
       final List<User> topUsers = op.getTopUsers();
-      assertEquals("Unexpected number of users", N_TOP_USERS, topUsers.size());
+        assertEquals(N_TOP_USERS, topUsers.size(), "Unexpected number of users");
       if (op.getOpType().equals("open")) {
         for (int i = 0; i < topUsers.size(); i++) {
           User user = topUsers.get(i);
-          assertEquals("Unexpected count for user " + user.getUser(),
-              (users.length-i)*2, user.getCount());
+            assertEquals(
+                    (users.length - i) * 2, user.getCount(), "Unexpected count for user " + user.getUser());
         }
-        // Closed form of sum(range(2,42,2))
-        assertEquals("Unexpected total count for op", 
-            (2+(users.length*2))*(users.length/2),
-            op.getTotalCount());
+          // Closed form of sum(range(2,42,2))
+          assertEquals(
+                  (2 + (users.length * 2)) * (users.length / 2),
+                  op.getTotalCount(), "Unexpected total count for op");
       }
     }
 
     // move the window forward not to see the "open" results
     time += WINDOW_LEN_MS - 2;
     tops = manager.snapshot(time);
-    assertEquals("Unexpected number of ops", 2, tops.getOps().size());
+      assertEquals(2, tops.getOps().size(), "Unexpected number of ops");
     assertEquals(TopConf.ALL_CMDS, tops.getOps().get(0).getOpType());
     final Op op = tops.getOps().get(1);
-    assertEquals("Should only see close ops", "close", op.getOpType());
+      assertEquals("close", op.getOpType(), "Should only see close ops");
     final List<User> topUsers = op.getTopUsers();
     for (int i = 0; i < topUsers.size(); i++) {
       User user = topUsers.get(i);
-      assertEquals("Unexpected count for user " + user.getUser(),
-          (users.length-i), user.getCount());
+        assertEquals(
+                (users.length - i), user.getCount(), "Unexpected count for user " + user.getUser());
     }
-    // Closed form of sum(range(1,21))
-    assertEquals("Unexpected total count for op",
-        (1 + users.length) * (users.length / 2), op.getTotalCount());
+      // Closed form of sum(range(1,21))
+      assertEquals(
+              (1 + users.length) * (users.length / 2), op.getTotalCount(), "Unexpected total count for op");
   }
 
   @Test
@@ -207,15 +207,15 @@ public class TestRollingWindowManager {
     rollingWindowManager.recordMetric(0, "op3", "user8", 1);
 
     TopWindow window = rollingWindowManager.snapshot(0);
-    Assert.assertEquals(numOps + 1, window.getOps().size());
+    Assertions.assertEquals(numOps + 1, window.getOps().size());
 
     Op allOp = window.getOps().get(0);
-    Assert.assertEquals(TopConf.ALL_CMDS, allOp.getOpType());
+    Assertions.assertEquals(TopConf.ALL_CMDS, allOp.getOpType());
     List<User> topUsers = allOp.getTopUsers();
-    Assert.assertEquals(numTopUsers * numOps, topUsers.size());
+    Assertions.assertEquals(numTopUsers * numOps, topUsers.size());
     // ensure all the top users for each op are present in the total op.
     for (int i = 1; i < numOps; i++) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           topUsers.containsAll(window.getOps().get(i).getTopUsers()));
     }
   }

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -59,11 +59,11 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,7 +93,7 @@ public class TestSnapshotDeletion {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
@@ -106,7 +106,7 @@ public class TestSnapshotDeletion {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -210,15 +210,15 @@ public class TestSnapshotDeletion {
     INodeDirectory dirNode = getDir(fsdir, dirPath);
     assertTrue(dirNode.isQuotaSet());
     QuotaCounts q = dirNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        q.getNameSpace());
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        q.getStorageSpace());
+      assertEquals(expectedNs,
+              q.getNameSpace(), dirNode.dumpTreeRecursively().toString());
+      assertEquals(expectedDs,
+              q.getStorageSpace(), dirNode.dumpTreeRecursively().toString());
     QuotaCounts counts = dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), false);
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        counts.getNameSpace());
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        counts.getStorageSpace());
+      assertEquals(expectedNs,
+              counts.getNameSpace(), dirNode.dumpTreeRecursively().toString());
+      assertEquals(expectedDs,
+              counts.getStorageSpace(), dirNode.dumpTreeRecursively().toString());
   }
   
   /**
@@ -1232,13 +1232,13 @@ public class TestSnapshotDeletion {
 
     // make sure bar has been removed from its parent
     INode p = fsdir.getInode(parentId);
-    Assert.assertNotNull(p);
+    Assertions.assertNotNull(p);
     INodeDirectory pd = p.asDirectory();
-    Assert.assertNotNull(pd);
-    Assert.assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
+    Assertions.assertNotNull(pd);
+    Assertions.assertNull(pd.getChild("bar".getBytes(), Snapshot.CURRENT_STATE_ID));
 
     // make sure bar has been cleaned from inodeMap
-    Assert.assertNull(fsdir.getInode(fileId));
+    Assertions.assertNull(fsdir.getInode(fileId));
   }
 
   @Test
@@ -1342,10 +1342,10 @@ public class TestSnapshotDeletion {
 
       SnapshotDiffReport sdr = hdfs.getSnapshotDiffReport(st, "s" + i, "ss");
       LOG.info("Snapshot Diff s{} to ss : {}", i, sdr);
-      Assert.assertEquals(sdr.getDiffList().size(), 1);
-      Assert.assertTrue(sdr.getDiffList().get(0).getType() ==
+      Assertions.assertEquals(sdr.getDiffList().size(), 1);
+      Assertions.assertTrue(sdr.getDiffList().get(0).getType() ==
           SnapshotDiffReport.DiffType.MODIFY);
-      Assert.assertTrue(new Path(st, DFSUtilClient.bytes2String(
+      Assertions.assertTrue(new Path(st, DFSUtilClient.bytes2String(
           sdr.getDiffList().get(0).getSourcePath())).equals(dest));
     }
 

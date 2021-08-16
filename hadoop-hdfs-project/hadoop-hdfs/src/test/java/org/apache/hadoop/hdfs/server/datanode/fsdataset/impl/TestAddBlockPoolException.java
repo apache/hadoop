@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests to ensure AddBlockPoolException behaves correctly when additional

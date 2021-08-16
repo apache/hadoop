@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -90,9 +87,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
@@ -160,7 +157,7 @@ public class TestDFSClientRetries {
     }
   }
   
-  @Before
+  @BeforeEach
   public void setupConf(){
     conf = new HdfsConfiguration();
   }
@@ -285,8 +282,8 @@ public class TestDFSClientRetries {
     try {
       os.close();
     } catch (Exception e) {
-      assertTrue("Retries are not being stopped correctly: " + e.getMessage(),
-           e.getMessage().equals(exceptionMsg));
+        assertTrue(
+                e.getMessage().equals(exceptionMsg), "Retries are not being stopped correctly: " + e.getMessage());
     }
   }
 
@@ -632,7 +629,7 @@ public class TestDFSClientRetries {
     timestamp = Time.now();
     pass = busyTest(xcievers, threads, fileLen, timeWin, retries);
     timestamp2 = Time.now();
-    assertTrue("Something wrong! Test 2 got Exception with maxmum retries!", pass);
+      assertTrue(pass, "Something wrong! Test 2 got Exception with maxmum retries!");
     LOG.info("Test 2 succeeded! Time spent: "  + (timestamp2-timestamp)/1000.0 + " sec.");
     
     //
@@ -657,7 +654,7 @@ public class TestDFSClientRetries {
     timestamp = Time.now();
     pass = busyTest(xcievers, threads, fileLen, timeWin, retries);
     timestamp2 = Time.now();
-    assertTrue("Something wrong! Test 4 got Exception with maxmum retries!", pass);
+      assertTrue(pass, "Something wrong! Test 4 got Exception with maxmum retries!");
     LOG.info("Test 4 succeeded! Time spent: "  + (timestamp2-timestamp)/1000.0 + " sec.");
   }
 
@@ -692,10 +689,10 @@ public class TestDFSClientRetries {
                                          bufferSize,
                                          replicationFactor,
                                          blockSize);
-      
-      // verify that file exists in FS namespace
-      assertTrue(file1 + " should be a file", 
-                  fs.getFileStatus(file1).isFile());
+
+        // verify that file exists in FS namespace
+        assertTrue(
+                fs.getFileStatus(file1).isFile(), file1 + " should be a file");
       System.out.println("Path : \"" + file1 + "\"");
       LOG.info("Path : \"" + file1 + "\"");
 
@@ -706,10 +703,10 @@ public class TestDFSClientRetries {
 
       // verify that file size has changed to the full size
       long len = fs.getFileStatus(file1).getLen();
-      
-      assertTrue(file1 + " should be of size " + fileLen +
-                 " but found to be of size " + len, 
-                  len == fileLen);
+
+        assertTrue(
+                len == fileLen, file1 + " should be of size " + fileLen +
+                " but found to be of size " + len);
       
       // read back and check data integrigy
       byte[] read_buf = new byte[fileLen];
@@ -809,11 +806,11 @@ public class TestDFSClientRetries {
         in.close();
         fs.close();
 
-        assertTrue("hashed keys are not the same size",
-                   hash_sha.length == expected_sha.length);
+          assertTrue(
+                  hash_sha.length == expected_sha.length, "hashed keys are not the same size");
 
-        assertTrue("hashed keys are not equal",
-                   Arrays.equals(hash_sha, expected_sha));
+          assertTrue(
+                  Arrays.equals(hash_sha, expected_sha), "hashed keys are not equal");
         
         counter.inc(); // count this thread as successful
         
@@ -928,8 +925,8 @@ public class TestDFSClientRetries {
 
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, path);
       int blockFilesCorrupted = cluster.corruptBlockOnDataNodes(block);
-      assertEquals("All replicas not corrupted", REPL_FACTOR,
-          blockFilesCorrupted);
+        assertEquals(REPL_FACTOR,
+                blockFilesCorrupted, "All replicas not corrupted");
 
       InetSocketAddress nnAddr =
         new InetSocketAddress("localhost", cluster.getNameNodePort());
@@ -1107,13 +1104,13 @@ public class TestDFSClientRetries {
         final FSDataInputStream in = fs.open(file4);
         int count = 0;
         for(int r; (r = in.read()) != -1; count++) {
-          Assert.assertEquals(String.format("count=%d", count),
-              bytes[count % bytes.length], (byte)r);
+            Assertions.assertEquals(
+                    bytes[count % bytes.length], (byte) r, String.format("count=%d", count));
         }
         if (!isWebHDFS) {
-          Assert.assertEquals(5 * bytes.length, count);
+          Assertions.assertEquals(5 * bytes.length, count);
         } else {
-          Assert.assertEquals(2 * bytes.length, count);
+          Assertions.assertEquals(2 * bytes.length, count);
         }
         in.close();
       }

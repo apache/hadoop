@@ -28,8 +28,8 @@ import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
@@ -63,7 +63,7 @@ public class TestExternalBlockReader {
       IOUtils.readFully(stream, buf, 0, TEST_LENGTH);
       byte expected[] = DFSTestUtil.
           calculateFileContentsFromSeed(SEED, TEST_LENGTH);
-      Assert.assertArrayEquals(expected, buf);
+      Assertions.assertArrayEquals(expected, buf);
       stream.close();
     } finally {
       dfs.close();
@@ -293,36 +293,36 @@ public class TestExternalBlockReader {
       byte expected[] = DFSTestUtil.
           calculateFileContentsFromSeed(SEED, TEST_LENGTH);
       ReadStatistics stats = stream.getReadStatistics();
-      Assert.assertEquals(1024, stats.getTotalShortCircuitBytesRead());
-      Assert.assertEquals(2047, stats.getTotalLocalBytesRead());
-      Assert.assertEquals(2047, stats.getTotalBytesRead());
-      Assert.assertArrayEquals(expected, buf);
+      Assertions.assertEquals(1024, stats.getTotalShortCircuitBytesRead());
+      Assertions.assertEquals(2047, stats.getTotalLocalBytesRead());
+      Assertions.assertEquals(2047, stats.getTotalBytesRead());
+      Assertions.assertArrayEquals(expected, buf);
       stream.close();
       ExtendedBlock block = DFSTestUtil.getFirstBlock(dfs, new Path("/a"));
-      Assert.assertNotNull(block);
+      Assertions.assertNotNull(block);
       LinkedList<SyntheticReplicaAccessor> accessorList = accessors.get(uuid);
-      Assert.assertNotNull(accessorList);
-      Assert.assertEquals(3, accessorList.size());
+      Assertions.assertNotNull(accessorList);
+      Assertions.assertEquals(3, accessorList.size());
       SyntheticReplicaAccessor accessor = accessorList.get(0);
-      Assert.assertTrue(accessor.builder.allowShortCircuit);
-      Assert.assertEquals(block.getBlockPoolId(),
+      Assertions.assertTrue(accessor.builder.allowShortCircuit);
+      Assertions.assertEquals(block.getBlockPoolId(),
           accessor.builder.blockPoolId);
-      Assert.assertEquals(block.getBlockId(),
+      Assertions.assertEquals(block.getBlockId(),
           accessor.builder.blockId);
-      Assert.assertEquals(dfs.getClient().clientName,
+      Assertions.assertEquals(dfs.getClient().clientName,
           accessor.builder.clientName);
-      Assert.assertEquals("/a", accessor.builder.fileName);
-      Assert.assertEquals(block.getGenerationStamp(),
+      Assertions.assertEquals("/a", accessor.builder.fileName);
+      Assertions.assertEquals(block.getGenerationStamp(),
           accessor.getGenerationStamp());
-      Assert.assertTrue(accessor.builder.verifyChecksum);
-      Assert.assertEquals(1024L, accessor.builder.visibleLength);
-      Assert.assertEquals(24L, accessor.totalRead);
-      Assert.assertEquals("", accessor.getError());
-      Assert.assertEquals(1, accessor.numCloses);
+      Assertions.assertTrue(accessor.builder.verifyChecksum);
+      Assertions.assertEquals(1024L, accessor.builder.visibleLength);
+      Assertions.assertEquals(24L, accessor.totalRead);
+      Assertions.assertEquals("", accessor.getError());
+      Assertions.assertEquals(1, accessor.numCloses);
       byte[] tempBuf = new byte[5];
-      Assert.assertEquals(-1, accessor.read(TEST_LENGTH,
+      Assertions.assertEquals(-1, accessor.read(TEST_LENGTH,
             tempBuf, 0, 0));
-      Assert.assertEquals(-1, accessor.read(TEST_LENGTH,
+      Assertions.assertEquals(-1, accessor.read(TEST_LENGTH,
             tempBuf, 0, tempBuf.length));
       accessors.remove(uuid);
     } finally {

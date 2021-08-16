@@ -27,10 +27,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -148,10 +145,10 @@ public class TestGetConf {
       int ret = ToolRunner.run(new GetConf(conf, out, out), args);
       out.flush();
       System.err.println("Output: " + o.toString());
-      assertEquals("Expected " + (success?"success":"failure") +
-          " for args: " + Joiner.on(" ").join(args) + "\n" +
-          "Output: " + o.toString(),
-          success, ret == 0);
+        assertEquals(
+                success, ret == 0, "Expected " + (success ? "success" : "failure") +
+                " for args: " + Joiner.on(" ").join(args) + "\n" +
+                "Output: " + o.toString());
       return o.toString();
     } finally {
       o.close();
@@ -260,7 +257,7 @@ public class TestGetConf {
     for (Command cmd : Command.values()) {
       String arg = cmd.getName();
       CommandHandler handler = Command.getHandler(arg);
-      assertNotNull("missing handler: " + cmd, handler);
+        assertNotNull(handler, "missing handler: " + cmd);
       if (handler.key != null) {
         // First test with configuration missing the required key
         String[] args = {handler.key};

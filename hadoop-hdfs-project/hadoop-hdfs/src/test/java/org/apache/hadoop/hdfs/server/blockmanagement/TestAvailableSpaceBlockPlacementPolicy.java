@@ -34,11 +34,11 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestAvailableSpaceBlockPlacementPolicy {
   private final static int numRacks = 4;
@@ -55,7 +55,7 @@ public class TestAvailableSpaceBlockPlacementPolicy {
   private static BlockPlacementPolicy placementPolicy;
   private static NetworkTopology cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     conf = new HdfsConfiguration();
     conf.setFloat(
@@ -173,7 +173,7 @@ public class TestAvailableSpaceBlockPlacementPolicy {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownCluster() {
     if (namenode != null) {
       namenode.stop();

@@ -27,8 +27,8 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 public class TestDFSAddressConfig {
@@ -67,7 +67,7 @@ public class TestDFSAddressConfig {
      *------------------------------------------------------------------------*/
     for (int i = 0; i < dns.size(); i++) {
       DataNodeProperties dnp = cluster.stopDataNode(i);
-      assertNotNull("Should have been able to stop simulated datanode", dnp);
+        assertNotNull(dnp, "Should have been able to stop simulated datanode");
     }
 
     conf.unset(DFS_DATANODE_ADDRESS_KEY);
@@ -92,7 +92,7 @@ public class TestDFSAddressConfig {
      *------------------------------------------------------------------------*/
     for (int i = 0; i < dns.size(); i++) {
       DataNodeProperties dnp = cluster.stopDataNode(i);
-      assertNotNull("Should have been able to stop simulated datanode", dnp);
+        assertNotNull(dnp, "Should have been able to stop simulated datanode");
     }
 
     conf.set(DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");

@@ -36,8 +36,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -45,9 +45,7 @@ import org.mockito.stubbing.Answer;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
 import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +66,7 @@ public class TestObserverReadProxyProvider {
   private NameNodeAnswer[] namenodeAnswers;
   private String[] namenodeAddrs;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ns = "testcluster";
     nnURI = URI.create("hdfs://" + ns);

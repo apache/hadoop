@@ -48,9 +48,9 @@ import org.apache.hadoop.hdfs.server.namenode.IllegalReservedPathException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This tests data transfer protocol handling in the Datanode. It sends
@@ -161,7 +161,7 @@ public class TestDFSUpgradeFromImage {
       // The paths are expected to be listed in the same order 
       // as they are traversed here.
       assertEquals(info.path, path);
-      assertEquals("Checking checksum for " + path, info.checksum, checksum);
+        assertEquals(info.checksum, checksum, "Checking checksum for " + path);
     }
   }
   
@@ -251,9 +251,9 @@ public class TestDFSUpgradeFromImage {
 
     // Set up a fake NN storage that looks like an ancient Hadoop dir circa 0.3.0
     FileUtil.fullyDelete(namenodeStorage);
-    assertTrue("Make " + namenodeStorage, namenodeStorage.mkdirs());
+      assertTrue(namenodeStorage.mkdirs(), "Make " + namenodeStorage);
     File imageDir = new File(namenodeStorage, "image");
-    assertTrue("Make " + imageDir, imageDir.mkdirs());
+      assertTrue(imageDir.mkdirs(), "Make " + imageDir);
 
     // Hex dump of a formatted image from Hadoop 0.3.0
     File imageFile = new File(imageDir, "fsimage");
@@ -333,7 +333,7 @@ public class TestDFSUpgradeFromImage {
       }
       int md5failures = appender.countExceptionsWithMessage(
           " is corrupt with MD5 checksum of ");
-      assertEquals("Upgrade did not fail with bad MD5", 1, md5failures);
+        assertEquals(1, md5failures, "Upgrade did not fail with bad MD5");
     }
   }
 
@@ -395,10 +395,10 @@ public class TestDFSUpgradeFromImage {
           }
         }
         for (String s: expected) {
-          assertTrue("Did not find expected path " + s, found.contains(s));
+            assertTrue(found.contains(s), "Did not find expected path " + s);
         }
-        assertEquals("Found an unexpected path while listing filesystem",
-            found.size(), expected.length);
+          assertEquals(
+                  found.size(), expected.length, "Found an unexpected path while listing filesystem");
       }
     } finally {
       if (cluster != null) {
@@ -459,10 +459,10 @@ public class TestDFSUpgradeFromImage {
           }
         }
         for (String s: expected) {
-          assertTrue("Did not find expected path " + s, found.contains(s));
+            assertTrue(found.contains(s), "Did not find expected path " + s);
         }
-        assertEquals("Found an unexpected path while listing filesystem",
-            found.size(), expected.length);
+          assertEquals(
+                  found.size(), expected.length, "Found an unexpected path while listing filesystem");
       }
     } finally {
       if (cluster != null) {
@@ -554,10 +554,10 @@ public class TestDFSUpgradeFromImage {
           }
         }
         for (String s: expected) {
-          assertTrue("Did not find expected path " + s, found.contains(s));
+            assertTrue(found.contains(s), "Did not find expected path " + s);
         }
-        assertEquals("Found an unexpected path while listing filesystem",
-            found.size(), expected.length);
+          assertEquals(
+                  found.size(), expected.length, "Found an unexpected path while listing filesystem");
       }
     } finally {
       if (cluster != null) {

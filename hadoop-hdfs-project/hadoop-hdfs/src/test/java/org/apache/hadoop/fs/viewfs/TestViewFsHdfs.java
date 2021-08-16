@@ -36,13 +36,13 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestViewFsHdfs extends ViewFsBaseTest {
 
@@ -56,7 +56,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
   }
 
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
@@ -72,7 +72,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
   }
 
       
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -80,7 +80,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create the test root on local_fs
     fcTarget = fc;
@@ -160,7 +160,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     FileContext otherfs = map.get("user1");
     otherfs.mkdir(user1Path, FileContext.DEFAULT_PERM, false);
     String owner = otherfs.getFileStatus(user1Path).getOwner();
-    assertEquals("The owner did not match ", owner, userUgi.getShortUserName());
+      assertEquals(owner, userUgi.getShortUserName(), "The owner did not match ");
     otherfs.delete(user1Path, false);
   }
  

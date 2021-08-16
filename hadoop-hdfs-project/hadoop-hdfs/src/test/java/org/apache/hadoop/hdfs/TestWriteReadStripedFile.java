@@ -32,10 +32,10 @@ import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -72,7 +72,7 @@ public class TestWriteReadStripedFile {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
@@ -83,7 +83,7 @@ public class TestWriteReadStripedFile {
         ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -322,9 +322,9 @@ public class TestWriteReadStripedFile {
     }
     try {
       fs.concat(target, srcs);
-      Assert.fail("non-ec file shouldn't concat with ec file");
+      Assertions.fail("non-ec file shouldn't concat with ec file");
     } catch (RemoteException e){
-      Assert.assertTrue(e.getMessage()
+      Assertions.assertTrue(e.getMessage()
           .contains("have different erasure coding policy"));
     }
   }

@@ -29,19 +29,19 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.util.ExitUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 
 public class TestNNThroughputBenchmark {
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     ExitUtil.disableSystemExit();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
   }
@@ -153,10 +153,10 @@ public class TestNNThroughputBenchmark {
       listing = fsNamesystem.getListing("/", HdfsFileStatus.EMPTY_NAME, false);
       HdfsFileStatus[] partialListingAfter = listing.getPartialListing();
 
-      Assert.assertEquals(partialListing.length, partialListingAfter.length);
+      Assertions.assertEquals(partialListing.length, partialListingAfter.length);
       for (int i = 0; i < partialListing.length; i++) {
         //Check the modification time after append operation
-        Assert.assertNotEquals(partialListing[i].getModificationTime(),
+        Assertions.assertNotEquals(partialListing[i].getModificationTime(),
             partialListingAfter[i].getModificationTime());
       }
 

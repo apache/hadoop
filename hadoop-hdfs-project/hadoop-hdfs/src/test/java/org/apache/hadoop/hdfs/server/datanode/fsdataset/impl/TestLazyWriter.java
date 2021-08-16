@@ -23,8 +23,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,9 +33,9 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestLazyWriter extends LazyPersistTestCase {
   @Test
@@ -192,7 +192,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
         ensureFileReplicasOnStorageType(path, RAM_DISK);
     // Delete before persist
     client.delete(path.toString(), false);
-    Assert.assertFalse(fs.exists(path));
+    Assertions.assertFalse(fs.exists(path));
 
     assertThat(verifyDeletedBlocks(locatedBlocks), is(true));
 
@@ -218,7 +218,7 @@ public class TestLazyWriter extends LazyPersistTestCase {
 
     // Delete after persist
     client.delete(path.toString(), false);
-    Assert.assertFalse(fs.exists(path));
+    Assertions.assertFalse(fs.exists(path));
 
     assertThat(verifyDeletedBlocks(locatedBlocks), is(true));
     verifyRamDiskJMXMetric("RamDiskBlocksLazyPersisted", 1);

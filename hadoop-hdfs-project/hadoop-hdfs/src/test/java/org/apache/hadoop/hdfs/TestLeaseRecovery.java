@@ -16,11 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -57,8 +53,8 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public class TestLeaseRecovery {
   static final int BLOCK_SIZE = 1024;
@@ -67,7 +63,7 @@ public class TestLeaseRecovery {
 
   private MiniDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void shutdown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -172,7 +168,7 @@ public class TestLeaseRecovery {
     waitLeaseRecovery(cluster);
     // verify that we still cannot recover the lease
     LeaseManager lm = NameNodeAdapter.getLeaseManager(cluster.getNamesystem());
-    assertTrue("Found " + lm.countLease() + " lease, expected 1", lm.countLease() == 1);
+      assertTrue(lm.countLease() == 1, "Found " + lm.countLease() + " lease, expected 1");
     cluster.getNameNodeRpc().setSafeMode(
         HdfsConstants.SafeModeAction.SAFEMODE_LEAVE, false);
   }
@@ -232,7 +228,7 @@ public class TestLeaseRecovery {
     while (++count < 10 && !newdfs.recoverLease(file)) {
       Thread.sleep(1000);
     }
-    assertTrue("File should be closed", newdfs.recoverLease(file));
+      assertTrue(newdfs.recoverLease(file), "File should be closed");
 
     // Verify file length after lease recovery. The new file length should not
     // include the bytes with corrupted checksum.
@@ -281,8 +277,8 @@ public class TestLeaseRecovery {
     while (count++ < 15 && !newDfs.recoverLease(file)) {
       Thread.sleep(1000);
     }
-    // The lease should have been recovered.
-    assertTrue("File should be closed", newDfs.recoverLease(file));
+      // The lease should have been recovered.
+      assertTrue(newDfs.recoverLease(file), "File should be closed");
   }
 
   /**

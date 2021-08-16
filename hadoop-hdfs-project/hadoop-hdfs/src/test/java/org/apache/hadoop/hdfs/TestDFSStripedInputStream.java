@@ -40,11 +40,11 @@ import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
@@ -54,11 +54,7 @@ import java.util.List;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -88,7 +84,7 @@ public class TestDFSStripedInputStream {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     /*
      * Initialize erasure coding policy.
@@ -128,7 +124,7 @@ public class TestDFSStripedInputStream {
         .setErasureCodingPolicy(dirPath.toString(), ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -214,9 +210,9 @@ public class TestDFSStripedInputStream {
       int ret = in.read(startOffset, buf, 0, fileLen);
       assertEquals(remaining, ret);
       for (int i = 0; i < remaining; i++) {
-        Assert.assertEquals("Byte at " + (startOffset + i) + " should be the " +
-                "same",
-            expected[startOffset + i], buf[i]);
+          Assertions.assertEquals(
+                  expected[startOffset + i], buf[i], "Byte at " + (startOffset + i) + " should be the " +
+                  "same");
       }
     }
     in.close();

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -36,8 +36,8 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.function.Supplier;
@@ -61,7 +61,7 @@ public class TestIPCLoggerChannel {
   private static final int LIMIT_QUEUE_SIZE_BYTES =
       LIMIT_QUEUE_SIZE_MB * 1024 * 1024;
   
-  @Before
+  @BeforeEach
   public void setupMock() {
     conf.setInt(DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY,
         LIMIT_QUEUE_SIZE_MB);

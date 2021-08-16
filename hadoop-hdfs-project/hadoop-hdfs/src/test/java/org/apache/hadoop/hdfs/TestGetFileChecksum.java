@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 
@@ -25,10 +25,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestGetFileChecksum {
   private static final int BLOCKSIZE = 1024;
@@ -38,7 +38,7 @@ public class TestGetFileChecksum {
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
@@ -48,7 +48,7 @@ public class TestGetFileChecksum {
     dfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -69,7 +69,7 @@ public class TestGetFileChecksum {
 
     for (int i = 0; i < appendRounds + 1; i++) {
       FileChecksum checksum = dfs.getFileChecksum(foo, appendLength * (i+1));
-      Assert.assertTrue(checksum.equals(fc[i]));
+      Assertions.assertTrue(checksum.equals(fc[i]));
     }
   }
 
@@ -82,7 +82,7 @@ public class TestGetFileChecksum {
       fail("getFileChecksum should fail for files "
           + "with blocks under construction");
     } catch (IOException ie) {
-      Assert.assertTrue(ie.getMessage().contains(
+      Assertions.assertTrue(ie.getMessage().contains(
           "Fail to get checksum, since file /testFile "
               + "is under construction."));
     }

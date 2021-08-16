@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -60,10 +59,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Assert;
 import org.junit.Test;
-
-import static org.junit.Assume.assumeTrue;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * This tests InterDataNodeProtocol for block handling. 
@@ -116,8 +113,8 @@ public class TestInterDatanodeProtocol {
   public static void checkMetaInfo(ExtendedBlock b, DataNode dn) throws IOException {
     Block metainfo = DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
         b.getBlockPoolId(), b.getBlockId());
-    Assert.assertEquals(b.getBlockId(), metainfo.getBlockId());
-    Assert.assertEquals(b.getNumBytes(), metainfo.getNumBytes());
+    Assertions.assertEquals(b.getBlockId(), metainfo.getBlockId());
+    Assertions.assertEquals(b.getNumBytes(), metainfo.getNumBytes());
   }
 
   public static LocatedBlock getLastLocatedBlock(
@@ -222,10 +219,10 @@ public class TestInterDatanodeProtocol {
   }
 
   private static void assertEquals(ReplicaInfo originalInfo, ReplicaRecoveryInfo recoveryInfo) {
-    Assert.assertEquals(originalInfo.getBlockId(), recoveryInfo.getBlockId());
-    Assert.assertEquals(originalInfo.getGenerationStamp(), recoveryInfo.getGenerationStamp());
-    Assert.assertEquals(originalInfo.getBytesOnDisk(), recoveryInfo.getNumBytes());
-    Assert.assertEquals(originalInfo.getState(), recoveryInfo.getOriginalReplicaState());
+    Assertions.assertEquals(originalInfo.getBlockId(), recoveryInfo.getBlockId());
+    Assertions.assertEquals(originalInfo.getGenerationStamp(), recoveryInfo.getGenerationStamp());
+    Assertions.assertEquals(originalInfo.getBytesOnDisk(), recoveryInfo.getNumBytes());
+    Assertions.assertEquals(originalInfo.getState(), recoveryInfo.getOriginalReplicaState());
   }
 
   /** Test 
@@ -256,8 +253,8 @@ public class TestInterDatanodeProtocol {
       assertEquals(originalInfo, recoveryInfo);
 
       final ReplicaUnderRecovery updatedInfo = (ReplicaUnderRecovery)map.get(bpid, b);
-      Assert.assertEquals(originalInfo.getBlockId(), updatedInfo.getBlockId());
-      Assert.assertEquals(recoveryid, updatedInfo.getRecoveryID());
+      Assertions.assertEquals(originalInfo.getBlockId(), updatedInfo.getBlockId());
+      Assertions.assertEquals(recoveryid, updatedInfo.getRecoveryID());
 
       //recover one more time 
       final long recoveryid2 = gs + 2;
@@ -267,14 +264,14 @@ public class TestInterDatanodeProtocol {
       assertEquals(originalInfo, recoveryInfo2);
 
       final ReplicaUnderRecovery updatedInfo2 = (ReplicaUnderRecovery)map.get(bpid, b);
-      Assert.assertEquals(originalInfo.getBlockId(), updatedInfo2.getBlockId());
-      Assert.assertEquals(recoveryid2, updatedInfo2.getRecoveryID());
+      Assertions.assertEquals(originalInfo.getBlockId(), updatedInfo2.getBlockId());
+      Assertions.assertEquals(recoveryid2, updatedInfo2.getRecoveryID());
       
       //case RecoveryInProgressException
       try {
         FsDatasetImpl.initReplicaRecovery(bpid, map, b, recoveryid,
             DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_DEFAULT);
-        Assert.fail();
+        Assertions.fail();
       }
       catch(RecoveryInProgressException ripe) {
         System.out.println("GOOD: getting " + ripe);
@@ -287,7 +284,7 @@ public class TestInterDatanodeProtocol {
       ReplicaRecoveryInfo r = FsDatasetImpl.initReplicaRecovery(bpid, map, b,
           recoveryid,
           DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_DEFAULT);
-      Assert.assertNull("Data-node should not have this replica.", r);
+        Assertions.assertNull(r, "Data-node should not have this replica.");
     }
     
     { // BlockRecoveryFI_02: "THIS IS NOT SUPPOSED TO HAPPEN" with recovery id < gs  
@@ -296,7 +293,7 @@ public class TestInterDatanodeProtocol {
       try {
         FsDatasetImpl.initReplicaRecovery(bpid, map, b, recoveryid,
             DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_DEFAULT);
-        Assert.fail();
+        Assertions.fail();
       }
       catch(IOException ioe) {
         System.out.println("GOOD: getting " + ioe);
@@ -341,11 +338,11 @@ public class TestInterDatanodeProtocol {
       final LocatedBlock locatedblock = getLastLocatedBlock(
           DFSClientAdapter.getDFSClient(dfs).getNamenode(), filestr);
       final DatanodeInfo[] datanodeinfo = locatedblock.getLocations();
-      Assert.assertTrue(datanodeinfo.length > 0);
+      Assertions.assertTrue(datanodeinfo.length > 0);
 
       //get DataNode and FSDataset objects
       final DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
-      Assert.assertTrue(datanode != null);
+      Assertions.assertTrue(datanode != null);
 
       //initReplicaRecovery
       final ExtendedBlock b = locatedblock.getBlock();
@@ -358,7 +355,7 @@ public class TestInterDatanodeProtocol {
       //check replica
       final Replica replica =
           cluster.getFsDatasetTestUtils(datanode).fetchReplica(b);
-      Assert.assertEquals(ReplicaState.RUR, replica.getState());
+      Assertions.assertEquals(ReplicaState.RUR, replica.getState());
 
       //check meta data before update
       cluster.getFsDatasetTestUtils(datanode).checkStoredReplica(replica);
@@ -373,7 +370,7 @@ public class TestInterDatanodeProtocol {
           //update should fail
           fsdataset.updateReplicaUnderRecovery(tmp, recoveryid,
               tmp.getBlockId(), newlength);
-          Assert.fail();
+          Assertions.fail();
         } catch(IOException ioe) {
           System.out.println("GOOD: getting " + ioe);
         }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestDFSShellGenericOptions {
 
@@ -103,8 +103,8 @@ public class TestDFSShellGenericOptions {
       ToolRunner.run(shell, args);
       fs = FileSystem.get(DFSUtilClient.getNNUri(
           DFSUtilClient.getNNAddress(namenode)), shell.getConf());
-      assertTrue("Directory does not get created",
-                 fs.isDirectory(new Path("/data")));
+        assertTrue(
+                fs.isDirectory(new Path("/data")), "Directory does not get created");
       fs.delete(new Path("/data"), true);
     } catch (Exception e) {
       System.err.println(e.getMessage());

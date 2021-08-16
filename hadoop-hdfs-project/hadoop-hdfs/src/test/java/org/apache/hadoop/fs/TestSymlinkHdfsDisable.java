@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 

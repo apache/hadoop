@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -53,9 +53,9 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 /**
@@ -67,7 +67,7 @@ public class TestDiskError {
   private MiniDFSCluster cluster;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
@@ -79,7 +79,7 @@ public class TestDiskError {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -111,9 +111,9 @@ public class TestDiskError {
     storageDir = cluster.getInstanceStorageDir(dnIndex, 1);
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     try {
-      // make the data directory of the first datanode to be readonly
-      assertTrue("Couldn't chmod local vol", dir1.setReadOnly());
-      assertTrue("Couldn't chmod local vol", dir2.setReadOnly());
+        // make the data directory of the first datanode to be readonly
+        assertTrue(dir1.setReadOnly(), "Couldn't chmod local vol");
+        assertTrue(dir2.setReadOnly(), "Couldn't chmod local vol");
 
       // create files and make sure that first datanode will be down
       DataNode dn = cluster.getDataNodes().get(dnIndex);
@@ -145,7 +145,7 @@ public class TestDiskError {
     // get the block belonged to the created file
     LocatedBlocks blocks = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), fileName.toString(), 0, (long)fileLen);
-    assertEquals("Should only find 1 block", blocks.locatedBlockCount(), 1);
+      assertEquals(blocks.locatedBlockCount(), 1, "Should only find 1 block");
     LocatedBlock block = blocks.get(0);
 
     // bring up a second datanode
@@ -207,8 +207,8 @@ public class TestDiskError {
         for (FsVolumeSpi vol : volumes) {
           Path dataDir = new Path(vol.getStorageLocation().getNormalizedUri());
           FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
-          assertEquals("Permission for dir: " + dataDir + ", is " + actual +
-              ", while expected is " + expected, expected, actual);
+            assertEquals(expected, actual, "Permission for dir: " + dataDir + ", is " + actual +
+                    ", while expected is " + expected);
         }
       }
     }

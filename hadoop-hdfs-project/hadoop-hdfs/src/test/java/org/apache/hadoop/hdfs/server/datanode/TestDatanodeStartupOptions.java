@@ -21,11 +21,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * This test verifies DataNode command line processing.
@@ -69,7 +69,7 @@ public class TestDatanodeStartupOptions {
    * Reinitialize configuration before every test since DN stores the
    * parsed StartupOption in the configuration.
    */
-  @Before
+  @BeforeEach
   public void initConfiguration() {
     conf = new HdfsConfiguration();
   }

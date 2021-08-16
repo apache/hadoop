@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,10 +35,10 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 /**
@@ -63,7 +61,7 @@ public class TestDataNodeVolumeFailureToleration {
   @Rule
   public Timeout timeout = new Timeout(120 * 1000);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
@@ -81,7 +79,7 @@ public class TestDataNodeVolumeFailureToleration {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -122,14 +120,14 @@ public class TestDataNodeVolumeFailureToleration {
     cluster.waitActive();
 
     try {
-      assertTrue("The DN should have started up fine.",
-          cluster.isDataNodeUp());
+        assertTrue(
+                cluster.isDataNodeUp(), "The DN should have started up fine.");
       DataNode dn = cluster.getDataNodes().get(0);
       String si = DataNodeTestUtils.getFSDataset(dn).getStorageInfo();
-      assertTrue("The DN should have started with this directory",
-          si.contains(dataDir1Actual.getPath()));
-      assertFalse("The DN shouldn't have a bad directory.",
-          si.contains(dataDir2Actual.getPath()));
+        assertTrue(
+                si.contains(dataDir1Actual.getPath()), "The DN should have started with this directory");
+        assertFalse(
+                si.contains(dataDir2Actual.getPath()), "The DN shouldn't have a bad directory.");
     } finally {
       cluster.shutdownDataNodes();
       FileUtil.chmod(dataDir2.toString(), "755");
@@ -272,8 +270,8 @@ public class TestDataNodeVolumeFailureToleration {
   private void prepareDirToFail(File dir) throws IOException,
       InterruptedException {
     dir.mkdirs();
-    assertEquals("Couldn't chmod local vol", 0,
-        FileUtil.chmod(dir.toString(), "000"));
+      assertEquals(0,
+              FileUtil.chmod(dir.toString(), "000"), "Couldn't chmod local vol");
   }
 
   /**

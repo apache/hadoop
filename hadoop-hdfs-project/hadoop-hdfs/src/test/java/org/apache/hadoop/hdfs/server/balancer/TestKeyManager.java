@@ -26,12 +26,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -70,8 +69,8 @@ public class TestKeyManager {
         "timer", fakeTimer);
     final DataEncryptionKey dek = keyManager.newDataEncryptionKey();
     final long remainingTime = dek.expiryDate - fakeTimer.now();
-    assertEquals("KeyManager dataEncryptionKey should expire in 2 seconds",
-        keyUpdateInterval, remainingTime);
+      assertEquals(
+              keyUpdateInterval, remainingTime, "KeyManager dataEncryptionKey should expire in 2 seconds");
     // advance the timer to expire the block key and data encryption key
     fakeTimer.advance(keyUpdateInterval + 1);
 
@@ -79,8 +78,8 @@ public class TestKeyManager {
     // regenerate a valid data encryption key using the current block key.
     final DataEncryptionKey dekAfterExpiration =
         keyManager.newDataEncryptionKey();
-    assertNotEquals("KeyManager should generate a new data encryption key",
-        dek, dekAfterExpiration);
+      assertNotEquals(
+              dek, dekAfterExpiration, "KeyManager should generate a new data encryption key");
     assertTrue("KeyManager has an expired DataEncryptionKey!",
         dekAfterExpiration.expiryDate > fakeTimer.now());
   }

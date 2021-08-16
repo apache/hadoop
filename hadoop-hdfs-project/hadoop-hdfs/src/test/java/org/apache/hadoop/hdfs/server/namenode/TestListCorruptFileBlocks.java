@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -93,18 +93,18 @@ public class TestListCorruptFileBlocks {
       final NameNode namenode = cluster.getNameNode();
       Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode.
         getNamesystem().listCorruptFileBlocks("/", null);
-      assertEquals("Namenode has " + badFiles.size()
-          + " corrupt files. Expecting None.", 0, badFiles.size());
+        assertEquals(0, badFiles.size(), "Namenode has " + badFiles.size()
+                + " corrupt files. Expecting None.");
       assertCorruptFilesCount(cluster, badFiles.size());
 
       // Now deliberately corrupt one block
       String bpid = cluster.getNamesystem().getBlockPoolId();
       File storageDir = cluster.getInstanceStorageDir(0, 1);
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
-      assertTrue("data directory does not exist", data_dir.exists());
+        assertTrue(data_dir.exists(), "data directory does not exist");
       List<File> metaFiles = MiniDFSCluster.getAllBlockFiles(data_dir);
-      assertTrue("Data directory does not contain any blocks or there was an "
-          + "IO error", metaFiles != null && !metaFiles.isEmpty());
+        assertTrue(metaFiles != null && !metaFiles.isEmpty(), "Data directory does not contain any blocks or there was an "
+                + "IO error");
       File metaFile = metaFiles.get(0);
       RandomAccessFile file = new RandomAccessFile(metaFile, "rw");
       FileChannel channel = file.getChannel();
@@ -122,15 +122,15 @@ public class TestListCorruptFileBlocks {
       } catch (BlockMissingException e) {
         System.out.println("Received BlockMissingException as expected.");
       } catch (IOException e) {
-        assertTrue("Corrupted replicas not handled properly. Expecting BlockMissingException " +
-            " but received IOException " + e, false);
+          assertTrue(false, "Corrupted replicas not handled properly. Expecting BlockMissingException " +
+                  " but received IOException " + e);
       }
 
       // fetch bad file list from namenode. There should be one file.
       badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
-          "Expecting 1.", 1, badFiles.size());
+        assertEquals(1, badFiles.size(), "Namenode has " + badFiles.size() + " bad files. " +
+                "Expecting 1.");
       assertCorruptFilesCount(cluster, badFiles.size());
       util.cleanup(fs, "/srcdat10");
     } finally {
@@ -176,18 +176,18 @@ public class TestListCorruptFileBlocks {
       // fetch bad file list from namenode. There should be none.
       Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = 
         cluster.getNameNode().getNamesystem().listCorruptFileBlocks("/", null);
-      assertEquals("Namenode has " + badFiles.size()
-          + " corrupt files. Expecting None.", 0, badFiles.size());
+        assertEquals(0, badFiles.size(), "Namenode has " + badFiles.size()
+                + " corrupt files. Expecting None.");
       assertCorruptFilesCount(cluster, badFiles.size());
 
       // Now deliberately corrupt one block
       File storageDir = cluster.getInstanceStorageDir(0, 0);
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, 
           cluster.getNamesystem().getBlockPoolId());
-      assertTrue("data directory does not exist", data_dir.exists());
+        assertTrue(data_dir.exists(), "data directory does not exist");
       List<File> metaFiles = MiniDFSCluster.getAllBlockFiles(data_dir);
-      assertTrue("Data directory does not contain any blocks or there was an "
-          + "IO error", metaFiles != null && !metaFiles.isEmpty());
+        assertTrue(metaFiles != null && !metaFiles.isEmpty(), "Data directory does not contain any blocks or there was an "
+                + "IO error");
       File metaFile = metaFiles.get(0);
       RandomAccessFile file = new RandomAccessFile(metaFile, "rw");
       FileChannel channel = file.getChannel();
@@ -205,17 +205,17 @@ public class TestListCorruptFileBlocks {
       } catch (BlockMissingException e) {
         System.out.println("Received BlockMissingException as expected.");
       } catch (IOException e) {
-        assertTrue("Corrupted replicas not handled properly. " +
-                   "Expecting BlockMissingException " +
-                   " but received IOException " + e, false);
+          assertTrue(false, "Corrupted replicas not handled properly. " +
+                  "Expecting BlockMissingException " +
+                  " but received IOException " + e);
       }
 
       // fetch bad file list from namenode. There should be one file.
       badFiles = cluster.getNameNode().getNamesystem().
         listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
-          "Expecting 1.", 1, badFiles.size());
+        assertEquals(1, badFiles.size(), "Namenode has " + badFiles.size() + " bad files. " +
+                "Expecting 1.");
       assertCorruptFilesCount(cluster, badFiles.size());
  
       // restart namenode
@@ -238,22 +238,22 @@ public class TestListCorruptFileBlocks {
       } catch (BlockMissingException e) {
         System.out.println("Received BlockMissingException as expected.");
       } catch (IOException e) {
-        assertTrue("Corrupted replicas not handled properly. " +
-                   "Expecting BlockMissingException " +
-                   " but received IOException " + e, false);
+          assertTrue(false, "Corrupted replicas not handled properly. " +
+                  "Expecting BlockMissingException " +
+                  " but received IOException " + e);
       }
 
       // fetch bad file list from namenode. There should be one file.
       badFiles = cluster.getNameNode().getNamesystem().
         listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
-          "Expecting 1.", 1, badFiles.size());
+        assertEquals(1, badFiles.size(), "Namenode has " + badFiles.size() + " bad files. " +
+                "Expecting 1.");
       assertCorruptFilesCount(cluster, badFiles.size());
 
-      // check that we are still in safe mode
-      assertTrue("Namenode is not in safe mode", 
-                 cluster.getNameNode().isInSafeMode());
+        // check that we are still in safe mode
+        assertTrue(
+                cluster.getNameNode().isInSafeMode(), "Namenode is not in safe mode");
 
       // now leave safe mode so that we can clean up
       cluster.getNameNodeRpc().setSafeMode(
@@ -310,9 +310,9 @@ public class TestListCorruptFileBlocks {
           for (File metadataFile : metadataFiles) {
             File blockFile = Block.metaToBlockFile(metadataFile);
             LOG.info("Deliberately removing file " + blockFile.getName());
-            assertTrue("Cannot remove file.", blockFile.delete());
+              assertTrue(blockFile.delete(), "Cannot remove file.");
             LOG.info("Deliberately removing file " + metadataFile.getName());
-            assertTrue("Cannot remove file.", metadataFile.delete());
+              assertTrue(metadataFile.delete(), "Cannot remove file.");
             // break;
           }
         }
@@ -423,9 +423,9 @@ public class TestListCorruptFileBlocks {
         for (File metadataFile : metadataFiles) {
           File blockFile = Block.metaToBlockFile(metadataFile);
           LOG.info("Deliberately removing file " + blockFile.getName());
-          assertTrue("Cannot remove file.", blockFile.delete());
+            assertTrue(blockFile.delete(), "Cannot remove file.");
           LOG.info("Deliberately removing file " + metadataFile.getName());
-          assertTrue("Cannot remove file.", metadataFile.delete());
+            assertTrue(metadataFile.delete(), "Cannot remove file.");
           // break;
         }
       }
@@ -483,9 +483,9 @@ public class TestListCorruptFileBlocks {
       final NameNode namenode = cluster.getNameNode();
       Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode.
         getNamesystem().listCorruptFileBlocks("/srcdat2", null);
-      assertEquals(
-          "Namenode has " + badFiles.size() + " corrupt files. Expecting none.",
-          0, badFiles.size());
+        assertEquals(
+                0, badFiles.size(),
+                "Namenode has " + badFiles.size() + " corrupt files. Expecting none.");
       assertCorruptFilesCount(cluster, badFiles.size());
 
       // Now deliberately blocks from all files
@@ -501,8 +501,8 @@ public class TestListCorruptFileBlocks {
             continue;
           for (File metadataFile : metadataFiles) {
             File blockFile = Block.metaToBlockFile(metadataFile);
-            assertTrue("Cannot remove file.", blockFile.delete());
-            assertTrue("Cannot remove file.", metadataFile.delete());
+              assertTrue(blockFile.delete(), "Cannot remove file.");
+              assertTrue(metadataFile.delete(), "Cannot remove file.");
           }
         }
       }
@@ -530,19 +530,19 @@ public class TestListCorruptFileBlocks {
       badFiles = namenode.getNamesystem().
         listCorruptFileBlocks("/srcdat2", null); 
       LOG.info("Namenode has bad files. " + badFiles.size());
-      assertEquals("Namenode has " + badFiles.size() + " bad files. " +
-          "Expecting " + maxCorruptFileBlocks + ".", maxCorruptFileBlocks,
-          badFiles.size());
+        assertEquals(maxCorruptFileBlocks,
+                badFiles.size(), "Namenode has " + badFiles.size() + " bad files. " +
+                "Expecting " + maxCorruptFileBlocks + ".");
 
       CorruptFileBlockIterator iter = (CorruptFileBlockIterator)
         fs.listCorruptFileBlocks(new Path("/srcdat2"));
       int corruptPaths = countPaths(iter);
-      assertTrue("Expected more than " + maxCorruptFileBlocks +
-                 " corrupt file blocks but got " + corruptPaths,
-                 corruptPaths > maxCorruptFileBlocks);
-      assertTrue("Iterator should have made more than 1 call but made " +
-                 iter.getCallsMade(),
-                 iter.getCallsMade() > 1);
+        assertTrue(
+                corruptPaths > maxCorruptFileBlocks, "Expected more than " + maxCorruptFileBlocks +
+                " corrupt file blocks but got " + corruptPaths);
+        assertTrue(
+                iter.getCallsMade() > 1, "Iterator should have made more than 1 call but made " +
+                iter.getCallsMade());
 
       util.cleanup(fs, "/srcdat2");
     } finally {
@@ -591,9 +591,9 @@ public class TestListCorruptFileBlocks {
         for (File metadataFile : metadataFiles) {
           File blockFile = Block.metaToBlockFile(metadataFile);
           LOG.info("Deliberately removing file " + blockFile.getName());
-          assertTrue("Cannot remove file.", blockFile.delete());
+            assertTrue(blockFile.delete(), "Cannot remove file.");
           LOG.info("Deliberately removing file " + metadataFile.getName());
-          assertTrue("Cannot remove file.", metadataFile.delete());
+            assertTrue(metadataFile.delete(), "Cannot remove file.");
         }
       }
 
@@ -610,7 +610,7 @@ public class TestListCorruptFileBlocks {
       }
       // Validate we get all the corrupt files
       LOG.info("Namenode has bad files. " + numCorrupt);
-      assertEquals("Failed to get corrupt files!", 3, numCorrupt);
+        assertEquals(3, numCorrupt, "Failed to get corrupt files!");
 
       util.cleanup(fs, "corruptData");
     } finally {
@@ -628,7 +628,7 @@ public class TestListCorruptFileBlocks {
   private void assertCorruptFilesCount(MiniDFSCluster cluster,
       int expectedCorrupt) {
     FSNamesystem fs = cluster.getNameNode().getNamesystem();
-    assertEquals("Incorrect number of corrupt files returned", expectedCorrupt,
-        fs.getCorruptFilesCount());
+      assertEquals(expectedCorrupt,
+              fs.getCorruptFilesCount(), "Incorrect number of corrupt files returned");
   }
 }

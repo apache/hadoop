@@ -34,17 +34,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import javax.security.auth.login.LoginException;
 
@@ -74,7 +68,7 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
     return new FileSystemTestHelper(TEST_TEMP_PATH);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
@@ -93,7 +87,7 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
     fsDefault = FS_HDFS[FS_INDEX_DEFAULT];
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -101,7 +95,7 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fsDefault;
     super.setUp();
@@ -191,9 +185,9 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
       fail("Shouldn't allow both merge slash link and regular link on same "
           + "mount table.");
     } catch (IOException e) {
-      assertTrue("Unexpected error message: " + e.getMessage(),
-          e.getMessage().contains(expectedErrorMsg1) || e.getMessage()
-              .contains(expectedErrorMsg2));
+        assertTrue(
+                e.getMessage().contains(expectedErrorMsg1) || e.getMessage()
+                        .contains(expectedErrorMsg2), "Unexpected error message: " + e.getMessage());
     }
   }
 
@@ -226,9 +220,9 @@ public class TestViewFileSystemLinkMergeSlash extends ViewFileSystemBaseTest {
         LINK_MERGE_SLASH_CLUSTER_1_NAME, "/", null, null);
     FileSystem fs = FileSystem.get(viewFsUri, conf);
     FileSystem[] childFs = fs.getChildFileSystems();
-    Assert.assertEquals("Unexpected number of child filesystems!",
-        1, childFs.length);
-    Assert.assertEquals("Unexpected child filesystem!",
-        DistributedFileSystem.class, childFs[0].getClass());
+      Assertions.assertEquals(
+              1, childFs.length, "Unexpected number of child filesystems!");
+      Assertions.assertEquals(
+              DistributedFileSystem.class, childFs[0].getClass(), "Unexpected child filesystem!");
   }
 }

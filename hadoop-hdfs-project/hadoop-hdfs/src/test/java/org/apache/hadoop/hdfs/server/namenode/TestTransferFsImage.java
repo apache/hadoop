@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -78,9 +76,9 @@ public class TestTransferFsImage {
       fail("Didn't get an exception!");
     } catch (IOException ioe) {
       Mockito.verify(mockStorage).reportErrorOnFile(localPath.get(0));
-      assertTrue(
-          "Unexpected exception: " + StringUtils.stringifyException(ioe),
-          ioe.getMessage().contains("Unable to download to any storage"));
+        assertTrue(
+                ioe.getMessage().contains("Unable to download to any storage"),
+                "Unexpected exception: " + StringUtils.stringifyException(ioe));
     } finally {
       cluster.shutdown();      
     }
@@ -110,8 +108,8 @@ public class TestTransferFsImage {
 
       TransferFsImage.getFileClient(fsName, id, localPaths, mockStorage, false);      
       Mockito.verify(mockStorage).reportErrorOnFile(localPaths.get(0));
-      assertTrue("The valid local file should get saved properly",
-          localPaths.get(1).length() > 0);
+        assertTrue(
+                localPaths.get(1).length() > 0, "The valid local file should get saved properly");
     } finally {
       cluster.shutdown();      
     }
@@ -134,7 +132,7 @@ public class TestTransferFsImage {
             null, false);
         fail("TransferImage Should fail with timeout");
       } catch (SocketTimeoutException e) {
-        assertEquals("Read should timeout", "Read timed out", e.getMessage());
+          assertEquals("Read timed out", e.getMessage(), "Read should timeout");
       }
     } finally {
       if (testServer != null) {
@@ -177,7 +175,7 @@ public class TestTransferFsImage {
             NameNodeFile.IMAGE, 1L);
         fail("TransferImage Should fail with timeout");
       } catch (SocketTimeoutException e) {
-        assertEquals("Upload should timeout", "Read timed out", e.getMessage());
+          assertEquals("Read timed out", e.getMessage(), "Upload should timeout");
       }
     } finally {
       testServer.stop();

@@ -19,10 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -56,8 +53,8 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test to ensure requests from dead datnodes are rejected by namenode with
@@ -68,7 +65,7 @@ public class TestDeadDatanode {
       LoggerFactory.getLogger(TestDeadDatanode.class);
   private MiniDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void cleanup() {
     if (cluster != null) {
       cluster.shutdown();
@@ -179,8 +176,8 @@ public class TestDeadDatanode {
         clientNode, new HashSet<>(), 256 * 1024 * 1024L, null, (byte) 7,
         BlockType.CONTIGUOUS, null, null);
     for (DatanodeStorageInfo datanodeStorageInfo : results) {
-      assertFalse("Dead node should not be chosen", datanodeStorageInfo
-          .getDatanodeDescriptor().equals(clientNode));
+        assertFalse(datanodeStorageInfo
+                .getDatanodeDescriptor().equals(clientNode), "Dead node should not be chosen");
     }
   }
 
@@ -206,11 +203,11 @@ public class TestDeadDatanode {
           .getDatanode(dn2.getDatanodeId());
       dn1.setHeartbeatsDisabledForTests(true);
       cluster.setDataNodeDead(dn1.getDatanodeId());
-      assertEquals("Capacity shouldn't include DeadNode", dn2Desc.getCapacity(),
-          cluster.getNamesystem(0).getCapacityTotal());
-      assertEquals("NonDFS-used shouldn't include DeadNode",
-          dn2Desc.getNonDfsUsed(),
-          cluster.getNamesystem(0).getNonDfsUsedSpace());
+        assertEquals(dn2Desc.getCapacity(),
+                cluster.getNamesystem(0).getCapacityTotal(), "Capacity shouldn't include DeadNode");
+        assertEquals(
+                dn2Desc.getNonDfsUsed(),
+                cluster.getNamesystem(0).getNonDfsUsedSpace(), "NonDFS-used shouldn't include DeadNode");
       // Wait for re-registration and heartbeat
       dn1.setHeartbeatsDisabledForTests(false);
       final DatanodeDescriptor dn1Desc = cluster.getNamesystem(0)
@@ -222,11 +219,11 @@ public class TestDeadDatanode {
           return dn1Desc.isAlive() && dn1Desc.isHeartbeatedSinceRegistration();
         }
       }, 100, 5000);
-      assertEquals("Capacity should be 0 after all DNs dead", initialCapacity,
-          cluster.getNamesystem(0).getCapacityTotal());
+        assertEquals(initialCapacity,
+                cluster.getNamesystem(0).getCapacityTotal(), "Capacity should be 0 after all DNs dead");
       long nonDfsAfterReg = cluster.getNamesystem(0).getNonDfsUsedSpace();
-      assertEquals("NonDFS should include actual DN NonDFSUsed",
-          dn1Desc.getNonDfsUsed() + dn2Desc.getNonDfsUsed(), nonDfsAfterReg);
+        assertEquals(
+                dn1Desc.getNonDfsUsed() + dn2Desc.getNonDfsUsed(), nonDfsAfterReg, "NonDFS should include actual DN NonDFSUsed");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

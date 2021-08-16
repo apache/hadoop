@@ -27,6 +27,8 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
@@ -45,10 +47,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   {
@@ -68,7 +70,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     return fileSystem;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() {
     final Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
@@ -100,7 +102,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -134,7 +136,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     Assert.assertFalse(exists(fSys, paths[2]));
 
     FileStatus fileStatus = fSys.getFileStatus(catPath);
-    Assert.assertEquals(1024*4, fileStatus.getLen());
+    assertEquals(1024*4, fileStatus.getLen());
   }
 
   @Test
@@ -152,16 +154,16 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
 
     boolean isReady = fSys.truncate(file, newLength);
 
-    Assert.assertTrue("Recovery is not expected.", isReady);
+      assertTrue(isReady, "Recovery is not expected.");
 
     FileStatus fileStatus = fSys.getFileStatus(file);
-    Assert.assertEquals(fileStatus.getLen(), newLength);
+    assertEquals(fileStatus.getLen(), newLength);
     AppendTestUtil.checkFullFile(fSys, file, newLength, data, file.toString());
 
     ContentSummary cs = fSys.getContentSummary(dir);
-    Assert.assertEquals("Bad disk space usage", cs.getSpaceConsumed(),
-        newLength * repl);
-    Assert.assertTrue("Deleted", fSys.delete(dir, true));
+      assertEquals(cs.getSpaceConsumed(),
+              newLength * repl, "Bad disk space usage");
+      Assert.assertTrue(fSys.delete(dir, true), "Deleted");
   }
 
   // Test that WebHdfsFileSystem.jsonParse() closes the connection's input
@@ -196,11 +198,11 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     doReturn(myIn).when(spyConn).getInputStream();
 
     try {
-      Assert.assertFalse(closedInputStream);
+      assertFalse(closedInputStream);
       WebHdfsFileSystem.jsonParse(spyConn, false);
-      Assert.assertTrue(closedInputStream);
+      assertTrue(closedInputStream);
     } catch(IOException ioe) {
-      junit.framework.TestCase.fail();
+      fail();
     }
     conn.disconnect();
   }
@@ -218,7 +220,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     Path testSubDir = getTestRootPath(fSys, "test/hadoop/file/subdir");
     try {
       fSys.mkdirs(testSubDir);
-      Assert.fail("Should throw IOException.");
+      fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
     }
@@ -231,7 +233,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     Path testDeepSubDir = getTestRootPath(fSys, "test/hadoop/file/deep/sub/dir");
     try {
       fSys.mkdirs(testDeepSubDir);
-      Assert.fail("Should throw IOException.");
+      fail("Should throw IOException.");
     } catch (IOException e) {
       // expected
     }

@@ -47,8 +47,8 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.LazyPersistTestCase;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -74,8 +74,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LAZY_PERSIST_FILE_SCRUB_INTERVAL_SEC;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Some long running Balancer tasks.
@@ -98,7 +98,7 @@ public class TestBalancerLongRunningTasks {
   private final static Path FILE_PATH = new Path(FILE_NAME);
   private MiniDFSCluster cluster;
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -651,23 +651,23 @@ public class TestBalancerLongRunningTasks {
       maxUsage = Math.max(maxUsage, datanodeReport[i].getDfsUsed());
     }
 
-    // The 95% usage DN will have 9 blocks of 100B and 1 block of 50B - all for the same file.
-    // The HDFS balancer will choose a block to move from this node randomly. More likely it will
-    // be 100B block. Since 100B is greater than DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY which is 99L,
-    // it will stop here. Total bytes moved from this 95% DN will be 1 block of size 100B.
-    // However, chances are the first block selected to be moved from this 95% DN is the 50B block.
-    // After this block is moved, the total moved size so far would be 50B which is smaller than
-    // DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY (99L), hence it will try to move another block.
-    // The second block will always be of size 100B. So total bytes moved from this 95% DN will be
-    // 2 blocks of size (100B + 50B) 150B.
-    // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
-    // a) 2 blocks of total size (100B + 100B)
-    // b) 3 blocks of total size (50B + 100B + 100B)
-    assertTrue("BalancerResult is not as expected. " + balancerResult,
-        (balancerResult.getBytesAlreadyMoved() == 200
-            && balancerResult.getBlocksMoved() == 2)
-            || (balancerResult.getBytesAlreadyMoved() == 250
-            && balancerResult.getBlocksMoved() == 3));
+      // The 95% usage DN will have 9 blocks of 100B and 1 block of 50B - all for the same file.
+      // The HDFS balancer will choose a block to move from this node randomly. More likely it will
+      // be 100B block. Since 100B is greater than DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY which is 99L,
+      // it will stop here. Total bytes moved from this 95% DN will be 1 block of size 100B.
+      // However, chances are the first block selected to be moved from this 95% DN is the 50B block.
+      // After this block is moved, the total moved size so far would be 50B which is smaller than
+      // DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY (99L), hence it will try to move another block.
+      // The second block will always be of size 100B. So total bytes moved from this 95% DN will be
+      // 2 blocks of size (100B + 50B) 150B.
+      // Hence, overall total blocks moved by HDFS balancer would be either of these 2 options:
+      // a) 2 blocks of total size (100B + 100B)
+      // b) 3 blocks of total size (50B + 100B + 100B)
+      assertTrue(
+              (balancerResult.getBytesAlreadyMoved() == 200
+                      && balancerResult.getBlocksMoved() == 2)
+                      || (balancerResult.getBytesAlreadyMoved() == 250
+                      && balancerResult.getBlocksMoved() == 3), "BalancerResult is not as expected. " + balancerResult);
     // 100% and 95% used nodes will be balanced, so top used will be 900
     assertEquals(900, maxUsage);
   }
@@ -723,14 +723,14 @@ public class TestBalancerLongRunningTasks {
           LOG.info("NNC to work on: " + nnc);
           Balancer b = new Balancer(nnc, bParams, conf);
           Balancer.Result r = b.runOneIteration();
-          // Since no block can be moved in 500 milli-seconds (i.e.,
-          // 4MB/s * 0.5s = 2MB < 10MB), NO_MOVE_PROGRESS will be reported.
-          // When a block move is not canceled in 500 ms properly
-          // (highly unlikely) and then a block is moved unexpectedly,
-          // IN_PROGRESS will be reported. This is highly unlikely unexpected
-          // case. See HDFS-15989.
-          assertEquals("We expect ExitStatus.NO_MOVE_PROGRESS to be reported.",
-              ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus());
+            // Since no block can be moved in 500 milli-seconds (i.e.,
+            // 4MB/s * 0.5s = 2MB < 10MB), NO_MOVE_PROGRESS will be reported.
+            // When a block move is not canceled in 500 ms properly
+            // (highly unlikely) and then a block is moved unexpectedly,
+            // IN_PROGRESS will be reported. This is highly unlikely unexpected
+            // case. See HDFS-15989.
+            assertEquals(
+                    ExitStatus.NO_MOVE_PROGRESS, r.getExitStatus(), "We expect ExitStatus.NO_MOVE_PROGRESS to be reported.");
           assertEquals(0, r.getBlocksMoved());
         }
       } finally {

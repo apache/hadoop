@@ -28,11 +28,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY;
 
 /**
@@ -53,7 +53,7 @@ public class TestNameNodeRetryCacheMetrics {
   private RetryCacheMetrics metrics;
 
   /** Start a cluster */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, true);
@@ -74,7 +74,7 @@ public class TestNameNodeRetryCacheMetrics {
    * Cleanup after the test
    * @throws IOException
    **/
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -98,9 +98,9 @@ public class TestNameNodeRetryCacheMetrics {
   }
 
   private void checkMetrics(long hit, long cleared, long updated) {
-    assertEquals("CacheHit", hit, metrics.getCacheHit());
-    assertEquals("CacheCleared", cleared, metrics.getCacheCleared());
-    assertEquals("CacheUpdated", updated, metrics.getCacheUpdated());
+      assertEquals(hit, metrics.getCacheHit(), "CacheHit");
+      assertEquals(cleared, metrics.getCacheCleared(), "CacheCleared");
+      assertEquals(updated, metrics.getCacheUpdated(), "CacheUpdated");
   }
 
   private void trySaveNamespace() throws IOException {

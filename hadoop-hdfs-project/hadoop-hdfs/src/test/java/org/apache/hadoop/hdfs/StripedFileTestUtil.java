@@ -37,7 +37,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +55,7 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class StripedFileTestUtil {
   public static final Logger LOG =
@@ -77,7 +77,7 @@ public class StripedFileTestUtil {
   static void verifyLength(FileSystem fs, Path srcPath, int fileLength)
       throws IOException {
     FileStatus status = fs.getFileStatus(srcPath);
-    assertEquals("File length should be the same", fileLength, status.getLen());
+      assertEquals(fileLength, status.getLen(), "File length should be the same");
   }
 
   static void verifyPread(DistributedFileSystem fs, Path srcPath,
@@ -109,9 +109,9 @@ public class StripedFileTestUtil {
           offset += target;
         }
         for (int i = 0; i < fileLength - startOffset; i++) {
-          assertEquals("Byte at " + (startOffset + i) + " is different, "
-              + "the startOffset is " + startOffset, expected[startOffset + i],
-              result[i]);
+            assertEquals(expected[startOffset + i],
+                    result[i], "Byte at " + (startOffset + i) + " is different, "
+                    + "the startOffset is " + startOffset);
         }
       }
     }
@@ -127,8 +127,8 @@ public class StripedFileTestUtil {
         System.arraycopy(buf, 0, result, readLen, ret);
         readLen += ret;
       }
-      assertEquals("The length of file should be the same to write size", fileLength, readLen);
-      Assert.assertArrayEquals(expected, result);
+        assertEquals(fileLength, readLen, "The length of file should be the same to write size");
+      Assertions.assertArrayEquals(expected, result);
     }
   }
 
@@ -144,8 +144,8 @@ public class StripedFileTestUtil {
         result.put(buf);
         buf.clear();
       }
-      assertEquals("The length of file should be the same to write size", fileLength, readLen);
-      Assert.assertArrayEquals(expected, result.array());
+        assertEquals(fileLength, readLen, "The length of file should be the same to write size");
+      Assertions.assertArrayEquals(expected, result.array());
     }
   }
 
@@ -185,14 +185,14 @@ public class StripedFileTestUtil {
       if (!(in.getWrappedStream() instanceof WebHdfsInputStream)) {
         try {
           in.seek(-1);
-          Assert.fail("Should be failed if seek to negative offset");
+          Assertions.fail("Should be failed if seek to negative offset");
         } catch (EOFException e) {
           // expected
         }
 
         try {
           in.seek(fileLength + 1);
-          Assert.fail("Should be failed if seek after EOF");
+          Assertions.fail("Should be failed if seek after EOF");
         } catch (EOFException e) {
           // expected
         }
@@ -206,8 +206,8 @@ public class StripedFileTestUtil {
     byte[] buf = new byte[writeBytes - pos];
     IOUtils.readFully(fsdis, buf, 0, buf.length);
     for (int i = 0; i < buf.length; i++) {
-      assertEquals("Byte at " + i + " should be the same",
-          StripedFileTestUtil.getByte(pos + i), buf[i]);
+        assertEquals(
+                StripedFileTestUtil.getByte(pos + i), buf[i], "Byte at " + i + " should be the same");
     }
   }
 
@@ -225,7 +225,7 @@ public class StripedFileTestUtil {
       final DatanodeInfo[] datanodes = streamer.getNodes();
       if (datanodes != null) {
         assertEquals(1, datanodes.length);
-        Assert.assertNotNull(datanodes[0]);
+        Assertions.assertNotNull(datanodes[0]);
         return datanodes[0];
       }
       try {
@@ -377,13 +377,13 @@ public class StripedFileTestUtil {
     final int parityBlkNum = ecPolicy.getNumParityUnits();
     int index = 0;
     for (LocatedBlock firstBlock : lbs.getLocatedBlocks()) {
-      Assert.assertTrue(firstBlock instanceof LocatedStripedBlock);
+      Assertions.assertTrue(firstBlock instanceof LocatedStripedBlock);
 
       final long gs = firstBlock.getBlock().getGenerationStamp();
       final long oldGS = oldGSList != null ? oldGSList.get(index++) : -1L;
       final String s = "gs=" + gs + ", oldGS=" + oldGS;
       LOG.info(s);
-      Assert.assertTrue(s, gs >= oldGS);
+        Assertions.assertTrue(gs >= oldGS, s);
 
       LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(
           (LocatedStripedBlock) firstBlock, cellSize,
@@ -456,7 +456,7 @@ public class StripedFileTestUtil {
         for (int posInBlk = 0; posInBlk < actual.length; posInBlk++) {
           final long posInFile = StripedBlockUtil.offsetInBlkToOffsetInBG(
               cellSize, dataBlkNum, posInBlk, i) + groupPosInFile;
-          Assert.assertTrue(posInFile < length);
+          Assertions.assertTrue(posInFile < length);
           final byte expected = getByte(posInFile);
 
           if (killed) {
@@ -466,7 +466,7 @@ public class StripedFileTestUtil {
               String s = "expected=" + expected + " but actual=" + actual[posInBlk]
                   + ", posInFile=" + posInFile + ", posInBlk=" + posInBlk
                   + ". group=" + group + ", i=" + i;
-              Assert.fail(s);
+              Assertions.fail(s);
             }
           }
         }
@@ -507,12 +507,12 @@ public class StripedFileTestUtil {
     try {
       encoder.encode(dataBytes, expectedParityBytes);
     } catch (IOException e) {
-      Assert.fail("Unexpected IOException: " + e.getMessage());
+      Assertions.fail("Unexpected IOException: " + e.getMessage());
     }
     for (int i = 0; i < parityBytes.length; i++) {
       if (checkSet.contains(i + dataBytes.length)){
-        Assert.assertArrayEquals("i=" + i, expectedParityBytes[i],
-            parityBytes[i]);
+          Assertions.assertArrayEquals(expectedParityBytes[i],
+                  parityBytes[i], "i=" + i);
       }
     }
   }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class to test Admin Helper.
@@ -28,11 +28,11 @@ public class TestAdminHelper {
   @Test
   public void prettifyExceptionWithNpe() {
     String pretty = AdminHelper.prettifyException(new NullPointerException());
-    Assert.assertTrue(
-        "Prettified exception message doesn't contain the required exception "
-            + "message",
-        pretty.startsWith("NullPointerException at org.apache.hadoop.hdfs.tools"
-            + ".TestAdminHelper.prettifyExceptionWithNpe"));
+      Assertions.assertTrue(
+              pretty.startsWith("NullPointerException at org.apache.hadoop.hdfs.tools"
+                      + ".TestAdminHelper.prettifyExceptionWithNpe"),
+              "Prettified exception message doesn't contain the required exception "
+                      + "message");
   }
 
   @Test
@@ -42,7 +42,7 @@ public class TestAdminHelper {
         new IllegalArgumentException("Something is wrong",
             new IllegalArgumentException("Something is illegal")));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "IllegalArgumentException: Something is wrong",
         pretty);
 
