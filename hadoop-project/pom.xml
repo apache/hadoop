@@ -88,7 +88,7 @@
     <protobuf.version>2.5.0</protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <zookeeper.version>3.4.13</zookeeper.version>
+    <zookeeper.version>3.4.14</zookeeper.version>
     <curator.version>2.13.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>2.1.7</dnsjava.version>
