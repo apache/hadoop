@@ -36,8 +36,6 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
-import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
@@ -47,7 +45,6 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
 import org.apache.hadoop.util.Time;
@@ -1180,14 +1177,6 @@ public class SequenceFile {
           new Metadata() : metadataOption.getValue();
       this.compress = compressionTypeOption.getValue();
       final CompressionCodec codec = compressionTypeOption.getCodec();
-      if (codec != null &&
-          (codec instanceof GzipCodec) &&
-          !NativeCodeLoader.isNativeCodeLoaded() &&
-          !ZlibFactory.isNativeZlibLoaded(conf)) {
-        throw new IllegalArgumentException("SequenceFile doesn't work with " +
-                                           "GzipCodec without native-hadoop " +
-                                           "code!");
-      }
       this.syncInterval = (syncIntervalOption == null) ?
           SYNC_INTERVAL :
           syncIntervalOption.getValue();
