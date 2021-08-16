@@ -919,8 +919,12 @@
           </exclusion>
         </exclusions>
       </dependency>
-
-
+      <dependency>
+        <groupId>io.opentelemetry.javaagent</groupId>
+        <artifactId>opentelemetry-javaagent</artifactId>
+        <version>${opentelemetry-instrumentation.version}</version>
+        <classifier>all</classifier>
+      </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
@@ -1757,12 +1761,6 @@
         <groupId>org.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4-java.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.opentelemetry.javaagent</groupId>
-        <artifactId>opentelemetry-javaagent</artifactId>
-        <version>${opentelemetry-instrumentation.version}</version>
-        <classifier>all</classifier>
       </dependency>
     </dependencies>
   </dependencyManagement>

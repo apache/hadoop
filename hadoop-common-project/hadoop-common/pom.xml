@@ -376,12 +376,6 @@
       <artifactId>opentelemetry-api</artifactId>
       <version>${opentelemetry.version}</version>
     </dependency>
-    <dependency>
-      <groupId>io.opentelemetry.javaagent</groupId>
-      <artifactId>opentelemetry-javaagent</artifactId>
-      <version>${opentelemetry-instrumentation.version}</version>
-      <classifier>all</classifier>
-    </dependency>
   </dependencies>
 
   <build>
