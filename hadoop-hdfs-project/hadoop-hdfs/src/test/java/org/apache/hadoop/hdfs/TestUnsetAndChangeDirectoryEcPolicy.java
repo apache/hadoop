@@ -94,6 +94,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final int numBlocks = 1;
     final int fileLen = blockGroupSize * numBlocks;
     final Path dirPath = new Path("/striped");
+    final Path subDirPath = new Path(dirPath, "sub_dir");
     final Path ecFilePath = new Path(dirPath, "ec_file");
     final Path replicateFilePath = new Path(dirPath, "3x_file");
 
@@ -107,6 +108,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     // Set EC policy on directory
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
+    fs.mkdirs(subDirPath);
     DFSTestUtil.createFile(fs, ecFilePath, fileLen, (short) 1, 0L);
     fs.unsetErasureCodingPolicy(dirPath);
     DFSTestUtil.createFile(fs, replicateFilePath, fileLen, (short) 1, 0L);
@@ -121,6 +123,11 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     tempEcPolicy = fs.getErasureCodingPolicy(replicateFilePath);
     Assert.assertNull("Replicate file should not have erasure coding policy!",
         tempEcPolicy);
+
+    // Subdirectory should not return erasure coding policy
+    tempEcPolicy = fs.getErasureCodingPolicy(subDirPath);
+    Assert.assertNull("Subdirectory should no have erasure coding policy set!",
+            tempEcPolicy);
 
     // Directory should not return erasure coding policy
     tempEcPolicy = fs.getErasureCodingPolicy(dirPath);
