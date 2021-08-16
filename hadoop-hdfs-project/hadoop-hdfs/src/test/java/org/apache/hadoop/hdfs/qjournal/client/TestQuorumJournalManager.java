@@ -1130,22 +1130,24 @@ public class TestQuorumJournalManager {
 
   @Test
   public void testGetJournalAddressListWithResolution() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setBoolean(
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED, true);
-    conf.set(
+    configuration.set(
         DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL,
         MockDomainNameResolver.class.getName());
 
-    URI uriWithDomain = URI.create("qjournal://" + MockDomainNameResolver.DOMAIN + ":1234" + "/testns");
-    List<InetSocketAddress> result = Util.getAddressesList(uriWithDomain, conf);
+    URI uriWithDomain = URI.create("qjournal://"
+        + MockDomainNameResolver.DOMAIN + ":1234" + "/testns");
+    List<InetSocketAddress> result = Util.getAddressesList(uriWithDomain, configuration);
     assertEquals(2, result.size());
     assertEquals(new InetSocketAddress(MockDomainNameResolver.FQDN_1, 1234), result.get(0));
     assertEquals(new InetSocketAddress(MockDomainNameResolver.FQDN_2, 1234), result.get(1));
 
-    uriWithDomain = URI.create("qjournal://" + MockDomainNameResolver.UNKNOW_DOMAIN + ":1234" + "/testns");
+    uriWithDomain = URI.create("qjournal://"
+        + MockDomainNameResolver.UNKNOW_DOMAIN + ":1234" + "/testns");
     try{
-      Util.getAddressesList(uriWithDomain, conf);
+      Util.getAddressesList(uriWithDomain, configuration);
       fail("Should throw unknown host exception.");
     } catch (UnknownHostException e) {
       // expected
