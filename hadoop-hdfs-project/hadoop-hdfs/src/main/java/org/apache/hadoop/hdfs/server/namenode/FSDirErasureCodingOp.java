@@ -186,7 +186,7 @@ final class FSDirErasureCodingOp {
     // check whether the directory already has an erasure coding policy
     // directly on itself.
     final Boolean hasEcXAttr =
-        getErasureCodingPolicyXAttrForINode(fsn, inode) == null ? false : true;
+        getErasureCodingPolicyXAttrForINode(fsn, inode, srcIIP.getPathSnapshotId()) == null ? false : true;
     final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
     xattrs.add(ecXAttr);
     final EnumSet<XAttrSetFlag> flag = hasEcXAttr ?
@@ -329,7 +329,7 @@ final class FSDirErasureCodingOp {
 
     // Check whether the directory has a specific erasure coding policy
     // directly on itself.
-    final XAttr ecXAttr = getErasureCodingPolicyXAttrForINode(fsn, inode);
+    final XAttr ecXAttr = getErasureCodingPolicyXAttrForINode(fsn, inode, srcIIP.getPathSnapshotId());
     if (ecXAttr == null) {
       return null;
     }
@@ -486,7 +486,7 @@ final class FSDirErasureCodingOp {
   }
 
   private static XAttr getErasureCodingPolicyXAttrForINode(
-      FSNamesystem fsn, INode inode) throws IOException {
+      FSNamesystem fsn, INode inode, int snapshotId) throws IOException {
     // INode can be null
     if (inode == null) {
       return null;
@@ -500,7 +500,7 @@ final class FSDirErasureCodingOp {
       if (inode.isSymlink()) {
         return null;
       }
-      final XAttrFeature xaf = inode.getXAttrFeature();
+      final XAttrFeature xaf = inode.getXAttrFeature(snapshotId);
       if (xaf != null) {
         XAttr xattr = xaf.getXAttr(XATTR_ERASURECODING_POLICY);
         if (xattr != null) {
