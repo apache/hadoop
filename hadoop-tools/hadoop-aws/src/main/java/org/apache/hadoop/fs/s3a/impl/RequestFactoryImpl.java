@@ -119,6 +119,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final PrepareRequest requestPreparer;
 
   /**
+   * Content encoding (null for none).
+   */
+  private final String contentEncoding;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -130,6 +135,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.multipartPartCountLimit = builder.multipartPartCountLimit;
     this.requesterPays = builder.requesterPays;
     this.requestPreparer = builder.requestPreparer;
+    this.contentEncoding = builder.contentEncoding;
   }
 
   /**
@@ -194,6 +200,15 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   /**
+   * Get the content encoding (e.g. gzip) or return null if none.
+   * @return content encoding
+   */
+  @Override
+  public String getContentEncoding() {
+    return contentEncoding;
+  }
+
+  /**
    * Sets server side encryption parameters to the part upload
    * request when encryption is enabled.
    * @param request upload part request
@@ -238,6 +253,8 @@ public class RequestFactoryImpl implements RequestFactory {
    * @param metadata to update.
    */
   protected void setOptionalObjectMetadata(ObjectMetadata metadata) {
+    final String contentEncoding =
+      getContentEncoding();
     final S3AEncryptionMethods algorithm
         = getServerSideEncryptionAlgorithm();
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
@@ -586,6 +603,9 @@ public class RequestFactoryImpl implements RequestFactory {
     /** Requester Pays flag. */
     private boolean requesterPays = false;
 
+    /** Content Encoding. */
+    private String contentEncoding = null;
+
     /**
      * Multipart limit.
      */
@@ -605,6 +625,16 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactory build() {
       return new RequestFactoryImpl(this);
+    }
+
+    /**
+     * Content encoding.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withContentEncoding(final String value) {
+      contentEncoding = value;
+      return this;
     }
 
     /**
