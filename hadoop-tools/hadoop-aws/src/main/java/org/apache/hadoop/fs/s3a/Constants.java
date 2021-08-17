@@ -410,6 +410,10 @@ public final class Constants {
   public static final String CANNED_ACL = "fs.s3a.acl.default";
   public static final String DEFAULT_CANNED_ACL = "";
 
+  // gzip, deflate, compress, br, etc.
+  public static final String CONTENT_ENCODING = "fs.s3a.contentEncoding";
+  public static final String DEFAULT_CONTENT_ENCODING = null;
+
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";
