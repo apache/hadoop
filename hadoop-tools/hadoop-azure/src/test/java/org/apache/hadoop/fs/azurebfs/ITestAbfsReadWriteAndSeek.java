@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,11 +36,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FASTPATH_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
@@ -100,7 +103,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result = -1;
-    boolean errCaseForUnsuppFastpathBuffSize =  ((bufferSize > 16 * ONE_MB) &&
+    boolean isUnsuppFastpathBuffSize =  ((bufferSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE) &&
         (fs.getAbfsStore().getAbfsConfiguration().isFastpathEnabled() ||
             isMockFastpathTest));
     try (FSDataInputStream inputStream = isMockFastpathTest
@@ -111,26 +114,26 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
               fs.getFileSystemId(), FSOperationType.READ, true, 0,
               ((AbfsInputStream) inputStream.getWrappedStream())
                   .getStreamID()));
-      inputStream.seek(bufferSize);
-      if (errCaseForUnsuppFastpathBuffSize) {
-        intercept(UnsupportedOperationException.class,
-            ()-> {
-              inputStream.read(readBuffer, bufferSize, bufferSize);
-            });
-      } else {
-        result = inputStream.read(readBuffer, bufferSize, bufferSize);
-        assertNotEquals(-1, result);
-        inputStream.seek(0);
-        result = inputStream.read(readBuffer, 0, bufferSize);
+      if (isUnsuppFastpathBuffSize) {
+        Assertions.assertThat(TestAbfsInputStream.isFastpathEnabled(
+            (AbfsInputStream) (inputStream.getWrappedStream())))
+            .describedAs("Fastpath session should be disabled "
+                + "automatically for unsupported buffer size")
+            .isFalse();
       }
+
+      inputStream.seek(bufferSize);
+      result = inputStream.read(readBuffer, bufferSize, bufferSize);
+      assertNotEquals(-1, result);
+      inputStream.seek(0);
+      result = inputStream.read(readBuffer, 0, bufferSize);
     }
 
-    if (!errCaseForUnsuppFastpathBuffSize) {
-      assertNotEquals("data read in final read()", -1, result);
-      assertArrayEquals(readBuffer, b);
-    }
+    assertNotEquals("data read in final read()", -1, result);
+    assertArrayEquals(readBuffer, b);
     if (isMockFastpathTest) {
-    MockFastpathConnection.unregisterAppend(testPath.getName());}
+      MockFastpathConnection.unregisterAppend(testPath.getName());
+    }
   }
 
   @Test
