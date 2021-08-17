@@ -27,6 +27,8 @@
 #include <chrono>
 #include <exception>
 
+#include "utils/temp-dir.h"
+
 static const char *hdfs_11294_core_site_txt =
 "<configuration>\n"
 "  <property name=\"fs.defaultFS\" value=\"hdfs://NAMESERVICE1\"/>\n"
@@ -78,7 +80,7 @@ namespace hdfs {
 // Make sure we can set up a mini-cluster and connect to it
 TEST(ConfigConnectBugs, Test_HDFS_11294) {
   // Directory for hdfs config
-  TempDir td;
+  TestUtils::TempDir td;
 
   const std::string &tempDirPath = td.GetPath();
   const std::string coreSitePath = tempDirPath + "/core-site.xml";
