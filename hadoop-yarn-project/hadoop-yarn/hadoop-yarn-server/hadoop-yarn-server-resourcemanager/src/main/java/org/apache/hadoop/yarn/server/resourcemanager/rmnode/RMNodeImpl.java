@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.keyvalue.DefaultMapEntry;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -1354,8 +1355,23 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           initialState.equals(NodeState.DECOMMISSIONING);
       if (isNodeDecommissioning) {
         List<ApplicationId> keepAliveApps = statusEvent.getKeepAliveAppIds();
+        // hasScheduledAMContainers solves the following race condition -
+        // 1. launch AM container on a node with 0 containers.
+        // 2. gracefully decommission this node.
+        // 3. Node heartbeats to RM. In StatusUpdateWhenHealthyTransition,
+        //    rmNode.runningApplications will be empty as it is updated after
+        //    call to RMNodeImpl.deactivateNode. This will cause the node to be
+        //    deactivated even though container is running on it and hence kill
+        //    all containers running on it.
+        // In order to avoid such race conditions the ground truth is retrieved
+        // from the scheduler before deactivating a DECOMMISSIONING node.
+        // Only AM containers are considered as AM container reattempts can
+        // cause application failures if max attempts is set to 1.
         if (rmNode.runningApplications.isEmpty() &&
-            (keepAliveApps == null || keepAliveApps.isEmpty())) {
+            (keepAliveApps == null || keepAliveApps.isEmpty()) &&
+            !hasScheduledAMContainers(rmNode)) {
+          LOG.info("No containers running on " + rmNode.nodeId + ". "
+              + "Attempting to deactivate decommissioning node.");
           RMNodeImpl.deactivateNode(rmNode, NodeState.DECOMMISSIONED);
           return NodeState.DECOMMISSIONED;
         }
@@ -1400,6 +1416,17 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       }
 
       return initialState;
+    }
+
+    /**
+     * Checks if the scheduler has scheduled any AMs on the given node.
+     * @return true if node has any AM scheduled on it.
+     */
+    private boolean hasScheduledAMContainers(RMNodeImpl rmNode) {
+      return rmNode.context.getScheduler()
+          .getSchedulerNode(rmNode.getNodeID())
+          .getCopiedListOfRunningContainers()
+          .stream().anyMatch(RMContainer::isAMContainer);
     }
   }
 
