@@ -30,12 +30,11 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -56,6 +55,7 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
@@ -91,10 +91,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   private String fileSystemName;
   private String accountName;
   private String testUrl;
-  private AuthType authType;
   private boolean useConfiguredFileSystem = false;
   private boolean usingFilesystemForSASTests = false;
+  private static final int SHORTENED_GUID_LEN = 12;
 
+  protected AuthType authType;
   protected List<String> mockFastpathFilesToRegister = new ArrayList<String>();
 
   protected AbstractAbfsIntegrationTest() throws Exception {
@@ -282,7 +283,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     // so first create temporary instance of the filesystem using SharedKey
     // then re-use the filesystem it creates with SAS auth instead of SharedKey.
     AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-    Assert.assertTrue(tempFs.exists(new Path("/")));
+    ContractTestUtils.assertPathExists(tempFs, "This path should exist",
+        new Path("/"));
     abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
     usingFilesystemForSASTests = true;
   }
@@ -456,7 +458,20 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected Path path(String filepath) throws IOException {
     return getFileSystem().makeQualified(
-        new Path(getTestPath(), filepath));
+        new Path(getTestPath(), getUniquePath(filepath)));
+  }
+
+  /**
+   * Generate a unique path using the given filepath.
+   * @param filepath path string
+   * @return unique path created from filepath and a GUID
+   */
+  protected Path getUniquePath(String filepath) {
+    if (filepath.equals("/")) {
+      return new Path(filepath);
+    }
+    return new Path(filepath + StringUtils
+        .right(UUID.randomUUID().toString(), SHORTENED_GUID_LEN));
   }
 
   /**

@@ -110,6 +110,15 @@
       <artifactId>zookeeper</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
@@ -123,7 +132,7 @@
     </dependency>
     <dependency>
       <groupId>com.zaxxer</groupId>
-      <artifactId>HikariCP-java7</artifactId>
+      <artifactId>HikariCP</artifactId>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>

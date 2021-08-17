@@ -123,6 +123,12 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_READ_BUFFER_SIZE)
   private int readBufferSize;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_AHEAD_RANGE,
+      MinValue = MIN_BUFFER_SIZE,
+      MaxValue = MAX_BUFFER_SIZE,
+      DefaultValue = DEFAULT_READ_AHEAD_RANGE)
+  private int readAheadRange;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_FASTPATH_ENABLE,
       DefaultValue = DEFAULT_FASTPATH_ENABLE)
   private boolean enableFastpath;
@@ -904,6 +910,10 @@ public class AbfsConfiguration{
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
     }
+  }
+
+  public int getReadAheadRange() {
+    return this.readAheadRange;
   }
 
   int validateInt(Field field) throws IllegalAccessException, InvalidConfigurationValueException {

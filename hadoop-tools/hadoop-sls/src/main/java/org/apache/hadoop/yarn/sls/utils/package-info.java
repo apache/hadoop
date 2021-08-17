@@ -15,11 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.registry.client.impl.zk;
-
 /**
- *
+ * Utility classes for SLS.
  */
-public interface ListenerHandle {
-  void remove();
-}
+package org.apache.hadoop.yarn.sls.utils;

@@ -17,7 +17,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
+
+import static org.junit.Assume.assumeTrue;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
@@ -34,6 +37,8 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
 
   public TestAbfsFastpath() throws Exception {
     super();
+    assumeTrue("Fastpath supported only for OAuth auth type",
+        authType == AuthType.OAuth);
   }
 
   @Test

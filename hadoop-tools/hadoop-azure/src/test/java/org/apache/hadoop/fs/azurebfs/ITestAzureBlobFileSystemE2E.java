@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -53,14 +55,14 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testWriteOneByteToFile() throws Exception {
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
   }
 
   @Test
   public void testReadWriteBytesToFile() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
     try(FSDataInputStream inputStream = fs.open(testFilePath,
             TEST_DEFAULT_BUFFER_SIZE)) {
@@ -79,7 +81,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final byte[] b = new byte[2 * readBufferSize];
     new Random().nextBytes(b);
 
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
     try(FSDataOutputStream writeStream = fs.create(testFilePath)) {
       writeStream.write(b);
       writeStream.flush();
@@ -108,7 +110,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     byte[] bytesToRead = new byte[readBufferSize];
     final byte[] b = new byte[2 * readBufferSize];
     new Random().nextBytes(b);
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
 
     try (FSDataOutputStream writeStream = fs.create(testFilePath)) {
       writeStream.write(b);
@@ -131,7 +133,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   @Test
   public void testWriteWithBufferOffset() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
 
     final byte[] b = new byte[1024 * 1000];
     new Random().nextBytes(b);
@@ -152,7 +154,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   @Test
   public void testReadWriteHeavyBytesToFileWithSmallerChunks() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
 
     final byte[] writeBuffer = new byte[5 * 1000 * 1024];
     new Random().nextBytes(writeBuffer);
@@ -172,50 +174,51 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   @Test
   public void testReadWithFileNotFoundException() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
 
-    FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
-    fs.delete(testFilePath, true);
-    assertFalse(fs.exists(testFilePath));
+    try (FSDataInputStream inputStream = fs.open(testFilePath,
+        TEST_DEFAULT_BUFFER_SIZE)) {
+      fs.delete(testFilePath, true);
+      assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
-    intercept(FileNotFoundException.class,
-            () -> inputStream.read(new byte[1]));
+      intercept(FileNotFoundException.class, () -> inputStream.read(new byte[1]));
+    }
   }
 
   @Test
   public void testWriteWithFileNotFoundException() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
 
-    FSDataOutputStream stream = fs.create(testFilePath);
-    assertTrue(fs.exists(testFilePath));
-    stream.write(TEST_BYTE);
+    try (FSDataOutputStream stream = fs.create(testFilePath)) {
+      assertPathExists(fs, "Path should exist", testFilePath);
+      stream.write(TEST_BYTE);
 
-    fs.delete(testFilePath, true);
-    assertFalse(fs.exists(testFilePath));
+      fs.delete(testFilePath, true);
+      assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
-    // trigger append call
-    intercept(FileNotFoundException.class,
-            () -> stream.close());
+      // trigger append call
+      intercept(FileNotFoundException.class, () -> stream.close());
+    }
   }
 
   @Test
   public void testFlushWithFileNotFoundException() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    final Path testFilePath = new Path(methodName.getMethodName());
+    final Path testFilePath = path(methodName.getMethodName());
     if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
       return;
     }
 
-    FSDataOutputStream stream = fs.create(testFilePath);
-    assertTrue(fs.exists(testFilePath));
+    try (FSDataOutputStream stream = fs.create(testFilePath)) {
+      assertPathExists(fs, "This path should exist", testFilePath);
 
-    fs.delete(testFilePath, true);
-    assertFalse(fs.exists(testFilePath));
+      fs.delete(testFilePath, true);
+      assertPathDoesNotExist(fs, "This path should not exist", testFilePath);
 
-    intercept(FileNotFoundException.class,
-            () -> stream.close());
+      intercept(FileNotFoundException.class, () -> stream.close());
+    }
   }
 
   private void testWriteOneByteToFile(Path testFilePath) throws Exception {

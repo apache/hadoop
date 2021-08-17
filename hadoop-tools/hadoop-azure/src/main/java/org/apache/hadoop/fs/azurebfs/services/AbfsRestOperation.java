@@ -316,13 +316,18 @@ public class AbfsRestOperation {
                 client.getAccessToken());
           }
 
+          tracingContext.constructHeader(httpOperation);
           break;
         case SAS:
           httpOperation  = new AbfsHttpConnection(url, method, requestHeaders);
           // do nothing; the SAS token should already be appended to the query string
+          httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+          tracingContext.constructHeader(httpOperation);
           break;
         case SharedKey:
           httpOperation  = new AbfsHttpConnection(url, method, requestHeaders);
+          // Construct correlation header before sharedKeyCred sign
+          tracingContext.constructHeader(httpOperation);
           // sign the HTTP request
           LOG.debug("Signing request with shared key");
           // sign the HTTP request
@@ -331,8 +336,6 @@ public class AbfsRestOperation {
               hasRequestBody ? bufferLength : 0);
           break;
       }
-
-      tracingContext.constructHeader(httpOperation);
 
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
     } catch (IOException e) {

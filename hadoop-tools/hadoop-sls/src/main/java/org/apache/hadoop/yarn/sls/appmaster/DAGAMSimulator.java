@@ -189,7 +189,8 @@ public class DAGAMSimulator extends AMSimulator {
               appId, container.getId());
           assignedContainers.put(container.getId(), cs);
           se.getNmMap().get(container.getNodeId())
-              .addNewContainer(container, cs.getLifeTime());
+              .addNewContainer(container, cs.getLifeTime(), appId);
+          getRanNodes().add(container.getNodeId());
         }
       }
     }

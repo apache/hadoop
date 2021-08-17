@@ -533,6 +533,9 @@ public class MiniDFSCluster implements AutoCloseable {
           DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
       this.storagesPerDatanode =
           FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      conf.setLong(DFSConfigKeys
+          .DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY,
+          0);
     }
   }
   

@@ -56,20 +56,15 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
   public void testMockFastpathAbfsStreamOps() throws Exception {
     // Run mock test only if feature is set to off
     Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    Path smallOperationsFile = new Path("testOneReadWriteOps_mock");
-    Path largeOperationsFile = new Path("testLargeReadWriteOps_mock");
-    testAbfsStreamOps(smallOperationsFile, largeOperationsFile, true);
+    testAbfsStreamOps(true);
   }
 
   @Test
   public void testAbfsStreamOps() throws Exception {
-    Path smallOperationsFile = new Path("testOneReadWriteOps");
-    Path largeOperationsFile = new Path("testLargeReadWriteOps");
-    testAbfsStreamOps(smallOperationsFile, largeOperationsFile, false);
+    testAbfsStreamOps(false);
   }
 
-  public void testAbfsStreamOps(Path smallOperationsFile,
-      Path largeOperationsFile, boolean isMockFastpathTest) throws Exception {
+  public void testAbfsStreamOps(boolean isMockFastpathTest) throws Exception {
     describe("Test to see correct population of read and write operations in "
         + "Abfs");
 
@@ -77,6 +72,10 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     configuration.set(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(configuration);//getFileSystem();
+
+    Path smallOperationsFile = path("testOneReadWriteOps");
+    Path largeOperationsFile = path("testLargeReadWriteOps");
+
     FileSystem.Statistics statistics = fs.getFsStatistics();
     String testReadWriteOps = "test this";
     statistics.reset();

@@ -193,6 +193,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final String namespace;
   private final int topUsersCount; // e.g., report top 10 users' metrics
   private static final double PRECISION = 0.0001;
+  private final TimeUnit metricsTimeUnit;
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
   private final Map<String, Integer> staticPriorities = new HashMap<>();
@@ -266,6 +267,8 @@ public class DecayRpcScheduler implements RpcScheduler,
         DecayRpcSchedulerDetailedMetrics.create(ns);
     decayRpcSchedulerDetailedMetrics.init(numLevels);
 
+    metricsTimeUnit = RpcMetrics.getMetricsTimeUnit(conf);
+
     // Setup delay timer
     Timer timer = new Timer(true);
     DecayTask task = new DecayTask(this, timer);
@@ -279,6 +282,18 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<CostProvider> providers = conf.getInstances(
         ns + "." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY,
         CostProvider.class);
+
+    if (providers.size() < 1) {
+      String[] nsPort = ns.split("\\.");
+      if (nsPort.length == 2) {
+        // Only if ns is split with ".", we can separate namespace and port.
+        // In the absence of "ipc.<port>.cost-provider.impl" property,
+        // we look up "ipc.cost-provider.impl" property.
+        providers = conf.getInstances(
+            nsPort[0] + "." + CommonConfigurationKeys.IPC_COST_PROVIDER_KEY,
+            CostProvider.class);
+      }
+    }
 
     if (providers.size() < 1) {
       LOG.info("CostProvider not specified, defaulting to DefaultCostProvider");
@@ -299,6 +314,18 @@ public class DecayRpcScheduler implements RpcScheduler,
     List<IdentityProvider> providers = conf.getInstances(
       ns + "." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
       IdentityProvider.class);
+
+    if (providers.size() < 1) {
+      String[] nsPort = ns.split("\\.");
+      if (nsPort.length == 2) {
+        // Only if ns is split with ".", we can separate namespace and port.
+        // In the absence of "ipc.<port>.identity-provider.impl" property,
+        // we look up "ipc.identity-provider.impl" property.
+        providers = conf.getInstances(
+            nsPort[0] + "." + CommonConfigurationKeys.IPC_IDENTITY_PROVIDER_KEY,
+            IdentityProvider.class);
+      }
+    }
 
     if (providers.size() < 1) {
       LOG.info("IdentityProvider not specified, " +
@@ -725,8 +752,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
-    long processingTime = details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+    long queueTime = details.get(Timing.QUEUE, metricsTimeUnit);
+    long processingTime = details.get(Timing.PROCESSING,
+        metricsTimeUnit);
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);

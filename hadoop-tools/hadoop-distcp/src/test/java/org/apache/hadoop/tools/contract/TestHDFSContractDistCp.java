@@ -30,8 +30,9 @@ import java.io.IOException;
  * Verifies that the HDFS passes all the tests in
  * {@link AbstractContractDistCpTest}.
  * As such, it acts as an in-module validation of this contract test itself.
+ * It does skip the large file test cases for speed.
  */
-public class OptionalTestHDFSContractDistCp extends AbstractContractDistCpTest {
+public class TestHDFSContractDistCp extends AbstractContractDistCpTest {
 
   @BeforeClass
   public static void createCluster() throws IOException {
@@ -46,5 +47,15 @@ public class OptionalTestHDFSContractDistCp extends AbstractContractDistCpTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new HDFSContract(conf);
+  }
+
+  /**
+   * Turn off the large file tests as they are very slow and there
+   * are many other distcp to HDFS tests which verify such things.
+   * @return 0
+   */
+  @Override
+  protected int getDefaultDistCPSizeKb() {
+    return 0;
   }
 }

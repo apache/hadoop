@@ -83,6 +83,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    * @see #read(long, byte[], int, int)
    */
   private final boolean bufferedPreadDisabled;
+  // User configured size of read ahead.
+  private final int readAheadRange;
 
   private boolean firstRead = true;
   // SAS tokens can be re-used until they expire
@@ -113,6 +115,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
+  /**
+   * This is the actual position within the object, used by
+   * lazy seek to decide whether to seek on the next read or not.
+   */
+  private long nextReadPos;
 
   protected AbfsFastpathSession fastpathSession = null;
 
@@ -132,6 +139,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
+    this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = true;
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
@@ -236,6 +244,28 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     incrementReadOps();
     do {
+
+      // limit is the maximum amount of data present in buffer.
+      // fCursor is the current file pointer. Thus maximum we can
+      // go back and read from buffer is fCursor - limit.
+      // There maybe case that we read less than requested data.
+      long filePosAtStartOfBuffer = fCursor - limit;
+      if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
+        // Determining position in buffer from where data is to be read.
+        bCursor = (int) (nextReadPos - filePosAtStartOfBuffer);
+
+        // When bCursor == limit, buffer will be filled again.
+        // So in this case we are not actually reading from buffer.
+        if (bCursor != limit && streamStatistics != null) {
+          streamStatistics.seekInBuffer();
+        }
+      } else {
+        // Clearing the buffer and setting the file pointer
+        // based on previous seek() call.
+        fCursor = nextReadPos;
+        limit = 0;
+        bCursor = 0;
+      }
       if (shouldReadFully()) {
         lastReadBytes = readFileCompletely(b, currentOff, currentLen);
       } else if (shouldReadLastBlock()) {
@@ -294,9 +324,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       } else {
         // Enable readAhead when reading sequentially
         if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+          LOG.debug("Sequential read with read ahead size of {}", bufferSize);
           bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
         } else {
-          bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
+          // Enabling read ahead for random reads as well to reduce number of remote calls.
+          int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
+          LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
+          bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);
         }
       }
       if (firstRead) {
@@ -430,6 +464,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int bytesToRead = min(len, bytesRemaining);
     System.arraycopy(buffer, bCursor, b, off, bytesToRead);
     bCursor += bytesToRead;
+    nextReadPos += bytesToRead;
     if (statistics != null) {
       statistics.incrementBytesRead(bytesToRead);
     }
@@ -513,6 +548,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
+      if (streamStatistics != null) {
+        streamStatistics.remoteReadOperation();
+      }
 
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       AbfsFastpathSessionInfo fastpathSessionInfo = ((fastpathSession == null)
@@ -524,9 +562,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       op =  executeRead(path, b, cachedSasToken.get(), reqParams, readThreadTracingContext);
       cachedSasToken.update(op.getSasToken());
       checkForFastpathConnectionFailures(fastpathSessionInfo);
-      if (streamStatistics != null) {
-        streamStatistics.remoteReadOperation();
-      }
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -597,21 +632,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       streamStatistics.seek(n, fCursor);
     }
 
-    if (n>=fCursor-limit && n<=fCursor) { // within buffer
-      bCursor = (int) (n-(fCursor-limit));
-      if (streamStatistics != null) {
-        streamStatistics.seekInBuffer();
-      }
-      return;
-    }
-
     // next read will read from here
-    fCursor = n;
-    LOG.debug("set fCursor to {}", fCursor);
-
-    //invalidate buffer
-    limit = 0;
-    bCursor = 0;
+    nextReadPos = n;
+    LOG.debug("set nextReadPos to {}", nextReadPos);
   }
 
   @Override
@@ -682,7 +705,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
-    return fCursor - limit + bCursor;
+    return nextReadPos < 0 ? 0 : nextReadPos;
   }
 
   public TracingContext getTracingContext() {
@@ -754,6 +777,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   byte[] getBuffer() {
     return buffer;
+  }
+
+  @VisibleForTesting
+  public int getReadAheadRange() {
+    return readAheadRange;
   }
 
   @VisibleForTesting

@@ -52,15 +52,15 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.O
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final String TEST_PATH = new String("/testfile");
+  private static final String TEST_PATH = "/testfile";
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
     return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
         {DEFAULT_READ_BUFFER_SIZE},
         {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
-        {17 * ONE_MB}});
-        //{MAX_BUFFER_SIZE}}); // TODO: snvijaya, supatki - undo before official PR. Commented as test duration is too long for this failure
+        {17 * ONE_MB},
+        {MAX_BUFFER_SIZE}});
   }
 
   private final int size;
@@ -82,7 +82,6 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   }
 
   private void testReadWriteAndSeek(int bufferSize, boolean isMockFastpathTest) throws Exception {
-    Path testPath = new Path(TEST_PATH + UUID.randomUUID().toString());
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
     abfsConfiguration.setWriteBufferSize(bufferSize);
@@ -91,6 +90,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
+    Path testPath = path(TEST_PATH);
     try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
@@ -135,7 +135,6 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
   @Test
   public void testReadAheadRequestID() throws java.io.IOException {
-    Path testPath = new Path(TEST_PATH + UUID.randomUUID().toString());
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
     int bufferSize = MIN_BUFFER_SIZE;
@@ -143,6 +142,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] b = new byte[bufferSize * 10];
     new Random().nextBytes(b);
+    Path testPath = path(TEST_PATH);
     try (FSDataOutputStream stream = fs.create(testPath)) {
       ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),

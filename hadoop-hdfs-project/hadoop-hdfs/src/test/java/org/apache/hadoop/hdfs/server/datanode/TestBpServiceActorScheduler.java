@@ -31,6 +31,7 @@ import java.util.Random;
 
 import static java.lang.Math.abs;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -70,7 +71,7 @@ public class TestBpServiceActorScheduler {
       Scheduler scheduler = makeMockScheduler(now);
       scheduler.scheduleBlockReport(0, true);
       assertTrue(scheduler.resetBlockReportTime);
-      assertThat(scheduler.nextBlockReportTime, is(now));
+      assertThat(scheduler.getNextBlockReportTime(), is(now));
     }
   }
 
@@ -81,8 +82,8 @@ public class TestBpServiceActorScheduler {
       final long delayMs = 10;
       scheduler.scheduleBlockReport(delayMs, true);
       assertTrue(scheduler.resetBlockReportTime);
-      assertTrue(scheduler.nextBlockReportTime - now >= 0);
-      assertTrue(scheduler.nextBlockReportTime - (now + delayMs) < 0);
+      assertTrue(scheduler.getNextBlockReportTime() - now >= 0);
+      assertTrue(scheduler.getNextBlockReportTime() - (now + delayMs) < 0);
     }
   }
 
@@ -96,7 +97,8 @@ public class TestBpServiceActorScheduler {
       Scheduler scheduler = makeMockScheduler(now);
       assertTrue(scheduler.resetBlockReportTime);
       scheduler.scheduleNextBlockReport();
-      assertTrue(scheduler.nextBlockReportTime - (now + BLOCK_REPORT_INTERVAL_MS) < 0);
+      assertTrue(scheduler.getNextBlockReportTime()
+          - (now + BLOCK_REPORT_INTERVAL_MS) < 0);
     }
   }
 
@@ -110,7 +112,8 @@ public class TestBpServiceActorScheduler {
       Scheduler scheduler = makeMockScheduler(now);
       scheduler.resetBlockReportTime = false;
       scheduler.scheduleNextBlockReport();
-      assertThat(scheduler.nextBlockReportTime, is(now + BLOCK_REPORT_INTERVAL_MS));
+      assertThat(scheduler.getNextBlockReportTime(),
+          is(now + BLOCK_REPORT_INTERVAL_MS));
     }
   }
 
@@ -129,10 +132,12 @@ public class TestBpServiceActorScheduler {
       final long blockReportDelay =
           BLOCK_REPORT_INTERVAL_MS + random.nextInt(2 * (int) BLOCK_REPORT_INTERVAL_MS);
       final long origBlockReportTime = now - blockReportDelay;
-      scheduler.nextBlockReportTime = origBlockReportTime;
+      scheduler.setNextBlockReportTime(origBlockReportTime);
       scheduler.scheduleNextBlockReport();
-      assertTrue(scheduler.nextBlockReportTime - now < BLOCK_REPORT_INTERVAL_MS);
-      assertTrue(((scheduler.nextBlockReportTime - origBlockReportTime) % BLOCK_REPORT_INTERVAL_MS) == 0);
+      assertTrue((scheduler.getNextBlockReportTime() - now)
+          < BLOCK_REPORT_INTERVAL_MS);
+      assertEquals(0, ((scheduler.getNextBlockReportTime() - origBlockReportTime)
+          % BLOCK_REPORT_INTERVAL_MS));
     }
   }
 
@@ -201,7 +206,7 @@ public class TestBpServiceActorScheduler {
         HEARTBEAT_INTERVAL_MS, LIFELINE_INTERVAL_MS,
         BLOCK_REPORT_INTERVAL_MS, OUTLIER_REPORT_INTERVAL_MS));
     doReturn(now).when(mockScheduler).monotonicNow();
-    mockScheduler.nextBlockReportTime = now;
+    mockScheduler.setNextBlockReportTime(now);
     mockScheduler.nextHeartbeatTime = now;
     mockScheduler.nextOutliersReportTime = now;
     return mockScheduler;

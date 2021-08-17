@@ -47,6 +47,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.junit.Assume.assumeTrue;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
@@ -77,6 +79,8 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
 
   public ITestAbfsFastpathSession() throws Exception {
     super();
+    assumeTrue("Fastpath supported only for OAuth auth type",
+        authType == AuthType.OAuth);
   }
 
   @Test

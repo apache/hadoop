@@ -19,6 +19,7 @@
 #include <Shlwapi.h>
 #include <WinBase.h>
 #include <Windows.h>
+#include <direct.h>
 #include <fcntl.h>
 #include <io.h>
 #include <share.h>
@@ -77,8 +78,8 @@ int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
     return -1;
   }
 
-  // Make space for _mktemp_s to add NULL character at the end
-  pattern.resize(pattern.size() + 1);
+  // Append NULL so that _mktemp_s can find the end of string
+  pattern.emplace_back('\0');
   if (_mktemp_s(pattern.data(), pattern.size()) != 0) {
     return -1;
   }
@@ -93,4 +94,18 @@ int XPlatform::Syscall::CreateAndOpenTempFile(std::vector<char>& pattern) {
 
 bool XPlatform::Syscall::CloseFile(const int file_descriptor) {
   return _close(file_descriptor) == 0;
+}
+
+bool XPlatform::Syscall::CreateTempDir(std::vector<char>& pattern) {
+  if (_set_errno(0) != 0) {
+    return false;
+  }
+
+  // Append NULL so that _mktemp_s can find the end of string
+  pattern.emplace_back('\0');
+  if (_mktemp_s(pattern.data(), pattern.size()) != 0) {
+    return false;
+  }
+
+  return _mkdir(pattern.data()) == 0;
 }

@@ -110,14 +110,18 @@ final class BalancerParameters {
     return this.sortTopNodes;
   }
 
+  long getHotBlockTimeInterval() {
+    return this.hotBlockTimeInterval;
+  }
+
   @Override
   public String toString() {
     return String.format("%s.%s [%s," + " threshold = %s,"
         + " max idle iteration = %s," + " #excluded nodes = %s,"
         + " #included nodes = %s," + " #source nodes = %s,"
         + " #blockpools = %s," + " run during upgrade = %s,"
-        + " hot block time interval = %s]"
-        + " sort top nodes = %s",
+        + " sort top nodes = %s,"
+        + " hot block time interval = %s]",
         Balancer.class.getSimpleName(), getClass().getSimpleName(), policy,
         threshold, maxIdleIteration, excludedNodes.size(),
         includedNodes.size(), sourceNodes.size(), blockpools.size(),
