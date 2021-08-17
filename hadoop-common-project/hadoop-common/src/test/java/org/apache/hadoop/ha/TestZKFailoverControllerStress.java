@@ -132,7 +132,7 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     long st = Time.now();
     while (Time.now() - st < runFor) {
       cluster.getTestContext().checkException();
-      //serverFactory.closeAll(ServerCnxn.DisconnectReason.SERVER_SHUTDOWN);
+      serverFactory.closeAll(ServerCnxn.DisconnectReason.SERVER_SHUTDOWN);
       Thread.sleep(50);
     }
   }
