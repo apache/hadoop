@@ -1,4 +1,4 @@
-checkstyle
+.checkstyle
 bin/
 src/test/resources/combinationConfigFiles
 src/test/resources/abfs-combination-test-configs.xml
