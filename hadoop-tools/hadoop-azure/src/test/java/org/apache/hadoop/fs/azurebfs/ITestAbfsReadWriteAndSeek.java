@@ -62,8 +62,8 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
         {DEFAULT_READ_BUFFER_SIZE},
         {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
-        {17 * ONE_MB},
-        {MAX_BUFFER_SIZE}});
+        {17 * ONE_MB}});
+        //{MAX_BUFFER_SIZE}}); - To be reenabled by https://issues.apache.org/jira/browse/HADOOP-17852
   }
 
   private final int size;
