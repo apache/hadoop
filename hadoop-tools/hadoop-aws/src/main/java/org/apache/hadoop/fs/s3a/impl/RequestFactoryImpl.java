@@ -260,6 +260,9 @@ public class RequestFactoryImpl implements RequestFactory {
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       metadata.setSSEAlgorithm(algorithm.getMethod());
     }
+    if (contentEncoding != null) {
+      metadata.setContentEncoding(contentEncoding);
+    }
   }
 
   /**
