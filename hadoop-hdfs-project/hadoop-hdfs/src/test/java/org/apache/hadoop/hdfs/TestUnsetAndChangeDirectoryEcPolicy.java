@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
+import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -94,7 +96,6 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final int numBlocks = 1;
     final int fileLen = blockGroupSize * numBlocks;
     final Path dirPath = new Path("/striped");
-    final Path subDirPath = new Path(dirPath, "sub_dir");
     final Path ecFilePath = new Path(dirPath, "ec_file");
     final Path replicateFilePath = new Path(dirPath, "3x_file");
 
@@ -108,7 +109,6 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     // Set EC policy on directory
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
-    fs.mkdirs(subDirPath);
     DFSTestUtil.createFile(fs, ecFilePath, fileLen, (short) 1, 0L);
     fs.unsetErasureCodingPolicy(dirPath);
     DFSTestUtil.createFile(fs, replicateFilePath, fileLen, (short) 1, 0L);
@@ -123,11 +123,6 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     tempEcPolicy = fs.getErasureCodingPolicy(replicateFilePath);
     Assert.assertNull("Replicate file should not have erasure coding policy!",
         tempEcPolicy);
-
-    // Subdirectory should not return erasure coding policy
-    tempEcPolicy = fs.getErasureCodingPolicy(subDirPath);
-    Assert.assertNull("Subdirectory should no have erasure coding policy set!",
-            tempEcPolicy);
 
     // Directory should not return erasure coding policy
     tempEcPolicy = fs.getErasureCodingPolicy(dirPath);
@@ -394,5 +389,32 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
 
     cluster.restartNameNode(true);
     Assert.assertNull(fs.getErasureCodingPolicy(new Path("/")));
+  }
+
+  /*
+   * Test Client unset EC policy on directory.
+   */
+  @Test
+  public void testClientUnsetEcPolicy() throws Exception {
+    ClientProtocol clientProtocol = fs.getClient().getNamenode();
+    clientProtocol.setErasureCodingPolicy("/",ErasureCodeConstants.REPLICATION_POLICY_NAME);
+    final String dirString = "/striped";
+    clientProtocol.mkdirs(dirString, null, false);
+    clientProtocol.setErasureCodingPolicy(dirString, ecPolicy.getName());
+
+    // Directory should has EC policy
+    ErasureCodingPolicy tempEcPolicy =
+            clientProtocol.getErasureCodingPolicy(dirString);
+    Assert.assertTrue("Erasure coding policy mismatch!",
+            tempEcPolicy.getName().equals(ecPolicy.getName()));
+
+    clientProtocol.unsetErasureCodingPolicy(dirString);
+
+    // Directory should not return erasure coding policy
+    tempEcPolicy = clientProtocol.getErasureCodingPolicy(dirString);
+    Assert.assertNull("Directory should no have erasure coding policy set!",
+            tempEcPolicy);
+
+    clientProtocol.delete(dirString, true);
   }
 }
