@@ -77,6 +77,6 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
     String encoding = meta.getContentEncoding();
     Assertions.assertThat(encoding)
         .describedAs("Encoding of object %s is gzip", path)
-        .isEqualTo("gzip!");
+        .isEqualTo("gzip");
   }
 }
