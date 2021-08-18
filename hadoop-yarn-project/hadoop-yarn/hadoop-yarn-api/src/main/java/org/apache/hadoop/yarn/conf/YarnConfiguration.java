@@ -1537,6 +1537,11 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_CLUSTER_SCALING_RECOMMENDATION_ENABLE =
       false;
 
+  public static final String AUTOSCALING_PLUGIN_TYPE =
+      RM_PREFIX + "autoscaling.plugin-type";
+  public static final String DEFAULT_AUTOSCALING_PLUGIN_TYPE =
+      "coarse";
+
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";

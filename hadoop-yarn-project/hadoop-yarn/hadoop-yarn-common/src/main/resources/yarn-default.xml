@@ -358,6 +358,12 @@
   </property>
 
   <property>
+    <description>Used to specify autoscaling policy which supports autoscaling at queue level </description>
+    <name>yarn.resourcemanager.autoscaling.plugin-type</name>
+    <value>coarse</value>
+  </property>
+
+  <property>
     <description>The address of the RM admin interface.</description>
     <name>yarn.resourcemanager.admin.address</name>
     <value>${yarn.resourcemanager.hostname}:8033</value>
