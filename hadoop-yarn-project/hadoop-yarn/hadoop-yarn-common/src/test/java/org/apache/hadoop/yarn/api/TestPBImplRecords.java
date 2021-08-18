@@ -435,7 +435,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     typeValueCache.put(QueueInfo.class, QueueInfo.
         newInstance("root", "root", 1.0f,
         1.0f, 0.1f, null, null, QueueState.RUNNING, ImmutableSet.of("x", "y"),
-        "x && y", null, false, -1.0f, null, false));
+        "x && y", null, false, -1.0f, 10, null, false));
     generateByNewInstance(QueueStatistics.class);
     generateByNewInstance(QueueUserACLInfo.class);
     generateByNewInstance(YarnClusterMetrics.class);

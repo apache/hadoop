@@ -324,6 +324,7 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | absoluteMaxCapacity | float | Absolute maximum capacity percentage this queue can use of the entire cluster |
 | absoluteUsedCapacity | float | Absolute used capacity percentage this queue is using of the entire cluster |
 | numApplications | int | The number of applications currently in the queue |
+| maxParallelApps | int | Maximum number of applications that can run at the same time |
 | usedResources | string | A string describing the current resources used by the queue |
 | queueName | string | The name of the queue |
 | state | string of QueueState | The state of the queue |
@@ -423,6 +424,7 @@ Response Body:
                         "capacity": 10.5,
                         "maxCapacity": 50.0,
                         "numApplications": 0,
+                        "maxParallelApps": 2147483647,
                         "queueName": "a",
                         "queues": {
                             "queue": [
@@ -433,6 +435,7 @@ Response Body:
                                     "capacity": 30.000002,
                                     "maxCapacity": 50.0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "queueName": "a1",
                                     "queues": {
                                         "queue": [
@@ -448,6 +451,7 @@ Response Body:
                                                 "maxCapacity": 100.0,
                                                 "numActiveApplications": 0,
                                                 "numApplications": 0,
+                                                "maxParallelApps": 2147483647,
                                                 "numContainers": 0,
                                                 "numPendingApplications": 0,
                                                 "queueName": "a1a",
@@ -475,6 +479,7 @@ Response Body:
                                                 "maxCapacity": 100.0,
                                                 "numActiveApplications": 0,
                                                 "numApplications": 0,
+                                                "maxParallelApps": 2147483647,
                                                 "numContainers": 0,
                                                 "numPendingApplications": 0,
                                                 "queueName": "a1b",
@@ -512,6 +517,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 0,
                                     "queueName": "a2",
@@ -544,6 +550,7 @@ Response Body:
                         "capacity": 89.5,
                         "maxCapacity": 100.0,
                         "numApplications": 2,
+                        "maxParallelApps": 2147483647,
                         "queueName": "b",
                         "queues": {
                             "queue": [
@@ -559,6 +566,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 1,
                                     "numApplications": 2,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 1,
                                     "queueName": "b1",
@@ -607,6 +615,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 0,
                                     "queueName": "b2",
@@ -634,6 +643,7 @@ Response Body:
                                     "maxCapacity": 100.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
+                                    "maxParallelApps": 2147483647,
                                     "numContainers": 0,
                                     "numPendingApplications": 0,
                                     "queueName": "b3",
@@ -756,6 +766,7 @@ Response Body:
         <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
+        <maxParallelApps>2147483647</maxParallelApps>
         <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
         <queueName>a</queueName>
         <state>RUNNING</state>
@@ -768,6 +779,7 @@ Response Body:
             <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>a1</queueName>
             <state>RUNNING</state>
@@ -780,6 +792,7 @@ Response Body:
                 <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <numApplications>0</numApplications>
+                <maxParallelApps>2147483647</maxParallelApps>
                 <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
                 <queueName>a1a</queueName>
                 <state>RUNNING</state>
@@ -806,6 +819,7 @@ Response Body:
                 <absoluteMaxCapacity>25.0</absoluteMaxCapacity>
                 <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
                 <numApplications>0</numApplications>
+                <maxParallelApps>2147483647</maxParallelApps>
                 <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
                 <queueName>a1b</queueName>
                 <state>RUNNING</state>
@@ -838,6 +852,7 @@ Response Body:
             <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>a2</queueName>
             <state>RUNNING</state>
@@ -870,6 +885,7 @@ Response Body:
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>2</numApplications>
+        <maxParallelApps>2147483647</maxParallelApps>
         <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
         <queueName>b</queueName>
         <state>RUNNING</state>
@@ -882,6 +898,7 @@ Response Body:
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>2</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>b1</queueName>
             <state>RUNNING</state>
@@ -927,6 +944,7 @@ Response Body:
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>b2</queueName>
             <state>RUNNING</state>
@@ -953,6 +971,7 @@ Response Body:
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <numApplications>0</numApplications>
+            <maxParallelApps>2147483647</maxParallelApps>
             <usedResources>&lt;memory:0, vCores:0&gt;</usedResources>
             <queueName>b3</queueName>
             <state>RUNNING</state>
