@@ -63,7 +63,7 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
   private void setEffectiveMock() {
     MockFastpathConnection.setTestMock(client.getAbfsConfiguration()
         .getRawConfiguration()
-        .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, true));
+        .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, false));
   }
 
   protected void processResponse(AbfsHttpOperation httpOperation) throws IOException {
