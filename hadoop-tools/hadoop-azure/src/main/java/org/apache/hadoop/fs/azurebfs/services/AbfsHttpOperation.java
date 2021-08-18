@@ -409,7 +409,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
           }
         }
       } catch (IOException ex) {
-        LOG.error("UnexpectedError: ", ex);
+        LOG.warn("IO/Network error: {} {}: {}",
+            method, getMaskedUrl(), ex.getMessage());
+        LOG.debug("IO Error: ", ex);
         throw ex;
       } finally {
         if (this.isTraceEnabled) {
