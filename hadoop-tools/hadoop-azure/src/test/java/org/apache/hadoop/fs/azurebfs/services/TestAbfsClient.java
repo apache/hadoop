@@ -253,8 +253,7 @@ public final class TestAbfsClient {
   public static AbfsClient createTestClientFromCurrentContext(
       AbfsClient baseAbfsClientInstance,
       AbfsConfiguration abfsConfig) throws IOException {
-    AuthType currentAuthType = abfsConfig.getAuthType(
-        abfsConfig.getAccountName());
+    AuthType currentAuthType = abfsConfig.getAuthType();
 
     AbfsPerfTracker tracker = new AbfsPerfTracker("test",
         abfsConfig.getAccountName(),
@@ -286,8 +285,7 @@ public final class TestAbfsClient {
 
   public static AbfsClient getMockAbfsClient(AbfsClient baseAbfsClientInstance,
       AbfsConfiguration abfsConfig) throws Exception {
-    AuthType currentAuthType = abfsConfig.getAuthType(
-        abfsConfig.getAccountName());
+    AuthType currentAuthType = abfsConfig.getAuthType();
 
     org.junit.Assume.assumeTrue(
         (currentAuthType == AuthType.SharedKey)

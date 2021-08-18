@@ -94,7 +94,7 @@ public class MockFastpathConnection
   }
 
   public MockFastpathConnection() throws FastpathConnectionException {
-    super(true);
+    super(testMockSoEnabled);
   }
 
   public static int getReadCounter() {

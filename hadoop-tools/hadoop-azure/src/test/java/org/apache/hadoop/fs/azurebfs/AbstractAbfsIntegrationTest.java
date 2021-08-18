@@ -189,7 +189,7 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     // Only live account without namespace support can run ABFS&WASB
     // compatibility tests
-    if (!isIPAddress && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
+    if (!isIPAddress && (abfsConfig.getAuthType() != AuthType.SAS)
         && !abfs.getIsNamespaceEnabled(getTestTracingContext(
             getFileSystem(), false))) {
       final URI wasbUri = new URI(

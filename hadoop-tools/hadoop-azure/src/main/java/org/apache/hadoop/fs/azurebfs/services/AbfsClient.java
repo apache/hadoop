@@ -117,7 +117,7 @@ public class AbfsClient implements Closeable {
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
-    this.authType = abfsConfiguration.getAuthType(accountName);
+    this.authType = abfsConfiguration.getAuthType();
 
     String encryptionKey = this.abfsConfiguration
         .getClientProvidedEncryptionKey();

@@ -620,7 +620,13 @@ public class AbfsConfiguration{
     return this.readBufferSize;
   }
 
-  public boolean isFastpathEnabled() { return this.enableFastpath; }
+  public boolean isFastpathEnabled() {
+    if ((getAuthType() == AuthType.OAuth) && enableFastpath) {
+      return true;
+    }
+
+    return false;
+  }
 
   public int getMinBackoffIntervalMilliseconds() {
     return this.minBackoffInterval;
@@ -701,7 +707,7 @@ public class AbfsConfiguration{
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     // we do not support creating the filesystem when AuthType is SAS
     return this.createRemoteFileSystemDuringInitialization
-        && this.getAuthType(this.accountName) != AuthType.SAS;
+        && this.getAuthType() != AuthType.SAS;
   }
 
   public boolean getSkipUserGroupMetadataDuringInitialization() {
@@ -756,7 +762,7 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
   }
 
-  public AuthType getAuthType(String accountName) {
+  public AuthType getAuthType() {
     return getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
   }
 
