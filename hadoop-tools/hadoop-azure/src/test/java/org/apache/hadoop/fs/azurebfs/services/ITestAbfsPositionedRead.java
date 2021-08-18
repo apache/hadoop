@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.utils.MockFastpathConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
@@ -191,11 +192,13 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
     builder.opt(ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE, true);
     FSDataInputStream inputStream = null;
     try {
+
       Configuration conf = getFileSystem().getConf();
       conf.setBoolean(ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE, true);
-      Optional<Configuration> c = Optional.ofNullable(conf);
+      OpenFileParameters param = new OpenFileParameters();
+      Optional<OpenFileParameters> opt = Optional.ofNullable(param.withOptions(conf));
       inputStream = isMockFastpathTest
-          ? openMockAbfsInputStream(getFileSystem(), dest, c)
+          ? openMockAbfsInputStream(getFileSystem(), dest, opt)
           : builder.build().get();
     } catch (IllegalArgumentException | UnsupportedOperationException
         | InterruptedException | ExecutionException e) {

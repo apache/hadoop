@@ -18,6 +18,9 @@
 
 #include "common/hdfs_configuration.h"
 #include "configuration_test.h"
+#include "utils/temp-file.h"
+#include "utils/temp-dir.h"
+
 #include <gmock/gmock.h>
 #include <iostream>
 
@@ -70,10 +73,10 @@ TEST(HdfsConfigurationTest, TestSetOptions)
 TEST(HdfsConfigurationTest, TestDefaultConfigs) {
   // Search path
   {
-    TempDir tempDir;
-    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
+    TestUtils::TempDir tempDir;
+    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
+    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigurationLoader loader;
@@ -87,8 +90,8 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
 
   // Only core-site.xml available
   {
-    TempDir tempDir;
-    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
+    TestUtils::TempDir tempDir;
+    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
 
     ConfigurationLoader loader;
@@ -101,8 +104,8 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
 
   // Only hdfs-site available
   {
-    TempDir tempDir;
-    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
+    TestUtils::TempDir tempDir;
+    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigurationLoader loader;
@@ -119,10 +122,10 @@ TEST(HdfsConfigurationTest, TestDefaultConfigs) {
 TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   // Config parser API
   {
-    TempDir tempDir;
-    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
+    TestUtils::TempDir tempDir;
+    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
+    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeSimpleConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigParser parser(tempDir.GetPath());
@@ -140,10 +143,10 @@ TEST(HdfsConfigurationTest, TestConfigParserAPI) {
   }
 
   {
-    TempDir tempDir;
-    TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
+    TestUtils::TempDir tempDir;
+    TestUtils::TempFile coreSite(tempDir.GetPath() + "/core-site.xml");
     writeSimpleConfig(coreSite.GetFileName(), "key1", "value1");
-    TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
+    TestUtils::TempFile hdfsSite(tempDir.GetPath() + "/hdfs-site.xml");
     writeDamagedConfig(hdfsSite.GetFileName(), "key2", "value2");
 
     ConfigParser parser(tempDir.GetPath());

@@ -372,8 +372,8 @@ public class AbfsRestOperation {
       String hostname = null;
       if (httpOperation != null) {
         hostname = httpOperation.getHost();
-        LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...",
-            hostname));
+        LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
+            hostname);
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -402,7 +402,7 @@ public class AbfsRestOperation {
       AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
-    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation.toString());
+    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
     if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
       return false;

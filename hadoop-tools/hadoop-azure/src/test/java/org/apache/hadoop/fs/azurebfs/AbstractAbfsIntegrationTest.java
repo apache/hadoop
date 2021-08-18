@@ -40,12 +40,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -452,6 +453,15 @@ public abstract class AbstractAbfsIntegrationTest extends
     return TestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
   }
 
+  public AbfsClient getAbfsClient(final AzureBlobFileSystemStore abfsStore) {
+    return abfsStore.getClient();
+  }
+
+  public void setAbfsClient(AzureBlobFileSystemStore abfsStore,
+      AbfsClient client) {
+    abfsStore.setClient(client);
+  }
+
   public Path makeQualified(Path path) throws java.io.IOException {
     return getFileSystem().makeQualified(path);
   }
@@ -551,7 +561,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   public FSDataInputStream openMockAbfsInputStream(AzureBlobFileSystem fs,
-      Path testFilePath, Optional<Configuration> opt) throws IOException {
+      Path testFilePath, Optional<OpenFileParameters> opt) throws IOException {
     return new FSDataInputStream(
         getMockAbfsInputStream(fs, testFilePath, opt));
   }
@@ -562,7 +572,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   public AbfsInputStream getMockAbfsInputStream(AzureBlobFileSystem fs,
-      Path testFilePath, Optional<Configuration> opt) throws IOException {
+      Path testFilePath, Optional<OpenFileParameters> opt) throws IOException {
     Configuration conf = fs.getConf();
     conf.setBoolean(FS_AZURE_FASTPATH_ENABLE, true);
     fs = (AzureBlobFileSystem) FileSystem.get(fs.getUri(), conf);
