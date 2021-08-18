@@ -36,9 +36,14 @@ public class ITestS3AEncryptionSSEKMSUserDefinedKey
   protected Configuration createConfiguration() {
     // get the KMS key for this test.
     Configuration c = new Configuration();
-    String kmsKey = c.get(S3_ENCRYPTION_KEY);
-    // skip the test if SSE-KMS or KMS key not set.
-    skipIfEncryptionNotSet(c, getSSEAlgorithm());
+    String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
+    String encryptionAlgorithm = c.get(SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    if (kmsKey == null || StringUtils.isBlank(kmsKey) || encryptionAlgorithm == null ||
+        !encryptionAlgorithm.equals(S3AEncryptionMethods.CSE_KMS.name())) {
+      skip(SERVER_SIDE_ENCRYPTION_KEY + " is not set for " +
+          SSE_KMS.getMethod() + " or CSE-KMS algorithm is used instead of "
+          + "SSE-KMS");
+    }
     Configuration conf = super.createConfiguration();
     conf.set(S3_ENCRYPTION_KEY, kmsKey);
     return conf;
