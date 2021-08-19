@@ -712,7 +712,7 @@ The parent queue which has the flexible auto queue creation enabled supports the
 Using the following example configuration snippet will instruct the `CapacityScheduler` to: 
 * enable the flexible auto queue creation for root.parent 
 * create **all** of the dynamic queues below root.parent with 80% as the maximum capacity, because of the wildcard queue path (root.parent.*)
-* create the dynamic parent queues **directly** below root.parent with weight 2 
+* create the dynamic parent queues **directly** under root.parent with weight 2 
 * add the GPU label to every leaf queue created **directly** under root.parent
 
 ```
