@@ -50,8 +50,8 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
     @Test
     public void testPurgeBufferManagerForParallelStreams() throws Exception {
-        describe("Testing purging of buffers from ReadBufferManager for " +
-                "parallel input streams");
+        describe("Testing purging of buffers from ReadBufferManager for "
+                + "parallel input streams");
         final int numBuffers = 16;
         final LinkedList<Integer> freeList = new LinkedList<>();
         for (int i=0; i < numBuffers; i++) {
@@ -94,8 +94,8 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
     @Test
     public void testPurgeBufferManagerForSequentialStream() throws Exception {
-        describe("Testing purging of buffers in ReadBufferManager for " +
-                "sequential input streams");
+        describe("Testing purging of buffers in ReadBufferManager for "
+                + "sequential input streams");
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
         final String fileName = methodName.getMethodName();
         byte[] fileContent = getRandomBytesArray(ONE_MB);
@@ -150,7 +150,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         conf.setLong(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, 8);
         conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
         conf.setInt(FS_AZURE_READ_AHEAD_BLOCK_SIZE, MIN_BUFFER_SIZE);
-        return getFileSystem(conf);
+        return (AzureBlobFileSystem) FileSystem.newInstance(conf);
     }
 
     protected byte[] getRandomBytesArray(int length) {
