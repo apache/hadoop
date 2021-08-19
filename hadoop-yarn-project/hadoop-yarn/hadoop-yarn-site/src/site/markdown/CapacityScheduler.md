@@ -572,7 +572,7 @@ The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierach
 
 ###Dynamic Auto-Creation and Management of Leaf Queues
 
-The `CapacityScheduler` supports two types of queue auto-creation modes: legacy and flexible. Legacy mode allows the creation of **leaf queues** under parent queues which have been configured to use this feature. Flexible mode allows the creation of both **parent queues** and **leaf queues**, but the created queues will be and can only be configured with weights as *capacity*.
+The `CapacityScheduler` supports two types of queue auto-creation modes: legacy and flexible. Legacy mode allows the creation of **leaf queues** under parent queues which have been configured to use this feature. Flexible mode allows the creation of both **parent queues** and **leaf queues**. Note: The created queues will be and can only be configured with weights as *capacity*.
 
   * Setup for dynamic auto-created leaf queues through queue mapping
 
@@ -691,7 +691,7 @@ list of current scheduling edit policies as a comma separated string in `yarn.re
 
 * Parent queue configuration for **flexible** dynamic leaf queue auto-creation and management
 
-The `Flexible Dynamic Queue Auto-Creation and Management` feature allows a **ParentQueue** to be configured to auto-create both parent and leaf queues. Such parent queues can have other pre-configured queues co-existing with the auto-created queues. The auto-created queues will have weights as *capacity* so the pre-configured queues under the parent must be configured to use the same. The `CapacityScheduler` supports the following parameters to enable auto-creation of queues
+The `Flexible Dynamic Queue Auto-Creation and Management` feature allows a **ParentQueue** to auto-create both parent and leaf queues. Such parent queues can have other pre-configured queues co-existing with the auto-created queues. The auto-created queues will have weights as *capacity* so the pre-configured queues under the parent must be configured the same way. The `CapacityScheduler` supports the following parameters to enable auto-creation of queues
 
 | Property | Description |
 |:---- |:---- |
@@ -701,15 +701,42 @@ The `Flexible Dynamic Queue Auto-Creation and Management` feature allows a **Par
 
 * Configuring **flexible** `Auto-Created Leaf Queues` with `CapacityScheduler`
 
-The parent queue which has the flexible auto queue creation enabled supports the configuration dynamically created leaf and parent queues through template parameters. The auto-created queues support all of the leaf queue configuration parameters except for **Queue ACL**, **Absolute Resource** configurations. Queue ACLs are currently inherited from the parent queue i.e they are not configurable on the leaf queue template
+The parent queue which has the flexible auto queue creation enabled supports the configuration of dynamically created leaf and parent queues through template parameters. The auto-created queues support all of the leaf queue configuration parameters except for **Queue ACL**, **Absolute Resource** configurations. Queue ACLs are currently inherited from the parent queue i.e they are not configurable on the leaf queue template
 
 | Property | Description |
 |:---- |:---- |
 | `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.template.<queue-property>` | *Optional* parameter: Specifies a queue property (like capacity, maximum-capacity, user-limit-factor, maximum-am-resource-percent ...  - Refer **Queue Properties** section) inherited by the auto-created **parent** and **leaf** queues. |
-| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.leaf-template.<queue-property>` | *Optional* parameter: Specifies a queue property inherited auto-created **leaf** queues. |
-| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.parent-template.<queue-property>` |  *Optional* parameter: Specifies a queue property inherited auto-created **parent** queues. |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.leaf-template.<queue-property>` | *Optional* parameter: Specifies a queue property inherited by auto-created **leaf** queues. |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.parent-template.<queue-property>` |  *Optional* parameter: Specifies a queue property inherited by auto-created **parent** queues. |
 
+Using the following example configuration snippet will instruct the `CapacityScheduler` to: 
+* enable the flexible auto queue creation for root.parent 
+* create **all** of the dynamic queues below root.parent with 80% as the maximum capacity, because of the wildcard queue path (root.parent.*)
+* create the dynamic parent queues **directly** below root.parent with weight 2 
+* add the GPU label to every leaf queue created **directly** under root.parent
 
+```
+ <property>
+   <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.enabled</name>
+   <value>true</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent.*.auto-queue-creation-v2.template.maximum-capacity</name>
+    <value>80</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.parent-template.capacity</name>
+    <value>2w</value>
+ </property>
+ <property>
+    <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.leaf-template.accessible-node-labels</name>
+    <value>GPU</value>
+ </property>
+  <property>
+    <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.leaf-template.accessible-node-labels.GPU.capacity</name>
+    <value>5w</value>
+ </property>
+```
 
 ###Other Properties
 
