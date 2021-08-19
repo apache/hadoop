@@ -123,17 +123,25 @@ Configuration
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.<queue-path>.capacity` | Queue *capacity* in percentage (%) as a float (e.g. 12.5) OR as absolute resource queue minimum capacity. The sum of capacities for all queues, at each level, must be equal to 100. However if absolute resource is configured, sum of absolute resources of child queues could be less than it's parent absolute resource capacity. Applications in the queue may consume more resources than the queue's capacity if there are free resources, providing elasticity. |
-| `yarn.scheduler.capacity.<queue-path>.maximum-capacity` | Maximum queue capacity in percentage (%) as a float OR as absolute resource queue maximum capacity. This limits the *elasticity* for applications in the queue. 1) Value is between 0 and 100. 2) Admin needs to make sure absolute maximum capacity >= absolute capacity for each queue. Also, setting this value to -1 sets maximum capacity to 100%. |
+| `yarn.scheduler.capacity.<queue-path>.capacity` | Queue *capacity* in percentage (%) as a float (e.g. 12.5), weight as a float with the postfix *w* (e.g. 2.0w) or as absolute resource queue minimum capacity. When using percentage values the sum of capacities for all queues, at each level, must be equal to 100. If absolute resource is configured, sum of absolute resources of child queues could be less than its parent absolute resource capacity. Applications in the queue may consume more resources than the queue's capacity if there are free resources, providing elasticity. |
+| `yarn.scheduler.capacity.<queue-path>.maximum-capacity` | Maximum queue capacity in percentage (%) as a float (when the *capacity* property is defined with either percentages or weights) or as absolute resource queue maximum capacity. This limits the *elasticity* for applications in the queue. 1) Value is between 0 and 100. 2) Admin needs to make sure absolute maximum capacity >= absolute capacity for each queue. Also, setting this value to -1 sets maximum capacity to 100%. |
 | `yarn.scheduler.capacity.<queue-path>.minimum-user-limit-percent` | Each queue enforces a limit on the percentage of resources allocated to a user at any given time, if there is demand for resources. The user limit can vary between a minimum and maximum value. The former (the minimum value) is set to this property value and the latter (the maximum value) depends on the number of users who have submitted applications. For e.g., suppose the value of this property is 25. If two users have submitted applications to a queue, no single user can use more than 50% of the queue resources. If a third user submits an application, no single user can use more than 33% of the queue resources. With 4 or more users, no user can use more than 25% of the queues resources. A value of 100 implies no user limits are imposed. The default is 100. Value is specified as a integer. |
 | `yarn.scheduler.capacity.<queue-path>.user-limit-factor` | User limit factor provides a way to control the max amount of resources that a single user can consume. It is the multiple of the queue's capacity. By default this is set to 1 which ensures that a single user can never take more than the queue's configured capacity irrespective of how idle the cluster is. Increasing it means a single user can use more than the minimum capacity of the cluster, while decreasing it results in lower maximum resources. Setting this to -1 will disable the feature. Value is specified as a float. Note: using the flexible auto queue creation (yarn.scheduler.capacity.\<queue-path\>.auto-queue-creation-v2) with weights will automatically set this property to -1, as the dynamic queues will be created with the hardcoded weight of 1 and in idle cluster scenarios they should be able to use more resources than calculated. |
 | `yarn.scheduler.capacity.<queue-path>.maximum-allocation-mb` | The per queue maximum limit of memory to allocate to each container request at the Resource Manager. This setting overrides the cluster configuration `yarn.scheduler.maximum-allocation-mb`. This value must be smaller than or equal to the cluster maximum. |
 | `yarn.scheduler.capacity.<queue-path>.maximum-allocation-vcores` | The per queue maximum limit of virtual cores to allocate to each container request at the Resource Manager. This setting overrides the cluster configuration `yarn.scheduler.maximum-allocation-vcores`. This value must be smaller than or equal to the cluster maximum. |
 | `yarn.scheduler.capacity.<queue-path>.user-settings.<user-name>.weight` | This floating point value is used when calculating the user limit resource values for users in a queue. This value will weight each user more or less than the other users in the queue. For example, if user A should receive 50% more resources in a queue than users B and C, this property will be set to 1.5 for user A.  Users B and C will default to 1.0. |
 
-  * Resource Allocation using Absolute Resources configuration
+  * Configuring Resource Allocation
 
- `CapacityScheduler` supports configuration of absolute resources instead of providing Queue *capacity* in percentage. As mentioned in above configuration section for `yarn.scheduler.capacity.<queue-path>.capacity` and `yarn.scheduler.capacity.<queue-path>.max-capacity`, administrator could specify an absolute resource value like `[memory=10240,vcores=12]`. This is a valid configuration which indicates 10GB Memory and 12 VCores.
+  `CapacityScheduler` supports three different resource allocation configuration modes: percentage values (*relative mode*), weights and absolute resources.
+
+  Relative mode provides a way to describe queue's resources as a fraction of its parent's resources. For example if *capacity* is set as 50.0, users queue has 50% of its parent, root's resources set as minimum capacity.
+
+  In weight mode the resources are divided based on how the queue's weight relates to the sum of configured weights under the same parent. For example if there are three queues under a parent with weights *3w*, *2w*, *5w*, the sum is 10, so the calculated minimum *capacity* will be 30%, 20% and 50% respectively. The benefit of using this mode is flexibility. When using percentages every time a new queue gets added the percentage values need to be manually recalculated, as the sum under a parent must to be 100%, but with weights this is performed automatically. Using the previous example when a new queue gets added under the same parent as the previous three with weight *10w* the new sum will be 20, so the new calculated *capacities* will be: 15%, 10%, 25%, 50%. Note: `yarn.scheduler.capacity.<queue-path>.max-capacity` must be configured with percentages, as there is no weight mode for *maximum-capacity*.
+
+  To use absolute resources mode both `yarn.scheduler.capacity.<queue-path>.capacity` and `yarn.scheduler.capacity.<queue-path>.max-capacity` should have absolute resource values like `[memory=10240,vcores=12]`. This configuration indicates 10GB Memory and 12 VCores.
+
+  It is possible to mix weights and percentages in a queue structure, but child queues under one parent must use the same *capacity* mode.
 
   * Running and Pending Application Limits
   
@@ -564,7 +572,7 @@ The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierach
 
 ###Dynamic Auto-Creation and Management of Leaf Queues
 
-The `CapacityScheduler` supports auto-creation of **leaf queues** under parent queues which have been configured to enable this feature.
+The `CapacityScheduler` supports two types of queue auto-creation modes: legacy and flexible. Legacy mode allows the creation of **leaf queues** under parent queues which have been configured to use this feature. Flexible mode allows the creation of both **parent queues** and **leaf queues**, but the created queues will be and can only be configured with weights as *capacity*.
 
   * Setup for dynamic auto-created leaf queues through queue mapping
 
@@ -589,7 +597,7 @@ Example:
  </property>
 ```
 
- * Parent queue configuration for dynamic leaf queue auto-creation and management
+ * Parent queue configuration for **legacy** dynamic leaf queue auto-creation and management
 
 The `Dynamic Queue Auto-Creation and Management` feature is integrated with the
 `CapacityScheduler` queue hierarchy and can be configured for a **ParentQueue** currently to auto-create leaf queues. Such parent queues do not
@@ -601,7 +609,7 @@ support other pre-configured queues to co-exist along with auto-created queues. 
 | `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.management-policy` | *Optional* parameter: the class name that will be used to determine the implementation of the `AutoCreatedQueueManagementPolicy`  which will manage leaf queues and their capacities dynamically under this parent queue. The default value is *org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy*. Users or groups might submit applications to the auto-created leaf queues for a limited time and stop using them. Hence there could be more number of leaf queues auto-created under the parent queue than its guaranteed capacity. The current policy implementation allots either configured or zero capacity on a **best-effort** basis based on availability of capacity on the parent queue and the application submission order across leaf queues. |
 
 
-* Configuring `Auto-Created Leaf Queues` with `CapacityScheduler`
+* Configuring **legacy** `Auto-Created Leaf Queues` with `CapacityScheduler`
 
 The parent queue which has been enabled for auto leaf queue creation,supports
  the configuration of template parameters for automatic configuration of the auto-created leaf queues. The auto-created queues support all of the
@@ -680,6 +688,28 @@ list of current scheduling edit policies as a comma separated string in `yarn.re
 | Property | Description |
 |:---- |:---- |
 | `yarn.resourcemanager.monitor.capacity.queue-management.monitoring-interval` | Time in milliseconds between invocations of this QueueManagementDynamicEditPolicy policy. Default value is 1500 |
+
+* Parent queue configuration for **flexible** dynamic leaf queue auto-creation and management
+
+The `Flexible Dynamic Queue Auto-Creation and Management` feature allows a **ParentQueue** to be configured to auto-create both parent and leaf queues. Such parent queues can have other pre-configured queues co-existing with the auto-created queues. The auto-created queues will have weights as *capacity* so the pre-configured queues under the parent must be configured to use the same. The `CapacityScheduler` supports the following parameters to enable auto-creation of queues
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` | *Mandatory* parameter: Indicates to the `CapacityScheduler` that flexible auto queue creation needs to be enabled for the specified parent queue.  Boolean value expected. The default value is *false*, i.e. auto leaf queue creation is not enabled in *ParentQueue* by default. |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.max-queues` | *Optional* parameter: Limits the number of dynamic queues created under a parent queue.  Integer value expected. The default value is *1000*. |
+
+
+* Configuring **flexible** `Auto-Created Leaf Queues` with `CapacityScheduler`
+
+The parent queue which has the flexible auto queue creation enabled supports the configuration dynamically created leaf and parent queues through template parameters. The auto-created queues support all of the leaf queue configuration parameters except for **Queue ACL**, **Absolute Resource** configurations. Queue ACLs are currently inherited from the parent queue i.e they are not configurable on the leaf queue template
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.template.<queue-property>` | *Optional* parameter: Specifies a queue property (like capacity, maximum-capacity, user-limit-factor, maximum-am-resource-percent ...  - Refer **Queue Properties** section) inherited by the auto-created **parent** and **leaf** queues. |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.leaf-template.<queue-property>` | *Optional* parameter: Specifies a queue property inherited auto-created **leaf** queues. |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.parent-template.<queue-property>` |  *Optional* parameter: Specifies a queue property inherited auto-created **parent** queues. |
+
+
 
 ###Other Properties
 
