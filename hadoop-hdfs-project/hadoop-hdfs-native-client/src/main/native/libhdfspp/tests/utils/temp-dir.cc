@@ -60,6 +60,7 @@ TempDir::~TempDir() {
   std::error_code tmp_dir_rm_err;
 
   const auto tmp_dir_rm_result = remove_all(tmp_dir_path, tmp_dir_rm_err);
+  EXPECT_TRUE(tmp_dir_rm_result);
   if (!tmp_dir_rm_result) {
     std::cerr << "Error in deleting directory " << path_ << ": "
               << tmp_dir_rm_err.message() << std::endl;
