@@ -40,54 +40,53 @@ import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
 public class MockFastpathConnection
     extends FastpathConnection {
 
-  int errStatus = 0;
-  boolean mockRequestException = false;
-  boolean mockConnectionException = false;
+  private int errStatus = 0;
+  private boolean mockRequestException = false;
+  private boolean mockConnectionException = false;
 
   protected static final Logger LOG = LoggerFactory.getLogger(
       MockFastpathConnection.class);
 
-  private final static MockFastpathDriver
-      nativeApiCaller = new MockFastpathDriver();
+  private static final MockFastpathDriver
+      NATIVE_API_CALLER = new MockFastpathDriver();
 
-  static AtomicInteger readCount = new AtomicInteger(0);
+  private static AtomicInteger readCount = new AtomicInteger(0);
 
-  static String successReadResponseFormat
+  private static String successReadResponseFormat
       = "{\"schemaVersion\":1,\"responseType\":\"Read\",\"status\":1001,\"httpStatus\":200,\"errorDescription\":\"OK\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"e419c8fc-77cc-4d3f-8ed7-08fb83362355\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_f5a469fc-c9ff-4cd6-9d27-98462972c6c1\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"bytesRead\":%d,\"xMsContentCrc64\":1111}";
 
-  static String throttledReadResponse
+  private static String throttledReadResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Read\",\"status\":675543456,\"httpStatus\":503,\"errorDescription\":\"Request throttled\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"a47dfca7-b717-405c-a08a-23dd87f7c895\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_af215940-551e-48b7-afb9-4a9396b48d83\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"bytesRead\":-1,\"xMsContentCrc64\":1111}";
 
-  static String fileNotFoundReadResponse
+  private static String fileNotFoundReadResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Read\",\"status\":137400330,\"httpStatus\":404,\"errorDescription\":\"FileNotFound\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"a47dfca7-b717-405c-a08a-23dd87f7c895\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_af215940-551e-48b7-afb9-4a9396b48d83\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"bytesRead\":-1,\"xMsContentCrc64\":1111}";
 
-  static String serverErrReadResponse
+  private static String serverErrReadResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Read\",\"status\":675543456,\"httpStatus\":500,\"errorDescription\":\"Internal server error\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"a47dfca7-b717-405c-a08a-23dd87f7c895\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_af215940-551e-48b7-afb9-4a9396b48d83\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"bytesRead\":10,\"xMsContentCrc64\":1111}";
 
-  static String fileNotFoundOpenResponse
+  private static String fileNotFoundOpenResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Open\",\"status\":137400330,\"httpStatus\":404,\"errorDescription\":\"FileNotFound\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"a8034a68-235f-4868-a6b3-12e47bf2594a\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_dc05a2aa-e145-4f33-b5d5-5424576c19f3\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"handleKey\":\"b5d20440-ec95-4614-addb-26f9776a57ab\"}";
 
-  static String serverErrOpenResponse
+  private static String serverErrOpenResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Open\",\"status\":675543456,\"httpStatus\":500,\"errorDescription\":\"Internal server error\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"a8034a68-235f-4868-a6b3-12e47bf2594a\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_dc05a2aa-e145-4f33-b5d5-5424576c19f3\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"handleKey\":\"b5d20440-ec95-4614-addb-26f9776a57ab\"}";
 
-  static String successOpenResponse
+  private static String successOpenResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Open\",\"status\":1001,\"httpStatus\":200,\"errorDescription\":\"OK\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"2201b43b-a471-43ce-85cb-9f0c5c5164cc\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_9e40999c-a76a-4fc2-9d2b-983f6445fe51\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\",\"handleKey\":\"ff42514e-ffb9-428f-a830-1cc8601b4ec5\"}";
 
-  static String serverErrCloseResponse
+  private static String serverErrCloseResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Close\",\"status\":675543456,\"httpStatus\":500,\"errorDescription\":\"Internal server error\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"fcb8502f-e1ac-4e91-b31c-a78cd2a98947\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_e6c5b8c8-864e-4e1d-9592-b4f3a4b8c9ae\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\"}";
 
-  static String successCloseResponse
+  private static String successCloseResponse
       = "{\"schemaVersion\":1,\"responseType\":\"Close\",\"status\":1001,\"httpStatus\":200,\"errorDescription\":\"OK\",\"elapsedTimeMs\":100,\"xMsRequestId\":\"d2a810ba-db10-4735-bb4a-6ba090959a5d\",\"crc64\":55555,\"xMsClientRequestId\":\"CLIENT_PROV_CORR_ID_9ee436d3-9a88-4c3b-8c30-7d9e454392d2\",\"xMsVersion\":\"2019-12-12\",\"responseTimestamp\":\"Mon, 01 Feb 2021 12:57:36 GMT\"}";
 
-  static String OPEN_OP = "open";
-  static String READ_OP = "read";
-  static String CLOSE_OP = "close";
+  private static final String OPEN_OP = "open";
+  private static final String READ_OP = "read";
+  private static final String CLOSE_OP = "close";
 
-  static HashMap<String, ByteBuffer> appendRegister
+  private static HashMap<String, ByteBuffer> appendRegister
       = new HashMap<String, ByteBuffer>();
 
-  int bufferOffset;
-  static boolean testMockSoEnabled;
+  private static boolean testMockSoEnabled;
 
   public static void setTestMock(boolean testMockSoEnabled) {
     MockFastpathConnection.testMockSoEnabled = testMockSoEnabled;
@@ -192,7 +191,7 @@ public class MockFastpathConnection
     ByteBuffer bb = clone(appendRegister.get(path));
     bb.rewind();
     checkIfExceptionShouldbeThrown();
-    int len = Math.min((bb.capacity() - (int)readParams.getStoreFilePosition()),
+    int len = Math.min((bb.capacity() - (int) readParams.getStoreFilePosition()),
         readParams.getBytesToRead());
     String mockedResponse = String.format(getReadResponse(), len);
     this.getNativeApiCaller()
@@ -262,7 +261,7 @@ public class MockFastpathConnection
   }
 
   protected FastpathDriver getNativeApiCaller() {
-    return testMockSoEnabled? super.getNativeApiCaller() : nativeApiCaller;
+    return testMockSoEnabled? super.getNativeApiCaller() : NATIVE_API_CALLER;
   }
 
   private void checkIfExceptionShouldbeThrown() throws FastpathException {

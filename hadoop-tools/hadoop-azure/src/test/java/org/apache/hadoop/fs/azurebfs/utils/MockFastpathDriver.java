@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.azure.storage.fastpath.driver.FastpathDriver;
 import com.azure.storage.fastpath.exceptions.FastpathConnectionException;
-import com.azure.storage.fastpath.exceptions.FastpathRequestException;
 
 public class MockFastpathDriver extends FastpathDriver {
   protected static final Logger LOG = LoggerFactory.getLogger(
@@ -38,7 +37,7 @@ public class MockFastpathDriver extends FastpathDriver {
     byte[] mockStoreBuffer;
   }
 
-  static HashMap<String, ResponseRegisterFields> responseRegistry = new HashMap<String, ResponseRegisterFields>();
+  private static HashMap<String, ResponseRegisterFields> responseRegistry = new HashMap<>();
 
   public void RegisterOpenResponse(String clientRequestID,
       String jsonResponseString) {

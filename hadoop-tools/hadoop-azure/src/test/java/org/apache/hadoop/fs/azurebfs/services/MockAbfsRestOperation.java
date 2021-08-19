@@ -28,9 +28,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 
 public class MockAbfsRestOperation extends AbfsRestOperation {
 
-  int errStatus = 0;
-  boolean mockRequestException = false;
-  boolean mockConnectionException = false;
+  private int errStatus = 0;
+  private boolean mockRequestException = false;
+  private boolean mockConnectionException = false;
 
   MockAbfsRestOperation(final AbfsRestOperationType operationType,
       final AbfsClient client,
@@ -69,8 +69,8 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
   protected void processResponse(AbfsHttpOperation httpOperation) throws IOException {
     if (isAFastpathRequest()) {
       setEffectiveMock();
-      signalErrorConditionToMockAbfsFastpathConn((MockAbfsFastpathConnection)httpOperation);
-      ((MockAbfsFastpathConnection)httpOperation).processResponse(buffer, bufferOffset, bufferLength);
+      signalErrorConditionToMockAbfsFastpathConn((MockAbfsFastpathConnection) httpOperation);
+      ((MockAbfsFastpathConnection) httpOperation).processResponse(buffer, bufferOffset, bufferLength);
     } else {
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
     }

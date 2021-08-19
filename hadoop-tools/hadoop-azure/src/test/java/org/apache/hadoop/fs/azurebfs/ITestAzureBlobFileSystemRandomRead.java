@@ -349,8 +349,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   public void testMockFastpathSeekAndAvailableAndPosition() throws Exception {
     // Run mock test only if feature is set to off
     Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    Path testPath = path(TEST_FILE_PREFIX +
-        "_testSeekAndAvailableAndPosition_mock");
+    Path testPath = path(TEST_FILE_PREFIX
+        + "_testSeekAndAvailableAndPosition_mock");
     testSeekAndAvailableAndPosition(true, testPath);
   }
 
@@ -432,8 +432,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   public void testMockFastpathSkipAndAvailableAndPosition() throws Exception {
     // Run mock test only if feature is set to off
     Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    Path testPath = path(TEST_FILE_PREFIX +
-        "_testSkipAndAvailableAndPosition_mock");
+    Path testPath = path(TEST_FILE_PREFIX
+        + "_testSkipAndAvailableAndPosition_mock");
     testSkipAndAvailableAndPosition(testPath, true);
   }
 
@@ -513,8 +513,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
       throws Exception {
     // Run mock test only if feature is set to off
     Assume.assumeFalse(getDefaultFastpathFeatureStatus());
-    Path testPath = path(TEST_FILE_PREFIX +
-        "_testSequentialReadAfterReverseSeekPerformance_mock");
+    Path testPath = path(TEST_FILE_PREFIX
+        + "_testSequentialReadAfterReverseSeekPerformance_mock");
     testSequentialReadAfterReverseSeekPerformance(true, testPath);
   }
 
@@ -665,7 +665,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
     // first read
     // if alwaysReadBufferSize is off, this is a sequential read
     if (isMockFastpathTest) {
-      ((MockAbfsInputStream)inputStream).read(byteBuffer5, 0, FIVE_BYTES);
+      ((MockAbfsInputStream) inputStream).read(byteBuffer5, 0, FIVE_BYTES);
     } else {
       inputStream.read(byteBuffer5, 0, FIVE_BYTES);
     }

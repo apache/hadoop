@@ -782,9 +782,6 @@ public class AbfsClient implements Closeable {
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String sasTokenForReuse = appendSASTokenToQuery(path,
-        SASTokenProvider.READ_OPERATION,
-        abfsUriQueryBuilder, null);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
@@ -798,9 +795,6 @@ public class AbfsClient implements Closeable {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
-        abfsUriQueryBuilder, null);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
 
@@ -809,7 +803,7 @@ public class AbfsClient implements Closeable {
 
   }
 
-  public AbfsRestOperation read( String path,
+  public AbfsRestOperation read(String path,
       byte[] buffer,
       String cachedSasToken,
       ReadRequestParameters reqParams,
@@ -1388,5 +1382,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  protected String getContainerName() { return filesystem; }
+  protected String getContainerName() {
+    return filesystem;
+  }
 }

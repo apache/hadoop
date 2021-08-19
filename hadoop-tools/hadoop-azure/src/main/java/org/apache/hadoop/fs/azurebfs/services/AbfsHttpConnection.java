@@ -221,10 +221,11 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
         } else if (AbfsHttpConstants.HTTP_METHOD_POST.equals(this.method)) {
           int contentLen = this.connection.getContentLength();
           if (contentLen != 0) {
-            DataInputStream dis = new DataInputStream(stream);
-            responseContentBuffer = new byte[contentLen];
-            dis.readFully(responseContentBuffer);
-            totalBytesRead += contentLen;
+            try (DataInputStream dis = new DataInputStream(stream)) {
+              responseContentBuffer = new byte[contentLen];
+              dis.readFully(responseContentBuffer);
+              totalBytesRead += contentLen;
+            }
           }
         } else {
           if (buffer != null) {

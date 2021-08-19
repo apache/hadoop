@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Arrays;
 import java.util.Random;
-import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -37,14 +36,11 @@ import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsInputStream;
-import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FASTPATH_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
@@ -103,9 +99,10 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result = -1;
-    boolean isUnsuppFastpathBuffSize =  ((bufferSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE) &&
-        (fs.getAbfsStore().getAbfsConfiguration().isFastpathEnabled() ||
-            isMockFastpathTest));
+    boolean isUnsuppFastpathBuffSize = (
+        (bufferSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE)
+            && (fs.getAbfsStore().getAbfsConfiguration().isFastpathEnabled()
+            || isMockFastpathTest));
     try (FSDataInputStream inputStream = isMockFastpathTest
         ? openMockAbfsInputStream(fs, fs.open(testPath))
         : fs.open(testPath)) {

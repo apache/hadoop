@@ -33,9 +33,9 @@ import com.azure.storage.fastpath.responseProviders.FastpathReadResponse;
 
 public class MockAbfsFastpathConnection extends AbfsFastpathConnection {
 
-  int errStatus = 0;
-  boolean mockRequestException = false;
-  boolean mockConnectionException = false;
+  private int errStatus = 0;
+  private boolean mockRequestException = false;
+  private boolean mockConnectionException = false;
 
   public MockAbfsFastpathConnection(final AbfsRestOperationType opType,
       final URL url,

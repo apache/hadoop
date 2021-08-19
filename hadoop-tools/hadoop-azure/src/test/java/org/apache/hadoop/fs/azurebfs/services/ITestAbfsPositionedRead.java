@@ -182,7 +182,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
     byte[] data = ContractTestUtils.dataset(TEST_FILE_DATA_SIZE, 'a', 'z');
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
         TEST_FILE_DATA_SIZE, true);
-    if(isMockFastpathTest) {
+    if (isMockFastpathTest) {
       MockFastpathConnection.registerAppend(
           TEST_FILE_DATA_SIZE, dest.getName(), data, 0, data.length);
       addToTestTearDownCleanupList(dest);

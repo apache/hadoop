@@ -42,10 +42,12 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_EXPIRY;
 
 public class MockAbfsInputStream extends AbfsInputStream {
@@ -53,10 +55,10 @@ public class MockAbfsInputStream extends AbfsInputStream {
   private static final long FILETIME_EPOCH_DIFF = 11644473600000L;
   // 1ms in units of nanoseconds
   private static final long FILETIME_ONE_MILLISECOND = 10 * 1000;
-  int errStatus = 0;
-  boolean mockRequestException = false;
-  boolean mockConnectionException = false;
-  boolean disableForceFastpathMock = false;
+  private int errStatus = 0;
+  private boolean mockRequestException = false;
+  private boolean mockConnectionException = false;
+  private boolean disableForceFastpathMock = false;
 
   public MockAbfsInputStream(final AbfsClient mockClient,
       final Statistics statistics,
@@ -108,7 +110,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
     // Force fastpath connection so that test fails and not pass on REST fallback
-    return ((MockAbfsClient)client).read(path, b, sasToken, reqParam, tracingContext);
+    return ((MockAbfsClient) client).read(path, b, sasToken, reqParam, tracingContext);
   }
 
   private void signalErrorConditionToMockClient() {
@@ -151,7 +153,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
   public void disableAlwaysOnFastpathTestMock() {
     disableForceFastpathMock = true;
-    ((MockAbfsClient)client).forceFastpathReadAlways = false;
+    ((MockAbfsClient) client).forceFastpathReadAlways = false;
   }
 
   public void resetAllMockErrStates() {
@@ -183,7 +185,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
     AbfsFastpathSession mockSession = mock(AbfsFastpathSession.class);
     Logger log = LoggerFactory.getLogger(AbfsInputStream.class);
-    double session_refresh_internal_factor = 0.75;
+    double sessionRefreshInternalFactor = 0.75;
     ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -191,7 +193,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
     mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
         mockSession, "LOG", log);
     mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
-        mockSession, "SESSION_REFRESH_INTERVAL_FACTOR", session_refresh_internal_factor);
+        mockSession, "SESSION_REFRESH_INTERVAL_FACTOR", sessionRefreshInternalFactor);
     mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
         mockSession, "client", client);
     mockSession = TestMockHelpers.setClassField(AbfsFastpathSession.class,
@@ -238,9 +240,15 @@ public class MockAbfsInputStream extends AbfsInputStream {
     buffer.putLong(Long.reverseBytes(w32FileTime));
     byte[] timeArray = buffer.array();
     byte[] sessionToken = new byte[token.length + timeArray.length + 8];
-    System.arraycopy(timeArray,0,sessionToken,8,timeArray.length);
-    System.arraycopy(token,0,sessionToken,16,token.length);
-    when(httpOp.getResponseContentBuffer()).thenReturn(sessionToken);
+    System.arraycopy(timeArray,0, sessionToken,8, timeArray.length);
+    System.arraycopy(token,0, sessionToken,16, token.length);
+
+    when(httpOp.getResponseHeader(CONTENT_LENGTH)).thenReturn(String.valueOf(sessionToken.length));
+    doAnswer(invocation -> {
+      Object arg0 = invocation.getArgument(0);
+      System.arraycopy(sessionToken, 0, arg0, 0, sessionToken.length);
+      return null;
+    }).when(httpOp).getResponseContentBuffer(any(byte[].class));
     when(op.getResult()).thenReturn(httpOp);
     return op;
   }
@@ -251,7 +259,13 @@ public class MockAbfsInputStream extends AbfsInputStream {
       Duration tokenDuration) {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
-    when(httpOp.getResponseContentBuffer()).thenReturn(token);
+    when(httpOp.getResponseHeader(CONTENT_LENGTH)).thenReturn(String.valueOf(token.length));
+    doAnswer(invocation -> {
+      Object arg0 = invocation.getArgument(0);
+      System.arraycopy(token, 0, arg0, 0, token.length);
+      return null;
+    }).when(httpOp).getResponseContentBuffer(any(byte[].class));
+
     String expiryTime = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(
         ZoneId.of("Etc/UTC")).format(Instant.now().plus(tokenDuration));
     when(httpOp.getResponseHeader(X_MS_FASTPATH_SESSION_EXPIRY)).thenReturn(expiryTime);

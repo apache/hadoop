@@ -91,9 +91,9 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
     put(505, "VERSION");
   }};
 
-  int defaultTimeout = Integer.valueOf(DEFAULT_TIMEOUT);
-  AbfsFastpathSessionInfo fastpathSessionInfo;
-  FastpathResponse response = null;
+  private int defaultTimeout = Integer.parseInt(DEFAULT_TIMEOUT);
+  private AbfsFastpathSessionInfo fastpathSessionInfo;
+  private FastpathResponse response = null;
 
   public String getFastpathFileHandle() {
     return fastpathSessionInfo.getFastpathFileHandle();
@@ -209,14 +209,14 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
           getRequestHeaders(),
           defaultTimeout);
       openResponse = triggerOpen(openRequestParams);
+      if ((openResponse != null) && (openResponse.isSuccessResponse())) {
+        this.fastpathSessionInfo.setFastpathFileHandle(openResponse.getFastpathFileHandle());
+        LOG.debug("Fast path open successful [Handle={}]", this.fastpathSessionInfo.getFastpathFileHandle());
+      }
+
       setStatusFromFastpathResponse(openResponse);
     } catch (FastpathException ex) {
       handleFastpathException(ex);
-    }
-
-    if ((openResponse != null) && (openResponse.isSuccessResponse())) {
-      this.fastpathSessionInfo.setFastpathFileHandle(openResponse.getFastpathFileHandle());
-      LOG.debug("Fast path open successful [Handle={}]", this.fastpathSessionInfo.getFastpathFileHandle());
     }
   }
 
@@ -238,16 +238,16 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
           getRequestHeaders(),
           defaultTimeout, buffOffset, fastpathSessionInfo.getFastpathFileHandle());
       readResponse = triggerRead(readRequestParams, buffer);
+      if ((readResponse != null) && (readResponse.isSuccessResponse())) {
+        this.bytesReceived = readResponse.getBytesRead();
+        LOG.debug("Fast path read successful [Handle={}] - bytes received = {} ",
+            this.fastpathSessionInfo.getFastpathFileHandle(), this.bytesReceived);
+      }
+
       setStatusFromFastpathResponse(readResponse);
       responseContentBuffer = buffer;
     } catch (FastpathException ex) {
       handleFastpathException(ex);
-    }
-
-    if ((readResponse != null) && (readResponse.isSuccessResponse())) {
-      this.bytesReceived = readResponse.getBytesRead();
-      LOG.debug("Fast path read successful [Handle={}] - bytes received = {} ",
-          this.fastpathSessionInfo.getFastpathFileHandle(), this.bytesReceived);
     }
   }
 
@@ -268,18 +268,19 @@ public class AbfsFastpathConnection extends AbfsHttpOperation {
           fastpathSessionInfo.getSessionToken(), getRequestHeaders(),
           defaultTimeout, fastpathSessionInfo.getFastpathFileHandle());
       closeResponse = triggerClose(closeRequestParams);
+      if ((closeResponse != null) && (closeResponse.isSuccessResponse())) {
+        LOG.debug("Fast path close successful [Handle={}]", fastpathSessionInfo.getFastpathFileHandle());
+      }
+
       setStatusFromFastpathResponse(closeResponse);
     } catch (FastpathException ex) {
       handleFastpathException(ex);
-    }
-
-    if ((closeResponse != null) && (closeResponse.isSuccessResponse())) {
-      LOG.debug("Fast path close successful [Handle={}]", fastpathSessionInfo.getFastpathFileHandle());
     }
   }
 
   private void handleFastpathException(final FastpathException ex)
       throws AbfsFastpathException {
+    LOG.debug("Received FastpathException: {}", ex.toString());
     if (ex instanceof FastpathRequestException) {
       throw new AbfsFastpathException(ex.getMessage(), ex);
     }

@@ -486,7 +486,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.hsync();
       MockFastpathConnection.registerAppend(buffer.length,
           testFilePath.getName(), buffer, 0, buffer.length);
-      addToTestTearDownCleanupList(testFilePath);;
+      addToTestTearDownCleanupList(testFilePath);
       /* For Appendlob flush is not needed to update data on server */
       validate(fs, testFilePath, buffer, isAppendBlob, isMockFastpathTest);
     }

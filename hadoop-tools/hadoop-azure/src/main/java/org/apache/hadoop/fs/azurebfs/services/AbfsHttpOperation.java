@@ -27,15 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonParser;
-import org.codehaus.jackson.JsonToken;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -171,10 +163,14 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  public abstract void processResponse(byte[] buffer, final int offset, final int length) throws IOException;
+  public abstract void processResponse(byte[] buffer, int offset, int length) throws IOException;
 
-  public byte[] getResponseContentBuffer() {
-    return responseContentBuffer;
+  public int getResponseContentBuffer(byte[] buffer) {
+    // Immutable byte[] is not possible, hence return a copy
+    // spotbugs -  EI_EXPOSE_REP
+    int length = Math.min(responseContentBuffer.length, buffer.length);
+    System.arraycopy(responseContentBuffer, 0, buffer, 0, length);
+    return length;
   }
 
   // Returns a trace message for the request
@@ -264,6 +260,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   /**
    * Returns the elapsed time in milliseconds.
+   * @param startTime request start time
+   * @return total elapsed time
    */
   protected long elapsedTimeMs(final long startTime) {
     return (System.nanoTime() - startTime) / ONE_MILLION;
@@ -272,6 +270,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   /**
    * Check null stream, this is to pass findbugs's redundant check for NULL
    * @param stream InputStream
+   * @return if inputStream is null
    */
   protected boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
@@ -333,7 +332,9 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     @Override
-    public String getClientRequestId() { return ""; }
+    public String getClientRequestId() {
+      return "";
+    }
 
     @Override
     public void setHeader(final String header, final String value) { }

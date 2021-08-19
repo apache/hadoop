@@ -36,9 +36,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 
 public class MockAbfsClient extends AbfsClient {
 
-  int errStatus = 0;
-  boolean mockRequestException = false;
-  boolean mockConnectionException = false;
+  private int errStatus = 0;
+  private boolean mockRequestException = false;
+  private boolean mockConnectionException = false;
   boolean forceFastpathReadAlways = true;
 
   public MockAbfsClient(final URL baseUrl,

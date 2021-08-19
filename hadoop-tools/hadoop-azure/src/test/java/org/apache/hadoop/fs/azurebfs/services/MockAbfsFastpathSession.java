@@ -37,10 +37,10 @@ import static org.mockito.Mockito.doReturn;
 public class MockAbfsFastpathSession extends AbfsFastpathSession {
   public static final Duration FIVE_MIN = Duration.ofMinutes(5);
 
-  int errStatus = 0;
-  boolean mockRequestException = false;
-  boolean mockConnectionException = false;
-  boolean disableForceFastpathMock = false;
+  private int errStatus = 0;
+  private boolean mockRequestException = false;
+  private boolean mockConnectionException = false;
+  private boolean disableForceFastpathMock = false;
 
   public MockAbfsFastpathSession(final AbfsClient client,
       final String path,

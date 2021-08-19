@@ -71,7 +71,7 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
     Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
     final AzureBlobFileSystem fs =
-        (AzureBlobFileSystem) FileSystem.newInstance(configuration);//getFileSystem();
+        (AzureBlobFileSystem) FileSystem.newInstance(configuration);
 
     Path smallOperationsFile = path("testOneReadWriteOps");
     Path largeOperationsFile = path("testLargeReadWriteOps");

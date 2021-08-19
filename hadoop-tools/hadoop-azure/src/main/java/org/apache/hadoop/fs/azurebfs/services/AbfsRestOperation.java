@@ -102,7 +102,7 @@ public class AbfsRestOperation {
   }
 
   public ListResultSchema getListResultSchema() {
-    return ((AbfsHttpConnection)this.result).getListResultSchema();
+    return ((AbfsHttpConnection) this.result).getListResultSchema();
   }
 
   /**
@@ -118,7 +118,7 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
-    this(operationType, client, method, url, requestHeaders, (String)null);
+    this(operationType, client, method, url, requestHeaders, (String) null);
   }
 
   /**
@@ -332,7 +332,7 @@ public class AbfsRestOperation {
           LOG.debug("Signing request with shared key");
           // sign the HTTP request
           client.getSharedKeyCredentials().signRequest(
-              ((AbfsHttpConnection)httpOperation).getConnection(),
+              ((AbfsHttpConnection) httpOperation).getConnection(),
               hasRequestBody ? bufferLength : 0);
           break;
       }
@@ -344,6 +344,12 @@ public class AbfsRestOperation {
           "Auth failure: " + e.getMessage(), e);
     }
 
+    if (httpOperation == null) {
+      throw new AbfsRestOperationException(-1, null,
+          "Unable to create httpOperation instance for auth type "
+              + client.getAuthType(), null);
+    }
+
     try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
@@ -352,7 +358,7 @@ public class AbfsRestOperation {
 
       if (hasRequestBody && !isAFastpathRequest()) {
         // HttpUrlConnection requires
-        ((AbfsHttpConnection)httpOperation).sendRequest(buffer, bufferOffset, bufferLength);
+        ((AbfsHttpConnection) httpOperation).sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
@@ -369,12 +375,9 @@ public class AbfsRestOperation {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
     } catch (UnknownHostException ex) {
-      String hostname = null;
-      if (httpOperation != null) {
-        hostname = httpOperation.getHost();
-        LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
-            hostname);
-      }
+      String hostname = httpOperation.getHost();
+      LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
+          hostname);
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex);
@@ -382,11 +385,7 @@ public class AbfsRestOperation {
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        if (httpOperation == null) {
-          LOG.debug("HttpRequestFailure: {} - {}: {}", method, url, ex);
-        } else {
-          LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
-        }
+        LOG.debug("HttpRequestFailure: {}, {}", httpOperation.toString(), ex);
       }
 
       if (ex instanceof AbfsFastpathException) {

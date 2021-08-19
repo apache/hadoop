@@ -46,7 +46,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MA
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FASTPATH_READ_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {

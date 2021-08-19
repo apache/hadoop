@@ -891,20 +891,27 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
-  AbfsInputStreamContext getContext() { return this.context; }
+  AbfsInputStreamContext getContext() {
+    return this.context;
+  }
 
   @VisibleForTesting
-  String getETag() { return this.eTag; }
+  String getETag() {
+    return this.eTag;
+  }
 
   @VisibleForTesting
-  Statistics getFSStatistics() { return this.statistics; }
+  Statistics getFSStatistics() {
+    return this.statistics;
+  }
 
   @VisibleForTesting
-  AbfsFastpathSession getFastpathSession() { return this.fastpathSession; }
+  AbfsFastpathSession getFastpathSession() {
+    return this.fastpathSession;
+  }
 
   @VisibleForTesting
-  void setFastpathSession(AbfsFastpathSession fastpathSession)
-  {
+  void setFastpathSession(AbfsFastpathSession fastpathSession) {
     if ((fastpathSession != null) && (
         fastpathSession.getCurrentAbfsFastpathSessionInfoCopy() != null)) {
       tracingContext.setConnectionMode(

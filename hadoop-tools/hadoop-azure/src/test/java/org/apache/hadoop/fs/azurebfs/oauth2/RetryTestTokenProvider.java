@@ -65,7 +65,9 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
     return new Date();
   }
 
-  public static RetryTestTokenProvider getCurrentRetryTestProviderInstance(AccessTokenProvider customTokenProvider) {
-    return (RetryTestTokenProvider)((CustomTokenProviderAdapter)customTokenProvider).getCustomTokenProviderAdaptee();
+  public static RetryTestTokenProvider getCurrentRetryTestProviderInstance(
+      AccessTokenProvider customTokenProvider) {
+    return (RetryTestTokenProvider) ((CustomTokenProviderAdapter) customTokenProvider)
+        .getCustomTokenProviderAdaptee();
   }
 }

@@ -181,8 +181,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isFastpathEnabled() {
     if ((isFastpathEnabled)
-        && ((readBufferSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE) ||
-        (readAheadBlockSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE))) {
+        && ((readBufferSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE)
+        || (readAheadBlockSize != DEFAULT_FASTPATH_READ_BUFFER_SIZE))) {
       LOG.debug("fs.azure.read.request.size[={}] or "
           + "fs.azure.read.readahead.blocksize[={}] is configured "
           + "different to allowed buffer size of Fastpath. Disabling "

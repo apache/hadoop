@@ -31,8 +31,6 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
-import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -157,7 +155,7 @@ public class TestAbfsInputStream extends
       boolean isFastpathEnabled) throws IOException {
     AbfsInputStreamContext context = getInStmContext(readAheadQueueDepth,
         readBufferSize, alwaysReadBufferSize, readAheadBlockSize, isFastpathEnabled);
-    return getAbfsInputStream(abfsClient, fileName,fileSize, eTag, context);
+    return getAbfsInputStream(abfsClient, fileName, fileSize, eTag, context);
   }
 
   public AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
@@ -170,7 +168,7 @@ public class TestAbfsInputStream extends
       int readAheadBlockSize) throws java.io.IOException {
     AbfsInputStreamContext context = getInStmContext(readAheadQueueDepth,
         readBufferSize, alwaysReadBufferSize, readAheadBlockSize, false);
-    return getAbfsInputStream(abfsClient, fileName,fileSize, eTag, context);
+    return getAbfsInputStream(abfsClient, fileName, fileSize, eTag, context);
   }
 
   private AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
@@ -225,7 +223,7 @@ public class TestAbfsInputStream extends
     // ReadAhead threads are triggered asynchronously.
     // Wait a second before verifying the number of total calls.
     Thread.sleep(1000);
-    verify(client, times(count)).read(any(), any(byte[].class), any(),any(), any(TracingContext.class));
+    verify(client, times(count)).read(any(), any(byte[].class), any(), any(), any(TracingContext.class));
   }
 
   private void checkEvictedStatus(AbfsInputStream inputStream, int position, boolean expectedToThrowException)

@@ -24,10 +24,8 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.ZoneOffset;
 import java.util.Base64;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.Date;
@@ -39,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_FASTPATH_SESSION_EXPIRY;
 
 public class AbfsFastpathSession {
@@ -98,8 +97,8 @@ public class AbfsFastpathSession {
   public void updateConnectionModeForFailures(AbfsConnectionMode connectionMode) {
     // Fastpath connection and session refresh failures are not recoverable,
     // update connection mode if that happens
-    if ((connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE) ||
-        (connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE)) {
+    if ((connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE)
+        || (connectionMode == AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE)) {
       LOG.debug(
           "{}: Switching to error connection mode : {}",
           Thread.currentThread().getName(), connectionMode);
@@ -122,8 +121,8 @@ public class AbfsFastpathSession {
 
   protected void fetchSessionTokenAndFileHandle() {
     fetchFastpathSessionToken();
-    if ((fastpathSessionInfo != null) &&
-        (fastpathSessionInfo.isValidSession())) {
+    if ((fastpathSessionInfo != null)
+        && (fastpathSessionInfo.isValidSession())) {
       fetchFastpathFileHandle();
     }
   }
@@ -159,12 +158,9 @@ public class AbfsFastpathSession {
       }
 
       // schedule for refresh right away
-      ScheduledFuture scheduledFuture =
-          scheduledExecutorService.schedule(new Callable() {
-            public Boolean call() throws Exception {
-              return fetchFastpathSessionToken();
-            }
-          }, sessionRefreshIntervalInSec, TimeUnit.SECONDS);
+      scheduledExecutorService.schedule(() -> {
+        fetchFastpathSessionToken();
+      }, sessionRefreshIntervalInSec, TimeUnit.SECONDS);
       LOG.debug(
           "Fastpath session token fetch successful, valid till {}. Refresh scheduled after {} secs",
           expiry, sessionRefreshIntervalInSec);
@@ -198,15 +194,18 @@ public class AbfsFastpathSession {
 
   @VisibleForTesting
   boolean fetchFastpathSessionToken() {
-    if ((fastpathSessionInfo != null) &&
-        (fastpathSessionInfo.getConnectionMode() != AbfsConnectionMode.FASTPATH_CONN)) {
+    if ((fastpathSessionInfo != null)
+        && (fastpathSessionInfo.getConnectionMode()
+        != AbfsConnectionMode.FASTPATH_CONN)) {
       // no need to refresh or schedule another
       return false;
     }
 
     try {
       AbfsRestOperation op = executeFetchFastpathSessionToken();
-      byte[] buffer = op.getResult().getResponseContentBuffer();
+      byte[] buffer = new byte[Integer.valueOf(
+          op.getResult().getResponseHeader(CONTENT_LENGTH))];
+      op.getResult().getResponseContentBuffer(buffer);
       updateAbfsFastpathSessionToken(Base64.getEncoder().encodeToString(buffer),
           getExpiry(buffer,
               op.getResult().getResponseHeader(X_MS_FASTPATH_SESSION_EXPIRY)));

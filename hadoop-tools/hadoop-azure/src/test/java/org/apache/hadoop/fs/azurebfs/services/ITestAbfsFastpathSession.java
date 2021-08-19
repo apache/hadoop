@@ -363,7 +363,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
     AbfsClient client = TestAbfsClient.getMockAbfsClient(
         getAbfsClient(getFileSystem()),
         this.getConfiguration());
-    AbfsRestOperation successOp_Fastpath_Conn = getMockReadRestOp();
+    AbfsRestOperation successOpn = getMockReadRestOp();
 
     Answer<AbfsRestOperation> answer = invocation -> {
       ReadRequestParameters params = (ReadRequestParameters) invocation.getArguments()[3];
@@ -375,7 +375,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
         params.getAbfsFastpathSessionInfo()
             .setConnectionMode(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
       }
-      return successOp_Fastpath_Conn;
+      return successOpn;
     };
 
     // Fail readAheads with Fastpath connection
