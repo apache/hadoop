@@ -101,18 +101,22 @@ public interface DatanodeProtocol {
    * an array of "DatanodeCommand" objects in HeartbeatResponse.
    * A DatanodeCommand tells the DataNode to invalidate local block(s), 
    * or to copy them to other DataNodes, etc.
-   * @param registration datanode registration information
-   * @param reports utilization report per storage
-   * @param xmitsInProgress number of transfers from this datanode to others
-   * @param xceiverCount number of active transceiver threads
-   * @param failedVolumes number of failed volumes
-   * @param volumeFailureSummary info about volume failures
+   * @param registration datanode registration information.
+   * @param reports utilization report per storage.
+   * @param dnCacheCapacity the total cache capacity of the datanode (in bytes).
+   * @param dnCacheUsed the amount of cache used by the datanode (in bytes).
+   * @param xmitsInProgress number of transfers from this datanode to others.
+   * @param xceiverCount number of active transceiver threads.
+   * @param failedVolumes number of failed volumes.
+   * @param volumeFailureSummary info about volume failures.
    * @param requestFullBlockReportLease whether to request a full block
    *                                    report lease.
    * @param slowPeers Details of peer DataNodes that were detected as being
    *                  slow to respond to packet writes. Empty report if no
    *                  slow peers were detected by the DataNode.
-   * @throws IOException on error
+   * @param slowDisks Details of disks on DataNodes that were detected as
+   *                  being slow. Empty report if no slow disks were detected.
+   * @throws IOException on error.
    */
   @Idempotent
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
