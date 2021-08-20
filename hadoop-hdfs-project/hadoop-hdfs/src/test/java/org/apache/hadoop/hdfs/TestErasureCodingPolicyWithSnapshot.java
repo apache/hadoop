@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
@@ -174,10 +174,9 @@ public class TestErasureCodingPolicyWithSnapshot {
     cluster.restartNameNode(true);
 
     ErasureCodingPolicy ecSnap1 = fs.getErasureCodingPolicy(snap1);
-      assertEquals(ecPolicy,
-              ecSnap1, "Got unexpected erasure coding policy");
-      assertEquals(ecSnap.getSchema(),
-              ecSnap1.getSchema(), "Got unexpected ecSchema");
+    assertEquals(ecPolicy, ecSnap1, "Got unexpected erasure coding policy");
+    assertEquals(ecSnap.getSchema(), ecSnap1.getSchema(),
+        "Got unexpected ecSchema");
   }
 
   /**
@@ -225,14 +224,14 @@ public class TestErasureCodingPolicyWithSnapshot {
     DFSTestUtil.createFile(fs, ecFile, len, (short) 1, 0xFEED);
 
     // Verify FileStatus for normal and EC files
-    Assertions.assertNotErasureCoded(fs, normalFile);
-    Assertions.assertErasureCoded(fs, ecFile);
+    ContractTestUtils.assertNotErasureCoded(fs, normalFile);
+    ContractTestUtils.assertErasureCoded(fs, ecFile);
 
     cluster.restartNameNode(true);
 
     // Verify FileStatus for normal and EC files
-    Assertions.assertNotErasureCoded(fs, normalFile);
-    Assertions.assertErasureCoded(fs, ecFile);
+    ContractTestUtils.assertNotErasureCoded(fs, normalFile);
+    ContractTestUtils.assertErasureCoded(fs, ecFile);
   }
 
   @Test
