@@ -253,8 +253,6 @@ public class RequestFactoryImpl implements RequestFactory {
    * @param metadata to update.
    */
   protected void setOptionalObjectMetadata(ObjectMetadata metadata) {
-    final String contentEncoding =
-      getContentEncoding();
     final S3AEncryptionMethods algorithm
         = getServerSideEncryptionAlgorithm();
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
