@@ -18,18 +18,89 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
-import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkOpStatistics;
-import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkStatistics;
-import static org.apache.hadoop.hdfs.TestDistributedFileSystem.getOpStatistics;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
-import static org.junit.jupiter.api.Assertions.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.MapType;
+import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.TestDFSClientRetries;
+import org.apache.hadoop.hdfs.TestFileCreation;
+import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
+import org.apache.hadoop.hdfs.web.resources.LengthParam;
+import org.apache.hadoop.hdfs.web.resources.NoRedirectParam;
+import org.apache.hadoop.hdfs.web.resources.OffsetParam;
+import org.apache.hadoop.hdfs.web.resources.Param;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.util.DataChecksum;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.EOFException;
 import java.io.File;
@@ -53,92 +124,25 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.commons.io.IOUtils;
-import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
-import org.apache.hadoop.test.LambdaTestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.BlockStoragePolicySpi;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.fs.FsServerDefaults;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclEntryScope;
-import org.apache.hadoop.fs.permission.AclEntryType;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.TestDFSClientRetries;
-import org.apache.hadoop.hdfs.TestFileCreation;
-import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
-import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
-import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkOpStatistics;
+import static org.apache.hadoop.hdfs.TestDistributedFileSystem.checkStatistics;
+import static org.apache.hadoop.hdfs.TestDistributedFileSystem.getOpStatistics;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
-import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
-import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
-import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
-import org.apache.hadoop.hdfs.web.resources.LengthParam;
-import org.apache.hadoop.hdfs.web.resources.NoRedirectParam;
-import org.apache.hadoop.hdfs.web.resources.OffsetParam;
-import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
-import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.RetriableException;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.test.Whitebox;
-import org.slf4j.event.Level;
-import org.codehaus.jettison.json.JSONArray;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
-import org.mockito.Mockito;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.MapType;
-
+import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
@@ -601,41 +605,39 @@ public class TestWebHDFS {
     FileStatus actualECDirStatus = webHdfs.getFileStatus(ecDir);
     Assertions.assertEquals(expectedECDirStatus.isErasureCoded(),
         actualECDirStatus.isErasureCoded());
-    Assertions.assertErasureCoded(dfs, ecDir);
-      assertTrue(
-              actualECDirStatus.toString().contains("isErasureCoded=true"),
-              ecDir + " should have erasure coding set in "
-                      + "FileStatus#toString(): " + actualECDirStatus);
+    ContractTestUtils.assertErasureCoded(dfs, ecDir);
+    assertTrue(actualECDirStatus.toString().contains("isErasureCoded=true"),
+        ecDir + " should have erasure coding set in "
+            + "FileStatus#toString(): " + actualECDirStatus);
 
     FileStatus expectedECFileStatus = dfs.getFileStatus(ecFile);
     FileStatus actualECFileStatus = webHdfs.getFileStatus(ecFile);
     Assertions.assertEquals(expectedECFileStatus.isErasureCoded(),
         actualECFileStatus.isErasureCoded());
-    Assertions.assertErasureCoded(dfs, ecFile);
-      assertTrue(
-              actualECFileStatus.toString().contains("isErasureCoded=true"),
-              ecFile + " should have erasure coding set in "
-                      + "FileStatus#toString(): " + actualECFileStatus);
+    ContractTestUtils.assertErasureCoded(dfs, ecFile);
+    assertTrue(actualECFileStatus.toString().contains("isErasureCoded=true"),
+        ecFile + " should have erasure coding set in "
+            + "FileStatus#toString(): " + actualECFileStatus);
 
     FileStatus expectedNormalDirStatus = dfs.getFileStatus(normalDir);
     FileStatus actualNormalDirStatus = webHdfs.getFileStatus(normalDir);
     Assertions.assertEquals(expectedNormalDirStatus.isErasureCoded(),
         actualNormalDirStatus.isErasureCoded());
-    Assertions.assertNotErasureCoded(dfs, normalDir);
-      assertTrue(
-              actualNormalDirStatus.toString().contains("isErasureCoded=false"),
-              normalDir + " should have erasure coding unset in "
-                      + "FileStatus#toString(): " + actualNormalDirStatus);
+    ContractTestUtils.assertNotErasureCoded(dfs, normalDir);
+    assertTrue(
+        actualNormalDirStatus.toString().contains("isErasureCoded=false"),
+        normalDir + " should have erasure coding unset in "
+            + "FileStatus#toString(): " + actualNormalDirStatus);
 
     FileStatus expectedNormalFileStatus = dfs.getFileStatus(normalFile);
     FileStatus actualNormalFileStatus = webHdfs.getFileStatus(normalDir);
     Assertions.assertEquals(expectedNormalFileStatus.isErasureCoded(),
         actualNormalFileStatus.isErasureCoded());
-    Assertions.assertNotErasureCoded(dfs, normalFile);
-      assertTrue(
-              actualNormalFileStatus.toString().contains("isErasureCoded=false"),
-              normalFile + " should have erasure coding unset in "
-                      + "FileStatus#toString(): " + actualNormalFileStatus);
+    ContractTestUtils.assertNotErasureCoded(dfs, normalFile);
+    assertTrue(
+        actualNormalFileStatus.toString().contains("isErasureCoded=false"),
+        normalFile + " should have erasure coding unset in "
+            + "FileStatus#toString(): " + actualNormalFileStatus);
   }
 
   /**
