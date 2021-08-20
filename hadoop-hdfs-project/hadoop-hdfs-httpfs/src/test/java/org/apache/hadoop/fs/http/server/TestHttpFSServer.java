@@ -70,6 +70,7 @@ import java.util.Set;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
@@ -2001,5 +2002,39 @@ public class TestHttpFSServer extends HFSTestCase {
             + "is incompatible with \"application/json\"",
         () -> HttpFSUtils.jsonParse(conn));
     conn.disconnect();
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetFileBlockLocations() throws Exception {
+    createHttpFSServer(false, false);
+    // Create a test directory
+    String pathStr = "/tmp/tmp-snap-diff-test";
+    createDirWithHttp(pathStr, "700", null);
+
+    Path path = new Path(pathStr);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path.toUri(), TestHdfsHelper.getHdfsConf());
+    // Enable snapshot
+    dfs.allowSnapshot(path);
+    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
+    // Create a file and take a snapshot
+    String file1 = pathStr + "/file1";
+    createWithHttp(file1, null);
+    HttpURLConnection conn = sendRequestToHttpFSServer(file1,
+        "GETFILEBLOCKLOCATIONS", "length=10&offset10");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    BlockLocation[] locations1 =
+        dfs.getFileBlockLocations(new Path(file1), 0, 1);
+    Assert.assertNotNull(locations1);
+
+    HttpURLConnection conn1 = sendRequestToHttpFSServer(file1,
+        "GET_BLOCK_LOCATIONS", "length=10&offset10");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
+    BlockLocation[] locations2 =
+        dfs.getFileBlockLocations(new Path(file1), 0, 1);
+    Assert.assertNotNull(locations2);
   }
 }

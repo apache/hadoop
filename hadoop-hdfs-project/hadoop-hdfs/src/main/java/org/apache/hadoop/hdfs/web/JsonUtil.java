@@ -655,4 +655,18 @@ public class JsonUtil {
     m.put(BlockLocation.class.getSimpleName(), blockLocations);
     return toJsonString("BlockLocations", m);
   }
+
+  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
+      throws IOException {
+    if (locations == null) {
+      return null;
+    }
+    final Map<String, Object> m = new TreeMap<>();
+    Object[] blockLocations = new Object[locations.length];
+    for (int i = 0; i < locations.length; i++) {
+      blockLocations[i] = toJsonMap(locations[i]);
+    }
+    m.put(BlockLocation.class.getSimpleName(), blockLocations);
+    return m;
+  }
 }

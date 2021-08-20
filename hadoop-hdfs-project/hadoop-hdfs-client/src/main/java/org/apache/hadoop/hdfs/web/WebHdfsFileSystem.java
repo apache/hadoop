@@ -1853,22 +1853,47 @@ public class WebHdfsFileSystem extends FileSystem
     if (status == null) {
       return null;
     }
+
     return getFileBlockLocations(status.getPath(), offset, length);
   }
 
   @Override
-  public BlockLocation[] getFileBlockLocations(final Path p,
-      final long offset, final long length) throws IOException {
+  public BlockLocation[] getFileBlockLocations(final Path p, final long offset,
+      final long length) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
+    BlockLocation[] locations = null;
+    try {
+      locations = getFileBlockLocations(GetOpParam.Op.GETFILEBLOCKLOCATIONS, p,
+          offset, length);
+    } catch (RemoteException e) {
+      if (e.getMessage() != null
+          && e.getMessage().contains("Invalid value for webhdfs parameter")
+          && e.getMessage()
+              .contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString())) {
+        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p,
+            offset, length);
+      }
+    }
+    return locations;
+  }
 
-    final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
+  private BlockLocation[] getFileBlockLocations(GetOpParam.Op operation,
+      final Path p, final long offset, final long length) throws IOException {
+    final HttpOpParam.Op op = operation;
     return new FsPathResponseRunner<BlockLocation[]>(op, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
-      BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        return DFSUtilClient.locatedBlocks2Locations(
-            JsonUtilClient.toLocatedBlocks(json));
+      BlockLocation[] decodeResponse(Map<?, ?> json) throws IOException {
+        switch (operation) {
+        case GETFILEBLOCKLOCATIONS:
+          return JsonUtilClient.toBlockLocationArray(json);
+        case GET_BLOCK_LOCATIONS:
+          return DFSUtilClient
+              .locatedBlocks2Locations(JsonUtilClient.toLocatedBlocks(json));
+        default:
+          throw new IOException("Unknown operation " + operation.name());
+        }
       }
     }.run();
   }

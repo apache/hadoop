@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
@@ -1195,7 +1196,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
-    SATISFYSTORAGEPOLICY
+    SATISFYSTORAGEPOLICY, GETFILEBLOCKLOCATIONS
   }
 
   private void operation(Operation op) throws Exception {
@@ -1331,6 +1332,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case SATISFYSTORAGEPOLICY:
       testStoragePolicySatisfier();
+      break;
+    case GETFILEBLOCKLOCATIONS:
+      testGetFileBlockLocations();
       break;
     }
 
@@ -1946,6 +1950,32 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         Assert.fail(fs.getClass().getSimpleName() + " doesn't support access");
       }
       dfs.delete(path1, true);
+    }
+  }
+
+  private void testGetFileBlockLocations() throws Exception {
+    BlockLocation[] locations1, locations2 = null;
+    Path testFile = null;
+    try {
+      if (!this.isLocalFS()) {
+        FileSystem fs = this.getHttpFSFileSystem();
+        testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
+        DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
+        if (fs instanceof HttpFSFileSystem) {
+          HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+          locations1 = httpFS.getFileBlockLocations(testFile, 0, 1);
+          Assert.assertNotNull(locations1);
+        } else if (fs instanceof WebHdfsFileSystem) {
+          WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+          locations2 = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
+          Assert.assertNotNull(locations2);
+        } else {
+          Assert
+              .fail(fs.getClass().getSimpleName() + " doesn't support access");
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -2130,6 +2131,40 @@ public final class FSOperations {
             + ". Please check your fs.defaultFS configuration");
       }
       return null;
+    }
+  }
+
+  /**
+   * Executor that performs a getFileBlockLocations operation.
+   */
+
+  @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
+  public static class FSFileBlockLocations
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+    private long offsetValue;
+    private long lengthValue;
+
+    /**
+     * Creates a file-block-locations executor.
+     *
+     * @param path the path to retrieve the location
+     * @param offsetValue offset into the given file
+     * @param lengthValue length for which to get locations for
+     */
+    public FSFileBlockLocations(String path, long offsetValue,
+        long lengthValue) {
+      this.path = new Path(path);
+      this.offsetValue = offsetValue;
+      this.lengthValue = lengthValue;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      BlockLocation[] locations = fs.getFileBlockLocations(this.path,
+          this.offsetValue, this.lengthValue);
+      return JsonUtil.toJsonMap(locations);
     }
   }
 }
