@@ -79,6 +79,7 @@ import org.apache.hadoop.fs.PathOperationException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem.HdfsDataOutputStreamBuilder;
@@ -1783,7 +1784,7 @@ public class TestDistributedFileSystem {
         out1.write(contentOrigin);
       }
 
-      Assertions.verifyFileContents(fs, testFilePath,
+      ContractTestUtils.verifyFileContents(fs, testFilePath,
           content.getBytes());
 
       try (FSDataOutputStream out = fs.createFile(testFilePath).overwrite(false)
