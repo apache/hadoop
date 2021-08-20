@@ -31,6 +31,7 @@ import org.junit.rules.Timeout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -80,7 +81,7 @@ public class TestKeyManager {
         keyManager.newDataEncryptionKey();
       assertNotEquals(
               dek, dekAfterExpiration, "KeyManager should generate a new data encryption key");
-    assertTrue("KeyManager has an expired DataEncryptionKey!",
-        dekAfterExpiration.expiryDate > fakeTimer.now());
+    assertTrue(dekAfterExpiration.expiryDate > fakeTimer.now(),
+        "KeyManager has an expired DataEncryptionKey!");
   }
 }
