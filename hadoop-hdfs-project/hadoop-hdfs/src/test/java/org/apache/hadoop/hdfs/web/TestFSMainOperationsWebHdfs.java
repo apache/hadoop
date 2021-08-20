@@ -53,7 +53,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
-  {
+  static {
     GenericTestUtils.setLogLevel(ExceptionHandler.LOG, Level.TRACE);
   }
 
@@ -161,9 +161,9 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     AppendTestUtil.checkFullFile(fSys, file, newLength, data, file.toString());
 
     ContentSummary cs = fSys.getContentSummary(dir);
-      assertEquals(cs.getSpaceConsumed(),
-              newLength * repl, "Bad disk space usage");
-      Assert.assertTrue(fSys.delete(dir, true), "Deleted");
+    assertEquals(cs.getSpaceConsumed(),
+            newLength * repl, "Bad disk space usage");
+    assertTrue(fSys.delete(dir, true), "Deleted");
   }
 
   // Test that WebHdfsFileSystem.jsonParse() closes the connection's input
