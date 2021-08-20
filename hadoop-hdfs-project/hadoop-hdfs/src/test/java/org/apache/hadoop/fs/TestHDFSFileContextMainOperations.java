@@ -18,15 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import static org.apache.hadoop.fs.FileContextTestHelper.exists;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -43,6 +34,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+
+import javax.security.auth.login.LoginException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import static org.apache.hadoop.fs.FileContextTestHelper.exists;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
@@ -324,8 +323,8 @@ public class TestHDFSFileContextMainOperations extends
     };
 
     for (String invalidName: invalidNames) {
-        Assert.assertFalse(
-                fc.getDefaultFileSystem().isValidName(invalidName), invalidName + " is not valid");
+      Assert.assertFalse(invalidName + " is not valid",
+          fc.getDefaultFileSystem().isValidName(invalidName));
     }
   }
 
