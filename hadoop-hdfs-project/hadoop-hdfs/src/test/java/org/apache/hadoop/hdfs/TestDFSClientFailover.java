@@ -31,6 +31,7 @@ import java.util.List;
 
 import javax.net.SocketFactory;
 
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +55,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
@@ -230,7 +230,7 @@ public class TestDFSClientFailover {
     try {
       Field f = InetAddress.class.getDeclaredField("nameServices");
       f.setAccessible(true);
-      Assumptions.assumeNotNull(f);
+      Assertions.assertNotNull(f);
       @SuppressWarnings("unchecked")
       List<NameService> nsList = (List<NameService>) f.get(null);
 
@@ -245,7 +245,7 @@ public class TestDFSClientFailover {
       LOG.info("Unable to spy on DNS. Skipping test.", t);
       // In case the JDK we're testing on doesn't work like Sun's, just
       // skip the test.
-      Assumptions.assumeNoException(t);
+      // Assume.assumeNoException(t);  // TODO: Should be safe to remove this?
       throw new RuntimeException(t);
     }
   }
