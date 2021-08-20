@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.io.IOException;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
+
+import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test ensures the statuses of EC files with the default policy.
@@ -71,23 +74,23 @@ public class TestFileStatusWithDefaultECPolicy {
     // test directory doesn't have an EC policy
     final Path dir = new Path("/foo");
     assertTrue(fs.mkdir(dir, FsPermission.getDirDefault()));
-    Assertions.assertNotErasureCoded(fs, dir);
+    ContractTestUtils.assertNotErasureCoded(fs, dir);
     assertNull(client.getFileInfo(dir.toString()).getErasureCodingPolicy());
     // test file doesn't have an EC policy
     final Path file = new Path(dir, "foo");
     fs.create(file).close();
     assertNull(client.getFileInfo(file.toString()).getErasureCodingPolicy());
-    Assertions.assertNotErasureCoded(fs, file);
+    ContractTestUtils.assertNotErasureCoded(fs, file);
     fs.delete(file, true);
 
     final ErasureCodingPolicy ecPolicy1 = getEcPolicy();
     // set EC policy on dir
     fs.setErasureCodingPolicy(dir, ecPolicy1.getName());
-    Assertions.assertErasureCoded(fs, dir);
+    ContractTestUtils.assertErasureCoded(fs, dir);
     final ErasureCodingPolicy ecPolicy2 =
         client.getFileInfo(dir.toUri().getPath()).getErasureCodingPolicy();
     assertNotNull(ecPolicy2);
-    assertTrue(ecPolicy1.equals(ecPolicy2));
+    assertEquals(ecPolicy1, ecPolicy2);
 
     // test file with EC policy
     fs.create(file).close();
@@ -95,11 +98,11 @@ public class TestFileStatusWithDefaultECPolicy {
         fs.getClient().getFileInfo(file.toUri().getPath())
             .getErasureCodingPolicy();
     assertNotNull(ecPolicy3);
-    assertTrue(ecPolicy1.equals(ecPolicy3));
-    Assertions.assertErasureCoded(fs, file);
+    assertEquals(ecPolicy1, ecPolicy3);
+    ContractTestUtils.assertErasureCoded(fs, file);
     FileStatus status = fs.getFileStatus(file);
-      assertTrue(
-              status.toString().contains("isErasureCoded=true"), file + " should have erasure coding set in " +
-              "FileStatus#toString(): " + status);
+    assertTrue(status.toString().contains("isErasureCoded=true"),
+        file + " should have erasure coding set in "
+            + "FileStatus#toString(): " + status);
   }
 }
