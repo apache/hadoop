@@ -107,7 +107,7 @@ public class MockFastpathDriver extends FastpathDriver {
     }
   }
 
-  public String open (int timeout,
+  public String open(int timeout,
       String clientRequestId,
       String serializedRequestParams) throws FastpathConnectionException {
     return responseRegistry.get(clientRequestId).mockResponse;
@@ -147,7 +147,7 @@ public class MockFastpathDriver extends FastpathDriver {
       return responseRegistry.get(clientRequestId).mockResponse;
     }
 
-    String mockResponseFormat  = responseRegistry.get(clientRequestId).mockResponse;
+    String mockResponseFormat = responseRegistry.get(clientRequestId).mockResponse;
     System.arraycopy(responseRegistry.get(clientRequestId).mockStoreBuffer,
         (int) responseRegistry.get(clientRequestId).remotePosition, rdBuffer,
         rdBufOffset, len);

@@ -120,8 +120,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    * lazy seek to decide whether to seek on the next read or not.
    */
   private long nextReadPos;
-
-  protected AbfsFastpathSession fastpathSession = null;
+  private AbfsFastpathSession fastpathSession = null;
 
   public AbfsInputStream(
           final AbfsClient client,

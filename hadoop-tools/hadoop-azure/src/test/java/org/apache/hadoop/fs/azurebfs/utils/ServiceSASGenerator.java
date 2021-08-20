@@ -37,15 +37,11 @@ public class ServiceSASGenerator extends SASGenerator {
   }
 
   public String getContainerSASWithFullControl(String accountName, String containerName) {
-    String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
-    return getContainerSASWithFullControl(accountName, containerName, se);
-  }
-
-  public String getContainerSASWithFullControl(String accountName, String containerName, String se) {
     String sp = "rcwdl";
     String sv = AuthenticationVersion.Feb20.toString();
     String sr = "c";
     String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
+    String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
 
     String signature = computeSignatureForSAS(sp, st, se, sv, "c",
         accountName, containerName, null);

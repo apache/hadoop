@@ -20,12 +20,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 

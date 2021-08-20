@@ -91,7 +91,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
   protected void createAbfsFastpathSession(boolean isFastpathFeatureConfigOn) {
     if (isFastpathFeatureConfigOn) {
       try {
-        fastpathSession = new MockAbfsFastpathSession(getClient(), getPath(), getETag(), getTracingContext());
+        setFastpathSession(new MockAbfsFastpathSession(getClient(), getPath(), getETag(), getTracingContext()));
       } catch (IOException e) {
         Assert.fail("Failure in creating MockAbfsFastpathSession instance " + e);
       }
@@ -242,8 +242,8 @@ public class MockAbfsInputStream extends AbfsInputStream {
     buffer.putLong(Long.reverseBytes(w32FileTime));
     byte[] timeArray = buffer.array();
     byte[] sessionToken = new byte[token.length + timeArray.length + 8];
-    System.arraycopy(timeArray,0, sessionToken,8, timeArray.length);
-    System.arraycopy(token,0, sessionToken,16, token.length);
+    System.arraycopy(timeArray, 0, sessionToken, 8, timeArray.length);
+    System.arraycopy(token, 0, sessionToken, 16, token.length);
 
     when(httpOp.getResponseHeader(CONTENT_LENGTH)).thenReturn(String.valueOf(sessionToken.length));
     doAnswer(invocation -> {

@@ -47,7 +47,7 @@ public class AbfsFastpathSession {
   // 1ms in units of nanoseconds
   private static final long FILETIME_ONE_MILLISECOND = 10 * 1000;
   private static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
-  protected final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
   private AbfsFastpathSessionInfo fastpathSessionInfo;
   private AbfsClient client;
