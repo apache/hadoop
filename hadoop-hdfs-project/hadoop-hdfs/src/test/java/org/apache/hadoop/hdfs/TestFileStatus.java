@@ -30,12 +30,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
@@ -44,7 +44,7 @@ import org.slf4j.event.Level;
  * This class tests the FileStatus API.
  */
 public class TestFileStatus {
-  {
+  static {
     GenericTestUtils.setLogLevel(FSNamesystem.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(FileSystem.LOG, Level.TRACE);
   }
@@ -95,11 +95,11 @@ public class TestFileStatus {
     Path path = new Path("/");
       assertTrue(
               fs.getFileStatus(path).isDirectory(), "/ should be a directory");
-    Assertions.assertNotErasureCoded(fs, path);
+    ContractTestUtils.assertNotErasureCoded(fs, path);
 
     // Make sure getFileInfo returns null for files which do not exist
     HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
-      assertEquals(null, fileInfo, "Non-existant file should result in null");
+    assertNull(fileInfo, "Non-existant file should result in null");
     
     Path path1 = new Path("/name1");
     Path path2 = new Path("/name1/name2");
@@ -132,7 +132,7 @@ public class TestFileStatus {
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
-    Assertions.assertNotErasureCoded(fs, file1);
+    ContractTestUtils.assertNotErasureCoded(fs, file1);
     assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
@@ -151,7 +151,7 @@ public class TestFileStatus {
     assertEquals(blockSize, status.getBlockSize());
     assertEquals(1, status.getReplication());
     assertEquals(fileSize, status.getLen());
-    Assertions.assertNotErasureCoded(fs, file1);
+    ContractTestUtils.assertNotErasureCoded(fs, file1);
     assertEquals(file1.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
@@ -199,23 +199,23 @@ public class TestFileStatus {
     // test getFileStatus on an empty directory
     FileStatus status = fs.getFileStatus(dir);
       assertTrue(status.isDirectory(), dir + " should be a directory");
-      assertTrue(status.getLen() == 0, dir + " should be zero size ");
-    Assertions.assertNotErasureCoded(fs, dir);
+    assertEquals(0, status.getLen(), dir + " should be zero size ");
+    ContractTestUtils.assertNotErasureCoded(fs, dir);
     assertEquals(dir.makeQualified(fs.getUri(),
         fs.getWorkingDirectory()).toString(), 
         status.getPath().toString());
     
     // test listStatus on an empty directory
     FileStatus[] stats = fs.listStatus(dir);
-      assertEquals(0, stats.length, dir + " should be empty");
-      assertEquals(
-              0, fs.getContentSummary(dir).getLength(), dir + " should be zero size ");
+    assertEquals(0, stats.length, dir + " should be empty");
+    assertEquals(
+            0, fs.getContentSummary(dir).getLength(), dir + " should be zero size ");
     
     RemoteIterator<FileStatus> itor = fc.listStatus(dir);
-      assertFalse(itor.hasNext(), dir + " should be empty");
+    assertFalse(itor.hasNext(), dir + " should be empty");
 
     itor = fs.listStatusIterator(dir);
-      assertFalse(itor.hasNext(), dir + " should be empty");
+    assertFalse(itor.hasNext(), dir + " should be empty");
 
     // create another file that is smaller than a block.
     Path file2 = new Path(dir, "filestatus2.dat");
@@ -245,19 +245,19 @@ public class TestFileStatus {
 
     // Test listStatus on a non-empty directory
     stats = fs.listStatus(dir);
-      assertEquals(2, stats.length, dir + " should have two entries");
+    assertEquals(2, stats.length, dir + " should have two entries");
     assertEquals(file2.toString(), stats[0].getPath().toString());
     assertEquals(file3.toString(), stats[1].getPath().toString());
 
     itor = fc.listStatus(dir);
     assertEquals(file2.toString(), itor.next().getPath().toString());
     assertEquals(file3.toString(), itor.next().getPath().toString());
-      assertFalse(itor.hasNext(), "Unexpected addtional file");
+    assertFalse(itor.hasNext(), "Unexpected addtional file");
 
     itor = fs.listStatusIterator(dir);
     assertEquals(file2.toString(), itor.next().getPath().toString());
     assertEquals(file3.toString(), itor.next().getPath().toString());
-      assertFalse(itor.hasNext(), "Unexpected addtional file");
+    assertFalse(itor.hasNext(), "Unexpected addtional file");
 
 
     // Test iterative listing. Now dir has 2 entries, create one more.
@@ -322,7 +322,7 @@ public class TestFileStatus {
     try {
       itor.hasNext();
       fail("FileNotFoundException expected");
-    } catch (FileNotFoundException fnfe) {
+    } catch (FileNotFoundException ignored) {
     }
 
     fs.mkdirs(file2);
@@ -337,7 +337,7 @@ public class TestFileStatus {
         count++;
       }
       fail("FileNotFoundException expected");
-    } catch (FileNotFoundException fnfe) {
+    } catch (FileNotFoundException ignored) {
     }
     assertEquals(2, count);
   }
