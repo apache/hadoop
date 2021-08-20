@@ -24,7 +24,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.io.File;
@@ -67,7 +66,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.rules.ExpectedException;
@@ -88,7 +86,7 @@ public class TestBlockReaderFactory {
   @BeforeEach
   public void init() {
     DomainSocket.disableBindPathValidation();
-    Assumptions.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assertions.assertNull(DomainSocket.getLoadingFailureReason());
   }
 
   @AfterEach
