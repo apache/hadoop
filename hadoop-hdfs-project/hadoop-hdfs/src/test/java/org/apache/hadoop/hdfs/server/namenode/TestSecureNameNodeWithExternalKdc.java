@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
+
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +58,7 @@ public class TestSecureNameNodeWithExternalKdc {
   @BeforeEach
   public void testExternalKdcRunning() {
     // Tests are skipped if external KDC is not running.
-    Assume.assumeTrue(isExternalKdcRunning());
+    Assumptions.assumeTrue(isExternalKdcRunning());
   }
 
   @Test
