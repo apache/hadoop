@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -201,13 +200,13 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     //Verify file deletion within EZ
     DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
-    assertTrue("ViewFileSystem trash roots should include EZ file trash",
-        (fsView.getTrashRoots(true).size() == 1));
+    assertEquals(1, fsView.getTrashRoots(true).size(),
+        "ViewFileSystem trash roots should include EZ file trash");
 
     //Verify deletion of EZ
     DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
-    assertTrue("ViewFileSystem trash roots should include EZ zone trash",
-        (fsView.getTrashRoots(true).size() == 2));
+    assertEquals(2, fsView.getTrashRoots(true).size(),
+        "ViewFileSystem trash roots should include EZ zone trash");
   }
 
   @Test
@@ -250,15 +249,15 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
         viewFs.getFileChecksum(mountDataFilePath);
     FileChecksum fileChecksumViaTargetFs =
         fsTarget.getFileChecksum(fsTargetFilePath);
-      assertTrue(
-              fileChecksumViaViewFs.equals(fileChecksumViaTargetFs), "File checksum not matching!");
+    assertTrue(fileChecksumViaViewFs.equals(fileChecksumViaTargetFs),
+        "File checksum not matching!");
 
     fileChecksumViaViewFs =
         viewFs.getFileChecksum(mountDataFilePath, fileLength / 2);
     fileChecksumViaTargetFs =
         fsTarget.getFileChecksum(fsTargetFilePath, fileLength / 2);
-      assertTrue(
-              fileChecksumViaViewFs.equals(fileChecksumViaTargetFs), "File checksum not matching!");
+    assertTrue(fileChecksumViaViewFs.equals(fileChecksumViaTargetFs),
+        "File checksum not matching!");
   }
 
   //Rename should fail on across different fileSystems
