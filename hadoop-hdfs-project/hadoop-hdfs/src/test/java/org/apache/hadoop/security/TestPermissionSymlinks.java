@@ -170,10 +170,8 @@ public class TestPermissionSymlinks {
       }
     });
     // Make sure only the link was deleted
-    assertTrue("Target should not have been deleted!",
-        wrapper.exists(target));
-    assertFalse("Link should have been deleted!",
-        wrapper.exists(link));
+    assertTrue(wrapper.exists(target), "Target should not have been deleted!");
+    assertFalse(wrapper.exists(link), "Link should have been deleted!");
   }
 
   @Test(timeout = 5000)
@@ -279,7 +277,7 @@ public class TestPermissionSymlinks {
         return null;
       }
     });
-    assertTrue("Expected target to exist", wrapper.exists(target));
+    assertTrue(wrapper.exists(target), "Expected target to exist");
   }
 
   @Test(timeout = 5000)
@@ -356,7 +354,7 @@ public class TestPermissionSymlinks {
         return null;
       }
     });
-    assertTrue("Expected target to exist", wrapper.exists(target));
+    assertTrue(wrapper.exists(target), "Expected target to exist");
   }
 
   @Test(timeout = 5000)
