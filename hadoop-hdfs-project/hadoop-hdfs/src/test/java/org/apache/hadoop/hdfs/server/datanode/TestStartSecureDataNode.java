@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Rule;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 import java.net.BindException;
@@ -58,7 +59,7 @@ public class TestStartSecureDataNode {
 
   private void testExternalKdcRunning() {
     // Tests are skipped if external KDC is not running.
-    Assume.assumeTrue(isExternalKdcRunning());
+    Assumptions.assumeTrue(isExternalKdcRunning());
   }
 
   @Test
