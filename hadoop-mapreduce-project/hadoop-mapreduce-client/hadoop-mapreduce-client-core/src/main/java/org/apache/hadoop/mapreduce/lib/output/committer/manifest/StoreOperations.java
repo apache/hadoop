@@ -115,6 +115,13 @@ public interface StoreOperations extends Closeable {
   boolean isTrashEnabled(Path path);
 
   /**
+   * Make an msync() call; swallow when unsupported.
+   * @param path path
+   * @throws IOException IO failure
+   */
+  void msync(Path path) throws IOException;
+
+  /**
    * Move a directory to trash, with the jobID as its name.
    * IOExceptions are caught and included in the outcome.
    * @param jobId job ID.

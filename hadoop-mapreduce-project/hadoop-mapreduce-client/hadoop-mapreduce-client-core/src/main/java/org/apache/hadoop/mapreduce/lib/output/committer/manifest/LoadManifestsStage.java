@@ -91,7 +91,8 @@ public class LoadManifestsStage extends
     // build a list of all manifests in the JA directory.
     List<FileStatus> manifestFiles = new ArrayList<>();
     trackDurationOfInvocation(getIOStatistics(), OP_DIRECTORY_SCAN, () -> {
-      final RemoteIterator<FileStatus> source = listManifests();
+      msync(getJobAttemptDir());
+      final RemoteIterator<FileStatus> source = listManifestsInJobAttemptDir();
       RemoteIterators.foreach(source, manifestFiles::add);
       // if the iterator provided statistics, collect them.
       maybeAddIOStatistics(getIOStatistics(), source);

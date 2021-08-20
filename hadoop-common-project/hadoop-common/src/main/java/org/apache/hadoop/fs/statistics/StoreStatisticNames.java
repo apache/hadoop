@@ -113,6 +113,9 @@ public final class StoreStatisticNames {
   public static final String OP_MODIFY_ACL_ENTRIES = "op_modify_acl_entries";
 
   /** {@value}. */
+  public static final String OP_MSYNC = "op_msync";
+
+  /** {@value}. */
   public static final String OP_OPEN = "op_open";
 
   /** {@value}. */

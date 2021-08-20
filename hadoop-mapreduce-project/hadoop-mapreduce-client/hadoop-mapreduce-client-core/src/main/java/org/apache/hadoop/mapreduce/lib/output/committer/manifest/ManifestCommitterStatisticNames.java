@@ -124,6 +124,14 @@ public final class ManifestCommitterStatisticNames {
    */
   public static final String OP_LOAD_MANIFEST = "op_load_manifest";
 
+  /**
+   * msync statistic: {@value}.
+   * This should be the same as StoreStatisticNames.OP_MSYNC; it's
+   * duplicated just to isolate this committer into a single JAR
+   * for ease of testing.
+   */
+  public static final String OP_MSYNC = "op_msync";
+
   /** Rename a file: {@value}. */
   public static final String OP_RENAME_FILE = OP_RENAME;
 

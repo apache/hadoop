@@ -115,6 +115,18 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
     }
   }
 
+  @Override
+  public void msync(Path path) throws IOException {
+    // qualify so we can be confident that the FS being synced
+    // is the one we expect.
+    fileSystem.makeQualified(path);
+    try {
+      fileSystem.msync();
+    } catch (UnsupportedOperationException ignored) {
+
+    }
+  }
+
   /**
    * Move a dir/file to the user's trash dir under the jobID.
    * IOExceptions in rename are caught, logged at info

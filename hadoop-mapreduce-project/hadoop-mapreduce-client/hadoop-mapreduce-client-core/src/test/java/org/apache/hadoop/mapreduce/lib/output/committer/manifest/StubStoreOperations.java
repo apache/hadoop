@@ -79,6 +79,11 @@ public class StubStoreOperations implements StoreOperations {
   }
 
   @Override
+  public void msync(Path path) throws IOException {
+
+  }
+
+  @Override
   public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
     return new MoveToTrashResult(MoveToTrashOutcome.RENAMED_TO_TRASH, null);
   }

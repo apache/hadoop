@@ -297,6 +297,11 @@ public class UnreliableStoreOperations implements StoreOperations {
   }
 
   @Override
+  public void msync(Path path) throws IOException {
+    wrappedOperations.msync(path);
+  }
+
+  @Override
   public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
     if (trashDisabled) {
       // same exception as FS implementation.

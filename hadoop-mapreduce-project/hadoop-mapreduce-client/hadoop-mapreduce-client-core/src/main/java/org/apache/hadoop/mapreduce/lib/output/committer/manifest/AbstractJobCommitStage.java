@@ -48,6 +48,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AuditingIntegration.enterStageWorker;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 
@@ -335,7 +336,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       boolean success = operations.mkdirs(path);
       if (!success && escalateFailure) {
         throw new PathIOException(path.toUri().toString(),
-            stageStatisticName + " : mkdirs() returned false");
+            stageStatisticName + ": mkdirs() returned false");
       }
       return success;
     });
@@ -374,11 +375,21 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return a iterator of manifests.
    * @throws IOException IO Failure.
    */
-  protected final RemoteIterator<FileStatus> listManifests()
+  protected final RemoteIterator<FileStatus> listManifestsInJobAttemptDir()
       throws IOException {
     return RemoteIterators.filteringRemoteIterator(
         listStatusIterator(getJobAttemptDir()),
         st -> st.getPath().toUri().toString().endsWith(MANIFEST_SUFFIX));
+  }
+
+  /**
+   * Make an msync() call; swallow when unsupported.
+   * @param path path
+   * @throws IOException IO failure
+   */
+  protected final void msync(Path path) throws IOException {
+    trackDurationOfInvocation(getIOStatistics(), OP_MSYNC, () ->
+        operations.msync(path));
   }
 
   /**
@@ -413,7 +424,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     if (!status.isDirectory()) {
       throw new PathIOException(path.toString(),
           operation
-              + ":. Path is not a directory; its status is :" + status);
+              + ": Path is not a directory; its status is :" + status);
     }
     return path;
   }
