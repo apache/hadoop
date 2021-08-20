@@ -16,23 +16,18 @@
  * limitations under the License.
  */
 
+#include <filesystem>
+#include <iostream>
 #include <string>
+#include <system_error>
 #include <vector>
 
-#include <ftw.h>
 #include <gtest/gtest.h>
-#include <sys/stat.h>
 
 #include "utils/temp-dir.h"
 #include "x-platform/syscall.h"
 
 namespace TestUtils {
-/*
- * Callback to remove a directory in the nftw visitor.
- */
-int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
-                struct FTW *ftwbuf);
-
 TempDir::TempDir() {
   std::vector path_pattern(path_.begin(), path_.end());
   is_path_init_ = XPlatform::Syscall::CreateTempDir(path_pattern);
@@ -57,19 +52,18 @@ TempDir &TempDir::operator=(TempDir &&other) noexcept {
 }
 
 TempDir::~TempDir() {
-  if (is_path_init_) {
-    nftw(path_.c_str(), nftw_remove, 64, FTW_DEPTH | FTW_PHYS);
+  if (!is_path_init_) {
+    return;
   }
-}
 
-int nftw_remove(const char *fpath, const struct stat *sb, int typeflag,
-                FTW *ftwbuf) {
-  (void)sb;
-  (void)typeflag;
-  (void)ftwbuf;
+  const std::filesystem::path tmp_dir_path(path_);
+  std::error_code tmp_dir_rm_err;
 
-  int rv = remove(fpath);
-  EXPECT_EQ(0, rv);
-  return rv;
+  const auto tmp_dir_rm_result = remove_all(tmp_dir_path, tmp_dir_rm_err);
+  EXPECT_TRUE(tmp_dir_rm_result);
+  if (!tmp_dir_rm_result) {
+    std::cerr << "Error in deleting directory " << path_ << ": "
+              << tmp_dir_rm_err.message() << std::endl;
+  }
 }
 } // namespace TestUtils
