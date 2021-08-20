@@ -17,16 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.UUID;
-import java.util.regex.Pattern;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Ordering;
-import org.junit.jupiter.api.AfterAll;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -35,10 +25,23 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Ordering;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGlobPaths {
 
@@ -984,7 +987,7 @@ public class TestGlobPaths {
           statuses[0].getPath().toUri().getPath());
       statuses = wrap.globStatus(new Path(USER_DIR + "/alpha/beta/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(USER_DIR + "/alpha/beta/gamma;" + USER_DIR
+      Assertions.assertEquals(USER_DIR + "/alpha/beta/gamma;" + USER_DIR
           + "/alpha/beta/gammaLink;" + USER_DIR + "/alpha/beta/gammaLinkLink;"
           + USER_DIR + "/alpha/beta/gammaLinkLinkLink",
           TestPath.mergeStatuses(statuses));
@@ -1044,11 +1047,11 @@ public class TestGlobPaths {
           .toUri().getPath());
       statuses = wrap.globStatus(new Path(USER_DIR + "/*/*"),
           new AcceptPathsEndingInZ());
-      Assert.assertEquals(USER_DIR + "/alpha/betaz;" + USER_DIR
+      Assertions.assertEquals(USER_DIR + "/alpha/betaz;" + USER_DIR
           + "/alphaLinkz/betaz", TestPath.mergeStatuses(statuses));
       statuses = wrap.globStatus(new Path(USER_DIR + "/*/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(USER_DIR + "/alpha/beta;" + USER_DIR
+      Assertions.assertEquals(USER_DIR + "/alpha/beta;" + USER_DIR
           + "/alpha/betaz;" + USER_DIR + "/alphaLinkz/beta;" + USER_DIR
           + "/alphaLinkz/betaz", TestPath.mergeStatuses(statuses));
     }
@@ -1186,10 +1189,9 @@ public class TestGlobPaths {
       } catch (AccessControlException ioe) {
       }
 
-      Assert.assertEquals("/norestrictions/val",
-        TestPath.mergeStatuses(wrap.globStatus(
-            new Path("/norestrictions/*"),
-                new AcceptAllPathFilter())));
+      Assertions.assertEquals("/norestrictions/val", TestPath.mergeStatuses(
+          wrap.globStatus(new Path("/norestrictions/*"),
+              new AcceptAllPathFilter())));
     }
   }
 
@@ -1213,9 +1215,8 @@ public class TestGlobPaths {
 
     void run() throws Exception {
       String reservedRoot = "/.reserved/.inodes/" + INodeId.ROOT_INODE_ID;
-      Assert.assertEquals(reservedRoot,
-        TestPath.mergeStatuses(wrap.
-            globStatus(new Path(reservedRoot), new AcceptAllPathFilter())));
+      Assertions.assertEquals(reservedRoot, TestPath.mergeStatuses(
+          wrap.globStatus(new Path(reservedRoot), new AcceptAllPathFilter())));
     }
   }
 
