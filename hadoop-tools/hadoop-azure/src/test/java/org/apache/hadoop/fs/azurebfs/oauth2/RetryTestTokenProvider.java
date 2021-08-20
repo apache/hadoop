@@ -29,13 +29,12 @@ import org.slf4j.LoggerFactory;
  * Test Token provider which should throw exception and trigger retries
  */
 public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
-
-  // Need to track first token fetch otherwise will get counted as a retry too.
-  public boolean isThisFirstTokenFetch = true;
-  public int reTryCount = 0;
-
   private static final Logger LOG = LoggerFactory
       .getLogger(RetryTestTokenProvider.class);
+
+  // Need to track first token fetch otherwise will get counted as a retry too.
+  private boolean isThisFirstTokenFetch = true;
+  private int reTryCount = 0;
 
   @Override
   public void initialize(Configuration configuration, String accountName)
@@ -43,7 +42,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   }
 
-  public void ResetStatusToFirstTokenFetch() {
+  public void resetStatusToFirstTokenFetch() {
     isThisFirstTokenFetch = true;
     reTryCount = 0;
   }
@@ -69,5 +68,9 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
       AccessTokenProvider customTokenProvider) {
     return (RetryTestTokenProvider) ((CustomTokenProviderAdapter) customTokenProvider)
         .getCustomTokenProviderAdaptee();
+  }
+
+  public int getReTryCount() {
+    return reTryCount;
   }
 }

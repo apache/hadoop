@@ -73,7 +73,7 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
 
     byte[] data = ContractTestUtils.dataset(16, 'a', 26);
     ContractTestUtils
-        .writeDataset(getFileSystem(), dest, data, data.length, 16, true);
+        .writeDataset(getFileSystem(), dest, data, data.length, data.length, true);
     if (isMockFastpathTest) {
       MockFastpathConnection
           .registerAppend(data.length, dest.getName(), data, 0, data.length);

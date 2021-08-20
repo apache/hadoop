@@ -205,9 +205,9 @@ public class TracingContext {
       return FASTPATH_CONN_REST_FALLBACK_CORR_INDICATOR;
     case REST_ON_FASTPATH_SESSION_UPD_FAILURE:
       return FASTPATH_SSN_UPD_FALLBACK_CORR_INDICATOR;
+    default:
+      return EMPTY_STRING;
     }
-
-    return EMPTY_STRING;
   }
 
   @VisibleForTesting

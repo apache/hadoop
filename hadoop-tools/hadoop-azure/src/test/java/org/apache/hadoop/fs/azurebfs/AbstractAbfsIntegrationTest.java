@@ -99,8 +99,8 @@ public abstract class AbstractAbfsIntegrationTest extends
   private boolean usingFilesystemForSASTests = false;
   private static final int SHORTENED_GUID_LEN = 12;
 
-  protected AuthType authType;
-  protected List<String> mockFastpathFilesToRegister = new ArrayList<String>();
+  private AuthType authType;
+  private List<String> mockFastpathFilesToRegister = new ArrayList<String>();
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();

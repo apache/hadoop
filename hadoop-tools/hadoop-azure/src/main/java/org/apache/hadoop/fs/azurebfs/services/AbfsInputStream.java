@@ -64,13 +64,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public static final int MAX_OPTIMIZED_READ_ATTEMPTS = 2;
 
   private int readAheadBlockSize;
-  protected final AbfsClient client;
+  private final AbfsClient client;
   private final Statistics statistics;
-  protected final String path;
+  private final String path;
   private final long contentLength;
   private final int bufferSize; // default buffer size
   private final int readAheadQueueDepth;         // initialized in constructor
-  protected final String eTag;                  // eTag of the path when InputStream are created
+  private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final String inputStreamId;
@@ -97,7 +97,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  protected TracingContext tracingContext;
+  private TracingContext tracingContext;
 
   //  Optimisations modify the pointer fields.
   //  For better resilience the following fields are used to save the
@@ -919,5 +919,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
 
     this.fastpathSession = fastpathSession;
+  }
+
+  @VisibleForTesting
+  protected AbfsClient getClient() {
+    return client;
   }
 }

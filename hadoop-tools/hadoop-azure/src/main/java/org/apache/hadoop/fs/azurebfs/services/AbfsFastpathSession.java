@@ -46,20 +46,17 @@ public class AbfsFastpathSession {
   private static final long FILETIME_EPOCH_DIFF = 11644473600000L;
   // 1ms in units of nanoseconds
   private static final long FILETIME_ONE_MILLISECOND = 10 * 1000;
-
-  protected static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
-
+  private static final double SESSION_REFRESH_INTERVAL_FACTOR = 0.75;
   protected final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-  protected AbfsFastpathSessionInfo fastpathSessionInfo;
-  protected AbfsClient client;
-  protected String path;
-  protected String eTag;
-  protected TracingContext tracingContext;
-
-  protected final ScheduledExecutorService scheduledExecutorService
+  private AbfsFastpathSessionInfo fastpathSessionInfo;
+  private AbfsClient client;
+  private String path;
+  private String eTag;
+  private TracingContext tracingContext;
+  private final ScheduledExecutorService scheduledExecutorService
       = Executors.newScheduledThreadPool(1);
-  protected int sessionRefreshIntervalInSec = -1;
+  private int sessionRefreshIntervalInSec = -1;
 
   public AbfsFastpathSession(final AbfsClient client,
       final String path,
@@ -203,7 +200,7 @@ public class AbfsFastpathSession {
 
     try {
       AbfsRestOperation op = executeFetchFastpathSessionToken();
-      byte[] buffer = new byte[Integer.valueOf(
+      byte[] buffer = new byte[Integer.parseInt(
           op.getResult().getResponseHeader(CONTENT_LENGTH))];
       op.getResult().getResponseContentBuffer(buffer);
       updateAbfsFastpathSessionToken(Base64.getEncoder().encodeToString(buffer),
@@ -282,5 +279,35 @@ public class AbfsFastpathSession {
   @VisibleForTesting
   void setConnectionMode(AbfsConnectionMode connMode) {
     updateConnectionMode(connMode);
+  }
+
+  @VisibleForTesting
+  protected String getPath() {
+    return path;
+  }
+
+  @VisibleForTesting
+  protected String geteTag() {
+    return eTag;
+  }
+
+  @VisibleForTesting
+  protected TracingContext getTracingContext() {
+    return tracingContext;
+  }
+
+  @VisibleForTesting
+  protected AbfsClient getClient() {
+    return client;
+  }
+
+  @VisibleForTesting
+  protected AbfsFastpathSessionInfo getFastpathSessionInfo() {
+    return fastpathSessionInfo;
+  }
+
+  @VisibleForTesting
+  public static double getSessionRefreshIntervalFactor() {
+    return SESSION_REFRESH_INTERVAL_FACTOR;
   }
 }

@@ -119,7 +119,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
     assertStatistics(inputStream.getIOStatistics(), bytesToRead, 1, 1,
         TEST_FILE_DATA_SIZE);
 
-    readPos = 50;
+    readPos = TEST_FILE_DATA_SIZE / 2;
     Assertions
         .assertThat(inputStream.read(readPos, readBuffer, 0, bytesToRead))
         .describedAs(

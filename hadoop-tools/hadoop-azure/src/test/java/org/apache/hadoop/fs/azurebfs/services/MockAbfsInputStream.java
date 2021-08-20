@@ -91,7 +91,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
   protected void createAbfsFastpathSession(boolean isFastpathFeatureConfigOn) {
     if (isFastpathFeatureConfigOn) {
       try {
-        fastpathSession = new MockAbfsFastpathSession(client, path, eTag, tracingContext);
+        fastpathSession = new MockAbfsFastpathSession(getClient(), getPath(), getETag(), getTracingContext());
       } catch (IOException e) {
         Assert.fail("Failure in creating MockAbfsFastpathSession instance " + e);
       }
@@ -101,38 +101,36 @@ public class MockAbfsInputStream extends AbfsInputStream {
   public void createMockAbfsFastpathSession()
       throws Exception {
     AbfsFastpathSession fastpathSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
-        client, path, eTag,
-        tracingContext);
+        getClient(), getPath(), getETag(), getTracingContext());
     setFastpathSession(new MockAbfsFastpathSession(fastpathSsn));
   }
 
-  protected AbfsRestOperation executeRead(String path, byte[] b, String sasToken, ReadRequestParameters reqParam, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+  protected AbfsRestOperation executeRead(String path,
+      byte[] b,
+      String sasToken,
+      ReadRequestParameters reqParam,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
     // Force fastpath connection so that test fails and not pass on REST fallback
-    return ((MockAbfsClient) client).read(path, b, sasToken, reqParam, tracingContext);
+    return ((MockAbfsClient) getClient()).read(path, b, sasToken, reqParam, tracingContext);
   }
 
   private void signalErrorConditionToMockClient() {
     if (errStatus != 0) {
-      ((MockAbfsClient) client).induceError(errStatus);
+      ((MockAbfsClient) getClient()).induceError(errStatus);
     }
 
     if (mockRequestException) {
-      ((MockAbfsClient) client).induceRequestException();
+      ((MockAbfsClient) getClient()).induceRequestException();
     }
 
     if (mockConnectionException) {
-      ((MockAbfsClient) client).induceConnectionException();
+      ((MockAbfsClient) getClient()).induceConnectionException();
     }
 
     if (disableForceFastpathMock) {
-      ((MockAbfsClient) client).forceFastpathReadAlways = false;
+      ((MockAbfsClient) getClient()).setForceFastpathReadAlways(false);
     }
-  }
-
-  public AbfsClient getClient() {
-    return this.client;
   }
 
   public Statistics getFSStatistics() {
@@ -153,7 +151,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
   public void disableAlwaysOnFastpathTestMock() {
     disableForceFastpathMock = true;
-    ((MockAbfsClient) client).forceFastpathReadAlways = false;
+    ((MockAbfsClient) getClient()).setForceFastpathReadAlways(false);
   }
 
   public void resetAllMockErrStates() {
@@ -185,7 +183,7 @@ public class MockAbfsInputStream extends AbfsInputStream {
 
     AbfsFastpathSession mockSession = mock(AbfsFastpathSession.class);
     Logger log = LoggerFactory.getLogger(AbfsInputStream.class);
-    double sessionRefreshInternalFactor = 0.75;
+    double sessionRefreshInternalFactor = AbfsFastpathSession.getSessionRefreshIntervalFactor();
     ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
     ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -225,7 +223,11 @@ public class MockAbfsInputStream extends AbfsInputStream {
     when(mockSession.executeFetchFastpathSessionToken()).thenCallRealMethod();
     when(mockSession.getSessionRefreshIntervalInSec()).thenCallRealMethod();
     when(mockSession.fetchFastpathSessionToken()).thenCallRealMethod();
-
+    when(mockSession.getPath()).thenCallRealMethod();
+    when(mockSession.geteTag()).thenCallRealMethod();
+    when(mockSession.getTracingContext()).thenCallRealMethod();
+    when(mockSession.getClient()).thenCallRealMethod();
+    when(mockSession.getFastpathSessionInfo()).thenCallRealMethod();
     return mockSession;
   }
 

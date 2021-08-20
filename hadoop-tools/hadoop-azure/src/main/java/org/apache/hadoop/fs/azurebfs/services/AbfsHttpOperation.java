@@ -48,43 +48,44 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   protected static final int ONE_THOUSAND = 1000;
   protected static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
 
-  protected final String method;
-  protected final URL url;
-  protected String maskedUrl;
-  protected String maskedEncodedUrl;
+  private final String method;
+  private final URL url;
+  private String maskedUrl;
+  private String maskedEncodedUrl;
 
-  protected int statusCode;
-  protected String statusDescription;
-  protected String storageErrorCode = "";
-  protected String storageErrorMessage  = "";
-  protected String clientRequestId = "";
-  protected String requestId  = "";
-  protected String expectedAppendPos = "";
+  private int statusCode;
+  private String statusDescription;
+  private String storageErrorCode = "";
+  private String storageErrorMessage  = "";
+  private String clientRequestId = "";
+  private String requestId  = "";
 
+  private String expectedAppendPos = "";
   // metrics
-  protected int bytesSent;
-  protected long bytesReceived;
+  private int bytesSent;
+  private long bytesReceived;
 
   // optional trace enabled metrics
-  protected final boolean isTraceEnabled;
-  protected long connectionTimeMs;
-  protected long sendRequestTimeMs;
-  protected long recvResponseTimeMs;
+  private final boolean isTraceEnabled;
+  private long connectionTimeMs;
+
+  private long sendRequestTimeMs;
+  private long recvResponseTimeMs;
   private boolean shouldMask = false;
 
-  protected AbfsRestOperationType opType;
-  protected List<AbfsHttpHeader> requestHeaders;
-  protected AuthType authType;
-  protected String authToken;
+  private AbfsRestOperationType opType;
+  private List<AbfsHttpHeader> abfsHttpHeaders;
+  private AuthType authType;
+  private String authToken;
 
-  protected byte[] responseContentBuffer = null;
+  private byte[] responseContentBuffer = null;
 
   public AbfsHttpOperation(final AbfsRestOperationType opType,
       final URL url,
       final String method,
       final AuthType authType,
       final String authToken,
-      List<AbfsHttpHeader> requestHeaders) throws IOException {
+      List<AbfsHttpHeader> abfsHttpHeaders) throws IOException {
 
     this.opType = opType;
     this.isTraceEnabled = LOG.isTraceEnabled();
@@ -93,7 +94,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     this.clientRequestId = UUID.randomUUID().toString();
   }
 
-  public AbfsHttpOperation(final URL url, final String method, List<AbfsHttpHeader> requestHeaders) throws IOException {
+  public AbfsHttpOperation(final URL url, final String method, List<AbfsHttpHeader> abfsHttpHeaders) throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
@@ -124,10 +125,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return storageErrorMessage;
   }
 
-  public String getExpectedAppendPos() {
-    return expectedAppendPos;
-  }
-
   public String getRequestId() {
     return requestId;
   }
@@ -142,6 +139,87 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public long getBytesReceived() {
     return bytesReceived;
+  }
+
+
+  protected void setStatusCode(final int statusCode) {
+    this.statusCode = statusCode;
+  }
+
+  protected void setStatusDescription(final String statusDescription) {
+    this.statusDescription = statusDescription;
+  }
+
+  protected void setStorageErrorCode(final String storageErrorCode) {
+    this.storageErrorCode = storageErrorCode;
+  }
+
+  protected void setStorageErrorMessage(final String storageErrorMessage) {
+    this.storageErrorMessage = storageErrorMessage;
+  }
+
+  protected void setRequestId(final String requestId) {
+    this.requestId = requestId;
+  }
+
+  protected void setBytesSent(final int bytesSent) {
+    this.bytesSent = bytesSent;
+  }
+
+  protected void setBytesReceived(final long bytesReceived) {
+    this.bytesReceived = bytesReceived;
+  }
+
+  protected void setRecvResponseTimeMs(final long recvResponseTimeMs) {
+    this.recvResponseTimeMs = recvResponseTimeMs;
+  }
+
+  protected long getRecvResponseTimeMs() {
+    return this.recvResponseTimeMs;
+  }
+
+  protected void setAuthType(final org.apache.hadoop.fs.azurebfs.services.AuthType authType) {
+    this.authType = authType;
+  }
+
+  protected void setAuthToken(final String authToken) {
+    this.authToken = authToken;
+  }
+
+  protected void setResponseContentBuffer(final byte[] responseContentBuffer) {
+    this.responseContentBuffer = responseContentBuffer;
+  }
+
+  protected void setAbfsHttpHeaders(final List<AbfsHttpHeader> abfsHttpHeaders) {
+    this.abfsHttpHeaders = abfsHttpHeaders;
+  }
+
+  protected List<AbfsHttpHeader> getAbfsHttpHeaders() {
+    return abfsHttpHeaders;
+  }
+
+  protected AbfsRestOperationType getOpType() {
+    return opType;
+  }
+
+  protected URL getUrl() {
+    return url;
+  }
+
+  protected boolean isTraceEnabled() {
+    return isTraceEnabled;
+  }
+
+  protected void setConnectionTimeMs(final long connectionTimeMs) {
+    this.connectionTimeMs = connectionTimeMs;
+  }
+
+  protected void setSendRequestTimeMs(final long sendRequestTimeMs) {
+    this.sendRequestTimeMs = sendRequestTimeMs;
+  }
+
+  protected void setExpectedAppendPos(final String expectedAppendPos) {
+    this.expectedAppendPos = expectedAppendPos;
   }
 
   public abstract String getResponseHeader(String httpHeader);

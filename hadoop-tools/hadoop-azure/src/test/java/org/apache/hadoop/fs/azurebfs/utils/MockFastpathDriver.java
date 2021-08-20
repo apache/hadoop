@@ -31,24 +31,25 @@ public class MockFastpathDriver extends FastpathDriver {
       MockFastpathDriver.class);
 
   class ResponseRegisterFields {
-    String mockResponse;
-    long remotePosition;
-    int bytesToRead;
-    byte[] mockStoreBuffer;
+
+    private String mockResponse;
+    private long remotePosition;
+    private int bytesToRead;
+    private byte[] mockStoreBuffer;
   }
 
   private static HashMap<String, ResponseRegisterFields> responseRegistry = new HashMap<>();
 
-  public void RegisterOpenResponse(String clientRequestID,
+  public void registerOpenResponse(String clientRequestID,
       String jsonResponseString) {
     registerResponse(clientRequestID, jsonResponseString);
   }
-  public void UnregisterOpenResponse(String clientRequestID,
+  public void unregisterOpenResponse(String clientRequestID,
       String jsonResponseString) {
     unregisterResponse(clientRequestID);
   }
 
-  public void RegisterReadResponse(String clientRequestID,
+  public void registerReadResponse(String clientRequestID,
       String jsonResponseString,
       int rdLength,
       long remoteFileOffset,
@@ -57,17 +58,17 @@ public class MockFastpathDriver extends FastpathDriver {
         remoteFileOffset, rdBuffer);
   }
 
-  public void UnregisterReadResponse(String clientRequestID,
+  public void unregisterReadResponse(String clientRequestID,
       String jsonResponseString) {
     unregisterResponse(clientRequestID);
   }
 
-  public void RegisterCloseResponse(String clientRequestID,
+  public void registerCloseResponse(String clientRequestID,
       String jsonResponseString) {
     registerResponse(clientRequestID, jsonResponseString);
 
   }
-  public void UnregisterCloseResponse(String clientRequestID,
+  public void unregisterCloseResponse(String clientRequestID,
       String jsonResponseString) {
     unregisterResponse(clientRequestID);
   }
@@ -106,28 +107,28 @@ public class MockFastpathDriver extends FastpathDriver {
     }
   }
 
-  public String Open (int timeout,
+  public String open (int timeout,
       String clientRequestId,
       String serializedRequestParams) throws FastpathConnectionException {
     return responseRegistry.get(clientRequestId).mockResponse;
   }
 
   @Override
-  public String Read(final int timeout,
+  public String read(final int timeout,
       final String clientRequestID,
       final String serializedRequestParams,
       final int rdBufOffset,
       final int readLength,
       final java.nio.ByteBuffer rdBuffer) throws FastpathConnectionException {
     byte[] tmpRdBBuffer = new byte[readLength];
-    ReadByteArray(timeout, clientRequestID, serializedRequestParams,
+    readByteArray(timeout, clientRequestID, serializedRequestParams,
         rdBufOffset, readLength, tmpRdBBuffer);
     rdBuffer.put(tmpRdBBuffer);
     return responseRegistry.get(clientRequestID).mockResponse;
   }
 
   @Override
-  public String ReadByteArray(final int timeout,
+  public String readByteArray(final int timeout,
       final String clientRequestId,
       final String serializedRequestParams,
       final int rdBufOffset,
@@ -155,7 +156,7 @@ public class MockFastpathDriver extends FastpathDriver {
     return responseRegistry.get(clientRequestId).mockResponse;
   }
 
-  public String Close (int timeout,
+  public String close (int timeout,
       String transactionId,
       String serializedRequestParams) throws FastpathConnectionException {
     return responseRegistry.get(transactionId).mockResponse;

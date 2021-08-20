@@ -148,33 +148,6 @@ public class TestAbfsInputStream extends
       String fileName,
       int fileSize,
       String eTag,
-      int readAheadQueueDepth,
-      int readBufferSize,
-      boolean alwaysReadBufferSize,
-      int readAheadBlockSize,
-      boolean isFastpathEnabled) throws IOException {
-    AbfsInputStreamContext context = getInStmContext(readAheadQueueDepth,
-        readBufferSize, alwaysReadBufferSize, readAheadBlockSize, isFastpathEnabled);
-    return getAbfsInputStream(abfsClient, fileName, fileSize, eTag, context);
-  }
-
-  public AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
-      String fileName,
-      int fileSize,
-      String eTag,
-      int readAheadQueueDepth,
-      int readBufferSize,
-      boolean alwaysReadBufferSize,
-      int readAheadBlockSize) throws java.io.IOException {
-    AbfsInputStreamContext context = getInStmContext(readAheadQueueDepth,
-        readBufferSize, alwaysReadBufferSize, readAheadBlockSize, false);
-    return getAbfsInputStream(abfsClient, fileName, fileSize, eTag, context);
-  }
-
-  private AbfsInputStream getAbfsInputStream(AbfsClient abfsClient,
-      String fileName,
-      int fileSize,
-      String eTag,
       AbfsInputStreamContext context) throws java.io.IOException {
     AbfsInputStream inputStream = new AbfsInputStream(
         abfsClient,
@@ -190,7 +163,8 @@ public class TestAbfsInputStream extends
 
     return inputStream;
   }
-  private AbfsInputStreamContext getInStmContext(int readAheadQueueDepth,
+
+  public  AbfsInputStreamContext getInStmContext(int readAheadQueueDepth,
       int readBufferSize,
       boolean alwaysReadBufferSize,
       int readAheadBlockSize,
@@ -911,8 +885,8 @@ public class TestAbfsInputStream extends
 
   public static boolean isFastpathEnabled(AbfsInputStream inStream) {
     if ((inStream.getFastpathSession() != null)
-      && (inStream.getFastpathSession().fastpathSessionInfo != null)
-        && (inStream.getFastpathSession().fastpathSessionInfo.getConnectionMode()
+      && (inStream.getFastpathSession().getFastpathSessionInfo() != null)
+        && (inStream.getFastpathSession().getFastpathSessionInfo().getConnectionMode()
             == AbfsConnectionMode.FASTPATH_CONN)) {
       return true;
     }

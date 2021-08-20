@@ -50,18 +50,18 @@ public class MockAbfsFastpathSession extends AbfsFastpathSession {
   }
 
   public MockAbfsFastpathSession(final AbfsFastpathSession srcSession) {
-    super(srcSession.client, srcSession.path, srcSession.eTag,
-        srcSession.tracingContext);
+    super(srcSession.getClient(), srcSession.getPath(), srcSession.geteTag(),
+        srcSession.getTracingContext());
   }
 
   protected void fetchSessionTokenAndFileHandle() {
     try {
       AbfsFastpathSession fastpathSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
-          client, path, eTag,
-          tracingContext);
+          getClient(), getPath(), geteTag(),
+          getTracingContext());
       String mockFirstToken = "firstToken";
       AbfsRestOperation ssnTokenRspOp1 = MockAbfsInputStream.getMockSuccessRestOp(
-          client, mockFirstToken.getBytes(), FIVE_MIN);
+          getClient(), mockFirstToken.getBytes(), FIVE_MIN);
 
       doReturn(ssnTokenRspOp1)
           .when(fastpathSsn)
@@ -74,83 +74,46 @@ public class MockAbfsFastpathSession extends AbfsFastpathSession {
       fetchFastpathFileHandle();
     } catch (Exception ex) {
       Assert.fail(
-          "Failure in creating mock AbfsFastpathSessionInfo instance with 5 min validity - " + ex);
+          "Failure in creating mock AbfsFastpathSessionInfo instance with 5 min validity - "
+              + ex.getMessage() + " " + ex.getStackTrace());
     }
   }
 
   void setAbfsFastpathSessionInfo(AbfsFastpathSessionInfo sessionInfo) {
-    rwLock.writeLock().lock();
-    try {
-      fastpathSessionInfo = sessionInfo;
-      OffsetDateTime utcNow = OffsetDateTime.now(ZoneOffset.UTC);
-      sessionRefreshIntervalInSec = (int) Math.floor(
-          utcNow.until(fastpathSessionInfo.getSessionTokenExpiry(), ChronoUnit.SECONDS)
-              * SESSION_REFRESH_INTERVAL_FACTOR);
-
-      // 0 or negative sessionRefreshIntervalInSec indicates a session token
-      // whose expiry is near as soon as its received. This will end up
-      // generating a lot of REST calls refreshing the session. Better to
-      // switch off Fastpath in that case.
-      if (sessionRefreshIntervalInSec <= 0) {
-        LOG.debug(
-            "Expiry time at present or past. Drop Fastpath session (could be clock skew). Received expiry {} ",
-            fastpathSessionInfo.getSessionTokenExpiry());
-        tracingContext.setConnectionMode(
-            AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
-        fastpathSessionInfo.setConnectionMode(
-            AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
-        return;
-      }
-
-      // schedule for refresh right away
-      ScheduledFuture scheduledFuture =
-          scheduledExecutorService.schedule(new Callable() {
-            public Boolean call() throws Exception {
-              return fetchFastpathSessionToken();
-            }
-          }, sessionRefreshIntervalInSec, TimeUnit.SECONDS);
-      LOG.debug(
-          "Fastpath session token fetch successful, valid till {}. Refresh scheduled after {} secs",
-          fastpathSessionInfo.getSessionTokenExpiry(), sessionRefreshIntervalInSec);
-    } finally {
-      rwLock.writeLock().unlock();
-    }
+    updateAbfsFastpathSessionToken(sessionInfo.getSessionToken(),
+        sessionInfo.getSessionTokenExpiry());
   }
 
   protected AbfsRestOperation executeFastpathClose()
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return client.fastPathClose(path, eTag,
-        fastpathSessionInfo, tracingContext);
+    return getClient().fastPathClose(getPath(), geteTag(),
+        getFastpathSessionInfo(), getTracingContext());
   }
 
   protected AbfsRestOperation executeFastpathOpen()
       throws AzureBlobFileSystemException {
     signalErrorConditionToMockClient();
-    return client.fastPathOpen(path, eTag,
-        fastpathSessionInfo, tracingContext);
+    return getClient().fastPathOpen(getPath(), geteTag(),
+        getFastpathSessionInfo(), getTracingContext());
   }
 
   private void signalErrorConditionToMockClient() {
     if (errStatus != 0) {
-      ((MockAbfsClient) client).induceError(errStatus);
+      ((MockAbfsClient) getClient()).induceError(errStatus);
     }
 
     if (mockRequestException) {
-      ((MockAbfsClient) client).induceRequestException();
+      ((MockAbfsClient) getClient()).induceRequestException();
     }
 
     if (mockConnectionException) {
-      ((MockAbfsClient) client).induceConnectionException();
+      ((MockAbfsClient) getClient()).induceConnectionException();
     }
 
     if (disableForceFastpathMock) {
-      ((MockAbfsClient) client).forceFastpathReadAlways = false;
+      ((MockAbfsClient) getClient()).setForceFastpathReadAlways(false);
     }
-  }
-
-  public AbfsClient getClient() {
-    return this.client;
   }
 
   public void induceError(int httpStatus) {

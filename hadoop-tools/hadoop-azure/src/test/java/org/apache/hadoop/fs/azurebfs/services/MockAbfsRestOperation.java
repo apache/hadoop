@@ -55,13 +55,13 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
   }
 
   protected AbfsFastpathConnection getFastpathConnection() throws IOException {
-    return new MockAbfsFastpathConnection(operationType, url, method,
-        client.getAuthType(), client.getAccessToken(), requestHeaders,
-        fastpathSessionInfo);
+    return new MockAbfsFastpathConnection(getOperationType(), getUrl(), getMethod(),
+        getAbfsClient().getAuthType(), getAbfsClient().getAccessToken(), getRequestHeaders(),
+        getFastpathSessionInfo());
   }
 
   private void setEffectiveMock() {
-    MockFastpathConnection.setTestMock(client.getAbfsConfiguration()
+    MockFastpathConnection.setTestMock(getAbfsClient().getAbfsConfiguration()
         .getRawConfiguration()
         .getBoolean(FS_AZURE_TEST_FASTPATH_MOCK_SO_ENABLED, false));
   }
@@ -70,9 +70,9 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
     if (isAFastpathRequest()) {
       setEffectiveMock();
       signalErrorConditionToMockAbfsFastpathConn((MockAbfsFastpathConnection) httpOperation);
-      ((MockAbfsFastpathConnection) httpOperation).processResponse(buffer, bufferOffset, bufferLength);
+      ((MockAbfsFastpathConnection) httpOperation).processResponse(getBuffer(), getBufferOffset(), getBufferLength());
     } else {
-      httpOperation.processResponse(buffer, bufferOffset, bufferLength);
+      httpOperation.processResponse(getBuffer(), getBufferOffset(), getBufferLength());
     }
   }
 

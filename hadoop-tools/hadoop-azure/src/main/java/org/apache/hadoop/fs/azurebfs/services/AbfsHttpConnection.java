@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 public class AbfsHttpConnection extends AbfsHttpOperation {
 
   private HttpURLConnection connection;
-  protected ListResultSchema listResultSchema = null;
+  private ListResultSchema listResultSchema = null;
 
   public AbfsHttpConnection(final URL url,
       final String method,
@@ -81,7 +81,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
 
-    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
+    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, getClientRequestId());
   }
 
   public HttpURLConnection getConnection() {
@@ -137,18 +137,18 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
     // send the request body
 
     long startTime = 0;
-    if (this.isTraceEnabled) {
+    if (isTraceEnabled()) {
       startTime = System.nanoTime();
     }
     try (OutputStream outputStream = this.connection.getOutputStream()) {
       // update bytes sent before they are sent so we may observe
       // attempted sends as well as successful sends via the
       // accompanying statusCode
-      this.bytesSent = length;
+      setBytesSent(length);
       outputStream.write(buffer, offset, length);
     } finally {
-      if (this.isTraceEnabled) {
-        this.sendRequestTimeMs = elapsedTimeMs(startTime);
+      if (isTraceEnabled()) {
+        setSendRequestTimeMs(elapsedTimeMs(startTime));
       }
     }
   }
@@ -166,43 +166,43 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       final int length) throws IOException {
     // get the response
     long startTime = 0;
-    if (this.isTraceEnabled) {
+    if (isTraceEnabled()) {
       startTime = System.nanoTime();
     }
 
-    this.statusCode = this.connection.getResponseCode();
+    setStatusCode(this.connection.getResponseCode());
 
-    if (this.isTraceEnabled) {
-      this.recvResponseTimeMs = elapsedTimeMs(startTime);
+    if (isTraceEnabled()) {
+      setRecvResponseTimeMs(elapsedTimeMs(startTime));
     }
 
-    this.statusDescription = this.connection.getResponseMessage();
+    setStatusDescription(this.connection.getResponseMessage());
 
-    this.requestId = this.connection.getHeaderField(
-        HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (this.requestId == null) {
-      this.requestId = AbfsHttpConstants.EMPTY_STRING;
+    setRequestId(this.connection.getHeaderField(
+        HttpHeaderConfigurations.X_MS_REQUEST_ID));
+    if (getRequestId() == null) {
+      setRequestId(AbfsHttpConstants.EMPTY_STRING);
     }
     // dump the headers
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         connection.getHeaderFields());
 
-    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(this.method)) {
+    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(getMethod())) {
       // If it is HEAD, and it is ERROR
       return;
     }
 
-    if (this.isTraceEnabled) {
+    if (isTraceEnabled()) {
       startTime = System.nanoTime();
     }
 
-    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
+    if (getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
       processStorageErrorResponse();
-      if (this.isTraceEnabled) {
-        this.recvResponseTimeMs += elapsedTimeMs(startTime);
+      if (isTraceEnabled()) {
+        setRecvResponseTimeMs(getRecvResponseTimeMs() + elapsedTimeMs(startTime));
       }
-      this.bytesReceived = this.connection.getHeaderFieldLong(
-          HttpHeaderConfigurations.CONTENT_LENGTH, 0);
+      setBytesReceived(this.connection.getHeaderFieldLong(
+          HttpHeaderConfigurations.CONTENT_LENGTH, 0));
     } else {
       // consume the input stream to release resources
       int totalBytesRead = 0;
@@ -215,15 +215,16 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(getMethod())
             && buffer == null) {
           parseListFilesResponse(stream);
-        } else if (AbfsHttpConstants.HTTP_METHOD_POST.equals(this.method)) {
+        } else if (AbfsHttpConstants.HTTP_METHOD_POST.equals(getMethod())) {
           int contentLen = this.connection.getContentLength();
           if (contentLen != 0) {
             try (DataInputStream dis = new DataInputStream(stream)) {
-              responseContentBuffer = new byte[contentLen];
-              dis.readFully(responseContentBuffer);
+              byte[] contentBuffer  = new byte[contentLen];
+              dis.readFully(contentBuffer);
+              setResponseContentBuffer(contentBuffer);
               totalBytesRead += contentLen;
             }
           }
@@ -250,14 +251,15 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
         }
       } catch (IOException ex) {
         LOG.warn("IO/Network error: {} {}: {}",
-            method, getMaskedUrl(), ex.getMessage());
+            getMethod(), getMaskedUrl(), ex.getMessage());
         LOG.debug("IO Error: ", ex);
         throw ex;
       } finally {
-        if (this.isTraceEnabled) {
-          this.recvResponseTimeMs += elapsedTimeMs(startTime);
+        if (isTraceEnabled()) {
+          setRecvResponseTimeMs(getRecvResponseTimeMs() + elapsedTimeMs(startTime));
         }
-        this.bytesReceived = totalBytesRead;
+
+        setBytesReceived(totalBytesRead);
       }
     }
   }
@@ -268,14 +270,14 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
    * @throws IOException if an error occurs.
    */
   private HttpURLConnection openConnection() throws IOException {
-    if (!isTraceEnabled) {
-      return (HttpURLConnection) url.openConnection();
+    if (!isTraceEnabled()) {
+      return (HttpURLConnection) getUrl().openConnection();
     }
     long start = System.nanoTime();
     try {
-      return (HttpURLConnection) url.openConnection();
+      return (HttpURLConnection) getUrl().openConnection();
     } finally {
-      connectionTimeMs = elapsedTimeMs(start);
+      setConnectionTimeMs(elapsedTimeMs(start));
     }
   }
 
@@ -315,13 +317,13 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
             fieldValue = jp.getText();
             switch (fieldName) {
             case "code":
-              storageErrorCode = fieldValue;
+              setStorageErrorCode(fieldValue);
               break;
             case "message":
-              storageErrorMessage = fieldValue;
+              setStorageErrorMessage(fieldValue);
               break;
             case "ExpectedAppendPos":
-              expectedAppendPos = fieldValue;
+              setExpectedAppendPos(fieldValue);
               break;
             default:
               break;

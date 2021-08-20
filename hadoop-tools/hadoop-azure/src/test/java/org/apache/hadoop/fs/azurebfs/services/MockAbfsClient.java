@@ -39,7 +39,7 @@ public class MockAbfsClient extends AbfsClient {
   private int errStatus = 0;
   private boolean mockRequestException = false;
   private boolean mockConnectionException = false;
-  boolean forceFastpathReadAlways = true;
+  private boolean forceFastpathReadAlways = true;
 
   public MockAbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -193,5 +193,13 @@ public class MockAbfsClient extends AbfsClient {
 
   private boolean mockErrorConditionSet() {
     return ((errStatus != 0) || mockRequestException || mockConnectionException);
+  }
+
+  public boolean isForceFastpathReadAlways() {
+    return forceFastpathReadAlways;
+  }
+
+  public void setForceFastpathReadAlways(final boolean forceFastpathReadAlways) {
+    this.forceFastpathReadAlways = forceFastpathReadAlways;
   }
 }

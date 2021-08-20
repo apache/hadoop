@@ -62,25 +62,28 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
   protected static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
   public static final Duration TWO_MIN = Duration.ofMinutes(2);
   public static final Duration FIVE_MIN = Duration.ofMinutes(5);
-
-  private static final int THREE_MB = 3 * ONE_MB;
-  private static final int THREE_KB = 3 * ONE_KB;
-  private static final int EIGHT_MB = 8 * ONE_MB;
+  private static final int ONE_MIN_IN_SECS = 60;
   private static final int ONE_SEC_IN_MS = 1000;
   private static final int REFRESH_TIME_WAIT_IN_SECS = 20;
   private static final int MOCK_EXPIRY_TIMESPAN_OF_1_MIN = 1;
   private static final int MOCK_EXPIRY_TIMESPAN_OF_2_MIN = 2;
   private static final int SERVER_SESSION_TOKEN_MIN_EXPIRY_IN_SECS = 5 * 60;
 
+  private static final int THREE_MB = 3 * ONE_MB;
+  private static final int THREE_KB = 3 * ONE_KB;
+  private static final int EIGHT_MB = 8 * ONE_MB;
+
+  private static final int BAD_REQUEST_HTTP_STATUS = 400;
+
   private static final int MIN_REFRESH_INTL_FOR_SERVER_SESSION_TOKEN
       = (int) Math.floor(SERVER_SESSION_TOKEN_MIN_EXPIRY_IN_SECS
-      * AbfsFastpathSession.SESSION_REFRESH_INTERVAL_FACTOR);
+      * AbfsFastpathSession.getSessionRefreshIntervalFactor());
 
 
   public ITestAbfsFastpathSession() throws Exception {
     super();
     assumeTrue("Fastpath supported only for OAuth auth type",
-        authType == AuthType.OAuth);
+        getAuthType() == AuthType.OAuth);
   }
 
   @Test
@@ -108,8 +111,8 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
   }
 
   private int getSessionRefreshInterval(int newTokenValidDurationInMins) {
-    return (int) Math.floor(newTokenValidDurationInMins * 60
-        * AbfsFastpathSession.SESSION_REFRESH_INTERVAL_FACTOR);
+    return (int) Math.floor(newTokenValidDurationInMins * ONE_MIN_IN_SECS
+        * AbfsFastpathSession.getSessionRefreshIntervalFactor());
   }
 
   @Test
@@ -200,11 +203,11 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
           currFastpathFileHandle,
           AbfsConnectionMode.FASTPATH_CONN);
       AbfsFastpathSession mockSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
-          currStream.client, currStream.path, currStream.eTag,
-          currStream.tracingContext, mockSsnInfo);
+          currStream.getClient(), currStream.getPath(), currStream.getETag(),
+          currStream.getTracingContext(), mockSsnInfo);
 
       when(mockSsn.executeFetchFastpathSessionToken()).thenThrow(
-          new AbfsRestOperationException(400, "", "",
+          new AbfsRestOperationException(BAD_REQUEST_HTTP_STATUS, "", "",
               new Exception("session token fetch failed")));
 
       currStream.setFastpathSession(mockSsn);
@@ -321,7 +324,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
         when(fastpathSsn.executeFetchFastpathSessionToken()).thenReturn(
             ssnTokenRspOp2);
       } else {
-        doThrow(new AbfsRestOperationException(400, "", "",
+        doThrow(new AbfsRestOperationException(BAD_REQUEST_HTTP_STATUS, "", "",
             new Exception("session token fetch failed")))
             .when(fastpathSsn)
             .executeFetchFastpathSessionToken();
@@ -392,7 +395,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
           .getConnectionMode()).describedAs(
           "Valid Fastpath session should be in FASTPATH_CONN mode")
           .isEqualTo(AbfsConnectionMode.FASTPATH_CONN);
-      Assertions.assertThat(inputStream.tracingContext.getConnectionMode())
+      Assertions.assertThat(inputStream.getTracingContext().getConnectionMode())
           .describedAs(
               "InputStream tracing context should be in FASTPATH_CONN mode")
           .isEqualTo(AbfsConnectionMode.FASTPATH_CONN);
@@ -408,7 +411,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
           .describedAs(
               "As a readAhead thread failed, fastpath session should have been invalidated")
           .isEqualTo(null);
-      Assertions.assertThat(inputStream.tracingContext.getConnectionMode())
+      Assertions.assertThat(inputStream.getTracingContext().getConnectionMode())
           .describedAs(
               "InputStream tracing context should be in FASTPATH_CONN mode")
           .isEqualTo(AbfsConnectionMode.REST_ON_FASTPATH_CONN_FAILURE);
@@ -427,7 +430,7 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
         .describedAs(
             "No fastpath session info should be returned if refresh failed")
         .isEqualTo(null);
-    Assertions.assertThat(inputStream.tracingContext.getConnectionMode())
+    Assertions.assertThat(inputStream.getTracingContext().getConnectionMode())
         .describedAs(
             "InputStream trackingContext should have REST_ON_FASTPATH_SESSION_UPD_FAILURE")
         .isEqualTo(AbfsConnectionMode.REST_ON_FASTPATH_SESSION_UPD_FAILURE);
@@ -578,8 +581,8 @@ public class ITestAbfsFastpathSession extends AbstractAbfsIntegrationTest {
     AbfsInputStream inputStream = inStreamTest.getAbfsInputStream(mockClient, testPath.getName());
 
     AbfsFastpathSession fastpathSsn = MockAbfsInputStream.getStubAbfsFastpathSession(
-        inputStream.client, inputStream.path, inputStream.eTag,
-        inputStream.tracingContext);
+        inputStream.getClient(), inputStream.getPath(), inputStream.getETag(),
+        inputStream.getTracingContext());
 
     String mockFirstToken = "firstToken";
     AbfsRestOperation ssnTokenRspOp1 = MockAbfsInputStream.getMockSuccessRestOp(mockClient, mockFirstToken.getBytes(), initialSessionValidityDuration);

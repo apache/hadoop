@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsInputStream;
 
@@ -638,12 +639,11 @@ public class ITestAzureBlobFileSystemRandomRead extends
         .getResponseHeader(ETAG);
 
     TestAbfsInputStream testInputStream = new TestAbfsInputStream();
-
+    AbfsInputStreamContext context = testInputStream.getInStmContext(DISABLED_READAHEAD_DEPTH, FOUR_MB,
+        alwaysReadBufferSizeConfigValue, FOUR_MB, getDefaultFastpathFeatureStatus());
     AbfsInputStream inputStream = testInputStream.getAbfsInputStream(
         fs.getAbfsClient(),
-        testFile.getName(), ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, eTag,
-        DISABLED_READAHEAD_DEPTH, FOUR_MB,
-        alwaysReadBufferSizeConfigValue, FOUR_MB, getDefaultFastpathFeatureStatus());
+        testFile.getName(), ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, eTag, context);
 
     if (isMockFastpathTest) {
       inputStream = new MockAbfsInputStream(fs.getAbfsClient(), inputStream);

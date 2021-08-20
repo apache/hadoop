@@ -50,13 +50,17 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
 
+  private static final int BAD_REQUEST_HTTP_STATUS = 400;
+  private static final int FILE_NOT_FOUND_HTTP_STATUS = 404;
+  private static final int THROTTLED_HTTP_STATUS = 503;
+
   @Rule
   public TestName methodName = new TestName();
 
   public TestAbfsFastpath() throws Exception {
     super();
     assumeTrue("Fastpath supported only for OAuth auth type",
-        authType == AuthType.OAuth);
+        getAuthType() == AuthType.OAuth);
   }
 
   @Test
@@ -64,7 +68,7 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getAbfsFileSystem(2, DEFAULT_FASTPATH_READ_BUFFER_SIZE, 0);
     AbfsInputStream inStream = createTestfileAndGetInputStream(fs,
         this.methodName.getMethodName(), DEFAULT_FASTPATH_READ_BUFFER_SIZE);
-    ((MockAbfsInputStream) inStream).induceError(404);
+    ((MockAbfsInputStream) inStream).induceError(FILE_NOT_FOUND_HTTP_STATUS);
     Map<String, Long> metricMap;
     metricMap = fs.getInstrumentationMap();
     long expectedConnectionsMade = metricMap.get(
@@ -114,7 +118,7 @@ public class TestAbfsFastpath extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = getAbfsFileSystem(2, DEFAULT_FASTPATH_READ_BUFFER_SIZE, 0);
     AbfsInputStream inStream = createTestfileAndGetInputStream(fs,
         this.methodName.getMethodName(), DEFAULT_FASTPATH_READ_BUFFER_SIZE);
-    ((MockAbfsInputStream) inStream).induceError(503);
+    ((MockAbfsInputStream) inStream).induceError(THROTTLED_HTTP_STATUS);
     Map<String, Long> metricMap;
     metricMap = fs.getInstrumentationMap();
     long expectedConnectionsMade = metricMap.get(
