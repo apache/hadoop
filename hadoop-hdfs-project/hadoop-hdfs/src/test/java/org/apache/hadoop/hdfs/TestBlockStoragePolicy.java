@@ -1338,6 +1338,52 @@ public class TestBlockStoragePolicy {
   }
 
   @Test
+  public void testAddDatanode2ExistingPipelineInSsd() throws Exception {
+    BlockStoragePolicySuite suite = BlockStoragePolicySuite.createDefaultSuite();
+    BlockStoragePolicy policy = suite
+        .getPolicy(HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
+
+    final String[] racks = {"/d1/r1", "/d2/r2", "/d3/r3", "/d4/r4", "/d5/r5",
+        "/d6/r6", "/d7/r7"};
+    final String[] hosts = {"host1", "host2", "host3", "host4", "host5",
+        "host6", "host7"};
+    final StorageType[] disks = {StorageType.DISK, StorageType.DISK, StorageType.DISK};
+
+    final DatanodeStorageInfo[] diskStorages
+        = DFSTestUtil.createDatanodeStorageInfos(7, racks, hosts, disks);
+    final DatanodeDescriptor[] dataNodes
+        = DFSTestUtil.toDatanodeDescriptor(diskStorages);
+    for(int i = 0; i < dataNodes.length ; i++) {
+      BlockManagerTestUtil.updateStorage(dataNodes[i],
+          new DatanodeStorage("ssd" + i + 1, DatanodeStorage.State.NORMAL,
+              StorageType.SSD));
+    }
+
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    File baseDir = PathUtils.getTestDir(TestReplicationPolicy.class);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        new File(baseDir, "name").getPath());
+    DFSTestUtil.formatNameNode(conf);
+    NameNode namenode = new NameNode(conf);
+
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
+    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+    for (DatanodeDescriptor datanode : dataNodes) {
+      cluster.add(datanode);
+    }
+    List<DatanodeStorageInfo> chsenDs = new ArrayList<>();
+    chsenDs.add(diskStorages[0]);
+    chsenDs.add(diskStorages[1]);
+    DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 1,
+        null, chsenDs, true,
+        new HashSet<Node>(), 0, policy, null);
+    System.out.println(policy.getName() + ": " + Arrays.asList(targets));
+    Assert.assertEquals(3, targets.length);
+  }
+
+  @Test
   public void testGetFileStoragePolicyAfterRestartNN() throws Exception {
     //HDFS8219
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
