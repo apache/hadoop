@@ -198,7 +198,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   private void doTest(HdfsConfiguration conf) throws IOException {
     fs = FileSystem.get(cluster.getURI(), conf);
     FileSystemTestHelper.createFile(fs, PATH, NUM_BLOCKS, BLOCK_SIZE);
-    assertArrayEquals(FileSystemTestHelper.getFileData(NUM_BLOCKS, BLOCK_SIZE),
+    assertEquals(FileSystemTestHelper.getFileData(NUM_BLOCKS, BLOCK_SIZE),
       DFSTestUtil.readFile(fs, PATH).getBytes("UTF-8"));
     BlockLocation[] blockLocations = fs.getFileBlockLocations(PATH, 0,
       Long.MAX_VALUE);
