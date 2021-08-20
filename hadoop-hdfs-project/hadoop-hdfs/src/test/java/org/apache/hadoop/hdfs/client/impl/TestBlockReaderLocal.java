@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.client.impl;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -138,7 +136,7 @@ public class TestBlockReaderLocal {
   public void runBlockReaderLocalTest(BlockReaderLocalTest test,
       boolean checksum, long readahead, int shortCircuitCachesNum)
           throws IOException {
-    Assumptions.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assertions.assertNull(DomainSocket.getLoadingFailureReason());
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.SKIP_CHECKSUM_KEY,
