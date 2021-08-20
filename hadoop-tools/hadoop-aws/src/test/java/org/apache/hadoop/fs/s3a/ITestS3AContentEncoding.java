@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
@@ -69,11 +70,8 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
 
     StoreContext storeContext = fs.createStoreContext();
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("encoding");
     String key = storeContext.pathToKey(path);
-    ObjectMetadata meta = s3.getObjectMetadata(storeContext.getBucket(),
-        key);
-    String encoding = meta.getContentEncoding();
+    String encoding = fs.getXAttrs(XA_CONTENT_ENCODING);
     Assertions.assertThat(encoding)
         .describedAs("Encoding of object %s is gzip", path)
         .isEqualTo("gzip");
