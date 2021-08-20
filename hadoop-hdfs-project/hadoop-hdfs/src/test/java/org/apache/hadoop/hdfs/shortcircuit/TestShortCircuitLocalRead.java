@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.shortcircuit;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -64,7 +63,6 @@ import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -91,7 +89,7 @@ public class TestShortCircuitLocalRead {
 
   @BeforeEach
   public void before() {
-    Assumptions.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assertions.assertNull(DomainSocket.getLoadingFailureReason());
   }
 
   static final long seed = 0xDEADBEEFL;
