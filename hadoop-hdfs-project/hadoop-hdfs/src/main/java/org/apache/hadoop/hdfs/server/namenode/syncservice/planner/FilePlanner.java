@@ -137,11 +137,20 @@ public class FilePlanner {
         new Path(syncMount.getMountPath()));
     INodeFile nodeFile = namesystem.getFSDirectory().getINode(
         source.getAbsolutePath()).asFile();
+    long currentTimeBeforeBlocked = System.currentTimeMillis();
     while (nodeFile.isUnderConstruction()) {
       try {
         // If file is under construction, we may miss syncing blocks which are
         // under construction
-        Thread.sleep(10);
+        LOG.info("Waiting for block recovery before syncing data..");
+        Thread.sleep(500);
+        // To avoid the thread is blocked infinitely, break if timeout.
+        // Currently, continue the execution, which may meet exceptions.
+        // TODO: properly tackling timeout case.
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - currentTimeBeforeBlocked > 60000) {
+          break;
+        }
       } catch (InterruptedException e) {
         LOG.error("Thread interrupted while waiting file under construction");
       }

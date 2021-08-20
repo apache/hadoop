@@ -1635,12 +1635,25 @@ public class DatanodeManager {
         // participate in block recovery.
         recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
       }
+
+      // We cannot recover replica stored on provided storage.
+      List<DatanodeInfo> recoveryInfosWithoutProvidedLoc = new ArrayList<>();
+      for (DatanodeInfo dnInfo : recoveryInfos) {
+        // Skip provided storage location.
+        if (dnInfo instanceof ProvidedStorageMap.ProvidedDescriptor) {
+          continue;
+        }
+        recoveryInfosWithoutProvidedLoc.add(dnInfo);
+      }
+
       RecoveringBlock rBlock;
       if (truncateRecovery) {
         Block recoveryBlock = (copyOnTruncateRecovery) ? b : uc.getTruncateBlock();
-        rBlock = new RecoveringBlock(primaryBlock, recoveryInfos, recoveryBlock);
+        rBlock = new RecoveringBlock(primaryBlock,
+          recoveryInfosWithoutProvidedLoc.toArray(new DatanodeInfo[0]), recoveryBlock);
       } else {
-        rBlock = new RecoveringBlock(primaryBlock, recoveryInfos,
+        rBlock = new RecoveringBlock(primaryBlock,
+          recoveryInfosWithoutProvidedLoc.toArray(new DatanodeInfo[0]),
             uc.getBlockRecoveryId());
         if (b.isStriped()) {
           rBlock = new RecoveringStripedBlock(rBlock, uc.getBlockIndices(),
