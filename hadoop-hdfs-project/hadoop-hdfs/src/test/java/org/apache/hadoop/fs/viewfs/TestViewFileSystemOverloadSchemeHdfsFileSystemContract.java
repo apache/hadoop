@@ -39,6 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -115,7 +116,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
   @Override
   @Test
   public void testListStatusRootDir() throws Throwable {
-    assumeTrue(rootDirTestEnabled());
+    Assumptions.assumeTrue(rootDirTestEnabled());
     Path dir = path("/");
     Path child = path("/FileSystemContractBaseTest");
     try (FileSystem dfs = ((ViewFileSystemOverloadScheme) fs).getRawFileSystem(
