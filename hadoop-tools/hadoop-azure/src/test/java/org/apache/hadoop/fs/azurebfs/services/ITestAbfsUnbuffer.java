@@ -37,6 +37,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
  * Validates that the underlying stream's buffer is null.
  */
 public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
+  private static final int TEST_DATASET_LEN = 16;
+  private static final int TEST_DATASET_MODULO = 26;
 
   private Path dest;
 
@@ -71,7 +73,7 @@ public class ITestAbfsUnbuffer extends AbstractAbfsIntegrationTest {
   public void writeData(boolean isMockFastpathTest) throws IOException {
     dest = path("ITestAbfsUnbuffer");
 
-    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+    byte[] data = ContractTestUtils.dataset(TEST_DATASET_LEN, 'a', TEST_DATASET_MODULO);
     ContractTestUtils
         .writeDataset(getFileSystem(), dest, data, data.length, data.length, true);
     if (isMockFastpathTest) {

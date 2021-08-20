@@ -156,7 +156,7 @@ public class MockFastpathDriver extends FastpathDriver {
     return responseRegistry.get(clientRequestId).mockResponse;
   }
 
-  public String close (int timeout,
+  public String close(int timeout,
       String transactionId,
       String serializedRequestParams) throws FastpathConnectionException {
     return responseRegistry.get(transactionId).mockResponse;

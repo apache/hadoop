@@ -55,6 +55,8 @@ public class MockAbfsInputStream extends AbfsInputStream {
   private static final long FILETIME_EPOCH_DIFF = 11644473600000L;
   // 1ms in units of nanoseconds
   private static final long FILETIME_ONE_MILLISECOND = 10 * 1000;
+  private static final int EXPIRY_POS_START = 8;
+  private static final int EXPIRY_POS_END = 16;
   private int errStatus = 0;
   private boolean mockRequestException = false;
   private boolean mockConnectionException = false;
@@ -242,8 +244,8 @@ public class MockAbfsInputStream extends AbfsInputStream {
     buffer.putLong(Long.reverseBytes(w32FileTime));
     byte[] timeArray = buffer.array();
     byte[] sessionToken = new byte[token.length + timeArray.length + 8];
-    System.arraycopy(timeArray, 0, sessionToken, 8, timeArray.length);
-    System.arraycopy(token, 0, sessionToken, 16, token.length);
+    System.arraycopy(timeArray, 0, sessionToken, EXPIRY_POS_START, timeArray.length);
+    System.arraycopy(token, 0, sessionToken, EXPIRY_POS_END, token.length);
 
     when(httpOp.getResponseHeader(CONTENT_LENGTH)).thenReturn(String.valueOf(sessionToken.length));
     doAnswer(invocation -> {
