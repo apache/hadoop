@@ -26,8 +26,6 @@ import org.junit.jupiter.api.BeforeAll;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.super;
-
 /**
  * Verify HDFS compliance with {@link org.apache.hadoop.fs.PathHandle}
  * semantics.
@@ -37,7 +35,7 @@ public class TestHDFSContractPathHandle
 
   public TestHDFSContractPathHandle(String testname, Options.HandleOpt[] opts,
       boolean serialized) {
-      super(opts, serialized, testname);
+      super(testname, opts, serialized);
   }
 
   @BeforeAll
