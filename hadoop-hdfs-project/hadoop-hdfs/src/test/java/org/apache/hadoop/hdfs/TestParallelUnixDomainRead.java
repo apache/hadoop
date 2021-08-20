@@ -17,15 +17,13 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-
 import java.io.File;
 
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -48,7 +46,7 @@ public class TestParallelUnixDomainRead extends TestParallelReadUtil {
 
   @BeforeEach
   public void before() {
-    Assumptions.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assertions.assertNull(DomainSocket.getLoadingFailureReason());
   }
 
   @AfterAll
