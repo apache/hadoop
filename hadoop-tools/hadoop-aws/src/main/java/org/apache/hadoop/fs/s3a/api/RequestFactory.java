@@ -104,7 +104,7 @@ public interface RequestFactory {
    * Get the content encoding (e.g. gzip) or return null if none.
    * @return content encoding
    */
-  public String getContentEncoding();
+  String getContentEncoding();
 
   /**
    * Create a new object metadata instance.

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.util.List;
-
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
@@ -30,11 +28,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.audit.S3AAuditConstants;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
  * Tests of content encoding object meta data.
@@ -60,10 +56,13 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
     Path path = new Path(dir, "1");
     ContractTestUtils.touch(fs, path);
     assertObjectHasEncoding(path);
+    Path path2 = new Path(dir, "2");
+    fs.rename(path, path2);
+    assertObjectHasEncoding(path);
   }
 
   /**
-   * Assert that a given object has gzip encoding specified
+   * Assert that a given object has gzip encoding specified.
    * @param path path
    */
   private void assertObjectHasEncoding(Path path) {
