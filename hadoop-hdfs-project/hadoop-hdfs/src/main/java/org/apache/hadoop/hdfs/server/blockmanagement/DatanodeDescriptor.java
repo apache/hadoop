@@ -41,8 +41,10 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.ProvidedVolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
+import org.apache.hadoop.hdfs.server.protocol.BlockSyncTask;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
@@ -68,6 +70,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
       LoggerFactory.getLogger(DatanodeDescriptor.class);
   public static final DatanodeDescriptor[] EMPTY_ARRAY = {};
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
+
+  /** A queue of files and directories commands that must be run. */
+  private final Queue<BlockSyncTask> plannedSyncTasks = new LinkedList<>();
+  public static final int MAX_SYNC_TASKS_NUM_PER_HEARTBEAT = 100;
 
   /** Block and targets pair */
   @InterfaceAudience.Private
@@ -179,6 +185,37 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * monotonic milliseconds.
    */
   private long lastCachingDirectiveSentTimeMs;
+
+  /**
+   * {@link ProvidedVolumes} contains lists of {@link ProvidedVolumeInfo}s
+   * relevant to the datanode. Some of the uses of these lists include
+   * construction of provided volume commands to be sent via heartbeats, and
+   * maintaining currently active volumes on the datanode
+   */
+  private static class ProvidedVolumes {
+    /**
+     * The {@link ProvidedVolumeInfo}s which we want to add on this DataNode.
+     */
+    private final List<ProvidedVolumeInfo> toBeAdded = new ArrayList<>();
+
+    /**
+     * The {@link ProvidedVolumeInfo}s which we know are added.
+     */
+    private final List<ProvidedVolumeInfo> added = new ArrayList<>();
+
+    /**
+     * The {@link ProvidedVolumeInfo}s which we want to be removed on this
+     * DataNode.
+     */
+    private final List<ProvidedVolumeInfo> toBeRemoved = new ArrayList<>();
+  }
+
+  /**
+   * {@link ProvidedVolumes} contains provided volume information relevant
+   * to the datanode. It will also be used for ensuring thread safety.
+   */
+  private final ProvidedVolumes providedVolumes = new ProvidedVolumes();
+
 
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
@@ -530,6 +567,43 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * Add the file info that should be backed up to provided storage.
+   *
+   * @param syncTask store info of file that should be backed up to
+   *                 provided storage
+   */
+  public void scheduleSyncTaskOnHeartbeat(BlockSyncTask syncTask) {
+    synchronized (plannedSyncTasks) {
+      plannedSyncTasks.add(syncTask);
+    }
+  }
+
+  int getNumberOfTotalBlockSyncTasks() {
+    return plannedSyncTasks.size();
+  }
+
+
+  List<BlockSyncTask> getBlockSyncTasksToDispatch() {
+    int totalSyncTasks = getNumberOfTotalBlockSyncTasks();
+    if (totalSyncTasks == 0) {
+      return Collections.EMPTY_LIST;
+    }
+    final int maxSyncTasksNum =
+        Math.min(MAX_SYNC_TASKS_NUM_PER_HEARTBEAT, totalSyncTasks);
+    return getBlockSyncTasksToDispatch(maxSyncTasksNum);
+  }
+
+  public List<BlockSyncTask> getBlockSyncTasksToDispatch(int maxTask) {
+    synchronized (plannedSyncTasks) {
+      List<BlockSyncTask> syncTasksToDispatch = new ArrayList<>();
+      for (; !plannedSyncTasks.isEmpty() && maxTask > 0; maxTask--) {
+        syncTasksToDispatch.add(plannedSyncTasks.poll());
+      }
+      return syncTasksToDispatch;
+    }
+  }
+
+  /**
    * Remove stale storages from storageMap. We must not remove any storages
    * as long as they have associated block replicas.
    */
@@ -708,7 +782,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * The number of work items that are pending to be replicated.
    */
-  int getNumberOfBlocksToBeReplicated() {
+  public int getNumberOfBlocksToBeReplicated() {
     return pendingReplicationWithoutTargets + replicateBlocks.size();
   }
 
@@ -732,6 +806,56 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public List<BlockECReconstructionInfo> getErasureCodeCommand(
       int maxTransfers) {
     return erasurecodeBlocks.poll(maxTransfers);
+  }
+
+  /**
+   * Enqueues the added provided volume's info to be sent to the DN in the
+   * next heartbeat response.
+   * @param info The provided volume to be added.
+   */
+  public void addProvidedVolume(ProvidedVolumeInfo info) {
+    synchronized (providedVolumes) {
+      providedVolumes.toBeAdded.add(info);
+    }
+  }
+
+  /**
+   * Enqueues the removed provided volume to be sent to the DN in the next
+   * heartbeat response.
+   * @param info The provided volume to be removed.
+   */
+  public void removeProvidedVolume(ProvidedVolumeInfo info) {
+    synchronized (providedVolumes) {
+      providedVolumes.toBeRemoved.add(info);
+    }
+  }
+
+  /**
+   * @return a {@link ProvidedVolumeInfo} instance to be created on the
+   * Datanode. Null if nothing is to be added.
+   */
+  public ProvidedVolumeInfo pollPendingAddProvidedVolume() {
+    synchronized (providedVolumes) {
+      if (providedVolumes.toBeAdded.isEmpty()) {
+        return null;
+      }
+
+      return providedVolumes.toBeAdded.remove(0);
+    }
+  }
+
+  /**
+   * @return a {@link ProvidedVolumeInfo} instance to be removed on the
+   * Datanodes. Null if nothing is to be removed.
+   */
+  public ProvidedVolumeInfo pollPendingRemoveProvidedVolume() {
+    synchronized (providedVolumes) {
+      if (providedVolumes.toBeRemoved.isEmpty()) {
+        return null;
+      }
+
+      return providedVolumes.toBeRemoved.remove(0);
+    }
   }
 
   public BlockInfo[] getLeaseRecoveryCommand(int maxTransfers) {

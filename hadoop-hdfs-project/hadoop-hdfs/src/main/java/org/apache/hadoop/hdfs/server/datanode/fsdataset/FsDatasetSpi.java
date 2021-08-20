@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.common.ProvidedVolumeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
@@ -205,6 +206,25 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
       final List<NamespaceInfo> nsInfos) throws IOException;
 
   /**
+   * Creates and adds a provided volume to the FSDataset.
+   * @param providedVol Details of the provided volume to be added.
+   * @param namespaceInfo The namespace info.
+   */
+  default void addProvidedVol(ProvidedVolumeInfo providedVol,
+      NamespaceInfo namespaceInfo) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Removes a provided volume from the FsDataset.
+   * @param providedVol Details of the provided volume to be removed.
+   */
+  default void removeProvidedVol(ProvidedVolumeInfo providedVol)
+      throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
    * Removes a collection of volumes from FsDataset.
    *
    * If the FSDataset supports block scanning, this function removes
@@ -301,6 +321,19 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   InputStream getBlockInputStream(ExtendedBlock b, long seekOffset)
             throws IOException;
+
+  /**
+   * Returns an input stream at specified offset of the specified block.
+   * @param b block
+   * @param seekOffset offset with in the block to seek to
+   * @param readThrough indicates if the data has to be read using read-through
+   *                    caching.
+   * @return an input stream to read the contents of the specified block,
+   *  starting at the offset
+   * @throws IOException
+   */
+  InputStream getBlockInputStream(ExtendedBlock b, long seekOffset,
+      boolean readThrough) throws IOException;
 
   /**
    * Returns an input stream at specified offset of the specified block.

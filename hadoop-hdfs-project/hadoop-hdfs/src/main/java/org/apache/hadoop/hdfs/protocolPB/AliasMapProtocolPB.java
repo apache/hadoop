@@ -29,7 +29,7 @@ import org.apache.hadoop.security.KerberosInfo;
  */
 @ProtocolInfo(
     protocolName =
-        "org.apache.hadoop.hdfs.server.aliasmap.AliasMapProtocol",
+        "org.apache.hadoop.hdfs.protocolPB.AliasMapProtocolPB",
     protocolVersion = 1)
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)

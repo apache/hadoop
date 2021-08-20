@@ -29,12 +29,16 @@ import org.apache.hadoop.hdfs.protocol.BlockType;
 @InterfaceAudience.Private
 public class BlockInfoContiguous extends BlockInfo {
 
+  private boolean hasProvidedStorage;
+
   public BlockInfoContiguous(short size) {
     super(size);
+    hasProvidedStorage = false;
   }
 
   public BlockInfoContiguous(Block blk, short size) {
     super(blk, size);
+    hasProvidedStorage = false;
   }
 
   /**
@@ -63,6 +67,9 @@ public class BlockInfoContiguous extends BlockInfo {
     // find the last null node
     int lastNode = ensureCapacity(1);
     setStorageInfo(lastNode, storage);
+    if (storage.getStorageType() == StorageType.PROVIDED) {
+      hasProvidedStorage = true;
+    }
     return true;
   }
 
@@ -78,6 +85,10 @@ public class BlockInfoContiguous extends BlockInfo {
     setStorageInfo(dnIndex, getStorageInfo(lastNode));
     // set the last entry to null
     setStorageInfo(lastNode, null);
+    if (storage.getStorageType() == StorageType.PROVIDED
+        && !isProvided()) {
+      hasProvidedStorage = false;
+    }
     return true;
   }
 

@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.InterQJournalProtocol;
+import org.apache.hadoop.hdfs.protocolPB.AliasMapProtocolPB;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeLifelineProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -52,7 +53,9 @@ public class HDFSPolicyProvider extends PolicyProvider {
         ClientDatanodeProtocol.class),
     new Service(CommonConfigurationKeys.SECURITY_DATANODE_PROTOCOL_ACL,
         DatanodeProtocol.class),
-    new Service(CommonConfigurationKeys.SECURITY_INTER_DATANODE_PROTOCOL_ACL, 
+    new Service(CommonConfigurationKeys.SECURITY_ALIASMAP_PROTOCOL_ACL,
+        AliasMapProtocolPB.class),
+    new Service(CommonConfigurationKeys.SECURITY_INTER_DATANODE_PROTOCOL_ACL,
         InterDatanodeProtocol.class),
     new Service(CommonConfigurationKeys.SECURITY_NAMENODE_PROTOCOL_ACL,
         NamenodeProtocol.class),

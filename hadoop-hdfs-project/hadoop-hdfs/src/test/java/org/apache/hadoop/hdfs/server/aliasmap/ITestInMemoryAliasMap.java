@@ -22,12 +22,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -64,17 +66,15 @@ public class ITestInMemoryAliasMap {
   }
 
   @Test
-  public void readNotFoundReturnsNothing() throws IOException {
+  public void testReadNotFoundReturnsNothing() throws IOException {
     Block block = new Block(42, 43, 44);
-
-    Optional<ProvidedStorageLocation> actualProvidedStorageLocationOpt
-        = aliasMap.read(block);
-
+    Optional<FileRegion> actualProvidedStorageLocationOpt
+        = aliasMap.read(block.getBlockId());
     assertFalse(actualProvidedStorageLocationOpt.isPresent());
   }
 
   @Test
-  public void readWrite() throws Exception {
+  public void testReadWriteRemove() throws Exception {
     Block block = new Block(42, 43, 44);
 
     Path path = new Path("eagle", "mouse");
@@ -84,22 +84,22 @@ public class ITestInMemoryAliasMap {
     byte[] nonce = new byte[nonceSize];
     Arrays.fill(nonce, 0, (nonceSize - 1), Byte.parseByte("0011", 2));
 
-    ProvidedStorageLocation expectedProvidedStorageLocation =
-        new ProvidedStorageLocation(path, offset, length, nonce);
+    FileRegion expectedFileRegion =
+        new FileRegion(block,
+            new ProvidedStorageLocation(path, offset, length, nonce));
 
-    aliasMap.write(block, expectedProvidedStorageLocation);
-
-    Optional<ProvidedStorageLocation> actualProvidedStorageLocationOpt
-        = aliasMap.read(block);
-
+    aliasMap.write(block, expectedFileRegion.getProvidedStorageLocation());
+    Optional<FileRegion> actualProvidedStorageLocationOpt
+        = aliasMap.read(block.getBlockId());
     assertTrue(actualProvidedStorageLocationOpt.isPresent());
-    assertEquals(expectedProvidedStorageLocation,
-        actualProvidedStorageLocationOpt.get());
-
+    assertNotNull(actualProvidedStorageLocationOpt.get());
+    assertEquals(expectedFileRegion, actualProvidedStorageLocationOpt.get());
+    aliasMap.remove(block);
+    assertFalse(aliasMap.read(block.getBlockId()).isPresent());
   }
 
   @Test
-  public void list() throws IOException {
+  public void testIteration() throws IOException {
     Block block1 = new Block(42, 43, 44);
     Block block2 = new Block(43, 44, 45);
     Block block3 = new Block(44, 45, 46);
@@ -147,8 +147,8 @@ public class ITestInMemoryAliasMap {
     try {
       snapshotAliasMap = InMemoryAliasMap.init(newConf, bpid);
       // now the snapshot should have the first block but not the second one.
-      assertTrue(snapshotAliasMap.read(block1).isPresent());
-      assertFalse(snapshotAliasMap.read(block2).isPresent());
+      assertTrue(snapshotAliasMap.read(block1.getBlockId()).isPresent());
+      assertFalse(snapshotAliasMap.read(block2.getBlockId()).isPresent());
     } finally {
       if (snapshotAliasMap != null) {
         snapshotAliasMap.close();

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -28,6 +29,12 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaLruTracker;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.BlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FixedBlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.SingleUGIResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.UGIResolver;
+import org.apache.hadoop.hdfs.server.namenode.syncservice.DefaultSyncServiceFileFilterImpl;
+import org.apache.hadoop.hdfs.server.namenode.syncservice.updatetracker.CurrentTasksFactory;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.http.HttpConfig;
 
@@ -94,18 +101,198 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY;
   public static final String  DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT = "0.0.0.0:50105";
   public static final String  DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY = "dfs.namenode.backup.dnrpc-address";
+
+  // Provided storage related configuration
   public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS =
       HdfsClientConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS;
-  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT = "0.0.0.0:50200";
-  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST = "dfs.provided.aliasmap.inmemory.rpc.bind-host";
+  public static final String
+      DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS_DEFAULT = "0.0.0.0:50200";
+  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST =
+      "dfs.provided.aliasmap.inmemory.rpc.bind-host";
+  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR =
+      "dfs.provided.aliasmap.inmemory.leveldb.dir";
+  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE =
+      "dfs.provided.aliasmap.inmemory.batch-size";
+  public static final int DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE_DEFAULT =
+      500;
+  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED =
+      "dfs.provided.aliasmap.inmemory.enabled";
+  public static final boolean DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED_DEFAULT =
+      false;
+  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG =
+      "dfs.provided.aliasmap.inmemory.server.log";
+  public static final boolean
+      DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG_DEFAULT = false;
+  public static final String DFS_PROVIDED_SYNC_INODE_FILTER_KEY =
+      "dfs.provided.sync.inode.filter.class";
+  public static final Class<DefaultSyncServiceFileFilterImpl>
+      DFS_PROVIDED_SYNC_INODE_FILTER_DEFAULT =
+      DefaultSyncServiceFileFilterImpl.class;
 
-  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR = "dfs.provided.aliasmap.inmemory.leveldb.dir";
-  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE = "dfs.provided.aliasmap.inmemory.batch-size";
-  public static final int DFS_PROVIDED_ALIASMAP_INMEMORY_BATCH_SIZE_DEFAULT = 500;
-  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED = "dfs.provided.aliasmap.inmemory.enabled";
-  public static final boolean DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED_DEFAULT = false;
-  public static final String DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG = "dfs.provided.aliasmap.inmemory.server.log";
-  public static final boolean DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_LOG_DEFAULT = false;
+  public static final String DFS_PROVIDED_SYNC_RETRY_STRATEGY =
+      "dfs.provided.sync.retry.strategy";
+  public static final CurrentTasksFactory.RetryStrategy
+      DFS_PROVIDED_SYNC_RETRY_STRATEGY_DEFAULT =
+      CurrentTasksFactory.RetryStrategy.LIMITED;
+  // Takes effect if DFS_PROVIDED_SYNC_RETRY_STRATEGY is LIMITED.
+  public static final String DFS_PROVIDED_SYNC_LIMITED_RETRY_THRESHOLD =
+      "dfs.provided.sync.limited.retry.threshold";
+  public static final int
+      DFS_PROVIDED_SYNC_LIMITED_RETRY_THRESHOLD_DEFAULT = 3;
+
+  public static final String DFS_PROVIDED_READ_CACHE_MANAGER_FACTORY =
+      "dfs.provided.read.cache.manager.factory";
+  public static final String DFS_PROVIDED_READ_CACHE_MANAGER_FACTORY_DEFAULT =
+      "org.apache.hadoop.hdfs.server.namenode.mountmanager." +
+          "ReadCacheManagerFactory";
+
+  public static final String DFS_PROVIDED_SYNC_TASK_TIMEOUT_SEC_KEY =
+      "dfs.provided.sync.task.timeout.sec";
+  public static final int DFS_PROVIDED_SYNC_TASK_TIMEOUT_SEC_DEFAULT = 1200;
+
+  public static final String DFS_PROVIDED_READ_CACHE_CAPACITY_FRACTION =
+      "dfs.provided.read.cache.capacity.fraction";
+  public static final double
+      DFS_PROVIDED_READ_CACHE_CAPACITY_FRACTION_DEFAULT = 0.01;
+
+  public static final String DFS_PROVIDED_READ_CACHE_CAPACITY_BYTES =
+      "dfs.provided.read.cache.capacity.bytes";
+  public static final long DFS_PROVIDED_READ_CACHE_CAPACITY_BYTES_DEFAULT = -1;
+
+  public static final String DFS_PROVIDED_READ_CACHE_CAPACITY_THRESHOLD =
+      "dfs.provided.read.cache.capacity.threshold";
+  public static final double
+      DFS_PROVIDED_READ_CACHE_CAPACITY_THRESHOLD_DEFAULT = 0.90;
+
+  public static final String DFS_PROVIDED_READ_CACHE_SCAN_INTERVAL_MS =
+      "dfs.provided.read.cache.scan.interval.millis";
+  public static final long
+      DFS_PROVIDED_READ_CACHE_SCAN_INTERVAL_MS_DEFAULT = 1000;
+
+  public static final String DFS_PROVIDED_READ_CACHE_STORAGE_TYPE_KEY =
+      "dfs.provided.read.cache.storage.type";
+  public static final StorageType DFS_PROVIDED_READ_CACHE_STORAGE_TYPE_DEFAULT =
+      StorageType.DISK;
+
+  public static final String DFS_DATANODE_PROVIDED_VOLUME_CHOOSING_POLICY =
+      "dfs.datanode.provided.volume.choosing.policy";
+  public static final String DFS_DATANODE_PROVIDED_READTHROUGH_THREADS_MAX =
+      "dfs.datanode.provided.readthrough.threads.max";
+  public static final int
+      DFS_DATANODE_PROVIDED_READTHROUGH_THREADS_MAX_DEFAULT = 20;
+  public static final String DFS_DATANODE_PROVIDED_READ_CACHE_TASK_CLASS =
+      "dfs.datanode.provided.read.cache.task.class";
+
+  // The currently supported evictors include SimpleWriteCacheEvictor,
+  // FIFOWriteCacheEvictor, and LRUWriteCacheEvictor.
+  public static final String DFS_PROVIDED_WRITE_CACHE_EVICTOR_CLASS =
+      "dfs.provided.write.cache.evictor.class";
+  public static final String DFS_PROVIDED_WRITE_CACHE_EVICTOR_CLASS_DEFAULT =
+      "org.apache.hadoop.hdfs.server.namenode.syncservice." +
+          "FIFOWriteCacheEvictor";
+
+  public static final String DFS_PROVIDED_WRITE_CACHE_QUOTA_SIZE =
+      "dfs.provided.write.cache.quota.size";
+  public static final long DFS_PROVIDED_WRITE_CACHE_QUOTA_SIZE_DEFAULT =
+      100 * 1024 * 1024 * 1024;
+  public static final String DFS_PROVIDED_WRITE_CACHE_HIGH_WATERMARK =
+      "dfs.provided.write.cache.high.watermark";
+  public static final float
+      DFS_PROVIDED_WRITE_CACHE_HIGH_WATERMARK_DEFAULT = 0.8f;
+  public static final String DFS_PROVIDED_WRITE_CACHE_LOW_WATERMARK =
+      "dfs.provided.write.cache.low.watermark";
+  public static final float
+      DFS_PROVIDED_WRITE_CACHE_LOW_WATERMARK_DEFAULT = 0.5f;
+
+  public static final String DFS_DATANODE_PROVIDED_ENABLED =
+      "dfs.datanode.provided.enabled";
+  public static final boolean DFS_DATANODE_PROVIDED_ENABLED_DEFAULT = false;
+
+  public static final String DFS_NAMENODE_PROVIDED_ENABLED =
+      "dfs.namenode.provided.enabled";
+  public static final boolean DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT = false;
+
+  public static final String DFS_PROVIDER_STORAGEUUID =
+      "dfs.provided.storage.id";
+  public static final String DFS_PROVIDER_STORAGEUUID_DEFAULT =  "DS-PROVIDED";
+  public static final String DFS_PROVIDED_ALIASMAP_CLASS =
+      "dfs.provided.aliasmap.class";
+  public static final String DFS_PROVIDED_ALIASMAP_LOAD_RETRIES =
+      "dfs.provided.aliasmap.load.retries";
+
+  public static final String DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER =
+      "dfs.provided.aliasmap.text.delimiter";
+  public static final String
+      DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT = ",";
+
+  public static final String DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE =
+      "dfs.provided.aliasmap.text.read.file";
+  public static final String DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE_DEFAULT =
+      "file:///tmp/blocks.csv";
+
+  public static final String DFS_PROVIDED_ALIASMAP_TEXT_CODEC =
+      "dfs.provided.aliasmap.text.codec";
+  public static final String DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR =
+      "dfs.provided.aliasmap.text.write.dir";
+  public static final String DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR_DEFAULT =
+      "file:///tmp/";
+
+  public static final String DFS_PROVIDED_ALIASMAP_LEVELDB_PATH =
+      "dfs.provided.aliasmap.leveldb.path";
+
+  public static final String
+      DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_HANDLER_COUNT_KEY =
+      "dfs.provided.aliasmap.inmemory.handler.count";
+  public static final int
+      DFS_PROVIDED_ALIASMAP_INMEMORY_SERVER_HANDLER_COUNT_DEFAULT = 10;
+
+  public static final String DFS_PROVIDED_ACLS_IMPORT_ENABLED =
+      "dfs.provided.acls.import.enabled";
+  public static final boolean DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT = false;
+
+  public static final String DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY =
+      "dfs.provided.overreplication.factor";
+  public static final short DFS_PROVIDED_OVERREPLICATION_FACTOR_DEFAULT = 0;
+
+  public static final String DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD =
+      "dfs.datanode.provided.volume.lazy.load";
+  public static final boolean
+      DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD_DEFAULT = false;
+
+  public static final String DFS_PROVIDED_REPLICAMAP_CACHE_SIZE =
+      "dfs.provided.replicamap.cache.size";
+  public static final long DFS_PROVIDED_REPLICAMAP_CACHE_SIZE_DEFAULT = 10000;
+  public static final String DFS_PROVIDED_REPLICAMAP_CACHE_ENABLE_STATS =
+      "dfs.provided.replicamap.cache.enable.stats";
+  public static final boolean
+      DFS_PROVIDED_REPLICAMAP_CACHE_ENABLE_STATS_DEFAULT = false;
+
+  public static final String DFS_IMAGE_WRITER_UGI_CLASS =
+      "hdfs.image.writer.ugi.class";
+  public static final Class<? extends UGIResolver>
+      DFS_IMAGE_WRITER_UGI_CLASS_DEFAULT = SingleUGIResolver.class;
+  public static final String DFS_IMAGE_WRITER_BLOCK_RESOLVER_CLASS =
+      "hdfs.image.writer.blockresolver.class";
+  public static final Class<? extends BlockResolver>
+      DFS_IMAGE_WRITER_BLOCK_RESOLVER_CLASS_DEFAULT = FixedBlockResolver.class;
+
+  public static final String DFS_NAMENODE_MOUNT_LOCK_DURATION_MAX =
+      "dfs.namenode.mount.lock.duration";
+  public static final long DFS_NAMENODE_MOUNT_LOCK_DURATION_MAX_DEFAULT =
+      TimeUnit.SECONDS.toMillis(1);
+
+  public static final String DFS_PROVIDED_READ_MOUNT_INODES_MAX =
+      "dfs.provided.read.mount.inodes.max";
+  public static final int DFS_PROVIDED_READ_MOUNT_INODES_MAX_DEFAULT = -1;
+
+  public static final String DFS_PROVIDED_MOUNT_ACLS_ENABLED =
+      "dfs.provided.mount.acls.enabled";
+  public static final boolean DFS_PROVIDED_MOUNT_ACLS_ENABLED_DEFAULT = false;
+
+  public static final String DFS_DATANODE_PROVIDED_VOLUME_READ_THROUGH =
+      "dfs.datanode.provided.volume.readthrough";
+  public static final boolean
+      DFS_DATANODE_PROVIDED_VOLUME_READ_THROUGH_DEFAULT = false;
 
   public static final String  DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY;
@@ -398,29 +585,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.edits.asynclogging.pending.queue.size";
   public static final int
       DFS_NAMENODE_EDITS_ASYNC_LOGGING_PENDING_QUEUE_SIZE_DEFAULT = 4096;
-
-  public static final String DFS_NAMENODE_PROVIDED_ENABLED = "dfs.namenode.provided.enabled";
-  public static final boolean DFS_NAMENODE_PROVIDED_ENABLED_DEFAULT = false;
-
-  public static final String DFS_PROVIDER_STORAGEUUID = "dfs.provided.storage.id";
-  public static final String DFS_PROVIDER_STORAGEUUID_DEFAULT =  "DS-PROVIDED";
-  public static final String DFS_PROVIDED_ALIASMAP_CLASS = "dfs.provided.aliasmap.class";
-  public static final String DFS_PROVIDED_ALIASMAP_LOAD_RETRIES = "dfs.provided.aliasmap.load.retries";
-
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER = "dfs.provided.aliasmap.text.delimiter";
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER_DEFAULT = ",";
-
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE = "dfs.provided.aliasmap.text.read.file";
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE_DEFAULT = "file:///tmp/blocks.csv";
-
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_CODEC = "dfs.provided.aliasmap.text.codec";
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR = "dfs.provided.aliasmap.text.write.dir";
-  public static final String DFS_PROVIDED_ALIASMAP_TEXT_WRITE_DIR_DEFAULT = "file:///tmp/";
-
-  public static final String DFS_PROVIDED_ALIASMAP_LEVELDB_PATH = "dfs.provided.aliasmap.leveldb.path";
-  public static final String DFS_PROVIDED_ACLS_IMPORT_ENABLED =
-      "dfs.provided.acls.import.enabled";
-  public static final boolean DFS_PROVIDED_ACLS_IMPORT_ENABLED_DEFAULT = false;
 
   public static final String  DFS_LIST_LIMIT = "dfs.ls.limit";
   public static final int     DFS_LIST_LIMIT_DEFAULT = 1000;

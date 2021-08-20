@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 
@@ -28,6 +31,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -217,6 +221,37 @@ public class TestOverReplicatedBlocks {
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, p);
       assertEquals("Expected only one live replica for the block", 1, bm
           .countNodes(bm.getStoredBlock(block.getLocalBlock())).liveReplicas());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testAllowedOverReplication() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    short replication = 3;
+    short overReplication = 2;
+    conf.setInt(DFS_PROVIDED_OVERREPLICATION_FACTOR_KEY, overReplication);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    FileSystem fs = cluster.getFileSystem();
+    try {
+      final Path fileName = new Path("/foo1");
+      DFSTestUtil.createFile(fs, fileName, 2, replication, 0L);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
+      final FSNamesystem namesystem = cluster.getNamesystem();
+      final BlockManager bm = namesystem.getBlockManager();
+      BlockInfo blockInfo = bm.getStoredBlock(block.getLocalBlock());
+      assertEquals(replication, bm.getExpectedRedundancyNum(blockInfo));
+      assertEquals(replication,
+          bm.getExpectedReplicaNumWithOverReplication(blockInfo));
+      DatanodeStorageInfo mockStorageInfo = mock(DatanodeStorageInfo.class);
+      when(mockStorageInfo.getStorageType()).thenReturn(StorageType.PROVIDED);
+      blockInfo.addStorage(mockStorageInfo, block.getLocalBlock());
+      assertTrue(blockInfo.isProvided());
+      assertEquals(replication, bm.getExpectedRedundancyNum(blockInfo));
+      assertEquals(replication + overReplication,
+          bm.getExpectedReplicaNumWithOverReplication(blockInfo));
     } finally {
       cluster.shutdown();
     }

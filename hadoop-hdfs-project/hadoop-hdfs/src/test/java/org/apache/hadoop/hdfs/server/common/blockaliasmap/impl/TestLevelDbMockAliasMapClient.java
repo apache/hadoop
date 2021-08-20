@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.net.NetUtils;
 import org.iq80.leveldb.DBException;
 import org.junit.After;
 import org.junit.Before;
@@ -56,7 +57,7 @@ public class TestLevelDbMockAliasMapClient {
     levelDBAliasMapServer = new InMemoryLevelDBAliasMapServer(
         (config, blockPoolID) -> aliasMapMock, bpid);
     conf = new Configuration();
-    int port = 9877;
+    int port = NetUtils.getFreeSocketPort();
 
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
         "localhost:" + port);
@@ -82,17 +83,17 @@ public class TestLevelDbMockAliasMapClient {
     doThrow(new IOException())
         .doThrow(new DBException())
         .when(aliasMapMock)
-        .read(block);
+        .read(block.getBlockId());
 
     assertThatExceptionOfType(IOException.class)
         .isThrownBy(() ->
             inMemoryLevelDBAliasMapClient.getReader(null, bpid)
-                .resolve(block));
+                .resolve(block.getBlockId()));
 
     assertThatExceptionOfType(IOException.class)
         .isThrownBy(() ->
             inMemoryLevelDBAliasMapClient.getReader(null, bpid)
-                .resolve(block));
+                .resolve(block.getBlockId()));
   }
 
   @Test

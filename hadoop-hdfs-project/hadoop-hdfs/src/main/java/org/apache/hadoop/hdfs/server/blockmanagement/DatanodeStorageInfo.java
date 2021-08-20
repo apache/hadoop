@@ -407,6 +407,10 @@ public class DatanodeStorageInfo {
     this.remaining = remaining;
   }
 
+  public boolean isPresent(BlockInfo blk) {
+    return this.blocks.contains(blk);
+  }
+
   enum AddBlockResult {
     ADDED, REPLACED, ALREADY_EXIST
   }

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_ERASURE_CODING_POLICY;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_MOUNT;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RM_MOUNT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_APPEND;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_BLOCK;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_DIRECTIVE;
@@ -82,6 +84,8 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
 
@@ -90,6 +94,7 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.MountMode;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
@@ -115,6 +120,8 @@ import org.apache.hadoop.hdfs.protocol.proto.EditLogProtos.XAttrEditLogProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.ProvidedVolumeInfo;
+import org.apache.hadoop.hdfs.util.RemoteMountUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
@@ -4397,6 +4404,163 @@ public abstract class FSEditLogOp {
       if (aclEntries == null) {
         aclEntries = Lists.newArrayList();
       }
+    }
+  }
+
+  static class AddMountOp extends FSEditLogOp {
+
+    String mountPoint;
+    ProvidedVolumeInfo providedVol;
+
+    AddMountOp() {
+      super(OP_ADD_MOUNT);
+    }
+
+    static AddMountOp getInstance(OpInstanceCache cache) {
+      return (AddMountOp) cache.get(OP_ADD_MOUNT);
+    }
+
+    void setMountPoint(String mountPoint) {
+      this.mountPoint = mountPoint;
+    }
+
+    public void setProvidedVolumeInfo(ProvidedVolumeInfo providedVolumeInfo) {
+      this.providedVol = providedVolumeInfo;
+    }
+
+    @Override
+    void resetSubFields() {
+      mountPoint = "";
+      providedVol = new ProvidedVolumeInfo();
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      UUID id = UUID.fromString(FSImageSerialization.readString(in));
+      this.mountPoint = FSImageSerialization.readString(in);
+      String remotePath = FSImageSerialization.readString(in);
+      String mountMode = FSImageSerialization.readString(in);
+
+      int configCount = FSImageSerialization.readInt(in);
+      HashMap<String, String> xConfig = new HashMap<>();
+      for (; configCount > 0; configCount--) {
+        String key = FSImageSerialization.readString(in);
+        String value = FSImageSerialization.readString(in);
+        xConfig.put(key, value);
+      }
+
+      this.providedVol = new ProvidedVolumeInfo(
+          id, mountPoint, remotePath,
+          MountMode.parseMountMode(mountMode), xConfig);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(providedVol.getId(), out);
+      FSImageSerialization.writeString(mountPoint, out);
+      FSImageSerialization.writeString(providedVol.getRemotePath(), out);
+      FSImageSerialization.writeString(
+          providedVol.getMountMode().toString(), out);
+
+      Map<String, String> xConfig = providedVol.getConfig();
+      if (xConfig == null) {
+        FSImageSerialization.writeInt(0, out);
+      } else {
+        FSImageSerialization.writeInt(xConfig.size(), out);
+        for (Entry<String, String> config : xConfig.entrySet()) {
+          FSImageSerialization.writeString(config.getKey(), out);
+          FSImageSerialization.writeString(config.getValue(), out);
+        }
+      }
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "ID", providedVol.getId());
+      XMLUtils.addSaxString(contentHandler, "MOUNTPOINT", mountPoint);
+      XMLUtils.addSaxString(contentHandler, "REMOTEPATH",
+          providedVol.getRemotePath());
+      XMLUtils.addSaxString(contentHandler, "MOUNTMODE",
+          providedVol.getMountModeString());
+      String configStr =
+          RemoteMountUtils.encodeConfig(providedVol.getConfig());
+      XMLUtils.addSaxString(contentHandler, "CONFIG", configStr);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.mountPoint = st.getValue("MOUNTPOINT");
+      UUID id = UUID.fromString(st.getValue("ID"));
+      String remotePath = st.getValue("REMOTEPATH");
+      String mountMode = st.getValue("MOUNTMODE");
+      Map<String, String> xConfig =
+          RemoteMountUtils.decodeConfig(st.getValue("CONFIG"));
+      this.providedVol = new ProvidedVolumeInfo(id, mountPoint, remotePath,
+          MountMode.parseMountMode(mountMode), xConfig);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("AddMountOp [");
+      builder.append("mountPoint=" + mountPoint + ",");
+      builder.append("remotePath=" + providedVol.getRemotePath() + ",");
+      builder.append("mountMode=" + providedVol.getMountModeString() + ",");
+      builder.append("uuid=" + providedVol.getId() + ",");
+      builder.append("config=" +
+          RemoteMountUtils.encodeConfig(providedVol.getConfig()));
+      builder.append("]");
+      return builder.toString();
+    }
+  }
+
+  static class RemoveMountOp extends FSEditLogOp {
+
+    String mountPoint;
+
+    RemoveMountOp() {
+      super(OP_RM_MOUNT);
+    }
+
+    static RemoveMountOp getInstance(OpInstanceCache cache) {
+      return (RemoveMountOp) cache.get(OP_RM_MOUNT);
+    }
+
+    void setMountPoint(String mountPoint) {
+      this.mountPoint = mountPoint;
+    }
+
+    @Override
+    void resetSubFields() {
+      mountPoint = "";
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      this.mountPoint = FSImageSerialization.readString(in);
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(mountPoint, out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "MOUNTPOINT", mountPoint);
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.mountPoint = st.getValue("MOUNTPOINT");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("RemoveMountOp [");
+      builder.append("mountPoint=" + mountPoint + "]");
+      return builder.toString();
     }
   }
 

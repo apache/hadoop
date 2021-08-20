@@ -53,6 +53,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.MountInfo;
+import org.apache.hadoop.fs.MountMode;
+import org.apache.hadoop.fs.ProvidedStorageSummary;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -164,6 +167,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BulkSyncTaskExecutionFeedback;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -1588,14 +1592,15 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       int failedVolumes, VolumeFailureSummary volumeFailureSummary,
       boolean requestFullBlockReportLease,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks)
-          throws IOException {
+      @Nonnull SlowDiskReports slowDisks,
+      BulkSyncTaskExecutionFeedback bulkSyncTaskExecutionFeedback)
+      throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
         dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
         failedVolumes, volumeFailureSummary, requestFullBlockReportLease,
-        slowPeers, slowDisks);
+        slowPeers, slowDisks, bulkSyncTaskExecutionFeedback);
   }
 
   @Override // DatanodeProtocol
@@ -2405,7 +2410,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     return ret;
   }
 
-  private EventBatchList getEventBatchList(long syncTxid, long txid,
+  public static EventBatchList getEventBatchList(long syncTxid, long txid,
       FSEditLog log, boolean readInProgress, int maxEventsPerRPC)
       throws IOException {
     List<EventBatch> batches = Lists.newArrayList();
@@ -2665,5 +2670,34 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           + "external SPS service is not allowed to fetch the path Ids");
     }
     return namesystem.getBlockManager().getSPSManager().getNextPathId();
+  }
+
+  // ClientProtocol
+  @Override
+  public boolean addMount(String remote, String mountPath, MountMode mountMode,
+      Map<String, String> config) throws IOException {
+    checkNNStartup();
+    return namesystem.addMount(remote, mountPath, mountMode,
+        config, nn.getConf());
+  }
+
+  // ClientProtocol
+  @Override
+  public ProvidedStorageSummary listMounts(boolean requireStats)
+      throws IOException {
+    checkNNStartup();
+    List<MountInfo> mountInfos = namesystem.listMounts(requireStats);
+    if (requireStats) {
+      String cacheSummary = namesystem.getProvidedCacheSummary();
+      return new ProvidedStorageSummary(mountInfos, cacheSummary);
+    }
+    return new ProvidedStorageSummary(mountInfos);
+  }
+
+  // ClientProtocol
+  @Override
+  public boolean removeMount(String mountPath) throws IOException {
+    checkNNStartup();
+    return namesystem.removeMount(mountPath);
   }
 }

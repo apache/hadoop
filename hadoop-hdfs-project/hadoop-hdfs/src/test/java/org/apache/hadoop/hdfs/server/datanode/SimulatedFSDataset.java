@@ -1195,6 +1195,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override // FsDatasetSpi
   public synchronized InputStream getBlockInputStream(ExtendedBlock b,
       long seekOffset) throws IOException {
+    return getBlockInputStream(b, seekOffset, false);
+  }
+
+  @Override // FsDatasetSpi
+  public synchronized InputStream getBlockInputStream(ExtendedBlock b,
+      long seekOffset, boolean readThrough) throws IOException {
     InputStream result = getBlockInputStream(b);
     IOUtils.skipFully(result, seekOffset);
     return result;

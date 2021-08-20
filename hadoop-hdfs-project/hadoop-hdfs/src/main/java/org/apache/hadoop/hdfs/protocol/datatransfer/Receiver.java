@@ -140,7 +140,9 @@ public abstract class Receiver implements DataTransferProtocol {
         strategy.getDropBehind() : null;
     Long readahead = strategy.hasReadahead() ?
         strategy.getReadahead() : null;
-    return new CachingStrategy(dropBehind, readahead);
+    Boolean readThrough = strategy.hasReadThrough() ?
+        strategy.getReadThrough() : null;
+    return new CachingStrategy(dropBehind, readahead, readThrough);
   }
 
   /** Receive OP_READ_BLOCK */

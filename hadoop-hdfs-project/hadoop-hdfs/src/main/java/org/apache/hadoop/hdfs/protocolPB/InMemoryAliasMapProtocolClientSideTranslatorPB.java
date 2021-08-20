@@ -164,24 +164,17 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
 
   @Nonnull
   @Override
-  public Optional<ProvidedStorageLocation> read(@Nonnull Block block)
-      throws IOException {
-
-    if (block == null) {
-      throw new IOException("Block cannot be null");
-    }
+  public Optional<FileRegion> read(long blockId) throws IOException {
     ReadRequestProto request =
         ReadRequestProto
             .newBuilder()
-            .setKey(PBHelperClient.convert(block))
+            .setKey(blockId)
             .build();
     try {
       ReadResponseProto response = rpcProxy.read(null, request);
-
-      ProvidedStorageLocationProto providedStorageLocation =
-          response.getValue();
-      if (providedStorageLocation.isInitialized()) {
-        return Optional.of(PBHelperClient.convert(providedStorageLocation));
+      KeyValueProto kvProto = response.getValue();
+      if (kvProto.isInitialized()) {
+        return Optional.ofNullable(PBHelper.convert(kvProto));
       }
       return Optional.empty();
 
@@ -208,6 +201,21 @@ public class InMemoryAliasMapProtocolClientSideTranslatorPB
 
     try {
       rpcProxy.write(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void remove(@Nonnull Block block) throws IOException {
+    RemoveRequestProto request =
+        RemoveRequestProto
+            .newBuilder()
+            .setKey(PBHelperClient.convert(block))
+            .build();
+
+    try {
+      rpcProxy.remove(null, request);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

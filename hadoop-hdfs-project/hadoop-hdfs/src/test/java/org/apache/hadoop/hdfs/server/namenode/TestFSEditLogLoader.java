@@ -812,7 +812,7 @@ public class TestFSEditLogLoader {
     namesystem.dir = mock(FSDirectory.class);
 
     FakeTimer timer = new FakeTimer();
-    FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0, timer);
+    FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0, false, timer);
 
     LogCapturer capture = LogCapturer.captureLogs(FSImage.LOG);
     loader.loadFSEdits(getFakeEditLogInputStream(1, 10), 1);

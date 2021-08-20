@@ -363,7 +363,8 @@ public class TestEditLog {
         editStreams.add(editLogFileInputStream2);
         FSImage readFsImage = new FSImage(conf);
         try {
-          readFsImage.loadEdits(editStreams, namesystem, 100, null, null);
+          readFsImage.loadEdits(editStreams, namesystem, 100, null, null,
+              false);
         } catch (Exception e){
           LOG.error("There appears to be an out-of-order edit in the edit log",
               e);

@@ -276,8 +276,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (excludedNodes == null) {
       excludedNodes = new HashSet<>();
     }
-     
-    int[] result = getMaxNodesPerRack(chosenStorage.size(), numOfReplicas);
+
+    int replicaWithoutProvided = chosenStorage.size();
+    if (chosenStorage.stream().anyMatch(
+        storage -> storage.getStorageType().equals(StorageType.PROVIDED))) {
+      replicaWithoutProvided -= 1;
+    }
+    int[] result = getMaxNodesPerRack(replicaWithoutProvided, numOfReplicas);
     numOfReplicas = result[0];
     int maxNodesPerRack = result[1];
       

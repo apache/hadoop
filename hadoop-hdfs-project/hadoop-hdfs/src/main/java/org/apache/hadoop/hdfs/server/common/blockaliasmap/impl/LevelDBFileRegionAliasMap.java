@@ -26,20 +26,20 @@ import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Longs;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
+
+import static org.apache.hadoop.hdfs.server.common.FileRegion.fromProtoBufBytes;
+import static org.apache.hadoop.hdfs.server.common.FileRegion.toProtoBufBytes;
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ProvidedStorageLocation;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LEVELDB_PATH;
-import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.fromBlockBytes;
-import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.fromProvidedStorageLocationBytes;
-import static org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap.toProtoBufBytes;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,15 +176,14 @@ public class LevelDBFileRegionAliasMap
     }
 
     @Override
-    public Optional<FileRegion> resolve(Block block) throws IOException {
+    public Optional<FileRegion> resolve(long blockId) throws IOException {
       if (db == null) {
         return Optional.empty();
       }
       // consider layering index w/ composable format
-      byte[] key = toProtoBufBytes(block);
+      byte[] key = toBytes(blockId);
       byte[] value = db.get(key);
-      ProvidedStorageLocation psl = fromProvidedStorageLocationBytes(value);
-      return Optional.of(new FileRegion(block, psl));
+      return Optional.of(fromProtoBufBytes(value));
     }
 
     static class FRIterator implements Iterator<FileRegion> {
@@ -206,10 +205,7 @@ public class LevelDBFileRegionAliasMap
           return null;
         }
         try {
-          Block block = fromBlockBytes(entry.getKey());
-          ProvidedStorageLocation psl =
-              fromProvidedStorageLocationBytes(entry.getValue());
-          return new FileRegion(block, psl);
+          return fromProtoBufBytes(entry.getValue());
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
@@ -259,9 +255,15 @@ public class LevelDBFileRegionAliasMap
 
     @Override
     public void store(FileRegion token) throws IOException {
-      byte[] key = toProtoBufBytes(token.getBlock());
-      byte[] value = toProtoBufBytes(token.getProvidedStorageLocation());
+      byte[] key = toBytes(token.getBlock().getBlockId());
+      byte[] value = toProtoBufBytes(token);
       db.put(key, value);
+    }
+
+    @Override
+    public void remove(Block block) throws IOException {
+      byte[] key = toBytes(block.getBlockId());
+      db.delete(key);
     }
 
     @Override
@@ -270,5 +272,9 @@ public class LevelDBFileRegionAliasMap
         db.close();
       }
     }
+  }
+
+  public static byte[] toBytes(long blockId) {
+    return Longs.toByteArray(blockId);
   }
 }

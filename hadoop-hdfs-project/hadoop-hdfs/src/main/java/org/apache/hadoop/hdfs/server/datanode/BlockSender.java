@@ -165,7 +165,9 @@ class BlockSender implements java.io.Closeable {
   private final boolean dropCacheBehindLargeReads;
   
   private final boolean dropCacheBehindAllReads;
-  
+
+  private final boolean readThrough;
+
   private long lastCacheDropOffset;
   private final FileIoProvider fileIoProvider;
   
@@ -240,6 +242,13 @@ class BlockSender implements java.io.Closeable {
         this.alwaysReadahead = true;
         this.readaheadLength = cachingStrategy.getReadahead().longValue();
       }
+
+      if (cachingStrategy.getReadThrough() == null) {
+        this.readThrough = false;
+      } else {
+        this.readThrough = cachingStrategy.getReadThrough().booleanValue();
+      }
+
       this.datanode = datanode;
       
       if (verifyChecksum) {
@@ -427,10 +436,12 @@ class BlockSender implements java.io.Closeable {
       if (DataNode.LOG.isDebugEnabled()) {
         DataNode.LOG.debug("replica=" + replica);
       }
-      blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
+      // seek to offset
+      blockIn = datanode.data.getBlockInputStream(block, offset, readThrough);
       ris = new ReplicaInputStreams(
           blockIn, checksumIn, volumeRef, fileIoProvider);
     } catch (IOException ioe) {
+      LOG.error("Exception in creating BlockSender: {}", ioe);
       IOUtils.closeStream(this);
       org.apache.commons.io.IOUtils.closeQuietly(blockIn);
       org.apache.commons.io.IOUtils.closeQuietly(checksumIn);

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES;
 
 import java.io.File;
@@ -27,6 +29,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -56,6 +59,8 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
@@ -71,7 +76,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
  * This class is used to create provided volumes.
  */
 @InterfaceAudience.Private
-class ProvidedVolumeImpl extends FsVolumeImpl {
+public class ProvidedVolumeImpl extends FsVolumeImpl {
 
   /**
    * Get a suffix of the full path, excluding the given prefix.
@@ -130,21 +135,33 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     private ProvidedVolumeDF df;
     private AtomicLong numOfBlocks = new AtomicLong();
     private int numRetries;
+    final private DataNodeMetrics dnMetrics;
+    private boolean enableLazyLoad;
 
     ProvidedBlockPoolSlice(String bpid, ProvidedVolumeImpl volume,
-        Configuration conf) {
+        Configuration conf, DataNodeMetrics dnMetrics) {
       this.providedVolume = volume;
       bpVolumeMap = new ReplicaMap(new ReentrantReadWriteLock());
       Class<? extends BlockAliasMap> fmt =
           conf.getClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
               TextFileRegionAliasMap.class, BlockAliasMap.class);
-      aliasMap = ReflectionUtils.newInstance(fmt, conf);
       this.conf = conf;
       this.bpid = bpid;
       this.df = new ProvidedVolumeDF();
       bpVolumeMap.initBlockPool(bpid);
       this.numRetries = conf.getInt(DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 0);
-      LOG.info("Created alias map using class: " + aliasMap.getClass());
+      this.enableLazyLoad = conf.getBoolean(
+          DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD,
+          DFS_DATANODE_PROVIDED_VOLUME_LAZY_LOAD_DEFAULT);
+      this.dnMetrics = dnMetrics;
+      try {
+        aliasMap = ReflectionUtils.newInstance(fmt, conf);
+        LOG.info("Created alias map using class: {}", aliasMap.getClass());
+      } catch (Exception e) {
+        LOG.error("Error in creation of aliasMap for bpid {}: {}", bpid,
+            e.getMessage());
+        aliasMap = null;
+      }
     }
 
     BlockAliasMap<FileRegion> getBlockAliasMap() {
@@ -156,9 +173,12 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       this.aliasMap = blockAliasMap;
     }
 
-    void fetchVolumeMap(ReplicaMap volumeMap,
-        RamDiskReplicaTracker ramDiskReplicaMap, FileSystem remoteFS)
+
+    public VolumeReplicaMap getVolumeMap(FileSystem remoteFS)
         throws IOException {
+      if (remoteFS == null || aliasMap == null) {
+        return null;
+      }
       BlockAliasMap.Reader<FileRegion> reader = null;
       int tries = 1;
       do {
@@ -174,44 +194,99 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       if (reader == null) {
         LOG.error("Got null reader from BlockAliasMap " + aliasMap
             + "; no blocks will be populated");
-        return;
+        return null;
       }
+
+      return enableLazyLoad ?
+          loadProvidedReplicaMap(remoteFS, reader) :
+          loadReplicas(remoteFS, reader);
+    }
+
+    private VolumeReplicaMap loadReplicas(FileSystem remoteFS,
+        BlockAliasMap.Reader<FileRegion> reader) throws IOException {
+      VolumeReplicaMap volumeMap =
+          new VolumeReplicaMap(new AutoCloseableLock());
+      volumeMap.initBlockPool(bpid);
+      int blocksLoaded = 0;
       Path blockPrefixPath = new Path(providedVolume.getBaseURI());
       for (FileRegion region : reader) {
-        if (containsBlock(providedVolume.baseURI,
-            region.getProvidedStorageLocation().getPath().toUri())) {
-          String blockSuffix = getSuffix(blockPrefixPath,
-              new Path(region.getProvidedStorageLocation().getPath().toUri()));
-          PathHandle pathHandle = null;
-          if (region.getProvidedStorageLocation().getNonce().length > 0) {
-            pathHandle = new RawPathHandle(ByteBuffer
-                .wrap(region.getProvidedStorageLocation().getNonce()));
-          }
-          ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
-              .setBlockId(region.getBlock().getBlockId())
-              .setPathPrefix(blockPrefixPath)
-              .setPathSuffix(blockSuffix)
-              .setOffset(region.getProvidedStorageLocation().getOffset())
-              .setLength(region.getBlock().getNumBytes())
-              .setGenerationStamp(region.getBlock().getGenerationStamp())
-              .setPathHandle(pathHandle)
-              .setFsVolume(providedVolume)
-              .setConf(conf)
-              .setRemoteFS(remoteFS)
-              .build();
-          ReplicaInfo oldReplica =
-              volumeMap.get(bpid, newReplica.getBlockId());
-          if (oldReplica == null) {
-            volumeMap.add(bpid, newReplica);
-            bpVolumeMap.add(bpid, newReplica);
-            incrNumBlocks();
-            incDfsUsed(region.getBlock().getNumBytes());
-          } else {
-            LOG.warn("A block with id " + newReplica.getBlockId()
-                + " exists locally. Skipping PROVIDED replica");
-          }
-        }
+        buildReplica(remoteFS, volumeMap, blockPrefixPath, region);
       }
+      LOG.info("Added {} blocks to block pool id {} for volume {}",
+          blocksLoaded, bpid, providedVolume.getBaseURI());
+      return volumeMap;
+    }
+
+    private void buildReplica(FileSystem remoteFS, VolumeReplicaMap volumeMap,
+        Path blockPrefixPath, FileRegion region) {
+      URI uri = region.getProvidedStorageLocation().getPath().toUri();
+      //trim provided volume id in base uri
+      String loc = providedVolume.getBaseURI().toString();
+      int index = loc.lastIndexOf("/");
+      if (!uri.toString().startsWith(loc.substring(0, index))) {
+        return;
+      }
+      PathHandle pathHandle = null;
+      if (region.getProvidedStorageLocation().getNonce().length > 0) {
+        pathHandle = new RawPathHandle(ByteBuffer
+            .wrap(region.getProvidedStorageLocation().getNonce()));
+      }
+      String blockSuffix = getSuffix(blockPrefixPath, new Path(uri));
+      ReplicaInfo newReplica = new ReplicaBuilder(ReplicaState.FINALIZED)
+          .setBlockId(region.getBlock().getBlockId())
+          .setPathPrefix(blockPrefixPath)
+          .setPathSuffix(blockSuffix)
+          .setOffset(region.getProvidedStorageLocation().getOffset())
+          .setLength(region.getBlock().getNumBytes())
+          .setGenerationStamp(region.getBlock().getGenerationStamp())
+          .setPathHandle(pathHandle)
+          .setFsVolume(providedVolume)
+          .setConf(conf)
+          .setRemoteFS(remoteFS)
+          .build();
+      ReplicaInfo oldReplica =
+          volumeMap.get(bpid, newReplica.getBlockId());
+      if (oldReplica == null) {
+        volumeMap.add(bpid, newReplica);
+        bpVolumeMap.add(bpid, newReplica);
+        incrNumBlocks();
+        incDfsUsed(region.getBlock().getNumBytes());
+      } else {
+        LOG.warn("A block with id " + newReplica.getBlockId()
+            + " exists locally. Skipping PROVIDED replica");
+      }
+    }
+
+    private VolumeReplicaMap loadProvidedReplicaMap(FileSystem remoteFS,
+        BlockAliasMap.Reader<FileRegion> reader) throws IOException {
+      ProvidedVolumeReplicaMap replicaMap = new ProvidedVolumeReplicaMap(
+          reader, providedVolume, dnMetrics, conf, remoteFS);
+      replicaMap.initBlockPool(bpid);
+      LOG.info("Created Provided replica map for block pool id {} volume {}",
+          bpid, providedVolume.getBaseURI());
+      // TODO account for number of provided blocks and their size properly.
+      return replicaMap;
+    }
+
+    public ReplicaInfo getReplica(FileSystem remoteFS, long blockid) {
+      if (aliasMap == null) {
+        return null;
+      }
+      Optional<FileRegion> fileRegion = Optional.empty();
+      try {
+        BlockAliasMap.Reader<FileRegion> reader =
+            aliasMap.getReader(null, bpid);
+        fileRegion = reader.resolve(blockid);
+      } catch (IOException e) {
+        return null;
+      }
+      VolumeReplicaMap volumeMap =
+              new VolumeReplicaMap(new AutoCloseableLock());
+      volumeMap.initBlockPool(bpid);
+      Path blockPrefixPath = new Path(providedVolume.getBaseURI());
+      fileRegion.ifPresent(region -> buildReplica(remoteFS, volumeMap,
+          blockPrefixPath, region));
+      return volumeMap.get(bpid, blockid);
     }
 
     private void incrNumBlocks() {
@@ -235,12 +310,18 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
        * from before the refresh, i.e., for blocks which did not change,
        * the ids remain the same.
        */
+      if (aliasMap == null) {
+        return;
+      }
       aliasMap.refresh();
       BlockAliasMap.Reader<FileRegion> reader = aliasMap.getReader(null, bpid);
-      for (FileRegion region : reader) {
-        reportCompiler.throttle();
-        report.add(new ScanInfo(region.getBlock().getBlockId(), providedVolume,
-            region, region.getProvidedStorageLocation().getLength()));
+      if (reader != null) {
+        for (FileRegion region : reader) {
+          reportCompiler.throttle();
+          report.add(new ScanInfo(region.getBlock().getBlockId(),
+              providedVolume, region,
+              region.getProvidedStorageLocation().getLength()));
+        }
       }
     }
 
@@ -265,6 +346,9 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   // the remote FileSystem to which this ProvidedVolume points to.
   private FileSystem remoteFS;
 
+  // a reference to the Datanode metrics.
+  private DataNodeMetrics dnMetrics;
+
   ProvidedVolumeImpl(FsDatasetImpl dataset, String storageID,
       StorageDirectory sd, FileIoProvider fileIoProvider,
       Configuration conf) throws IOException {
@@ -274,7 +358,18 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
 
     baseURI = getStorageLocation().getUri();
     df = new ProvidedVolumeDF();
-    remoteFS = FileSystem.get(baseURI, conf);
+    remoteFS = baseURI.toString().equals(FsDatasetImpl.PROVIDED_LOCATION)
+            ? null : FileSystem.get(baseURI, conf);
+    if (dataset.datanode != null) {
+      dnMetrics = dataset.datanode.getMetrics();
+    } else {
+      dnMetrics = null;
+    }
+  }
+
+  @VisibleForTesting
+  public String getConfigValue(String key) {
+    return getConf().get(key);
   }
 
   @Override
@@ -345,6 +440,11 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   void incDfsUsedAndNumBlocks(String bpid, long value) {
     throw new UnsupportedOperationException(
         "ProvidedVolume does not yet support writes");
+  }
+
+  @Override
+  long getReserved() {
+    return 0;
   }
 
   @Override
@@ -526,14 +626,21 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     return VolumeCheckResult.HEALTHY;
   }
 
-  @Override
-  void getVolumeMap(ReplicaMap volumeMap,
-      final RamDiskReplicaTracker ramDiskReplicaMap)
-          throws IOException {
+  VolumeReplicaMap getVolumeMap(final RamDiskReplicaTracker ramDiskReplicaMap)
+      throws IOException {
     LOG.info("Creating volumemap for provided volume " + this);
+    VolumeReplicaMap volumeMap = null;
     for (ProvidedBlockPoolSlice s : bpSlices.values()) {
-      s.fetchVolumeMap(volumeMap, ramDiskReplicaMap, remoteFS);
+      VolumeReplicaMap tempReplicaMap = s.getVolumeMap(remoteFS);
+      if (tempReplicaMap != null) {
+        if (volumeMap == null) {
+          volumeMap = tempReplicaMap;
+        } else {
+          volumeMap.addAll(tempReplicaMap);
+        }
+      }
     }
+    return volumeMap;
   }
 
   private ProvidedBlockPoolSlice getProvidedBlockPoolSlice(String bpid)
@@ -546,11 +653,9 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   }
 
   @Override
-  void getVolumeMap(String bpid, ReplicaMap volumeMap,
-      final RamDiskReplicaTracker ramDiskReplicaMap)
-          throws IOException {
-    getProvidedBlockPoolSlice(bpid).fetchVolumeMap(volumeMap, ramDiskReplicaMap,
-        remoteFS);
+  VolumeReplicaMap getVolumeMap(String bpid, Object mutex,
+      final RamDiskReplicaTracker ramDiskReplicaMap) throws IOException {
+    return getProvidedBlockPoolSlice(bpid).getVolumeMap(remoteFS);
   }
 
   @VisibleForTesting
@@ -574,7 +679,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     LOG.info("Adding block pool " + bpid +
         " to volume with id " + getStorageID());
     ProvidedBlockPoolSlice bp;
-    bp = new ProvidedBlockPoolSlice(bpid, this, conf);
+    bp = new ProvidedBlockPoolSlice(bpid, this, conf, dnMetrics);
     bpSlices.put(bpid, bp);
   }
 
@@ -710,5 +815,35 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
       throw new IOException("block pool " + bpid + " is not found");
     }
     bp.setFileRegionProvider(blockAliasMap);
+  }
+
+  /**
+   * Increase the number of calls to {@code FileSystem#open} by one,
+   * for provided storage.
+   */
+  public void incrProvidedOpenCalls() {
+    if (dnMetrics != null) {
+      dnMetrics.incrProvidedOpenCalls();
+    }
+  }
+
+  /**
+   * Increase the number of calls to {@code FileSystem#exists} by one,
+   * for provided storage.
+   */
+  public void incrProvidedExistsChecks() {
+    if (dnMetrics != null) {
+      dnMetrics.incrProvidedExistsChecks();
+    }
+  }
+
+  public ReplicaInfo getReplica(String bpid, long blockid) {
+    ProvidedBlockPoolSlice pbps = null;
+    try {
+      pbps = getProvidedBlockPoolSlice(bpid);
+    } catch (IOException e) {
+      return null;
+    }
+    return pbps.getReplica(remoteFS, blockid);
   }
 }

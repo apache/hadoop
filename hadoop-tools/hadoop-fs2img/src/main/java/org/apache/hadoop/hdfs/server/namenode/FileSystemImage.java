@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -32,6 +34,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.BlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FSMultiRootTreeWalk;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FSTreeWalk;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreePath;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreeWalk;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.UGIResolver;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -59,7 +67,9 @@ public class FileSystemImage implements Tool {
 
   protected void printUsage() {
     HelpFormatter formatter = new HelpFormatter();
-    formatter.printHelp("fs2img [OPTIONS] URI", new Options());
+    formatter.printHelp("fs2img [OPTIONS] " +
+        "<mount point 1, remote URI 1> <mount point 2, remote URI 2> ...",
+        new Options());
     formatter.setSyntaxPrefix("");
     formatter.printHelp("Options", options());
     ToolRunner.printGenericCommandUsage(System.out);
@@ -130,14 +140,34 @@ public class FileSystemImage implements Tool {
       }
     }
 
+    // TODO: add an option prior to the below args.
     String[] rem = cmd.getArgs();
-    if (rem.length != 1) {
-      printUsage();
-      return -1;
+    List<String[]> mountpoints = new ArrayList<>();
+    if (rem.length == 1) {
+      // no mount points specified explicitly.
+      mountpoints.add(new String[]{"/", rem[0]});
+    } else {
+      for (String arg : rem) {
+        String[] pair = arg.split(",");
+        if (pair.length != 2) {
+          printUsage();
+          return -1;
+        }
+        mountpoints.add(pair);
+      }
+    }
+
+    Path[] localMounts = new Path[mountpoints.size()];
+    TreeWalk[] remoteTreeWalks = new TreeWalk[mountpoints.size()];
+    int count = 0;
+    for (String[] mountInfo: mountpoints) {
+      localMounts[count] = new Path(mountInfo[0]);
+      remoteTreeWalks[count] = new FSTreeWalk(new Path(mountInfo[1]), conf);
+      count++;
     }
 
     try (ImageWriter w = new ImageWriter(opts)) {
-      for (TreePath e : new FSTreeWalk(new Path(rem[0]), getConf())) {
+      for (TreePath e : new FSMultiRootTreeWalk(localMounts, remoteTreeWalks)) {
         w.accept(e); // add and continue
       }
     }
@@ -148,5 +178,4 @@ public class FileSystemImage implements Tool {
     int ret = ToolRunner.run(new FileSystemImage(), argv);
     System.exit(ret);
   }
-
 }

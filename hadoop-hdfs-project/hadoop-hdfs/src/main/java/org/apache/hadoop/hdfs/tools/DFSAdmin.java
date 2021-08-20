@@ -35,12 +35,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
+import org.apache.hadoop.fs.MountInfo;
+import org.apache.hadoop.fs.MountMode;
+import org.apache.hadoop.fs.ProvidedStorageSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -87,6 +91,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
+import org.apache.hadoop.hdfs.util.RemoteMountUtils;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
@@ -468,6 +473,10 @@ public class DFSAdmin extends FsShell {
     "\t[-metasave filename]\n" +
     "\t[-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode <namenode_host:ipc_port>]]\n" +
     "\t[-listOpenFiles [-blockingDecommission] [-path <path>]]\n" +
+    "\t[-addMount <remotePath> <mountPath> [-readOnly|-backup|-writeBack] " +
+        "[<remoteConfig>]]\n" +
+    "\t[-removeMount <rootOfMount>]\n" +
+    "\t[-listMounts [-stats]\n" +
     "\t[-help [cmd]]\n";
 
   /**
@@ -1298,6 +1307,20 @@ public class DFSAdmin extends FsShell {
         + "\tIf 'blockingDecommission' option is specified, it will list the\n"
         + "\topen files only that are blocking the ongoing Decommission.";
 
+    String addMount = "-addMount <remotePath> <mountPath> " +
+        "[-readOnly|-backup|writeBack] "
+        + "[<remoteConfig>]\n"
+        + "\tAdd a PROVIDED mount point to the FSImage.\n"
+        + "\tPlease use -readOnly, -backup or -writeBack to specify " +
+        "mount mode.\n"
+        + "\tThe default mount mode is -readOnly.\n";
+
+    String removeMount = "-removeMount <mountPath>\n"
+        + "\tUnmount (delete) a PROVIDED mount.\n";
+
+    String listMounts = "-listMounts [-stats]\n" +
+        "\t List all PROVIDED mounts.\n";
+
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -1371,6 +1394,12 @@ public class DFSAdmin extends FsShell {
       System.out.println(triggerBlockReport);
     } else if ("listOpenFiles".equalsIgnoreCase(cmd)) {
       System.out.println(listOpenFiles);
+    } else if ("addMount".equalsIgnoreCase(cmd)) {
+      System.out.println(addMount);
+    } else if ("removeMount".equalsIgnoreCase(cmd)) {
+      System.out.println(removeMount);
+    } else if ("listMounts".equalsIgnoreCase(cmd)) {
+      System.out.println(listMounts);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1409,6 +1438,9 @@ public class DFSAdmin extends FsShell {
       System.out.println(getDatanodeInfo);
       System.out.println(triggerBlockReport);
       System.out.println(listOpenFiles);
+      System.out.println(addMount);
+      System.out.println(removeMount);
+      System.out.println(listMounts);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -2207,6 +2239,14 @@ public class DFSAdmin extends FsShell {
     } else if ("-listOpenFiles".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-listOpenFiles [-blockingDecommission] [-path <path>]]");
+    } else if ("-addMount".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-addMount <remotePath> <mountPath> " +
+          "[-readOnly|-backup|-writeBack] [<remoteConfig>]]");
+    } else if ("-removeMount".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin [-removeMount <mountPath>]");
+    } else if ("-listMounts".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin -listMounts [-stats]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -2374,6 +2414,21 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-addMount".equals(cmd)) {
+      if (argv.length < 3) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-removeMount".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-listMounts".equals(cmd)) {
+      if (argv.length > 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -2452,6 +2507,12 @@ public class DFSAdmin extends FsShell {
         exitCode = triggerBlockReport(argv);
       } else if ("-listOpenFiles".equals(cmd)) {
         exitCode = listOpenFiles(argv);
+      } else if ("-addMount".equals(cmd)) {
+        exitCode = addMount(argv);
+      } else if ("-removeMount".equals(cmd)) {
+        exitCode = removeMount(argv);
+      } else if ("-listMounts".equals(cmd)) {
+        exitCode = listMounts(argv);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -2600,6 +2661,111 @@ public class DFSAdmin extends FsShell {
       System.out.println(dnInfo.getDatanodeLocalReport());
     } catch (IOException ioe) {
       throw new IOException("Datanode unreachable. " + ioe, ioe);
+    }
+    return 0;
+  }
+
+  /**
+   * Specify mount mode by using "-readOnly" , "-backup" or "-writeBack".
+   * If not specified, "-readOnly" will be used.
+   */
+  private int addMount(String[] argv) throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    String remotePath = argv[1];
+    String mountPath = argv[2];
+    MountMode mountMode = MountMode.READONLY;
+    String remoteConfig = null;
+    List<String> args = new ArrayList<>(Arrays.asList(argv));
+    boolean isReadOnlyMount = StringUtils.popOption("-" +
+        MountMode.READONLY.toString(), args);
+    boolean isBackupMount = StringUtils.popOption("-" +
+        MountMode.BACKUP.toString(), args);
+    boolean isWriteBackMount = StringUtils.popOption("-" +
+        MountMode.WRITEBACK.toString(), args);
+    if (isReadOnlyMount && (isBackupMount || isWriteBackMount)) {
+      System.out.println("Only one mount mode can be specified!");
+      printUsage("-addMount");
+      return -1;
+    }
+    if ((isBackupMount && isWriteBackMount)) {
+      System.out.println("Only one mount mode can be specified!");
+      printUsage("-addMount");
+      return -1;
+    }
+
+    if (!isReadOnlyMount && !isBackupMount && !isWriteBackMount) {
+      if (argv.length >= 4) {
+        remoteConfig = argv[3];
+      }
+    } else {
+      if (isBackupMount) {
+        mountMode = MountMode.BACKUP;
+      } else if (isWriteBackMount) {
+        mountMode = MountMode.WRITEBACK;
+      }
+      if (argv.length >= 5) {
+        remoteConfig = argv[4];
+      }
+    }
+    Map<String, String> config = RemoteMountUtils.decodeConfig(remoteConfig);
+    System.out.println(String.format("Try to mount a provided storage..\n" +
+            "mount path: %s\n" +
+            "remote path: %s\n" +
+            "mount mode: %s",
+        mountPath, remotePath, mountMode.toString()));
+    dfs.addMount(remotePath, mountPath, mountMode, config);
+    System.out.println("Successfully mount a provided storage!");
+    return 0;
+  }
+
+  private int removeMount(String[] argv) throws IOException {
+    DistributedFileSystem dfs = getDFS();
+    String mountPath = argv[1];
+    dfs.removeMount(mountPath);
+    System.out.println("Successfully remove mount for " + mountPath + "!");
+    return 0;
+  }
+
+  /**
+   * List the mount info for provided storage, with metrics included
+   * if "-stats" is given.
+   *
+   * @throws IOException
+   */
+  private int listMounts(String[] argv) throws IOException {
+    List<String> args = new ArrayList<>(Arrays.asList(argv));
+    boolean requireStats = StringUtils.popOption("-stats", args);
+    DistributedFileSystem dfs = getDFS();
+    ProvidedStorageSummary summary = dfs.listMounts(requireStats);
+    List<MountInfo> mountInfos = summary.getMountInfos();
+    if (mountInfos.isEmpty()) {
+      System.out.println("No mount info for provided storage was found!");
+      return 1;
+    }
+    System.out.println(
+        String.format("Found %d mount record(s):\n", mountInfos.size()));
+    for (MountInfo mountInfo : mountInfos) {
+      System.out.println(mountInfo.getMountPath() + " -> " +
+          mountInfo.getRemotePath() + ", " + mountInfo.getMountMode() +
+          " mode, " + mountInfo.getMountStatus());
+      if (requireStats && !mountInfo.getMetrics().isEmpty()) {
+        Scanner scanner = new Scanner(mountInfo.getMetrics());
+        while (scanner.hasNextLine()) {
+          System.out.println(String.format("\t%s", scanner.nextLine()));
+        }
+      }
+      if (requireStats) {
+        System.out.println("------------------------------------------------");
+      }
+    }
+    if (requireStats) {
+      System.out.println(
+          "Cache Usage Summary for ReadOnly/WriteBack Mount: ");
+      Scanner scanner = new Scanner(summary.getCacheSummary());
+      while (scanner.hasNextLine()) {
+        System.out.println(String.format("\t%s", scanner.nextLine()));
+      }
+      System.out.print("\n");
     }
     return 0;
   }

@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaTracker.RamDiskReplica;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -363,6 +364,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   protected File getTmpDir(String bpid) throws IOException {
     return getBlockPoolSlice(bpid).getTmpDir();
+  }
+
+  protected Configuration getConf() {
+    return conf;
   }
 
   void onBlockFileDeletion(String bpid, long value) {
@@ -1060,16 +1065,23 @@ public class FsVolumeImpl implements FsVolumeSpi {
     return VolumeCheckResult.HEALTHY;
   }
 
-  void getVolumeMap(ReplicaMap volumeMap,
-      final RamDiskReplicaTracker ramDiskReplicaMap) throws IOException {
-    for (BlockPoolSlice s : bpSlices.values()) {
-      s.getVolumeMap(volumeMap, ramDiskReplicaMap);
+  VolumeReplicaMap getVolumeMap(final RamDiskReplicaTracker ramDiskReplicaMap)
+      throws IOException {
+    VolumeReplicaMap replicaMap =
+        new VolumeReplicaMap(new AutoCloseableLock());
+    for(String bpid : bpSlices.keySet()) {
+      replicaMap.initBlockPool(bpid);
+      bpSlices.get(bpid).getVolumeMap(replicaMap, ramDiskReplicaMap);
     }
+    return replicaMap;
   }
 
-  void getVolumeMap(String bpid, ReplicaMap volumeMap,
+  VolumeReplicaMap getVolumeMap(String bpid, Object mutex,
       final RamDiskReplicaTracker ramDiskReplicaMap) throws IOException {
+    VolumeReplicaMap volumeMap = new VolumeReplicaMap(new AutoCloseableLock());
+    volumeMap.initBlockPool(bpid);
     getBlockPoolSlice(bpid).getVolumeMap(volumeMap, ramDiskReplicaMap);
+    return volumeMap;
   }
 
   long getNumBlocks() {

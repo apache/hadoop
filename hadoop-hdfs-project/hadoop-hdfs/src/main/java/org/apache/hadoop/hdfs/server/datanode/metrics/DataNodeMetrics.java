@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeFloat;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
@@ -78,6 +79,15 @@ public class DataNodeMetrics {
   MutableCounterLong remoteBytesRead;
   @Metric("Bytes written by remote client")
   MutableCounterLong remoteBytesWritten;
+
+  @Metric("Number of exists() checks on PROVIDED Storage")
+  MutableCounterLong providedExistsChecks;
+  @Metric("Number of calls to open() on PROVIDED storage")
+  MutableCounterLong providedOpenCalls;
+  @Metric("AliasMap lookups for PROVIDDED storage")
+  MutableCounterLong numAliasMapLookups;
+  @Metric("AliasMap cache hit rate")
+  MutableGaugeFloat aliasMapCacheHitRate;
 
   // RamDisk metrics on read/write
   @Metric MutableCounterLong ramDiskBlocksWrite;
@@ -608,6 +618,22 @@ public class DataNodeMetrics {
 
   public void incrECReconstructionDecodingTime(long millis) {
     ecReconstructionDecodingTimeMillis.incr(millis);
+  }
+
+  public void incrProvidedExistsChecks() {
+    providedExistsChecks.incr();
+  }
+
+  public void incrProvidedOpenCalls() {
+    providedOpenCalls.incr();
+  }
+
+  public void incrAliasMapLookUps() {
+    numAliasMapLookups.incr();
+  }
+
+  public void setAliasMapCacheHitRate(float cacheHitRate) {
+    aliasMapCacheHitRate.set(cacheHitRate);
   }
 
   public DataNodeUsageReport getDNUsageReport(long timeSinceLastReport) {

@@ -1478,7 +1478,21 @@ class DataStreamer extends Daemon {
       streamerClosed = true;
       return;
     }
-    setupPipelineInternal(nodes, storageTypes, storageIDs);
+    // Exclude provided storage in setting up pipeline.
+    List<StorageType> nodeStorageTypes = new LinkedList<>(Arrays.asList(storageTypes));
+    if (nodeStorageTypes.contains(StorageType.PROVIDED)) {
+      List<DatanodeInfo> datanodes = new LinkedList<>(Arrays.asList(nodes));
+      List<String> nodeStorageIDs = new LinkedList<>(Arrays.asList(storageIDs));
+      int index = nodeStorageTypes.indexOf(StorageType.PROVIDED);
+      nodeStorageTypes.remove(index);
+      datanodes.remove(index);
+      nodeStorageIDs.remove(index);
+      setupPipelineInternal(datanodes.toArray(new DatanodeInfo[0]),
+        nodeStorageTypes.toArray(new StorageType[0]),
+        nodeStorageIDs.toArray(new String[0]));
+    } else {
+      setupPipelineInternal(nodes, storageTypes, storageIDs);
+    }
   }
 
   protected void setupPipelineInternal(DatanodeInfo[] datanodes,
@@ -1504,12 +1518,12 @@ class DataStreamer extends Daemon {
       accessToken = lb.getBlockToken();
 
       // set up the pipeline again with the remaining nodes
-      success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
+      success = createBlockOutputStream(datanodes, nodeStorageTypes, nodeStorageIDs, newGS,
           isRecovery);
 
       failPacket4Testing();
 
-      errorState.checkRestartingNodeDeadline(nodes);
+      errorState.checkRestartingNodeDeadline(datanodes);
     } // while
 
     if (success) {

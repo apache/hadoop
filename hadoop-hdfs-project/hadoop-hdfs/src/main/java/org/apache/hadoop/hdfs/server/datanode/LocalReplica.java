@@ -268,6 +268,12 @@ abstract public class LocalReplica extends ReplicaInfo {
   }
 
   @Override
+  public InputStream getDataInputStream(long seekOffset, boolean readThrough,
+      String bpid) throws IOException {
+    return getDataInputStream(seekOffset);
+  }
+
+  @Override
   public boolean blockDataExists() {
     return getFileIoProvider().exists(getVolume(), getBlockFile());
   }

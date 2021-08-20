@@ -438,7 +438,9 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
     try (FsVolumeReferences refs = dataset.getFsVolumeReferences()) {
       for (FsVolumeSpi vol : refs) {
         FsVolumeImpl volume = (FsVolumeImpl) vol;
-        volume.getVolumeMap(bpid, replicaMap, dataset.ramDiskReplicaTracker);
+        VolumeReplicaMap volumeMap =
+            volume.getVolumeMap(bpid, replicaMap, dataset.ramDiskReplicaTracker);
+        replicaMap.addAll(volume, volumeMap);
       }
     }
 

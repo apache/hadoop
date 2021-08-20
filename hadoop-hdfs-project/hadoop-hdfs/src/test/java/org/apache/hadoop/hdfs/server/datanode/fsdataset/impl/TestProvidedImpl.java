@@ -18,10 +18,11 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
-import static org.junit.Assert.assertArrayEquals;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,34 +43,28 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ScanInfoVolumeReport;
-import org.apache.hadoop.hdfs.server.datanode.FinalizedProvidedReplica;
+import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.ProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
@@ -80,7 +75,11 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeRef
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -126,6 +125,9 @@ public class TestProvidedImpl {
       this.currentCount = minID;
       this.numBlocks = numBlocks;
       this.basePath = basePath;
+      if (!new File(basePath).exists()) {
+        new File(basePath).mkdirs();
+      }
     }
 
     @Override
@@ -225,8 +227,13 @@ public class TestProvidedImpl {
             }
 
             @Override
-            public Optional<FileRegion> resolve(Block ident)
+            public Optional<FileRegion> resolve(long blockId)
                 throws IOException {
+              for (FileRegion fr : this) {
+                if (fr.getBlock().getBlockId() == blockId) {
+                  return Optional.of(fr);
+                }
+              }
               return null;
             }
           };
@@ -311,6 +318,24 @@ public class TestProvidedImpl {
     }
   }
 
+  /**
+   * Tests if ProvidedVolumes can be created with the
+   * default configuration.
+   */
+  public static class TestDefaultAliasMapLoad {
+
+    @Test
+    public void test() throws Exception {
+      // load the default configurations
+      Configuration conf = new Configuration(true);
+      ProvidedVolumeImpl.ProvidedBlockPoolSlice bpSlice =
+          new ProvidedVolumeImpl.ProvidedBlockPoolSlice(
+              "bpid", mock(ProvidedVolumeImpl.class), conf,
+              mock(DataNodeMetrics.class));
+      assertNotNull(bpSlice.getBlockAliasMap());
+    }
+  }
+
   @Before
   public void setUp() throws IOException {
     datanode = mock(DataNode.class);
@@ -324,11 +349,17 @@ public class TestProvidedImpl {
     // reset the space used
     spaceUsed = 0;
 
+    DataNodeMetrics metrics = DataNodeMetrics.create(conf, "mockDN");
+    when(datanode.getMetrics()).thenReturn(metrics);
+
     final BlockScanner disabledBlockScanner = new BlockScanner(datanode, conf);
     when(datanode.getBlockScanner()).thenReturn(disabledBlockScanner);
     final ShortCircuitRegistry shortCircuitRegistry =
         new ShortCircuitRegistry(conf);
     when(datanode.getShortCircuitRegistry()).thenReturn(shortCircuitRegistry);
+
+    FileIoProvider fileIoProvider = new FileIoProvider(conf, datanode);
+    when(datanode.getFileIoProvider()).thenReturn(fileIoProvider);
 
     this.conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         TestFileRegionBlockAliasMap.class, BlockAliasMap.class);
@@ -340,11 +371,12 @@ public class TestProvidedImpl {
         storage, conf, NUM_LOCAL_INIT_VOLUMES, NUM_PROVIDED_INIT_VOLUMES);
 
     dataset = new FsDatasetImpl(datanode, storage, conf);
-    FsVolumeReferences volumes = dataset.getFsVolumeReferences();
-    for (int i = 0; i < volumes.size(); i++) {
-      FsVolumeSpi vol = volumes.get(i);
-      if (vol.getStorageType() == StorageType.PROVIDED) {
-        providedVolumes.add((FsVolumeImpl) vol);
+    try (FsVolumeReferences volumes = dataset.getFsVolumeReferences()) {
+      for (int i = 0; i < volumes.size(); i++) {
+        FsVolumeSpi vol = volumes.get(i);
+        if (vol.getStorageType() == StorageType.PROVIDED) {
+          providedVolumes.add((FsVolumeImpl) vol);
+        }
       }
     }
 
@@ -359,6 +391,11 @@ public class TestProvidedImpl {
       // the reserved space for provided volumes should be 0.
       assertEquals(0, ((FsVolumeImpl) vol).getReserved());
     }
+  }
+
+  @After
+  public void shutdown() {
+    dataset.shutdown();
   }
 
   @Test
@@ -400,9 +437,7 @@ public class TestProvidedImpl {
   public void testBlockLoad() throws IOException {
     for (int i = 0; i < providedVolumes.size(); i++) {
       FsVolumeImpl vol = providedVolumes.get(i);
-      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
-      vol.getVolumeMap(volumeMap, null);
-
+      VolumeReplicaMap volumeMap = vol.getVolumeMap(null);
       assertEquals(vol.getBlockPoolList().length, BLOCK_POOL_IDS.length);
       for (int j = 0; j < BLOCK_POOL_IDS.length; j++) {
         if (j != CHOSEN_BP_ID) {
@@ -426,6 +461,9 @@ public class TestProvidedImpl {
       TestProvidedReplicaImpl.verifyReplicaContents(new File(filepath), ins, 0,
           BLK_LEN);
     }
+    MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+    assertEquals(NUM_PROVIDED_BLKS,
+        getLongCounter("ProvidedOpenCalls", rb));
   }
 
   @Test
@@ -476,8 +514,8 @@ public class TestProvidedImpl {
       vol.setFileRegionProvider(BLOCK_POOL_IDS[CHOSEN_BP_ID],
           new TestFileRegionBlockAliasMap(fileRegionIterator, minBlockId,
               numBlocks));
-      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
-      vol.getVolumeMap(BLOCK_POOL_IDS[CHOSEN_BP_ID], volumeMap, null);
+      VolumeReplicaMap volumeMap = vol.getVolumeMap(
+          BLOCK_POOL_IDS[CHOSEN_BP_ID], new AutoCloseableLock(), null);
       totalBlocks += volumeMap.size(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
     }
     return totalBlocks;
@@ -508,8 +546,9 @@ public class TestProvidedImpl {
     // none of these blocks can belong to the volume
     blocksFound =
         getBlocksInProvidedVolumes("randomtest1/", expectedBlocks, minId);
-    assertEquals("Number of blocks in provided volumes should be 0", 0,
-        blocksFound);
+    assertEquals(
+        "Number of blocks in provided volumes should " + expectedBlocks,
+        expectedBlocks, blocksFound);
   }
 
   @Test
@@ -586,8 +625,7 @@ public class TestProvidedImpl {
   public void testProvidedReplicaPrefix() throws Exception {
     for (int i = 0; i < providedVolumes.size(); i++) {
       FsVolumeImpl vol = providedVolumes.get(i);
-      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
-      vol.getVolumeMap(volumeMap, null);
+      VolumeReplicaMap volumeMap = vol.getVolumeMap(null);
 
       Path expectedPrefix = new Path(
           StorageLocation.normalizeFileURI(new File(providedBasePath).toURI()));
@@ -610,51 +648,29 @@ public class TestProvidedImpl {
     }
   }
 
-  /**
-   * Tests that a ProvidedReplica supports path handles.
-   *
-   * @throws Exception
-   */
   @Test
-  public void testProvidedReplicaWithPathHandle() throws Exception {
-
-    Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
-
-    DistributedFileSystem fs = cluster.getFileSystem();
-
-    // generate random data
-    int chunkSize = 512;
-    Random r = new Random(12345L);
-    byte[] data = new byte[chunkSize];
-    r.nextBytes(data);
-
-    Path file = new Path("/testfile");
-    try (FSDataOutputStream fout = fs.create(file)) {
-      fout.write(data);
-    }
-
-    PathHandle pathHandle = fs.getPathHandle(fs.getFileStatus(file),
-        Options.HandleOpt.changed(true), Options.HandleOpt.moved(true));
-    FinalizedProvidedReplica replica = new FinalizedProvidedReplica(0,
-        file.toUri(), 0, chunkSize, 0, pathHandle, null, conf, fs);
-    byte[] content = new byte[chunkSize];
-    IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
-    assertArrayEquals(data, content);
-
-    fs.rename(file, new Path("/testfile.1"));
-    // read should continue succeeding after the rename operation
-    IOUtils.readFully(replica.getDataInputStream(0), content, 0, chunkSize);
-    assertArrayEquals(data, content);
-
-    replica.setPathHandle(null);
-    try {
-      // expected to fail as URI of the provided replica is no longer valid.
-      replica.getDataInputStream(0);
-      fail("Expected an exception");
-    } catch (IOException e) {
-      LOG.info("Expected exception " + e);
+  public void testInMemoryAliasMapWithoutProvidedNN() throws Exception {
+    conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+        InMemoryLevelDBAliasMapClient.class, BlockAliasMap.class);
+    // create a new provided volume.
+    File loc = new File(BASE_DIR, "newProvidedVolume");
+    String dirString = "[PROVIDED]" +
+        new Path(loc.toString()).toUri().toString();
+    Storage.StorageDirectory newSD =
+        createProvidedStorageDirectory(dirString, conf);
+    FsVolumeImpl fsVolume = new FsVolumeImplBuilder()
+        .setDataset(dataset)
+        .setStorageID(newSD.getStorageUuid())
+        .setStorageDirectory(newSD)
+        .setConf(conf)
+        .build();
+    LOG.info("Created ProvidedVolume {}", fsVolume);
+    ReplicaMap replicaMap = new ReplicaMap(new ReentrantReadWriteLock());
+    for (String bpid: BLOCK_POOL_IDS) {
+      fsVolume.addBlockPool(bpid, conf);
+      replicaMap.addAll(
+          fsVolume, fsVolume.getVolumeMap(bpid, new Object(), null));
+      LOG.info("Successfully added bpid {} to volume {}.", bpid, fsVolume);
     }
   }
 }

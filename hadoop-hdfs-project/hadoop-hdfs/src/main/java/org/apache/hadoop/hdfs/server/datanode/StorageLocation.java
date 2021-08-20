@@ -70,7 +70,13 @@ public class StorageLocation
   }
 
   public static URI normalizeFileURI(URI uri) {
+    if (uri == null) {
+      return null;
+    }
     try {
+      if (uri.getPath() == null || uri.getPath().equals("/")) {
+        return uri;
+      }
       File uriFile = new File(uri.getPath());
       String uriStr = uriFile.toURI().normalize().toString();
       if (uriStr.endsWith("/")) {
@@ -79,7 +85,7 @@ public class StorageLocation
       return new URI(uriStr);
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(
-              "URI: " + uri + " is not in the expected format");
+            "URI: " + uri + " is not in the expected format");
     }
   }
 

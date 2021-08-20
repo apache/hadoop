@@ -78,7 +78,7 @@ public class Snapshot implements Comparable<byte[]> {
    * @param s The given snapshot.
    * @return The name of the snapshot, or an empty string if {@code s} is null
    */
-  static String getSnapshotName(Snapshot s) {
+  public static String getSnapshotName(Snapshot s) {
     return s != null ? s.getRoot().getLocalName() : "";
   }
   

@@ -59,6 +59,12 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.BlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.FixedBlockResolver;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.MountMetadataWriter;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.NullBlockAliasMap;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.TreePath;
+import org.apache.hadoop.hdfs.server.namenode.mountmanager.UGIResolver;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
@@ -68,6 +74,10 @@ import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_WRITER_BLOCK_RESOLVER_CLASS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_WRITER_BLOCK_RESOLVER_CLASS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_WRITER_UGI_CLASS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_WRITER_UGI_CLASS_DEFAULT;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageUtil.MAGIC_HEADER;
 
 /**
@@ -77,7 +87,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageUtil.MAGIC_HEADER;
 // TODO: generalize to types beyond FileRegion
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class ImageWriter implements Closeable {
+public class ImageWriter implements MountMetadataWriter, Closeable {
 
   private static final int ONDISK_VERSION = 1;
   private static final int LAYOUT_VERSION =
@@ -515,9 +525,6 @@ public class ImageWriter implements Closeable {
 
     public static final String START_INODE = "hdfs.image.writer.start.inode";
     public static final String CACHE_ENTRY = "hdfs.image.writer.cache.entries";
-    public static final String UGI_CLASS   = "hdfs.image.writer.ugi.class";
-    public static final String BLOCK_RESOLVER_CLASS =
-        "hdfs.image.writer.blockresolver.class";
 
     private Path outdir;
     private Configuration conf;
@@ -549,13 +556,13 @@ public class ImageWriter implements Closeable {
       startBlock = conf.getLong(FixedBlockResolver.START_BLOCK, (1L << 30) + 1);
       startInode = conf.getLong(START_INODE, (1L << 14) + 1);
       maxdircache = conf.getInt(CACHE_ENTRY, 100);
-      ugisClass = conf.getClass(UGI_CLASS,
-          SingleUGIResolver.class, UGIResolver.class);
+      ugisClass = conf.getClass(DFS_IMAGE_WRITER_UGI_CLASS,
+          DFS_IMAGE_WRITER_UGI_CLASS_DEFAULT, UGIResolver.class);
       aliasMap = conf.getClass(
           DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
           NullBlockAliasMap.class, BlockAliasMap.class);
-      blockIdsClass = conf.getClass(BLOCK_RESOLVER_CLASS,
-          FixedBlockResolver.class, BlockResolver.class);
+      blockIdsClass = conf.getClass(DFS_IMAGE_WRITER_BLOCK_RESOLVER_CLASS,
+          DFS_IMAGE_WRITER_BLOCK_RESOLVER_CLASS_DEFAULT, BlockResolver.class);
       clusterID = "";
       blockPoolID = "";
     }

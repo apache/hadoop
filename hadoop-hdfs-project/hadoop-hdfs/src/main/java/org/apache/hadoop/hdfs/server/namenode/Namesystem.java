@@ -49,6 +49,11 @@ public interface Namesystem extends RwLock, SafeMode {
   boolean inTransitionToActive();
 
   /**
+   * @return the MountManager associated with the Namesystem
+   */
+  MountManager getMountManager();
+
+  /**
    * Remove xAttr from the inode.
    * @param id
    * @param xattrName

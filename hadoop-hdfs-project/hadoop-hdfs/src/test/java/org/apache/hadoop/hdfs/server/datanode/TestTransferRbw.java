@@ -62,11 +62,12 @@ public class TestTransferRbw {
   }
   private static LocalReplicaInPipeline getReplica(final DataNode datanode,
       final String bpid, final ReplicaState expectedState) throws InterruptedException {
-    final Collection<ReplicaInfo> replicas = FsDatasetTestUtil.getReplicas(
+    Collection<ReplicaInfo> replicas = FsDatasetTestUtil.getReplicas(
         datanode.getFSDataset(), bpid);
     for(int i = 0; i < 5 && replicas.size() == 0; i++) {
       LOG.info("wait since replicas.size() == 0; i=" + i);
       Thread.sleep(1000);
+      replicas = FsDatasetTestUtil.getReplicas(datanode.getFSDataset(), bpid);
     }
     Assert.assertEquals(1, replicas.size());
     final ReplicaInfo r = replicas.iterator().next();
