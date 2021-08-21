@@ -56,7 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Timer;
+import org.apache.hadoop.util.FakeTimer;
 import org.slf4j.event.Level;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -401,6 +401,7 @@ public class TestEditLogTailer {
     final int logRollWaitTime = 3;
 
     final int logRollPeriod = standbyCatchupWaitTime + noLogRollWaitTime + 1;
+    final long logRollPeriodMs = TimeUnit.SECONDS.toMillis(logRollPeriod);
     Configuration conf = getConf();
     conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, logRollPeriod);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
@@ -433,9 +434,9 @@ public class TestEditLogTailer {
 
       long curTime = standby.getNamesystem().getEditLogTailer().getTimer()
           .monotonicNow();
-      long inSufficientTimeForLogRoll =
-          TimeUnit.SECONDS.toMillis(logRollPeriod / 3);
-      TestTimer testTimer = new TestTimer(curTime + inSufficientTimeForLogRoll);
+      long inSufficientTimeForLogRoll = logRollPeriodMs / 3;
+      final FakeTimer testTimer =
+          new FakeTimer(curTime + inSufficientTimeForLogRoll);
       standby.getNamesystem().getEditLogTailer().setTimerForTest(testTimer);
 
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
@@ -451,11 +452,8 @@ public class TestEditLogTailer {
         // expected
       }
 
-      long curTimeNew = standby.getNamesystem().getEditLogTailer().getTimer()
-          .monotonicNow();
-      long sufficientTimeForLogRoll =
-          TimeUnit.SECONDS.toMillis(logRollPeriod * 3);
-      testTimer.setTime(curTimeNew + sufficientTimeForLogRoll);
+      long sufficientTimeForLogRoll = logRollPeriodMs * 3;
+      testTimer.advance(sufficientTimeForLogRoll);
 
       checkForLogRoll(active, origTxId, logRollWaitTime);
     } finally {
@@ -495,24 +493,6 @@ public class TestEditLogTailer {
         .numDataNodes(0)
         .build();
     return cluster;
-  }
-
-  private static final class TestTimer extends Timer {
-
-    private volatile long time;
-
-    private TestTimer(long time) {
-      this.time = time;
-    }
-
-    private void setTime(long newTime) {
-      this.time = newTime;
-    }
-
-    @Override
-    public long monotonicNow() {
-      return time;
-    }
   }
 
 }
