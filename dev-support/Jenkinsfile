@@ -290,11 +290,18 @@ pipeline {
                                       reportName: 'Yetus Report'
                         ])
 
-                        // Publish JUnit results
-                        try {
-                            junit "${SOURCEDIR}/**/target/surefire-reports/*.xml"
-                        } catch(e) {
-                            echo 'junit processing: ' + e.toString()
+                        // Publish JUnit results only if there are XML files under surefire-reports
+                        def findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+                        boolean surefireReportsExist = findCmdExitCode == 0
+                        if (surefireReportsExist) {
+                            echo "XML files found under surefire-reports, running junit"
+                            try {
+                                junit "${SOURCEDIR}/**/target/surefire-reports/*.xml"
+                            } catch(e) {
+                                echo 'junit processing: ' + e.toString()
+                            }
+                        } else {
+                            echo "No XML files found under surefire-reports, skipping junit"
                         }
                     }
                 }
