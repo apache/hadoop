@@ -438,6 +438,7 @@ public class TestEditLogTailer {
       final FakeTimer testTimer =
           new FakeTimer(curTime + inSufficientTimeForLogRoll);
       standby.getNamesystem().getEditLogTailer().setTimerForTest(testTimer);
+      Thread.sleep(2000);
 
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         NameNodeAdapter.mkdirs(active, getDirPath(i),
