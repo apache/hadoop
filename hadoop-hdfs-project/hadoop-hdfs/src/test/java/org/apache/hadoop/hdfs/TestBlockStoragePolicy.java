@@ -1339,9 +1339,7 @@ public class TestBlockStoragePolicy {
 
   @Test
   public void testAddDatanode2ExistingPipelineInSsd() throws Exception {
-    BlockStoragePolicySuite suite = BlockStoragePolicySuite.createDefaultSuite();
-    BlockStoragePolicy policy = suite
-        .getPolicy(HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
+    BlockStoragePolicy policy = POLICY_SUITE.getPolicy(ALLSSD);
 
     final String[] racks = {"/d1/r1", "/d2/r2", "/d3/r3", "/d4/r4", "/d5/r5",
         "/d6/r6", "/d7/r7"};
@@ -1373,6 +1371,7 @@ public class TestBlockStoragePolicy {
     for (DatanodeDescriptor datanode : dataNodes) {
       cluster.add(datanode);
     }
+    // chsenDs are DISK StorageType to simulate not enough SDD Storage
     List<DatanodeStorageInfo> chsenDs = new ArrayList<>();
     chsenDs.add(diskStorages[0]);
     chsenDs.add(diskStorages[1]);

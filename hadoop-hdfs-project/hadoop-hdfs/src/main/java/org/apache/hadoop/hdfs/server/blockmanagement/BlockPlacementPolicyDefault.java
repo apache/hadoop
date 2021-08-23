@@ -469,7 +469,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     LOG.trace("storageTypes={}", storageTypes);
 
     try {
-      if ((numOfReplicas = requiredStorageTypes.size()) == 0) {
+      if (requiredStorageTypes.size() == 0) {
         throw new NotEnoughReplicasException(
             "All required storage types are unavailable: "
             + " unavailableStorages=" + unavailableStorages
