@@ -27,7 +27,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -76,7 +79,8 @@ public class TestDecommissioningStatus {
   private FileSystem fileSys;
   private HostsFileWriter hostsFileWriter;
   private Configuration conf;
-  private Logger LOG;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDecommissioningStatus.class);
 
   final ArrayList<String> decommissionedNodes = new ArrayList<String>(numDatanodes);
 
@@ -110,7 +114,6 @@ public class TestDecommissioningStatus {
     conf.setLong(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY, 1);
     GenericTestUtils.setLogLevel(
         LoggerFactory.getLogger(DatanodeAdminManager.class), Level.DEBUG);
-    LOG = LoggerFactory.getLogger(TestDecommissioningStatus.class);
     return conf;
   }
 
@@ -165,17 +168,30 @@ public class TestDecommissioningStatus {
 
   protected void checkDecommissionStatus(DatanodeDescriptor decommNode,
       int expectedUnderRep, int expectedDecommissionOnly,
-      int expectedUnderRepInOpenFiles) {
-      assertEquals(
-              expectedUnderRep,
-              decommNode.getLeavingServiceStatus().getUnderReplicatedBlocks(), "Unexpected num under-replicated blocks");
-      assertEquals(
-              expectedDecommissionOnly,
-              decommNode.getLeavingServiceStatus().getOutOfServiceOnlyReplicas(), "Unexpected number of decom-only replicas");
-      assertEquals(
-              expectedUnderRepInOpenFiles,
-              decommNode.getLeavingServiceStatus().getUnderReplicatedInOpenFiles(),
-              "Unexpected number of replicas in under-replicated open files");
+      int expectedUnderRepInOpenFiles) throws TimeoutException,
+      InterruptedException {
+    String errorMsg;
+    errorMsg = "Under replicated blocks. Expected: "
+        + expectedUnderRep + " , Actual: "
+        + decommNode.getLeavingServiceStatus().getUnderReplicatedBlocks();
+    GenericTestUtils.waitFor(
+        () -> expectedUnderRep == decommNode.getLeavingServiceStatus()
+            .getUnderReplicatedBlocks(),
+        1000, TimeUnit.SECONDS.toMillis(10), errorMsg);
+    errorMsg = "OutOfService only replicas. Expected: "
+        + expectedDecommissionOnly + " , Actual: "
+        + decommNode.getLeavingServiceStatus().getOutOfServiceOnlyReplicas();
+    GenericTestUtils.waitFor(
+        () -> expectedDecommissionOnly == decommNode.getLeavingServiceStatus()
+            .getOutOfServiceOnlyReplicas(),
+        1000, TimeUnit.SECONDS.toMillis(10), errorMsg);
+    errorMsg = "UnderReplicated in open files. Expected: "
+        + expectedUnderRepInOpenFiles + " , Actual: "
+        + decommNode.getLeavingServiceStatus().getUnderReplicatedInOpenFiles();
+    GenericTestUtils.waitFor(
+        () -> expectedUnderRepInOpenFiles == decommNode
+            .getLeavingServiceStatus().getUnderReplicatedInOpenFiles(),
+        1000, TimeUnit.SECONDS.toMillis(10), errorMsg);
   }
 
   protected void checkDFSAdminDecommissionStatus(
@@ -270,6 +286,7 @@ public class TestDecommissioningStatus {
 
     FSNamesystem fsn = cluster.getNamesystem();
     final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
+    verifyInitialState(fsn, dm);
     for (int iteration = 0; iteration < numDatanodes; iteration++) {
       String downnode = decommissionNode(client, iteration);
       dm.refreshNodes(conf);
@@ -278,14 +295,13 @@ public class TestDecommissioningStatus {
       // Block until the admin's monitor updates the number of tracked nodes.
       waitForDecommissionedNodes(dm.getDatanodeAdminManager(), iteration + 1);
       final List<DatanodeDescriptor> decommissioningNodes = dm.getDecommissioningNodes();
+      assertEquals(decommissioningNodes.size(), iteration + 1);
       if (iteration == 0) {
-        assertEquals(decommissioningNodes.size(), 1);
         DatanodeDescriptor decommNode = decommissioningNodes.get(0);
         checkDecommissionStatus(decommNode, 3, 0, 1);
         checkDFSAdminDecommissionStatus(decommissioningNodes.subList(0, 1),
             fileSys, admin);
       } else {
-        assertEquals(decommissioningNodes.size(), 2);
         DatanodeDescriptor decommNode1 = decommissioningNodes.get(0);
         DatanodeDescriptor decommNode2 = decommissioningNodes.get(1);
         // This one is still 3,3,1 since it passed over the UC block
@@ -305,6 +321,69 @@ public class TestDecommissioningStatus {
     st1.close();
     AdminStatesBaseTest.cleanupFile(fileSys, file1);
     AdminStatesBaseTest.cleanupFile(fileSys, file2);
+  }
+
+  // Why do we verify initial state of DataNodes here?
+  // Before we start actual decommission testing, we should ensure that
+  // total 8 blocks (original 4 blocks of 2 files and 4 replicas) are
+  // present over two Datanodes available. If we don't wait until all 8 blocks
+  // are reported live by BlockManager, we might get to a situation
+  // where one of the replicas might not yet been present on any of Datanodes
+  // and we start decommissioning process, and then it would result in
+  // flaky test because total (no of under replicated blocks, no of outOfService
+  // only replicas, no of under replicated in open files) counts would be
+  // incorrect.
+  protected void verifyInitialState(FSNamesystem fsn, DatanodeManager dm)
+      throws InterruptedException {
+    dm.getDatanodes().forEach(datanodeDescriptor -> {
+      try {
+        checkDecommissionStatus(datanodeDescriptor, 0, 0, 0);
+      } catch (TimeoutException | InterruptedException e) {
+        throw new AssertionError("Datanode not in good state.", e);
+      }
+    });
+    int c = 0;
+    int totalBlocks;
+    long totalReplicatedBlocks;
+    while (true) {
+      totalBlocks = fsn.getBlockManager().getTotalBlocks();
+      totalReplicatedBlocks = fsn.getBlockManager().getTotalReplicatedBlocks();
+      if (totalBlocks == 4 && totalReplicatedBlocks == 4) {
+        break;
+      } else {
+        if (c == 4) {
+          throw new AssertionError("Unexpected Total blocks " + totalBlocks
+              + " and replicated blocks " + totalReplicatedBlocks);
+        }
+        Thread.sleep(3000);
+      }
+      c++;
+    }
+    c = 0;
+    AtomicInteger total = new AtomicInteger(0);
+    AtomicInteger sufficientBlocksSuccess = new AtomicInteger(0);
+    while (true) {
+      total.set(0);
+      sufficientBlocksSuccess.set(0);
+      dm.getDatanodes().forEach(
+          datanodeDescriptor -> {
+            total.addAndGet(datanodeDescriptor.numBlocks());
+            if (datanodeDescriptor.numBlocks() == 4) {
+              sufficientBlocksSuccess.incrementAndGet();
+            }
+          });
+      if (total.get() == 8 && sufficientBlocksSuccess.get() == 2) {
+        break;
+      } else {
+        if (c == 4) {
+          throw new AssertionError("Unexpected Total blocks " + total.get()
+              + " from Datanode Storage. 4 blocks per Datanode Storage"
+              + " expected from each DataNode");
+        }
+        Thread.sleep(3000);
+      }
+      c++;
+    }
   }
 
   /**
