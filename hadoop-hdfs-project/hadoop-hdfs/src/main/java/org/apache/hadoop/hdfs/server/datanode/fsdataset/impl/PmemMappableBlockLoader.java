@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,8 +105,8 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
       LOG.info("Successfully cached one replica:{} into persistent memory"
           + ", [cached path={}, length={}]", key, cachePath, length);
     } finally {
-      IOUtils.closeQuietly(blockChannel);
-      IOUtils.closeQuietly(cacheFile);
+      IOUtils.closeStream(blockChannel);
+      IOUtils.closeStream(cacheFile);
       if (mappableBlock == null) {
         LOG.debug("Delete {} due to unsuccessful mapping.", cachePath);
         FsDatasetUtil.deleteMappedFile(cachePath);

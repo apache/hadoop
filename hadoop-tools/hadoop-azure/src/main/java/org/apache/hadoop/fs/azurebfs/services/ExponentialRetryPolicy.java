@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Random;
 import java.net.HttpURLConnection;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -87,6 +88,16 @@ public class ExponentialRetryPolicy {
 
     this(maxIoRetries, DEFAULT_MIN_BACKOFF, DEFAULT_MAX_BACKOFF,
         DEFAULT_CLIENT_BACKOFF);
+  }
+
+  /**
+   * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
+   *
+   * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
+   */
+  public ExponentialRetryPolicy(AbfsConfiguration conf) {
+    this(conf.getMaxIoRetries(), conf.getMinBackoffIntervalMilliseconds(), conf.getMaxBackoffIntervalMilliseconds(),
+        conf.getBackoffIntervalMilliseconds());
   }
 
   /**

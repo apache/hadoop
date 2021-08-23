@@ -632,6 +632,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return configuredNodeLabels;
   }
 
+  @VisibleForTesting
+  public void reinitConfiguredNodeLabels(CapacitySchedulerConfiguration conf) {
+    this.configuredNodeLabels = new ConfiguredNodeLabels(conf);
+  }
+
   private LeafQueue createAutoQueue(ApplicationPlacementContext queue)
       throws SchedulerDynamicEditException {
     List<String> parentsToCreate = determineMissingParents(queue);

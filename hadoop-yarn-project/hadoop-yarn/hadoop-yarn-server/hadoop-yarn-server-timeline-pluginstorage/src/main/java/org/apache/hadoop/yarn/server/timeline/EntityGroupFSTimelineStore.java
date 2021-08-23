@@ -808,10 +808,11 @@ public class EntityGroupFSTimelineStore extends CompositeService
       LogInfo log;
       if (isDomainLog) {
         log = new DomainLogInfo(attemptDirName, filename, owner);
+        summaryLogs.add(0, log);
       } else {
         log = new EntityLogInfo(attemptDirName, filename, owner);
+        summaryLogs.add(log);
       }
-      summaryLogs.add(log);
     }
 
     private synchronized void addDetailLog(String attemptDirName,
