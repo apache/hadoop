@@ -122,21 +122,23 @@ pipeline {
                     touch "${SOURCEDIR}/hadoop-hdfs-project/hadoop-hdfs-native-client/target/surefire-reports/a.xml"
                     '''
 
-                    def findCmdExitCodePositiveCase = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
-                    boolean surefireReportsExistCodePositiveCase = findCmdExitCodePositiveCase == 0
-                    if (surefireReportsExistCodePositiveCase) {
-                        echo "XML files found under surefire-reports, running junit (positive case)"
-                    } else {
-                        echo "No XML files found under surefire-reports, skipping junit (positive case)"
-                    }
-                    
-                    def findCmdExitCodeNegativeCase = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports-that-doesnt-exist-for-sure/*.xml | egrep .", returnStatus: true
-                    boolean surefireReportsExistCodeNegativeCase = findCmdExitCodeNegativeCase == 0
-                    if (surefireReportsExistCodeNegativeCase) {
-                        echo "XML files found under surefire-reports, running junit (negative case)"
-                    } else {
-                        echo "No XML files found under surefire-reports, skipping junit (negative case)"
-                    }
+                    script {
+                        def findCmdExitCodePositiveCase = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+                        boolean surefireReportsExistCodePositiveCase = findCmdExitCodePositiveCase == 0
+                        if (surefireReportsExistCodePositiveCase) {
+                            echo "XML files found under surefire-reports, running junit (positive case)"
+                        } else {
+                            echo "No XML files found under surefire-reports, skipping junit (positive case)"
+                        }
+
+                        def findCmdExitCodeNegativeCase = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports-that-doesnt-exist-for-sure/*.xml | egrep .", returnStatus: true
+                        boolean surefireReportsExistCodeNegativeCase = findCmdExitCodeNegativeCase == 0
+                        if (surefireReportsExistCodeNegativeCase) {
+                            echo "XML files found under surefire-reports, running junit (negative case)"
+                        } else {
+                            echo "No XML files found under surefire-reports, skipping junit (negative case)"
+                        }
+                    }                    
                 }
             }
 
