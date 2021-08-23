@@ -25,8 +25,10 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server.Call;
@@ -183,5 +185,23 @@ public class TestServer {
     assertTrue(handler.isSuppressedLog(RpcServerException.class));
     assertTrue(handler.isSuppressedLog(IpcException.class));
     assertFalse(handler.isSuppressedLog(RpcClientException.class));
+  }
+
+  @Test (timeout=300000)
+  public void testPurgeIntervalNanosConf() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(CommonConfigurationKeysPublic.
+        IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY, 3);
+    Server server = new Server("0.0.0.0", 0, LongWritable.class,
+            1, conf) {
+      @Override
+      public Writable call(
+              RPC.RpcKind rpcKind, String protocol, Writable param,
+              long receiveTime) throws Exception {
+        return null;
+      }
+    };
+    long purgeInterval = TimeUnit.NANOSECONDS.convert(3, TimeUnit.MINUTES);
+    assertEquals(server.getPurgeIntervalNanos(), purgeInterval);
   }
 }
