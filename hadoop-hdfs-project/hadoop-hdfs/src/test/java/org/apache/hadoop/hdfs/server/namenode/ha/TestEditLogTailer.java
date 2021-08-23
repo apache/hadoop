@@ -434,9 +434,9 @@ public class TestEditLogTailer {
 
       long curTime = standby.getNamesystem().getEditLogTailer().getTimer()
           .monotonicNow();
-      long inSufficientTimeForLogRoll = logRollPeriodMs / 3;
+      long insufficientTimeForLogRoll = logRollPeriodMs / 3;
       final FakeTimer testTimer =
-          new FakeTimer(curTime + inSufficientTimeForLogRoll);
+          new FakeTimer(curTime + insufficientTimeForLogRoll);
       standby.getNamesystem().getEditLogTailer().setTimerForTest(testTimer);
       Thread.sleep(2000);
 
