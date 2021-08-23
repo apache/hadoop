@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
@@ -1722,7 +1723,8 @@ public class HttpFSFileSystem extends FileSystem
     return getFileBlockLocations(status.getPath(), offset, length);
   }
 
-  private BlockLocation[] toBlockLocations(JSONObject json) throws IOException {
+  @VisibleForTesting
+  static BlockLocation[] toBlockLocations(JSONObject json) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     MapType subType = mapper.getTypeFactory().constructMapType(Map.class,
         String.class, BlockLocation[].class);

@@ -187,6 +187,8 @@ public class WebHdfsFileSystem extends FileSystem
   private KeyProvider testProvider;
   private boolean isTLSKrb;
 
+  private boolean isServerHCFSCompatible = true;
+
   /**
    * Return the protocol scheme for the FileSystem.
    *
@@ -1853,7 +1855,6 @@ public class WebHdfsFileSystem extends FileSystem
     if (status == null) {
       return null;
     }
-
     return getFileBlockLocations(status.getPath(), offset, length);
   }
 
@@ -1864,18 +1865,33 @@ public class WebHdfsFileSystem extends FileSystem
     storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
     BlockLocation[] locations = null;
     try {
-      locations = getFileBlockLocations(GetOpParam.Op.GETFILEBLOCKLOCATIONS, p,
-          offset, length);
-    } catch (RemoteException e) {
-      if (e.getMessage() != null
-          && e.getMessage().contains("Invalid value for webhdfs parameter")
-          && e.getMessage()
-              .contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString())) {
+      if (isServerHCFSCompatible) {
+        locations =
+            getFileBlockLocations(GetOpParam.Op.GETFILEBLOCKLOCATIONS, p, offset, length);
+      } else {
         locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p,
             offset, length);
       }
+    } catch (RemoteException e) {
+      if (isGetFileBlockLocationsException(e)) {
+        LOG.warn("Server does not appear to support GETFILEBLOCKLOCATIONS." +
+                "Fallback to the old GET_BLOCK_LOCATIONS. Exception: " +
+            e.getMessage());
+        isServerHCFSCompatible = false;
+        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p,
+            offset, length);
+      } else {
+        throw e;
+      }
     }
     return locations;
+  }
+
+  private boolean isGetFileBlockLocationsException(RemoteException e) {
+    return e.getMessage() != null
+        && e.getMessage().contains("Invalid value for webhdfs parameter")
+        && e.getMessage()
+        .contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString());
   }
 
   private BlockLocation[] getFileBlockLocations(GetOpParam.Op operation,

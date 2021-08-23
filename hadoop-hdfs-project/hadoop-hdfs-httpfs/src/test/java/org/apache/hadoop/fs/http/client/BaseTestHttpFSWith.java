@@ -1956,26 +1956,26 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   private void testGetFileBlockLocations() throws Exception {
     BlockLocation[] locations1, locations2 = null;
     Path testFile = null;
-    try {
-      if (!this.isLocalFS()) {
-        FileSystem fs = this.getHttpFSFileSystem();
-        testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
-        DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
-        if (fs instanceof HttpFSFileSystem) {
-          HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
-          locations1 = httpFS.getFileBlockLocations(testFile, 0, 1);
-          Assert.assertNotNull(locations1);
-        } else if (fs instanceof WebHdfsFileSystem) {
-          WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
-          locations2 = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
-          Assert.assertNotNull(locations2);
-        } else {
-          Assert
-              .fail(fs.getClass().getSimpleName() + " doesn't support access");
-        }
+    if (!this.isLocalFS()) {
+      FileSystem fs = this.getHttpFSFileSystem();
+      testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
+      DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
+      if (fs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
+        locations1 = httpFS.getFileBlockLocations(testFile, 0, 1);
+        Assert.assertNotNull(locations1);
+
+        // TODO: add test for HttpFSFileSystem.toBlockLocations()
+        Json
+        httpFS.toBlockLocations()
+      } else if (fs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
+        locations2 = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
+        Assert.assertNotNull(locations2);
+      } else {
+        Assert
+            .fail(fs.getClass().getSimpleName() + " doesn't support access");
       }
-    } catch (Exception e) {
-      e.printStackTrace();
     }
   }
 }
