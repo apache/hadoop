@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +101,7 @@ public class FifoCandidatesSelector
         // sure such containers will be preemptionCandidates first
         Map<String, TreeSet<RMContainer>> ignorePartitionExclusivityContainers =
             leafQueue.getIgnoreExclusivityRMContainers();
-        for (String partition : resToObtainByPartition.keySet()) {
+        for (String partition : new HashSet<String>(resToObtainByPartition.keySet())) {
           if (ignorePartitionExclusivityContainers.containsKey(partition)) {
             TreeSet<RMContainer> rmContainers =
                 ignorePartitionExclusivityContainers.get(partition);
