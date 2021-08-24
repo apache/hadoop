@@ -522,8 +522,8 @@ public class HttpFSServer {
       if (lenParam != null && lenParam.longValue() > 0) {
         len = lenParam.longValue();
       }
-      FSOperations.FSFileBlockLocations command =
-          new FSOperations.FSFileBlockLocations(path, offset, len);
+      FSOperations.FSFileBlockLocationsLegacy command =
+          new FSOperations.FSFileBlockLocationsLegacy(path, offset, len);
       @SuppressWarnings("rawtypes")
       Map locations = fsExecute(user, command);
       final String json = JsonUtil.toJsonString("LocatedBlocks", locations);

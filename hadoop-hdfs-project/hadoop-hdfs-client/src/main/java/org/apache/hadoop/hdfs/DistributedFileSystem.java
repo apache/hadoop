@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -116,6 +117,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
+import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
@@ -3888,5 +3890,28 @@ public class DistributedFileSystem extends FileSystem
   public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
       throws IOException {
     return new FileSystemMultipartUploaderBuilder(this, basePath);
+  }
+
+  public LocatedBlocks getLocatedBlocks(Path p, long start, long len)
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
+    final Path absF = fixRelativePart(p);
+    return new FileSystemLinkResolver<LocatedBlocks>() {
+      @Override
+      public LocatedBlocks doCall(final Path p) throws IOException {
+        return dfs.getLocatedBlocks(getPathName(p), start, len);
+      }
+      @Override
+      public LocatedBlocks next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.getLocatedBlocks(p, start, len);
+        }
+        throw new UnsupportedOperationException("Cannot recoverLease through" +
+            " a symlink to a non-DistributedFileSystem: " + fs + " -> " + p);
+      }
+    }.resolve(this, absF);
   }
 }

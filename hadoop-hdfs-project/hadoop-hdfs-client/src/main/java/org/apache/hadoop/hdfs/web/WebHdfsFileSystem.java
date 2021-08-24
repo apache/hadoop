@@ -1873,7 +1873,9 @@ public class WebHdfsFileSystem extends FileSystem
             offset, length);
       }
     } catch (RemoteException e) {
-      if (isGetFileBlockLocationsException(e)) {
+      // parsing the exception is needed only if the client thinks the service
+      // is compatible
+      if (isServerHCFSCompatible && isGetFileBlockLocationsException(e)) {
         LOG.warn("Server does not appear to support GETFILEBLOCKLOCATIONS." +
                 "Fallback to the old GET_BLOCK_LOCATIONS. Exception: " +
             e.getMessage());

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.http.client;
 
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
@@ -40,8 +43,10 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.DFSClientAdapter;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -49,6 +54,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -69,6 +75,9 @@ import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.apache.hadoop.util.Lists;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ContainerFactory;
+import org.json.simple.parser.JSONParser;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -76,6 +85,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -97,11 +108,13 @@ import java.util.regex.Pattern;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(value = Parameterized.class)
 public abstract class BaseTestHttpFSWith extends HFSTestCase {
-
+  public static final Logger LOG = LoggerFactory
+      .getLogger(BaseTestHttpFSWith.class);
   protected abstract Path getProxiedFSTestDir();
 
   protected abstract String getProxiedFSURI();
@@ -186,7 +199,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   protected void testGet() throws Exception {
     FileSystem fs = getHttpFSFileSystem();
-    Assert.assertNotNull(fs);
+    assertNotNull(fs);
     URI uri = new URI(getScheme() + "://" +
                       TestJettyHelper.getJettyURL().toURI().getAuthority());
     assertEquals(fs.getUri(), uri);
@@ -1335,6 +1348,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETFILEBLOCKLOCATIONS:
       testGetFileBlockLocations();
+      testGetFileBlockLocationsFallback();
       break;
     }
 
@@ -1963,19 +1977,84 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
         locations1 = httpFS.getFileBlockLocations(testFile, 0, 1);
-        Assert.assertNotNull(locations1);
+        assertNotNull(locations1);
 
         // TODO: add test for HttpFSFileSystem.toBlockLocations()
-        Json
-        httpFS.toBlockLocations()
+        String jsonString = JsonUtil.toJsonString(locations1);
+        JSONParser parser = new JSONParser();
+        JSONObject jsonObject = (JSONObject)parser.parse(
+            jsonString, (ContainerFactory)null);
+        BlockLocation[] deserializedLocation =
+            httpFS.toBlockLocations(jsonObject);
+        assertEquals(locations1.length, deserializedLocation.length);
+        for (int i = 0; i < locations1.length; i++) {
+          assertEquals(locations1[i].toString(),
+              deserializedLocation[i].toString());
+        }
       } else if (fs instanceof WebHdfsFileSystem) {
         WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
         locations2 = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
-        Assert.assertNotNull(locations2);
+        assertNotNull(locations2);
       } else {
         Assert
             .fail(fs.getClass().getSimpleName() + " doesn't support access");
       }
+    }
+  }
+
+  private void testGetFileBlockLocationsFallback() throws IOException,
+      InterruptedException {
+    Configuration conf = new Configuration(false);
+
+    // create a HDFS file. Get its HdfsFileStatus.
+    // convert that to json string, return back to client
+    // verify the client gets the expected string.
+    Path testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
+    DistributedFileSystem distributedFs = (DistributedFileSystem) FileSystem
+        .get(testFile.toUri(), this.getProxiedFSConf());
+    DFSTestUtil.createFile(distributedFs, testFile, (long) 1, (short) 1, 0L);
+
+    MiniDFSCluster cluster = ((TestHdfsHelper) hdfsTestHelper)
+        .getMiniDFSCluster();
+    LocatedBlocks locatedBlocks = DFSClientAdapter.callGetBlockLocations(
+        cluster.getNameNodeRpc(0), testFile.toString(), 0L, 1);
+    String json = JsonUtil.toJsonString(locatedBlocks);
+    LOG.info("json = {}", json);
+
+    try (MockWebServer server = new MockWebServer()) {
+      server.enqueue(new MockResponse().setBody("{\n"
+          + "  \"RemoteException\":\n" + "  {\n"
+          + "    \"exception\"    : \"IllegalArgumentException\",\n"
+          + "    \"javaClassName\": \"java.lang.IllegalArgumentException\",\n"
+          + "    \"message\"      : \"Invalid value for webhdfs parameter \\\"GETFILEBLOCKLOCATIONS\\\": ...\"\n"
+          + "  }\n" + "}").setResponseCode(400)); // BAD_REQUEST
+      server.enqueue(new MockResponse().setBody(json));
+      server.start();
+      URI uri = URI.create(String.format("%s://%s:%d", getScheme(),
+          server.getHostName(), server.getPort()));
+
+      FileSystem fs = FileSystem.get(uri, conf);
+
+      // verify client FileSystem handles fallback from GETFILEBLOCKLOCATIONS to
+      // GET_BLOCK_LOCATIONS correctly.
+      BlockLocation[] locations = DFSUtilClient.locatedBlocks2Locations(locatedBlocks);
+      BlockLocation[] locations1 = fs.getFileBlockLocations(testFile, 0, 1);
+      // assert locations1 == locations
+      assertEquals(locations.length, locations1.length);
+      for (int i = 0; i< locations.length; i++) {
+        assertEquals(locations[i].toString(), locations1[i].toString());
+      }
+
+      // verify server did receive both requests.
+      RecordedRequest req = server.takeRequest();
+      LOG.info("req received = {}. check against: {}", req.getPath(),
+          "/webhdfs/v1" + testFile.toString() + "?op=GETFILEBLOCKLOCATIONS");
+      assertTrue(req.getPath().startsWith("/webhdfs/v1" + testFile.toString() + "?op=GETFILEBLOCKLOCATIONS"));
+
+      RecordedRequest req2 = server.takeRequest();
+      LOG.info("req received = {}. check against: {}", req2.getPath(),
+          "/webhdfs/v1" + testFile.toString() + "?op=GET_BLOCK_LOCATIONS");
+      assertTrue(req2.getPath().startsWith("/webhdfs/v1" + testFile.toString() + "?op=GET_BLOCK_LOCATIONS"));
     }
   }
 }

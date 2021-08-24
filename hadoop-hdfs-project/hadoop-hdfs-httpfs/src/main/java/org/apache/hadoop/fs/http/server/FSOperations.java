@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
@@ -2165,6 +2166,47 @@ public final class FSOperations {
       BlockLocation[] locations = fs.getFileBlockLocations(this.path,
           this.offsetValue, this.lengthValue);
       return JsonUtil.toJsonMap(locations);
+    }
+  }
+
+  /**
+   * Executor that performs a getFileBlockLocations operation for legacy
+   * clients.
+   */
+
+  @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
+  public static class FSFileBlockLocationsLegacy
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+    private long offsetValue;
+    private long lengthValue;
+
+    /**
+     * Creates a file-block-locations executor.
+     *
+     * @param path the path to retrieve the location
+     * @param offsetValue offset into the given file
+     * @param lengthValue length for which to get locations for
+     */
+    public FSFileBlockLocationsLegacy(String path, long offsetValue,
+        long lengthValue) {
+      this.path = new Path(path);
+      this.offsetValue = offsetValue;
+      this.lengthValue = lengthValue;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem)fs;
+        LocatedBlocks
+            locations = dfs.getLocatedBlocks(this.path, this.offsetValue, this.lengthValue);
+        return JsonUtil.toJsonMap(locations);
+      } else {
+        throw new IOException("Unable to support FSFileBlockLocationsLegacy " +
+            "because the file system is not DistributedFileSystem.");
+      }
     }
   }
 }
