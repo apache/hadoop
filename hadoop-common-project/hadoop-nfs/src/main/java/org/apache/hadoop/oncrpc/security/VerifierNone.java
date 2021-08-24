@@ -24,6 +24,8 @@ import com.google.common.base.Preconditions;
 /** Verifier used by AUTH_NONE. */
 public class VerifierNone extends Verifier {
 
+  public static final Verifier INSTANCE = new VerifierNone();
+
   public VerifierNone() {
     super(AuthFlavor.AUTH_NONE);
   }
