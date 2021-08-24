@@ -37,6 +37,7 @@ public final class TokenUtils {
   private TokenUtils() {
   }
 
+  @SuppressWarnings("unchecked")
   public static Token<DelegationTokenIdentifier> toDelegationToken(
       final Map<?, ?> inputMap) throws IOException {
     final Map<?, ?> m = (Map<?, ?>) inputMap.get(Token.class.getSimpleName());

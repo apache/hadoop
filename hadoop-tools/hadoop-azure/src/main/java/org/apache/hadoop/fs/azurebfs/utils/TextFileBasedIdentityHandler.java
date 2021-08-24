@@ -115,7 +115,7 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
    * @return Local User name, if no name found or on exception, returns empty string.
    * */
   public synchronized String lookupForLocalUserIdentity(String originalIdentity) throws IOException {
-    if(Strings.isNullOrEmpty(originalIdentity)) {
+    if (Strings.isNullOrEmpty(originalIdentity)) {
       return EMPTY_STRING;
     }
 
@@ -140,7 +140,7 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
    * @return Local Security group name, if no name found or on exception, returns empty string.
    * */
   public synchronized String lookupForLocalGroupIdentity(String originalIdentity) throws IOException {
-    if(Strings.isNullOrEmpty(originalIdentity)) {
+    if (Strings.isNullOrEmpty(originalIdentity)) {
       return EMPTY_STRING;
     }
 
@@ -172,9 +172,7 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
     LOG.debug("Loading identity map from file {}", fileLocation);
     int errorRecord = 0;
     File file = new File(fileLocation);
-    LineIterator it = null;
-    try {
-      it = FileUtils.lineIterator(file, "UTF-8");
+    try (LineIterator it = FileUtils.lineIterator(file, "UTF-8")) {
       while (it.hasNext()) {
         String line = it.nextLine();
         if (!Strings.isNullOrEmpty(line.trim()) && !line.startsWith(HASH)) {
@@ -188,8 +186,6 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
       LOG.debug("Loaded map stats - File: {}, Loaded: {}, Error: {} ", fileLocation, cache.size(), errorRecord);
     } catch (ArrayIndexOutOfBoundsException e) {
       LOG.error("Error while parsing mapping file", e);
-    } finally {
-      LineIterator.closeQuietly(it);
     }
   }
 }

@@ -335,6 +335,9 @@ public class AbfsRestOperation {
               ((AbfsHttpConnection) httpOperation).getConnection(),
               hasRequestBody ? bufferLength : 0);
           break;
+      default:
+        throw new AbfsRestOperationException(-1, null,
+            "Unsupported Auth type: " + client.getAuthType(), null);
       }
 
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
@@ -342,12 +345,6 @@ public class AbfsRestOperation {
       LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null,
           "Auth failure: " + e.getMessage(), e);
-    }
-
-    if (httpOperation == null) {
-      throw new AbfsRestOperationException(-1, null,
-          "Unable to create httpOperation instance for auth type "
-              + client.getAuthType(), null);
     }
 
     try {
