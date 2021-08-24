@@ -517,7 +517,6 @@ public class RouterRpcClient {
           // Communication retries are handled by the retry policy
           if (this.rpcMonitor != null) {
             this.rpcMonitor.proxyOpFailureCommunicate();
-            this.rpcMonitor.proxyOpComplete(false);
           }
           throw ioe;
         }
@@ -526,9 +525,6 @@ public class RouterRpcClient {
           connection.release();
         }
       }
-    }
-    if (this.rpcMonitor != null) {
-      this.rpcMonitor.proxyOpComplete(false);
     }
 
     // All namenodes were unavailable or in standby
