@@ -42,7 +42,6 @@ import org.junit.Before;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
 import org.junit.rules.Timeout;
 
 import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE;
@@ -140,26 +139,6 @@ public class TestHttpFSServerWebServer {
     Configuration conf = createConfiguration();
     setDeprecatedSecretFile(conf, secretFile.getAbsolutePath());
     webServer = createWebServer(conf);
-
-    // HttpFSAuthenticationFilter gets the configuration from the webapp, the defaults are loaded
-    // so the custom file location is overwritten with a non-existing default one.
-    Exception exception =
-        Assert.assertThrows(IOException.class, new ThrowingRunnable() {
-          @Override
-          public void run() throws Throwable {
-            webServer.start();
-          }
-        });
-    Assert.assertTrue(exception.getMessage().startsWith(
-        "Unable to initialize"));
-  }
-
-  @Test
-  public void testServiceWithSecretFileWithBothConfigOptions() throws Exception {
-    createSecretFile("foo");
-    Configuration conf = createConfigurationWithSecretFile();
-    setDeprecatedSecretFile(conf, secretFile.getAbsolutePath());
-    webServer = createWebServer(conf);
     webServer.start();
     assertServiceRespondsWithOK(webServer.getUrl());
     assertSignerSecretProviderType(webServer.getHttpServer(),
@@ -168,11 +147,10 @@ public class TestHttpFSServerWebServer {
   }
 
   @Test
-  public void testServiceWithSecretFileWithBothConfigOptionsOverwriteCheck()
-      throws Exception {
+  public void testServiceWithSecretFileWithBothConfigOptions() throws Exception {
     createSecretFile("foo");
     Configuration conf = createConfigurationWithSecretFile();
-    setDeprecatedSecretFile(conf, "will-be-overwritten");
+    setDeprecatedSecretFile(conf, secretFile.getAbsolutePath());
     webServer = createWebServer(conf);
     webServer.start();
     assertServiceRespondsWithOK(webServer.getUrl());

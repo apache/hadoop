@@ -19,6 +19,12 @@ package org.apache.hadoop.fs.http.server;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import static org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter.CONF_PREFIX;
+import static org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX;
+import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.AUTH_TYPE;
+import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.SIGNATURE_SECRET_FILE;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.KEYTAB;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.PRINCIPAL;
 import static org.apache.hadoop.util.StringUtils.startupShutdownMessage;
 
 import java.io.IOException;
@@ -67,6 +73,7 @@ public class HttpFSServerWebServer {
   private static final String SERVLET_PATH = "/webhdfs";
 
   static {
+    addDeprecatedKeys();
     Configuration.addDefaultResource(HTTPFS_DEFAULT_XML);
     Configuration.addDefaultResource(HTTPFS_SITE_XML);
   }
@@ -194,5 +201,18 @@ public class HttpFSServerWebServer {
         new HttpFSServerWebServer(conf, sslConf);
     webServer.start();
     webServer.join();
+  }
+
+  public static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+        new Configuration.DeprecationDelta(CONF_PREFIX + KEYTAB,
+            HADOOP_HTTP_CONF_PREFIX + KEYTAB),
+        new Configuration.DeprecationDelta(CONF_PREFIX + PRINCIPAL,
+            HADOOP_HTTP_CONF_PREFIX + PRINCIPAL),
+        new Configuration.DeprecationDelta(CONF_PREFIX + SIGNATURE_SECRET_FILE,
+            HADOOP_HTTP_CONF_PREFIX + SIGNATURE_SECRET_FILE),
+        new Configuration.DeprecationDelta(CONF_PREFIX + AUTH_TYPE,
+            HADOOP_HTTP_CONF_PREFIX + AUTH_TYPE)
+    });
   }
 }
