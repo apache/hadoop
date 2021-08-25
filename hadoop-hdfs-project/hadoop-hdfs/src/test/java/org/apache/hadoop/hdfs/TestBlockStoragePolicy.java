@@ -1378,7 +1378,6 @@ public class TestBlockStoragePolicy {
     DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 1,
         null, chsenDs, true,
         new HashSet<Node>(), 0, policy, null);
-    System.out.println(policy.getName() + ": " + Arrays.asList(targets));
     Assert.assertEquals(3, targets.length);
   }
 
