@@ -2451,6 +2451,14 @@
 </property>
 
 <property>
+  <name>ipc.server.purge.interval</name>
+  <value>15</value>
+  <description>Define how often calls are cleaned up in the server.
+    The default is 15 minutes. The unit is minutes.
+  </description>
+</property>
+
+<property>
   <name>ipc.maximum.data.length</name>
   <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
