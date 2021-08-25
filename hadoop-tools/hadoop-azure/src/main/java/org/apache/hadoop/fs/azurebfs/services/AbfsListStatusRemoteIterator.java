@@ -141,7 +141,7 @@ public class AbfsListStatusRemoteIterator
     }
   }
 
-  private void addNextBatchIteratorToQueue()
+  private synchronized void addNextBatchIteratorToQueue()
       throws IOException, InterruptedException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     continuation = listingSupport
@@ -150,10 +150,8 @@ public class AbfsListStatusRemoteIterator
     if (!fileStatuses.isEmpty()) {
       listResultQueue.put(new AbfsListResult(fileStatuses.iterator()));
     }
-    synchronized (this) {
-      if (continuation == null || continuation.isEmpty()) {
-        isIterationComplete = true;
-      }
+    if (continuation == null || continuation.isEmpty()) {
+      isIterationComplete = true;
     }
   }
 

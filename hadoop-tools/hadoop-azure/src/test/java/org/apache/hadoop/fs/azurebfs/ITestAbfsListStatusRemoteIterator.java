@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -52,6 +54,8 @@ import static org.mockito.Mockito.verify;
 public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_FILES_NUMBER = 1000;
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ITestAbfsListStatusRemoteIterator.class);
 
   public ITestAbfsListStatusRemoteIterator() throws Exception {
   }
@@ -75,7 +79,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     while (fsItr.hasNext()) {
       FileStatus fileStatus = fsItr.next();
       String pathStr = fileStatus.getPath().toString();
-      fileNames.remove(pathStr);
+      if (!fileNames.remove(pathStr)) {
+        LOG.debug("Could not remove path string {} from fileNames", pathStr);
+      }
       itrCount++;
     }
     Assertions.assertThat(itrCount)
@@ -84,7 +90,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         .isEqualTo(TEST_FILES_NUMBER);
     Assertions.assertThat(fileNames.size())
         .describedAs("After removing every iterm found from the iterator, "
-            + "there should be no more elements in the fileNames")
+            + "there should be no more elements in the fileNames, but found: " + fileNames)
         .isEqualTo(0);
     int minNumberOfInvokations = TEST_FILES_NUMBER / 10;
     verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
@@ -113,7 +119,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     for (int i = 0; i < TEST_FILES_NUMBER; i++) {
       FileStatus fileStatus = fsItr.next();
       String pathStr = fileStatus.getPath().toString();
-      fileNames.remove(pathStr);
+      if (!fileNames.remove(pathStr)) {
+        LOG.debug("Could not remove path string {} from fileNames", pathStr);
+      }
       itrCount++;
     }
     Assertions.assertThatThrownBy(() -> fsItr.next())
@@ -127,7 +135,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         .isEqualTo(TEST_FILES_NUMBER);
     Assertions.assertThat(fileNames.size())
         .describedAs("After removing every iterm found from the iterator, "
-            + "there should be no more elements in the fileNames")
+            + "there should be no more elements in the fileNames; found: " + fileNames)
         .isEqualTo(0);
     int minNumberOfInvokations = TEST_FILES_NUMBER / 10;
     verify(listngSupport, Mockito.atLeast(minNumberOfInvokations))
@@ -155,7 +163,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     while (fsItr.hasNext()) {
       FileStatus fileStatus = fsItr.next();
       String pathStr = fileStatus.getPath().toString();
-      fileNames.remove(pathStr);
+      if (!fileNames.remove(pathStr)) {
+        LOG.debug("Could not remove path string {} from fileNames", pathStr);
+      }
       itrCount++;
     }
     Assertions.assertThat(itrCount)
@@ -164,7 +174,8 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         .isEqualTo(TEST_FILES_NUMBER);
     Assertions.assertThat(fileNames.size())
         .describedAs("After removing every iterm found from the iterator, "
-            + "there should be no more elements in the fileNames")
+            + (("there should be no more elements in the fileNames; found: "
+            + fileNames)))
         .isEqualTo(0);
   }
 
@@ -186,7 +197,9 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
     for (int i = 0; i < TEST_FILES_NUMBER; i++) {
       FileStatus fileStatus = fsItr.next();
       String pathStr = fileStatus.getPath().toString();
-      fileNames.remove(pathStr);
+      if (!fileNames.remove(pathStr)) {
+        LOG.debug("Could not remove path string {} from fileNames", pathStr);
+      }
       itrCount++;
     }
     Assertions.assertThatThrownBy(() -> fsItr.next())
@@ -200,7 +213,7 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         .isEqualTo(TEST_FILES_NUMBER);
     Assertions.assertThat(fileNames.size())
         .describedAs("After removing every iterm found from the iterator, "
-            + "there should be no more elements in the fileNames")
+            + "there should be no more elements in the fileNames, but found: " + fileNames)
         .isEqualTo(0);
   }
 
@@ -330,10 +343,18 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
         final Path filePath = new Path(rootPath, filenamePrefix + i);
         Callable<Void> callable = () -> {
           getFileSystem().create(filePath);
-          fileNames.add(makeQualified(filePath).toString());
+          String path = makeQualified(filePath).toString();
+          if (path == null) {
+            LOG.debug("path being added to filenames is null");
+          }
+          fileNames.add(path);
+          LOG.trace("Path {} added to list", path);
           return null;
         };
         tasks.add(es.submit(callable));
+      }
+      if (fileNames.contains(null)) {
+        LOG.debug("fileNames list contains null value(s): {}", fileNames);
       }
       for (Future<Void> task : tasks) {
         task.get();
