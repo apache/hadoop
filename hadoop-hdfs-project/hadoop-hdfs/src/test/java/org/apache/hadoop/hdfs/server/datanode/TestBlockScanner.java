@@ -1004,6 +1004,8 @@ public class TestBlockScanner {
         TestScanResultHandler.getInfo(ctx.volumes.get(0));
     synchronized (info) {
       info.shouldRun = true;
+      info.sem = new Semaphore(1);
+      info.sem.acquire();
       info.notify();
     }
     try {
@@ -1017,6 +1019,7 @@ public class TestBlockScanner {
       LOG.debug("Timeout for all files are accessed in last period.");
     }
     synchronized (info) {
+      info.sem.release();
       info.shouldRun = false;
       info.notify();
     }
