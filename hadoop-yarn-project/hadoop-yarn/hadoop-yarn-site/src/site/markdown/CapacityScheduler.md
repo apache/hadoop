@@ -709,10 +709,10 @@ The parent queue which has the flexible auto queue creation enabled supports the
 | `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.leaf-template.<queue-property>` | *Optional* parameter: Specifies a queue property inherited by auto-created **leaf** queues. |
 | `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.parent-template.<queue-property>` |  *Optional* parameter: Specifies a queue property inherited by auto-created **parent** queues. |
 
-Using the following example configuration snippet will instruct the `CapacityScheduler` to: 
-* enable the flexible auto queue creation for root.parent 
+Using the following example configuration snippet will instruct the `CapacityScheduler` to:
+* enable the flexible auto queue creation for root.parent
 * create **all** of the dynamic queues below root.parent with 80% as the maximum capacity, because of the wildcard queue path (root.parent.*)
-* create the dynamic parent queues **directly** under root.parent with weight 2 
+* create the dynamic parent queues **directly** under root.parent with weight 2
 * add the GPU label to every leaf queue created **directly** under root.parent
 
 ```
