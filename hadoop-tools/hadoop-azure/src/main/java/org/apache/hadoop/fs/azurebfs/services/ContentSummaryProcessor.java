@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,9 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 public class ContentSummaryProcessor {
-  private static final int CORE_POOL_SIZE = 1;
   private static final int MAX_THREAD_COUNT = 16;
-  private static final int KEEP_ALIVE_TIME = 5;
   private static final int POLL_TIMEOUT = 100;
   private static final Logger LOG = LoggerFactory.getLogger(ContentSummaryProcessor.class);
   private final AtomicLong fileCount = new AtomicLong(0L);
@@ -49,11 +46,8 @@ public class ContentSummaryProcessor {
   private final AtomicLong totalBytes = new AtomicLong(0L);
   private final AtomicInteger numTasks = new AtomicInteger(0);
   private final ListingSupport abfsStore;
-  private final ExecutorService executorService = new ThreadPoolExecutor(
-      CORE_POOL_SIZE, MAX_THREAD_COUNT, KEEP_ALIVE_TIME, TimeUnit.SECONDS,
-      new SynchronousQueue<>());
-  private final CompletionService<Void> completionService =
-      new ExecutorCompletionService<>(executorService);
+  private final ExecutorService executorService;
+  private final CompletionService<Void> completionService;
   private final LinkedBlockingQueue<FileStatus> queue = new LinkedBlockingQueue<>();
 
   /**
@@ -62,8 +56,11 @@ public class ContentSummaryProcessor {
    * @param abfsStore Instance of AzureBlobFileSystemStore, used to make
    * listStatus calls to server
    */
-  public ContentSummaryProcessor(ListingSupport abfsStore) {
+  public ContentSummaryProcessor(ListingSupport abfsStore,
+      ExecutorService executorService) {
     this.abfsStore = abfsStore;
+    this.executorService = executorService;
+    completionService = new ExecutorCompletionService<>(this.executorService);
   }
 
   public ContentSummary getContentSummary(Path path, TracingContext tracingContext)

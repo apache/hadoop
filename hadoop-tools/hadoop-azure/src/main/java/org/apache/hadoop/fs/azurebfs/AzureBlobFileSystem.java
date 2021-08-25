@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -126,6 +127,9 @@ public class AzureBlobFileSystem extends FileSystem
   private String clientCorrelationId;
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
+  private final ExecutorService contentSummaryExecutorService = Executors.newCachedThreadPool();
+//  private final ExecutorService contentSummaryExecutorService = new ThreadPoolExecutor(
+//      0, 16, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -142,8 +146,7 @@ public class AzureBlobFileSystem extends FileSystem
         configuration, abfsCounters);
     LOG.trace("AzureBlobFileSystemStore init complete");
 
-    final AbfsConfiguration abfsConfiguration = abfsStore
-        .getAbfsConfiguration();
+    final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
@@ -151,8 +154,10 @@ public class AzureBlobFileSystem extends FileSystem
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
-      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
+          fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat,
+          listener);
+      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH),
+          tracingContext) == null) {
         try {
           this.createFileSystem(tracingContext);
         } catch (AzureBlobFileSystemException ex) {
@@ -180,8 +185,7 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "AzureBlobFileSystem{");
+    final StringBuilder sb = new StringBuilder("AzureBlobFileSystem{");
     sb.append("uri=").append(uri);
     sb.append(", user='").append(abfsStore.getUser()).append('\'');
     sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
@@ -204,7 +208,8 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
-    LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
+    LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path,
+        bufferSize);
     // bufferSize is unused.
     return open(path, Optional.empty());
   }
@@ -217,10 +222,10 @@ public class AzureBlobFileSystem extends FileSystem
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.OPEN, tracingHeaderFormat, listener);
-      InputStream inputStream = abfsStore
-          .openFileForRead(qualifiedPath, parameters, statistics, tracingContext);
+      InputStream inputStream = abfsStore.openFileForRead(qualifiedPath,
+          parameters, statistics, tracingContext);
       return new FSDataInputStream(inputStream);
-    } catch(AzureBlobFileSystemException ex) {
+    } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
       return null;
     }
@@ -231,7 +236,8 @@ public class AzureBlobFileSystem extends FileSystem
    * {@link org.apache.hadoop.fs.impl.OpenFileParameters}. Ensure that
    * FileStatus entered is up-to-date, as it will be used to create the
    * InputStream (with info such as contentLength, eTag)
-   * @param path The location of file to be opened
+   *
+   * @param path       The location of file to be opened
    * @param parameters OpenFileParameters instance; can hold FileStatus,
    *                   Configuration, bufferSize and mandatoryKeys
    */
@@ -240,22 +246,17 @@ public class AzureBlobFileSystem extends FileSystem
       final Path path, final OpenFileParameters parameters) throws IOException {
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
-        parameters.getMandatoryKeys(),
-        Collections.emptySet(),
-        "for " + path);
-    return LambdaUtils.eval(
-        new CompletableFuture<>(), () ->
-            open(path, Optional.of(parameters)));
+        parameters.getMandatoryKeys(), Collections.emptySet(), "for " + path);
+    return LambdaUtils.eval(new CompletableFuture<>(), () -> open(path, Optional.of(parameters)));
   }
 
   @Override
-  public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
-      final short replication, final long blockSize, final Progressable progress) throws IOException {
-    LOG.debug("AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
-        f,
-        permission,
-        overwrite,
-        blockSize);
+  public FSDataOutputStream create(final Path f, final FsPermission permission,
+      final boolean overwrite, final int bufferSize, final short replication,
+      final long blockSize, final Progressable progress) throws IOException {
+    LOG.debug(
+        "AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
+        f, permission, overwrite, blockSize);
 
     statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);
@@ -264,13 +265,14 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.CREATE, overwrite, tracingHeaderFormat, listener);
+          fileSystemId, FSOperationType.CREATE, overwrite, tracingHeaderFormat,
+          listener);
       OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
           permission == null ? FsPermission.getFileDefault() : permission,
           FsPermission.getUMask(getConf()), tracingContext);
       statIncrement(FILES_CREATED);
       return new FSDataOutputStream(outputStream, statistics);
-    } catch(AzureBlobFileSystemException ex) {
+    } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
     }
@@ -290,11 +292,11 @@ public class AzureBlobFileSystem extends FileSystem
     final FileStatus parentFileStatus = tryGetFileStatus(parent, tracingContext);
 
     if (parentFileStatus == null) {
-      throw new FileNotFoundException("Cannot create file "
-          + f.getName() + " because parent folder does not exist.");
+      throw new FileNotFoundException("Cannot create file " + f.getName() + " because parent folder does not exist.");
     }
 
-    return create(f, permission, overwrite, bufferSize, replication, blockSize, progress);
+    return create(f, permission, overwrite, bufferSize, replication, blockSize,
+        progress);
   }
 
   @Override
@@ -305,41 +307,38 @@ public class AzureBlobFileSystem extends FileSystem
 
     // Check if file should be appended or overwritten. Assume that the file
     // is overwritten on if the CREATE and OVERWRITE create flags are set.
-    final EnumSet<CreateFlag> createflags =
-        EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE);
+    final EnumSet<CreateFlag> createflags = EnumSet.of(CreateFlag.CREATE,
+        CreateFlag.OVERWRITE);
     final boolean overwrite = flags.containsAll(createflags);
 
     // Delegate the create non-recursive call.
-    return this.createNonRecursive(f, permission, overwrite,
-        bufferSize, replication, blockSize, progress);
+    return this.createNonRecursive(f, permission, overwrite, bufferSize,
+        replication, blockSize, progress);
   }
 
   @Override
   @SuppressWarnings("deprecation")
   public FSDataOutputStream createNonRecursive(final Path f,
-      final boolean overwrite, final int bufferSize, final short replication, final long blockSize,
-      final Progressable progress) throws IOException {
-    return this.createNonRecursive(f, FsPermission.getFileDefault(),
-        overwrite, bufferSize, replication, blockSize, progress);
+      final boolean overwrite, final int bufferSize, final short replication,
+      final long blockSize, final Progressable progress) throws IOException {
+    return this.createNonRecursive(f, FsPermission.getFileDefault(), overwrite,
+        bufferSize, replication, blockSize, progress);
   }
 
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize, final Progressable progress) throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.append path: {} bufferSize: {}",
-        f.toString(),
-        bufferSize);
+    LOG.debug("AzureBlobFileSystem.append path: {} bufferSize: {}",
+        f.toString(), bufferSize);
     statIncrement(CALL_APPEND);
     Path qualifiedPath = makeQualified(f);
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.APPEND, tracingHeaderFormat,
-          listener);
-      OutputStream outputStream = abfsStore
-          .openFileForWrite(qualifiedPath, statistics, false, tracingContext);
+          fileSystemId, FSOperationType.APPEND, tracingHeaderFormat, listener);
+      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath,
+          statistics, false, tracingContext);
       return new FSDataOutputStream(outputStream, statistics);
-    } catch(AzureBlobFileSystemException ex) {
+    } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
     }
@@ -362,7 +361,7 @@ public class AzureBlobFileSystem extends FileSystem
         fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
         listener);
     // rename under same folder;
-    if(makeQualified(parentFolder).equals(qualifiedDstPath)) {
+    if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
       return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
     }
 
@@ -399,17 +398,13 @@ public class AzureBlobFileSystem extends FileSystem
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext);
       return true;
-    } catch(AzureBlobFileSystemException ex) {
+    } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
-      checkException(
-              src,
-              ex,
-              AzureServiceErrorCode.PATH_ALREADY_EXISTS,
-              AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
-              AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
-              AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-              AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
-              AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
+      checkException(src, ex, AzureServiceErrorCode.PATH_ALREADY_EXISTS,
+          AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
+          AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND, AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
+          AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+          AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
     }
 
@@ -417,8 +412,8 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public boolean delete(final Path f, final boolean recursive) throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
+    LOG.debug("AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(),
+        recursive);
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
 
@@ -432,8 +427,7 @@ public class AzureBlobFileSystem extends FileSystem
 
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
-          fileSystemId, FSOperationType.DELETE, tracingHeaderFormat,
-          listener);
+          fileSystemId, FSOperationType.DELETE, tracingHeaderFormat, listener);
       abfsStore.delete(qualifiedPath, recursive, tracingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -446,10 +440,12 @@ public class AzureBlobFileSystem extends FileSystem
   /**
    * Returns a ContentSummary instance containing the count of directories,
    * files and total number of bytes under a given path
+   *
    * @param path The given path
    * @return ContentSummary
    * @throws IOException if an error is encountered during listStatus calls
-   * or if there is any issue with the thread pool used while processing
+   *                     or if there is any issue with the thread pool used
+   *                     while processing
    */
   @Override
   public ContentSummary getContentSummary(Path path) throws IOException {
@@ -457,14 +453,15 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.GET_CONTENT_SUMMARY, true,
           tracingHeaderFormat, listener);
-      return (new ContentSummaryProcessor(abfsStore)).getContentSummary(path,
+      return (new ContentSummaryProcessor(abfsStore,
+          contentSummaryExecutorService)).getContentSummary(path,
           tracingContext);
     } catch (InterruptedException e) {
       LOG.debug("Thread interrupted");
-      throw new IOException(e);
-    } catch(ExecutionException ex) {
+      throw new InterruptedIOException(e.getMessage());
+    } catch (ExecutionException ex) {
       LOG.debug("GetContentSummary failed with error: {}", ex.getMessage());
-      throw new IOException(ex);
+      throw new PathIOException(path.toString(), ex);
     }
   }
 

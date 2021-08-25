@@ -46,13 +46,13 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
-public class TestGetContentSummary extends AbstractAbfsIntegrationTest {
+public class ITestGetContentSummary extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_BUFFER_SIZE = 20;
   private static final int FILES_PER_DIRECTORY = 2;
   private static final int MAX_THREADS = 16;
-  private static final int NUM_FILES_FOR_LIST_MAX_TEST =
-      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
+  private static final int NUM_FILES_FOR_LIST_MAX_TEST =10;
+//      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
 private static final int NUM_CONCURRENT_CALLS = 8;
 
   private final String[] directories = {"/testFolder",
@@ -67,7 +67,7 @@ private static final int NUM_CONCURRENT_CALLS = 8;
 
   private final byte[] b = new byte[TEST_BUFFER_SIZE];
 
-  public TestGetContentSummary() throws Exception {
+  public ITestGetContentSummary() throws Exception {
     new Random().nextBytes(b);
   }
 
@@ -78,19 +78,17 @@ private static final int NUM_CONCURRENT_CALLS = 8;
     createDirectoryStructure();
     int fileCount = directories.length * FILES_PER_DIRECTORY;
     ContentSummary contentSummary = fs.getContentSummary(new Path("/"));
-    verifyContentSummary(contentSummary, directories.length, fileCount,
+    verifyContentSummary(contentSummary, directories.length + 2, fileCount,
         directories.length * TEST_BUFFER_SIZE);
   }
 
   @Test
   public void testFileContentSummary() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("/testFolder"));
-    Path filePath = new Path("/testFolder/testFile");
-    fs.create(filePath);
-    FSDataOutputStream out = fs.append(filePath);
-    out.write(b);
-    out.close();
+    Path filePath = path("testFile");
+    try (FSDataOutputStream out = fs.create(filePath)) {
+      out.write(b);
+    }
     ContentSummary contentSummary = fs.getContentSummary(filePath);
     verifyContentSummary(contentSummary, 0, 1, TEST_BUFFER_SIZE);
   }
@@ -98,10 +96,9 @@ private static final int NUM_CONCURRENT_CALLS = 8;
   @Test
   public void testLeafDir() throws IOException {
     AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("/testFolder"));
-    fs.mkdirs(new Path("/testFolder/testFolder1"));
-    fs.mkdirs(new Path("/testFolder/testFolder2"));
-    Path leafDir = new Path("/testFolder/testFolder1/testFolder3");
+    Path testFolder = path("testFolder");
+    fs.mkdirs(new Path(testFolder + "/testFolder2"));
+    Path leafDir = new Path(testFolder + "/testFolder1/testFolder3");
     fs.mkdirs(leafDir);
     ContentSummary contentSummary = fs.getContentSummary(leafDir);
     verifyContentSummary(contentSummary, 0, 0, 0);
@@ -111,8 +108,8 @@ private static final int NUM_CONCURRENT_CALLS = 8;
   public void testIntermediateDirWithFilesOnly()
       throws IOException, ExecutionException, InterruptedException {
     AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("/testFolder"));
-    Path intermediateDir = new Path("/testFolder/testFolder1");
+    Path testFolder = path("testFolder");
+    Path intermediateDir = new Path(testFolder + "/testFolder1");
     fs.mkdirs(intermediateDir);
     populateDirWithFiles(intermediateDir, FILES_PER_DIRECTORY);
     ContentSummary contentSummary =
@@ -125,11 +122,10 @@ private static final int NUM_CONCURRENT_CALLS = 8;
   public void testIntermediateDirWithFilesAndSubdirs()
       throws IOException, ExecutionException, InterruptedException {
     AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("/testFolder"));
-    Path intermediateDir = new Path("/testFolder/testFolder1");
+    Path intermediateDir = new Path(path("/testFolder") + "/testFolder1");
     fs.mkdirs(intermediateDir);
     populateDirWithFiles(intermediateDir, FILES_PER_DIRECTORY);
-    fs.mkdirs(new Path("/testFolder/testFolder1/testFolder3"));
+    fs.mkdirs(new Path(intermediateDir + "/testFolder3"));
     fs.registerListener(
         new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
             fs.getFileSystemId(), FSOperationType.GET_CONTENT_SUMMARY, true,
@@ -144,9 +140,7 @@ private static final int NUM_CONCURRENT_CALLS = 8;
   public void testDirOverListMaxResultsItems()
       throws IOException, ExecutionException, InterruptedException {
     AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("/testFolder"));
-    Path pathToListMaxDir = new Path("/testFolder/listMaxDir");
-    fs.mkdirs(pathToListMaxDir);
+    Path pathToListMaxDir = new Path(path("/testFolder") + "/listMaxDir");
     fs.mkdirs(new Path(pathToListMaxDir + "/testFolder2"));
     populateDirWithFiles(pathToListMaxDir, NUM_FILES_FOR_LIST_MAX_TEST);
     verifyContentSummary(
@@ -169,10 +163,10 @@ private static final int NUM_CONCURRENT_CALLS = 8;
         TimeUnit.SECONDS, new SynchronousQueue<>());
     CompletionService<ContentSummary> completionService =
         new ExecutorCompletionService<>(executorService);
-    createDirectoryStructure();
+    Path testPath = createDirectoryStructure();
     for (int i = 0; i < NUM_CONCURRENT_CALLS; i++) {
       completionService.submit(() -> fs.getContentSummary(new Path(
-          "/testFolder")));
+          testPath + "/testFolder")));
     }
     for (int i = 0; i < NUM_CONCURRENT_CALLS; i++) {
       ContentSummary contentSummary = completionService.take().get();
@@ -184,6 +178,9 @@ private static final int NUM_CONCURRENT_CALLS = 8;
 
   private void verifyContentSummary(ContentSummary contentSummary,
       long expectedDirectoryCount, long expectedFileCount, long expectedByteCount) {
+    System.out.println(contentSummary);
+    System.out.println(expectedDirectoryCount + " : " + expectedFileCount +
+        " : " + expectedByteCount);
     Assertions.assertThat(contentSummary.getDirectoryCount())
         .describedAs("Incorrect directory count").isEqualTo(expectedDirectoryCount);
     Assertions.assertThat(contentSummary.getFileCount())
@@ -194,14 +191,16 @@ private static final int NUM_CONCURRENT_CALLS = 8;
         .describedAs("Incorrect value of space consumed").isEqualTo(expectedByteCount);
   }
 
-  private void createDirectoryStructure()
+  private Path createDirectoryStructure()
       throws IOException, ExecutionException, InterruptedException {
     AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = path("testPath");
     for (String directory : directories) {
-      Path dirPath = new Path(directory);
+      Path dirPath = new Path(testPath + directory);
       fs.mkdirs(dirPath);
       populateDirWithFiles(dirPath, FILES_PER_DIRECTORY);
     }
+    return testPath;
   }
 
   private void populateDirWithFiles(Path directory, int numFiles)
@@ -218,10 +217,10 @@ private static final int NUM_CONCURRENT_CALLS = 8;
     for (Future<Void> task : tasks) {
       task.get();
     }
-    FSDataOutputStream out = getFileSystem()
-        .append(new Path(directory + "/test0"));
-    out.write(b);
-    out.close();
+    try (FSDataOutputStream out = getFileSystem().append(
+        new Path(directory + "/test0"))) {
+      out.write(b);
+    }
     es.shutdownNow();
   }
 }
