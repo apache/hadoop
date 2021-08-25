@@ -1337,6 +1337,15 @@ public class TestBlockStoragePolicy {
     Assert.assertEquals(StorageType.DISK, targets[1].getStorageType());
   }
 
+  /**
+   * Consider a File with All_SSD storage policy.
+   * 1. Choose 3 DISK DNs for pipeline because SSD DNs no enough at
+   * the beginning.
+   * 2. One of DISK DNs fails And it need choose one new DN for existing.
+   * pipeline {@link DataStreamer addDatanode2ExistingPipeline()}.
+   * Make sure the number of target DNs are 3.
+   * see HDFS-16182.
+   */
   @Test
   public void testAddDatanode2ExistingPipelineInSsd() throws Exception {
     BlockStoragePolicy policy = POLICY_SUITE.getPolicy(ALLSSD);
