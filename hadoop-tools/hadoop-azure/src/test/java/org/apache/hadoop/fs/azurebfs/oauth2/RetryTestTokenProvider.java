@@ -35,7 +35,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   // Need to track first token fetch otherwise will get counted as a retry too.
   private boolean isThisFirstTokenFetch = true;
-  public int reTryCount = 0;
+  private int reTryCount = 0;
 
   @Override
   public void initialize(Configuration configuration, String accountName)
