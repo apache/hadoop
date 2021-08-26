@@ -36,12 +36,14 @@ import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.hdfs.web.JsonUtilClient;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticationHandler;
+import org.apache.hadoop.util.JsonSerialization;
 import org.json.simple.JSONArray;
 import org.junit.Assert;
 
@@ -2011,16 +2013,13 @@ public class TestHttpFSServer extends HFSTestCase {
   public void testGetFileBlockLocations() throws Exception {
     createHttpFSServer(false, false);
     // Create a test directory
-    String pathStr = "/tmp/tmp-snap-diff-test";
+    String pathStr = "/tmp/tmp-get-block-location-test";
     createDirWithHttp(pathStr, "700", null);
 
     Path path = new Path(pathStr);
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
         .get(path.toUri(), TestHdfsHelper.getHdfsConf());
-    // Enable snapshot
-    dfs.allowSnapshot(path);
-    Assert.assertTrue(dfs.getFileStatus(path).isSnapshotEnabled());
-    // Create a file and take a snapshot
+
     String file1 = pathStr + "/file1";
     createWithHttp(file1, null);
     HttpURLConnection conn = sendRequestToHttpFSServer(file1,
@@ -2030,11 +2029,17 @@ public class TestHttpFSServer extends HFSTestCase {
         dfs.getFileBlockLocations(new Path(file1), 0, 1);
     Assert.assertNotNull(locations1);
 
-    HttpURLConnection conn1 = sendRequestToHttpFSServer(file1,
-        "GET_BLOCK_LOCATIONS", "length=10&offset10");
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
-    BlockLocation[] locations2 =
-        dfs.getFileBlockLocations(new Path(file1), 0, 1);
-    Assert.assertNotNull(locations2);
+    Map<?,?> jsonMap = JsonSerialization.mapReader().readValue(
+        conn.getInputStream());
+
+    BlockLocation[] httpfsBlockLocations =
+        JsonUtilClient.toBlockLocationArray(jsonMap);
+
+    assertEquals(locations1.length, httpfsBlockLocations.length);
+    for (int i = 0; i < locations1.length; i++) {
+      assertEquals(locations1.toString(), httpfsBlockLocations.toString());
+    }
+
+    conn.getInputStream().close();
   }
 }

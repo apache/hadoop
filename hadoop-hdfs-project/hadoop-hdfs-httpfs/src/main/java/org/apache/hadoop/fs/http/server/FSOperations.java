@@ -2171,7 +2171,7 @@ public final class FSOperations {
 
   /**
    * Executor that performs a getFileBlockLocations operation for legacy
-   * clients.
+   * clients that supports only GET_BLOCK_LOCATIONS.
    */
 
   @InterfaceAudience.Private
@@ -2200,13 +2200,12 @@ public final class FSOperations {
     public Map execute(FileSystem fs) throws IOException {
       if (fs instanceof DistributedFileSystem) {
         DistributedFileSystem dfs = (DistributedFileSystem)fs;
-        LocatedBlocks
-            locations = dfs.getLocatedBlocks(this.path, this.offsetValue, this.lengthValue);
+        LocatedBlocks locations = dfs.getLocatedBlocks(
+            this.path, this.offsetValue,this.lengthValue);
         return JsonUtil.toJsonMap(locations);
-      } else {
-        throw new IOException("Unable to support FSFileBlockLocationsLegacy " +
-            "because the file system is not DistributedFileSystem.");
       }
+      throw new IOException("Unable to support FSFileBlockLocationsLegacy " +
+          "because the file system is not DistributedFileSystem.");
     }
   }
 }

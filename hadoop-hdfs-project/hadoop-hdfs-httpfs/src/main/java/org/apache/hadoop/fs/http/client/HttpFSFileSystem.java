@@ -1715,6 +1715,7 @@ public class HttpFSFileSystem extends FileSystem
     return toBlockLocations(json);
   }
 
+  @Override
   public BlockLocation[] getFileBlockLocations(final FileStatus status,
       final long offset, final long length) throws IOException {
     if (status == null) {
@@ -1735,8 +1736,6 @@ public class HttpFSFileSystem extends FileSystem
         mapper.readValue(json.toJSONString(), rootType);
     Map<String, BlockLocation[]> locationMap =
         jsonMap.get(BLOCK_LOCATIONS_JSON);
-    BlockLocation[] locationArray =
-        locationMap.get(BlockLocation.class.getSimpleName());
-    return locationArray;
+    return locationMap.get(BlockLocation.class.getSimpleName());
   }
 }

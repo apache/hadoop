@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -912,7 +913,8 @@ public class JsonUtilClient {
     return snapshotStatus;
   }
 
-  static BlockLocation[] toBlockLocationArray(Map<?, ?> json)
+  @VisibleForTesting
+  public static BlockLocation[] toBlockLocationArray(Map<?, ?> json)
       throws IOException {
     final Map<?, ?> rootmap =
         (Map<?, ?>) json.get(BlockLocation.class.getSimpleName() + "s");
@@ -929,7 +931,7 @@ public class JsonUtilClient {
   }
 
   /** Convert a Json map to BlockLocation. **/
-  static BlockLocation toBlockLocation(Map<?, ?> m) throws IOException {
+  private static BlockLocation toBlockLocation(Map<?, ?> m) throws IOException {
     if (m == null) {
       return null;
     }
@@ -946,6 +948,7 @@ public class JsonUtilClient {
         storageIds, storageTypes, offset, length, corrupt);
   }
 
+  @VisibleForTesting
   static String[] toStringArray(List<?> list) {
     if (list == null) {
       return null;

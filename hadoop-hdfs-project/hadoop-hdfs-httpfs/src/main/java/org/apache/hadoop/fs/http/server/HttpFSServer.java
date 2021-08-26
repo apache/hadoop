@@ -514,13 +514,12 @@ public class HttpFSServer {
       long len = Long.MAX_VALUE;
       Long offsetParam = params.get(OffsetParam.NAME, OffsetParam.class);
       Long lenParam = params.get(LenParam.NAME, LenParam.class);
-      AUDIT_LOG.info("[{}] offset [{}] len [{}]",
-          new Object[] { path, offsetParam, lenParam });
-      if (offsetParam != null && offsetParam.longValue() > 0) {
-        offset = offsetParam.longValue();
+      AUDIT_LOG.info("[{}] offset [{}] len [{}]", path, offsetParam, lenParam);
+      if (offsetParam != null && offsetParam > 0) {
+        offset = offsetParam;
       }
-      if (lenParam != null && lenParam.longValue() > 0) {
-        len = lenParam.longValue();
+      if (lenParam != null && lenParam > 0) {
+        len = lenParam;
       }
       FSOperations.FSFileBlockLocationsLegacy command =
           new FSOperations.FSFileBlockLocationsLegacy(path, offset, len);

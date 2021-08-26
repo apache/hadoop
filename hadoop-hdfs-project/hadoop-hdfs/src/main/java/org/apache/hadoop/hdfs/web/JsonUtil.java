@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
@@ -635,7 +636,8 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> toJsonMap(
+  @VisibleForTesting
+  static Map<String, Object> toJsonMap(
       final BlockLocation blockLocation) throws IOException {
     if (blockLocation == null) {
       return null;

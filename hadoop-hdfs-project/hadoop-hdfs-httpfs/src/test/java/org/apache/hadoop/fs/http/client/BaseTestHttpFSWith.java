@@ -1968,7 +1968,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   }
 
   private void testGetFileBlockLocations() throws Exception {
-    BlockLocation[] locations1, locations2 = null;
+    BlockLocation[] blockLocations;
     Path testFile = null;
     if (!this.isLocalFS()) {
       FileSystem fs = this.getHttpFSFileSystem();
@@ -1976,25 +1976,25 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
-        locations1 = httpFS.getFileBlockLocations(testFile, 0, 1);
-        assertNotNull(locations1);
+        blockLocations = httpFS.getFileBlockLocations(testFile, 0, 1);
+        assertNotNull(blockLocations);
 
-        // TODO: add test for HttpFSFileSystem.toBlockLocations()
-        String jsonString = JsonUtil.toJsonString(locations1);
+        // verify HttpFSFileSystem.toBlockLocations()
+        String jsonString = JsonUtil.toJsonString(blockLocations);
         JSONParser parser = new JSONParser();
         JSONObject jsonObject = (JSONObject)parser.parse(
             jsonString, (ContainerFactory)null);
         BlockLocation[] deserializedLocation =
-            httpFS.toBlockLocations(jsonObject);
-        assertEquals(locations1.length, deserializedLocation.length);
-        for (int i = 0; i < locations1.length; i++) {
-          assertEquals(locations1[i].toString(),
+            HttpFSFileSystem.toBlockLocations(jsonObject);
+        assertEquals(blockLocations.length, deserializedLocation.length);
+        for (int i = 0; i < blockLocations.length; i++) {
+          assertEquals(blockLocations[i].toString(),
               deserializedLocation[i].toString());
         }
       } else if (fs instanceof WebHdfsFileSystem) {
         WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
-        locations2 = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
-        assertNotNull(locations2);
+        blockLocations = webHdfsFileSystem.getFileBlockLocations(testFile, 0, 1);
+        assertNotNull(blockLocations);
       } else {
         Assert
             .fail(fs.getClass().getSimpleName() + " doesn't support access");
@@ -2037,24 +2037,29 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
       // verify client FileSystem handles fallback from GETFILEBLOCKLOCATIONS to
       // GET_BLOCK_LOCATIONS correctly.
-      BlockLocation[] locations = DFSUtilClient.locatedBlocks2Locations(locatedBlocks);
-      BlockLocation[] locations1 = fs.getFileBlockLocations(testFile, 0, 1);
+      BlockLocation[] hdfsBlockLocations = DFSUtilClient.locatedBlocks2Locations(
+          locatedBlocks);
+      BlockLocation[] httpfsBlockLocations =
+          fs.getFileBlockLocations(testFile, 0, 1);
       // assert locations1 == locations
-      assertEquals(locations.length, locations1.length);
-      for (int i = 0; i< locations.length; i++) {
-        assertEquals(locations[i].toString(), locations1[i].toString());
+      assertEquals(hdfsBlockLocations.length, httpfsBlockLocations.length);
+      for (int i = 0; i< hdfsBlockLocations.length; i++) {
+        assertEquals(hdfsBlockLocations[i].toString(),
+            httpfsBlockLocations[i].toString());
       }
 
       // verify server did receive both requests.
       RecordedRequest req = server.takeRequest();
       LOG.info("req received = {}. check against: {}", req.getPath(),
           "/webhdfs/v1" + testFile.toString() + "?op=GETFILEBLOCKLOCATIONS");
-      assertTrue(req.getPath().startsWith("/webhdfs/v1" + testFile.toString() + "?op=GETFILEBLOCKLOCATIONS"));
+      assertTrue(req.getPath().startsWith("/webhdfs/v1" + testFile.toString() +
+          "?op=GETFILEBLOCKLOCATIONS"));
 
-      RecordedRequest req2 = server.takeRequest();
-      LOG.info("req received = {}. check against: {}", req2.getPath(),
+      req = server.takeRequest();
+      LOG.info("req received = {}. check against: {}", req.getPath(),
           "/webhdfs/v1" + testFile.toString() + "?op=GET_BLOCK_LOCATIONS");
-      assertTrue(req2.getPath().startsWith("/webhdfs/v1" + testFile.toString() + "?op=GET_BLOCK_LOCATIONS"));
+      assertTrue(req.getPath().startsWith("/webhdfs/v1" + testFile.toString() +
+          "?op=GET_BLOCK_LOCATIONS"));
     }
   }
 }
