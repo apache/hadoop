@@ -406,6 +406,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
+  private ConfigurationProperties configurationProperties;
 
   /**
    * Different resource types supported.
@@ -1041,6 +1042,34 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       return ResourceUtils.createResourceFromString(rawQueueMaxAllocation,
               ResourceUtils.getResourcesTypeInfo());
     }
+  }
+
+  public void setQueueMaximumAllocation(String queue, String maximumAllocation) {
+    String queuePrefix = getQueuePrefix(queue);
+    set(queuePrefix + MAXIMUM_ALLOCATION, maximumAllocation);
+  }
+
+  /**
+   * Get all configuration properties parsed in a
+   * {@code ConfigurationProperties} object.
+   * @return configuration properties
+   */
+  public ConfigurationProperties getConfigurationProperties() {
+    if (configurationProperties == null) {
+      reinitializeConfigurationProperties();
+    }
+
+    return configurationProperties;
+  }
+
+  /**
+   * Reinitializes the cached {@code ConfigurationProperties} object.
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public void reinitializeConfigurationProperties() {
+    // Props are always Strings, therefore this cast is safe
+    Map<String, String> props = (Map) getProps();
+    configurationProperties = new ConfigurationProperties(props);
   }
 
   public long getQueueMaximumAllocationMb(String queue) {
@@ -2463,6 +2492,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setDefaultNodeLabelExpression(leafQueueConfPrefix, expression);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueConfigMaximumAllocation(String
+         queuePath, String expression) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setQueueMaximumAllocation(leafQueueConfPrefix, expression);
   }
 
   public static String getUnits(String resourceValue) {

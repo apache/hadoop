@@ -106,6 +106,7 @@ public class TestDecommissioningStatusWithBackoffMonitor
 
     FSNamesystem fsn = cluster.getNamesystem();
     final DatanodeManager dm = fsn.getBlockManager().getDatanodeManager();
+    verifyInitialState(fsn, dm);
     for (int iteration = 0; iteration < numDatanodes; iteration++) {
       String downnode = decommissionNode(client, iteration);
       dm.refreshNodes(conf);

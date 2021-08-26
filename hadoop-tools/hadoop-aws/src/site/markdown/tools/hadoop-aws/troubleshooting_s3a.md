@@ -1157,6 +1157,309 @@ is used, no encryption is specified, or the SSE-C specified is incorrect.
 2. A directory is encrypted with a SSE-C keyA and the user is trying to move a
 file using configured SSE-C keyB into that structure.
 
+## <a name="client-side-encryption"></a> S3 Client Side Encryption
+
+### Instruction file not found for S3 object
+
+Reading an unencrypted file would fail when read through CSE enabled client.
+```
+java.lang.SecurityException: Instruction file not found for S3 object with bucket name: ap-south-cse, key: unencryptedData.txt
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.decipher(S3CryptoModuleAE.java:190)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.getObjectSecurely(S3CryptoModuleAE.java:136)
+    at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.getObject(AmazonS3EncryptionClientV2.java:241)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem$InputStreamCallbacksImpl.getObject(S3AFileSystem.java:1462)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$reopen$0(S3AInputStream.java:217)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:216)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:382)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$3(Invoker.java:230)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$5(Invoker.java:354)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:414)
+    at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:350)
+    at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:228)
+    at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:272)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:374)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:493)
+    at java.io.DataInputStream.read(DataInputStream.java:100)
+    at org.apache.hadoop.io.IOUtils.copyBytes(IOUtils.java:94)
+    at org.apache.hadoop.io.IOUtils.copyBytes(IOUtils.java:68)
+    at org.apache.hadoop.io.IOUtils.copyBytes(IOUtils.java:129)
+    at org.apache.hadoop.fs.shell.Display$Cat.printToStdout(Display.java:101)
+    at org.apache.hadoop.fs.shell.Display$Cat.processPath(Display.java:96)
+    at org.apache.hadoop.fs.shell.Command.processPathInternal(Command.java:370)
+    at org.apache.hadoop.fs.shell.Command.processPaths(Command.java:333)
+    at org.apache.hadoop.fs.shell.Command.processPathArgument(Command.java:306)
+    at org.apache.hadoop.fs.shell.Command.processArgument(Command.java:288)
+    at org.apache.hadoop.fs.shell.Command.processArguments(Command.java:272)
+    at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:121)
+    at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+    at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+    at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+```
+CSE enabled client should read encrypted data only.
+
+### CSE-KMS method requires KMS key ID
+
+KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
+ to failure.
+
+```
+2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
+s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
+method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to set it.
+-ls: CSE-KMS method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to
+ set it.
+```
+
+set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` generated through AWS console.
+
+### `com.amazonaws.services.kms.model.IncorrectKeyException` The key ID in the request does not identify a CMK that can perform this operation.
+
+KMS key ID used to PUT(encrypt) the data, must be the one used to GET the
+data.
+ ```
+cat: open s3a://ap-south-cse/encryptedData.txt at 0 on
+s3a://ap-south-cse/encryptedData.txt:
+com.amazonaws.services.kms.model.IncorrectKeyException: The key ID in the
+request does not identify a CMK that can perform this operation. (Service: AWSKMS;
+Status Code: 400; ErrorCode: IncorrectKeyException;
+Request ID: da21aa8a-f00d-467c-94a0-32b627d32bc0; Proxy: null):IncorrectKeyException:
+The key ID in the request does not identify a CMK that can perform this
+operation. (Service: AWSKMS ; Status Code: 400; Error Code: IncorrectKeyException;
+Request ID: da21aa8a-f00d-467c-94a0-32b627d32bc0; Proxy: null)
+```
+Use the same KMS key ID used to upload data to download and read it as well.
+
+### `com.amazonaws.services.kms.model.NotFoundException` key/<KMS_KEY_ID> does not exist
+
+Using a KMS key ID from a different region than the bucket used to store data
+ would lead to failure while uploading.
+
+```
+mkdir: PUT 0-byte object  on testmkdir:
+com.amazonaws.services.kms.model.NotFoundException: Key
+'arn:aws:kms:ap-south-1:152813717728:key/<KMS_KEY_ID>'
+does not exist (Service: AWSKMS; Status Code: 400; Error Code: NotFoundException;
+Request ID: 279db85d-864d-4a38-9acd-d892adb504c0; Proxy: null):NotFoundException:
+Key 'arn:aws:kms:ap-south-1:152813717728:key/<KMS_KEY_ID>'
+does not exist(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException;
+Request ID: 279db85d-864d-4a38-9acd-d892adb504c0; Proxy: null)
+```
+While generating the KMS Key ID make sure to generate it in the same region
+ as your bucket.
+
+### Unable to perform range get request: Range get support has been disabled
+
+If Range get is not supported for a CSE algorithm or is disabled:
+```
+java.lang.SecurityException: Unable to perform range get request: Range get support has been disabled. See https://docs.aws.amazon.com/general/latest/gr/aws_sdk_cryptography.html
+
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.assertCanGetPartialObject(S3CryptoModuleAE.java:446)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleAE.getObjectSecurely(S3CryptoModuleAE.java:117)
+    at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.getObject(AmazonS3EncryptionClientV2.java:241)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem$InputStreamCallbacksImpl.getObject(S3AFileSystem.java:1462)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$reopen$0(S3AInputStream.java:217)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:216)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:382)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$3(Invoker.java:230)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    at org.apache.hadoop.fs.s3a.Invoker.lambda$maybeRetry$5(Invoker.java:354)
+    at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:414)
+    at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:350)
+    at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:228)
+    at org.apache.hadoop.fs.s3a.Invoker.maybeRetry(Invoker.java:272)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:374)
+    at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:408)
+    at java.io.DataInputStream.readByte(DataInputStream.java:265)
+```
+Range gets must be enabled for CSE to work.
+
+### WARNING: Range gets do not provide authenticated encryption properties even when used with an authenticated mode (AES-GCM).
+
+The S3 Encryption Client is configured to support range get requests. This
+ warning would be shown everytime S3-CSE is used.
+```
+2021-07-14 12:54:09,525 [main] WARN  s3.AmazonS3EncryptionClientV2
+(AmazonS3EncryptionClientV2.java:warnOnRangeGetsEnabled(401)) - The S3
+Encryption Client is configured to support range get requests. Range gets do
+not provide authenticated encryption properties even when used with an
+authenticated mode (AES-GCM). See https://docs.aws.amazon.com/general/latest
+/gr/aws_sdk_cryptography.html
+```
+We can Ignore this warning since, range gets must be enabled for S3-CSE to
+get data.
+
+### WARNING: If you don't have objects encrypted with these legacy modes, you should disable support for them to enhance security.
+
+The S3 Encryption Client is configured to read encrypted data with legacy
+encryption modes through the CryptoMode setting, and we would see this
+warning for all S3-CSE request.
+
+```
+2021-07-14 12:54:09,519 [main] WARN  s3.AmazonS3EncryptionClientV2
+(AmazonS3EncryptionClientV2.java:warnOnLegacyCryptoMode(409)) - The S3
+Encryption Client is configured to read encrypted data with legacy
+encryption modes through the CryptoMode setting. If you don't have objects
+encrypted with these legacy modes, you should disable support for them to
+enhance security. See https://docs.aws.amazon.com/general/latest/gr/aws_sdk_cryptography.html
+```
+We can ignore this, since this CryptoMode setting(CryptoMode.AuthenticatedEncryption)
+is required for range gets to work.
+
+### com.amazonaws.services.kms.model.InvalidKeyUsageException: You cannot generate a data key with an asymmetric CMK
+
+If you generated an Asymmetric CMK from AWS console then CSE-KMS won't be
+able to generate unique data key for encryption.
+
+```
+Caused by: com.amazonaws.services.kms.model.InvalidKeyUsageException:
+You cannot generate a data key with an asymmetric CMK
+(Service: AWSKMS; Status Code: 400; Error Code: InvalidKeyUsageException; Request ID: 93609c15-e490-4035-8390-f4396f0d90bf; Proxy: null)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1819)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1403)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1372)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1145)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:802)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:704)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:550)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:530)
+    at com.amazonaws.services.kms.AWSKMSClient.doInvoke(AWSKMSClient.java:7223)
+    at com.amazonaws.services.kms.AWSKMSClient.invoke(AWSKMSClient.java:7190)
+    at com.amazonaws.services.kms.AWSKMSClient.invoke(AWSKMSClient.java:7179)
+    at com.amazonaws.services.kms.AWSKMSClient.executeGenerateDataKey(AWSKMSClient.java:3482)
+    at com.amazonaws.services.kms.AWSKMSClient.generateDataKey(AWSKMSClient.java:3451)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.buildContentCryptoMaterial(S3CryptoModuleBase.java:533)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.newContentCryptoMaterial(S3CryptoModuleBase.java:481)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.createContentCryptoMaterial(S3CryptoModuleBase.java:447)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.putObjectUsingMetadata(S3CryptoModuleBase.java:160)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.putObjectSecurely(S3CryptoModuleBase.java:156)
+    at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.putObject(AmazonS3EncryptionClientV2.java:236)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$putObjectDirect$17(S3AFileSystem.java:2792)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier(IOStatisticsBinding.java:604)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.putObjectDirect(S3AFileSystem.java:2789)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$createEmptyObject$33(S3AFileSystem.java:4440)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    ... 49 more
+```
+
+Generate a Symmetric Key in the same region as your S3 storage for CSE-KMS to
+work.
+
+### com.amazonaws.services.kms.model.NotFoundException: Invalid keyId
+
+If the value in `fs.s3a.server-side-encryption.key` property, does not exist
+/valid in AWS KMS CMK(Customer managed keys), then this error would be seen.
+
+```
+Caused by: com.amazonaws.services.kms.model.NotFoundException: Invalid keyId abc
+(Service: AWSKMS; Status Code: 400; Error Code: NotFoundException; Request ID: 9d53552a-3d1b-47c8-984c-9a599d5c2391; Proxy: null)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1819)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1403)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1372)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1145)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:802)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:704)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:550)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:530)
+    at com.amazonaws.services.kms.AWSKMSClient.doInvoke(AWSKMSClient.java:7223)
+    at com.amazonaws.services.kms.AWSKMSClient.invoke(AWSKMSClient.java:7190)
+    at com.amazonaws.services.kms.AWSKMSClient.invoke(AWSKMSClient.java:7179)
+    at com.amazonaws.services.kms.AWSKMSClient.executeGenerateDataKey(AWSKMSClient.java:3482)
+    at com.amazonaws.services.kms.AWSKMSClient.generateDataKey(AWSKMSClient.java:3451)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.buildContentCryptoMaterial(S3CryptoModuleBase.java:533)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.newContentCryptoMaterial(S3CryptoModuleBase.java:481)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.createContentCryptoMaterial(S3CryptoModuleBase.java:447)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.putObjectUsingMetadata(S3CryptoModuleBase.java:160)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.putObjectSecurely(S3CryptoModuleBase.java:156)
+    at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.putObject(AmazonS3EncryptionClientV2.java:236)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$putObjectDirect$17(S3AFileSystem.java:2792)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier(IOStatisticsBinding.java:604)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.putObjectDirect(S3AFileSystem.java:2789)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$createEmptyObject$33(S3AFileSystem.java:4440)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    ... 49 more
+```
+
+Check if `fs.s3a.server-side-encryption.key` is set correctly and matches the
+same on AWS console.
+
+### com.amazonaws.services.kms.model.AWSKMSException: User: <User_ARN> is not authorized to perform : kms :GenerateDataKey on resource: <KEY_ID>
+
+User doesn't have authorization to the specific AWS KMS Key ID.
+```
+Caused by: com.amazonaws.services.kms.model.AWSKMSException:
+User: arn:aws:iam::152813717728:user/<user> is not authorized to perform: kms:GenerateDataKey on resource: <key_ID>
+(Service: AWSKMS; Status Code: 400; Error Code: AccessDeniedException; Request ID: 4ded9f1f-b245-4213-87fc-16cba7a1c4b9; Proxy: null)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1819)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleServiceErrorResponse(AmazonHttpClient.java:1403)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1372)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeHelper(AmazonHttpClient.java:1145)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.doExecute(AmazonHttpClient.java:802)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeWithTimer(AmazonHttpClient.java:770)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.execute(AmazonHttpClient.java:744)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.access$500(AmazonHttpClient.java:704)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutionBuilderImpl.execute(AmazonHttpClient.java:686)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:550)
+    at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:530)
+    at com.amazonaws.services.kms.AWSKMSClient.doInvoke(AWSKMSClient.java:7223)
+    at com.amazonaws.services.kms.AWSKMSClient.invoke(AWSKMSClient.java:7190)
+    at com.amazonaws.services.kms.AWSKMSClient.invoke(AWSKMSClient.java:7179)
+    at com.amazonaws.services.kms.AWSKMSClient.executeGenerateDataKey(AWSKMSClient.java:3482)
+    at com.amazonaws.services.kms.AWSKMSClient.generateDataKey(AWSKMSClient.java:3451)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.buildContentCryptoMaterial(S3CryptoModuleBase.java:533)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.newContentCryptoMaterial(S3CryptoModuleBase.java:481)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.createContentCryptoMaterial(S3CryptoModuleBase.java:447)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.putObjectUsingMetadata(S3CryptoModuleBase.java:160)
+    at com.amazonaws.services.s3.internal.crypto.v2.S3CryptoModuleBase.putObjectSecurely(S3CryptoModuleBase.java:156)
+    at com.amazonaws.services.s3.AmazonS3EncryptionClientV2.putObject(AmazonS3EncryptionClientV2.java:236)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$putObjectDirect$17(S3AFileSystem.java:2792)
+    at org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier(IOStatisticsBinding.java:604)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.putObjectDirect(S3AFileSystem.java:2789)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$createEmptyObject$33(S3AFileSystem.java:4440)
+    at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:117)
+    ... 49 more
+```
+
+The user trying to use the KMS Key ID should have the right permissions to access
+(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.server-side-encryption.key`.
+If not, then add permission(or IAM role) in "Key users" section by selecting the
+AWS-KMS CMK Key on AWS console.
+
+### S3-CSE cannot be used with S3Guard
+
+S3-CSE not supported for S3Guard enabled buckets.
+```
+org.apache.hadoop.fs.PathIOException: `s3a://test-bucket': S3-CSE cannot be used with S3Guard
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:543)
+    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3460)
+    at org.apache.hadoop.fs.FileSystem.access$300(FileSystem.java:172)
+    at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3565)
+    at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:3512)
+    at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:539)
+    at org.apache.hadoop.fs.Path.getFileSystem(Path.java:366)
+    at org.apache.hadoop.fs.shell.PathData.expandAsGlob(PathData.java:342)
+    at org.apache.hadoop.fs.shell.Command.expandArgument(Command.java:252)
+    at org.apache.hadoop.fs.shell.Command.expandArguments(Command.java:235)
+    at org.apache.hadoop.fs.shell.FsCommand.processRawArguments(FsCommand.java:105)
+    at org.apache.hadoop.fs.shell.Command.run(Command.java:179)
+    at org.apache.hadoop.fs.FsShell.run(FsShell.java:327)
+    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:81)
+    at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:95)
+    at org.apache.hadoop.fs.FsShell.main(FsShell.java:390)
+```
+If you want to use S3Guard then disable S3-CSE or disable S3Guard if you want
+to use S3-CSE.
+
 ### <a name="not_all_bytes_were_read"></a> Message appears in logs "Not all bytes were read from the S3ObjectInputStream"
 
 

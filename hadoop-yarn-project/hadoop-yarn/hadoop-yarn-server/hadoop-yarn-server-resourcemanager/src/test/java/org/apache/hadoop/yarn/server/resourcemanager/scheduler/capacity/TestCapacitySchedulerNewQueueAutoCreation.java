@@ -1162,6 +1162,51 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         "when its dynamic parent is removed", bAutoLeaf);
   }
 
+  @Test
+  public void testParentQueueDynamicChildRemoval() throws Exception {
+    startScheduler();
+
+    createQueue("root.a.a-auto");
+    createQueue("root.a.a-auto");
+    AbstractCSQueue aAuto = (AbstractCSQueue) cs.
+        getQueue("root.a.a-auto");
+    Assert.assertTrue(aAuto.isDynamicQueue());
+    ParentQueue a = (ParentQueue) cs.
+        getQueue("root.a");
+    createQueue("root.e.e1-auto");
+    AbstractCSQueue eAuto = (AbstractCSQueue) cs.
+        getQueue("root.e.e1-auto");
+    Assert.assertTrue(eAuto.isDynamicQueue());
+    ParentQueue e = (ParentQueue) cs.
+        getQueue("root.e");
+
+    // Try to remove a static child queue
+    try {
+      a.removeChildQueue(cs.getQueue("root.a.a1"));
+      Assert.fail("root.a.a1 is a static queue and should not be removed at " +
+          "runtime");
+    } catch (SchedulerDynamicEditException ignored) {
+    }
+
+    // Try to remove a dynamic queue with a different parent
+    try {
+      a.removeChildQueue(eAuto);
+      Assert.fail("root.a should not be able to remove root.e.e1-auto");
+    } catch (SchedulerDynamicEditException ignored) {
+    }
+
+    a.removeChildQueue(aAuto);
+    e.removeChildQueue(eAuto);
+
+    aAuto = (AbstractCSQueue) cs.
+        getQueue("root.a.a-auto");
+    eAuto = (AbstractCSQueue) cs.
+        getQueue("root.e.e1-auto");
+
+    Assert.assertNull("root.a.a-auto should have been removed", aAuto);
+    Assert.assertNull("root.e.e1-auto should have been removed", eAuto);
+  }
+
   protected LeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
     return autoQueueHandler.createQueue(

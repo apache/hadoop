@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.nio.charset.Charset;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
@@ -95,7 +96,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         fs.getBucket(),
         path,
         fs.pathToKey(path),
-        fs.getServerSideEncryptionAlgorithm(),
+        fs.getS3EncryptionAlgorithm(),
         new EncryptionSecrets().getEncryptionKey(),
         eTag,
         versionId,
@@ -120,10 +121,28 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     return new S3AInputStream.InputStreamCallbacks() {
 
       private final S3Object mockedS3Object = getMockedS3Object();
+      private Integer mockedS3ObjectIndex = 0;
 
       @Override
       public S3Object getObject(GetObjectRequest request) {
         // Set s3 client to return mocked s3object with defined read behavior.
+        mockedS3ObjectIndex++;
+        // open() -> lazySeek() -> reopen()
+        //        -> getObject (mockedS3ObjectIndex=1) -> getObjectContent(objectInputStreamBad1)
+        // read() -> objectInputStreamBad1 throws exception
+        //        -> onReadFailure -> close wrappedStream
+        //  -> retry(1) -> wrappedStream==null -> reopen -> getObject (mockedS3ObjectIndex=2)
+        //        -> getObjectContent(objectInputStreamBad2)-> objectInputStreamBad2
+        //        -> wrappedStream.read -> objectInputStreamBad2 throws exception
+        //        -> onReadFailure -> close wrappedStream
+        //  -> retry(2) -> wrappedStream==null -> reopen
+        //        -> getObject (mockedS3ObjectIndex=3) throws exception
+        //  -> retry(3) -> wrappedStream==null -> reopen -> getObject (mockedS3ObjectIndex=4)
+        //        -> getObjectContent(objectInputStreamGood)-> objectInputStreamGood
+        //        -> wrappedStream.read
+        if (mockedS3ObjectIndex == 3) {
+          throw new SdkClientException("Failed to get S3Object");
+        }
         return mockedS3Object;
       }
 

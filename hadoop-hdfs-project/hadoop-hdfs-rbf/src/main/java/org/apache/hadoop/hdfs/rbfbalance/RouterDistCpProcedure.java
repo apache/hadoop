@@ -44,6 +44,7 @@ public class RouterDistCpProcedure extends DistCpProcedure {
     Configuration conf = context.getConf();
     String mount = context.getMount();
     MountTableProcedure.disableWrite(mount, conf);
+    updateStage(Stage.FINAL_DISTCP);
   }
 
   /**

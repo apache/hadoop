@@ -18,6 +18,9 @@
     "centos:7": "automake",
     "centos:8": "automake"
   },
+  "autoconf": {
+    "centos:7": "autoconf"
+  },
   "bats": {
     "debian:10": "bats",
     "ubuntu:focal": "bats",
@@ -136,11 +139,13 @@
       "devtoolset-9"
     ]
   },
+  "gettext": {
+    "centos:7": "gettext-devel"
+  },
   "git": {
     "debian:10": "git",
     "ubuntu:focal": "git",
     "ubuntu:focal::arch64": "git",
-    "centos:7": "git",
     "centos:8": "git"
   },
   "gnupg-agent": {
@@ -171,6 +176,12 @@
     "ubuntu:focal::arch64": "libssl-dev",
     "centos:7": "openssl-devel",
     "centos:8": "openssl-devel"
+  },
+  "perl": {
+    "centos:7": [
+      "perl-CPAN",
+      "perl-devel"
+    ]
   },
   "protocol-buffers": {
     "debian:10": [

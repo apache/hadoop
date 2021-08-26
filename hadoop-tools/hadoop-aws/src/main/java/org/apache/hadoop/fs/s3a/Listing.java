@@ -90,6 +90,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFr
 public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
+  private final boolean isCSEEnabled;
 
   static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
@@ -97,9 +98,10 @@ public class Listing extends AbstractStoreOperation {
   private final ListingOperationCallbacks listingOperationCallbacks;
 
   public Listing(ListingOperationCallbacks listingOperationCallbacks,
-                 StoreContext storeContext) {
+      StoreContext storeContext) {
     super(storeContext);
     this.listingOperationCallbacks = listingOperationCallbacks;
+    this.isCSEEnabled = storeContext.isCSEEnabled();
   }
 
   /**
@@ -687,7 +689,7 @@ public class Listing extends AbstractStoreOperation {
           S3AFileStatus status = createFileStatus(keyPath, summary,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
-              summary.getETag(), null);
+              summary.getETag(), null, isCSEEnabled);
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;
@@ -961,7 +963,7 @@ public class Listing extends AbstractStoreOperation {
     public boolean accept(Path keyPath, S3ObjectSummary summary) {
       return !keyPath.equals(qualifiedPath)
           && !summary.getKey().endsWith(S3N_FOLDER_SUFFIX)
-          && !objectRepresentsDirectory(summary.getKey(), summary.getSize());
+          && !objectRepresentsDirectory(summary.getKey());
     }
 
     /**
@@ -1049,6 +1051,7 @@ public class Listing extends AbstractStoreOperation {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
       RemoteIterator<? extends LocatedFileStatus> iterator) {
     return (RemoteIterator < LocatedFileStatus >) iterator;

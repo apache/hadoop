@@ -418,6 +418,28 @@ public abstract class GenericTestUtils {
   public static void waitFor(final Supplier<Boolean> check,
       final long checkEveryMillis, final long waitForMillis)
       throws TimeoutException, InterruptedException {
+    waitFor(check, checkEveryMillis, waitForMillis, null);
+  }
+
+  /**
+   * Wait for the specified test to return true. The test will be performed
+   * initially and then every {@code checkEveryMillis} until at least
+   * {@code waitForMillis} time has expired. If {@code check} is null or
+   * {@code waitForMillis} is less than {@code checkEveryMillis} this method
+   * will throw an {@link IllegalArgumentException}.
+   *
+   * @param check the test to perform.
+   * @param checkEveryMillis how often to perform the test.
+   * @param waitForMillis the amount of time after which no more tests will be
+   * performed.
+   * @param errorMsg error message to provide in TimeoutException.
+   * @throws TimeoutException if the test does not return true in the allotted
+   * time.
+   * @throws InterruptedException if the method is interrupted while waiting.
+   */
+  public static void waitFor(final Supplier<Boolean> check,
+      final long checkEveryMillis, final long waitForMillis,
+      final String errorMsg) throws TimeoutException, InterruptedException {
     Objects.requireNonNull(check, ERROR_MISSING_ARGUMENT);
     if (waitForMillis < checkEveryMillis) {
       throw new IllegalArgumentException(ERROR_INVALID_ARGUMENT);
@@ -432,9 +454,12 @@ public abstract class GenericTestUtils {
     }
 
     if (!result) {
-      throw new TimeoutException("Timed out waiting for condition. " +
-          "Thread diagnostics:\n" +
-          TimedOutTestsListener.buildThreadDiagnosticString());
+      final String exceptionErrorMsg = "Timed out waiting for condition. "
+          + (org.apache.commons.lang3.StringUtils.isNotEmpty(errorMsg)
+          ? "Error Message: " + errorMsg : "")
+          + "\nThread diagnostics:\n" +
+          TimedOutTestsListener.buildThreadDiagnosticString();
+      throw new TimeoutException(exceptionErrorMsg);
     }
   }
 
@@ -943,8 +968,8 @@ public abstract class GenericTestUtils {
       final int fileCount,
       final int dirCount) throws IOException {
     return createDirsAndFiles(fs, destDir, depth, fileCount, dirCount,
-        new ArrayList<Path>(fileCount),
-        new ArrayList<Path>(dirCount));
+        new ArrayList<>(fileCount),
+        new ArrayList<>(dirCount));
   }
 
   /**

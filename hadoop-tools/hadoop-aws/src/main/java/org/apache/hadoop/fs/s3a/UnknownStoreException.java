@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.PathIOException;
 
 /**
  * The bucket or other AWS resource is unknown.
@@ -33,23 +32,28 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class UnknownStoreException extends IOException {
+public class UnknownStoreException extends PathIOException {
 
   /**
    * Constructor.
-   * @param message message
+   *
+   * @param path    path trying to access.
+   * @param message message.
    */
-  public UnknownStoreException(final String message) {
-    this(message, null);
+  public UnknownStoreException(final String path, final String message) {
+    this(path, message, null);
   }
 
   /**
    * Constructor.
-   * @param message message
-   * @param cause cause (may be null)
+   *
+   * @param path    path trying to access.
+   * @param message message.
+   * @param cause   cause (may be null).
    */
-  public UnknownStoreException(final String message, Throwable cause) {
-    super(message);
+  public UnknownStoreException(String path, final String message,
+      Throwable cause) {
+    super(path, message);
     if (cause != null) {
       initCause(cause);
     }

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,11 +15,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.registry.client.impl.zk;
 
+#ifndef NATIVE_LIBHDFSPP_TESTS_UTILS_TEMP_FILE
+#define NATIVE_LIBHDFSPP_TESTS_UTILS_TEMP_FILE
+
+#include <string>
+
+namespace TestUtils {
 /**
+ * Creates a temporary file and deletes it
+ * upon destruction of the TempFile instance.
  *
+ * The temporary file gets created in /tmp directory
+ * by default.
  */
-public interface ListenerHandle {
-  void remove();
-}
+class TempFile {
+public:
+  TempFile();
+
+  TempFile(std::string filename);
+
+  TempFile(const TempFile &other) = default;
+
+  TempFile(TempFile &&other) noexcept;
+
+  TempFile &operator=(const TempFile &other);
+
+  TempFile &operator=(TempFile &&other) noexcept;
+
+  [[nodiscard]] const std::string &GetFileName() const { return filename_; }
+
+  ~TempFile();
+
+private:
+  std::string filename_{"/tmp/test_XXXXXXXXXX"};
+  int fd_{-1};
+};
+} // namespace TestUtils
+
+#endif

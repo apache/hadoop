@@ -68,7 +68,7 @@ public class BuiltInGzipDecompressor implements Decompressor {
    * (Technically, the private variables localBuf through hasHeaderCRC are
    * also part of the state, so this enum is merely the label for it.)
    */
-  private enum GzipStateLabel {
+  public enum GzipStateLabel {
     /**
      * Immediately prior to or (strictly) within the 10-byte basic gzip header.
      */
@@ -93,6 +93,10 @@ public class BuiltInGzipDecompressor implements Decompressor {
      * Immediately prior to or within the main compressed (deflate) data stream.
      */
     DEFLATE_STREAM,
+    /**
+     * Immediately prior to or within the main uncompressed (inflate) data stream.
+     */
+    INFLATE_STREAM,
     /**
      * Immediately prior to or (strictly) within the 4-byte uncompressed CRC.
      */
