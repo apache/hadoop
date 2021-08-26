@@ -43,6 +43,8 @@ import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -361,7 +363,7 @@ public final class Util {
     return (header != null) ? new MD5Hash(header) : null;
   }
 
-  public static List<InetSocketAddress> getAddressesList(URI uri)
+  public static List<InetSocketAddress> getAddressesList(URI uri, Configuration conf)
       throws IOException{
     String authority = uri.getAuthority();
     Preconditions.checkArgument(authority != null && !authority.isEmpty(),
@@ -372,21 +374,49 @@ public final class Util {
       parts[i] = parts[i].trim();
     }
 
+    boolean resolveNeeded = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED_DEFAULT);
+    DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
+        conf,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL);
+
     List<InetSocketAddress> addrs = Lists.newArrayList();
     for (String addr : parts) {
-      InetSocketAddress isa = NetUtils.createSocketAddr(
-          addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
-      if (isa.isUnresolved()) {
-        throw new UnknownHostException(addr);
+      if (resolveNeeded) {
+        LOG.info("Resolving journal address: " + addr);
+        InetSocketAddress isa = NetUtils.createSocketAddr(
+            addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
+        // Get multiple hostnames from domain name if needed,
+        // for example multiple hosts behind a DNS entry.
+        int port = isa.getPort();
+        // QJM should just use FQDN
+        String[] hostnames = dnr
+            .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
+        if (hostnames.length == 0) {
+          throw new UnknownHostException(addr);
+        }
+        for (String h : hostnames) {
+          addrs.add(NetUtils.createSocketAddr(
+              h + ":" + port,
+              DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT)
+          );
+        }
+      } else {
+        InetSocketAddress isa = NetUtils.createSocketAddr(
+            addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
+        if (isa.isUnresolved()) {
+          throw new UnknownHostException(addr);
+        }
+        addrs.add(isa);
       }
-      addrs.add(isa);
     }
     return addrs;
   }
 
   public static List<InetSocketAddress> getLoggerAddresses(URI uri,
-      Set<InetSocketAddress> addrsToExclude) throws IOException {
-    List<InetSocketAddress> addrsList = getAddressesList(uri);
+      Set<InetSocketAddress> addrsToExclude, Configuration conf) throws IOException {
+    List<InetSocketAddress> addrsList = getAddressesList(uri, conf);
     addrsList.removeAll(addrsToExclude);
     return addrsList;
   }

@@ -488,6 +488,8 @@ public abstract class Server {
   volatile private boolean running = true;         // true while server runs
   private CallQueueManager<Call> callQueue;
 
+  private long purgeIntervalNanos;
+
   // maintains the set of client connections and handles idle timeouts
   private ConnectionManager connectionManager;
   private Listener listener = null;
@@ -517,6 +519,20 @@ public abstract class Server {
     this.logSlowRPC = logSlowRPCFlag;
   }
 
+  private void setPurgeIntervalNanos(int purgeInterval) {
+    int tmpPurgeInterval = CommonConfigurationKeysPublic.
+        IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT;
+    if (purgeInterval > 0) {
+      tmpPurgeInterval = purgeInterval;
+    }
+    this.purgeIntervalNanos = TimeUnit.NANOSECONDS.convert(
+            tmpPurgeInterval, TimeUnit.MINUTES);
+  }
+
+  @VisibleForTesting
+  public long getPurgeIntervalNanos() {
+    return this.purgeIntervalNanos;
+  }
 
   /**
    * Logs a Slow RPC Request.
@@ -1591,9 +1607,6 @@ public abstract class Server {
     }
   }
 
-  private final static long PURGE_INTERVAL_NANOS = TimeUnit.NANOSECONDS.convert(
-      15, TimeUnit.MINUTES);
-
   // Sends responses of RPC back to clients.
   private class Responder extends Thread {
     private final Selector writeSelector;
@@ -1629,7 +1642,7 @@ public abstract class Server {
         try {
           waitPending();     // If a channel is being registered, wait.
           writeSelector.select(
-              TimeUnit.NANOSECONDS.toMillis(PURGE_INTERVAL_NANOS));
+              TimeUnit.NANOSECONDS.toMillis(purgeIntervalNanos));
           Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();
           while (iter.hasNext()) {
             SelectionKey key = iter.next();
@@ -1652,7 +1665,7 @@ public abstract class Server {
             }
           }
           long nowNanos = Time.monotonicNowNanos();
-          if (nowNanos < lastPurgeTimeNanos + PURGE_INTERVAL_NANOS) {
+          if (nowNanos < lastPurgeTimeNanos + purgeIntervalNanos) {
             continue;
           }
           lastPurgeTimeNanos = nowNanos;
@@ -1730,7 +1743,7 @@ public abstract class Server {
         Iterator<RpcCall> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (now > call.responseTimestampNanos + PURGE_INTERVAL_NANOS) {
+          if (now > call.responseTimestampNanos + purgeIntervalNanos) {
             closeConnection(call.connection);
             break;
           }
@@ -3238,6 +3251,10 @@ public abstract class Server {
     this.setLogSlowRPC(conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+
+    this.setPurgeIntervalNanos(conf.getInt(
+        CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT));
 
     // Create the responder here
     responder = new Responder();
