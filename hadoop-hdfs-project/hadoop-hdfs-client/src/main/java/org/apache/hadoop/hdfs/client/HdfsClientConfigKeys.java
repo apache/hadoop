@@ -338,7 +338,7 @@ public interface HdfsClientConfigKeys {
     int     WINDOW_MULTIPLIER_DEFAULT = 1;
 
     String  WINDOW_MAXIMUM_KEY = PREFIX + "window.max";
-    int     WINDOW_MAXIMUM_DEFAULT = Integer.MAX_VALUE;
+    int     WINDOW_MAXIMUM_DEFAULT = 30000;
   }
 
   /** dfs.client.failover configuration properties */

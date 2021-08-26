@@ -4458,11 +4458,10 @@
 
 <property>
   <name>dfs.client.retry.window.max</name>
-  <value>2147483647</value>
+  <value>30000</value>
   <description>
     Maximum value that the retry window can be expanded to. Once the maximum has been reached,
-    the retry window will be a constant value until the maximum retries are exhausted. The default
-    leaves this effectively uncapped.
+    the retry window will be a constant value until the maximum retries are exhausted.
   </description>
 </property>
 
