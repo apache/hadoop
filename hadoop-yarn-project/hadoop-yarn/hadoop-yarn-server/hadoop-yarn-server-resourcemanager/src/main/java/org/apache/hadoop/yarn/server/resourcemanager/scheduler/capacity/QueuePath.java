@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Objects;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
@@ -24,7 +28,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
  * This is a helper class which represents a queue path, and has easy access
  * methods to get the path's parent or leaf part, or as a whole.
  */
-public class MappingQueuePath {
+public class QueuePath implements Iterable<String> {
+  private static final String QUEUE_REGEX_DELIMITER = "\\.";
   /**
    * The parent part of the queue path.
    */
@@ -40,7 +45,7 @@ public class MappingQueuePath {
    * @param parent Parent path of the queue
    * @param leaf Name of the leaf queue
    */
-  public MappingQueuePath(String parent, String leaf) {
+  public QueuePath(String parent, String leaf) {
     this.parent = parent;
     this.leaf = leaf;
   }
@@ -49,7 +54,7 @@ public class MappingQueuePath {
    * Constructor creates a MappingQueuePath object using the queue's full path.
    * @param fullPath Full path of the queue
    */
-  public MappingQueuePath(String fullPath) {
+  public QueuePath(String fullPath) {
     setFromFullPath(fullPath);
   }
 
@@ -116,8 +121,79 @@ public class MappingQueuePath {
     return parent != null;
   }
 
+  /**
+   * Creates a new {@code QueuePath} from the current full path as parent, and
+   * the appended child queue path as leaf.
+   * @param childQueue path of leaf queue
+   * @return new queue path made of current full path and appended leaf path
+   */
+  public QueuePath createNewLeaf(String childQueue) {
+    return new QueuePath(getFullPath(), childQueue);
+  }
+
+  /**
+   * Returns an iterator of queue path parts, starting from the highest level
+   * (generally root).
+   * @return queue part iterator
+   */
+  @Override
+  public Iterator<String> iterator() {
+    return Arrays.asList(getFullPath().split(QUEUE_REGEX_DELIMITER)).iterator();
+  }
+
+  /**
+   * Returns an iterator that provides a way to traverse the queue path from
+   * current queue through its parents.
+   * @return queue path iterator
+   */
+  public Iterator<QueuePath> reversePathIterator() {
+    QueuePath initial = this;
+
+    return new Iterator<QueuePath>() {
+      private boolean stop = false;
+      private QueuePath current = initial;
+
+      @Override
+      public boolean hasNext() {
+        return !stop;
+      }
+
+      @Override
+      public QueuePath next() {
+        QueuePath old = current;
+        if (current.hasParent()) {
+          current = new QueuePath(current.getParent());
+        }
+
+        if (!old.hasParent()) {
+          stop = true;
+        }
+
+        return old;
+      }
+    };
+  }
+
   @Override
   public String toString() {
     return getFullPath();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    QueuePath strings = (QueuePath) o;
+    return Objects.equals(parent, strings.parent) &&
+        Objects.equals(leaf, strings.leaf);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(parent, leaf);
   }
 }
