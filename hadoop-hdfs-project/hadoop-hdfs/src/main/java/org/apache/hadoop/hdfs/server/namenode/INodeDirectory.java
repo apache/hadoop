@@ -890,12 +890,14 @@ public class INodeDirectory extends INodeWithAdditionalFields
    */
   @Override
   public boolean metadataEquals(INodeDirectoryAttributes other) {
-    return other != null
-        && getQuotaCounts().equals(other.getQuotaCounts())
+    return other != null && getQuotaCounts().equals(other.getQuotaCounts())
         && getPermissionLong() == other.getPermissionLong()
-        && getAclFeature() == other.getAclFeature()
-        && getXAttrFeature() == other.getXAttrFeature();
+        && INodeDirectoryAttributes
+        .validateFeature(getAclFeature(), other.getAclFeature())
+        && INodeDirectoryAttributes
+        .validateFeature(getXAttrFeature(), other.getXAttrFeature());
   }
+
   
   /*
    * The following code is to dump the tree recursively for testing.

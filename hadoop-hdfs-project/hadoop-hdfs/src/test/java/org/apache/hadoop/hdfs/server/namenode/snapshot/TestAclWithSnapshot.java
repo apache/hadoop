@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.AclStorage;
 import org.apache.hadoop.hdfs.server.namenode.AclTestHelpers;
@@ -55,6 +56,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Assert;
 import org.junit.rules.ExpectedException;
 
 /**
@@ -281,6 +283,50 @@ public class TestAclWithSnapshot {
     assertPermission((short)010550, subdirSnapshotPath);
     assertDirPermissionGranted(fsAsBruce, BRUCE, subdirSnapshotPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, subdirSnapshotPath);
+  }
+
+
+  @Test
+  public void testAclWithSnapshotAndNNRestart()
+      throws Exception {
+    Path filePath = new Path(path, "file1");
+    Path subdirPath = new Path(path, "subdir1");
+    Path fileSnapshotPath = new Path(snapshotPath, "file1");
+    Path subdirSnapshotPath = new Path(snapshotPath, "subdir1");
+    FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0777));
+    FileSystem.create(hdfs, filePath, FsPermission.createImmutable((short) 0600))
+        .close();
+    FileSystem
+        .mkdirs(hdfs, subdirPath, FsPermission.createImmutable((short) 0700));
+    List<AclEntry> aclSpec = Lists
+        .newArrayList(aclEntry(ACCESS, USER, READ_EXECUTE),
+            aclEntry(ACCESS, USER, "bruce", READ_EXECUTE),
+            aclEntry(ACCESS, GROUP, NONE), aclEntry(ACCESS, OTHER, NONE));
+    hdfs.setAcl(filePath, aclSpec);
+    hdfs.setAcl(subdirPath, aclSpec);
+
+    assertFilePermissionGranted(fsAsBruce, BRUCE, filePath);
+    assertFilePermissionDenied(fsAsDiana, DIANA, filePath);
+    assertDirPermissionGranted(fsAsBruce, BRUCE, subdirPath);
+    assertDirPermissionDenied(fsAsDiana, DIANA, subdirPath);
+
+    hdfs.createSnapshot(path, snapshotName);
+    SnapshotDiffReport report =
+        hdfs.getSnapshotDiffReport(path, snapshotName, "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
+    report =
+        hdfs.getSnapshotDiffReport(path, snapshotName, "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
+    hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNode(true);
+    report =
+        hdfs.getSnapshotDiffReport(path, snapshotName, "");
+    System.out.println(report);
+    Assert.assertEquals(0, report.getDiffList().size());
   }
 
   @Test

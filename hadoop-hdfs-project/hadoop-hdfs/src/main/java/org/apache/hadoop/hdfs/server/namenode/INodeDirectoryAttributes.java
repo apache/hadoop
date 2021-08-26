@@ -32,6 +32,11 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
   public QuotaCounts getQuotaCounts();
 
   public boolean metadataEquals(INodeDirectoryAttributes other);
+
+  static boolean validateFeature(INode.Feature left, INode.Feature right) {
+    return (left == right ||
+        (left != null && right != null && left.equals(right)));
+  }
   
   /** A copy of the inode directory attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
@@ -58,11 +63,12 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
 
     @Override
     public boolean metadataEquals(INodeDirectoryAttributes other) {
-      return other != null
-          && getQuotaCounts().equals(other.getQuotaCounts())
+      return other != null && getQuotaCounts().equals(other.getQuotaCounts())
           && getPermissionLong() == other.getPermissionLong()
-          && getAclFeature() == other.getAclFeature()
-          && getXAttrFeature() == other.getXAttrFeature();
+          && INodeDirectoryAttributes
+          .validateFeature(getAclFeature(), other.getAclFeature())
+          && INodeDirectoryAttributes
+          .validateFeature(getXAttrFeature(), other.getXAttrFeature());
     }
   }
 

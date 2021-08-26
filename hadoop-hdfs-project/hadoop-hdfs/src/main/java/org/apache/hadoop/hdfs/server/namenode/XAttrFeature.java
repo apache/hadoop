@@ -84,6 +84,17 @@ public class XAttrFeature implements INode.Feature {
     }
   }
 
+  @Override
+  public boolean equals(Object o) {
+    if (o == null) {
+      return false;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
+    return getXAttrs().equals(((XAttrFeature) o).getXAttrs());
+  }
+
   /**
    * Get XAttr by name with prefix.
    * @param prefixedName xAttr name with prefix
