@@ -1360,7 +1360,7 @@ public class TestBlockStoragePolicy {
         = DFSTestUtil.createDatanodeStorageInfos(7, racks, hosts, disks);
     final DatanodeDescriptor[] dataNodes
         = DFSTestUtil.toDatanodeDescriptor(diskStorages);
-    for(int i = 0; i < dataNodes.length ; i++) {
+    for (int i = 0; i < dataNodes.length; i++) {
       BlockManagerTestUtil.updateStorage(dataNodes[i],
           new DatanodeStorage("ssd" + i + 1, DatanodeStorage.State.NORMAL,
               StorageType.SSD));
