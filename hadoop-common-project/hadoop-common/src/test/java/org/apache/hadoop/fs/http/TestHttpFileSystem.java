@@ -33,6 +33,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 
@@ -48,14 +49,14 @@ public class TestHttpFileSystem {
     final String data = "foo";
 
     try (MockWebServer server = new MockWebServer()) {
-      server.enqueue(new MockResponse().setBody(data));
-      server.enqueue(new MockResponse().setBody(data));
+      IntStream.rangeClosed(1, 3).forEach(i -> server.enqueue(new MockResponse().setBody(data)));
       server.start();
       URI uri = URI.create(String.format("http://%s:%d", server.getHostName(),
           server.getPort()));
       FileSystem fs = FileSystem.get(uri, conf);
       assertSameData(fs, new Path(new URL(uri.toURL(), "/foo").toURI()), data);
       assertSameData(fs, new Path("/foo"), data);
+      assertSameData(fs, new Path("foo"), data);
       RecordedRequest req = server.takeRequest();
       assertEquals("/foo", req.getPath());
     }
