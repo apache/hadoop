@@ -49,19 +49,25 @@ public class TestHttpFileSystem {
 
     try (MockWebServer server = new MockWebServer()) {
       server.enqueue(new MockResponse().setBody(data));
+      server.enqueue(new MockResponse().setBody(data));
       server.start();
       URI uri = URI.create(String.format("http://%s:%d", server.getHostName(),
           server.getPort()));
       FileSystem fs = FileSystem.get(uri, conf);
-      try (InputStream is = fs.open(
-          new Path(new URL(uri.toURL(), "/foo").toURI()),
-          4096)) {
-        byte[] buf = new byte[data.length()];
-        IOUtils.readFully(is, buf, 0, buf.length);
-        assertEquals(data, new String(buf, StandardCharsets.UTF_8));
-      }
+      assertSameData(fs, new Path(new URL(uri.toURL(), "/foo").toURI()), data);
+      assertSameData(fs, new Path("/foo"), data);
       RecordedRequest req = server.takeRequest();
       assertEquals("/foo", req.getPath());
+    }
+  }
+
+  private void assertSameData(FileSystem fs, Path path, String data) throws IOException {
+    try (InputStream is = fs.open(
+            path,
+            4096)) {
+      byte[] buf = new byte[data.length()];
+      IOUtils.readFully(is, buf, 0, buf.length);
+      assertEquals(data, new String(buf, StandardCharsets.UTF_8));
     }
   }
 }

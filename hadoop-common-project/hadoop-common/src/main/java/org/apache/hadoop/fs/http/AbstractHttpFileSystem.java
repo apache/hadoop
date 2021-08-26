@@ -60,7 +60,7 @@ abstract class AbstractHttpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path path, int bufferSize) throws IOException {
-    URLConnection conn = path.toUri().toURL().openConnection();
+    URLConnection conn = path.makeQualified(this.getUri(), null).toUri().toURL().openConnection();
     InputStream in = conn.getInputStream();
     return new FSDataInputStream(new HttpDataInputStream(in));
   }
