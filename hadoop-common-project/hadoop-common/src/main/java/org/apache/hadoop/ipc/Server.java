@@ -192,7 +192,7 @@ public abstract class Server {
      * Optimized for infrequent invocation.
      * @param exceptionClass exception classes 
      */
-    void addTerseLoggingExceptions(Class<?>... exceptionClass) {
+    synchronized void addTerseLoggingExceptions(Class<?>... exceptionClass) {
       // Thread-safe replacement of terseExceptions.
       terseExceptions = addExceptions(terseExceptions, exceptionClass);
     }
@@ -202,7 +202,8 @@ public abstract class Server {
      * Optimized for infrequent invocation.
      * @param exceptionClass exception classes
      */
-    void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {
+    synchronized void addSuppressedLoggingExceptions(
+        Class<?>... exceptionClass) {
       // Thread-safe replacement of suppressedExceptions.
       suppressedExceptions = addExceptions(
           suppressedExceptions, exceptionClass);
