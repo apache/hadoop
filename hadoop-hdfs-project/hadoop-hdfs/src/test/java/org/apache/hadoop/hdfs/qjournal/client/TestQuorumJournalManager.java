@@ -33,13 +33,17 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1121,6 +1125,32 @@ public class TestQuorumJournalManager {
 
     for (AsyncLogger logger : spies) {
       Mockito.verify(logger, Mockito.times(1)).getEditLogManifest(1, true);
+    }
+  }
+
+  @Test
+  public void testGetJournalAddressListWithResolution() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED, true);
+    configuration.set(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL,
+        MockDomainNameResolver.class.getName());
+
+    URI uriWithDomain = URI.create("qjournal://"
+        + MockDomainNameResolver.DOMAIN + ":1234" + "/testns");
+    List<InetSocketAddress> result = Util.getAddressesList(uriWithDomain, configuration);
+    assertEquals(2, result.size());
+    assertEquals(new InetSocketAddress(MockDomainNameResolver.FQDN_1, 1234), result.get(0));
+    assertEquals(new InetSocketAddress(MockDomainNameResolver.FQDN_2, 1234), result.get(1));
+
+    uriWithDomain = URI.create("qjournal://"
+        + MockDomainNameResolver.UNKNOW_DOMAIN + ":1234" + "/testns");
+    try{
+      Util.getAddressesList(uriWithDomain, configuration);
+      fail("Should throw unknown host exception.");
+    } catch (UnknownHostException e) {
+      // expected
     }
   }
   
