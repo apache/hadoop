@@ -563,6 +563,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     private final SimulatedStorage storage;
     private final FileIoProvider fileIoProvider;
     private final DataNodeVolumeMetrics metrics;
+    private VolumeExCountPair volumeExCountPair;
 
     SimulatedVolume(final SimulatedStorage storage,
                     final FileIoProvider fileIoProvider,
@@ -627,6 +628,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public void releaseReservedSpace(long bytesToRelease) {
+    }
+
+    @Override
+    public VolumeExCountPair getExCountPair() {
+      return this.volumeExCountPair;
     }
 
     @Override

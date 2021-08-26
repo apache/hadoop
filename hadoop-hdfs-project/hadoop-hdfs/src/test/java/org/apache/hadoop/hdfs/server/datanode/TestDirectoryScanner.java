@@ -927,6 +927,12 @@ public class TestDirectoryScanner {
   }
 
   private static class TestFsVolumeSpi implements FsVolumeSpi {
+    private VolumeExCountPair volumeExCountPair;
+    @Override
+    public VolumeExCountPair getExCountPair() {
+      return this.volumeExCountPair;
+    }
+
     @Override
     public String[] getBlockPoolList() {
       return new String[0];

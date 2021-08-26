@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.VolumeExCountPair;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -37,6 +38,13 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 public class ExternalVolumeImpl implements FsVolumeSpi {
+  private VolumeExCountPair volumeExCountPair;
+
+  @Override
+  public VolumeExCountPair getExCountPair() {
+    return this.volumeExCountPair;
+  }
+
   @Override
   public FsVolumeReference obtainReference() throws ClosedChannelException {
     return null;
