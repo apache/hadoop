@@ -490,7 +490,7 @@ public class DFSUtil {
                     " to append it with namenodeId");
                 URI uri = new URI(journalsUri);
                 List<InetSocketAddress> socketAddresses = Util.
-                    getAddressesList(uri);
+                    getAddressesList(uri, conf);
                 for (InetSocketAddress is : socketAddresses) {
                   journalNodeList.add(is.getHostName());
                 }
@@ -501,7 +501,7 @@ public class DFSUtil {
           } else {
             URI uri = new URI(journalsUri);
             List<InetSocketAddress> socketAddresses = Util.
-                getAddressesList(uri);
+                getAddressesList(uri, conf);
             for (InetSocketAddress is : socketAddresses) {
               journalNodeList.add(is.getHostName());
             }
@@ -512,7 +512,7 @@ public class DFSUtil {
           return journalNodeList;
         } else {
           URI uri = new URI(journalsUri);
-          List<InetSocketAddress> socketAddresses = Util.getAddressesList(uri);
+          List<InetSocketAddress> socketAddresses = Util.getAddressesList(uri, conf);
           for (InetSocketAddress is : socketAddresses) {
             journalNodeList.add(is.getHostName());
           }

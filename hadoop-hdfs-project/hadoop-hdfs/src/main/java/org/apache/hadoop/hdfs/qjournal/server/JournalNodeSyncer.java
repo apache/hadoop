@@ -315,7 +315,7 @@ public class JournalNodeSyncer {
       IOException {
     URI uri = new URI(uriStr);
     return Util.getLoggerAddresses(uri,
-        Sets.newHashSet(jn.getBoundIpcAddress()));
+        Sets.newHashSet(jn.getBoundIpcAddress()), conf);
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,

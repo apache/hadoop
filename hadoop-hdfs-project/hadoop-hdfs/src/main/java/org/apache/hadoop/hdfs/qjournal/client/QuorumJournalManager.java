@@ -414,7 +414,7 @@ public class QuorumJournalManager implements JournalManager {
                                          String nameServiceId)
       throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
-    List<InetSocketAddress> addrs = Util.getAddressesList(uri);
+    List<InetSocketAddress> addrs = Util.getAddressesList(uri, conf);
     if (addrs.size() % 2 == 0) {
       LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
           "of Journal Nodes specified. This is not recommended!");

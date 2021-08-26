@@ -194,6 +194,15 @@ The order in which you set these configurations is unimportant, but the values y
           <value>qjournal://node1.example.com:8485;node2.example.com:8485;node3.example.com:8485/mycluster</value>
         </property>
 
+    You can also configure journal nodes by setting up dns round-robin record to avoid hardcoded names:
+
+        <property>
+          <name>dfs.namenode.edits.qjournals.resolution-enabled</name>
+          <value>true</value>
+        </property>
+
+    This will require you to configure multiple IPs behind one dns record on the host level, for example round robin DNS.
+
 *   **dfs.client.failover.proxy.provider.[nameservice ID]** - the Java class that HDFS clients use to contact the Active NameNode
 
     Configure the name of the Java class which will be used by the DFS Client to
