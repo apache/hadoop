@@ -29,14 +29,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+/**
+ * Class to carry out parallelized recursive listing on a given path to
+ * collect directory and file count/size information, as part of the
+ * implementation for the Filesystem method getContentSummary
+ */
 public class ContentSummaryProcessor {
   private static final int MAX_THREAD_COUNT = 16;
   private static final int POLL_TIMEOUT = 100;
@@ -56,33 +62,34 @@ public class ContentSummaryProcessor {
    * @param abfsStore Instance of AzureBlobFileSystemStore, used to make
    * listStatus calls to server
    */
-  public ContentSummaryProcessor(ListingSupport abfsStore,
-      ExecutorService executorService) {
+  public ContentSummaryProcessor(ListingSupport abfsStore) {
     this.abfsStore = abfsStore;
-    this.executorService = executorService;
+    this.executorService = ((AzureBlobFileSystemStore) abfsStore).getContentSummaryExecutorService();
     completionService = new ExecutorCompletionService<>(this.executorService);
   }
 
-  public ContentSummary getContentSummary(Path path, TracingContext tracingContext)
-          throws IOException, ExecutionException, InterruptedException {
-    try {
-      processDirectoryTree(path, tracingContext);
-      while (!queue.isEmpty() || numTasks.get() > 0) {
-        try {
-          completionService.take().get();
-        } finally {
-          numTasks.decrementAndGet();
-          LOG.debug("FileStatus queue size = {}, number of submitted unfinished tasks = {}, active thread count = {}",
-              queue.size(), numTasks, ((ThreadPoolExecutor) executorService).getActiveCount());
-        }
+  public ContentSummary getContentSummary(Path path,
+      TracingContext tracingContext)
+      throws IOException, ExecutionException, InterruptedException {
+
+    processDirectoryTree(path, tracingContext);
+    while (!queue.isEmpty() || numTasks.get() > 0) {
+      try {
+        completionService.take().get();
+      } finally {
+        numTasks.decrementAndGet();
+        LOG.debug(
+            "FileStatus queue size = {}, number of submitted unfinished tasks"
+                + " = {}, active thread count = {}",
+            queue.size(), numTasks,
+            ((ThreadPoolExecutor) executorService).getActiveCount());
       }
-    } finally {
-      executorService.shutdownNow();
-      LOG.debug("Executor shutdown");
     }
+
     LOG.debug("Processed content summary of subtree under given path");
-    ContentSummary.Builder builder = new ContentSummary.Builder()
-        .directoryCount(directoryCount.get()).fileCount(fileCount.get())
+    ContentSummary.Builder builder =
+        new ContentSummary.Builder().directoryCount(
+            directoryCount.get()).fileCount(fileCount.get())
         .length(totalBytes.get()).spaceConsumed(totalBytes.get());
     return builder.build();
   }

@@ -208,7 +208,7 @@ private static final int NUM_CONCURRENT_CALLS = 8;
     final List<Future<Void>> tasks = new ArrayList<>();
     ExecutorService es = Executors.newFixedThreadPool(10);
     for (int i = 0; i < numFiles; i++) {
-      final Path fileName = new Path(directory + "/test" + i);
+      final Path fileName = new Path(directory, String.format("test-%02d", i));
       tasks.add(es.submit(() -> {
         touch(fileName);
         return null;
@@ -218,7 +218,7 @@ private static final int NUM_CONCURRENT_CALLS = 8;
       task.get();
     }
     try (FSDataOutputStream out = getFileSystem().append(
-        new Path(directory + "/test0"))) {
+        new Path(directory + "/test-00"))) {
       out.write(b);
     }
     es.shutdownNow();

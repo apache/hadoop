@@ -127,9 +127,6 @@ public class AzureBlobFileSystem extends FileSystem
   private String clientCorrelationId;
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
-  private final ExecutorService contentSummaryExecutorService = Executors.newCachedThreadPool();
-//  private final ExecutorService contentSummaryExecutorService = new ThreadPoolExecutor(
-//      0, 16, 5, TimeUnit.SECONDS, new SynchronousQueue<>());
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -453,8 +450,7 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.GET_CONTENT_SUMMARY, true,
           tracingHeaderFormat, listener);
-      return (new ContentSummaryProcessor(abfsStore,
-          contentSummaryExecutorService)).getContentSummary(path,
+      return (new ContentSummaryProcessor(abfsStore)).getContentSummary(path,
           tracingContext);
     } catch (InterruptedException e) {
       LOG.debug("Thread interrupted");

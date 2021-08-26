@@ -51,6 +51,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -166,6 +168,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+  private final ExecutorService contentSummaryExecutorService = Executors.newCachedThreadPool();
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -1667,6 +1670,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private AbfsPerfInfo startTracking(String callerName, String calleeName) {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
+  }
+
+  public ExecutorService getContentSummaryExecutorService() {
+    return contentSummaryExecutorService;
   }
 
   private static class VersionedFileStatus extends FileStatus {
