@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.common.FileRegion;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.VolumeExCountPair;
 import org.apache.hadoop.hdfs.server.datanode.checker.Checkable;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 
@@ -448,4 +449,6 @@ public interface FsVolumeSpi
   FileIoProvider getFileIoProvider();
 
   DataNodeVolumeMetrics getMetrics();
+
+  VolumeExCountPair getExCountPair();
 }

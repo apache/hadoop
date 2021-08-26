@@ -54,19 +54,8 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
-import org.apache.hadoop.hdfs.server.datanode.DataStorage;
-import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.*;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ReportCompiler;
-import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
-import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
-import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
-import org.apache.hadoop.hdfs.server.datanode.LocalReplicaInPipeline;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaBuilder;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -138,6 +127,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private boolean enableSameDiskTiering;
   private final String mount;
   private double reservedForArchive;
+
+  private VolumeExCountPair volumeExCountPair;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -1403,6 +1394,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @Override
   public DataNodeVolumeMetrics getMetrics() {
     return metrics;
+  }
+
+  @Override
+  public VolumeExCountPair getExCountPair() {
+    return this.volumeExCountPair;
   }
 
   /**

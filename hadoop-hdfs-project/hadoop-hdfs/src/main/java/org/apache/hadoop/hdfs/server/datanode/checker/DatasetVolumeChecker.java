@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import org.apache.hadoop.hdfs.server.datanode.VolumeExCountPair;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -392,6 +393,20 @@ public class DatasetVolumeChecker {
     }
 
     private void markHealthy() {
+      long totalFileIoErrors = reference.getVolume().getMetrics().getTotalFileIoErrors();
+      VolumeExCountPair volumeExCountPair = reference.getVolume().getExCountPair();
+      LOG.warn("Volume {} Exception Count is {}", reference.getVolume().toString(),reference.getVolume().getExCountPair().getIoExceptionCnt());
+      if (volumeExCountPair.getIoExceptionCnt() == 0) {
+        volumeExCountPair.setNewPair(System.currentTimeMillis(),totalFileIoErrors);
+      } else {
+        if((System.currentTimeMillis() - reference.getVolume().getExCountPair().getPrevTs())/1000/60/60 > 2){
+          long cnt = reference.getVolume().getExCountPair().getPair().getIoExceptionCnt();
+          if(cnt > 100){
+            failedVolumes.add(reference.getVolume());
+            return;
+          }
+        }
+      }
       synchronized (DatasetVolumeChecker.this) {
         healthyVolumes.add(reference.getVolume());
       }
