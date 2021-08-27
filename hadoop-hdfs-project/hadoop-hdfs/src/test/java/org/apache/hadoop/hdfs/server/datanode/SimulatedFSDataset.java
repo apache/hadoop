@@ -563,7 +563,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     private final SimulatedStorage storage;
     private final FileIoProvider fileIoProvider;
     private final DataNodeVolumeMetrics metrics;
-    private VolumeExCountPair volumeExCountPair;
+    private VolumeExCountPair volumeExCountPair = new VolumeExCountPair();
 
     SimulatedVolume(final SimulatedStorage storage,
                     final FileIoProvider fileIoProvider,

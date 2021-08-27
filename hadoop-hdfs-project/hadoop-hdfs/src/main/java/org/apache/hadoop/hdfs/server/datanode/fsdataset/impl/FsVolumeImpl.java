@@ -128,7 +128,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final String mount;
   private double reservedForArchive;
 
-  private VolumeExCountPair volumeExCountPair;
+  private VolumeExCountPair volumeExCountPair = new VolumeExCountPair();
 
   /**
    * Per-volume worker pool that processes new blocks to cache.

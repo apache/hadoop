@@ -25,7 +25,7 @@ public class VolumeExCountPair {
     private long prevTs;
     private long IoExceptionCnt;
 
-    private VolumeExCountPair() {
+    public VolumeExCountPair() {
     }
 
     public VolumeExCountPair(long prevTimeStamp, long IoExceptionCnt) {
