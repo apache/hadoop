@@ -62,6 +62,16 @@ public class NNHAServiceTarget extends HAServiceTarget {
     this(conf, nsId, nnId, null, null, null);
   }
 
+  /**
+   * Create a NNHAServiceTarget for a namenode.
+   *
+   * @param conf          HDFS configuration.
+   * @param nsId          nsId of this nn.
+   * @param nnId          nnId of this nn.
+   * @param serviceAddr   Provided service address.
+   * @param addr          Provided service address.
+   * @param lifelineAddr  Provided service address.
+   */
   public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId,
       String serviceAddr, String addr, String lifelineAddr) {

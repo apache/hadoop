@@ -106,8 +106,8 @@ public class TestRouterDistCpProcedure extends TestDistCpProcedure {
     FedBalanceContext context = new FedBalanceContext
         .Builder(null, null, mount, routerConf).build();
     RouterDistCpProcedure dcProcedure = new RouterDistCpProcedure();
-//    executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
-//        () -> dcProcedure.disableWrite(context));
+    executeProcedure(dcProcedure, Stage.FINAL_DISTCP,
+        () -> dcProcedure.disableWrite(context));
     intercept(RemoteException.class, "is in a read only mount point",
         "Expect readonly exception.", () -> routerClient
         .mkdirs(mount + "/dir", new FsPermission(020), false));
