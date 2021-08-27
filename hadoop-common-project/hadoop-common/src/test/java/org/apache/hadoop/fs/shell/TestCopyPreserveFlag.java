@@ -123,6 +123,22 @@ public class TestCopyPreserveFlag {
   }
 
   @Test(timeout = 10000)
+  public void testPutWithPQ() throws Exception {
+    Put put = new Put();
+    run(put, "-p", "-q", "100", FROM.toString(), TO.toString());
+    assertEquals(put.getThreadPoolQueueSize(), 100);
+    assertAttributesPreserved(TO);
+  }
+
+  @Test(timeout = 10000)
+  public void testPutWithQ() throws Exception {
+    Put put = new Put();
+    run(put, "-q", "100", FROM.toString(), TO.toString());
+    assertEquals(put.getThreadPoolQueueSize(), 100);
+    assertAttributesChanged(TO);
+  }
+
+  @Test(timeout = 10000)
   public void testPutWithSplCharacter() throws Exception {
     fs.mkdirs(DIR_FROM_SPL);
     fs.createNewFile(FROM_SPL);
