@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 /**
  * Class to provide lambda expression invocation of AWS operations.
@@ -43,7 +44,8 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
  * the other {@code retry() and retryUntranslated()} calls are wrappers.
  *
  * The static {@link #once(String, String, CallableRaisingIOE)} and
- * {@link #once(String, String, VoidOperation)} calls take an operation and
+ * {@link #once(String, String, InvocationRaisingIOE)} calls take an
+ * operation and
  * return it with AWS exceptions translated to IOEs of some form.
  *
  * The retry logic on a failure is defined by the retry policy passed in
@@ -57,7 +59,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
  * but before the sleep.
  * These callbacks can be used for reporting and incrementing statistics.
  *
- * The static {@link #quietly(String, String, VoidOperation)} and
+ * The static {@link #quietly(String, String, InvocationRaisingIOE)} and
  * {@link #quietlyEval(String, String, CallableRaisingIOE)} calls exist to
  * take any operation and quietly catch and log at debug.
  * The return value of {@link #quietlyEval(String, String, CallableRaisingIOE)}
@@ -126,11 +128,11 @@ public class Invoker {
    * @throws IOException any IOE raised, or translated exception
    */
   @Retries.OnceTranslated
-  public static void once(String action, String path, VoidOperation operation)
-      throws IOException {
+  public static void once(String action, String path,
+      InvocationRaisingIOE operation) throws IOException {
     once(action, path,
         () -> {
-          operation.execute();
+          operation.apply();
           return null;
         });
   }
@@ -171,10 +173,10 @@ public class Invoker {
       Logger log,
       String action,
       String path,
-      VoidOperation operation) {
+      InvocationRaisingIOE operation) {
     ignoreIOExceptions(log, action, path,
         () -> {
-          operation.execute();
+          operation.apply();
           return null;
         });
   }
@@ -194,11 +196,11 @@ public class Invoker {
       String path,
       boolean idempotent,
       Retried retrying,
-      VoidOperation operation)
+      InvocationRaisingIOE operation)
       throws IOException {
     retry(action, path, idempotent, retrying,
         () -> {
-          operation.execute();
+          operation.apply();
           return null;
         });
   }
@@ -221,11 +223,11 @@ public class Invoker {
       String path,
       boolean idempotent,
       Retried retrying,
-      VoidOperation operation)
+      InvocationRaisingIOE operation)
       throws IOException {
     maybeRetry(doRetry, action, path, idempotent, retrying,
         () -> {
-          operation.execute();
+          operation.apply();
           return null;
         });
   }
@@ -243,7 +245,7 @@ public class Invoker {
   public void retry(String action,
       String path,
       boolean idempotent,
-      VoidOperation operation)
+      InvocationRaisingIOE operation)
       throws IOException {
     retry(action, path, idempotent, retryCallback, operation);
   }
@@ -265,7 +267,7 @@ public class Invoker {
       String action,
       String path,
       boolean idempotent,
-      VoidOperation operation)
+      InvocationRaisingIOE operation)
       throws IOException {
     maybeRetry(doRetry, action, path, idempotent, retryCallback, operation);
   }
@@ -475,7 +477,7 @@ public class Invoker {
    */
   public static void quietly(String action,
       String path,
-      VoidOperation operation) {
+      InvocationRaisingIOE operation) {
     try {
       once(action, path, operation);
     } catch (Exception e) {
@@ -513,14 +515,6 @@ public class Invoker {
   private static String toDescription(String action, @Nullable String path) {
     return action +
         (StringUtils.isNotEmpty(path) ? (" on " + path) : "");
-  }
-
-  /**
-   * Void operation which may raise an IOException.
-   */
-  @FunctionalInterface
-  public interface VoidOperation {
-    void execute() throws IOException;
   }
 
   /**

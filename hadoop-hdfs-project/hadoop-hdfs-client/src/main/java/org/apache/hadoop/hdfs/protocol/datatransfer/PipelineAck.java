@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -32,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.hdfs.util.LongBitFormat;
+import org.apache.hadoop.util.Lists;
 
 /** Pipeline Acknowledgment **/
 @InterfaceAudience.Private

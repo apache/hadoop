@@ -348,7 +348,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       FileSystem fs = res.isInternalDir() ?
           (fsState.getRootFallbackLink() != null ?
               ((ChRootedFileSystem) fsState
-                  .getRootFallbackLink().targetFileSystem).getMyFs() :
+                  .getRootFallbackLink().getTargetFileSystem()).getMyFs() :
               fsGetter().get(path.toUri(), conf)) :
           ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
       return new MountPathInfo<FileSystem>(res.remainingPath, res.resolvedPath,
@@ -390,8 +390,13 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     if (fsState.getRootFallbackLink() == null) {
       return null;
     }
-    return ((ChRootedFileSystem) fsState.getRootFallbackLink().targetFileSystem)
-        .getMyFs();
+    try {
+      return ((ChRootedFileSystem) fsState.getRootFallbackLink()
+          .getTargetFileSystem()).getMyFs();
+    } catch (IOException ex) {
+      LOG.error("Could not get fallback filesystem ");
+    }
+    return null;
   }
 
   @Override

@@ -39,6 +39,16 @@ public class FakeTimer extends Timer {
     nowNanos = TimeUnit.MILLISECONDS.toNanos(1000);
   }
 
+  /**
+   * FakeTimer constructor with milliseconds to keep as initial value.
+   *
+   * @param time time in millis.
+   */
+  public FakeTimer(long time) {
+    now = time;
+    nowNanos = TimeUnit.MILLISECONDS.toNanos(time);
+  }
+
   @Override
   public long now() {
     return now;

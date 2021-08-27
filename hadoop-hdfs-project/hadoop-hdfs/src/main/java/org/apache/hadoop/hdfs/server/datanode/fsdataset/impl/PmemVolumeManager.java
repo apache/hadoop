@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -357,7 +357,7 @@ public final class PmemVolumeManager {
         out.clear();
       }
       if (testFile != null) {
-        IOUtils.closeQuietly(testFile);
+        IOUtils.closeStream(testFile);
         NativeIO.POSIX.munmap(out);
         try {
           FsDatasetUtil.deleteMappedFile(testFilePath);

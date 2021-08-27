@@ -147,6 +147,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals(1f, c.getQueueCapacities().getWeight(), 1e-6);
     Assert.assertEquals(400 * GB,
         c.getQueueResourceQuotas().getEffectiveMinResource().getMemorySize());
+    Assert.assertEquals(((LeafQueue)c).getUserLimitFactor(), -1, 1e-6);
+    Assert.assertEquals(((LeafQueue)c).getMaxAMResourcePerQueuePercent(), 1, 1e-6);
 
     // Now add another queue-d, in the same hierarchy
     createQueue("root.d-auto");
@@ -696,6 +698,29 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("weight is not explicitly set", 4f,
         a2.getQueueCapacities().getWeight(), 1e-6);
+
+    csConf.setBoolean(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.a") + CapacitySchedulerConfiguration
+        .AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    LeafQueue a3 = createQueue("root.a.a3");
+    Assert.assertFalse("auto queue deletion should be turned off on a3",
+        a3.isEligibleForAutoDeletion());
+
+    // Set the capacity of label TEST
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.c") + "accessible-node-labels.TEST.capacity", "6w");
+    csConf.setQueues("root", new String[]{"a", "b", "c"});
+    csConf.setAutoQueueCreationV2Enabled("root.c", true);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    LeafQueue c1 = createQueue("root.c.c1");
+    Assert.assertEquals("weight is not set for label TEST", 6f,
+        c1.getQueueCapacities().getWeight("TEST"), 1e-6);
+    cs.reinitialize(csConf, mockRM.getRMContext());
+    c1 = (LeafQueue) cs.getQueue("root.c.c1");
+    Assert.assertEquals("weight is not set for label TEST", 6f,
+        c1.getQueueCapacities().getWeight("TEST"), 1e-6);
+
   }
 
   @Test
@@ -1135,6 +1160,51 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     CSQueue bAutoLeaf = cs.getQueue("root.b.b-auto-parent.b-auto-leaf");
     Assert.assertNull("b-auto-leaf should not exist " +
         "when its dynamic parent is removed", bAutoLeaf);
+  }
+
+  @Test
+  public void testParentQueueDynamicChildRemoval() throws Exception {
+    startScheduler();
+
+    createQueue("root.a.a-auto");
+    createQueue("root.a.a-auto");
+    AbstractCSQueue aAuto = (AbstractCSQueue) cs.
+        getQueue("root.a.a-auto");
+    Assert.assertTrue(aAuto.isDynamicQueue());
+    ParentQueue a = (ParentQueue) cs.
+        getQueue("root.a");
+    createQueue("root.e.e1-auto");
+    AbstractCSQueue eAuto = (AbstractCSQueue) cs.
+        getQueue("root.e.e1-auto");
+    Assert.assertTrue(eAuto.isDynamicQueue());
+    ParentQueue e = (ParentQueue) cs.
+        getQueue("root.e");
+
+    // Try to remove a static child queue
+    try {
+      a.removeChildQueue(cs.getQueue("root.a.a1"));
+      Assert.fail("root.a.a1 is a static queue and should not be removed at " +
+          "runtime");
+    } catch (SchedulerDynamicEditException ignored) {
+    }
+
+    // Try to remove a dynamic queue with a different parent
+    try {
+      a.removeChildQueue(eAuto);
+      Assert.fail("root.a should not be able to remove root.e.e1-auto");
+    } catch (SchedulerDynamicEditException ignored) {
+    }
+
+    a.removeChildQueue(aAuto);
+    e.removeChildQueue(eAuto);
+
+    aAuto = (AbstractCSQueue) cs.
+        getQueue("root.a.a-auto");
+    eAuto = (AbstractCSQueue) cs.
+        getQueue("root.e.e1-auto");
+
+    Assert.assertNull("root.a.a-auto should have been removed", aAuto);
+    Assert.assertNull("root.e.e1-auto should have been removed", eAuto);
   }
 
   protected LeafQueue createQueue(String queuePath) throws YarnException,

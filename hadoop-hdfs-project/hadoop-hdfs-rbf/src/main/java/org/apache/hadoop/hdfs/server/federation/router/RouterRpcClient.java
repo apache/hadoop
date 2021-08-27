@@ -261,6 +261,24 @@ public class RouterRpcClient {
   }
 
   /**
+   * Total number of idle sockets between the router and NNs.
+   *
+   * @return Number of namenode clients.
+   */
+  public int getNumIdleConnections() {
+    return this.connectionManager.getNumIdleConnections();
+  }
+
+  /**
+   * Total number of active sockets between the router and NNs.
+   *
+   * @return Number of recently active namenode clients.
+   */
+  public int getNumActiveConnectionsRecently() {
+    return this.connectionManager.getNumActiveConnectionsRecently();
+  }
+
+  /**
    * Total number of open connection pools to a NN. Each connection pool.
    * represents one user + one NN.
    *
@@ -1111,25 +1129,17 @@ public class RouterRpcClient {
    * Invoke method in all locations and return success if any succeeds.
    *
    * @param <T> The type of the remote location.
-   * @param <R> The type of the remote method return.
    * @param locations List of remote locations to call concurrently.
    * @param method The remote method and parameters to invoke.
    * @return If the call succeeds in any location.
    * @throws IOException If any of the calls return an exception.
    */
-  public <T extends RemoteLocationContext, R> boolean invokeAll(
+  public <T extends RemoteLocationContext> boolean invokeAll(
       final Collection<T> locations, final RemoteMethod method)
-          throws IOException {
-    boolean anyResult = false;
+      throws IOException {
     Map<T, Boolean> results =
         invokeConcurrent(locations, method, false, false, Boolean.class);
-    for (Boolean value : results.values()) {
-      boolean result = value.booleanValue();
-      if (result) {
-        anyResult = true;
-      }
-    }
-    return anyResult;
+    return results.containsValue(true);
   }
 
   /**

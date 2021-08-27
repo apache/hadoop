@@ -231,14 +231,16 @@ public class MRAMSimulator extends AMSimulator {
               appId, container.getId());
           assignedMaps.put(container.getId(), cs);
           se.getNmMap().get(container.getNodeId())
-                  .addNewContainer(container, cs.getLifeTime());
+              .addNewContainer(container, cs.getLifeTime(), appId);
+          getRanNodes().add(container.getNodeId());
         } else if (! this.scheduledReduces.isEmpty()) {
           ContainerSimulator cs = scheduledReduces.remove();
           LOG.debug("Application {} starts to launch a reducer ({}).",
               appId, container.getId());
           assignedReduces.put(container.getId(), cs);
           se.getNmMap().get(container.getNodeId())
-                  .addNewContainer(container, cs.getLifeTime());
+              .addNewContainer(container, cs.getLifeTime(), appId);
+          getRanNodes().add(container.getNodeId());
         }
       }
     }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer.workloadgenerator;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;

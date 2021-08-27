@@ -399,9 +399,7 @@ public class ContractTestUtils extends Assert {
       IOException {
     if (fileSystem != null) {
       rejectRootOperation(path, allowRootDelete);
-      if (fileSystem.exists(path)) {
-        return fileSystem.delete(path, recursive);
-      }
+      return fileSystem.delete(path, recursive);
     }
     return false;
 
@@ -728,8 +726,10 @@ public class ContractTestUtils extends Assert {
       assertPathExists(fs, "about to be deleted file", file);
     }
     boolean deleted = fs.delete(file, recursive);
-    String dir = ls(fs, file.getParent());
-    assertTrue("Delete failed on " + file + ": " + dir, deleted);
+    if (!deleted) {
+      String dir = ls(fs, file.getParent());
+      assertTrue("Delete failed on " + file + ": " + dir, deleted);
+    }
     assertPathDoesNotExist(fs, "Deleted file", file);
   }
 

@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -70,13 +70,17 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     invoker = new Invoker(new S3ARetryPolicy(getConfiguration()),
         Invoker.NO_OP
     );
+    skipIfClientSideEncryption();
     Assume.assumeTrue("No metadata store in test filesystem",
         getFileSystem().hasMetadataStore());
   }
 
   @Override
   public void teardown() throws Exception {
-    clearInconsistency(getFileSystem());
+    if (getFileSystem() != null && getFileSystem()
+        .getAmazonS3Client() instanceof InconsistentAmazonS3Client) {
+      clearInconsistency(getFileSystem());
+    }
     super.teardown();
   }
 

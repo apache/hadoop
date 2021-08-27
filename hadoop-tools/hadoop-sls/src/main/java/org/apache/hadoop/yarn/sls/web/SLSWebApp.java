@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 
+import org.apache.hadoop.yarn.sls.utils.NodeUsageRanges;
 import org.eclipse.jetty.http.MimeTypes;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
@@ -73,6 +74,7 @@ public class SLSWebApp extends HttpServlet {
   private transient Gauge allocatedVCoresGauge;
   private transient Gauge availableMemoryGauge;
   private transient Gauge availableVCoresGauge;
+  private transient Map<String, Gauge> perNodeUsageGaugeMap;
   private transient Histogram allocateTimecostHistogram;
   private transient Histogram commitSuccessTimecostHistogram;
   private transient Histogram commitFailureTimecostHistogram;
@@ -122,6 +124,7 @@ public class SLSWebApp extends HttpServlet {
     handleOperTimecostHistogramMap = new HashMap<>();
     queueAllocatedMemoryCounterMap = new HashMap<>();
     queueAllocatedVCoresCounterMap = new HashMap<>();
+    perNodeUsageGaugeMap = new HashMap<>();
     schedulerMetrics = wrapper.getSchedulerMetrics();
     metrics = schedulerMetrics.getMetrics();
     port = metricsAddressPort;
@@ -547,7 +550,37 @@ public class SLSWebApp extends HttpServlet {
       sb.append(",\"scheduler.handle-").append(e).append(".timecost\":")
               .append(handleOperTimecostMap.get(e));
     }
+    sb.append(generateNodeUsageMetrics("memory"));
+    sb.append(generateNodeUsageMetrics("vcores"));
     sb.append("}");
+    return sb.toString();
+  }
+
+  private String generateNodeUsageMetrics(String resourceType) {
+    StringBuilder sb = new StringBuilder();
+    Map<String, Integer> perNodeUsageMap = new HashMap<>();
+    for (NodeUsageRanges.Range range : NodeUsageRanges.getRanges()) {
+      String metricName = "nodes." + resourceType + "." + range.getKeyword();
+      if (!perNodeUsageGaugeMap.containsKey(metricName) &&
+          metrics.getGauges().containsKey(metricName)) {
+        perNodeUsageGaugeMap.put(metricName,
+            metrics.getGauges().get(metricName));
+      }
+
+      int perNodeUsageCount =
+          perNodeUsageGaugeMap.containsKey(metricName) ?
+              Integer.parseInt(
+                  perNodeUsageGaugeMap.get(metricName).getValue().toString()) : 0;
+
+      perNodeUsageMap.put(metricName, perNodeUsageCount);
+    }
+
+    // per node memory and vcores used
+    for (NodeUsageRanges.Range range : NodeUsageRanges.getRanges()) {
+      String metricName = "nodes." + resourceType + "." + range.getKeyword();
+      sb.append(",\"").append(metricName).append("\":")
+          .append(perNodeUsageMap.get(metricName));
+    }
     return sb.toString();
   }
 

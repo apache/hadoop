@@ -1200,7 +1200,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           targetNode.reserveResource(this,
               reservedContainer.getReservedSchedulerKey(), reservedContainer);
         } catch (IllegalStateException e) {
-          LOG.debug("Reserve on target node failed, e={}", e);
+          LOG.debug("Reserve on target node failed", e);
           return false;
         }
 

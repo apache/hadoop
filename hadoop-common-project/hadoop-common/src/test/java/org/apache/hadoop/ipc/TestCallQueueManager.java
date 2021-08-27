@@ -218,7 +218,8 @@ public class TestCallQueueManager {
 
     // Specify only Fair Call Queue without a scheduler
     // Ensure the DecayScheduler will be added to avoid breaking.
-    Class<? extends RpcScheduler> scheduler = Server.getSchedulerClass(ns,
+    Class<? extends RpcScheduler> scheduler =
+        Server.getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, 0,
         conf);
     assertTrue(scheduler.getCanonicalName().
         equals("org.apache.hadoop.ipc.DecayRpcScheduler"));
@@ -250,8 +251,8 @@ public class TestCallQueueManager {
         "LinkedBlockingQueue"));
 
     manager = new CallQueueManager<FakeCall>(queue,
-        Server.getSchedulerClass(ns, conf), false,
-        3, "", conf);
+        Server.getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, 0,
+            conf), false, 3, "", conf);
 
     // LinkedBlockingQueue with a capacity of 3 can put 3 calls
     assertCanPut(manager, 3, 3);

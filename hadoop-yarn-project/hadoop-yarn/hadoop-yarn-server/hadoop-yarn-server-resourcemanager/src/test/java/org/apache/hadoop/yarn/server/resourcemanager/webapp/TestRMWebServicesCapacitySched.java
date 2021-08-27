@@ -100,7 +100,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int numContainers;
     int maxApplications;
     int maxApplicationsPerUser;
-    int userLimit;
+    float userLimit;
     float userLimitFactor;
     long defaultApplicationLifetime;
     long maxApplicationLifetime;
@@ -352,7 +352,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(qElem, "maxApplications");
       lqi.maxApplicationsPerUser =
           WebServicesTestUtils.getXmlInt(qElem, "maxApplicationsPerUser");
-      lqi.userLimit = WebServicesTestUtils.getXmlInt(qElem, "userLimit");
+      lqi.userLimit = WebServicesTestUtils.getXmlFloat(qElem, "userLimit");
       lqi.userLimitFactor =
           WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor");
       lqi.defaultApplicationLifetime =
@@ -369,7 +369,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements in: " + info, 19, info.length());
+    assertEquals("incorrect number of elements in: " + info, 22, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
@@ -424,10 +424,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   private void verifySubQueue(JSONObject info, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 34;
+    int numExpectedElements = 37;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 52;
+      numExpectedElements = 55;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -477,7 +477,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       lqi.numContainers = info.getInt("numContainers");
       lqi.maxApplications = info.getInt("maxApplications");
       lqi.maxApplicationsPerUser = info.getInt("maxApplicationsPerUser");
-      lqi.userLimit = info.getInt("userLimit");
+      lqi.userLimit = (float) info.getDouble("userLimit");
       lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
       lqi.defaultApplicationLifetime =
           info.getLong("defaultApplicationLifetime");
@@ -553,7 +553,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         (float)info.maxApplicationsPerUser, info.userLimitFactor);
 
     assertEquals("userLimit doesn't match", csConf.getUserLimit(q),
-        info.userLimit);
+        info.userLimit, 1e-3f);
     assertEquals("userLimitFactor doesn't match",
         csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
 

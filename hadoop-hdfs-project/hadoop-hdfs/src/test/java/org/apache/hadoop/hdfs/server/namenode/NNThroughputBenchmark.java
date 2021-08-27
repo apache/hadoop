@@ -827,6 +827,53 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   /**
+   * Append file statistics.
+   * Measure how many append calls the name-node can handle per second.
+   */
+  class AppendFileStats extends OpenFileStats {
+    // Operation types
+    static final String OP_APPEND_NAME = "append";
+    public static final String APPEND_NEW_BLK = "-appendNewBlk";
+    static final String OP_APPEND_USAGE =
+        "-op " + OP_APPEND_NAME + OP_USAGE_ARGS + " [" + APPEND_NEW_BLK + ']';
+    private boolean appendNewBlk = false;
+
+    AppendFileStats(List<String> args) {
+      super(args);
+    }
+
+    @Override
+    String getOpName() {
+      return OP_APPEND_NAME;
+    }
+
+    @Override
+    void parseArguments(List<String> args) {
+      appendNewBlk = args.contains(APPEND_NEW_BLK);
+      if (this.appendNewBlk) {
+        args.remove(APPEND_NEW_BLK);
+      }
+      super.parseArguments(args);
+    }
+
+    @Override
+    long executeOp(int daemonId, int inputIdx, String ignore)
+        throws IOException {
+      long start = Time.now();
+      String src = fileNames[daemonId][inputIdx];
+      EnumSetWritable<CreateFlag> enumSet = null;
+      if (appendNewBlk) {
+        enumSet = new EnumSetWritable<>(EnumSet.of(CreateFlag.NEW_BLOCK));
+      } else {
+        enumSet = new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND));
+      }
+      clientProto.append(src, "TestClient", enumSet);
+      long end = Time.now();
+      return end - start;
+    }
+  }
+
+  /**
    * List file status statistics.
    * 
    * Measure how many get-file-status calls the name-node can handle per second.
@@ -958,7 +1005,7 @@ public class NNThroughputBenchmark implements Tool {
           new StorageBlockReport(storage, BlockListAsLongs.EMPTY)
       };
       dataNodeProto.blockReport(dnRegistration, bpid, reports,
-              new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+              new BlockReportContext(1, 0, System.nanoTime(), 0L));
     }
 
     /**
@@ -1240,7 +1287,7 @@ public class NNThroughputBenchmark implements Tool {
       StorageBlockReport[] report = { new StorageBlockReport(
           dn.storage, dn.getBlockReportList()) };
       dataNodeProto.blockReport(dn.dnRegistration, bpid, report,
-          new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+          new BlockReportContext(1, 0, System.nanoTime(), 0L));
       long end = Time.now();
       return end-start;
     }
@@ -1434,6 +1481,7 @@ public class NNThroughputBenchmark implements Tool {
         + " | \n\t" + MkdirsStats.OP_MKDIRS_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
         + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
+        + " | \n\t" + AppendFileStats.OP_APPEND_USAGE
         + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
         + " | \n\t" + RenameFileStats.OP_RENAME_USAGE
         + " | \n\t" + BlockReportStats.OP_BLOCK_REPORT_USAGE
@@ -1494,6 +1542,10 @@ public class NNThroughputBenchmark implements Tool {
       }
       if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
         opStat = new DeleteFileStats(args);
+        ops.add(opStat);
+      }
+      if (runAll || AppendFileStats.OP_APPEND_NAME.equals(type)) {
+        opStat = new AppendFileStats(args);
         ops.add(opStat);
       }
       if(runAll || FileStatusStats.OP_FILE_STATUS_NAME.equals(type)) {

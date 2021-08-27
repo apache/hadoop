@@ -48,6 +48,7 @@
             <li><a href="jmx">Metrics</a></li>
             <li><a href="conf">Configuration</a></li>
             <li><a href="stacks">Process Thread Dump</a></li>
+            <li><a href="topology">Network Topology</a></li>
           </ul>
         </li>
       </ul>
@@ -165,32 +166,11 @@
         <div class="modal-footer">
           <button type="button" class="btn" data-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-success" id="delete-button"
-                  data-complete-text="Deleting..." data-toggle="modal" data-target="#delete-trash-modal">Delete
-          </button>
+            data-complete-text="Deleting...">Delete</button>
         </div>
       </div>
     </div>
   </div>
-      <div class="modal" id="delete-trash-modal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal"
-                      aria-hidden="true">&times;</button>
-              <h4 class="modal-title" id="delete-trash-modal-title">Delete Trash</h4>
-            </div>
-            <div class="modal-body">
-              <div class="panel-body">
-                <div id="delete-trash-prompt"></div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn" id="skip-trash-button">Yes (Skip Trash)</button>
-              <button type="button" class="btn btn-success" id="trash-button">No</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div class="row">
       <div class="col-xs-9 col-md-9">

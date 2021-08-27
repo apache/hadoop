@@ -86,7 +86,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
   @Test
   public void testBasicRead() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testBasicRead");
+    Path testPath = path(TEST_FILE_PREFIX + "_testBasicRead");
     assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -114,8 +114,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testRandomRead() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
-            this.getFileSystem().getIsNamespaceEnabled());
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testRandomRead");
+        getIsNamespaceEnabled(getFileSystem()));
+    Path testPath = path(TEST_FILE_PREFIX + "_testRandomRead");
     assumeHugeFileExists(testPath);
 
     try (
@@ -174,7 +174,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testSeekToNewSource() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSeekToNewSource");
+    Path testPath = path(TEST_FILE_PREFIX + "_testSeekToNewSource");
     assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -189,7 +189,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testSkipBounds() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSkipBounds");
+    Path testPath = path(TEST_FILE_PREFIX + "_testSkipBounds");
     long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -230,7 +230,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testValidateSeekBounds() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
+    Path testPath = path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
     long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -281,7 +281,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testSeekAndAvailableAndPosition() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSeekAndAvailableAndPosition");
+    Path testPath = path(TEST_FILE_PREFIX + "_testSeekAndAvailableAndPosition");
     long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -347,7 +347,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    */
   @Test
   public void testSkipAndAvailableAndPosition() throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSkipAndAvailableAndPosition");
+    Path testPath = path(TEST_FILE_PREFIX + "_testSkipAndAvailableAndPosition");
     long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
@@ -413,7 +413,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testSequentialReadAfterReverseSeekPerformance()
           throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSequentialReadAfterReverseSeekPerformance");
+    Path testPath = path(
+        TEST_FILE_PREFIX + "_testSequentialReadAfterReverseSeekPerformance");
     assumeHugeFileExists(testPath);
     final int maxAttempts = 10;
     final double maxAcceptableRatio = 1.01;
@@ -445,8 +446,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Ignore("HADOOP-16915")
   public void testRandomReadPerformance() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
-            this.getFileSystem().getIsNamespaceEnabled());
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testRandomReadPerformance");
+        getIsNamespaceEnabled(getFileSystem()));
+    Path testPath = path(TEST_FILE_PREFIX + "_testRandomReadPerformance");
     assumeHugeFileExists(testPath);
 
     final AzureBlobFileSystem abFs = this.getFileSystem();
@@ -506,7 +507,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
     final AzureBlobFileSystem fs = createTestFile(testFile, 16 * MEGABYTE,
         1 * MEGABYTE, config);
     String eTag = fs.getAbfsClient()
-        .getPathStatus(testFile.toUri().getPath(), false)
+        .getPathStatus(testFile.toUri().getPath(), false,
+            getTestTracingContext(fs, false))
         .getResult()
         .getResponseHeader(ETAG);
 

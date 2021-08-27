@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -398,13 +399,15 @@ public class Dispatcher {
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this, e);
+        nnc.getBlocksFailed().incrementAndGet();
         target.getDDatanode().setHasFailure();
         // Check that the failure is due to block pinning errors.
         if (e instanceof BlockPinningException) {
           // Pinned block can't be moved. Add this block into failure list.
           // Later in the next iteration mover will exclude these blocks from
           // pending moves.
-          target.getDDatanode().addBlockPinningFailures(this);
+          target.getDDatanode().addBlockPinningFailures(
+              this.reportedBlock.getBlock().getBlockId(), this.getSource());
           return;
         }
 
@@ -642,7 +645,8 @@ public class Dispatcher {
     /** blocks being moved but not confirmed yet */
     private final List<PendingMove> pendings;
     private volatile boolean hasFailure = false;
-    private Map<Long, Set<DatanodeInfo>> blockPinningFailures = new HashMap<>();
+    private final Map<Long, Set<DatanodeInfo>> blockPinningFailures =
+        new ConcurrentHashMap<>();
     private volatile boolean hasSuccess = false;
     private ExecutorService moveExecutor;
 
@@ -728,16 +732,17 @@ public class Dispatcher {
       this.hasFailure = true;
     }
 
-    void addBlockPinningFailures(PendingMove pendingBlock) {
-      synchronized (blockPinningFailures) {
-        long blockId = pendingBlock.reportedBlock.getBlock().getBlockId();
-        Set<DatanodeInfo> pinnedLocations = blockPinningFailures.get(blockId);
+    private void addBlockPinningFailures(long blockId, DatanodeInfo source) {
+      blockPinningFailures.compute(blockId, (key, pinnedLocations) -> {
+        Set<DatanodeInfo> newPinnedLocations;
         if (pinnedLocations == null) {
-          pinnedLocations = new HashSet<>();
-          blockPinningFailures.put(blockId, pinnedLocations);
+          newPinnedLocations = new HashSet<>();
+        } else {
+          newPinnedLocations = pinnedLocations;
         }
-        pinnedLocations.add(pendingBlock.getSource());
-      }
+        newPinnedLocations.add(source);
+        return newPinnedLocations;
+      });
     }
 
     Map<Long, Set<DatanodeInfo>> getBlockPinningFailureList() {

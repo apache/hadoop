@@ -24,6 +24,11 @@ import java.io.OutputStream;
 import java.net.SocketTimeoutException;
 import java.nio.channels.Pipe;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil;
@@ -187,6 +192,46 @@ public class TestSocketIOWithTimeout {
   }
 
   @Test
+  public void testSocketIOWithTimeoutByMultiThread() throws Exception {
+    CountDownLatch latch = new CountDownLatch(1);
+    Runnable ioTask = () -> {
+      try {
+        Pipe pipe = Pipe.open();
+        try (Pipe.SourceChannel source = pipe.source();
+             InputStream in = new SocketInputStream(source, TIMEOUT);
+             Pipe.SinkChannel sink = pipe.sink();
+             OutputStream out = new SocketOutputStream(sink, TIMEOUT)) {
+
+          byte[] writeBytes = TEST_STRING.getBytes();
+          byte[] readBytes = new byte[writeBytes.length];
+          latch.await();
+
+          out.write(writeBytes);
+          doIO(null, out, TIMEOUT);
+
+          in.read(readBytes);
+          assertArrayEquals(writeBytes, readBytes);
+          doIO(in, null, TIMEOUT);
+        }
+      } catch (Exception e) {
+        fail(e.getMessage());
+      }
+    };
+
+    int threadCnt = 64;
+    ExecutorService threadPool = Executors.newFixedThreadPool(threadCnt);
+    for (int i = 0; i < threadCnt; ++i) {
+      threadPool.submit(ioTask);
+    }
+
+    Thread.sleep(1000);
+    latch.countDown();
+
+    threadPool.shutdown();
+    assertTrue(threadPool.awaitTermination(3, TimeUnit.SECONDS));
+  }
+
+  @Test
   public void testSocketIOWithTimeoutInterrupted() throws Exception {
     Pipe pipe = Pipe.open();
     final int timeout = TIMEOUT * 10;
@@ -222,5 +267,39 @@ public class TestSocketIOWithTimeout {
       thread.interrupt();
       ctx.stop();
     }
+  }
+
+  @Test
+  public void testSocketIOWithTimeoutInterruptedByMultiThread()
+      throws Exception {
+    final int timeout = TIMEOUT * 10;
+    AtomicLong readCount = new AtomicLong();
+    AtomicLong exceptionCount = new AtomicLong();
+    Runnable ioTask = () -> {
+      try {
+        Pipe pipe = Pipe.open();
+        try (Pipe.SourceChannel source = pipe.source();
+             InputStream in = new SocketInputStream(source, timeout)) {
+          in.read();
+          readCount.incrementAndGet();
+        } catch (InterruptedIOException ste) {
+          exceptionCount.incrementAndGet();
+        }
+      } catch (Exception e) {
+        fail(e.getMessage());
+      }
+    };
+
+    int threadCnt = 64;
+    ExecutorService threadPool = Executors.newFixedThreadPool(threadCnt);
+    for (int i = 0; i < threadCnt; ++i) {
+      threadPool.submit(ioTask);
+    }
+    Thread.sleep(1000);
+    threadPool.shutdownNow();
+    threadPool.awaitTermination(1, TimeUnit.SECONDS);
+
+    assertEquals(0, readCount.get());
+    assertEquals(threadCnt, exceptionCount.get());
   }
 }
