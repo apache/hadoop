@@ -2956,6 +2956,8 @@ public class YarnConfiguration extends Configuration {
   public static final String PROXY_BIND_HOST =
       PROXY_PREFIX + "bind-host";
 
+  public static final String PROXY_GATEWAY_URL = PROXY_PREFIX + "gateway.url";
+  
   /**
    * YARN Service Level Authorization
    */
