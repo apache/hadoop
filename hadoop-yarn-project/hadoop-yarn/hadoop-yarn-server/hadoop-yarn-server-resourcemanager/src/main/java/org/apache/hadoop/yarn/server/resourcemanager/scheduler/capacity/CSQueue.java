@@ -151,6 +151,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return current run-state
    */
   public QueueState getState();
+
+  /**
+   * Get the max-parallel-applications property of the queue
+   * @return max-parallel-applications
+   */
+  public int getMaxParallelApps();
   
   /**
    * Get child queues

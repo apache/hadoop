@@ -139,6 +139,8 @@ public class QueueCLI extends YarnCLI {
     writer.println(df.format(queueInfo.getMaximumCapacity() * 100) + "%");
     writer.print("\tWeight : ");
     writer.println(df.format(queueInfo.getWeight()));
+    writer.print("\tMaximum Parallel Apps : ");
+    writer.println(queueInfo.getMaxParallelApps());
     writer.print("\tDefault Node Label expression : ");
     String nodeLabelExpression = queueInfo.getDefaultNodeLabelExpression();
     nodeLabelExpression =
