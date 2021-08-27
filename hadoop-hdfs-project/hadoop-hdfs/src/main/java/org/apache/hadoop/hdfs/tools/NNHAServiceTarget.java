@@ -56,9 +56,15 @@ public class NNHAServiceTarget extends HAServiceTarget {
   private final String nnId;
   private final String nsId;
   private final boolean autoFailoverEnabled;
-  
+
   public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId) {
+    this(conf, nsId, nnId, null, null, null);
+  }
+
+  public NNHAServiceTarget(Configuration conf,
+      String nsId, String nnId,
+      String serviceAddr, String addr, String lifelineAddr) {
     Preconditions.checkNotNull(nnId);
 
     if (nsId == null) {
@@ -81,20 +87,30 @@ public class NNHAServiceTarget extends HAServiceTarget {
     // target node -- not the node we happen to be running on.
     HdfsConfiguration targetConf = new HdfsConfiguration(conf);
     NameNode.initializeGenericKeys(targetConf, nsId, nnId);
-    
-    String serviceAddr = 
-      DFSUtil.getNamenodeServiceAddr(targetConf, nsId, nnId);
+
+    if (serviceAddr == null) {
+      serviceAddr =
+          DFSUtil.getNamenodeServiceAddr(targetConf, nsId, nnId);
+    }
     if (serviceAddr == null) {
       throw new IllegalArgumentException(
           "Unable to determine service address for namenode '" + nnId + "'");
     }
-    this.addr = NetUtils.createSocketAddr(serviceAddr,
-        HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+    if (addr == null) {
+      this.addr = NetUtils.createSocketAddr(serviceAddr,
+          HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+    } else {
+      this.addr = NetUtils.createSocketAddr(addr);
+    }
 
-    String lifelineAddrStr =
-        DFSUtil.getNamenodeLifelineAddr(targetConf, nsId, nnId);
-    this.lifelineAddr = (lifelineAddrStr != null) ?
-        NetUtils.createSocketAddr(lifelineAddrStr) : null;
+    if (lifelineAddr == null) {
+      String lifelineAddrStr =
+          DFSUtil.getNamenodeLifelineAddr(targetConf, nsId, nnId);
+      this.lifelineAddr = (lifelineAddrStr != null) ?
+          NetUtils.createSocketAddr(lifelineAddrStr) : null;
+    } else {
+      this.lifelineAddr = NetUtils.createSocketAddr(lifelineAddr);
+    }
 
     this.autoFailoverEnabled = targetConf.getBoolean(
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,

@@ -426,35 +426,42 @@ public class DFSUtilClient {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
-      String suffix = concatSuffixes(nsId, nnId);
-      String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
-      if (address != null) {
-        InetSocketAddress isa = NetUtils.createSocketAddr(address);
-        try {
-          // Datanode should just use FQDN
-          String[] resolvedHostNames = dnr
-              .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
-          int port = isa.getPort();
-          for (String hostname : resolvedHostNames) {
-            InetSocketAddress inetSocketAddress = new InetSocketAddress(
-                hostname, port);
-            // Concat nn info with host info to make uniq ID
-            String concatId;
-            if (nnId == null || nnId.isEmpty()) {
-              concatId = String
-                  .join("-", nsId, hostname, String.valueOf(port));
-            } else {
-              concatId = String
-                  .join("-", nsId, nnId, hostname, String.valueOf(port));
-            }
-            ret.put(concatId, inetSocketAddress);
-          }
-        } catch (UnknownHostException e) {
-          LOG.error("Failed to resolve address: " + address);
-        }
-      }
+      getResolvedAddressesForNnId(
+          conf, nsId, nnId, dnr, defaultValue, ret, keys);
     }
     return ret;
+  }
+
+  public static void getResolvedAddressesForNnId(
+      Configuration conf, String nsId, String nnId,
+      DomainNameResolver dnr, String defaultValue,
+      Map<String, InetSocketAddress> ret, String... keys) {
+    String suffix = concatSuffixes(nsId, nnId);
+    String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
+    if (address != null) {
+      InetSocketAddress isa = NetUtils.createSocketAddr(address);
+      try {
+        String[] resolvedHostNames = dnr
+            .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
+        int port = isa.getPort();
+        for (String hostname : resolvedHostNames) {
+          InetSocketAddress inetSocketAddress = new InetSocketAddress(
+              hostname, port);
+          // Concat nn info with host info to make uniq ID
+          String concatId;
+          if (nnId == null || nnId.isEmpty()) {
+            concatId = String
+                .join("-", nsId, hostname, String.valueOf(port));
+          } else {
+            concatId = String
+                .join("-", nsId, nnId, hostname, String.valueOf(port));
+          }
+          ret.put(concatId, inetSocketAddress);
+        }
+      } catch (UnknownHostException e) {
+        LOG.error("Failed to resolve address: " + address);
+      }
+    }
   }
 
   /**

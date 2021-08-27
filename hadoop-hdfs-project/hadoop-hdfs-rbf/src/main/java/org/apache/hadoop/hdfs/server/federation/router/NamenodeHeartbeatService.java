@@ -94,6 +94,9 @@ public class NamenodeHeartbeatService extends PeriodicService {
   private URLConnectionFactory connectionFactory;
   /** URL scheme to use for JMX calls. */
   private String scheme;
+
+  private String resolvedHost;
+  private String originalNnId;
   /**
    * Create a new Namenode status updater.
    * @param resolver Namenode resolver service to handle NN registration.
@@ -113,6 +116,31 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
   }
 
+  /**
+   * Create a new Namenode status updater.
+   *
+   * @param resolver Namenode resolver service to handle NN registration.
+   * @param nsId          Identifier of the nameservice.
+   * @param nnId          Identifier of the namenode in HA.
+   * @param resolvedHost  resolvedHostname for this specific namenode.
+   */
+  public NamenodeHeartbeatService(
+      ActiveNamenodeResolver resolver, String nsId, String nnId, String resolvedHost) {
+    super(NamenodeHeartbeatService.class.getSimpleName() +
+        (nsId == null ? "" : " " + nsId) +
+        (nnId == null ? "" : " " + nnId));
+
+    this.resolver = resolver;
+
+    this.nameserviceId = nsId;
+    // Concat a uniq id from original nnId and resolvedHost
+    this.namenodeId = nnId + "-" + resolvedHost;
+    this.resolvedHost = resolvedHost;
+    // Same the original nnid to get the ports from config.
+    this.originalNnId = nnId;
+
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
 
@@ -120,39 +148,58 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
     String nnDesc = nameserviceId;
     if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
-      this.localTarget = new NNHAServiceTarget(
-          conf, nameserviceId, namenodeId);
       nnDesc += "-" + namenodeId;
     } else {
       this.localTarget = null;
     }
 
+    if (originalNnId == null) {
+      originalNnId = namenodeId;
+    }
+
     // Get the RPC address for the clients to connect
-    this.rpcAddress = getRpcAddress(conf, nameserviceId, namenodeId);
+    this.rpcAddress = getRpcAddress(conf, nameserviceId, originalNnId);
+    if (resolvedHost != null) {
+      rpcAddress = resolvedHost + ":" + rpcAddress.split(":")[1];
+    }
     LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
 
     // Get the Service RPC address for monitoring
     this.serviceAddress =
-        DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, namenodeId);
+        DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, originalNnId);
     if (this.serviceAddress == null) {
       LOG.error("Cannot locate RPC service address for NN {}, " +
           "using RPC address {}", nnDesc, this.rpcAddress);
       this.serviceAddress = this.rpcAddress;
     }
+    if (resolvedHost != null) {
+      serviceAddress = resolvedHost + ":" + serviceAddress.split(":")[1];
+    }
     LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
 
     // Get the Lifeline RPC address for faster monitoring
     this.lifelineAddress =
-        DFSUtil.getNamenodeLifelineAddr(conf, nameserviceId, namenodeId);
+        DFSUtil.getNamenodeLifelineAddr(conf, nameserviceId, originalNnId);
     if (this.lifelineAddress == null) {
       this.lifelineAddress = this.serviceAddress;
+    }
+    if (resolvedHost != null) {
+      lifelineAddress = resolvedHost + ":" + lifelineAddress.split(":")[1];
     }
     LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
 
     // Get the Web address for UI
     this.webAddress =
-        DFSUtil.getNamenodeWebAddr(conf, nameserviceId, namenodeId);
+        DFSUtil.getNamenodeWebAddr(conf, nameserviceId, originalNnId);
+    if (resolvedHost != null) {
+      webAddress = resolvedHost + ":" + webAddress.split(":")[1];
+    }
     LOG.info("{} Web address: {}", nnDesc, webAddress);
+
+    if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
+      this.localTarget = new NNHAServiceTarget(
+          conf, nameserviceId, namenodeId, serviceAddress, rpcAddress, lifelineAddress);
+    }
 
     this.connectionFactory =
         URLConnectionFactory.newDefaultURLConnectionFactory(conf);
