@@ -77,7 +77,7 @@ public final class Constants {
 
   // cname support
   public static final String CNAME_SUPPORT_KEY = "fs.oss.cname.support.enabled";
-  public static final boolean DEFAULT_CNAME_SUPPORT = true;
+  public static final boolean CNAME_SUPPORT_DEFAULT = true;
 
   // Time until we give up on a connection to oss
   public static final String SOCKET_TIMEOUT_KEY = "fs.oss.connection.timeout";
