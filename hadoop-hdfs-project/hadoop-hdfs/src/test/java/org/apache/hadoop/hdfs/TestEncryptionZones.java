@@ -1195,7 +1195,6 @@ public class TestEncryptionZones {
     SnapshotDiffReport report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
     Assert.assertEquals(0, report.getDiffList().size());
-    System.out.
     report =
         fs.getSnapshotDiffReport(snapshottable, "snap1", "");
     System.out.println(report);
