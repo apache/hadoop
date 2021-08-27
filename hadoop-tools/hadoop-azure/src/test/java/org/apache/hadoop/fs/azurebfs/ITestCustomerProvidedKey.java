@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
@@ -119,8 +120,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         tracingContext);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
+    ReadRequestParameters readParams = new ReadRequestParameters(0, 0, length, eTag);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read(fileName, 0, buffer, 0, length, eTag, null, tracingContext);
+        .read(fileName, buffer, null, readParams, tracingContext);
     assertCPKHeaders(abfsRestOperation, true);
     assertResponseHeader(abfsRestOperation, true, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
@@ -169,8 +171,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .getPathStatus(fileName, false, tracingContext);
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
+    ReadRequestParameters readParams = new ReadRequestParameters(0, 0, length, eTag);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read(fileName, 0, buffer, 0, length, eTag, null, tracingContext);
+        .read(fileName,  buffer, null, readParams, tracingContext);
     assertCPKHeaders(abfsRestOperation, false);
     assertResponseHeader(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
@@ -188,7 +191,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
-        abfsClient2.read(fileName, 0, buffer, 0, length, eTag, null,
+        abfsClient2.read(fileName, buffer, null, readParams,
             getTestTracingContext(fs, false));
       });
     }

@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ReadRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.io.IOUtils;
@@ -780,14 +781,18 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag, String cachedSasToken,
+  public AbfsRestOperation read(String path,
+      byte[] buffer,
+      String cachedSasToken,
+      ReadRequestParameters reqParams,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
+    long position = reqParams.getStoreFilePosition();
     requestHeaders.add(new AbfsHttpHeader(RANGE,
-            String.format("bytes=%d-%d", position, position + bufferLength - 1)));
-    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+        String.format("bytes=%d-%d", position,
+            position + reqParams.getReadLength() - 1)));
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, reqParams.getETag()));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
@@ -802,8 +807,9 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders,
             buffer,
-            bufferOffset,
-            bufferLength, sasTokenForReuse);
+            reqParams.getBufferOffset(),
+            reqParams.getReadLength(),
+            sasTokenForReuse);
     op.execute(tracingContext);
 
     return op;
