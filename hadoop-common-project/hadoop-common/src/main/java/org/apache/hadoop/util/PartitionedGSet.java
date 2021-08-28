@@ -345,4 +345,7 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     assert pLock != null : "pLock is null";
     pLock.writeTopUnlock();
   }
+  public int getPartitionSize() {
+    return partitions.size();
+  }
 }

@@ -262,18 +262,31 @@ public class INodeMap {
     PermissionStatus perm =
         new PermissionStatus("", "", new FsPermission((short) 0));
     // TODO: create a static array, to avoid creation of keys each time.
+    //Iterate static partitions added on startup
     for (int p = 0; p < NUM_RANGES_STATIC; p++) {
       INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
           "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
-      key.setParent(new INodeDirectory((long)p, null, perm, 0));
+      key.setParent(new INodeDirectory(p, null, perm, 0));
       PartitionedGSet.PartitionEntry e = pgs.getPartition(key);
       
       if (e.contains(inode)) {
         return (INode) e.get(inode);
       }
     }
+    //Iterate dynamic partitions
+    for(int p = NUM_RANGES_STATIC; p < pgs.getPartitionSize(); p++) {
+      INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
+          "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
+      key.setParent(new INodeDirectory(0, null, perm, 0));
+      PartitionedGSet.PartitionEntry e = pgs.getPartition(key);
 
-    return null;
+      if (e.contains(inode)) {
+        return (INode) e.get(inode);
+      }
+    }
+    //Call should have returned before, in case of any concurrent changes
+    // while above iteration, this can
+    return pgs.get(inode);
   }
 
   public INode get(INode inode) {
