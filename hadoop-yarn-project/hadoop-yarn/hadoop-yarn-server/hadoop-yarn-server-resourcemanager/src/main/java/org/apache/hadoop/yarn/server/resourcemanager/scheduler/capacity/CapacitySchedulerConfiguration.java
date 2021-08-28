@@ -406,6 +406,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
+  private ConfigurationProperties configurationProperties;
 
   /**
    * Different resource types supported.
@@ -1043,6 +1044,34 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
+  public void setQueueMaximumAllocation(String queue, String maximumAllocation) {
+    String queuePrefix = getQueuePrefix(queue);
+    set(queuePrefix + MAXIMUM_ALLOCATION, maximumAllocation);
+  }
+
+  /**
+   * Get all configuration properties parsed in a
+   * {@code ConfigurationProperties} object.
+   * @return configuration properties
+   */
+  public ConfigurationProperties getConfigurationProperties() {
+    if (configurationProperties == null) {
+      reinitializeConfigurationProperties();
+    }
+
+    return configurationProperties;
+  }
+
+  /**
+   * Reinitializes the cached {@code ConfigurationProperties} object.
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public void reinitializeConfigurationProperties() {
+    // Props are always Strings, therefore this cast is safe
+    Map<String, String> props = (Map) getProps();
+    configurationProperties = new ConfigurationProperties(props);
+  }
+
   public long getQueueMaximumAllocationMb(String queue) {
     String queuePrefix = getQueuePrefix(queue);
     return getInt(queuePrefix + MAXIMUM_ALLOCATION_MB, (int)UNDEFINED);
@@ -1562,6 +1591,42 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     configuredNodeLabels.add(RMNodeLabelsManager.NO_LABEL);
 
     return configuredNodeLabels;
+  }
+
+  /**
+   * Get configured node labels for all queues that have accessible-node-labels
+   * prefixed properties set.
+   * @return configured node labels
+   */
+  public Map<String, Set<String>> getConfiguredNodeLabelsByQueue() {
+    Map<String, Set<String>> labelsByQueue = new HashMap<>();
+    Map<String, String> schedulerEntries = getPropsWithPrefix(
+        CapacitySchedulerConfiguration.PREFIX);
+
+    for (Map.Entry<String, String> propertyEntry
+        : schedulerEntries.entrySet()) {
+      String key = propertyEntry.getKey();
+      // Consider all keys that has accessible-node-labels prefix, excluding
+      // <queue-path>.accessible-node-labels itself
+      if (key.contains(ACCESSIBLE_NODE_LABELS + DOT)) {
+        // Find <label-name> in
+        // <queue-path>.accessible-node-labels.<label-name>.property
+        int labelStartIdx =
+            key.indexOf(ACCESSIBLE_NODE_LABELS)
+                + ACCESSIBLE_NODE_LABELS.length() + 1;
+        int labelEndIndx = key.indexOf('.', labelStartIdx);
+        String labelName = key.substring(labelStartIdx, labelEndIndx);
+        // Find queuePath and exclude "." at the end
+        String queuePath = key.substring(0, key.indexOf(
+            ACCESSIBLE_NODE_LABELS) - 1);
+        if (!labelsByQueue.containsKey(queuePath)) {
+          labelsByQueue.put(queuePath, new HashSet<>());
+          labelsByQueue.get(queuePath).add(RMNodeLabelsManager.NO_LABEL);
+        }
+        labelsByQueue.get(queuePath).add(labelName);
+      }
+    }
+    return labelsByQueue;
   }
 
   public Integer getDefaultApplicationPriorityConfPerQueue(String queue) {
@@ -2427,6 +2492,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setDefaultNodeLabelExpression(leafQueueConfPrefix, expression);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueConfigMaximumAllocation(String
+         queuePath, String expression) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setQueueMaximumAllocation(leafQueueConfPrefix, expression);
   }
 
   public static String getUnits(String resourceValue) {

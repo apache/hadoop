@@ -141,6 +141,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
+    String s3EncryptionMethod =
+        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM,
+            S3AEncryptionMethods.SSE_KMS.getMethod());
+    String s3EncryptionKey = conf.getTrimmed(SERVER_SIDE_ENCRYPTION_KEY, "");
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
@@ -149,13 +153,17 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
-    // switch to SSE_S3.
+    // switch to CSE-KMS(if specified) else SSE-KMS.
     if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
-      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
-          S3AEncryptionMethods.SSE_S3.getMethod());
+      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
+      // KMS key ID a must if CSE-KMS is being tested.
+      conf.set(SERVER_SIDE_ENCRYPTION_KEY, s3EncryptionKey);
     }
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
+    // turn on ACLs so as to verify role DT permissions include
+    // write access.
+    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     return conf;
   }
 
@@ -358,10 +366,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       assertBoundToDT(delegatedFS, tokenKind);
       if (encryptionTestEnabled()) {
         assertNotNull("Encryption propagation failed",
-            delegatedFS.getServerSideEncryptionAlgorithm());
+            delegatedFS.getS3EncryptionAlgorithm());
         assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            delegatedFS.getServerSideEncryptionAlgorithm());
+            fs.getS3EncryptionAlgorithm(),
+            delegatedFS.getS3EncryptionAlgorithm());
       }
       verifyRestrictedPermissions(delegatedFS);
 
@@ -393,10 +401,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       assertBoundToDT(secondDelegate, tokenKind);
       if (encryptionTestEnabled()) {
         assertNotNull("Encryption propagation failed",
-            secondDelegate.getServerSideEncryptionAlgorithm());
+            secondDelegate.getS3EncryptionAlgorithm());
         assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            secondDelegate.getServerSideEncryptionAlgorithm());
+            fs.getS3EncryptionAlgorithm(),
+            secondDelegate.getS3EncryptionAlgorithm());
       }
       ContractTestUtils.assertDeleted(secondDelegate, testPath, true);
       assertNotNull("unbounded DT",

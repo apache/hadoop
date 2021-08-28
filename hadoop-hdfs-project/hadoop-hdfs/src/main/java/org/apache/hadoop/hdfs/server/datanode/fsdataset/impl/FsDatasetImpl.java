@@ -728,7 +728,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         infos.length);
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getNormalizedUri().toString());
+          info.getFailedStorageLocation().toString());
     }
     return failedStorageLocations.toArray(
         new String[failedStorageLocations.size()]);
@@ -767,7 +767,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     long estimatedCapacityLostTotal = 0;
     for (VolumeFailureInfo info: infos) {
       failedStorageLocations.add(
-          info.getFailedStorageLocation().getNormalizedUri().toString());
+          info.getFailedStorageLocation().toString());
       long failureDate = info.getFailureDate();
       if (failureDate > lastVolumeFailureDate) {
         lastVolumeFailureDate = failureDate;
@@ -1129,6 +1129,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
     try {
+      LOG.debug("moving block {} from {} to {}", block,
+            replicaInfo.getVolume(), volumeRef.getVolume());
       moveBlock(block, replicaInfo, volumeRef, useVolumeOnSameMount);
       datanode.getMetrics().incrReplaceBlockOpOnSameHost();
       if (useVolumeOnSameMount) {
@@ -1631,6 +1633,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (ref == null) {
         ref = volumes.getNextVolume(storageType, storageId, b.getNumBytes());
       }
+      LOG.debug("Creating Rbw, block: {} on volume: {}", b, ref.getVolume());
 
       FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
       // create an rbw file to hold block in the designated volume
@@ -1904,6 +1907,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaInPipeline newReplicaInfo;
       try {
         newReplicaInfo = v.createTemporary(b);
+        LOG.debug("creating temporary for block: {} on volume: {}",
+            b, ref.getVolume());
       } catch (IOException e) {
         IOUtils.cleanupWithLogger(null, ref);
         throw e;

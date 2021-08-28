@@ -438,6 +438,12 @@ you'll need to remove the `profile` prefix from the AWS configuration section he
     aws_session_token = ...
     aws_security_token = ...
     ```
+Note:
+
+1. The `region` setting is only used if `fs.s3a.endpoint.region` is set to the empty string.
+1. For the credentials to be available to applications running in a Hadoop cluster, the
+   configuration files MUST be in the `~/.aws/` directory on the local filesystem in
+   all hosts in the cluster.
 
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 
@@ -802,8 +808,10 @@ options are covered in [Testing](./testing.md).
 <property>
   <name>fs.s3a.endpoint.region</name>
   <description>AWS S3 region for a bucket, which bypasses the parsing of
- fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
- while using privateLink URL and explicitly set the bucket region.
+    fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+    while using privateLink URL and explicitly set the bucket region.
+    If set to a blank string (or 1+ space), falls back to the
+    (potentially brittle) SDK region resolution process.
   </description>
 </property>
 
@@ -936,7 +944,9 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.acl.default</name>
   <description>Set a canned ACL for newly created and copied objects. Value may be Private,
     PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
-    or BucketOwnerFullControl.</description>
+    or BucketOwnerFullControl.
+    If set, caller IAM role must have "s3:PutObjectAcl" permission on the bucket.
+    </description>
 </property>
 
 <property>

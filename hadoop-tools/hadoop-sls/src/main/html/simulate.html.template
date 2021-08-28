@@ -49,6 +49,10 @@
     <div class="row">
       <div class="divborder span8" style="margin-left:50px" id="area7"></div>
       <div class="divborder span8" style="margin-left:50px" id="area8"></div>
+    </div>
+    <div class="row">
+      <div class="divborder span8" style="margin-left:50px" id="area9"></div>
+      <div class="divborder span8" style="margin-left:50px" id="area10"></div>
     </div><br/><br/>
 
     <script>
@@ -87,6 +91,20 @@
                     ''scheduler.commit.failure.timecost''];
       legends[7] = [''scheduler.commit.success.throughput'',
                     ''scheduler.commit.failure.throughput''];
+      legends[8] = [''nodes.memory.unused'',
+                    ''nodes.memory.1to19pctUsed'',
+                    ''nodes.memory.20to39pctUsed'',
+                    ''nodes.memory.40to59pctUsed'',
+                    ''nodes.memory.60to79pctUsed'',
+                    ''nodes.memory.80to99pctUsed'',
+                    ''nodes.memory.full''];
+      legends[9] = [''nodes.vcores.unused'',
+                    ''nodes.vcores.1to19pctUsed'',
+                    ''nodes.vcores.20to39pctUsed'',
+                    ''nodes.vcores.40to59pctUsed'',
+                    ''nodes.vcores.60to79pctUsed'',
+                    ''nodes.vcores.80to99pctUsed'',
+                    ''nodes.vcores.full''];
 
       // title
       titles[0] = ''Cluster running applications & containers'';
@@ -97,6 +115,8 @@
       titles[5] = ''Queue allocated vcores'';
       titles[6] = ''Scheduler allocate & handle & commit operation timecost'';
       titles[7] = ''Scheduler commit success/failure operation throughput'';
+      titles[8] = ''Cluster nodes memory usage'';
+      titles[9] = ''Cluster nodes vcores usage'';
 
       // ylabels
       yLabels[0] = ''Number'';
@@ -107,12 +127,14 @@
       yLabels[5] = ''Number'';
       yLabels[6] = ''Timecost (ms)'';
       yLabels[7] = ''Number'';
+      yLabels[8] = ''Number'';
+      yLabels[9] = ''Number'';
 
       // is area?
-      isAreas = [0, 0, 0, 0, 1, 1, 0, 0];
+      isAreas = [0, 0, 0, 0, 1, 1, 0, 0, 1, 1];
 
       // draw all charts
-      for (var i = 0; i < 8; i ++) '{'
+      for (var i = 0; i < 10; i ++) '{'
         drawEachChart(i);
       '}'
 
@@ -180,7 +202,7 @@
           data.push(point);
 
           // clear old
-          for (var i = 0; i < 8; i ++) '{'
+          for (var i = 0; i < 10; i ++) '{'
             svgs[i].selectAll(''g.tick'').remove();
             svgs[i].selectAll(''g'').remove();
             var color = d3.scale.category10();

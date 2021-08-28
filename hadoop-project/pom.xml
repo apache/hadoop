@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.40.v20210413</jetty.version>
+    <jetty.version>9.4.43.v20210629</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -97,10 +97,10 @@
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.5.6</zookeeper.version>
-    <curator.version>4.2.0</curator.version>
+    <zookeeper.version>3.6.3</zookeeper.version>
+    <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
-    <dnsjava.version>2.1.7</dnsjava.version>
+    <dnsjava.version>3.4.0</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.2.3</guice.version>
@@ -116,7 +116,7 @@
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
-    <commons-compress.version>1.19</commons-compress.version>
+    <commons-compress.version>1.21</commons-compress.version>
     <commons-csv.version>1.0</commons-csv.version>
     <commons-io.version>2.8.0</commons-io.version>
     <commons-lang3.version>3.7</commons-lang3.version>
@@ -129,7 +129,7 @@
     <kerby.version>1.0.1</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
-    <hikari.version>2.4.12</hikari.version>
+    <hikari.version>4.0.3</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
     <jdom.version>1.1</jdom.version>
@@ -198,7 +198,7 @@
     <snakeyaml.version>1.26</snakeyaml.version>
     <hbase.one.version>1.4.8</hbase.one.version>
     <hbase.two.version>2.0.2</hbase.two.version>
-    <junit.version>4.13.1</junit.version>
+    <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <junit.vintage.version>5.5.1</junit.vintage.version>
     <junit.platform.version>1.5.1</junit.platform.version>
@@ -209,7 +209,7 @@
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.3.0</woodstox.version>
-    <json-smart.version>2.4.2</json-smart.version>
+    <json-smart.version>2.4.7</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
   </properties>
 
@@ -1047,6 +1047,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-params</artifactId>
+        <version>${junit.jupiter.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.junit.vintage</groupId>
         <artifactId>junit-vintage-engine</artifactId>
         <version>${junit.vintage.version}</version>
@@ -1462,7 +1468,7 @@
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>3.4.1</version>
+        <version>3.13.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -1686,7 +1692,7 @@
         </dependency>
         <dependency>
           <groupId>com.zaxxer</groupId>
-          <artifactId>HikariCP-java7</artifactId>
+          <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
         </dependency>
         <dependency>

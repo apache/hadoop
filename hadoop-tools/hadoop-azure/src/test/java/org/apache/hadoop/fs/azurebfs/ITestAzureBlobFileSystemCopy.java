@@ -53,7 +53,7 @@ public class ITestAzureBlobFileSystemCopy extends AbstractAbfsIntegrationTest {
     localFs.delete(localFilePath, true);
     try {
       writeString(localFs, localFilePath, "Testing");
-      Path dstPath = new Path("copiedFromLocal");
+      Path dstPath = path("copiedFromLocal");
       assertTrue(FileUtil.copy(localFs, localFilePath, fs, dstPath, false,
           fs.getConf()));
       assertIsFile(fs, dstPath);

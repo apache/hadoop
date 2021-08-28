@@ -5101,7 +5101,7 @@ public class TestLeafQueue {
     CSQueueMetrics metrics = CSQueueMetrics.forQueue(name, parent, false, cs.getConf());
     QueueInfo queueInfo = QueueInfo.
         newInstance(name, path, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, -1.0f, null, false);
+        null, QueueState.RUNNING, null, "", null, false, -1.0f, 10, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     AbstractCSQueue queue = mock(AbstractCSQueue.class);
     when(queue.getMetrics()).thenReturn(metrics);
@@ -5118,6 +5118,45 @@ public class TestLeafQueue {
     when(queue.getQueueResourceQuotas()).thenReturn(qQuotas);
     when(queue.getEffectiveCapacity(any())).thenReturn(res);
     return queue;
+  }
+
+  @Test
+  public void testMaxApplicationsWithNodeLabels() throws IOException {
+    CapacitySchedulerConfiguration conf = csConf;
+    String rootChild = root.getChildQueues().get(0).getQueuePath();
+
+    conf.setCapacityByLabel(ROOT, "test", 100);
+    conf.setCapacityByLabel(rootChild, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
+    cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
+    cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
+    cs.reinitialize(conf, cs.getRMContext());
+
+    LeafQueue e = (LeafQueue) cs.getQueue("e");
+    // Maximum application should be calculated with the default node label
+    Assert.assertEquals("Maximum application is not calculated properly",
+            (int)(conf.getMaximumSystemApplications()
+                * e.getAbsoluteCapacity()), e.getMaxApplications());
+
+    conf.setCapacityByLabel(rootChild + "." + A, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + B, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + D, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + E, "test", 60);
+    cs.reinitialize(conf, cs.getRMContext());
+
+    e = (LeafQueue) cs.getQueue("e");
+    // Maximum application is now determined by test label, because that would
+    // yield a higher value than with default node label
+    Assert.assertEquals("Maximum application is not calculated properly",
+        (int)(conf.getMaximumSystemApplications() *
+            e.getQueueCapacities().getAbsoluteCapacity("test")),
+        e.getMaxApplications());
   }
 
   @After

@@ -175,7 +175,7 @@ public class JournalNodeSyncer {
       }
       if (!createEditsSyncDir()) {
         LOG.error("Failed to create directory for downloading log " +
-                "segments: %s. Stopping Journal Node Sync.",
+                "segments: {}. Stopping Journal Node Sync.",
             journal.getStorage().getEditsSyncDir());
         return;
       }
@@ -315,7 +315,7 @@ public class JournalNodeSyncer {
       IOException {
     URI uri = new URI(uriStr);
     return Util.getLoggerAddresses(uri,
-        Sets.newHashSet(jn.getBoundIpcAddress()));
+        Sets.newHashSet(jn.getBoundIpcAddress()), conf);
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,
@@ -467,7 +467,7 @@ public class JournalNodeSyncer {
       moveSuccess = journal.moveTmpSegmentToCurrent(tmpEditsFile,
           finalEditsFile, log.getEndTxId());
     } catch (IOException e) {
-      LOG.info("Could not move %s to current directory.", tmpEditsFile);
+      LOG.info("Could not move {} to current directory.", tmpEditsFile);
     } finally {
       if (tmpEditsFile.exists() && !tmpEditsFile.delete()) {
         LOG.warn("Deleting " + tmpEditsFile + " has failed");

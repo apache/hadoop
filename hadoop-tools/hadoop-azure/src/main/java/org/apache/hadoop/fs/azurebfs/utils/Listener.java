@@ -16,34 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.contract;
+package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 
 /**
- * Contract test for secure distCP operation.
+ * Interface for testing identifiers tracked via TracingContext
+ * Implemented in TracingHeaderValidator
  */
-public class ITestAbfsFileSystemContractSecureDistCp extends AbstractContractDistCpTest {
-  private final ABFSContractTestBinding binding;
 
-  public ITestAbfsFileSystemContractSecureDistCp() throws Exception {
-    binding = new ABFSContractTestBinding();
-  }
-
-  @Override
-  public void setup() throws Exception {
-    binding.setup();
-    super.setup();
-  }
-
-  @Override
-  protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
-  }
-
-  @Override
-  protected AbfsFileSystemContract createContract(Configuration conf) {
-    return new AbfsFileSystemContract(conf, true);
-  }
+public interface Listener {
+  void callTracingHeaderValidator(String header, TracingHeaderFormat format);
+  void updatePrimaryRequestID(String primaryRequestID);
+  Listener getClone();
+  void setOperation(FSOperationType operation);
 }

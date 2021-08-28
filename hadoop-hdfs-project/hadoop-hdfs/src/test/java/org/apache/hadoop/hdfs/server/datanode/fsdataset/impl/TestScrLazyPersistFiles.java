@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
+
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.ClientContext;
@@ -125,8 +125,7 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
     waitForMetric("RamDiskBlocksLazyPersisted", 1);
 
-    HdfsDataInputStream fis = (HdfsDataInputStream) fs.open(path1);
-    try {
+    try (HdfsDataInputStream fis = (HdfsDataInputStream) fs.open(path1)) {
       // Keep and open read handle to path1 while creating path2
       byte[] buf = new byte[BUFFER_LENGTH];
       fis.read(0, buf, 0, BUFFER_LENGTH);
@@ -138,8 +137,6 @@ public class TestScrLazyPersistFiles extends LazyPersistTestCase {
           is((long) 2 * BUFFER_LENGTH));
       assertThat(fis.getReadStatistics().getTotalShortCircuitBytesRead(),
           is((long) 2 * BUFFER_LENGTH));
-    } finally {
-      IOUtils.closeQuietly(fis);
     }
   }
 

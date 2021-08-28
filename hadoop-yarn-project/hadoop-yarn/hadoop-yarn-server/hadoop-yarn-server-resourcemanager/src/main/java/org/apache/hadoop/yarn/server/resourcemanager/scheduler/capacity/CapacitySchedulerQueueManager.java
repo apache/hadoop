@@ -84,6 +84,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
   private QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       queueStateManager;
+  private ConfiguredNodeLabels configuredNodeLabels;
 
   /**
    * Construct the service.
@@ -98,6 +99,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     this.labelManager = labelManager;
     this.queueStateManager = new QueueStateManager<>();
     this.appPriorityACLManager = appPriorityACLManager;
+    this.configuredNodeLabels = new ConfiguredNodeLabels();
   }
 
   @Override
@@ -165,6 +167,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    */
   public void initializeQueues(CapacitySchedulerConfiguration conf)
     throws IOException {
+    configuredNodeLabels = new ConfiguredNodeLabels(conf);
     root = parseQueue(this.csContext, conf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, NOOP);
     setQueueAcls(authorizer, appPriorityACLManager, queues);
@@ -180,6 +183,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       throws IOException {
     // Parse new queues
     CSQueueStore newQueues = new CSQueueStore();
+    configuredNodeLabels = new ConfiguredNodeLabels(newConf);
     CSQueue newRoot = parseQueue(this.csContext, newConf, null,
         CapacitySchedulerConfiguration.ROOT, newQueues, queues, NOOP);
 
@@ -617,6 +621,20 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     }
 
     return parentsToCreate;
+  }
+
+  /**
+   * Get {@code ConfiguredNodeLabels} which contains the configured node labels
+   * for all queues.
+   * @return configured node labels
+   */
+  public ConfiguredNodeLabels getConfiguredNodeLabels() {
+    return configuredNodeLabels;
+  }
+
+  @VisibleForTesting
+  public void reinitConfiguredNodeLabels(CapacitySchedulerConfiguration conf) {
+    this.configuredNodeLabels = new ConfiguredNodeLabels(conf);
   }
 
   private LeafQueue createAutoQueue(ApplicationPlacementContext queue)

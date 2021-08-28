@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 /** 
  * This represents block replicas which are stored in DataNode.
@@ -64,4 +65,10 @@ public interface Replica {
    * Return true if the target volume is backed by RAM.
    */
   public boolean isOnTransientStorage();
+
+  /**
+   * Get the volume of replica.
+   * @return the volume of replica
+   */
+  public FsVolumeSpi getVolume();
 }

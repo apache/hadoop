@@ -47,13 +47,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
@@ -418,6 +418,28 @@ public abstract class GenericTestUtils {
   public static void waitFor(final Supplier<Boolean> check,
       final long checkEveryMillis, final long waitForMillis)
       throws TimeoutException, InterruptedException {
+    waitFor(check, checkEveryMillis, waitForMillis, null);
+  }
+
+  /**
+   * Wait for the specified test to return true. The test will be performed
+   * initially and then every {@code checkEveryMillis} until at least
+   * {@code waitForMillis} time has expired. If {@code check} is null or
+   * {@code waitForMillis} is less than {@code checkEveryMillis} this method
+   * will throw an {@link IllegalArgumentException}.
+   *
+   * @param check the test to perform.
+   * @param checkEveryMillis how often to perform the test.
+   * @param waitForMillis the amount of time after which no more tests will be
+   * performed.
+   * @param errorMsg error message to provide in TimeoutException.
+   * @throws TimeoutException if the test does not return true in the allotted
+   * time.
+   * @throws InterruptedException if the method is interrupted while waiting.
+   */
+  public static void waitFor(final Supplier<Boolean> check,
+      final long checkEveryMillis, final long waitForMillis,
+      final String errorMsg) throws TimeoutException, InterruptedException {
     Objects.requireNonNull(check, ERROR_MISSING_ARGUMENT);
     if (waitForMillis < checkEveryMillis) {
       throw new IllegalArgumentException(ERROR_INVALID_ARGUMENT);
@@ -432,9 +454,12 @@ public abstract class GenericTestUtils {
     }
 
     if (!result) {
-      throw new TimeoutException("Timed out waiting for condition. " +
-          "Thread diagnostics:\n" +
-          TimedOutTestsListener.buildThreadDiagnosticString());
+      final String exceptionErrorMsg = "Timed out waiting for condition. "
+          + (org.apache.commons.lang3.StringUtils.isNotEmpty(errorMsg)
+          ? "Error Message: " + errorMsg : "")
+          + "\nThread diagnostics:\n" +
+          TimedOutTestsListener.buildThreadDiagnosticString();
+      throw new TimeoutException(exceptionErrorMsg);
     }
   }
 
@@ -500,7 +525,7 @@ public abstract class GenericTestUtils {
 
     @Override
     public void close() throws Exception {
-      IOUtils.closeQuietly(bytesPrintStream);
+      IOUtils.closeStream(bytesPrintStream);
       System.setErr(oldErr);
     }
   }
@@ -821,12 +846,10 @@ public abstract class GenericTestUtils {
    */
   public static String getFilesDiff(File a, File b) throws IOException {
     StringBuilder bld = new StringBuilder();
-    BufferedReader ra = null, rb = null;
-    try {
-      ra = new BufferedReader(
-          new InputStreamReader(new FileInputStream(a)));
-      rb = new BufferedReader(
-          new InputStreamReader(new FileInputStream(b)));
+    try (BufferedReader ra = new BufferedReader(
+        new InputStreamReader(new FileInputStream(a)));
+         BufferedReader rb = new BufferedReader(
+             new InputStreamReader(new FileInputStream(b)))) {
       while (true) {
         String la = ra.readLine();
         String lb = rb.readLine();
@@ -846,9 +869,6 @@ public abstract class GenericTestUtils {
           bld.append(" + ").append(lb).append("\n");
         }
       }
-    } finally {
-      IOUtils.closeQuietly(ra);
-      IOUtils.closeQuietly(rb);
     }
     return bld.toString();
   }
@@ -948,8 +968,8 @@ public abstract class GenericTestUtils {
       final int fileCount,
       final int dirCount) throws IOException {
     return createDirsAndFiles(fs, destDir, depth, fileCount, dirCount,
-        new ArrayList<Path>(fileCount),
-        new ArrayList<Path>(dirCount));
+        new ArrayList<>(fileCount),
+        new ArrayList<>(dirCount));
   }
 
   /**

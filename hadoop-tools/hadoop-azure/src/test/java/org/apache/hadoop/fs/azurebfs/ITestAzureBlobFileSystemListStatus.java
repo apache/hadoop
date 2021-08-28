@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
@@ -83,6 +85,9 @@ public class ITestAzureBlobFileSystemListStatus extends
     }
 
     es.shutdownNow();
+    fs.registerListener(
+        new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
     FileStatus[] files = fs.listStatus(new Path("/"));
     assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
   }
@@ -94,7 +99,7 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListFileVsListDir() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path path = new Path("/testFile");
+    Path path = path("/testFile");
     try(FSDataOutputStream ignored = fs.create(path)) {
       FileStatus[] testFiles = fs.listStatus(path);
       assertEquals("length of test files", 1, testFiles.length);
@@ -106,19 +111,20 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListFileVsListDir2() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    fs.mkdirs(new Path("/testFolder"));
-    fs.mkdirs(new Path("/testFolder/testFolder2"));
-    fs.mkdirs(new Path("/testFolder/testFolder2/testFolder3"));
-    Path testFile0Path = new Path("/testFolder/testFolder2/testFolder3/testFile");
+    Path testFolder = path("/testFolder");
+    fs.mkdirs(testFolder);
+    fs.mkdirs(new Path(testFolder + "/testFolder2"));
+    fs.mkdirs(new Path(testFolder + "/testFolder2/testFolder3"));
+    Path testFile0Path = new Path(
+        testFolder + "/testFolder2/testFolder3/testFile");
     ContractTestUtils.touch(fs, testFile0Path);
 
     FileStatus[] testFiles = fs.listStatus(testFile0Path);
     assertEquals("Wrong listing size of file " + testFile0Path,
         1, testFiles.length);
     FileStatus file0 = testFiles[0];
-    assertEquals("Wrong path for " + file0,
-        new Path(getTestUrl(), "/testFolder/testFolder2/testFolder3/testFile"),
-        file0.getPath());
+    assertEquals("Wrong path for " + file0, new Path(getTestUrl(),
+        testFolder + "/testFolder2/testFolder3/testFile"), file0.getPath());
     assertIsFileReference(file0);
   }
 
@@ -131,18 +137,18 @@ public class ITestAzureBlobFileSystemListStatus extends
   @Test
   public void testListFiles() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testDir = new Path("/test");
+    Path testDir = path("/test");
     fs.mkdirs(testDir);
 
     FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
     assertEquals(1, fileStatuses.length);
 
-    fs.mkdirs(new Path("/test/sub"));
+    fs.mkdirs(new Path(testDir + "/sub"));
     fileStatuses = fs.listStatus(testDir);
     assertEquals(1, fileStatuses.length);
     assertEquals("sub", fileStatuses[0].getPath().getName());
     assertIsDirectoryReference(fileStatuses[0]);
-    Path childF = fs.makeQualified(new Path("/test/f"));
+    Path childF = fs.makeQualified(new Path(testDir + "/f"));
     touch(childF);
     fileStatuses = fs.listStatus(testDir);
     assertEquals(2, fileStatuses.length);
@@ -188,7 +194,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path nontrailingPeriodDir = path("testTrailingDir/dir");
-    Path trailingPeriodDir = path("testTrailingDir/dir.");
+    Path trailingPeriodDir = new Path("testMkdirTrailingDir/dir.");
 
     assertMkdirs(fs, nontrailingPeriodDir);
 
@@ -207,8 +213,8 @@ public class ITestAzureBlobFileSystemListStatus extends
     boolean exceptionThrown = false;
     final AzureBlobFileSystem fs = getFileSystem();
 
-    Path trailingPeriodFile = path("testTrailingDir/file.");
-    Path nontrailingPeriodFile = path("testTrailingDir/file");
+    Path trailingPeriodFile = new Path("testTrailingDir/file.");
+    Path nontrailingPeriodFile = path("testCreateTrailingDir/file");
 
     createFile(fs, nontrailingPeriodFile, false, new byte[0]);
     assertPathExists(fs, "Trailing period file does not exist",
@@ -230,7 +236,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     final AzureBlobFileSystem fs = getFileSystem();
 
     Path nonTrailingPeriodFile = path("testTrailingDir/file");
-    Path trailingPeriodFile = path("testTrailingDir/file.");
+    Path trailingPeriodFile = new Path("testRenameTrailingDir/file.");
 
     createFile(fs, nonTrailingPeriodFile, false, new byte[0]);
     try {

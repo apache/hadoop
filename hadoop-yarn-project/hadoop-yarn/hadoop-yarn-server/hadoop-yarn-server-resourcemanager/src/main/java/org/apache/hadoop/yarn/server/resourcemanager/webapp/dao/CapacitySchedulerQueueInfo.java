@@ -65,6 +65,7 @@ public class CapacitySchedulerQueueInfo {
   protected float weight;
   protected float normalizedWeight;
   protected int numApplications;
+  protected int maxParallelApps;
   protected String queueName;
   protected boolean isAbsoluteResource;
   protected QueueState state;
@@ -92,6 +93,10 @@ public class CapacitySchedulerQueueInfo {
   protected String defaultNodeLabelExpression;
   protected AutoQueueTemplatePropertiesInfo autoQueueTemplateProperties =
       new AutoQueueTemplatePropertiesInfo();
+  protected AutoQueueTemplatePropertiesInfo autoQueueParentTemplateProperties =
+      new AutoQueueTemplatePropertiesInfo();
+  protected AutoQueueTemplatePropertiesInfo autoQueueLeafTemplateProperties =
+      new AutoQueueTemplatePropertiesInfo();
 
   CapacitySchedulerQueueInfo() {
   };
@@ -116,6 +121,7 @@ public class CapacitySchedulerQueueInfo {
     weight = q.getQueueCapacities().getWeight();
     normalizedWeight = q.getQueueCapacities().getNormalizedWeight();
     numApplications = q.getNumApplications();
+    maxParallelApps = q.getMaxParallelApps();
     allocatedContainers = q.getMetrics().getAllocatedContainers();
     pendingContainers = q.getMetrics().getPendingContainers();
     reservedContainers = q.getMetrics().getReservedContainers();
@@ -172,10 +178,18 @@ public class CapacitySchedulerQueueInfo {
 
     queuePriority = q.getPriority().getPriority();
     if (q instanceof ParentQueue) {
-      orderingPolicyInfo = ((ParentQueue) q).getQueueOrderingPolicy()
+      ParentQueue queue = (ParentQueue) q;
+      orderingPolicyInfo = queue.getQueueOrderingPolicy()
           .getConfigName();
       autoQueueTemplateProperties = CapacitySchedulerInfoHelper
-            .getAutoCreatedTemplate((ParentQueue) q);
+            .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+                .getTemplateProperties());
+      autoQueueParentTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getParentOnlyProperties());
+      autoQueueLeafTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getLeafOnlyProperties());
     }
 
     String configuredCapacity = conf.get(
@@ -338,6 +352,10 @@ public class CapacitySchedulerQueueInfo {
 
   public float getNormalizedWeight() {
     return normalizedWeight;
+  }
+
+  public int getMaxParallelApps() {
+    return maxParallelApps;
   }
 
   public String getDefaultNodeLabelExpression() {

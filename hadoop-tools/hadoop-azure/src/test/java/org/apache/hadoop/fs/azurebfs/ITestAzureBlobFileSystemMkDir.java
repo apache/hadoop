@@ -45,10 +45,11 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCreateDirWithExistingDir() throws Exception {
-    Assume.assumeTrue(DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE || !getFileSystem()
-        .getIsNamespaceEnabled());
+    Assume.assumeTrue(
+        DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE || !getIsNamespaceEnabled(
+            getFileSystem()));
     final AzureBlobFileSystem fs = getFileSystem();
-    Path path = new Path("testFolder");
+    Path path = path("testFolder");
     assertMkdirs(fs, path);
     assertMkdirs(fs, path);
   }
@@ -58,12 +59,12 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     Assume.assumeFalse("Ignore test until default overwrite is set to false",
         DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE);
     Assume.assumeTrue("Ignore test for Non-HNS accounts",
-        getFileSystem().getIsNamespaceEnabled());
+        getIsNamespaceEnabled(getFileSystem()));
     //execute test only for HNS account with default overwrite=false
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_ENABLE_MKDIR_OVERWRITE, Boolean.toString(false));
     AzureBlobFileSystem fs = getFileSystem(config);
-    Path path = new Path("testFolder");
+    Path path = path("testFolder");
     assertMkdirs(fs, path); //checks that mkdirs returns true
     long timeCreated = fs.getFileStatus(path).getModificationTime();
     assertMkdirs(fs, path); //call to existing dir should return success
@@ -74,11 +75,11 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
   @Test
   public void createDirWithExistingFilename() throws Exception {
     Assume.assumeFalse("Ignore test until default overwrite is set to false",
-        DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE && getFileSystem()
-            .getIsNamespaceEnabled());
+        DEFAULT_FS_AZURE_ENABLE_MKDIR_OVERWRITE && getIsNamespaceEnabled(
+            getFileSystem()));
     final AzureBlobFileSystem fs = getFileSystem();
-    Path path = new Path("testFilePath");
-    fs.create(path);
+    Path path = path("testFilePath");
+    fs.create(path).close();
     assertTrue(fs.getFileStatus(path).isFile());
     intercept(FileAlreadyExistsException.class, () -> fs.mkdirs(path));
   }

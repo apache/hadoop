@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -582,6 +581,21 @@ public class ParentQueue extends AbstractCSQueue {
       throws SchedulerDynamicEditException {
     writeLock.lock();
     try {
+      if (!(queue instanceof AbstractCSQueue) ||
+          !((AbstractCSQueue) queue).isDynamicQueue()) {
+        throw new SchedulerDynamicEditException("Queue " + getQueuePath()
+            + " can not remove " + queue.getQueuePath() +
+            " because it is not a dynamic queue");
+      }
+
+      // We need to check if the parent of the child queue is exactly this
+      // ParentQueue object
+      if (queue.getParent() != this) {
+        throw new SchedulerDynamicEditException("Queue " + getQueuePath()
+            + " can not remove " + queue.getQueuePath() +
+            " because it has a different parent queue");
+      }
+
       // Now we can do remove and update
       this.childQueues.remove(queue);
       this.scheduler.getCapacitySchedulerQueueManager()
@@ -1258,9 +1272,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // Update effective capacity in all parent queue.
-      Set<String> configuredNodelabels = csContext.getConfiguration()
-          .getConfiguredNodeLabels(getQueuePath());
-      for (String label : configuredNodelabels) {
+      for (String label : configuredNodeLabels) {
         calculateEffectiveResourcesAndCapacity(label, clusterResource);
       }
 

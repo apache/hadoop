@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
-import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
 /**
@@ -60,41 +55,28 @@ public class ITestS3AContractDistCp extends AbstractContractDistCpTest {
   }
 
   @Override
+  protected boolean shouldUseDirectWrite() {
+    return true;
+  }
+
+  @Override
   protected S3AContract createContract(Configuration conf) {
     return new S3AContract(conf);
   }
 
-  /**
-   * Always inject the delay path in, so if the destination is inconsistent,
-   * and uses this key, inconsistency triggered.
-   * @param filepath path string in
-   * @return path on the remote FS for distcp
-   * @throws IOException IO failure
-   */
   @Override
-  protected Path path(final String filepath) throws IOException {
-    Path path = super.path(filepath);
-    return new Path(path, FailureInjectionPolicy.DEFAULT_DELAY_KEY_SUBSTRING);
-  }
-
-  @Override
-  public void testDirectWrite() throws Exception {
+  public void testDistCpWithIterator() throws Exception {
     final long renames = getRenameOperationCount();
-    super.testDirectWrite();
-    assertEquals("Expected no renames for a direct write distcp", 0L,
-        getRenameOperationCount() - renames);
+    super.testDistCpWithIterator();
+    assertEquals("Expected no renames for a direct write distcp",
+        getRenameOperationCount(),
+         renames);
   }
 
   @Override
   public void testNonDirectWrite() throws Exception {
     final long renames = getRenameOperationCount();
-    try {
-      super.testNonDirectWrite();
-    } catch (FileNotFoundException e) {
-      // We may get this exception when data is written to a DELAY_LISTING_ME
-      // directory causing verification of the distcp success to fail if
-      // S3Guard is not enabled
-    }
+    super.testNonDirectWrite();
     assertEquals("Expected 2 renames for a non-direct write distcp", 2L,
         getRenameOperationCount() - renames);
   }
