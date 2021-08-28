@@ -74,9 +74,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     super(application, rc, rmContext, activitiesManager);
   }
   
-  private boolean checkHeadroom(Resource clusterResource,
-      ResourceLimits currentResourceLimits, Resource required,
-      String nodePartition) {
+  private boolean checkHeadroom(ResourceLimits currentResourceLimits, Resource required,
+                                String nodePartition) {
     // If headroom + currentReservation < required, we cannot allocate this
     // require
     Resource resourceCouldBeUnReserved =
@@ -86,9 +85,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
     }
-    return Resources.greaterThanOrEqual(rc, clusterResource, Resources.add(
-        currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved),
-        required);
+    return Resources.fitsIn(rc, required,
+        Resources.add(currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved));
   }
 
   /*
@@ -168,8 +166,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       }
     }
 
-    if (!checkHeadroom(clusterResource, resourceLimits, required,
-        node.getPartition())) {
+    if (!checkHeadroom(resourceLimits, required, node.getPartition())) {
       LOG.debug("cannot allocate required resource={} because of headroom",
           required);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
