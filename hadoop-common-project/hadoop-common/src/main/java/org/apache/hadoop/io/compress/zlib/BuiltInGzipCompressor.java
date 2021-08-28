@@ -39,15 +39,15 @@ public class BuiltInGzipCompressor implements Compressor {
    * Fixed ten-byte gzip header. See {@link GZIPOutputStream}'s source for
    * details.
    */
-  private static final byte[] GZIP_HEADER = new byte[]{
+  private final byte[] GZIP_HEADER = new byte[]{
       0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   // The trailer will be overwritten based on crc and output size.
-  private static final byte[] GZIP_TRAILER = new byte[]{
+  private final byte[] GZIP_TRAILER = new byte[]{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  private static final int GZIP_HEADER_LEN = GZIP_HEADER.length;
-  private static final int GZIP_TRAILER_LEN = GZIP_TRAILER.length;
+  private final int GZIP_HEADER_LEN = GZIP_HEADER.length;
+  private final int GZIP_TRAILER_LEN = GZIP_TRAILER.length;
 
   private Deflater deflater;
 
