@@ -1,4 +1,3 @@
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,234 +17,80 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:xenial
+FROM centos:7
 
 WORKDIR /root
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-#####
-# Disable suggests/recommends
-#####
-RUN echo APT::Install-Recommends "0"\; > /etc/apt/apt.conf.d/10disableextras
-RUN echo APT::Install-Suggests "0"\; >>  /etc/apt/apt.conf.d/10disableextras
-
-ENV DEBIAN_FRONTEND noninteractive
-ENV DEBCONF_TERSE true
+######
+# Platform package dependency resolver
+######
+COPY pkg-resolver pkg-resolver
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
 
 ######
-# Install common dependencies from packages. Versions here are either
-# sufficient or irrelevant.
-#
-# WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
-# Ubuntu Java.  See Java section below!
+# Install packages from yum
 ######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends \
-        apt-utils \
-        build-essential \
-        bzip2 \
-        curl \
-        doxygen \
-        fuse \
-        g++ \
-        gcc \
-        git \
-        gnupg-agent \
-        libbz2-dev \
-        libcurl4-openssl-dev \
-        libfuse-dev \
-        libprotobuf-dev \
-        libprotoc-dev \
-        libsasl2-dev \
-        libsnappy-dev \
-        libssl-dev \
-        libtool \
-        libzstd1-dev \
-        locales \
-        make \
-        pinentry-curses \
-        pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
-        rsync \
-        software-properties-common \
-        snappy \
-        sudo \
-        zlib1g-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3008,SC2046
+RUN yum update -y \
+    && yum groupinstall -y "Development Tools" \
+    && yum install -y \
+        centos-release-scl \
+        python3 \
+    && yum install -y $(pkg-resolver/resolve.py centos:7)
+
+# Set GCC 9 as the default C/C++ compiler
+RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
+SHELL ["/bin/bash", "--login", "-c"]
+
+######
+# Set the environment variables needed for CMake
+# to find and use GCC 9 for compilation
+######
+ENV GCC_HOME "/opt/rh/devtoolset-9"
+ENV CC "${GCC_HOME}/root/usr/bin/gcc"
+ENV CXX "${GCC_HOME}/root/usr/bin/g++"
+ENV SHLVL 1
+ENV LD_LIBRARY_PATH "${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
+ENV PCP_DIR "${GCC_HOME}/root"
+ENV MANPATH "${GCC_HOME}/root/usr/share/man:"
+ENV PATH "${GCC_HOME}/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV PKG_CONFIG_PATH "${GCC_HOME}/root/usr/lib64/pkgconfig"
+ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
+
+# TODO: Set locale
+
+######
+# Set env vars required to build Hadoop
+######
+ENV MAVEN_HOME /opt/maven
+ENV PATH "${PATH}:${MAVEN_HOME}/bin"
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
 
 #######
-# OpenJDK 8
+# Set env vars for SpotBugs
 #######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-8-jdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
-# OpenJDK 7
+# Set env vars for Google Protobuf
 #######
-# hadolint ignore=DL3008
-RUN add-apt-repository ppa:openjdk-r/ppa
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-7-jdk \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN update-java-alternatives --set java-1.7.0-openjdk-amd64
-
-######
-# Install cmake 3.1.0 (3.5.1 ships with Xenial)
-######
-RUN mkdir -p /opt/cmake \
-    && curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz \
-    && tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
-ENV CMAKE_HOME /opt/cmake
-ENV PATH "${PATH}:/opt/cmake/bin"
-
-######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/protobuf-src \
-    && curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
-      -o /opt/protobuf.tar.gz \
-    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
-    && cd /opt/protobuf-src \
-    && ./configure --prefix=/opt/protobuf \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-src
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ######
-# Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
+# Install packages
 ######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends maven \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV MAVEN_HOME /usr
-
-######
-# Install Apache Ant 1.9.6 (1.9.6 ships with Xenial)
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends ant \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-######
-# Install findbugs 3.0.1 (3.0.1 ships with Xenial)
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends findbugs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV FINDBUGS_HOME /usr
-
-####
-# Install shellcheck (0.4.6, the latest as of 2017-09-26)
-####
-# hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
-####
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends bats \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
-####
-RUN pip2 install pylint==1.9.2
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
-
-###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
-###
-# hadolint ignore=DL3008, DL3016
-RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
-    && npm install npm@latest -g \
-    && npm install -g jshint
-
-###
-# Install hadolint
-####
-RUN curl -L -s -S \
-        https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
-        -o /bin/hadolint \
-   && chmod a+rx /bin/hadolint \
-   && shasum -a 512 /bin/hadolint | \
-        awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
-
-###
-# Avoid out of memory errors in builds
-###
-ENV MAVEN_OPTS -Xms256m -Xmx1536m -Dhttps.protocols=TLSv1.2 -Dhttps.cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
-
-
-###
-# Everything past this point is either not needed for testing or breaks Yetus.
-# So tell Yetus not to read the rest of the file:
-# YETUS CUT HERE
-###
-
-####
-# Install svn & Forrest (for Apache Hadoop website)
-###
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends subversion \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /opt/apache-forrest \
-    && curl -L -s -S \
-      https://archive.apache.org/dist/forrest/0.8/apache-forrest-0.8.tar.gz \
-      -o /opt/forrest.tar.gz \
-    && tar xzf /opt/forrest.tar.gz --strip-components 1 -C /opt/apache-forrest
-RUN echo 'forrest.home=/opt/apache-forrest' > build.properties
-ENV FORREST_HOME=/opt/apache-forrest
-
-# Hugo static website generator (for new hadoop site and Ozone docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
-    && dpkg --install hugo.deb \
-    && rm hugo.deb
-
-# Add a welcome message and environment checks.
-COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh
-RUN chmod 755 /root/hadoop_env_checks.sh
-# hadolint ignore=SC2016
-RUN echo '${HOME}/hadoop_env_checks.sh' >> /root/.bashrc
+RUN pkg-resolver/install-maven.sh centos:7
+RUN pkg-resolver/install-cmake.sh centos:7
+RUN pkg-resolver/install-zstandard.sh centos:7
+RUN pkg-resolver/install-yasm.sh centos:7
+RUN pkg-resolver/install-protobuf.sh centos:7
+RUN pkg-resolver/install-boost.sh centos:7
+RUN pkg-resolver/install-spotbugs.sh centos:7
+RUN pkg-resolver/install-nodejs.sh centos:7
+RUN pkg-resolver/install-git.sh centos:7
+RUN pkg-resolver/install-common-pkgs.sh
