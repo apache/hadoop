@@ -109,7 +109,7 @@ public class TestCodec {
     }
     // without hadoop-native installed.
     ZlibFactory.setNativeZlibLoaded(false);
-    assumeTrue(ZlibFactory.isNativeZlibLoaded(conf));
+    assertFalse(ZlibFactory.isNativeZlibLoaded(conf));
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.GzipCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
@@ -570,7 +570,7 @@ public class TestCodec {
     }
     // without hadoop-native installed.
     ZlibFactory.setNativeZlibLoaded(false);
-    assumeTrue(ZlibFactory.isNativeZlibLoaded(conf));
+    assertFalse(ZlibFactory.isNativeZlibLoaded(conf));
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.GzipCodec", 5);
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.GzipCodec", 100);
     sequenceFileCodecTest(conf, 200000, "org.apache.hadoop.io.compress.GzipCodec", 1000000);
