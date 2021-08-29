@@ -122,10 +122,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         });
 
     // Number of retries done should be as configured
-    Assert.assertTrue(
-        "Number of token fetch retries (" + retryTestTokenProvider.getReTryCount()
-            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
-            + ")", retryTestTokenProvider.getReTryCount() == numOfRetries);
+    Assert.assertEquals(
+        "Number of token fetch retries done does not match with fs.azure"
+            + ".custom.token.fetch.retry.count configured", numOfRetries,
+        retryTestTokenProvider.getRetryCount());
   }
 
   @Test

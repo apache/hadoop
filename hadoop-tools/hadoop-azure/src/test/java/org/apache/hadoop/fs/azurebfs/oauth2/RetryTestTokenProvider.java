@@ -35,7 +35,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   // Need to track first token fetch otherwise will get counted as a retry too.
   private boolean isThisFirstTokenFetch = true;
-  private int reTryCount = 0;
+  private int retryCount = 0;
 
   @Override
   public void initialize(Configuration configuration, String accountName)
@@ -43,9 +43,13 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   }
 
+  /**
+   * Clear earlier retry details and reset RetryTestTokenProvider instance to
+   * state of first access token fetch call
+   */
   public void resetStatusToFirstTokenFetch() {
     isThisFirstTokenFetch = true;
-    reTryCount = 0;
+    retryCount = 0;
   }
 
   @Override
@@ -53,7 +57,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
     if (isThisFirstTokenFetch) {
       isThisFirstTokenFetch = false;
     } else {
-      reTryCount++;
+      retryCount++;
     }
 
     LOG.debug("RetryTestTokenProvider: Throw an exception in fetching tokens");
@@ -70,7 +74,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
     return (RetryTestTokenProvider) ((CustomTokenProviderAdapter) customTokenProvider).getCustomTokenProviderAdaptee();
   }
 
-  public int getReTryCount() {
-    return reTryCount;
+  public int getRetryCount() {
+    return retryCount;
   }
 }
