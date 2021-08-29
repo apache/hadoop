@@ -39,15 +39,15 @@ public class BuiltInGzipCompressor implements Compressor {
    * Fixed ten-byte gzip header. See {@link GZIPOutputStream}'s source for
    * details.
    */
-  private static final byte[] GZIP_HEADER = new byte[]{
+  private final byte[] gzipHeader = new byte[]{
       0x1f, (byte) 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   // The trailer will be overwritten based on crc and output size.
-  private static final byte[] GZIP_TRAILER = new byte[]{
+  private final byte[] gzipTrailer = new byte[]{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  private static final int GZIP_HEADER_LEN = GZIP_HEADER.length;
-  private static final int GZIP_TRAILER_LEN = GZIP_TRAILER.length;
+  private final int gzipHeaderLen = gzipHeader.length;
+  private final int gzipTrailerLen = gzipTrailer.length;
 
   private Deflater deflater;
 
@@ -210,12 +210,12 @@ public class BuiltInGzipCompressor implements Compressor {
       return 0;
     }
 
-    int n = Math.min(len, GZIP_HEADER_LEN - headerOff);
-    System.arraycopy(GZIP_HEADER, headerOff, b, off, n);
+    int n = Math.min(len, gzipHeaderLen - headerOff);
+    System.arraycopy(gzipHeader, headerOff, b, off, n);
     headerOff += n;
 
     // Completes header output.
-    if (headerOff == GZIP_HEADER_LEN) {
+    if (headerOff == gzipHeaderLen) {
       state = BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM;
     }
 
@@ -225,15 +225,15 @@ public class BuiltInGzipCompressor implements Compressor {
   private void fillTrailer() {
     if (state == BuiltInGzipDecompressor.GzipStateLabel.TRAILER_CRC) {
       int streamCrc = (int) crc.getValue();
-      GZIP_TRAILER[0] = (byte) (streamCrc & 0x000000ff);
-      GZIP_TRAILER[1] = (byte) ((streamCrc & 0x0000ff00) >> 8);
-      GZIP_TRAILER[2] = (byte) ((streamCrc & 0x00ff0000) >> 16);
-      GZIP_TRAILER[3] = (byte) ((streamCrc & 0xff000000) >> 24);
+      gzipTrailer[0] = (byte) (streamCrc & 0x000000ff);
+      gzipTrailer[1] = (byte) ((streamCrc & 0x0000ff00) >> 8);
+      gzipTrailer[2] = (byte) ((streamCrc & 0x00ff0000) >> 16);
+      gzipTrailer[3] = (byte) ((streamCrc & 0xff000000) >> 24);
 
-      GZIP_TRAILER[4] = (byte) (accuBufLen & 0x000000ff);
-      GZIP_TRAILER[5] = (byte) ((accuBufLen & 0x0000ff00) >> 8);
-      GZIP_TRAILER[6] = (byte) ((accuBufLen & 0x00ff0000) >> 16);
-      GZIP_TRAILER[7] = (byte) ((accuBufLen & 0xff000000) >> 24);
+      gzipTrailer[4] = (byte) (accuBufLen & 0x000000ff);
+      gzipTrailer[5] = (byte) ((accuBufLen & 0x0000ff00) >> 8);
+      gzipTrailer[6] = (byte) ((accuBufLen & 0x00ff0000) >> 16);
+      gzipTrailer[7] = (byte) ((accuBufLen & 0xff000000) >> 24);
 
       crc.reset();
       accuBufLen = 0;
@@ -245,11 +245,11 @@ public class BuiltInGzipCompressor implements Compressor {
       return 0;
     }
 
-    int n = Math.min(len, GZIP_TRAILER_LEN - trailerOff);
-    System.arraycopy(GZIP_TRAILER, trailerOff, b, off, n);
+    int n = Math.min(len, gzipTrailerLen - trailerOff);
+    System.arraycopy(gzipTrailer, trailerOff, b, off, n);
     trailerOff += n;
 
-    if (trailerOff == GZIP_TRAILER_LEN) {
+    if (trailerOff == gzipTrailerLen) {
       state = BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
       currentBufLen = 0;
       headerOff = 0;
