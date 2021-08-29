@@ -491,7 +491,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("blockPoolUsed", node.getBlockPoolUsed());
         innerinfo.put("blockPoolUsedPercent", node.getBlockPoolUsedPercent());
         innerinfo.put("volfails", -1); // node.getVolumeFailures()
-        info.put(node.getHostName() + ":" + node.getXferPort(),
+        info.put(node.getDisplayName(),
             Collections.unmodifiableMap(innerinfo));
       }
     } catch (StandbyException e) {

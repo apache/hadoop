@@ -256,6 +256,13 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
 
   /**
+   * @return name useful for logging or display
+   */
+  public String getDisplayName() {
+    return hostName + ":" + getXferPort();
+  }
+
+  /**
    * @return infoPort (the port at which the HTTP server bound to)
    */
   public int getInfoPort() {
