@@ -24,6 +24,11 @@ import java.util.Iterator;
 
 import org.apache.hadoop.fs.FileStatus;
 
+/**
+ * Class to store listStatus results for AbfsListStatusRemoteIterator. The
+ * results can either be of type Iterator or an exception thrown during the
+ * operation
+ */
 public class AbfsListResult {
   private IOException listException = null;
 
