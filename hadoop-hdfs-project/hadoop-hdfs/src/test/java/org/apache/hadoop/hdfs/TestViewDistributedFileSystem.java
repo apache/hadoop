@@ -103,7 +103,8 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
       conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
           defaultUri.toString());
       conf.setLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 30000);
-      try (ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem.get(conf)) {
+      try (ViewDistributedFileSystem fileSystem =
+          (ViewDistributedFileSystem) FileSystem.get(conf)) {
         final Path testDir = new Path("/test");
         final Path renameDir = new Path("/testRename");
         fileSystem.mkdirs(testDir);
