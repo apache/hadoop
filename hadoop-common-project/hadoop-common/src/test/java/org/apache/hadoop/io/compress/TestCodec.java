@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.compress;
 
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -734,12 +735,13 @@ public class TestCodec {
 
     for (int i = 0; i < 100; i++){
       Compressor compressor = codec.createCompressor();
-      assertEquals(BuiltInGzipCompressor.class, compressor.getClass());
+      assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
+        .isInstanceOf(BuiltInGzipCompressor.class);
 
       Random r = new Random();
       long seed = r.nextLong();
       r.setSeed(seed);
-      LOG.info("seed: " + seed);
+      LOG.info("seed: {}", seed);
 
       int inputSize = r.nextInt(256 * 1024 + 1);
       byte[] b = new byte[inputSize];
@@ -762,15 +764,17 @@ public class TestCodec {
       gzbuf.reset(output, outputOff);
 
       Decompressor decom = codec.createDecompressor();
-      assertNotNull(decom);
-      assertEquals(BuiltInGzipDecompressor.class, decom.getClass());
-      InputStream gzin = codec.createInputStream(gzbuf, decom);
+      assertThat(decom).as("decompressor should not be null").isNotNull();
+      assertThat(decom).withFailMessage("should be BuiltInGzipDecompressor")
+        .isInstanceOf(BuiltInGzipDecompressor.class);
+      try (InputStream gzin = codec.createInputStream(gzbuf, decom);) {
 
-      DataOutputBuffer dflbuf = new DataOutputBuffer();
-      dflbuf.reset();
-      IOUtils.copyBytes(gzin, dflbuf, 4096);
-      final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
-      assertArrayEquals(b, dflchk);
+        DataOutputBuffer dflbuf = new DataOutputBuffer();
+        dflbuf.reset();
+        IOUtils.copyBytes(gzin, dflbuf, 4096);
+        final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+        assertThat(b).as("check decompressed output").isEqualTo(dflchk);
+      }
     }
   }
 
@@ -783,12 +787,13 @@ public class TestCodec {
 
     for (int i = 0; i < 100; i++){
       Compressor compressor = codec.createCompressor();
-      assertEquals(BuiltInGzipCompressor.class, compressor.getClass());
+      assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
+        .isInstanceOf(BuiltInGzipCompressor.class);
 
       Random r = new Random();
       long seed = r.nextLong();
       r.setSeed(seed);
-      LOG.info("seed: " + seed);
+      LOG.info("seed: {}", seed);
 
       int inputSize = r.nextInt(256 * 1024 + 1);
       byte[] b = new byte[inputSize];
@@ -807,19 +812,20 @@ public class TestCodec {
         outputOff += compressed;
       }
 
-      DataOutputBuffer dflbuf = new DataOutputBuffer();
-      GZIPOutputStream gzout = new GZIPOutputStream(dflbuf);
-      gzout.write(b);
-      gzout.close();
+      try (DataOutputBuffer dflbuf = new DataOutputBuffer();
+           GZIPOutputStream gzout = new GZIPOutputStream(dflbuf);) {
+        gzout.write(b);
+        gzout.close();
 
-      final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
-      LOG.info("output: " + outputOff);
-      LOG.info("dflchk: " + dflchk.length);
+        final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+        LOG.info("output: {}", outputOff);
+        LOG.info("dflchk: {}", dflchk.length);
 
-      assertEquals(outputOff, dflchk.length);
+        assertEquals(outputOff, dflchk.length);
 
-      uncompressGzipOutput(b, output, outputOff, codec);
-      uncompressGzipOutput(b, dflchk, dflchk.length, codec);
+        uncompressGzipOutput(b, output, outputOff, codec);
+        uncompressGzipOutput(b, dflchk, dflchk.length, codec);
+      }
     }
   }
 
@@ -832,37 +838,40 @@ public class TestCodec {
 
     for (int i = 0; i < 100; i++){
       Compressor compressor = codec.createCompressor();
-      DataOutputBuffer dflbuf = new DataOutputBuffer();
-      assertEquals(BuiltInGzipCompressor.class, compressor.getClass());
-      CompressionOutputStream compressionOutputStream = codec.createOutputStream(dflbuf, compressor);
+      try (DataOutputBuffer dflbuf = new DataOutputBuffer();) {
+        assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
+          .isInstanceOf(BuiltInGzipCompressor.class);
+        CompressionOutputStream compressionOutputStream = codec.createOutputStream(dflbuf, compressor);
 
-      Random r = new Random();
-      long seed = r.nextLong();
-      r.setSeed(seed);
-      LOG.info("seed: " + seed);
+        Random r = new Random();
+        long seed = r.nextLong();
+        r.setSeed(seed);
+        LOG.info("seed: {}", seed);
 
-      int inputSize = r.nextInt(256 * 1024 + 1);
-      byte[] b = new byte[inputSize];
-      r.nextBytes(b);
+        int inputSize = r.nextInt(256 * 1024 + 1);
+        byte[] b = new byte[inputSize];
+        r.nextBytes(b);
 
-      compressionOutputStream.write(b);
-      compressionOutputStream.close();
+        compressionOutputStream.write(b);
+        compressionOutputStream.close();
 
-      final byte[] output = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
-      dflbuf.reset();
+        final byte[] output = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+        dflbuf.reset();
 
-      GZIPOutputStream gzout = new GZIPOutputStream(dflbuf);
-      gzout.write(b);
-      gzout.close();
+        try (GZIPOutputStream gzout = new GZIPOutputStream(dflbuf);) {
+          gzout.write(b);
+          gzout.close();
 
-      final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
-      LOG.info("output: " + output.length);
-      LOG.info("dflchk: " + dflchk.length);
+          final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+          LOG.info("output: {}", output.length);
+          LOG.info("dflchk: {}", dflchk.length);
 
-      assertEquals(output.length, dflchk.length);
+          assertThat(output.length).as("check compressed data length").isEqualTo(dflchk.length);
 
-      uncompressGzipOutput(b, output, output.length, codec);
-      uncompressGzipOutput(b, dflchk, dflchk.length, codec);
+          uncompressGzipOutput(b, output, output.length, codec);
+          uncompressGzipOutput(b, dflchk, dflchk.length, codec);
+        }
+      }
     }
   }
 
@@ -872,15 +881,16 @@ public class TestCodec {
     gzbuf.reset(output, outputLen);
 
     Decompressor decom = codec.createDecompressor();
-    assertNotNull(decom);
-    assertEquals(BuiltInGzipDecompressor.class, decom.getClass());
+    assertThat(decom).as("decompressor should not be null").isNotNull();
+    assertThat(decom).withFailMessage("should be BuiltInGzipDecompressor")
+      .isInstanceOf(BuiltInGzipDecompressor.class);
     InputStream gzin = codec.createInputStream(gzbuf, decom);
 
     DataOutputBuffer dflbuf = new DataOutputBuffer();
     dflbuf.reset();
     IOUtils.copyBytes(gzin, dflbuf, 4096);
     final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
-    assertArrayEquals(origin, dflchk);
+    assertThat(origin).as("check decompressed output").isEqualTo(dflchk);
   }
 
   void GzipConcatTest(Configuration conf,
