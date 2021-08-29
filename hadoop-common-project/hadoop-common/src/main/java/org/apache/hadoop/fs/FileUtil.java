@@ -1883,6 +1883,7 @@ public class FileUtil {
    * out casting to the specific filesystem. This util method is proposed to get
    * the access to FileSystem#rename with options.
    */
+  @SuppressWarnings("deprecation")
   public static void rename(FileSystem srcFs, Path src, Path dst,
       final Options.Rename... options) throws IOException {
     srcFs.rename(src, dst, options);
