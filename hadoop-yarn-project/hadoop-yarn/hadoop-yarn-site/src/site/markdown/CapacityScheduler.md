@@ -296,7 +296,7 @@ The following properties control how the new placement engine expects rules.
 |:---- |:---- |
 | `yarn.scheduler.capacity.mapping-rule-format` | Allowed values are `legacy` or `json`. If it is not set, then the engine assumes that the old format might be in use so it also checks the value of `yarn.scheduler.capacity.queue-mappings`. Therefore, this must be set to `json` and cannot be left empty. |
 | `yarn.scheduler.capacity.mapping-rule-json` | The value of this property should contain the entire chain of rules inline. This is the preferred way of configuring Capacity Scheduler if you use the Mutation API, ie. modify configuration real-time via the REST interface. |
-| `yarn.scheduler.capacity.mapping-rule-json-file` | Defines an absolute path to a JSON file which contains the rules. For exmaple, `/opt/hadoop/config/mapping-rules.json`. |
+| `yarn.scheduler.capacity.mapping-rule-json-file` | Defines an absolute path to a JSON file which contains the rules. For example, `/opt/hadoop/config/mapping-rules.json`. |
 
 The property `yarn.scheduler.capacity.mapping-rule-json` takes precedence over `yarn.scheduler.capacity.mapping-rule-json-file`. If the format is set to `json` but you don't define either of these, then you'll get a warning but the initialization of Capacity Scheduler will not fail.
 
@@ -304,7 +304,7 @@ The property `yarn.scheduler.capacity.mapping-rule-json` takes precedence over `
 
 To use the flexible Queue Auto-Creation under a parent the queue capacities must be configured with weights. The flexible mode gives the user much bigger freedom to automatically create new leaf queues or entire queue hierarchies based on mapping rules. "Legacy" mode refers to either percentage-based configuration or where capacities are defined with absolute resources.
 
-In flexible Queue Auto-Creation mode, the concept of `ManagedParent` does not exist, every parent queue can have dynamically created parent of leaf queues (if the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` property is set to true). This also means that certain settings influence the outcome of the queue placement depending on how the scheduler is configured.
+In flexible Queue Auto-Creation mode every parent queue can have dynamically created parent or leaf queues (if the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` property is set to true), even if it already has static child queues. This also means that certain settings influence the outcome of the queue placement depending on how the scheduler is configured.
 
 When the mode is relevant, the document explains how certain settings or flags affect the overall logic.
 
@@ -335,9 +335,9 @@ When the mode is relevant, the document explains how certain settings or flags a
 
   The `create` flag is affected by the mode:
 
-* **Legacy** mode: it has no effect if the parent is not managed.
+* **Legacy** mode: applies to all parent queues that have the `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.enabled` set to true.
 
-* **Flexible** mode: it applies to all parent queues. However, if `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` is set to false the queue will not be created.
+* **Flexible** mode: applies to all parent queues that have the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` set to true.
 
 ####Policies
 
@@ -354,7 +354,7 @@ When the mode is relevant, the document explains how certain settings or flags a
 | `primaryGroupUser` | Places the application into the queue hierarchy `root.[parentQueue].<primaryGroup>.<userName>`. Note that `parentQueue` is optional. |
 | `secondaryGroup` | Places the application into a queue which matches the secondary group of the submitter. |
 | `secondaryGroupUser` | Places the application into the queue hierarchy `root.[parentQueue].<secondaryGroup>.<userName>`. Note that `parentQueue` is optional. |
-| `setDefaultQueue` | Changes the default queue from `root.default`. The change is permament in a sense that it is not restored in the next rule. You can change the default queue at any point and as many times as necessary. |
+| `setDefaultQueue` | Changes the default queue from `root.default`. The change is permanent in a sense that it is not restored in the next rule. You can change the default queue at any point and as many times as necessary. |
 | `custom` | Enables the user to use custom placement strings. See explanation below. |
 
 Notes:
