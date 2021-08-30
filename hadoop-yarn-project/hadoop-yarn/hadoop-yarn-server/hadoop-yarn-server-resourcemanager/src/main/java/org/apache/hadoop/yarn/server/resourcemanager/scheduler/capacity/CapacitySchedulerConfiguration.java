@@ -638,8 +638,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public float getUserLimit(String queue) {
+    float defaultUserLimit = getFloat(PREFIX + USER_LIMIT, DEFAULT_USER_LIMIT);
     float userLimit = getFloat(getQueuePrefix(queue) + USER_LIMIT,
-        DEFAULT_USER_LIMIT);
+        defaultUserLimit);
     return userLimit;
   }
 
@@ -694,9 +695,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public float getUserLimitFactor(String queue) {
+    float defaultUserLimitFactor = getFloat(PREFIX + USER_LIMIT_FACTOR, DEFAULT_USER_LIMIT_FACTOR);
     float userLimitFactor =
         getFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR,
-            DEFAULT_USER_LIMIT_FACTOR);
+            defaultUserLimitFactor);
     return userLimitFactor;
   }
 
