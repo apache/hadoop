@@ -110,6 +110,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         fileSystem.mkdirs(testDir);
         fileSystem.rename(testDir, renameDir, Options.Rename.TO_TRASH);
         Assert.assertTrue(fileSystem.exists(renameDir));
+        Assert.assertFalse(fileSystem.exists(testDir));
       }
     } finally {
       if (cluster != null) {
