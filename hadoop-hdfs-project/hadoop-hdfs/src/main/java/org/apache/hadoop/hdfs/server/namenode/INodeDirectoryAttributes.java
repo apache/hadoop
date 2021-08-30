@@ -24,6 +24,8 @@ import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
+import java.util.Objects;
+
 /**
  * The attributes of an inode.
  */
@@ -32,11 +34,6 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
   public QuotaCounts getQuotaCounts();
 
   public boolean metadataEquals(INodeDirectoryAttributes other);
-
-  static boolean validateFeature(INode.Feature left, INode.Feature right) {
-    return (left == right ||
-        (left != null && right != null && left.equals(right)));
-  }
   
   /** A copy of the inode directory attributes */
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
@@ -65,10 +62,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
     public boolean metadataEquals(INodeDirectoryAttributes other) {
       return other != null && getQuotaCounts().equals(other.getQuotaCounts())
           && getPermissionLong() == other.getPermissionLong()
-          && INodeDirectoryAttributes
-          .validateFeature(getAclFeature(), other.getAclFeature())
-          && INodeDirectoryAttributes
-          .validateFeature(getXAttrFeature(), other.getXAttrFeature());
+          && Objects.equals(getAclFeature(), other.getAclFeature())
+          && Objects.equals(getXAttrFeature(), other.getXAttrFeature());
     }
   }
 

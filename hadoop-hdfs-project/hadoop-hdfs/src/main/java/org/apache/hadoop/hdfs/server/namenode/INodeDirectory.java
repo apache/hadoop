@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -892,10 +893,8 @@ public class INodeDirectory extends INodeWithAdditionalFields
   public boolean metadataEquals(INodeDirectoryAttributes other) {
     return other != null && getQuotaCounts().equals(other.getQuotaCounts())
         && getPermissionLong() == other.getPermissionLong()
-        && INodeDirectoryAttributes
-        .validateFeature(getAclFeature(), other.getAclFeature())
-        && INodeDirectoryAttributes
-        .validateFeature(getXAttrFeature(), other.getXAttrFeature());
+        && Objects.equals(getAclFeature(), other.getAclFeature())
+        && Objects.equals(getXAttrFeature(), other.getXAttrFeature());
   }
 
   
