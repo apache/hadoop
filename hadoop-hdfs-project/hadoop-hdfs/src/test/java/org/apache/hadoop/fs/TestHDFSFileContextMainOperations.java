@@ -18,15 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import static org.apache.hadoop.fs.FileContextTestHelper.exists;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -36,12 +27,21 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+
+import javax.security.auth.login.LoginException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import static org.apache.hadoop.fs.FileContextTestHelper.exists;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
@@ -54,7 +54,7 @@ public class TestHDFSFileContextMainOperations extends
     return new FileContextTestHelper("/tmp/TestHDFSFileContextMainOperations");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
@@ -80,7 +80,7 @@ public class TestHDFSFileContextMainOperations extends
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
       
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -89,13 +89,13 @@ public class TestHDFSFileContextMainOperations extends
   }
   
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
   }
   
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -134,16 +134,16 @@ public class TestHDFSFileContextMainOperations extends
 
     boolean isReady = fc.truncate(file, newLength);
 
-    Assert.assertTrue("Recovery is not expected.", isReady);
+      Assertions.assertTrue(isReady, "Recovery is not expected.");
 
     FileStatus fileStatus = fc.getFileStatus(file);
-    Assert.assertEquals(fileStatus.getLen(), newLength);
+    Assertions.assertEquals(fileStatus.getLen(), newLength);
     AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
 
     ContentSummary cs = fs.getContentSummary(dir);
-    Assert.assertEquals("Bad disk space usage", cs.getSpaceConsumed(),
-        newLength * repl);
-    Assert.assertTrue(fs.delete(dir, true));
+      Assertions.assertEquals(cs.getSpaceConsumed(),
+              newLength * repl, "Bad disk space usage");
+    Assertions.assertTrue(fs.delete(dir, true));
   }
 
   @Test
@@ -280,8 +280,8 @@ public class TestHDFSFileContextMainOperations extends
     fs = cluster.getFileSystem();
     src1 = getTestRootPath(fc, "testEditsLogOldRename/srcdir/src1");
     dst1 = getTestRootPath(fc, "testEditsLogOldRename/dstdir/dst1");
-    Assert.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
-    Assert.assertTrue(fs.exists(dst1));    // ensure rename dst exists
+    Assertions.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
+    Assertions.assertTrue(fs.exists(dst1));    // ensure rename dst exists
   }
   
   /**
@@ -309,8 +309,8 @@ public class TestHDFSFileContextMainOperations extends
     fs = cluster.getFileSystem();
     src1 = getTestRootPath(fc, "testEditsLogRename/srcdir/src1");
     dst1 = getTestRootPath(fc, "testEditsLogRename/dstdir/dst1");
-    Assert.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
-    Assert.assertTrue(fs.exists(dst1));    // ensure rename dst exists
+    Assertions.assertFalse(fs.exists(src1));   // ensure src1 is already renamed
+    Assertions.assertTrue(fs.exists(dst1));    // ensure rename dst exists
   }
 
   @Test
@@ -324,7 +324,7 @@ public class TestHDFSFileContextMainOperations extends
 
     for (String invalidName: invalidNames) {
       Assert.assertFalse(invalidName + " is not valid",
-        fc.getDefaultFileSystem().isValidName(invalidName));
+          fc.getDefaultFileSystem().isValidName(invalidName));
     }
   }
 
@@ -332,9 +332,9 @@ public class TestHDFSFileContextMainOperations extends
       boolean exception) throws Exception {
     DistributedFileSystem fs = cluster.getFileSystem();
     try {
-      Assert.assertEquals(renameSucceeds, fs.rename(src, dst));
+      Assertions.assertEquals(renameSucceeds, fs.rename(src, dst));
     } catch (Exception ex) {
-      Assert.assertTrue(exception);
+      Assertions.assertTrue(exception);
     }
     Assert.assertEquals(renameSucceeds, !exists(fc, src));
     Assert.assertEquals(renameSucceeds, exists(fc, dst));

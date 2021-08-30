@@ -17,15 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.UUID;
-import java.util.regex.Pattern;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Ordering;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -34,7 +25,23 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.*;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Ordering;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestGlobPaths {
 
@@ -65,7 +72,7 @@ public class TestGlobPaths {
   static private String USER_DIR;
   private final Path[] path = new Path[NUM_OF_PATHS];
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
@@ -81,7 +88,7 @@ public class TestGlobPaths {
     USER_DIR = fs.getHomeDirectory().toUri().getPath().toString();
   }
   
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if(dfsCluster!=null) {
       dfsCluster.shutdown();
@@ -102,8 +109,8 @@ public class TestGlobPaths {
     fs.createNewFile(fNormal);
     fs.createNewFile(fWithCR);
     statuses = fs.globStatus(new Path(d1, "f1*"));
-    assertEquals("Expected both normal and CR-carrying files in result: ",
-        2, statuses.length);
+      assertEquals(
+              2, statuses.length, "Expected both normal and CR-carrying files in result: ");
     cleanupDFS();
   }
 
@@ -892,14 +899,14 @@ public class TestGlobPaths {
       // Test simple glob
       FileStatus[] statuses = wrap.globStatus(new Path(USER_DIR + "/alpha/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alpha/beta", statuses[0].getPath()
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alpha/beta", statuses[0].getPath()
           .toUri().getPath());
       // Test glob through symlink
       statuses = wrap.globStatus(new Path(USER_DIR + "/alphaLink/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alphaLink/beta", statuses[0].getPath()
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alphaLink/beta", statuses[0].getPath()
           .toUri().getPath());
       // If the terminal path component in a globbed path is a symlink,
       // we don't dereference that link.
@@ -907,20 +914,20 @@ public class TestGlobPaths {
           + "/alphaLink/betaLink"), false);
       statuses = wrap.globStatus(new Path(USER_DIR + "/alpha/betaLi*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alpha/betaLink", statuses[0].getPath()
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alpha/betaLink", statuses[0].getPath()
           .toUri().getPath());
       // todo: test symlink-to-symlink-to-dir, etc.
     }
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testGlobWithSymlinksOnFS() throws Exception {
     testOnFileSystem(new TestGlobWithSymlinks(false));
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testGlobWithSymlinksOnFC() throws Exception {
     testOnFileContext(new TestGlobWithSymlinks(true));
@@ -951,20 +958,20 @@ public class TestGlobPaths {
       // Test glob through symlink to a symlink to a directory
       FileStatus statuses[] = wrap.globStatus(new Path(USER_DIR
           + "/alphaLinkLink"), new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alphaLinkLink", statuses[0].getPath()
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alphaLinkLink", statuses[0].getPath()
           .toUri().getPath());
       statuses = wrap.globStatus(new Path(USER_DIR + "/alphaLinkLink/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alphaLinkLink/beta", statuses[0]
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alphaLinkLink/beta", statuses[0]
           .getPath().toUri().getPath());
       // Test glob of dangling symlink (theta does not actually exist)
       wrap.createSymlink(new Path(USER_DIR + "theta"), new Path(USER_DIR
           + "/alpha/kappa"), false);
       statuses = wrap.globStatus(new Path(USER_DIR + "/alpha/kappa/kappa"),
           new AcceptAllPathFilter());
-      Assert.assertNull(statuses);
+      Assertions.assertNull(statuses);
       // Test glob of symlinks
       wrap.createFile(USER_DIR + "/alpha/beta/gamma");
       wrap.createSymlink(new Path(USER_DIR + "gamma"), new Path(USER_DIR
@@ -975,12 +982,12 @@ public class TestGlobPaths {
           USER_DIR + "/alpha/beta/gammaLinkLinkLink"), false);
       statuses = wrap.globStatus(new Path(USER_DIR
           + "/alpha/*/gammaLinkLinkLink"), new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alpha/beta/gammaLinkLinkLink",
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alpha/beta/gammaLinkLinkLink",
           statuses[0].getPath().toUri().getPath());
       statuses = wrap.globStatus(new Path(USER_DIR + "/alpha/beta/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(USER_DIR + "/alpha/beta/gamma;" + USER_DIR
+      Assertions.assertEquals(USER_DIR + "/alpha/beta/gamma;" + USER_DIR
           + "/alpha/beta/gammaLink;" + USER_DIR + "/alpha/beta/gammaLinkLink;"
           + USER_DIR + "/alpha/beta/gammaLinkLinkLink",
           TestPath.mergeStatuses(statuses));
@@ -992,17 +999,17 @@ public class TestGlobPaths {
       statuses = wrap.globStatus(
           new Path(USER_DIR + "/tweedledee/unobtainium"),
           new AcceptAllPathFilter());
-      Assert.assertNull(statuses);
+      Assertions.assertNull(statuses);
     }
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testGlobWithSymlinksToSymlinksOnFS() throws Exception {
     testOnFileSystem(new TestGlobWithSymlinksToSymlinks(false));
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testGlobWithSymlinksToSymlinksOnFC() throws Exception {
     testOnFileContext(new TestGlobWithSymlinksToSymlinks(true));
@@ -1032,31 +1039,31 @@ public class TestGlobPaths {
       // PathFilter
       FileStatus statuses[] = wrap.globStatus(
           new Path(USER_DIR + "/alpha/beta"), new AcceptPathsEndingInZ());
-      Assert.assertNull(statuses);
+      Assertions.assertNull(statuses);
       statuses = wrap.globStatus(new Path(USER_DIR + "/alphaLinkz/betaz"),
           new AcceptPathsEndingInZ());
-      Assert.assertEquals(1, statuses.length);
-      Assert.assertEquals(USER_DIR + "/alphaLinkz/betaz", statuses[0].getPath()
+      Assertions.assertEquals(1, statuses.length);
+      Assertions.assertEquals(USER_DIR + "/alphaLinkz/betaz", statuses[0].getPath()
           .toUri().getPath());
       statuses = wrap.globStatus(new Path(USER_DIR + "/*/*"),
           new AcceptPathsEndingInZ());
-      Assert.assertEquals(USER_DIR + "/alpha/betaz;" + USER_DIR
+      Assertions.assertEquals(USER_DIR + "/alpha/betaz;" + USER_DIR
           + "/alphaLinkz/betaz", TestPath.mergeStatuses(statuses));
       statuses = wrap.globStatus(new Path(USER_DIR + "/*/*"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(USER_DIR + "/alpha/beta;" + USER_DIR
+      Assertions.assertEquals(USER_DIR + "/alpha/beta;" + USER_DIR
           + "/alpha/betaz;" + USER_DIR + "/alphaLinkz/beta;" + USER_DIR
           + "/alphaLinkz/betaz", TestPath.mergeStatuses(statuses));
     }
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testGlobSymlinksWithCustomPathFilterOnFS() throws Exception {
     testOnFileSystem(new TestGlobSymlinksWithCustomPathFilter(false));
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testGlobSymlinksWithCustomPathFilterOnFC() throws Exception {
     testOnFileContext(new TestGlobSymlinksWithCustomPathFilter(true));
@@ -1078,22 +1085,22 @@ public class TestGlobPaths {
           + "/alphaLink"), false);
       FileStatus statuses[] = wrap.globStatus(
           new Path(USER_DIR + "/alphaLink"), new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
+      Assertions.assertEquals(1, statuses.length);
       Path path = statuses[0].getPath();
-      Assert.assertEquals(USER_DIR + "/alpha", path.toUri().getPath());
-      Assert.assertEquals("hdfs", path.toUri().getScheme());
+      Assertions.assertEquals(USER_DIR + "/alpha", path.toUri().getPath());
+      Assertions.assertEquals("hdfs", path.toUri().getScheme());
 
       // FileContext can list a file:/// URI.
       // Since everyone should have the root directory, we list that.
       statuses = fc.util().globStatus(new Path("file:///"),
           new AcceptAllPathFilter());
-      Assert.assertEquals(1, statuses.length);
+      Assertions.assertEquals(1, statuses.length);
       Path filePath = statuses[0].getPath();
-      Assert.assertEquals("file", filePath.toUri().getScheme());
-      Assert.assertEquals("/", filePath.toUri().getPath());
+      Assertions.assertEquals("file", filePath.toUri().getScheme());
+      Assertions.assertEquals("/", filePath.toUri().getPath());
 
       // The FileSystem should have scheme 'hdfs'
-      Assert.assertEquals("hdfs", fs.getScheme());
+      Assertions.assertEquals("hdfs", fs.getScheme());
     }
   }
 
@@ -1176,16 +1183,15 @@ public class TestGlobPaths {
       try {
         wrap.globStatus(new Path("/no*/*"),
             new AcceptAllPathFilter());
-        Assert.fail("expected to get an AccessControlException when " +
+        Assertions.fail("expected to get an AccessControlException when " +
             "globbing through a directory we don't have permissions " +
             "to list.");
       } catch (AccessControlException ioe) {
       }
 
-      Assert.assertEquals("/norestrictions/val",
-        TestPath.mergeStatuses(wrap.globStatus(
-            new Path("/norestrictions/*"),
-                new AcceptAllPathFilter())));
+      Assertions.assertEquals("/norestrictions/val", TestPath.mergeStatuses(
+          wrap.globStatus(new Path("/norestrictions/*"),
+              new AcceptAllPathFilter())));
     }
   }
 
@@ -1209,9 +1215,8 @@ public class TestGlobPaths {
 
     void run() throws Exception {
       String reservedRoot = "/.reserved/.inodes/" + INodeId.ROOT_INODE_ID;
-      Assert.assertEquals(reservedRoot,
-        TestPath.mergeStatuses(wrap.
-            globStatus(new Path(reservedRoot), new AcceptAllPathFilter())));
+      Assertions.assertEquals(reservedRoot, TestPath.mergeStatuses(
+          wrap.globStatus(new Path(reservedRoot), new AcceptAllPathFilter())));
     }
   }
 
@@ -1240,8 +1245,8 @@ public class TestGlobPaths {
       privWrap.setOwner(new Path("/"), newOwner, null);
       FileStatus[] status = 
           wrap.globStatus(rootPath, new AcceptAllPathFilter());
-      Assert.assertEquals(1, status.length);
-      Assert.assertEquals(newOwner, status[0].getOwner());
+      Assertions.assertEquals(1, status.length);
+      Assertions.assertEquals(newOwner, status[0].getOwner());
       privWrap.setOwner(new Path("/"), oldRootStatus.getOwner(), null);
     }
   }
@@ -1273,8 +1278,8 @@ public class TestGlobPaths {
         FileStatus[] statuses =
             wrap.globStatus(new Path("/filed*/alpha"),
                   new AcceptAllPathFilter());
-        Assert.assertEquals(1, statuses.length);
-        Assert.assertEquals("/filed_away/alpha", statuses[0].getPath()
+        Assertions.assertEquals(1, statuses.length);
+        Assertions.assertEquals("/filed_away/alpha", statuses[0].getPath()
             .toUri().getPath());
         privWrap.mkdir(new Path("/filed_away/alphabet"),
             new FsPermission((short)0777), true);
@@ -1282,8 +1287,8 @@ public class TestGlobPaths {
             new FsPermission((short)0777), true);
         statuses = wrap.globStatus(new Path("/filed*/alph*/*b*"),
                   new AcceptAllPathFilter());
-        Assert.assertEquals(1, statuses.length);
-        Assert.assertEquals("/filed_away/alphabet/abc", statuses[0].getPath()
+        Assertions.assertEquals(1, statuses.length);
+        Assertions.assertEquals("/filed_away/alphabet/abc", statuses[0].getPath()
             .toUri().getPath());
       } finally {
         privWrap.delete(new Path("/filed"), true);
@@ -1308,12 +1313,12 @@ public class TestGlobPaths {
     FileSystem fs = FileSystem.getLocal(conf);
     String localTmp = System.getProperty("java.io.tmpdir");
     Path base = new Path(new Path(localTmp), UUID.randomUUID().toString());
-    Assert.assertTrue(fs.mkdirs(base));
-    Assert.assertTrue(fs.mkdirs(new Path(base, "e")));
-    Assert.assertTrue(fs.mkdirs(new Path(base, "c")));
-    Assert.assertTrue(fs.mkdirs(new Path(base, "a")));
-    Assert.assertTrue(fs.mkdirs(new Path(base, "d")));
-    Assert.assertTrue(fs.mkdirs(new Path(base, "b")));
+    Assertions.assertTrue(fs.mkdirs(base));
+    Assertions.assertTrue(fs.mkdirs(new Path(base, "e")));
+    Assertions.assertTrue(fs.mkdirs(new Path(base, "c")));
+    Assertions.assertTrue(fs.mkdirs(new Path(base, "a")));
+    Assertions.assertTrue(fs.mkdirs(new Path(base, "d")));
+    Assertions.assertTrue(fs.mkdirs(new Path(base, "b")));
     fs.deleteOnExit(base);
     FileStatus[] status = fs.globStatus(new Path(base, "*"));
     ArrayList list = new ArrayList();
@@ -1321,7 +1326,7 @@ public class TestGlobPaths {
         list.add(f.getPath().toString());
     }
     boolean sorted = Ordering.natural().isOrdered(list);
-    Assert.assertTrue(sorted);
+    Assertions.assertTrue(sorted);
   }
 }
 

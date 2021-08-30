@@ -39,9 +39,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.ServletContext;
@@ -49,7 +49,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -59,7 +59,7 @@ public class TestJspHelper {
   private final Configuration conf = new HdfsConfiguration();
 
   // allow user with TGT to run tests
-  @BeforeClass
+  @BeforeAll
   public static void setupKerb() {
     System.setProperty("java.security.krb5.kdc", "");
     System.setProperty("java.security.krb5.realm", "NONE");
@@ -142,7 +142,7 @@ public class TestJspHelper {
     UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     Token<? extends TokenIdentifier> tokenInUgi = ugi.getTokens().iterator()
         .next();
-    Assert.assertEquals(expected, tokenInUgi.getService().toString());
+    Assertions.assertEquals(expected, tokenInUgi.getService().toString());
   }
 
   @Test
@@ -168,9 +168,9 @@ public class TestJspHelper {
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
     // token with auth-ed user
@@ -178,9 +178,9 @@ public class TestJspHelper {
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);    
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);    
     checkUgiFromToken(ugi);
     
     // completely different user, token trumps auth
@@ -188,9 +188,9 @@ public class TestJspHelper {
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);    
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);    
     checkUgiFromToken(ugi);
     
     // expected case
@@ -198,9 +198,9 @@ public class TestJspHelper {
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);    
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);    
     checkUgiFromToken(ugi);
 
     // if present token, ignore doas parameter
@@ -209,9 +209,9 @@ public class TestJspHelper {
         tokenString);
 
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
     // if present token, ignore user.name parameter
@@ -220,9 +220,9 @@ public class TestJspHelper {
         tokenString);
 
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
     // if present token, ignore user.name and doas parameter
@@ -231,9 +231,9 @@ public class TestJspHelper {
         tokenString);
 
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromToken(ugi);
 
   }
@@ -253,18 +253,18 @@ public class TestJspHelper {
     request = getMockRequest(null, null, null);
     try {
       JspHelper.getUGI(context, request, conf);
-      Assert.fail("bad request allowed");
+      Assertions.fail("bad request allowed");
     } catch (IOException ioe) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Security enabled but user not authenticated by filter",
           ioe.getMessage());
     }
     request = getMockRequest(null, realUser, null);
     try {
       JspHelper.getUGI(context, request, conf);
-      Assert.fail("bad request allowed");
+      Assertions.fail("bad request allowed");
     } catch (IOException ioe) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Security enabled but user not authenticated by filter",
           ioe.getMessage());
     }
@@ -272,22 +272,22 @@ public class TestJspHelper {
     // ugi for remote user
     request = getMockRequest(realUser, null, null);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assertions.assertNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getShortUserName(), realUser);
     checkUgiFromAuth(ugi);
     
     // ugi for remote user = real user
     request = getMockRequest(realUser, realUser, null);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assertions.assertNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getShortUserName(), realUser);
     checkUgiFromAuth(ugi);
     
     // if there is remote user via SPNEGO, ignore user.name param
     request = getMockRequest(realUser, user, null);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getShortUserName(), realUser);
+    Assertions.assertNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getShortUserName(), realUser);
     checkUgiFromAuth(ugi);
   }
   
@@ -312,18 +312,18 @@ public class TestJspHelper {
     request = getMockRequest(null, null, user);
     try {
       JspHelper.getUGI(context, request, conf);
-      Assert.fail("bad request allowed");
+      Assertions.fail("bad request allowed");
     } catch (IOException ioe) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Security enabled but user not authenticated by filter",
           ioe.getMessage());
     }
     request = getMockRequest(null, realUser, user);
     try {
       JspHelper.getUGI(context, request, conf);
-      Assert.fail("bad request allowed");
+      Assertions.fail("bad request allowed");
     } catch (IOException ioe) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Security enabled but user not authenticated by filter",
           ioe.getMessage());
     }
@@ -331,25 +331,25 @@ public class TestJspHelper {
     // proxy ugi for user via remote user
     request = getMockRequest(realUser, null, user);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromAuth(ugi);
     
     // proxy ugi for user vi a remote user = real user
     request = getMockRequest(realUser, realUser, user);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromAuth(ugi);
 
     // if there is remote user via SPNEGO, ignore user.name, doas param
     request = getMockRequest(realUser, user, user);
     ugi = JspHelper.getUGI(context, request, conf);
-    Assert.assertNotNull(ugi.getRealUser());
-    Assert.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
-    Assert.assertEquals(ugi.getShortUserName(), user);
+    Assertions.assertNotNull(ugi.getRealUser());
+    Assertions.assertEquals(ugi.getRealUser().getShortUserName(), realUser);
+    Assertions.assertEquals(ugi.getShortUserName(), user);
     checkUgiFromAuth(ugi);
 
 
@@ -358,18 +358,18 @@ public class TestJspHelper {
     try {
       request = getMockRequest(user, null, realUser);
       JspHelper.getUGI(context, request, conf);
-      Assert.fail("bad proxy request allowed");
+      Assertions.fail("bad proxy request allowed");
     } catch (AuthorizationException ae) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "User: " + user + " is not allowed to impersonate " + realUser,
            ae.getMessage());
     }
     try {
       request = getMockRequest(user, user, realUser);
       JspHelper.getUGI(context, request, conf);
-      Assert.fail("bad proxy request allowed");
+      Assertions.fail("bad proxy request allowed");
     } catch (AuthorizationException ae) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "User: " + user + " is not allowed to impersonate " + realUser,
            ae.getMessage());
     }
@@ -420,24 +420,24 @@ public class TestJspHelper {
   
   private void checkUgiFromAuth(UserGroupInformation ugi) {
     if (ugi.getRealUser() != null) {
-      Assert.assertEquals(AuthenticationMethod.PROXY,
+      Assertions.assertEquals(AuthenticationMethod.PROXY,
                           ugi.getAuthenticationMethod());
-      Assert.assertEquals(AuthenticationMethod.KERBEROS_SSL,
+      Assertions.assertEquals(AuthenticationMethod.KERBEROS_SSL,
                           ugi.getRealUser().getAuthenticationMethod());
     } else {
-      Assert.assertEquals(AuthenticationMethod.KERBEROS_SSL,
+      Assertions.assertEquals(AuthenticationMethod.KERBEROS_SSL,
                           ugi.getAuthenticationMethod()); 
     }
   }
   
   private void checkUgiFromToken(UserGroupInformation ugi) {
     if (ugi.getRealUser() != null) {
-      Assert.assertEquals(AuthenticationMethod.PROXY,
+      Assertions.assertEquals(AuthenticationMethod.PROXY,
                           ugi.getAuthenticationMethod());
-      Assert.assertEquals(AuthenticationMethod.TOKEN,
+      Assertions.assertEquals(AuthenticationMethod.TOKEN,
                           ugi.getRealUser().getAuthenticationMethod());
     } else {
-      Assert.assertEquals(AuthenticationMethod.TOKEN,
+      Assertions.assertEquals(AuthenticationMethod.TOKEN,
                           ugi.getAuthenticationMethod());
     }
   }
@@ -453,7 +453,7 @@ public class TestJspHelper {
         in.reset(out.getData(), out.getLength());
         HdfsServerConstants.ReplicaState result = HdfsServerConstants.ReplicaState
             .read(in);
-        assertTrue("testReadWrite error !!!", repState == result);
+          assertTrue(repState == result, "testReadWrite error !!!");
         out.reset();
         in.reset();
       }

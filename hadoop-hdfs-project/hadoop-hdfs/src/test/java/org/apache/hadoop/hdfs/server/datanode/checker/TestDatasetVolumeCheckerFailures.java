@@ -24,8 +24,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
 import org.apache.hadoop.util.FakeTimer;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +34,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.TimeUnit;
 import java.util.*;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -55,7 +55,7 @@ public class TestDatasetVolumeCheckerFailures {
 
   private static final long MIN_DISK_CHECK_GAP_MS = 1000; // 1 second.
 
-  @Before
+  @BeforeEach
   public void commonInit() {
     timer = new FakeTimer();
     conf = new HdfsConfiguration();

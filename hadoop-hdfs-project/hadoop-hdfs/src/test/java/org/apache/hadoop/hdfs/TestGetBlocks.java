@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -56,8 +56,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.LambdaTestUtils;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,8 +117,8 @@ public class TestGetBlocks {
     List<DatanodeDescriptor> nodeInfoList = cluster.getNameNode()
         .getNamesystem().getBlockManager().getDatanodeManager()
         .getDatanodeListForReport(DatanodeReportType.LIVE);
-    assertEquals("Unexpected number of datanodes", NUM_DATA_NODES,
-        nodeInfoList.size());
+      assertEquals(NUM_DATA_NODES,
+              nodeInfoList.size(), "Unexpected number of datanodes");
     FileSystem fileSys = cluster.getFileSystem();
     FSDataOutputStream stm = null;
     try {
@@ -323,18 +322,18 @@ public class TestGetBlocks {
     String dId = cluster.getDataNodes().get(0).getDatanodeUuid();
     DatanodeDescriptor dnd = BlockManagerTestUtil.getDatanode(ns, dId);
     DatanodeStorageInfo[] storages = dnd.getStorageInfos();
-    assertEquals("DataNode should have 4 storages", 4, storages.length);
+      assertEquals(4, storages.length, "DataNode should have 4 storages");
 
     Iterator<BlockInfo> dnBlockIt = null;
     // check illegal start block number
     try {
       dnBlockIt = BlockManagerTestUtil.getBlockIterator(
           cluster.getNamesystem(), dId, -1);
-      assertTrue("Should throw IllegalArgumentException", false);
+        assertTrue(false, "Should throw IllegalArgumentException");
     } catch(IllegalArgumentException ei) {
       // as expected
     }
-    assertNull("Iterator should be null", dnBlockIt);
+      assertNull(dnBlockIt, "Iterator should be null");
 
     // form an array of all DataNode blocks
     int numBlocks = dnd.numBlocks();
@@ -347,8 +346,8 @@ public class TestGetBlocks {
         allBlocks[idx++] = storageBlockIt.next();
         try {
           storageBlockIt.remove();
-          assertTrue(
-              "BlockInfo iterator should have been unmodifiable", false);
+            assertTrue(false,
+                    "BlockInfo iterator should have been unmodifiable");
         } catch (UnsupportedOperationException e) {
           //expected exception
         }
@@ -359,17 +358,17 @@ public class TestGetBlocks {
     for(int i = 0; i < allBlocks.length; i++) {
       // create iterator starting from i
       dnBlockIt = BlockManagerTestUtil.getBlockIterator(ns, dId, i);
-      assertTrue("Block iterator should have next block", dnBlockIt.hasNext());
+        assertTrue(dnBlockIt.hasNext(), "Block iterator should have next block");
       // check iterator lists blocks in the desired order
       for(int j = i; j < allBlocks.length; j++) {
-        assertEquals("Wrong block order", allBlocks[j], dnBlockIt.next());
+          assertEquals(allBlocks[j], dnBlockIt.next(), "Wrong block order");
       }
     }
 
     // check start block number larger than numBlocks in the DataNode
     dnBlockIt = BlockManagerTestUtil.getBlockIterator(
         ns, dId, allBlocks.length + 1);
-    assertFalse("Iterator should not have next block", dnBlockIt.hasNext());
+      assertFalse(dnBlockIt.hasNext(), "Iterator should not have next block");
   }
 
   @Test

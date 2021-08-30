@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -34,6 +31,7 @@ import java.util.List;
 
 import javax.net.SocketFactory;
 
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,10 +53,9 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
@@ -74,7 +71,7 @@ public class TestDFSClientFailover {
   private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
   
-  @Before
+  @BeforeEach
   public void setUpCluster() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -83,7 +80,7 @@ public class TestDFSClientFailover {
     cluster.waitActive();
   }
   
-  @After
+  @AfterEach
   public void tearDownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -91,7 +88,7 @@ public class TestDFSClientFailover {
     }
   }
 
-  @After
+  @AfterEach
   public void clearConfig() {
     SecurityUtil.setTokenServiceUseIp(true);
   }
@@ -217,9 +214,9 @@ public class TestDFSClientFailover {
       fail("Successfully got proxy provider for misconfigured FS");
     } catch (IOException ioe) {
       LOG.info("got expected exception", ioe);
-      assertTrue("expected exception did not contain helpful message",
-          StringUtils.stringifyException(ioe).contains(
-          "Could not find any configured addresses for URI " + uri));
+        assertTrue(
+                StringUtils.stringifyException(ioe).contains(
+                        "Could not find any configured addresses for URI " + uri), "expected exception did not contain helpful message");
     }
   }
 
@@ -233,7 +230,7 @@ public class TestDFSClientFailover {
     try {
       Field f = InetAddress.class.getDeclaredField("nameServices");
       f.setAccessible(true);
-      Assume.assumeNotNull(f);
+      Assertions.assertNotNull(f);
       @SuppressWarnings("unchecked")
       List<NameService> nsList = (List<NameService>) f.get(null);
 
@@ -248,7 +245,7 @@ public class TestDFSClientFailover {
       LOG.info("Unable to spy on DNS. Skipping test.", t);
       // In case the JDK we're testing on doesn't work like Sun's, just
       // skip the test.
-      Assume.assumeNoException(t);
+      // Assume.assumeNoException(t);  // TODO: Should be safe to remove this?
       throw new RuntimeException(t);
     }
   }
@@ -377,9 +374,9 @@ public class TestDFSClientFailover {
     // not to use IP address for token service
     SecurityUtil.setTokenServiceUseIp(false);
 
-    // Logical URI should be used.
-    assertTrue("Legacy proxy providers should use logical URI.",
-        HAUtil.useLogicalUri(config, p.toUri()));
+      // Logical URI should be used.
+      assertTrue(
+              HAUtil.useLogicalUri(config, p.toUri()), "Legacy proxy providers should use logical URI.");
   }
 
   /**
@@ -394,8 +391,8 @@ public class TestDFSClientFailover {
         nnUri.getHost(),
         IPFailoverProxyProvider.class.getName());
 
-    assertFalse("IPFailoverProxyProvider should not use logical URI.",
-        HAUtil.useLogicalUri(config, nnUri));
+      assertFalse(
+              HAUtil.useLogicalUri(config, nnUri), "IPFailoverProxyProvider should not use logical URI.");
   }
 
 }

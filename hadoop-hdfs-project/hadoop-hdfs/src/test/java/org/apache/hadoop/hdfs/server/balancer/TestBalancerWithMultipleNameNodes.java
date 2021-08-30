@@ -51,8 +51,8 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test balancer with multiple NameNodes
@@ -184,7 +184,7 @@ public class TestBalancerWithMultipleNameNodes {
     // start rebalancing
     final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(s.conf);
     final int r = Balancer.run(namenodes, s.parameters, s.conf);
-    Assert.assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
+    Assertions.assertEquals(ExitStatus.SUCCESS.getExitCode(), r);
 
     LOG.info("BALANCER 2");
     wait(s, totalUsed, totalCapacity);
@@ -201,7 +201,7 @@ public class TestBalancerWithMultipleNameNodes {
       for(int n = 0; n < s.clients.length; n++) {
         final DatanodeInfo[] datanodes = s.clients[n].getDatanodeReport(
             DatanodeReportType.ALL);
-        Assert.assertEquals(datanodes.length, used.length);
+        Assertions.assertEquals(datanodes.length, used.length);
 
         for(int d = 0; d < datanodes.length; d++) {
           if (n == 0) {
@@ -213,8 +213,8 @@ public class TestBalancerWithMultipleNameNodes {
                   + ", getCapacity()=" + datanodes[d].getCapacity());
             }
           } else {
-            Assert.assertEquals(used[d], datanodes[d].getDfsUsed());
-            Assert.assertEquals(cap[d], datanodes[d].getCapacity());
+            Assertions.assertEquals(used[d], datanodes[d].getDfsUsed());
+            Assertions.assertEquals(cap[d], datanodes[d].getCapacity());
           }
           bpUsed[n][d] = datanodes[d].getBlockPoolUsed();
         }
@@ -266,7 +266,7 @@ public class TestBalancerWithMultipleNameNodes {
     // cluster is balanced, verify that only selected blockpools were touched
     Map<Integer, DatanodeStorageReport[]> postBalancerPoolUsages =
         getStorageReports(s);
-    Assert.assertEquals(preBalancerPoolUsages.size(),
+    Assertions.assertEquals(preBalancerPoolUsages.size(),
         postBalancerPoolUsages.size());
     for (Map.Entry<Integer, DatanodeStorageReport[]> entry
         : preBalancerPoolUsages.entrySet()) {
@@ -284,14 +284,14 @@ public class TestBalancerWithMultipleNameNodes {
    */
   private static void compareTotalPoolUsage(DatanodeStorageReport[] preReports,
       DatanodeStorageReport[] postReports) {
-    Assert.assertNotNull(preReports);
-    Assert.assertNotNull(postReports);
-    Assert.assertEquals(preReports.length, postReports.length);
+    Assertions.assertNotNull(preReports);
+    Assertions.assertNotNull(postReports);
+    Assertions.assertEquals(preReports.length, postReports.length);
     for (DatanodeStorageReport preReport : preReports) {
       String dnUuid = preReport.getDatanodeInfo().getDatanodeUuid();
       for(DatanodeStorageReport postReport : postReports) {
         if(postReport.getDatanodeInfo().getDatanodeUuid().equals(dnUuid)) {
-          Assert.assertEquals(getTotalPoolUsage(preReport),
+          Assertions.assertEquals(getTotalPoolUsage(preReport),
               getTotalPoolUsage(postReport));
           LOG.info("Comparision of datanode pool usage pre/post balancer run. "
               + "PrePoolUsage: " + getTotalPoolUsage(preReport)
@@ -490,7 +490,7 @@ public class TestBalancerWithMultipleNameNodes {
     final long[] capacities = new long[nDataNodes];
     Arrays.fill(capacities, CAPACITY);
     LOG.info("nNameNodes=" + nNameNodes + ", nDataNodes=" + nDataNodes);
-    Assert.assertEquals(nDataNodes, racks.length);
+    Assertions.assertEquals(nDataNodes, racks.length);
 
     LOG.info("RUN_TEST -1: start a cluster with nNameNodes=" + nNameNodes
         + ", nDataNodes=" + nDataNodes);

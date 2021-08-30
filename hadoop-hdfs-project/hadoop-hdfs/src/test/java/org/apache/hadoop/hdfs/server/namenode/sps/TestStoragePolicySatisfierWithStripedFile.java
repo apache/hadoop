@@ -46,9 +46,9 @@ import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +83,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
   /**
    * Initialize erasure coding policy.
    */
-  @Before
+  @BeforeEach
   public void init(){
     ecPolicy = getEcPolicy();
     dataBlocks = ecPolicy.getNumDataUnits();
@@ -165,7 +165,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
           fileLen);
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
         for (StorageType type : lb.getStorageTypes()) {
-          Assert.assertEquals(StorageType.DISK, type);
+          Assertions.assertEquals(StorageType.DISK, type);
         }
       }
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks,
@@ -275,7 +275,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
           fileLen);
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
         for (StorageType type : lb.getStorageTypes()) {
-          Assert.assertEquals(StorageType.DISK, type);
+          Assertions.assertEquals(StorageType.DISK, type);
         }
       }
       Thread.sleep(5000);
@@ -479,7 +479,7 @@ public class TestStoragePolicySatisfierWithStripedFile {
           fileLen);
       for (LocatedBlock lb : locatedBlocks.getLocatedBlocks()) {
         for (StorageType type : lb.getStorageTypes()) {
-          Assert.assertEquals(StorageType.DISK, type);
+          Assertions.assertEquals(StorageType.DISK, type);
         }
       }
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks,

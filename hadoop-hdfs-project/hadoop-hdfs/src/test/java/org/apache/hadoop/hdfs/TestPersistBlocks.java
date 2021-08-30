@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +42,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -128,8 +126,8 @@ public class TestPersistBlocks {
       // Check that the file has no less bytes than before the restart
       // This would mean that blocks were successfully persisted to the log
       FileStatus status = fs.getFileStatus(FILE_PATH);
-      assertTrue("Length too short: " + status.getLen(),
-          status.getLen() >= len);
+        assertTrue(
+                status.getLen() >= len, "Length too short: " + status.getLen());
       
       // And keep writing (ensures that leases are also persisted correctly)
       stream.write(DATA_AFTER_RESTART);
@@ -194,8 +192,8 @@ public class TestPersistBlocks {
       // Check that the file has no less bytes than before the restart
       // This would mean that blocks were successfully persisted to the log
       FileStatus status = fs.getFileStatus(FILE_PATH);
-      assertTrue("Length incorrect: " + status.getLen(),
-          status.getLen() == len - BLOCK_SIZE);
+        assertTrue(
+                status.getLen() == len - BLOCK_SIZE, "Length incorrect: " + status.getLen());
 
       // Verify the data showed up from before restart, sans abandoned block.
       FSDataInputStream readStream = fs.open(FILE_PATH);

@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Random;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -43,9 +43,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.VersionInfo;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test if FSNamesystem handles heartbeat right
@@ -64,7 +64,7 @@ public class TestComputeInvalidateWork {
   private int totalBlockGroups, blockGroupSize, stripesPerBlock, cellSize;
   private LocatedStripedBlock locatedStripedBlock;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ecPolicy = SystemErasureCodingPolicies.getByID(
         SystemErasureCodingPolicies.XOR_2_1_POLICY_ID);
@@ -99,7 +99,7 @@ public class TestComputeInvalidateWork {
     locatedStripedBlock = (LocatedStripedBlock)(lbs.get(0));
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -262,13 +262,13 @@ public class TestComputeInvalidateWork {
       invalidateBlocks = (InvalidateBlocks) Whitebox
           .getInternalState(cluster.getNamesystem().getBlockManager(),
               "invalidateBlocks");
-      assertEquals("Invalidate blocks should include both Replicas and " +
-          "Striped BlockGroups!",
-          (long) expected, invalidateBlocks.numBlocks());
-      assertEquals("Unexpected invalidate count for replicas!",
-          totalReplicas, invalidateBlocks.getBlocks());
-      assertEquals("Unexpected invalidate count for striped block groups!",
-          totalStripedDataBlocks, invalidateBlocks.getECBlocks());
+        assertEquals(
+                (long) expected, invalidateBlocks.numBlocks(), "Invalidate blocks should include both Replicas and " +
+                "Striped BlockGroups!");
+        assertEquals(
+                totalReplicas, invalidateBlocks.getBlocks(), "Unexpected invalidate count for replicas!");
+        assertEquals(
+                totalStripedDataBlocks, invalidateBlocks.getECBlocks(), "Unexpected invalidate count for striped block groups!");
     } finally {
       namesystem.writeUnlock();
     }
@@ -286,8 +286,8 @@ public class TestComputeInvalidateWork {
       try {
         bm.getDatanodeManager().registerDatanode(reg);
         expected -= (totalReplicasPerDataNode + totalBlockGroupsPerDataNode);
-        assertEquals("Expected number of invalidate blocks to decrease",
-            (long) expected, invalidateBlocks.numBlocks());
+          assertEquals(
+                  (long) expected, invalidateBlocks.numBlocks(), "Expected number of invalidate blocks to decrease");
       } finally {
           namesystem.writeUnlock();
       }

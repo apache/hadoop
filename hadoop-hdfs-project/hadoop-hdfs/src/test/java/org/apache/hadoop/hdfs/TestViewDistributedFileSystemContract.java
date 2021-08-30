@@ -26,10 +26,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class TestViewDistributedFileSystemContract
   private static String defaultWorkingDirectory;
   private static Configuration conf = new HdfsConfiguration();
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
     final File basedir = GenericTestUtils.getRandomizedTestDir();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
@@ -53,7 +53,7 @@ public class TestViewDistributedFileSystemContract
         "/user/" + UserGroupInformation.getCurrentUser().getShortUserName();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.set("fs.hdfs.impl", ViewDistributedFileSystem.class.getName());
     URI defaultFSURI =
@@ -65,7 +65,7 @@ public class TestViewDistributedFileSystemContract
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfter() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

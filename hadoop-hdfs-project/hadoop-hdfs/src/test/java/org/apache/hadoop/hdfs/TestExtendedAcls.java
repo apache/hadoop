@@ -27,9 +27,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -49,9 +49,7 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
 import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A class for testing the behavior of HDFS directory and file ACL.
@@ -65,7 +63,7 @@ public class TestExtendedAcls {
 
   private static DistributedFileSystem hdfs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_ACLS_ENABLED_KEY, true);
@@ -76,7 +74,7 @@ public class TestExtendedAcls {
     hdfs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

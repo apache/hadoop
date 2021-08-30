@@ -24,13 +24,7 @@ import static org.apache.hadoop.hdfs.server.namenode.ImageServlet.RECENT_IMAGE_C
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -89,9 +83,9 @@ import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -128,14 +122,14 @@ public class TestCheckpoint {
 
   private CheckpointFaultInjector faultInjector;
     
-  @Before
+  @BeforeEach
   public void setUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
     faultInjector = Mockito.mock(CheckpointFaultInjector.class);
     CheckpointFaultInjector.instance = faultInjector;
   }
   
-  @After
+  @AfterEach
   public void checkForSNNThreads() {
     GenericTestUtils.assertNoThreadsMatching(".*SecondaryNameNode.*");
   }
@@ -144,7 +138,7 @@ public class TestCheckpoint {
     throws IOException {
     assertTrue(fileSys.exists(name));
     int replication = fileSys.getFileStatus(name).getReplication();
-    assertEquals("replication for " + name, repl, replication);
+      assertEquals(repl, replication, "replication for " + name);
     //We should probably test for more of the file properties.    
   }
   
@@ -201,29 +195,29 @@ public class TestCheckpoint {
     ArrayList<URI> editsDirs = new ArrayList<URI>();
     File filePath =
       new File(PathUtils.getTestDir(getClass()), "storageDirToCheck");
-    assertTrue("Couldn't create directory storageDirToCheck",
-               filePath.exists() || filePath.mkdirs());
+      assertTrue(
+              filePath.exists() || filePath.mkdirs(), "Couldn't create directory storageDirToCheck");
     fsImageDirs.add(filePath.toURI());
     editsDirs.add(filePath.toURI());
     NNStorage nnStorage = new NNStorage(new HdfsConfiguration(),
       fsImageDirs, editsDirs);
     try {
-      assertTrue("List of storage directories didn't have storageDirToCheck.",
-                 nnStorage.getEditsDirectories().iterator().next().
-                 toString().indexOf("storageDirToCheck") != -1);
-      assertTrue("List of removed storage directories wasn't empty",
-                 nnStorage.getRemovedStorageDirs().isEmpty());
+        assertTrue(
+                nnStorage.getEditsDirectories().iterator().next().
+                        toString().indexOf("storageDirToCheck") != -1, "List of storage directories didn't have storageDirToCheck.");
+        assertTrue(
+                nnStorage.getRemovedStorageDirs().isEmpty(), "List of removed storage directories wasn't empty");
     } finally {
-      // Delete storage directory to cause IOException in writeTransactionIdFile 
-      assertTrue("Couldn't remove directory " + filePath.getAbsolutePath(),
-                 filePath.delete());
+        // Delete storage directory to cause IOException in writeTransactionIdFile 
+        assertTrue(
+                filePath.delete(), "Couldn't remove directory " + filePath.getAbsolutePath());
     }
     // Just call writeTransactionIdFile using any random number
     nnStorage.writeTransactionIdFileToStorage(1);
     List<StorageDirectory> listRsd = nnStorage.getRemovedStorageDirs();
-    assertTrue("Removed directory wasn't what was expected",
-               listRsd.size() > 0 && listRsd.get(listRsd.size() - 1).getRoot().
-               toString().indexOf("storageDirToCheck") != -1);
+      assertTrue(
+              listRsd.size() > 0 && listRsd.get(listRsd.size() - 1).getRoot().
+                      toString().indexOf("storageDirToCheck") != -1, "Removed directory wasn't what was expected");
     nnStorage.close();
   }
 
@@ -266,9 +260,9 @@ public class TestCheckpoint {
       // The error must be recorded, so next checkpoint will reload image.
       fos.write(new byte[] { 0, 1, 2, 3 });
       fos.hsync();
-      
-      assertTrue("Another checkpoint should have reloaded image",
-          secondary.doCheckpoint());
+
+        assertTrue(
+                secondary.doCheckpoint(), "Another checkpoint should have reloaded image");
     } finally {
       if (fs != null) {
         fs.close();
@@ -315,7 +309,7 @@ public class TestCheckpoint {
     } catch (ExitException ee) {
       // ignore
       ExitUtil.resetFirstExitException();
-      assertEquals("Max retries", 1, secondary.getMergeErrorCount() - 1);
+        assertEquals(1, secondary.getMergeErrorCount() - 1, "Max retries");
     } finally {
       if (fs != null) {
         fs.close();
@@ -830,8 +824,8 @@ public class TestCheckpoint {
       savedSd.lock();
       try {
         secondary = startSecondaryNameNode(conf);
-        assertFalse("Should fail to start 2NN when " + savedSd + " is locked",
-            savedSd.isLockSupported());
+          assertFalse(
+                  savedSd.isLockSupported(), "Should fail to start 2NN when " + savedSd + " is locked");
       } catch (IOException ioe) {
         GenericTestUtils.assertExceptionContains("already locked", ioe);
       } finally {
@@ -876,8 +870,8 @@ public class TestCheckpoint {
           " " + ManagementFactory.getRuntimeMXBean().getName();
         String expectedLogMessage = "It appears that another node "
           + lockingJvmName + " has already locked the storage directory";
-        assertTrue("Log output does not contain expected log message: "
-          + expectedLogMessage, logs.getOutput().contains(expectedLogMessage));
+          assertTrue(logs.getOutput().contains(expectedLogMessage), "Log output does not contain expected log message: "
+                  + expectedLogMessage);
       }
     } finally {
       cleanup(cluster);
@@ -913,8 +907,8 @@ public class TestCheckpoint {
     try {      
       cluster = new MiniDFSCluster.Builder(conf).format(false)
           .manageNameDfsDirs(false).numDataNodes(0).build();
-      assertFalse("cluster should fail to start after locking " +
-          sdToLock, sdToLock.isLockSupported());
+        assertFalse(sdToLock.isLockSupported(), "cluster should fail to start after locking " +
+                sdToLock);
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains("already locked", ioe);
     } finally {
@@ -982,9 +976,9 @@ public class TestCheckpoint {
     try {
       cluster = new MiniDFSCluster.Builder(conf).format(false).numDataNodes(0)
           .startupOption(StartupOption.IMPORT).build();
-      
-      assertTrue("Path from checkpoint should exist after import",
-          cluster.getFileSystem().exists(testPath));
+
+        assertTrue(
+                cluster.getFileSystem().exists(testPath), "Path from checkpoint should exist after import");
 
       // Make sure that the image got saved on import
       FSImageTestUtil.assertNNHasCheckpoints(cluster, Ints.asList(3));
@@ -1220,8 +1214,8 @@ public class TestCheckpoint {
         File savedImage = new File(imageDir, "current/"
                                    + NNStorage.getImageFileName(
                                        EXPECTED_TXNS_FIRST_SEG));
-        assertTrue("Should have saved image at " + savedImage,
-            savedImage.exists());        
+          assertTrue(
+                  savedImage.exists(), "Should have saved image at " + savedImage);        
       }
 
       // restart cluster and verify file exists
@@ -1264,7 +1258,7 @@ public class TestCheckpoint {
       sig.clusterID = "somerandomcid";
       try {
         sig.validateStorageInfo(nn.getFSImage()); // this should fail
-        assertTrue("This test is expected to fail.", false);
+          assertTrue(false, "This test is expected to fail.");
       } catch (Exception ignored) {
       }
     } finally {
@@ -1433,36 +1427,36 @@ public class TestCheckpoint {
           NNStorage.getImageFileName(expectedTxIdToDownload));
       File secondaryFsImageAfter = new File(secondaryCurrent,
           NNStorage.getImageFileName(expectedTxIdToDownload + 2));
-      
-      assertFalse("Secondary should start with empty current/ dir " +
-          "but " + secondaryFsImageBefore + " exists",
-          secondaryFsImageBefore.exists());
 
-      assertTrue("Secondary should have loaded an image",
-          secondary.doCheckpoint());
-      
-      assertTrue("Secondary should have downloaded original image",
-          secondaryFsImageBefore.exists());
-      assertTrue("Secondary should have created a new image",
-          secondaryFsImageAfter.exists());
+        assertFalse(
+                secondaryFsImageBefore.exists(), "Secondary should start with empty current/ dir " +
+                "but " + secondaryFsImageBefore + " exists");
+
+        assertTrue(
+                secondary.doCheckpoint(), "Secondary should have loaded an image");
+
+        assertTrue(
+                secondaryFsImageBefore.exists(), "Secondary should have downloaded original image");
+        assertTrue(
+                secondaryFsImageAfter.exists(), "Secondary should have created a new image");
       
       long fsimageLength = secondaryFsImageBefore.length();
-      assertEquals("Image size should not have changed",
-          fsimageLength,
-          secondaryFsImageAfter.length());
+        assertEquals(
+                fsimageLength,
+                secondaryFsImageAfter.length(), "Image size should not have changed");
 
       // change namespace
       fileSys.mkdirs(dir);
-      
-      assertFalse("Another checkpoint should not have to re-load image",
-          secondary.doCheckpoint());
+
+        assertFalse(
+                secondary.doCheckpoint(), "Another checkpoint should not have to re-load image");
       
       for (StorageDirectory sd :
         image.getStorage().dirIterable(NameNodeDirType.IMAGE)) {
         File imageFile = NNStorage.getImageFile(sd, NameNodeFile.IMAGE,
             expectedTxIdToDownload + 5);
-        assertTrue("Image size increased",
-            imageFile.length() > fsimageLength);
+          assertTrue(
+                  imageFile.length() > fsimageLength, "Image size increased");
       }
 
     } finally {
@@ -1559,9 +1553,9 @@ public class TestCheckpoint {
       for (StorageDirectory sd : secondary.getFSImage().getStorage()
           .dirIterable(NameNodeDirType.EDITS)) {
         File[] tmpEdits = sd.getCurrentDir().listFiles(tmpEditsFilter);
-        assertTrue(
-            "Expected a single tmp edits file in directory " + sd.toString(),
-            tmpEdits.length == 1);
+          assertTrue(
+                  tmpEdits.length == 1,
+                  "Expected a single tmp edits file in directory " + sd.toString());
         RandomAccessFile randFile = new RandomAccessFile(tmpEdits[0], "rw");
         randFile.setLength(0);
         randFile.close();
@@ -1673,9 +1667,9 @@ public class TestCheckpoint {
       for (StorageDirectory sd : secondary.getFSImage().getStorage()
           .dirIterable(NameNodeDirType.EDITS)) {
         File[] tmpEdits = sd.getCurrentDir().listFiles(tmpEditsFilter);
-        assertTrue(
-            "Expected a single tmp edits file in directory " + sd.toString(),
-            tmpEdits.length == 1);
+          assertTrue(
+                  tmpEdits.length == 1,
+                  "Expected a single tmp edits file in directory " + sd.toString());
       }
       // Restart 2NN
       secondary.shutdown();
@@ -1684,9 +1678,9 @@ public class TestCheckpoint {
       for (StorageDirectory sd : secondary.getFSImage().getStorage()
           .dirIterable(NameNodeDirType.EDITS)) {
         File[] tmpEdits = sd.getCurrentDir().listFiles(tmpEditsFilter);
-        assertTrue(
-            "Did not expect a tmp edits file in directory " + sd.toString(),
-            tmpEdits.length == 0);
+          assertTrue(
+                  tmpEdits.length == 0,
+                  "Did not expect a tmp edits file in directory " + sd.toString());
       }
       // Next checkpoint should succeed
       secondary.doCheckpoint();
@@ -2001,7 +1995,7 @@ public class TestCheckpoint {
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);
-        assertTrue(msg, msg.contains("but the secondary expected"));
+          assertTrue(msg.contains("but the secondary expected"), msg);
       }
 
       try {
@@ -2009,7 +2003,7 @@ public class TestCheckpoint {
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);
-        assertTrue(msg, msg.contains("but the secondary expected"));
+          assertTrue(msg.contains("but the secondary expected"), msg);
       }
 
       try {
@@ -2018,7 +2012,7 @@ public class TestCheckpoint {
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);
-        assertTrue(msg, msg.contains("but the secondary expected"));
+          assertTrue(msg.contains("but the secondary expected"), msg);
       }
     } finally {
       cleanup(cluster);
@@ -2279,8 +2273,8 @@ public class TestCheckpoint {
       for (File checkpointDir : checkpointDirs) {
         List<EditLogFile> editsFiles = FileJournalManager.matchEditLogs(
             checkpointDir);
-        assertEquals("Edit log files were not purged from 2NN", 1,
-            editsFiles.size());
+          assertEquals(1,
+                  editsFiles.size(), "Edit log files were not purged from 2NN");
       }
       
     } finally {
@@ -2443,14 +2437,14 @@ public class TestCheckpoint {
       // Checkpoint once
       secondary.doCheckpoint();
       String files1[] = tmpDir.list();
-      assertEquals("Only one file is expected", 1, files1.length);
+        assertEquals(1, files1.length, "Only one file is expected");
 
       // Perform more checkpointngs and check whether retention management
       // is working.
       secondary.doCheckpoint();
       secondary.doCheckpoint();
       String files2[] = tmpDir.list();
-      assertEquals("Two files are expected", 2, files2.length);
+        assertEquals(2, files2.length, "Two files are expected");
 
       // Verify that the first file is deleted.
       for (String fName : files2) {

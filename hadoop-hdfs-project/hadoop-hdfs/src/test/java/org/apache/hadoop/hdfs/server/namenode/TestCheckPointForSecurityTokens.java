@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
@@ -36,7 +34,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -90,8 +88,8 @@ public class TestCheckPointForSecurityTokens {
         assertTrue(log.isInProgress());
         log.scanLog(Long.MAX_VALUE, true);
         long numTransactions = (log.getLastTxId() - log.getFirstTxId()) + 1;
-        assertEquals("In-progress log " + log + " should have 5 transactions",
-                     5, numTransactions);;
+          assertEquals(
+                  5, numTransactions, "In-progress log " + log + " should have 5 transactions");;
       }
 
       // Saving image in safe mode should succeed
@@ -107,8 +105,8 @@ public class TestCheckPointForSecurityTokens {
         assertTrue(log.isInProgress());
         log.scanLog(Long.MAX_VALUE, true);
         long numTransactions = (log.getLastTxId() - log.getFirstTxId()) + 1;
-        assertEquals("In-progress log " + log + " should only have START txn",
-            1, numTransactions);
+          assertEquals(
+                  1, numTransactions, "In-progress log " + log + " should only have START txn");
       }
 
       // restart cluster

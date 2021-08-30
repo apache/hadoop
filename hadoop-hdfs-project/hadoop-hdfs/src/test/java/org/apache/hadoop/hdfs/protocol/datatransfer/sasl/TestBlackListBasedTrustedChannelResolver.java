@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +27,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlackListBasedTrustedChannelResolver;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for  {@link BlackListBasedTrustedChannelResolver}.
@@ -43,7 +41,7 @@ public class TestBlackListBasedTrustedChannelResolver {
   private final static String BLACK_LISTED = "127.0.0.1\n216.58.216.174\n";
   private BlackListBasedTrustedChannelResolver resolver;
 
-  @Before
+  @BeforeEach
   public void setup() {
     blacklistFile = new File(GenericTestUtils.getTestDir(), FILE_NAME);
     resolver
@@ -55,7 +53,7 @@ public class TestBlackListBasedTrustedChannelResolver {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     FileUtils.deleteQuietly(blacklistFile);
   }

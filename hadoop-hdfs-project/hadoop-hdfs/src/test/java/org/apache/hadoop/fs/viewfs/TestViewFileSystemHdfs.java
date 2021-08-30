@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -56,12 +55,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +81,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     return new FileSystemTestHelper("/tmp/TestViewFileSystemHdfs");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
 
@@ -129,7 +125,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   }
 
       
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -137,7 +133,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create the test root on local_fs
     fsTarget = fHdfs;
@@ -147,7 +143,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   }
 
   @Override
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -204,13 +200,13 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     //Verify file deletion within EZ
     DFSTestUtil.verifyDelete(shell, fsTarget, encFile, true);
-    assertTrue("ViewFileSystem trash roots should include EZ file trash",
-        (fsView.getTrashRoots(true).size() == 1));
+    assertEquals(1, fsView.getTrashRoots(true).size(),
+        "ViewFileSystem trash roots should include EZ file trash");
 
     //Verify deletion of EZ
     DFSTestUtil.verifyDelete(shell, fsTarget, zone, true);
-    assertTrue("ViewFileSystem trash roots should include EZ zone trash",
-        (fsView.getTrashRoots(true).size() == 2));
+    assertEquals(2, fsView.getTrashRoots(true).size(),
+        "ViewFileSystem trash roots should include EZ zone trash");
   }
 
   @Test
@@ -253,15 +249,15 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
         viewFs.getFileChecksum(mountDataFilePath);
     FileChecksum fileChecksumViaTargetFs =
         fsTarget.getFileChecksum(fsTargetFilePath);
-    assertTrue("File checksum not matching!",
-        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
+    assertTrue(fileChecksumViaViewFs.equals(fileChecksumViaTargetFs),
+        "File checksum not matching!");
 
     fileChecksumViaViewFs =
         viewFs.getFileChecksum(mountDataFilePath, fileLength / 2);
     fileChecksumViaTargetFs =
         fsTarget.getFileChecksum(fsTargetFilePath, fileLength / 2);
-    assertTrue("File checksum not matching!",
-        fileChecksumViaViewFs.equals(fileChecksumViaTargetFs));
+    assertTrue(fileChecksumViaViewFs.equals(fileChecksumViaTargetFs),
+        "File checksum not matching!");
   }
 
   //Rename should fail on across different fileSystems
@@ -276,7 +272,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     fsView.create(filePath);
     try {
       fsView.rename(filePath, hdfFilepath);
-      ContractTestUtils.fail("Should thrown IOE on Renames across filesytems");
+      Assertions.fail("Should thrown IOE on Renames across filesytems");
     } catch (IOException e) {
       GenericTestUtils
           .assertExceptionContains("Renames across Mount points not supported",
@@ -325,7 +321,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     // 1. test mkdirs
     final Path testDir = new Path("testdir1/sub1/sub3");
     final Path testDir_tmp = new Path("testdir1/sub1/sub3_temp");
-    assertTrue(testDir + ": Failed to create!", nfly.mkdirs(testDir));
+      assertTrue(nfly.mkdirs(testDir), testDir + ": Failed to create!");
 
     // Test renames
     assertTrue(nfly.rename(testDir, testDir_tmp));
@@ -333,7 +329,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     for (final URI testUri : testUris) {
       final FileSystem fs = FileSystem.get(testUri, testConf);
-      assertTrue(testDir + " should exist!", fs.exists(testDir));
+        assertTrue(fs.exists(testDir), testDir + " should exist!");
     }
 
     // 2. test write
@@ -349,7 +345,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       final FileSystem fs = FileSystem.get(testUri, testConf);
       final FSDataInputStream fsdis = fs.open(testFile);
       try {
-        assertEquals("Wrong file content", testString, fsdis.readUTF());
+          assertEquals(testString, fsdis.readUTF(), "Wrong file content");
       } finally {
         fsdis.close();
       }
@@ -364,7 +360,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       FSDataInputStream fsDis = null;
       try {
         fsDis = nfly.open(testFile);
-        assertEquals("Wrong file content", testString, fsDis.readUTF());
+          assertEquals(testString, fsDis.readUTF(), "Wrong file content");
       } finally {
         IOUtils.cleanupWithLogger(LOG, fsDis);
         cluster.restartNameNode(i);
@@ -378,7 +374,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     FSDataInputStream fsDis = null;
     try {
       fsDis = nfly.open(testFile);
-      assertEquals("Wrong file content", testString, fsDis.readUTF());
+        assertEquals(testString, fsDis.readUTF(), "Wrong file content");
       assertTrue(fs1.exists(testFile));
     } finally {
       IOUtils.cleanupWithLogger(LOG, fsDis);
@@ -393,18 +389,18 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
       for (final URI testUri : testUris) {
         final FileSystem fs = FileSystem.get(testUri, conf);
         fs.setTimes(testFile, 1L, 1L);
-        assertEquals(testUri + "Set mtime failed!", 1L,
-            fs.getFileStatus(testFile).getModificationTime());
-        assertEquals("nfly file status wrong", expectedMtime,
-            nfly.getFileStatus(testFile).getModificationTime());
+          assertEquals(1L,
+                  fs.getFileStatus(testFile).getModificationTime(), testUri + "Set mtime failed!");
+          assertEquals(expectedMtime,
+                  nfly.getFileStatus(testFile).getModificationTime(), "nfly file status wrong");
         FSDataInputStream fsDis2 = null;
         try {
           fsDis2 = nfly.open(testFile);
-          assertEquals("Wrong file content", testString, fsDis2.readUTF());
-          // repair is done, now trying via normal fs
-          //
-          assertEquals("Repair most recent failed!", expectedMtime,
-              fs.getFileStatus(testFile).getModificationTime());
+            assertEquals(testString, fsDis2.readUTF(), "Wrong file content");
+            // repair is done, now trying via normal fs
+            //
+            assertEquals(expectedMtime,
+                    fs.getFileStatus(testFile).getModificationTime(), "Repair most recent failed!");
         } finally {
           IOUtils.cleanupWithLogger(LOG, fsDis2);
         }
@@ -476,7 +472,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     FileSystem otherfs = map.get("user1");
     otherfs.mkdirs(user1Path);
     String owner = otherfs.getFileStatus(user1Path).getOwner();
-    assertEquals("The owner did not match ", owner, userUgi.getShortUserName());
+      assertEquals(owner, userUgi.getShortUserName(), "The owner did not match ");
     otherfs.delete(user1Path, false);
   }
 }

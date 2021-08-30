@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -27,9 +27,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import static org.apache.hadoop.security.SecurityUtilTestHelper.isExternalKdcRunning;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Assume;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
@@ -59,7 +59,7 @@ public class TestStartSecureDataNode {
 
   private void testExternalKdcRunning() {
     // Tests are skipped if external KDC is not running.
-    Assume.assumeTrue(isExternalKdcRunning());
+    Assumptions.assumeTrue(isExternalKdcRunning());
   }
 
   @Test
@@ -72,15 +72,15 @@ public class TestStartSecureDataNode {
       String nnSpnegoPrincipal =
         System.getProperty("dfs.namenode.kerberos.internal.spnego.principal");
       String nnKeyTab = System.getProperty("dfs.namenode.keytab.file");
-      assertNotNull("NameNode principal was not specified", nnPrincipal);
-      assertNotNull("NameNode SPNEGO principal was not specified",
-                    nnSpnegoPrincipal);
-      assertNotNull("NameNode keytab was not specified", nnKeyTab);
+        assertNotNull(nnPrincipal, "NameNode principal was not specified");
+        assertNotNull(
+                nnSpnegoPrincipal, "NameNode SPNEGO principal was not specified");
+        assertNotNull(nnKeyTab, "NameNode keytab was not specified");
 
       String dnPrincipal = System.getProperty("dfs.datanode.kerberos.principal");
       String dnKeyTab = System.getProperty("dfs.datanode.keytab.file");
-      assertNotNull("DataNode principal was not specified", dnPrincipal);
-      assertNotNull("DataNode keytab was not specified", dnKeyTab);
+        assertNotNull(dnPrincipal, "DataNode principal was not specified");
+        assertNotNull(dnKeyTab, "DataNode keytab was not specified");
 
       Configuration conf = new HdfsConfiguration();
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,

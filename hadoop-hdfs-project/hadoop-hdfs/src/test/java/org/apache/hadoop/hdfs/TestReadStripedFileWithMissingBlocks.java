@@ -26,8 +26,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -124,7 +124,7 @@ public class TestReadStripedFileWithMissingBlocks {
 
     // make sure there are missing block locations
     BlockLocation[] newLocs = fs.getFileBlockLocations(srcPath, 0, cellSize);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         newLocs[0].getNames().length < locs[0].getNames().length);
 
     byte[] smallBuf = new byte[1024];

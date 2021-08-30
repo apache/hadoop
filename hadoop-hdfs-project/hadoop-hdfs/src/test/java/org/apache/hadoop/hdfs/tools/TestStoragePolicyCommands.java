@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test StoragePolicyAdmin commands
@@ -46,7 +46,7 @@ public class TestStoragePolicyCommands {
   protected static MiniDFSCluster cluster;
   protected static FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void clusterSetUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
@@ -59,7 +59,7 @@ public class TestStoragePolicyCommands {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void clusterShutdown() throws IOException{
     if(fs != null) {
       fs.close();

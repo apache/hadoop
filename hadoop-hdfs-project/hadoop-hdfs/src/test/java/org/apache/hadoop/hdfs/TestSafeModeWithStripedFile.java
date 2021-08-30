@@ -27,18 +27,16 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 import java.io.IOException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestSafeModeWithStripedFile {
 
@@ -59,7 +57,7 @@ public class TestSafeModeWithStripedFile {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     ecPolicy = getEcPolicy();
     dataBlocks = (short) ecPolicy.getNumDataUnits();
@@ -78,7 +76,7 @@ public class TestSafeModeWithStripedFile {
     cluster.waitActive();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

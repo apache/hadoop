@@ -24,16 +24,12 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Verify XAttrs through ViewFileSystem functionality.
@@ -57,7 +53,7 @@ public class TestViewFileSystemWithXAttrs {
   protected static final String name2 = "user.a2";
   protected static final byte[] value2 = {0x37, 0x38, 0x39};
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning() throws IOException {
     cluster = new MiniDFSCluster.Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
@@ -69,14 +65,14 @@ public class TestViewFileSystemWithXAttrs {
     fHdfs2 = cluster.getFileSystem(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fsTarget = fHdfs;
     fsTarget2 = fHdfs2;
@@ -102,7 +98,7 @@ public class TestViewFileSystemWithXAttrs {
         targetTestRoot2.toUri());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
     fsTarget2.delete(fileSystemTestHelper.getTestRootPath(fsTarget2), true);

@@ -26,11 +26,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.util.ChunkedArrayList;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This class includes end-to-end tests for snapshot related FsShell and
@@ -42,7 +42,7 @@ public class TestSnapshotCommands {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
   
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetUp() throws IOException {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 3);
@@ -51,7 +51,7 @@ public class TestSnapshotCommands {
     fs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void clusterShutdown() throws IOException{
     if(fs != null){
       fs.close();
@@ -61,7 +61,7 @@ public class TestSnapshotCommands {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fs.mkdirs(new Path("/sub1"));
     fs.mkdirs(new Path("/Fully/QPath"));
@@ -70,7 +70,7 @@ public class TestSnapshotCommands {
     fs.mkdirs(new Path("/sub1/sub1sub2"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (fs.exists(new Path("/sub1"))) {
       if (fs.exists(new Path("/sub1/.snapshot"))) {

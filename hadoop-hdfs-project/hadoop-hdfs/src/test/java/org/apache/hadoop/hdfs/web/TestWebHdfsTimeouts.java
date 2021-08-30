@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,14 +47,14 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.junit.AssumptionViolatedException;
-import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This test suite checks that WebHdfsFileSystem sets connection timeouts and
@@ -107,7 +107,7 @@ public class TestWebHdfsTimeouts {
   @Parameter
   public TimeoutSource timeoutSource;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = WebHdfsTestUtil.createConf();
     serverSocket = new ServerSocket(0, CONNECTION_BACKLOG);
@@ -129,7 +129,7 @@ public class TestWebHdfsTimeouts {
     failedToConsumeBacklog = false;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     IOUtils.cleanupWithLogger(
         LOG, clients.toArray(new SocketChannel[clients.size()]));

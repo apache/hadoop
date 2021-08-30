@@ -33,10 +33,10 @@ import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
@@ -58,7 +58,7 @@ public class TestAddStripedBlockInFBR {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     Configuration conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize).build();
@@ -68,7 +68,7 @@ public class TestAddStripedBlockInFBR {
         StripedFileTestUtil.getDefaultECPolicy().getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();

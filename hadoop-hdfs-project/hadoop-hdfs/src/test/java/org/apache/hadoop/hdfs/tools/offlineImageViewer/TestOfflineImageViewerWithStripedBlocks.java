@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,9 +40,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestOfflineImageViewerWithStripedBlocks {
   private final ErasureCodingPolicy ecPolicy =
@@ -56,7 +56,7 @@ public class TestOfflineImageViewerWithStripedBlocks {
   private final int stripesPerBlock = 3;
   private final int blockSize = cellSize * stripesPerBlock;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
     Configuration conf = new Configuration();
@@ -72,7 +72,7 @@ public class TestOfflineImageViewerWithStripedBlocks {
     fs.mkdirs(eczone);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -148,23 +148,23 @@ public class TestOfflineImageViewerWithStripedBlocks {
     INodeFile fileNode = fsdir.getINode4Write(file.toString()).asFile();
     assertEquals(StripedFileTestUtil.getDefaultECPolicy().getId(),
         fileNode.getErasureCodingPolicyID());
-    assertTrue("Invalid block size", fileNode.getBlocks().length > 0);
+      assertTrue(fileNode.getBlocks().length > 0, "Invalid block size");
     long actualFileSize = 0;
     for (BlockInfo blockInfo : fileNode.getBlocks()) {
-      assertTrue("Didn't find block striped information",
-          blockInfo instanceof BlockInfoStriped);
+        assertTrue(
+                blockInfo instanceof BlockInfoStriped, "Didn't find block striped information");
       actualFileSize += blockInfo.getNumBytes();
     }
 
-    assertEquals("Wrongly computed file size contains striped blocks",
-        expectedFileSize, actualFileSize);
+      assertEquals(
+              expectedFileSize, actualFileSize, "Wrongly computed file size contains striped blocks");
 
     // Verify space consumed present in filestatus
     String EXPECTED_FILE_SIZE = "\"length\":"
         + String.valueOf(expectedFileSize);
-    assertTrue(
-        "Wrongly computed file size contains striped blocks, file status:"
-            + fileStatus + ". Expected file size is : " + EXPECTED_FILE_SIZE,
-        fileStatus.contains(EXPECTED_FILE_SIZE));
+      assertTrue(
+              fileStatus.contains(EXPECTED_FILE_SIZE),
+              "Wrongly computed file size contains striped blocks, file status:"
+                      + fileStatus + ". Expected file size is : " + EXPECTED_FILE_SIZE);
   }
 }

@@ -27,14 +27,14 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.StorageType.DEFAULT;
 import static org.apache.hadoop.fs.StorageType.RAM_DISK;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
   @Test
@@ -61,8 +61,8 @@ public class TestLazyPersistReplicaRecovery extends LazyPersistTestCase {
     ensureFileReplicasOnStorageType(path1, RAM_DISK);
 
     LOG.info("Restarting the DataNode");
-    assertTrue("DN did not restart properly",
-        cluster.restartDataNode(0, true));
+      assertTrue(
+              cluster.restartDataNode(0, true), "DN did not restart properly");
     // wait for blockreport
     waitForBlockReport(dn, dnd);
     // Ensure that the replica is now on persistent storage.

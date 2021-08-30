@@ -36,8 +36,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /**
@@ -121,7 +121,7 @@ public class TestFsckWithMultipleNameNodes {
         LOG.info("urls[" + i + "]=" + urls[i]);
         final String result = TestFsck.runFsck(conf, 0, false, urls[i]);
         LOG.info("result=" + result);
-        Assert.assertTrue(result.contains("Status: HEALTHY"));
+        Assertions.assertTrue(result.contains("Status: HEALTHY"));
       }
 
       // Test viewfs
@@ -138,7 +138,7 @@ public class TestFsckWithMultipleNameNodes {
         LOG.info("vurls[" + i + "]=" + vurls[i]);
         final String result = TestFsck.runFsck(conf, 0, false, vurls[i]);
         LOG.info("result=" + result);
-        Assert.assertTrue(result.contains("Status: HEALTHY"));
+        Assertions.assertTrue(result.contains("Status: HEALTHY"));
       }
     } finally {
       cluster.shutdown();

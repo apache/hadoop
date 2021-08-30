@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -25,15 +26,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test snapshot diff report for the snapshot root descendant directory.
  */
 public class TestSnapRootDescendantDiff extends TestSnapshotDiffReport {
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setBoolean(
@@ -51,7 +52,7 @@ public class TestSnapRootDescendantDiff extends TestSnapshotDiffReport {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

@@ -30,9 +30,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Lists;
-import org.junit.After;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 
 /**
@@ -49,7 +49,7 @@ public class TestAclConfigFlag {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     IOUtils.cleanupWithLogger(null, fs);
     if (cluster != null) {

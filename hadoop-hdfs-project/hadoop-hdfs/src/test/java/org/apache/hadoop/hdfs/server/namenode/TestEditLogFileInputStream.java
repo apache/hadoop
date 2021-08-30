@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -44,8 +44,8 @@ import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 
 public class TestEditLogFileInputStream {
@@ -147,13 +147,13 @@ public class TestEditLogFileInputStream {
     rwf.close();
 
     EditLogFileInputStream elis = new EditLogFileInputStream(editLog);
-    Assert.assertEquals(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+    Assertions.assertEquals(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
         elis.getVersion(true));
-    Assert.assertEquals(1, elis.scanNextOp());
+    Assertions.assertEquals(1, elis.scanNextOp());
     LOG.debug("Read transaction 1 from " + editLog);
     try {
       elis.scanNextOp();
-      Assert.fail("Expected scanNextOp to fail when op checksum was corrupt.");
+      Assertions.fail("Expected scanNextOp to fail when op checksum was corrupt.");
     } catch (IOException e) {
       LOG.debug("Caught expected checksum error when reading corrupt " +
           "transaction 2", e);

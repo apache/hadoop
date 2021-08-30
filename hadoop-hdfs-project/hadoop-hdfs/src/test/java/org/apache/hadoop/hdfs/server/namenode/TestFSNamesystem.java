@@ -23,7 +23,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.hamcrest.CoreMatchers.either;
 import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,15 +48,15 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 
 import java.util.List;
 
 public class TestFSNamesystem {
 
-  @After
+  @AfterEach
   public void cleanUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
   }
@@ -108,16 +109,16 @@ public class TestFSNamesystem {
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
 
     fsn.leaveSafeMode(false);
-    assertTrue("After leaving safemode FSNamesystem.isInStartupSafeMode still "
-      + "returned true", !fsn.isInStartupSafeMode());
-    assertTrue("After leaving safemode FSNamesystem.isInSafeMode still returned"
-      + " true", !fsn.isInSafeMode());
+      assertTrue(!fsn.isInStartupSafeMode(), "After leaving safemode FSNamesystem.isInStartupSafeMode still "
+              + "returned true");
+      assertTrue(!fsn.isInSafeMode(), "After leaving safemode FSNamesystem.isInSafeMode still returned"
+              + " true");
 
     fsn.enterSafeMode(true);
-    assertTrue("After entering safemode due to low resources FSNamesystem."
-      + "isInStartupSafeMode still returned true", !fsn.isInStartupSafeMode());
-    assertTrue("After entering safemode due to low resources FSNamesystem."
-      + "isInSafeMode still returned false",  fsn.isInSafeMode());
+      assertTrue(!fsn.isInStartupSafeMode(), "After entering safemode due to low resources FSNamesystem."
+              + "isInStartupSafeMode still returned true");
+      assertTrue(  fsn.isInSafeMode(), "After entering safemode due to low resources FSNamesystem."
+              + "isInSafeMode still returned false");
   }
 
   @Test
@@ -144,17 +145,17 @@ public class TestFSNamesystem {
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
 
     fsn.enterSafeMode(false);
-    assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
-    assertTrue("Replication queues were being populated during very first "
-        + "safemode", !bm.isPopulatingReplQueues());
+      assertTrue(fsn.isInSafeMode(), "FSNamesystem didn't enter safemode");
+      assertTrue(!bm.isPopulatingReplQueues(), "Replication queues were being populated during very first "
+              + "safemode");
     fsn.leaveSafeMode(false);
-    assertTrue("FSNamesystem didn't leave safemode", !fsn.isInSafeMode());
-    assertTrue("Replication queues weren't being populated even after leaving "
-      + "safemode", bm.isPopulatingReplQueues());
+      assertTrue(!fsn.isInSafeMode(), "FSNamesystem didn't leave safemode");
+      assertTrue(bm.isPopulatingReplQueues(), "Replication queues weren't being populated even after leaving "
+              + "safemode");
     fsn.enterSafeMode(false);
-    assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
-    assertTrue("Replication queues weren't being populated after entering "
-      + "safemode 2nd time", bm.isPopulatingReplQueues());
+      assertTrue(fsn.isInSafeMode(), "FSNamesystem didn't enter safemode");
+      assertTrue(bm.isPopulatingReplQueues(), "Replication queues weren't being populated after entering "
+              + "safemode 2nd time");
   }
 
   @Test

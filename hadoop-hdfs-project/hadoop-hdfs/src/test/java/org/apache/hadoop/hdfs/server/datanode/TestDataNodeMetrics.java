@@ -22,7 +22,7 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -89,8 +89,8 @@ public class TestDataNodeMetrics {
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounter("BytesWritten", LONG_FILE_LEN, rb);
-      assertTrue("Expected non-zero number of incremental block reports",
-          getLongCounter("IncrementalBlockReportsNumOps", rb) > 0);
+        assertTrue(
+                getLongCounter("IncrementalBlockReportsNumOps", rb) > 0, "Expected non-zero number of incremental block reports");
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
@@ -196,10 +196,10 @@ public class TestDataNodeMetrics {
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder dnMetrics = getMetrics(datanode.getMetrics().name());
-      assertTrue("More than 1 packet received",
-          getLongCounter("TotalPacketsReceived", dnMetrics) > 1L);
-      assertTrue("More than 1 slow packet to mirror",
-          getLongCounter("TotalPacketsSlowWriteToMirror", dnMetrics) > 1L);
+        assertTrue(
+                getLongCounter("TotalPacketsReceived", dnMetrics) > 1L, "More than 1 packet received");
+        assertTrue(
+                getLongCounter("TotalPacketsSlowWriteToMirror", dnMetrics) > 1L, "More than 1 slow packet to mirror");
       assertCounter("TotalPacketsSlowWriteToDisk", 1L, dnMetrics);
       assertCounter("TotalPacketsSlowWriteToOsCache", 0L, dnMetrics);
     } finally {
@@ -293,15 +293,15 @@ public class TestDataNodeMetrics {
           break;
         }
       }
-      assertNotNull("Could not find the head of the datanode write pipeline", 
-          headNode);
+        assertNotNull(
+                headNode, "Could not find the head of the datanode write pipeline");
       // Close the file and wait for the metrics to rollover
       Thread.sleep((interval + 1) * 1000);
       // Check the ack was received
       MetricsRecordBuilder dnMetrics = getMetrics(headNode.getMetrics()
           .name());
-      assertTrue("Expected non-zero number of acks", 
-          getLongCounter("PacketAckRoundTripTimeNanosNumOps", dnMetrics) > 0);
+        assertTrue(
+                getLongCounter("PacketAckRoundTripTimeNanosNumOps", dnMetrics) > 0, "Expected non-zero number of acks");
       assertQuantileGauges("PacketAckRoundTripTimeNanos" + interval
           + "s", dnMetrics);
     } finally {
@@ -346,10 +346,10 @@ public class TestDataNodeMetrics {
       final Object dnc =
           mbs.getAttribute(mxbeanName, "DatanodeNetworkCounts");
       final String allDnc = dnc.toString();
-      assertTrue("expected to see loopback address",
-          allDnc.indexOf("127.0.0.1") >= 0);
-      assertTrue("expected to see networkErrors",
-          allDnc.indexOf("networkErrors") >= 0);
+        assertTrue(
+                allDnc.indexOf("127.0.0.1") >= 0, "expected to see loopback address");
+        assertTrue(
+                allDnc.indexOf("networkErrors") >= 0, "expected to see networkErrors");
     } finally {
       IOUtils.cleanupWithLogger(LOG, streams.toArray(new Closeable[0]));
       if (cluster != null) {
@@ -420,7 +420,7 @@ public class TestDataNodeMetrics {
 
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       long blocksReplicated = getLongCounter("BlocksReplicated", rb);
-      assertEquals("No blocks replicated yet", 0, blocksReplicated);
+        assertEquals(0, blocksReplicated, "No blocks replicated yet");
 
       Path path = new Path("/counter.txt");
       DFSTestUtil.createFile(fs, path, 1024, (short) 2, Time.monotonicNow());
@@ -430,7 +430,7 @@ public class TestDataNodeMetrics {
 
       MetricsRecordBuilder rbNew = getMetrics(datanode.getMetrics().name());
       blocksReplicated = getLongCounter("BlocksReplicated", rbNew);
-      assertEquals("blocks replicated counter incremented", 1, blocksReplicated);
+        assertEquals(1, blocksReplicated, "blocks replicated counter incremented");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -550,8 +550,8 @@ public class TestDataNodeMetrics {
                 CachingStrategy.newDefaultStrategy());
         fail("Must throw FileNotFoundException");
       } catch (FileNotFoundException fe) {
-        assertTrue("Should throw too many open files",
-                fe.getMessage().contains("Too many open files"));
+          assertTrue(
+                  fe.getMessage().contains("Too many open files"), "Should throw too many open files");
       }
       cluster.triggerHeartbeats(); // IBR delete ack
       //After DN throws too many open files

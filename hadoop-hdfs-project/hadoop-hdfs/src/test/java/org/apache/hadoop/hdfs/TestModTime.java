@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.util.ThreadUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -79,7 +79,7 @@ public class TestModTime {
                                                    cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", numDatanodes, info.length);
+      assertEquals(numDatanodes, info.length, "Number of Datanodes ");
     FileSystem fileSys = cluster.getFileSystem();
     int replicas = numDatanodes - 1;
     assertTrue(fileSys instanceof DistributedFileSystem);

@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -45,9 +42,9 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /** Unit tests for permission */
 public class TestDFSPermission {
@@ -115,13 +112,13 @@ public class TestDFSPermission {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -185,7 +182,7 @@ public class TestDFSPermission {
     // case 5: test non-existent parent directory
     uMask = DEFAULT_UMASK;
     initFileSystem(uMask);
-    assertFalse("File shouldn't exists", fs.exists(NON_EXISTENT_PATH));
+      assertFalse(fs.exists(NON_EXISTENT_PATH), "File shouldn't exists");
     createAndCheckPermission(op, NON_EXISTENT_PATH, uMask, new FsPermission(
         DEFAULT_PERMISSION), false);
     Path parent = NON_EXISTENT_PATH.getParent();
@@ -324,8 +321,8 @@ public class TestDFSPermission {
         fail("User2 should not be allowed to delete user1's dir.");
       } catch (AccessControlException e) {
         e.printStackTrace();
-        assertTrue("Permission denied messages must carry the username",
-            e.getMessage().contains(USER2_NAME));
+          assertTrue(
+                  e.getMessage().contains(USER2_NAME), "Permission denied messages must carry the username");
       }
 
       // ensure the /BSS/user1 still exists
@@ -357,8 +354,8 @@ public class TestDFSPermission {
         // expect the exception is caused by permission denied
         assertTrue(e.getCause() instanceof AccessControlException);
         e.printStackTrace();
-        assertTrue("Permission denied messages must carry the username",
-            e.getCause().getMessage().contains(USER2_NAME));
+          assertTrue(
+                  e.getCause().getMessage().contains(USER2_NAME), "Permission denied messages must carry the username");
       }
 
       // ensure /BSS/user1 still exists
@@ -540,11 +537,11 @@ public class TestDFSPermission {
       fs.access(p1, FsAction.WRITE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
-      assertTrue("Permission denied messages must carry the username",
-              e.getMessage().contains(USER1_NAME));
-      assertTrue("Permission denied messages must carry the path parent",
-              e.getMessage().contains(
-                  p1.getParent().toUri().getPath()));
+        assertTrue(
+                e.getMessage().contains(USER1_NAME), "Permission denied messages must carry the username");
+        assertTrue(
+                e.getMessage().contains(
+                        p1.getParent().toUri().getPath()), "Permission denied messages must carry the path parent");
     }
 
     Path badPath = new Path("/bad/bad");
@@ -574,11 +571,11 @@ public class TestDFSPermission {
       fs.access(p2, FsAction.EXECUTE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
-      assertTrue("Permission denied messages must carry the username",
-              e.getMessage().contains(USER1_NAME));
-      assertTrue("Permission denied messages must carry the path parent",
-              e.getMessage().contains(
-                  p2.getParent().toUri().getPath()));
+        assertTrue(
+                e.getMessage().contains(USER1_NAME), "Permission denied messages must carry the username");
+        assertTrue(
+                e.getMessage().contains(
+                        p2.getParent().toUri().getPath()), "Permission denied messages must carry the path parent");
     }
   }
 
@@ -599,11 +596,11 @@ public class TestDFSPermission {
       fs.access(p3, FsAction.READ_WRITE);
       fail("The access call should have failed.");
     } catch (AccessControlException e) {
-      assertTrue("Permission denied messages must carry the username",
-              e.getMessage().contains(USER1_NAME));
-      assertTrue("Permission denied messages must carry the path parent",
-              e.getMessage().contains(
-                  p3.getParent().toUri().getPath()));
+        assertTrue(
+                e.getMessage().contains(USER1_NAME), "Permission denied messages must carry the username");
+        assertTrue(
+                e.getMessage().contains(
+                        p3.getParent().toUri().getPath()), "Permission denied messages must carry the path parent");
     }
   }
 
@@ -636,11 +633,11 @@ public class TestDFSPermission {
       fs.exists(nfpath);
       fail("The exists call should have failed.");
     } catch (AccessControlException e) {
-      assertTrue("Permission denied messages must carry file path",
-          e.getMessage().contains(fpath.getName()));
-      assertTrue("Permission denied messages must specify existing_file is not "
-              + "a directory, when checked on /existing_file/non_existing_name",
-          e.getMessage().contains("is not a directory"));
+        assertTrue(
+                e.getMessage().contains(fpath.getName()), "Permission denied messages must carry file path");
+        assertTrue(
+                e.getMessage().contains("is not a directory"), "Permission denied messages must specify existing_file is not "
+                + "a directory, when checked on /existing_file/non_existing_name");
     }
 
     rootFs.setPermission(p4, new FsPermission("600"));
@@ -648,13 +645,13 @@ public class TestDFSPermission {
       fs.exists(nfpath);
       fail("The exists call should have failed.");
     } catch (AccessControlException e) {
-      assertFalse("Permission denied messages must not carry full file path,"
-              + "since the user does not have permission on /p4: "
-              + e.getMessage(),
-          e.getMessage().contains(fpath.getName()));
-      assertFalse("Permission denied messages must not specify /p4"
-          + " is not a directory: " + e.getMessage(),
-          e.getMessage().contains("is not a directory"));
+        assertFalse(
+                e.getMessage().contains(fpath.getName()), "Permission denied messages must not carry full file path,"
+                + "since the user does not have permission on /p4: "
+                + e.getMessage());
+        assertFalse(
+                e.getMessage().contains("is not a directory"), "Permission denied messages must not specify /p4"
+                + " is not a directory: " + e.getMessage());
     }
   }
 

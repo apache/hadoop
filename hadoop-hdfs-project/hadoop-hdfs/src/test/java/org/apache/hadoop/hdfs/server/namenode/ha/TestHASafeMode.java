@@ -18,10 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,9 +66,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Lists;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.event.Level;
 
 import java.util.function.Supplier;
@@ -93,7 +90,7 @@ public class TestHASafeMode {
     GenericTestUtils.setLogLevel(FSImage.LOG, Level.TRACE);
   }
   
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -115,7 +112,7 @@ public class TestHASafeMode {
     cluster.transitionToActive(0);
   }
   
-  @After
+  @AfterEach
   public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -155,10 +152,10 @@ public class TestHASafeMode {
         }
       }
     }.start();
-    
-    // make sure the client's call has actually been handled by the active NN
-    assertFalse("The directory should not be created while NN in safemode",
-        fs.exists(test));
+
+      // make sure the client's call has actually been handled by the active NN
+      assertFalse(
+              fs.exists(test), "The directory should not be created while NN in safemode");
     
     Thread.sleep(1000);
     // let nn0 leave safemode
@@ -203,14 +200,14 @@ public class TestHASafeMode {
 
     FSNamesystem namesystem = nn0.getNamesystem();
     String status = namesystem.getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'", status
-        .startsWith("Safe mode is ON."));
+      assertTrue(status
+              .startsWith("Safe mode is ON."), "Bad safemode status: '" + status + "'");
     NameNodeAdapter.enterSafeMode(nn0, false);
-    assertTrue("Failed to enter into safemode in active", namesystem
-        .isInSafeMode());
+      assertTrue(namesystem
+              .isInSafeMode(), "Failed to enter into safemode in active");
     NameNodeAdapter.enterSafeMode(nn0, false);
-    assertTrue("Failed to enter into safemode in active", namesystem
-        .isInSafeMode());
+      assertTrue(namesystem
+              .isInSafeMode(), "Failed to enter into safemode in active");
   }
 
   /**
@@ -234,14 +231,14 @@ public class TestHASafeMode {
     restartStandby();
     FSNamesystem namesystem = nn1.getNamesystem();
     String status = namesystem.getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'", status
-        .startsWith("Safe mode is ON."));
+      assertTrue(status
+              .startsWith("Safe mode is ON."), "Bad safemode status: '" + status + "'");
     NameNodeAdapter.enterSafeMode(nn1, false);
-    assertTrue("Failed to enter into safemode in standby", namesystem
-        .isInSafeMode());
+      assertTrue(namesystem
+              .isInSafeMode(), "Failed to enter into safemode in standby");
     NameNodeAdapter.enterSafeMode(nn1, false);
-    assertTrue("Failed to enter into safemode in standby", namesystem
-        .isInSafeMode());
+      assertTrue(namesystem
+              .isInSafeMode(), "Failed to enter into safemode in standby");
   }
 
   private void restartActive() throws IOException {
@@ -500,37 +497,37 @@ public class TestHASafeMode {
     int numNodes, int nodeThresh) {
     String status = nn.getNamesystem().getSafemode();
     if (total == 0 && nodeThresh == 0) {
-      assertTrue("Bad safemode status: '" + status + "'",
-          status.isEmpty()
-              || status.startsWith("Safe mode is ON. The reported blocks 0 " +
-              "has reached the threshold 0.9990 of total blocks 0. The " +
-              "minimum number of live datanodes is not required. In safe " +
-              "mode extension. Safe mode will be turned off automatically " +
-              "in 0 seconds."));
+        assertTrue(
+                status.isEmpty()
+                        || status.startsWith("Safe mode is ON. The reported blocks 0 " +
+                        "has reached the threshold 0.9990 of total blocks 0. The " +
+                        "minimum number of live datanodes is not required. In safe " +
+                        "mode extension. Safe mode will be turned off automatically " +
+                        "in 0 seconds."), "Bad safemode status: '" + status + "'");
     } else if (safe == total) {
       if (nodeThresh == 0) {
-        assertTrue("Bad safemode status: '" + status + "'",
-            status.startsWith("Safe mode is ON. The reported blocks " + safe
-                + " has reached the " + "threshold 0.9990 of total blocks "
-                + total + ". The minimum number of live datanodes is not "
-                + "required. In safe mode extension. Safe mode will be turned "
-                + "off automatically"));
+          assertTrue(
+                  status.startsWith("Safe mode is ON. The reported blocks " + safe
+                          + " has reached the " + "threshold 0.9990 of total blocks "
+                          + total + ". The minimum number of live datanodes is not "
+                          + "required. In safe mode extension. Safe mode will be turned "
+                          + "off automatically"), "Bad safemode status: '" + status + "'");
       } else {
-        assertTrue("Bad safemode status: '" + status + "'",
-            status.startsWith(
-                "Safe mode is ON. The reported blocks " + safe + " has reached "
-                    + "the threshold 0.9990 of total blocks " + total + ". The "
-                    + "number of live datanodes " + numNodes + " has reached "
-                    + "the minimum number " + nodeThresh + ". In safe mode "
-                    + "extension. Safe mode will be turned off automatically"));
+          assertTrue(
+                  status.startsWith(
+                          "Safe mode is ON. The reported blocks " + safe + " has reached "
+                                  + "the threshold 0.9990 of total blocks " + total + ". The "
+                                  + "number of live datanodes " + numNodes + " has reached "
+                                  + "the minimum number " + nodeThresh + ". In safe mode "
+                                  + "extension. Safe mode will be turned off automatically"), "Bad safemode status: '" + status + "'");
       }
     } else {
       int additional = (int) (total * 0.9990) - safe;
-      assertTrue("Bad safemode status: '" + status + "'",
-          status.startsWith(
-              "Safe mode is ON. " +
-              "The reported blocks " + safe + " needs additional " +
-              additional + " blocks"));
+        assertTrue(
+                status.startsWith(
+                        "Safe mode is ON. " +
+                                "The reported blocks " + safe + " needs additional " +
+                                additional + " blocks"), "Bad safemode status: '" + status + "'");
     }
   }
 
@@ -589,12 +586,12 @@ public class TestHASafeMode {
     
     // It will initially have all of the blocks necessary.
     String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-      status.startsWith(
-        "Safe mode is ON. The reported blocks 10 has reached the threshold "
-        + "0.9990 of total blocks 10. The minimum number of live datanodes is "
-        + "not required. In safe mode extension. Safe mode will be turned off "
-        + "automatically"));
+      assertTrue(
+              status.startsWith(
+                      "Safe mode is ON. The reported blocks 10 has reached the threshold "
+                              + "0.9990 of total blocks 10. The minimum number of live datanodes is "
+                              + "not required. In safe mode extension. Safe mode will be turned off "
+                              + "automatically"), "Bad safemode status: '" + status + "'");
 
     // Delete those blocks while the SBN is in safe mode.
     // Immediately roll the edit log before the actual deletions are sent
@@ -788,7 +785,7 @@ public class TestHASafeMode {
   public void testIsInSafemode() throws Exception {
     // Check for the standby nn without client failover.
     NameNode nn2 = cluster.getNameNode(1);
-    assertTrue("nn2 should be in standby state", nn2.isStandbyState());
+      assertTrue(nn2.isStandbyState(), "nn2 should be in standby state");
 
     InetSocketAddress nameNodeAddress = nn2.getNameNodeAddress();
     Configuration conf = new Configuration();
@@ -801,11 +798,11 @@ public class TestHASafeMode {
       fail("StandBy should throw exception for isInSafeMode");
     } catch (IOException e) {
       if (e instanceof RemoteException) {
-        assertEquals("RPC Error code should indicate app failure.", RpcErrorCodeProto.ERROR_APPLICATION,
-            ((RemoteException) e).getErrorCode());
+          assertEquals(RpcErrorCodeProto.ERROR_APPLICATION,
+                  ((RemoteException) e).getErrorCode(), "RPC Error code should indicate app failure.");
         IOException sbExcpetion = ((RemoteException) e).unwrapRemoteException();
-        assertTrue("StandBy nn should not support isInSafeMode",
-            sbExcpetion instanceof StandbyException);
+          assertTrue(
+                  sbExcpetion instanceof StandbyException, "StandBy nn should not support isInSafeMode");
       } else {
         throw e;
       }
@@ -820,10 +817,10 @@ public class TestHASafeMode {
     cluster.transitionToActive(1);
     cluster.getNameNodeRpc(1).setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     DistributedFileSystem dfsWithFailOver = (DistributedFileSystem) fs;
-    assertTrue("ANN should be in SafeMode", dfsWithFailOver.isInSafeMode());
+      assertTrue(dfsWithFailOver.isInSafeMode(), "ANN should be in SafeMode");
 
     cluster.getNameNodeRpc(1).setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
-    assertFalse("ANN should be out of SafeMode", dfsWithFailOver.isInSafeMode());
+      assertFalse(dfsWithFailOver.isInSafeMode(), "ANN should be out of SafeMode");
   }
 
   /** Test NN crash and client crash/stuck immediately after block allocation */
@@ -870,7 +867,7 @@ public class TestHASafeMode {
       FSDataInputStream is = dfs.open(filePath);
       is.close();
       dfs.recoverLease(filePath);// initiate recovery
-      assertTrue("Recovery also should be success", dfs.recoverLease(filePath));
+        assertTrue(dfs.recoverLease(filePath), "Recovery also should be success");
     } finally {
       cluster.shutdown();
     }

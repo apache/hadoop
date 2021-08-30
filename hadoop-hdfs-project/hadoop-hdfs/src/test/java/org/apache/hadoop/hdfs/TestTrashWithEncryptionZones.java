@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
@@ -36,9 +36,9 @@ import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
@@ -78,7 +78,7 @@ public class TestTrashWithEncryptionZones {
         new Path(testRootDir.toString(), "test.jks").toUri();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
@@ -114,7 +114,7 @@ public class TestTrashWithEncryptionZones {
         .getProvider());
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -178,8 +178,8 @@ public class TestTrashWithEncryptionZones {
         // Delete /zones/zone1 should not succeed as current user is not admin
         String[] argv = new String[]{"-rm", "-r", zone1.toString()};
         int res = ToolRunner.run(shell, argv);
-        assertEquals("Non-admin could delete an encryption zone with multiple" +
-            " users : " + zone1, 1, res);
+          assertEquals(1, res, "Non-admin could delete an encryption zone with multiple" +
+                  " users : " + zone1);
         return null;
       }
     });

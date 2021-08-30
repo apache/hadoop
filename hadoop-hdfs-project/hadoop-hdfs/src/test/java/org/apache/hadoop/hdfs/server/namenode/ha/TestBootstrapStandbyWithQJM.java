@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,10 +34,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
@@ -64,7 +63,7 @@ public class TestBootstrapStandbyWithQJM {
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration conf = createConfig();
 
@@ -82,7 +81,7 @@ public class TestBootstrapStandbyWithQJM {
     dfs.close();
   }
   
-  @After
+  @AfterEach
   public void cleanup() throws IOException {
     if (cluster != null) {
       cluster.shutdown();

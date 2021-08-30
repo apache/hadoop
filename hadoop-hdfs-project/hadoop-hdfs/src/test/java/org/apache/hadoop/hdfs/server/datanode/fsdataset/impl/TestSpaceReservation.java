@@ -25,11 +25,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -46,10 +46,10 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.slf4j.event.Level;
@@ -87,7 +87,7 @@ public class TestSpaceReservation {
 
   private static Random rand = new Random();
 
-  @Before
+  @BeforeEach
   public void before() {
     conf = new HdfsConfiguration();
   }
@@ -135,7 +135,7 @@ public class TestSpaceReservation {
     }
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (singletonVolumeRef != null) {
       singletonVolumeRef.close();
@@ -337,10 +337,10 @@ public class TestSpaceReservation {
       // Exception can be ignored (expected)
     }
 
-    // Ensure RBW space reserved is released
-    assertTrue(
-        "Expected ZERO but got " + fsVolumeImpl.getReservedForReplicas(),
-        fsVolumeImpl.getReservedForReplicas() == 0);
+      // Ensure RBW space reserved is released
+      assertTrue(
+              fsVolumeImpl.getReservedForReplicas() == 0,
+              "Expected ZERO but got " + fsVolumeImpl.getReservedForReplicas());
 
     // Reserve some bytes to verify double clearing space should't happen
     fsVolumeImpl.reserveSpaceForReplica(1000);
@@ -419,11 +419,11 @@ public class TestSpaceReservation {
 
       performReReplication(file, true);
 
-      assertEquals("Wrong reserve space for Tmp ", byteCount1,
-          fsVolumeImpl.getRecentReserved());
+        assertEquals(byteCount1,
+                fsVolumeImpl.getRecentReserved(), "Wrong reserve space for Tmp ");
 
-      assertEquals("Reserved Tmp space is not released", 0,
-          fsVolumeImpl.getReservedForReplicas());
+        assertEquals(0,
+                fsVolumeImpl.getReservedForReplicas(), "Reserved Tmp space is not released");
     }
 
     // Test when file creation fails
@@ -464,11 +464,11 @@ public class TestSpaceReservation {
 
       performReReplication(file, false);
 
-      assertEquals("Wrong reserve space for Tmp ", byteCount2,
-          fsVolumeImpl.getRecentReserved());
+        assertEquals(byteCount2,
+                fsVolumeImpl.getRecentReserved(), "Wrong reserve space for Tmp ");
 
-      assertEquals("Tmp space is not released OR released twice", 1000,
-          fsVolumeImpl.getReservedForReplicas());
+        assertEquals(1000,
+                fsVolumeImpl.getReservedForReplicas(), "Tmp space is not released OR released twice");
     }
   }
 

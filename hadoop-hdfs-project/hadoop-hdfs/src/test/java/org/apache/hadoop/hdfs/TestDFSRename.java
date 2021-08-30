@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -191,9 +189,9 @@ public class TestDFSRename {
       dfs.rename(path, new Path("/dir1"),
           new Rename[] {Rename.OVERWRITE, Rename.TO_TRASH});
       String auditOut = auditLog.getOutput();
-      assertTrue("Rename should have both OVERWRITE and TO_TRASH "
-              + "flags at namenode but had only " + auditOut,
-          auditOut.contains("options=[OVERWRITE, TO_TRASH]"));
+        assertTrue(
+                auditOut.contains("options=[OVERWRITE, TO_TRASH]"), "Rename should have both OVERWRITE and TO_TRASH "
+                + "flags at namenode but had only " + auditOut);
     }
   }
 }

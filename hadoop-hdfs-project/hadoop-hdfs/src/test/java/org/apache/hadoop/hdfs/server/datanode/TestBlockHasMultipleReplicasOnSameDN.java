@@ -40,13 +40,13 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * This test verifies NameNode behavior when it gets unexpected block reports
@@ -68,7 +68,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
   private DFSClient client;
   private String bpid;
 
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     conf = new HdfsConfiguration();
     cluster = new MiniDFSCluster.Builder(conf)
@@ -79,7 +79,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     bpid = cluster.getNamesystem().getBlockPoolId();
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (cluster != null) {
       fs.close();

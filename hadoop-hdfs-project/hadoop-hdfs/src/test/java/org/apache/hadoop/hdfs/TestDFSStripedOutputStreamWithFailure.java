@@ -33,8 +33,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test striped file write operation with data node failures with fixed
@@ -105,7 +105,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
       cluster.triggerHeartbeats();
       DatanodeInfo[] info = dfs.getClient().datanodeReport(
           DatanodeReportType.LIVE);
-      assertEquals("Mismatches number of live Dns", numDatanodes, info.length);
+        assertEquals(numDatanodes, info.length, "Mismatches number of live Dns");
       final Path dirFile = new Path(dir, "ecfile");
       LambdaTestUtils.intercept(
           IOException.class,
@@ -218,7 +218,7 @@ public class TestDFSStripedOutputStreamWithFailure extends
       cluster.triggerHeartbeats();
       DatanodeInfo[] info = dfs.getClient().datanodeReport(
           DatanodeReportType.LIVE);
-      assertEquals("Mismatches number of live Dns", numDatanodes, info.length);
+        assertEquals(numDatanodes, info.length, "Mismatches number of live Dns");
       Path srcPath = new Path(dir, "testAddBlockWhenNoSufficientParityNodes");
       int fileLength = cellSize - 1000;
       final byte[] expected = StripedFileTestUtil.generateBytes(fileLength);

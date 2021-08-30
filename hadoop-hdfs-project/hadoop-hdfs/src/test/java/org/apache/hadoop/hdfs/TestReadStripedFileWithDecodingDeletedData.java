@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -48,13 +48,13 @@ public class TestReadStripedFileWithDecodingDeletedData {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     cluster = initializeCluster();
     dfs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     tearDownCluster(cluster);
   }

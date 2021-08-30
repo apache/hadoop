@@ -54,8 +54,8 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import javax.servlet.http.HttpServletResponse;
@@ -87,13 +87,13 @@ public class TestWebHDFSForHA {
       cluster.transitionToActive(0);
 
       final Path dir = new Path("/test");
-      Assert.assertTrue(fs.mkdirs(dir));
+      Assertions.assertTrue(fs.mkdirs(dir));
 
       cluster.shutdownNameNode(0);
       cluster.transitionToActive(1);
 
       final Path dir2 = new Path("/test2");
-      Assert.assertTrue(fs.mkdirs(dir2));
+      Assertions.assertTrue(fs.mkdirs(dir2));
     } finally {
       IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
@@ -174,7 +174,7 @@ public class TestWebHDFSForHA {
       } catch (IOException e) {
         // Mimic the UserProvider class logic (server side) by throwing
         // SecurityException here
-        Assert.assertTrue(e instanceof SecretManager.InvalidToken);
+        Assertions.assertTrue(e instanceof SecretManager.InvalidToken);
         resp = eh.toResponse(new SecurityException(e));
       }
       // The Response (resp) below is what the server will send to client
@@ -197,7 +197,7 @@ public class TestWebHDFSForHA {
       Map<?, ?> m = (Map<?, ?>) JSON.parse(resp.getEntity().toString());
       RemoteException re = JsonUtilClient.toRemoteException(m);
       Exception unwrapped = re.unwrapRemoteException(StandbyException.class);
-      Assert.assertTrue(unwrapped instanceof StandbyException);
+      Assertions.assertTrue(unwrapped instanceof StandbyException);
     } finally {
       IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
@@ -236,7 +236,7 @@ public class TestWebHDFSForHA {
       FSDataInputStream in = fs.open(p);
       byte[] buf = new byte[data.length];
       IOUtils.readFully(in, buf, 0, buf.length);
-      Assert.assertArrayEquals(data, buf);
+      Assertions.assertArrayEquals(data, buf);
     } finally {
       IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
@@ -262,7 +262,7 @@ public class TestWebHDFSForHA {
       DFSTestUtil.setFakeHttpAddresses(conf, LOGICAL_NAME + "remote");
 
       fs = (WebHdfsFileSystem)FileSystem.get(WEBHDFS_URI, conf);
-      Assert.assertEquals(2, fs.getResolvedNNAddr().length);
+      Assertions.assertEquals(2, fs.getResolvedNNAddr().length);
     } finally {
       IOUtils.cleanupWithLogger(null, fs);
       if (cluster != null) {
@@ -319,7 +319,7 @@ public class TestWebHDFSForHA {
         while (!resultMap.containsKey("mkdirs")) {
           this.wait();
         }
-        Assert.assertTrue(resultMap.get("mkdirs"));
+        Assertions.assertTrue(resultMap.get("mkdirs"));
       }
     } finally {
       if (cluster != null) {

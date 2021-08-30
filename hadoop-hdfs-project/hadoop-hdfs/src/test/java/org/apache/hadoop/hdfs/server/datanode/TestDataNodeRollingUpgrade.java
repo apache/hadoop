@@ -19,13 +19,15 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,8 +109,8 @@ public class TestDataNodeRollingUpgrade {
   private File getBlockForFile(Path path, boolean exists) throws IOException {
     LocatedBlocks blocks = nn.getRpcServer().getBlockLocations(path.toString(),
         0, Long.MAX_VALUE);
-    assertEquals("The test helper functions assume that each file has a single block",
-                 1, blocks.getLocatedBlocks().size());
+      assertEquals(
+              1, blocks.getLocatedBlocks().size(), "The test helper functions assume that each file has a single block");
     ExtendedBlock block = blocks.getLocatedBlocks().get(0).getBlock();
     BlockLocalPathInfo bInfo = dn0.getFSDataset().getBlockLocalPathInfo(block);
     File blockFile = new File(bInfo.getBlockPath());

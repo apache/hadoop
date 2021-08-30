@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
 import java.util.Arrays;
@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.CombinedHostFileManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.HostFileManager;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -135,8 +135,8 @@ public class TestHostsFiles {
       ObjectName mxbeanName = new ObjectName(
               "Hadoop:service=NameNode,name=NameNodeInfo");
       String nodes = (String) mbs.getAttribute(mxbeanName, "LiveNodes");
-      assertTrue("Live nodes should contain the decommissioned node",
-              nodes.contains("Decommissioned"));
+        assertTrue(
+                nodes.contains("Decommissioned"), "Live nodes should contain the decommissioned node");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

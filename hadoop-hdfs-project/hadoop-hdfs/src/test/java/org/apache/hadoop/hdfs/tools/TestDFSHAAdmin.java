@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.hdfs.tools;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -43,8 +41,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.test.MockitoUtil;
 import org.apache.hadoop.util.Shell;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -112,7 +110,7 @@ public class TestDFSHAAdmin {
         FENCER_FALSE_COMMAND_WINDOWS : FENCER_FALSE_COMMAND_UNIX;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     mockProtocol = MockitoUtil.mockProtocol(HAServiceProtocol.class);
     mockZkfcProtocol = MockitoUtil.mockProtocol(ZKFCProtocol.class);

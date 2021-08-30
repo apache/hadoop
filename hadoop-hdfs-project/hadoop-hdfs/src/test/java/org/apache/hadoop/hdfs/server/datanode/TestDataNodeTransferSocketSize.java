@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestDataNodeTransferSocketSize {
 
@@ -40,8 +40,8 @@ public class TestDataNodeTransferSocketSize {
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode datanode = datanodes.get(0);
-      assertEquals("Receive buffer size should be 4K",
-        4 * 1024, datanode.getXferServer().getPeerServer().getReceiveBufferSize());
+        assertEquals(
+                4 * 1024, datanode.getXferServer().getPeerServer().getReceiveBufferSize(), "Receive buffer size should be 4K");
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -59,9 +59,9 @@ public class TestDataNodeTransferSocketSize {
     try {
       List<DataNode> datanodes = cluster.getDataNodes();
       DataNode datanode = datanodes.get(0);
-      assertTrue(
-        "Receive buffer size should be a default value (determined by kernel)",
-        datanode.getXferServer().getPeerServer().getReceiveBufferSize() > 0);
+        assertTrue(
+                datanode.getXferServer().getPeerServer().getReceiveBufferSize() > 0,
+                "Receive buffer size should be a default value (determined by kernel)");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,9 +43,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +61,7 @@ public class TestDatanodeRegister {
   NamespaceInfo fakeNsInfo;
   DNConf mockDnConf;
   
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     mockDnConf = mock(DNConf.class);
     doReturn(VersionInfo.getVersion()).when(mockDnConf).getMinimumNameNodeVersion();
@@ -158,7 +158,7 @@ public class TestDatanodeRegister {
       localActor.stop();
       localActor.register(nsInfo);
     } catch (IOException e) {
-      Assert.assertEquals("DN shut down before block pool registered",
+      Assertions.assertEquals("DN shut down before block pool registered",
           e.getMessage());
     }
   }

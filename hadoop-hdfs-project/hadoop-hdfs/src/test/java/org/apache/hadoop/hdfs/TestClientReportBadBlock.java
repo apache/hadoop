@@ -41,10 +41,10 @@ import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Class is used to test client reporting corrupted block replica to name node.
@@ -67,7 +67,7 @@ public class TestClientReportBadBlock {
 
   Random rand = new Random();
 
-  @Before
+  @BeforeEach
   public void startUpCluster() throws IOException {
     // disable block scanner
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); 
@@ -80,7 +80,7 @@ public class TestClientReportBadBlock {
     buffersize = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (dfs != null) {
       dfs.close();
@@ -211,7 +211,7 @@ public class TestClientReportBadBlock {
     // Locate the file blocks by asking name node
     final LocatedBlocks locatedblocks = dfs.dfs.getNamenode()
         .getBlockLocations(filePath.toString(), 0L, BLOCK_SIZE);
-    Assert.assertEquals(repl, locatedblocks.get(0).getLocations().length);
+    Assertions.assertEquals(repl, locatedblocks.get(0).getLocations().length);
     // The file only has one block
     LocatedBlock lblock = locatedblocks.get(0);
     DatanodeInfo[] datanodeinfos = lblock.getLocations();
@@ -236,7 +236,7 @@ public class TestClientReportBadBlock {
     final LocatedBlocks locatedBlocks = dfs.dfs.getNamenode()
         .getBlockLocations(filePath.toUri().getPath(), 0, Long.MAX_VALUE);
     final LocatedBlock firstLocatedBlock = locatedBlocks.get(0);
-    Assert.assertEquals(isCorrupted, firstLocatedBlock.isCorrupt());
+    Assertions.assertEquals(isCorrupted, firstLocatedBlock.isCorrupt());
   }
 
   /**
@@ -250,7 +250,7 @@ public class TestClientReportBadBlock {
         filePath.toUri().getPath(), 0, Long.MAX_VALUE);
     // we expect only the first block of the file is used for this test
     LocatedBlock firstLocatedBlock = lBlocks.get(0);
-    Assert.assertEquals(expectedReplicas,
+    Assertions.assertEquals(expectedReplicas,
         firstLocatedBlock.getLocations().length);
   }
 
@@ -300,23 +300,23 @@ public class TestClientReportBadBlock {
     // Make sure filesystem is in healthy state
     String outStr = runFsck(conf, 0, true, "/");
     LOG.info(outStr);
-    Assert.assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+    Assertions.assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     if (!expected.equals("")) {
-      Assert.assertTrue(outStr.contains(expected));
+      Assertions.assertTrue(outStr.contains(expected));
     }
   }
 
   private static void verifyFsckBlockCorrupted() throws Exception {
     String outStr = runFsck(conf, 1, true, "/");
     LOG.info(outStr);
-    Assert.assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
+    Assertions.assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
   }
   
   private static void testFsckListCorruptFilesBlocks(Path filePath, int errorCode) throws Exception{
     String outStr = runFsck(conf, errorCode, true, filePath.toString(), "-list-corruptfileblocks");
     LOG.info("fsck -list-corruptfileblocks out: " + outStr);
     if (errorCode != 0) {
-      Assert.assertTrue(outStr.contains("CORRUPT blocks"));
+      Assertions.assertTrue(outStr.contains("CORRUPT blocks"));
     }
   }
 
@@ -326,7 +326,7 @@ public class TestClientReportBadBlock {
     PrintStream out = new PrintStream(bStream, true);
     int errCode = ToolRunner.run(new DFSck(conf, out), path);
     if (checkErrorCode)
-      Assert.assertEquals(expectedErrCode, errCode);
+      Assertions.assertEquals(expectedErrCode, errCode);
     return bStream.toString();
   }
 }

@@ -19,8 +19,6 @@ package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT;
-import static org.junit.Assume.assumeTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -39,11 +37,12 @@ import org.apache.hadoop.hdfs.TestHDFSFileSystemContract;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * Tests ViewFileSystemOverloadScheme with file system contract tests.
@@ -55,7 +54,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
   private static String defaultWorkingDirectory;
   private static Configuration conf = new HdfsConfiguration();
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws IOException {
     final File basedir = GenericTestUtils.getRandomizedTestDir();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
@@ -67,7 +66,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
         "/user/" + UserGroupInformation.getCurrentUser().getShortUserName();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.set(String.format("fs.%s.impl", "hdfs"),
         ViewFileSystemOverloadScheme.class.getName());
@@ -89,7 +88,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
     fs = FileSystem.get(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfter() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -117,7 +116,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
   @Override
   @Test
   public void testListStatusRootDir() throws Throwable {
-    assumeTrue(rootDirTestEnabled());
+    Assumptions.assumeTrue(rootDirTestEnabled());
     Path dir = path("/");
     Path child = path("/FileSystemContractBaseTest");
     try (FileSystem dfs = ((ViewFileSystemOverloadScheme) fs).getRawFileSystem(
@@ -129,7 +128,7 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
   }
 
   @Override
-  @Ignore // This test same as above in this case.
+  @Disabled // This test same as above in this case.
   public void testLSRootDir() throws Throwable {
   }
 }

@@ -30,7 +30,7 @@ import org.apache.hadoop.util.DataChecksum;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 

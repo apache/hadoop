@@ -32,15 +32,16 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_KEY;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
@@ -73,7 +74,7 @@ public class TestDnRespectsBlockReportSplitThreshold {
     bpid = cluster.getNamesystem().getBlockPoolId();
   }
 
-  @After
+  @AfterEach
   public void shutDownCluster() throws IOException {
     if (cluster != null) {
       fs.close();

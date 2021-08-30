@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class provides tests for {@link BlockUnderConstructionFeature} class

@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -97,9 +95,9 @@ public class AppendTestUtil {
     }
     
     LOG.info("partition=" + Arrays.toString(p));
-    assertTrue("i=0", p[0] > 0 && p[0] < n);
+      assertTrue(p[0] > 0 && p[0] < n, "i=0");
     for(int i = 1; i < p.length; i++) {
-      assertTrue("i=" + i, p[i] > p[i - 1] && p[i] < n);
+        assertTrue(p[i] > p[i - 1] && p[i] < n, "i=" + i);
     }
     return p;
   }
@@ -217,8 +215,8 @@ public class AppendTestUtil {
       boolean checkFileStatus) throws IOException {
     if (checkFileStatus) {
       final FileStatus status = fs.getFileStatus(name);
-      assertEquals("len=" + len + " but status.getLen()=" + status.getLen(),
-          len, status.getLen());
+        assertEquals(
+                len, status.getLen(), "len=" + len + " but status.getLen()=" + status.getLen());
     }
 
     FSDataInputStream stm = fs.open(name);
@@ -231,9 +229,9 @@ public class AppendTestUtil {
   private static void checkData(final byte[] actual, int from,
                                 final byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                   expected[from+idx]+" actual "+actual[idx],
-                   expected[from+idx], actual[idx]);
+        assertEquals(
+                expected[from + idx], actual[idx], message + " byte " + (from + idx) + " differs. expected " +
+                expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }

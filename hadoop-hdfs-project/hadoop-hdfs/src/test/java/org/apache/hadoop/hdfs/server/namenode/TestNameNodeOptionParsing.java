@@ -18,15 +18,13 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class TestNameNodeOptionParsing {
 
@@ -132,7 +130,7 @@ public class TestNameNodeOptionParsing {
       final String[] args = {"-rollingUpgrade", "foo"};
       try {
         NameNode.parseArguments(args);
-        Assert.fail();
+        Assertions.fail();
       } catch(IllegalArgumentException iae) {
         // the exception is expected.
       }

@@ -44,10 +44,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestOpenFilesWithSnapshot {
   private static final Logger LOG =
@@ -62,7 +62,7 @@ public class TestOpenFilesWithSnapshot {
   private static final long BUFFERLEN = BLOCKSIZE / 2;
   private static final long FILELEN = BLOCKSIZE * 2;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES, true);
@@ -72,7 +72,7 @@ public class TestOpenFilesWithSnapshot {
     fs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -313,13 +313,13 @@ public class TestOpenFilesWithSnapshot {
     final long hbaseFileLengthAfterS1 = fs.getFileStatus(hbaseFile).getLen();
 
     // Verify if Snap S1 file lengths are same as the the live ones
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS1,
+    Assertions.assertEquals(hbaseFileLengthAfterS1,
         fs.getFileStatus(hbaseS1Path).getLen());
-    Assert.assertEquals(appAFileInitialLength,
+    Assertions.assertEquals(appAFileInitialLength,
         fs.getFileStatus(appAFile).getLen());
-    Assert.assertEquals(appBFileInitialLength,
+    Assertions.assertEquals(appBFileInitialLength,
         fs.getFileStatus(appBFile).getLen());
 
     long flumeFileWrittenDataLength = flumeFileLengthAfterS1;
@@ -346,17 +346,17 @@ public class TestOpenFilesWithSnapshot {
     // Verify live files lengths are same as all data written till now
     final long flumeFileLengthAfterS2 = fs.getFileStatus(flumeFile).getLen();
     final long hbaseFileLengthAfterS2 = fs.getFileStatus(hbaseFile).getLen();
-    Assert.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
-    Assert.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS2);
+    Assertions.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
+    Assertions.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS2);
 
     // Verify if Snap S2 file lengths are same as the live ones
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS2,
+    Assertions.assertEquals(hbaseFileLengthAfterS2,
         fs.getFileStatus(hbaseS2Path).getLen());
-    Assert.assertEquals(appAFileInitialLength,
+    Assertions.assertEquals(appAFileInitialLength,
         fs.getFileStatus(appAFile).getLen());
-    Assert.assertEquals(appBFileInitialLength,
+    Assertions.assertEquals(appBFileInitialLength,
         fs.getFileStatus(appBFile).getLen());
 
     // Write more data to appA file only
@@ -366,9 +366,9 @@ public class TestOpenFilesWithSnapshot {
     appAFileWrittenDataLength += writeToStream(appAOutputStream, buf);
 
     // Verify other open files are not affected in their snapshots
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
-    Assert.assertEquals(appAFileWrittenDataLength,
+    Assertions.assertEquals(appAFileWrittenDataLength,
         fs.getFileStatus(appAFile).getLen());
 
     // Write more data to flume file only
@@ -388,35 +388,35 @@ public class TestOpenFilesWithSnapshot {
     // Verify live files lengths are same as all data written till now
     final long flumeFileLengthAfterS3 = fs.getFileStatus(flumeFile).getLen();
     final long hbaseFileLengthAfterS3 = fs.getFileStatus(hbaseFile).getLen();
-    Assert.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS3);
-    Assert.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS3);
+    Assertions.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS3);
+    Assertions.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS3);
 
     // Verify if Snap S3 file lengths are same as the live ones
-    Assert.assertEquals(flumeFileLengthAfterS3,
+    Assertions.assertEquals(flumeFileLengthAfterS3,
         fs.getFileStatus(flumeS3Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS3,
+    Assertions.assertEquals(hbaseFileLengthAfterS3,
         fs.getFileStatus(hbaseS3Path).getLen());
-    Assert.assertEquals(appAFileWrittenDataLength,
+    Assertions.assertEquals(appAFileWrittenDataLength,
         fs.getFileStatus(appAFile).getLen());
-    Assert.assertEquals(appBFileInitialLength,
+    Assertions.assertEquals(appBFileInitialLength,
         fs.getFileStatus(appBFile).getLen());
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // even after the live file have moved forward.
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS3,
+    Assertions.assertEquals(flumeFileLengthAfterS3,
         fs.getFileStatus(flumeS3Path).getLen());
 
     // Verify old hbase snapshots have point-in-time / frozen file lengths
     // even after the live files have moved forward.
-    Assert.assertEquals(hbaseFileLengthAfterS1,
+    Assertions.assertEquals(hbaseFileLengthAfterS1,
         fs.getFileStatus(hbaseS1Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS2,
+    Assertions.assertEquals(hbaseFileLengthAfterS2,
         fs.getFileStatus(hbaseS2Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS3,
+    Assertions.assertEquals(hbaseFileLengthAfterS3,
         fs.getFileStatus(hbaseS3Path).getLen());
 
     flumeOutputStream.close();
@@ -450,7 +450,7 @@ public class TestOpenFilesWithSnapshot {
     final long flumeFileLengthAfterS1 = fs.getFileStatus(flumeFile).getLen();
 
     // Verify if Snap S1 file length is same as the the live one
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
 
     long flumeFileWrittenDataLength = flumeFileLengthAfterS1;
@@ -469,10 +469,10 @@ public class TestOpenFilesWithSnapshot {
 
     // Verify live files length is same as all data written till now
     final long flumeFileLengthAfterS2 = fs.getFileStatus(flumeFile).getLen();
-    Assert.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
+    Assertions.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
 
     // Verify if Snap S2 file length is same as the live one
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
 
     // Write more data to flume file
@@ -480,9 +480,9 @@ public class TestOpenFilesWithSnapshot {
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // even after the live file have moved forward.
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
 
     // Restart the NameNode
@@ -490,14 +490,14 @@ public class TestOpenFilesWithSnapshot {
     cluster.waitActive();
 
     // Verify live file length hasn't changed after NN restart
-    Assert.assertEquals(flumeFileWrittenDataLength,
+    Assertions.assertEquals(flumeFileWrittenDataLength,
         fs.getFileStatus(flumeFile).getLen());
 
     // Verify old flume snapshots have point-in-time / frozen file lengths
     // after NN restart and live file moved forward.
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
 
     flumeOutputStream.close();
@@ -534,9 +534,9 @@ public class TestOpenFilesWithSnapshot {
     final long hbaseFileLengthAfterS1 = fs.getFileStatus(hbaseFile).getLen();
 
     // Verify if Snap S1 file length is same as the the current versions
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS1,
+    Assertions.assertEquals(hbaseFileLengthAfterS1,
         fs.getFileStatus(hbaseS1Path).getLen());
 
     long flumeFileWrittenDataLength = flumeFileLengthAfterS1;
@@ -558,14 +558,14 @@ public class TestOpenFilesWithSnapshot {
 
     // Verify current files length are same as all data written till now
     final long flumeFileLengthAfterS2 = fs.getFileStatus(flumeFile).getLen();
-    Assert.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
+    Assertions.assertEquals(flumeFileWrittenDataLength, flumeFileLengthAfterS2);
     final long hbaseFileLengthAfterS2 = fs.getFileStatus(hbaseFile).getLen();
-    Assert.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS2);
+    Assertions.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS2);
 
     // Verify if Snap S2 file length is same as the current versions
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS2,
+    Assertions.assertEquals(hbaseFileLengthAfterS2,
         fs.getFileStatus(hbaseS2Path).getLen());
 
     // Write more data to open files
@@ -574,22 +574,22 @@ public class TestOpenFilesWithSnapshot {
 
     // Verify old snapshots have point-in-time/frozen file
     // lengths even after the current versions have moved forward.
-    Assert.assertEquals(flumeFileLengthAfterS1,
+    Assertions.assertEquals(flumeFileLengthAfterS1,
         fs.getFileStatus(flumeS1Path).getLen());
-    Assert.assertEquals(flumeFileLengthAfterS2,
+    Assertions.assertEquals(flumeFileLengthAfterS2,
         fs.getFileStatus(flumeS2Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS1,
+    Assertions.assertEquals(hbaseFileLengthAfterS1,
         fs.getFileStatus(hbaseS1Path).getLen());
-    Assert.assertEquals(hbaseFileLengthAfterS2,
+    Assertions.assertEquals(hbaseFileLengthAfterS2,
         fs.getFileStatus(hbaseS2Path).getLen());
 
     // Delete flume current file. Snapshots should
     // still have references to flume file.
     boolean flumeFileDeleted = fs.delete(flumeFile, true);
-    Assert.assertTrue(flumeFileDeleted);
-    Assert.assertFalse(fs.exists(flumeFile));
-    Assert.assertTrue(fs.exists(flumeS1Path));
-    Assert.assertTrue(fs.exists(flumeS2Path));
+    Assertions.assertTrue(flumeFileDeleted);
+    Assertions.assertFalse(fs.exists(flumeFile));
+    Assertions.assertTrue(fs.exists(flumeS1Path));
+    Assertions.assertTrue(fs.exists(flumeS2Path));
 
     SnapshotTestHelper.createSnapshot(fs, snapRootDir, "tmp_snap");
     fs.deleteSnapshot(snapRootDir, "tmp_snap");
@@ -597,14 +597,14 @@ public class TestOpenFilesWithSnapshot {
     // Delete snap_2. snap_1 still has reference to
     // the flume file.
     fs.deleteSnapshot(snapRootDir, snap2Name);
-    Assert.assertFalse(fs.exists(flumeS2Path));
-    Assert.assertTrue(fs.exists(flumeS1Path));
+    Assertions.assertFalse(fs.exists(flumeS2Path));
+    Assertions.assertTrue(fs.exists(flumeS1Path));
 
     // Delete snap_1. Now all traces of flume file
     // is gone.
     fs.deleteSnapshot(snapRootDir, snap1Name);
-    Assert.assertFalse(fs.exists(flumeS2Path));
-    Assert.assertFalse(fs.exists(flumeS1Path));
+    Assertions.assertFalse(fs.exists(flumeS2Path));
+    Assertions.assertFalse(fs.exists(flumeS1Path));
 
     // Create Snapshot S3
     final Path snap3Dir = SnapshotTestHelper.createSnapshot(
@@ -613,7 +613,7 @@ public class TestOpenFilesWithSnapshot {
 
     // Verify live files length is same as all data written till now
     final long hbaseFileLengthAfterS3 = fs.getFileStatus(hbaseFile).getLen();
-    Assert.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS3);
+    Assertions.assertEquals(hbaseFileWrittenDataLength, hbaseFileLengthAfterS3);
 
     // Write more data to open files
     hbaseFileWrittenDataLength += writeToStream(hbaseOutputStream, buf);
@@ -621,9 +621,9 @@ public class TestOpenFilesWithSnapshot {
     // Verify old snapshots have point-in-time/frozen file
     // lengths even after the flume open file is deleted and
     // the hbase live file has moved forward.
-    Assert.assertEquals(hbaseFileLengthAfterS3,
+    Assertions.assertEquals(hbaseFileLengthAfterS3,
         fs.getFileStatus(hbaseS3Path).getLen());
-    Assert.assertEquals(hbaseFileWrittenDataLength,
+    Assertions.assertEquals(hbaseFileWrittenDataLength,
         fs.getFileStatus(hbaseFile).getLen());
 
     hbaseOutputStream.close();
@@ -666,12 +666,12 @@ public class TestOpenFilesWithSnapshot {
     // its output stream is still open.
     fs.delete(hbaseFile, true);
     fs.deleteSnapshot(snapRootDir, snap1Name);
-    Assert.assertFalse(fs.exists(hbaseFile));
+    Assertions.assertFalse(fs.exists(hbaseFile));
 
     // Verify file existence after the NameNode restart
     cluster.restartNameNode();
     cluster.waitActive();
-    Assert.assertFalse(fs.exists(hbaseFile));
+    Assertions.assertFalse(fs.exists(hbaseFile));
   }
 
   /**
@@ -770,7 +770,7 @@ public class TestOpenFilesWithSnapshot {
     SnapshotTestHelper.createSnapshot(fs, snapRootDir, "test");
 
     t.join();
-    Assert.assertFalse("Client encountered writing error!", writerError.get());
+      Assertions.assertFalse(writerError.get(), "Client encountered writing error!");
 
     restartNameNode();
     cluster.waitActive();
@@ -807,9 +807,9 @@ public class TestOpenFilesWithSnapshot {
     final Path hbaseS1Path = new Path(hbaseS1Dir, hbaseFileName);
     final FileChecksum hbaseFileCksumS1 = fs.getFileChecksum(hbaseS1Path);
 
-    // Verify if Snap S1 checksum is same as the current version one
-    Assert.assertEquals("Live and snap1 file checksum doesn't match!",
-        hbaseWALFileCksum0, fs.getFileChecksum(hbaseS1Path));
+      // Verify if Snap S1 checksum is same as the current version one
+      Assertions.assertEquals(
+              hbaseWALFileCksum0, fs.getFileChecksum(hbaseS1Path), "Live and snap1 file checksum doesn't match!");
 
     int newWriteLength = (int) (BLOCKSIZE * 1.5);
     byte[] buf = new byte[newWriteLength];
@@ -823,12 +823,12 @@ public class TestOpenFilesWithSnapshot {
     final Path hbaseS2Path = new Path(hbaseS2Dir, hbaseFileName);
     final FileChecksum hbaseFileCksumS2 = fs.getFileChecksum(hbaseS2Path);
 
-    // Verify if the s1 checksum is still the same
-    Assert.assertEquals("Snap file checksum has changed!",
-        hbaseFileCksumS1, fs.getFileChecksum(hbaseS1Path));
-    // Verify if the s2 checksum is different from the s1 checksum
-    Assert.assertNotEquals("Snap1 and snap2 file checksum should differ!",
-        hbaseFileCksumS1, hbaseFileCksumS2);
+      // Verify if the s1 checksum is still the same
+      Assertions.assertEquals(
+              hbaseFileCksumS1, fs.getFileChecksum(hbaseS1Path), "Snap file checksum has changed!");
+      // Verify if the s2 checksum is different from the s1 checksum
+      Assertions.assertNotEquals(
+              hbaseFileCksumS1, hbaseFileCksumS2, "Snap1 and snap2 file checksum should differ!");
 
     newWriteLength = (int) (BLOCKSIZE * 2.5);
     buf = new byte[newWriteLength];
@@ -845,18 +845,18 @@ public class TestOpenFilesWithSnapshot {
     hbaseOutputStream.close();
     final FileChecksum hbaseFileCksumBeforeTruncate =
         fs.getFileChecksum(hbaseFile);
-    Assert.assertEquals("Snap3 and before truncate file checksum should match!",
-        hbaseFileCksumBeforeTruncate, hbaseFileCksumS3);
+      Assertions.assertEquals(
+              hbaseFileCksumBeforeTruncate, hbaseFileCksumS3, "Snap3 and before truncate file checksum should match!");
 
     // Truncate the current file and record the after truncate checksum
     long currentFileLen = fs.getFileStatus(hbaseFile).getLen();
     boolean fileTruncated = fs.truncate(hbaseFile, currentFileLen / 2);
-    Assert.assertTrue("File truncation failed!", fileTruncated);
+      Assertions.assertTrue(fileTruncated, "File truncation failed!");
     final FileChecksum hbaseFileCksumAfterTruncate =
         fs.getFileChecksum(hbaseFile);
 
-    Assert.assertNotEquals("Snap3 and after truncate checksum shouldn't match!",
-        hbaseFileCksumS3, hbaseFileCksumAfterTruncate);
+      Assertions.assertNotEquals(
+              hbaseFileCksumS3, hbaseFileCksumAfterTruncate, "Snap3 and after truncate checksum shouldn't match!");
 
     // Append more data to the current file
     hbaseOutputStream = fs.append(hbaseFile);
@@ -876,13 +876,13 @@ public class TestOpenFilesWithSnapshot {
     final FileChecksum hbaseFileCksumAfterAppend =
         fs.getFileChecksum(hbaseFile);
 
-    Assert.assertEquals("Snap4 and after append file checksum should match!",
-        hbaseFileCksumAfterAppend, hbaseFileCksumS4);
+      Assertions.assertEquals(
+              hbaseFileCksumAfterAppend, hbaseFileCksumS4, "Snap4 and after append file checksum should match!");
 
     // Recompute checksum for S3 path and verify it has not changed
     hbaseFileCksumS3 = fs.getFileChecksum(hbaseS3Path);
-    Assert.assertEquals("Snap3 and before truncate file checksum should match!",
-        hbaseFileCksumBeforeTruncate, hbaseFileCksumS3);
+      Assertions.assertEquals(
+              hbaseFileCksumBeforeTruncate, hbaseFileCksumS3, "Snap3 and before truncate file checksum should match!");
   }
 
   private Path createSnapshot(Path snapRootDir, String snapName,
@@ -895,7 +895,7 @@ public class TestOpenFilesWithSnapshot {
   private void verifyFileSize(long fileSize, Path... filePaths) throws
       IOException {
     for (Path filePath : filePaths) {
-      Assert.assertEquals(fileSize, fs.getFileStatus(filePath).getLen());
+      Assertions.assertEquals(fileSize, fs.getFileStatus(filePath).getLen());
     }
   }
 

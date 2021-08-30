@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class TestSetrepIncreasing {
     conf.set(DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(10).build();
     FileSystem fs = cluster.getFileSystem();
-    assertTrue("Not a HDFS: "+fs.getUri(), fs instanceof DistributedFileSystem);
+      assertTrue(fs instanceof DistributedFileSystem, "Not a HDFS: " + fs.getUri());
 
     try {
       Path root = TestDFSShell.mkdir(fs, 
@@ -60,7 +60,7 @@ public class TestSetrepIncreasing {
         try {
           assertEquals(0, shell.run(args));
         } catch (Exception e) {
-          assertTrue("-setrep " + e, false);
+            assertTrue(false, "-setrep " + e);
         }
       }
 

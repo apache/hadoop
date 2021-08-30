@@ -20,9 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_FAIL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_ROLL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.setupEdits;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -44,9 +42,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.TestEditLog.AbortSpec;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -67,7 +65,7 @@ public class TestFileJournalManager {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = new Configuration();
   }
@@ -387,8 +385,8 @@ public class TestFileJournalManager {
     assertEquals("[101,200],[1001,1100]", getLogsAsString(fjm, 101));
     assertEquals("[101,200],[1001,1100]", getLogsAsString(fjm, 150));
     assertEquals("[1001,1100]", getLogsAsString(fjm, 201));
-    assertEquals("Asking for a newer log than exists should return empty list",
-        "", getLogsAsString(fjm, 9999));
+      assertEquals(
+              "", getLogsAsString(fjm, 9999), "Asking for a newer log than exists should return empty list");
   }
 
   /**
@@ -446,7 +444,7 @@ public class TestFileJournalManager {
     EditLogInputStream elis = getJournalInputStream(jm, 5, true);
     try {
       FSEditLogOp op = elis.readOp();
-      assertEquals("read unexpected op", op.getTransactionId(), 5);
+        assertEquals(op.getTransactionId(), 5, "read unexpected op");
     } finally {
       IOUtils.cleanupWithLogger(LOG, elis);
     }

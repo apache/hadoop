@@ -28,14 +28,14 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.File;
 import java.io.RandomAccessFile;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests to ensure that a block is not read successfully from a datanode
@@ -47,7 +47,7 @@ public class TestCorruptMetadataFile {
   private MiniDFSCluster.Builder clusterBuilder;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new HdfsConfiguration();
     // Reduce block acquire retries as we only have 1 DN and it allows the
@@ -57,7 +57,7 @@ public class TestCorruptMetadataFile {
     clusterBuilder = new MiniDFSCluster.Builder(conf).numDataNodes(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

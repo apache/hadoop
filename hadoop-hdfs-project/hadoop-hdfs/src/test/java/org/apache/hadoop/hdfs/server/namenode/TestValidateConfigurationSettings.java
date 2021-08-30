@@ -25,8 +25,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +39,7 @@ import java.util.Random;
  */
 public class TestValidateConfigurationSettings {
 
-  @After
+  @AfterEach
   public void cleanUp() {
     FileUtil.fullyDeleteContents(new File(MiniDFSCluster.getBaseDirectory()));
   }

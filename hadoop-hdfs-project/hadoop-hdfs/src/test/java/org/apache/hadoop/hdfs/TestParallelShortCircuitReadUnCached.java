@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-
 import java.io.File;
 
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This class tests short-circuit local reads without any FileInputStream or
@@ -36,7 +34,7 @@ import org.junit.BeforeClass;
 public class TestParallelShortCircuitReadUnCached extends TestParallelReadUtil {
   private static TemporarySocketDirectory sockDir;
 
-  @BeforeClass
+  @BeforeAll
   static public void setupCluster() throws Exception {
     if (DomainSocket.getLoadingFailureReason() != null) return;
     sockDir = new TemporarySocketDirectory();
@@ -66,12 +64,12 @@ public class TestParallelShortCircuitReadUnCached extends TestParallelReadUtil {
     setupCluster(1, conf);
   }
 
-  @Before
+  @BeforeEach
   public void before() {
-    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
+    Assertions.assertNull(DomainSocket.getLoadingFailureReason());
   }
 
-  @AfterClass
+  @AfterAll
   static public void teardownCluster() throws Exception {
     if (DomainSocket.getLoadingFailureReason() != null) return;
     sockDir.close();

@@ -32,19 +32,17 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestQuotaByStorageType {
 
@@ -61,7 +59,7 @@ public class TestQuotaByStorageType {
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestQuotaByStorageType.class);
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
@@ -77,7 +75,7 @@ public class TestQuotaByStorageType {
     refreshClusterState();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -207,8 +205,8 @@ public class TestQuotaByStorageType {
 
     QuotaCounts counts = fnode.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(fnode.dumpTreeRecursively().toString(), 0,
-        counts.getTypeSpaces().get(StorageType.SSD));
+      assertEquals(0,
+              counts.getTypeSpaces().get(StorageType.SSD), fnode.dumpTreeRecursively().toString());
 
     ContentSummary cs = dfs.getContentSummary(foo);
     assertEquals(cs.getSpaceConsumed(), 0);
@@ -466,10 +464,10 @@ public class TestQuotaByStorageType {
     // Validate the computeQuotaUsage()
     QuotaCounts counts = fnode.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(fnode.dumpTreeRecursively().toString(), 1,
-        counts.getNameSpace());
-    assertEquals(fnode.dumpTreeRecursively().toString(), 0,
-        counts.getStorageSpace());
+      assertEquals(1,
+              counts.getNameSpace(), fnode.dumpTreeRecursively().toString());
+      assertEquals(0,
+              counts.getStorageSpace(), fnode.dumpTreeRecursively().toString());
   }
 
   /**
@@ -578,8 +576,8 @@ public class TestQuotaByStorageType {
 
     QuotaCounts counts1 = sub1Node.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(sub1Node.dumpTreeRecursively().toString(), file1Len,
-        counts1.getTypeSpaces().get(StorageType.SSD));
+      assertEquals(file1Len,
+              counts1.getTypeSpaces().get(StorageType.SSD), sub1Node.dumpTreeRecursively().toString());
 
     ContentSummary cs1 = dfs.getContentSummary(sub1);
     assertEquals(cs1.getSpaceConsumed(), file1Len * REPLICATION);
@@ -596,8 +594,8 @@ public class TestQuotaByStorageType {
 
     QuotaCounts counts2 = sub1Node.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(sub1Node.dumpTreeRecursively().toString(), 0,
-        counts2.getTypeSpaces().get(StorageType.SSD));
+      assertEquals(0,
+              counts2.getTypeSpaces().get(StorageType.SSD), sub1Node.dumpTreeRecursively().toString());
 
     ContentSummary cs2 = dfs.getContentSummary(sub1);
     assertEquals(cs2.getSpaceConsumed(), 0);

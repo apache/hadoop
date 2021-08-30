@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +33,7 @@ import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.server.blockmanagement.CorruptReplicasMap.Reason;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 
@@ -83,13 +80,13 @@ public class TestCorruptReplicaInfo {
       long expectedReplicaCount, long expectedStripedBlockCount) {
     long totalExpectedCorruptBlocks = expectedReplicaCount +
         expectedStripedBlockCount;
-    assertEquals("Unexpected total corrupt blocks count!",
-        totalExpectedCorruptBlocks, corruptReplicasMap.size());
-    assertEquals("Unexpected replica blocks count!",
-        expectedReplicaCount, corruptReplicasMap.getCorruptBlocks());
-    assertEquals("Unexpected striped blocks count!",
-        expectedStripedBlockCount,
-        corruptReplicasMap.getCorruptECBlockGroups());
+      assertEquals(
+              totalExpectedCorruptBlocks, corruptReplicasMap.size(), "Unexpected total corrupt blocks count!");
+      assertEquals(
+              expectedReplicaCount, corruptReplicasMap.getCorruptBlocks(), "Unexpected replica blocks count!");
+      assertEquals(
+              expectedStripedBlockCount,
+              corruptReplicasMap.getCorruptECBlockGroups(), "Unexpected striped blocks count!");
   }
   
   @Test
@@ -101,21 +98,21 @@ public class TestCorruptReplicaInfo {
     when(bim.isStripedBlock(any(Block.class))).thenCallRealMethod();
     assertTrue(!bim.isLegacyBlock(new Block(-1)));
 
-    // Make sure initial values are returned correctly
-    assertEquals("Total number of corrupt blocks must initially be 0!",
-        0, crm.size());
-    assertEquals("Number of corrupt replicas must initially be 0!",
-        0, crm.getCorruptBlocks());
-    assertEquals("Number of corrupt striped block groups must initially be 0!",
-        0, crm.getCorruptECBlockGroups());
-    assertNull("Param n cannot be less than 0",
-        crm.getCorruptBlockIdsForTesting(bim, BlockType.CONTIGUOUS, -1, null));
-    assertNull("Param n cannot be greater than 100",
-        crm.getCorruptBlockIdsForTesting(bim, BlockType.CONTIGUOUS, 101, null));
+      // Make sure initial values are returned correctly
+      assertEquals(
+              0, crm.size(), "Total number of corrupt blocks must initially be 0!");
+      assertEquals(
+              0, crm.getCorruptBlocks(), "Number of corrupt replicas must initially be 0!");
+      assertEquals(
+              0, crm.getCorruptECBlockGroups(), "Number of corrupt striped block groups must initially be 0!");
+      assertNull(
+              crm.getCorruptBlockIdsForTesting(bim, BlockType.CONTIGUOUS, -1, null), "Param n cannot be less than 0");
+      assertNull(
+              crm.getCorruptBlockIdsForTesting(bim, BlockType.CONTIGUOUS, 101, null), "Param n cannot be greater than 100");
     long[] l = crm.getCorruptBlockIdsForTesting(
         bim, BlockType.CONTIGUOUS, 0, null);
-    assertNotNull("n = 0 must return non-null", l);
-    assertEquals("n = 0 must return an empty list", 0, l.length);
+      assertNotNull(l, "n = 0 must return non-null");
+      assertEquals(0, l.length, "n = 0 must return an empty list");
 
     // Create a list of block ids. A list is used to allow easy
     // validation of the output of getCorruptReplicaBlockIds.
@@ -165,25 +162,25 @@ public class TestCorruptReplicaInfo {
       addToCorruptReplicasMap(crm, getStripedBlock(blockId), dn1);
     }
 
-    assertEquals("Number of corrupt blocks not returning correctly",
-        2 * blockCount, crm.size());
-    assertTrue("First five corrupt replica blocks ids are not right!",
-        Arrays.equals(Arrays.copyOfRange(replicaIds, 0, 5),
-            crm.getCorruptBlockIdsForTesting(
-                bim, BlockType.CONTIGUOUS, 5, null)));
-    assertTrue("First five corrupt striped blocks ids are not right!",
-        Arrays.equals(Arrays.copyOfRange(stripedIds, 0, 5),
-            crm.getCorruptBlockIdsForTesting(
-                bim, BlockType.STRIPED, 5, null)));
+      assertEquals(
+              2 * blockCount, crm.size(), "Number of corrupt blocks not returning correctly");
+      assertTrue(
+              Arrays.equals(Arrays.copyOfRange(replicaIds, 0, 5),
+                      crm.getCorruptBlockIdsForTesting(
+                              bim, BlockType.CONTIGUOUS, 5, null)), "First five corrupt replica blocks ids are not right!");
+      assertTrue(
+              Arrays.equals(Arrays.copyOfRange(stripedIds, 0, 5),
+                      crm.getCorruptBlockIdsForTesting(
+                              bim, BlockType.STRIPED, 5, null)), "First five corrupt striped blocks ids are not right!");
 
-    assertTrue("10 replica blocks after 7 not returned correctly!",
-        Arrays.equals(Arrays.copyOfRange(replicaIds, 7, 17),
-            crm.getCorruptBlockIdsForTesting(
-                bim, BlockType.CONTIGUOUS, 10, 7L)));
-    assertTrue("10 striped blocks after 7 not returned correctly!",
-        Arrays.equals(Arrays.copyOfRange(stripedIds, 7, 17),
-            crm.getCorruptBlockIdsForTesting(bim, BlockType.STRIPED,
-                10, getStripedBlock(7).getBlockId())));
+      assertTrue(
+              Arrays.equals(Arrays.copyOfRange(replicaIds, 7, 17),
+                      crm.getCorruptBlockIdsForTesting(
+                              bim, BlockType.CONTIGUOUS, 10, 7L)), "10 replica blocks after 7 not returned correctly!");
+      assertTrue(
+              Arrays.equals(Arrays.copyOfRange(stripedIds, 7, 17),
+                      crm.getCorruptBlockIdsForTesting(bim, BlockType.STRIPED,
+                              10, getStripedBlock(7).getBlockId())), "10 striped blocks after 7 not returned correctly!");
   }
   
   private static void addToCorruptReplicasMap(CorruptReplicasMap crm,

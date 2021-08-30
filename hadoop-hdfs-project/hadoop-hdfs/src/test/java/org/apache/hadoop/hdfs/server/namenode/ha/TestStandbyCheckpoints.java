@@ -54,9 +54,9 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ThreadUtil;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -65,7 +65,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 
 public class TestStandbyCheckpoints {
@@ -80,7 +80,7 @@ public class TestStandbyCheckpoints {
   private static final Logger LOG = LoggerFactory.getLogger(TestStandbyCheckpoints.class);
 
   @SuppressWarnings("rawtypes")
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     Configuration conf = setupCommonConfig();
 
@@ -143,7 +143,7 @@ public class TestStandbyCheckpoints {
     return conf;
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -175,9 +175,9 @@ public class TestStandbyCheckpoints {
         }
       }
     }, 1000, 60000);
-    
-    // It should have saved the oiv image too.
-    assertEquals("One file is expected", 1, tmpOivImgDir.list().length);
+
+      // It should have saved the oiv image too.
+      assertEquals(1, tmpOivImgDir.list().length, "One file is expected");
     
     // It should also upload it back to the active.
     HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
@@ -496,8 +496,8 @@ public class TestStandbyCheckpoints {
     doEdits(0, 1000);
     nns[0].getRpcServer().rollEditLog();
     answerer.waitForCall();
-    assertTrue("SBN is not performing checkpoint but it should be.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+      assertTrue(
+              answerer.getFireCount() == 1 && answerer.getResultCount() == 0, "SBN is not performing checkpoint but it should be.");
     
     // Make sure that the lock has actually been taken by the checkpointing
     // thread.
@@ -516,15 +516,15 @@ public class TestStandbyCheckpoints {
     doCreate();
     Thread.sleep(1000);
     assertTrue(cluster.getNamesystem(1).getPendingDataNodeMessageCount() > 0);
-    
-    // Make sure that the checkpoint is still going on, implying that the client
-    // RPC to the SBN happened during the checkpoint.
-    assertTrue("SBN should have still been checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+
+      // Make sure that the checkpoint is still going on, implying that the client
+      // RPC to the SBN happened during the checkpoint.
+      assertTrue(
+              answerer.getFireCount() == 1 && answerer.getResultCount() == 0, "SBN should have still been checkpointing.");
     answerer.proceed();
     answerer.waitForResult();
-    assertTrue("SBN should have finished checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
+      assertTrue(
+              answerer.getFireCount() == 1 && answerer.getResultCount() == 1, "SBN should have finished checkpointing.");
   }
   
   @Test(timeout=300000)
@@ -542,8 +542,8 @@ public class TestStandbyCheckpoints {
     doEdits(0, 1000);
     nns[0].getRpcServer().rollEditLog();
     answerer.waitForCall();
-    assertTrue("SBN is not performing checkpoint but it should be.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+      assertTrue(
+              answerer.getFireCount() == 1 && answerer.getResultCount() == 0, "SBN is not performing checkpoint but it should be.");
     
     // Make sure that the lock has actually been taken by the checkpointing
     // thread.
@@ -575,15 +575,15 @@ public class TestStandbyCheckpoints {
         nns[1].getHttpAddress().getHostName() + ":" +
         nns[1].getHttpAddress().getPort() + "/jmx"));
     assertTrue(pageContents.contains("NumLiveDataNodes"));
-    
-    // Make sure that the checkpoint is still going on, implying that the client
-    // RPC to the SBN happened during the checkpoint.
-    assertTrue("SBN should have still been checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+
+      // Make sure that the checkpoint is still going on, implying that the client
+      // RPC to the SBN happened during the checkpoint.
+      assertTrue(
+              answerer.getFireCount() == 1 && answerer.getResultCount() == 0, "SBN should have still been checkpointing.");
     answerer.proceed();
     answerer.waitForResult();
-    assertTrue("SBN should have finished checkpointing.",
-        answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
+      assertTrue(
+              answerer.getFireCount() == 1 && answerer.getResultCount() == 1, "SBN should have finished checkpointing.");
     
     t.join();
   }

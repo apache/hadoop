@@ -16,10 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -38,10 +35,10 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -77,13 +74,13 @@ public class TestFileConcurrentReader {
   private FileSystem fileSystem;
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     init(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -124,10 +121,10 @@ public class TestFileConcurrentReader {
     IOUtils.readFully(inputStream, buffer, 0, numBytes);
     inputStream.close();
 
-    assertTrue(
-      "unable to validate bytes",
-      validateSequentialBytes(buffer, 0, numBytes)
-    );
+      assertTrue(
+              validateSequentialBytes(buffer, 0, numBytes)
+      ,
+              "unable to validate bytes");
   }
 
   private void waitForBlocks(FileSystem fileSys, Path name)
@@ -273,8 +270,8 @@ public class TestFileConcurrentReader {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     }
-    
-    assertNull(errorMessage.get(), errorMessage.get());
+
+      assertNull(errorMessage.get(), errorMessage.get());
   }
 
   // for some reason, using tranferTo evokes the race condition more often
@@ -291,7 +288,7 @@ public class TestFileConcurrentReader {
   }
 
   // fails due to issue w/append, disable 
-  @Ignore
+  @Disabled
   public void _testUnfinishedBlockCRCErrorTransferToAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.APPEND, DEFAULT_WRITE_SIZE);
@@ -309,7 +306,7 @@ public class TestFileConcurrentReader {
   }
 
   // fails due to issue w/append, disable 
-  @Ignore
+  @Disabled
   public void _testUnfinishedBlockCRCErrorNormalTransferAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.APPEND, DEFAULT_WRITE_SIZE);
@@ -407,9 +404,9 @@ public class TestFileConcurrentReader {
       writer.join();
       tailer.join();
 
-      assertFalse(
-        "error occurred, see log above", error.get()
-      );
+        assertFalse(error.get()
+        ,
+                "error occurred, see log above");
     } catch (InterruptedException e) {
       LOG.info("interrupted waiting for writer or tailer to complete");
 

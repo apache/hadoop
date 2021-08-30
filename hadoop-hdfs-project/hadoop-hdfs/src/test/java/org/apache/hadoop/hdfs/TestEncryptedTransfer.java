@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.times;
 
 import java.io.IOException;
@@ -53,11 +50,11 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -118,12 +115,12 @@ public class TestEncryptedTransfer {
     this.resolverClazz = resolverClazz;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new Configuration();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -365,11 +362,11 @@ public class TestEncryptedTransfer {
     LOG.info("The encryption key is invalid on all nodes now.");
     fs.getFileChecksum(TEST_PATH);
     // verify that InvalidEncryptionKeyException is handled properly
-    Assert.assertTrue(client.getEncryptionKey() == null);
+    Assertions.assertTrue(client.getEncryptionKey() == null);
     Mockito.verify(spyClient, times(1)).clearDataEncryptionKey();
     // Retry the operation after clearing the encryption key
     FileChecksum verifyChecksum = fs.getFileChecksum(TEST_PATH);
-    Assert.assertEquals(checksum, verifyChecksum);
+    Assertions.assertEquals(checksum, verifyChecksum);
   }
 
   @Test
@@ -428,8 +425,8 @@ public class TestEncryptedTransfer {
       // write data to induce pipeline recovery
       out.write(PLAIN_TEXT.getBytes());
       out.hflush();
-      assertFalse("The first datanode in the pipeline was not replaced.",
-          Arrays.asList(dfstream.getPipeline()).contains(targets[0]));
+        assertFalse(
+                Arrays.asList(dfstream.getPipeline()).contains(targets[0]), "The first datanode in the pipeline was not replaced.");
     }
     // verify that InvalidEncryptionKeyException is handled properly
     Mockito.verify(spyClient, times(1)).clearDataEncryptionKey();

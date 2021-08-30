@@ -31,10 +31,10 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -64,7 +64,7 @@ public class TestQuotaWithStripedBlocks {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     blockSize = 1024 * 1024;
     ecPolicy = getEcPolicy();
@@ -92,7 +92,7 @@ public class TestQuotaWithStripedBlocks {
     dfs.setStoragePolicy(ecDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -124,8 +124,8 @@ public class TestQuotaWithStripedBlocks {
       final long diskUsed = dirNode.getDirectoryWithQuotaFeature()
           .getSpaceConsumed().getTypeSpaces().get(StorageType.DISK);
       // When we add a new block we update the quota using the full block size.
-      Assert.assertEquals(blockSize * groupSize, spaceUsed);
-      Assert.assertEquals(blockSize * groupSize, diskUsed);
+      Assertions.assertEquals(blockSize * groupSize, spaceUsed);
+      Assertions.assertEquals(blockSize * groupSize, diskUsed);
 
       dfs.getClient().getNamenode().complete(file.toString(),
           dfs.getClient().getClientName(), previous, fileNode.getId());
@@ -135,9 +135,9 @@ public class TestQuotaWithStripedBlocks {
       final long actualDiskUsed = dirNode.getDirectoryWithQuotaFeature()
           .getSpaceConsumed().getTypeSpaces().get(StorageType.DISK);
       // In this case the file's real size is cell size * block group size.
-      Assert.assertEquals(cellSize * groupSize,
+      Assertions.assertEquals(cellSize * groupSize,
           actualSpaceUsed);
-      Assert.assertEquals(cellSize * groupSize,
+      Assertions.assertEquals(cellSize * groupSize,
           actualDiskUsed);
     } finally {
       IOUtils.cleanupWithLogger(null, out);

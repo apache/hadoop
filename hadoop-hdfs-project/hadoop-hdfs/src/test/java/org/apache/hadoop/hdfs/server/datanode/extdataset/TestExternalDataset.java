@@ -22,7 +22,7 @@ import org.apache.hadoop.hdfs.server.datanode.Replica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the ability to create external FsDatasetSpi implementations.

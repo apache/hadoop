@@ -18,10 +18,8 @@
 
 package org.apache.hadoop;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,11 +29,7 @@ import org.apache.hadoop.ipc.RefreshHandler;
 
 import org.apache.hadoop.ipc.RefreshRegistry;
 import org.apache.hadoop.ipc.RefreshResponse;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 
 /**
@@ -51,7 +45,7 @@ public class TestGenericRefresh {
   private static RefreshHandler firstHandler;
   private static RefreshHandler secondHandler;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     config = new Configuration();
     config.set("hadoop.security.authorization", "true");
@@ -61,14 +55,14 @@ public class TestGenericRefresh {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownBeforeClass() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Register Handlers, first one just sends an ok response
     firstHandler = Mockito.mock(RefreshHandler.class);
@@ -85,7 +79,7 @@ public class TestGenericRefresh {
     RefreshRegistry.defaultRegistry().register("secondHandler", secondHandler);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     RefreshRegistry.defaultRegistry().unregisterAll("firstHandler");
     RefreshRegistry.defaultRegistry().unregisterAll("secondHandler");
@@ -96,7 +90,7 @@ public class TestGenericRefresh {
     DFSAdmin admin = new DFSAdmin(config);
     String [] args = new String[]{"-refresh", "nn"};
     int exitCode = admin.run(args);
-    assertEquals("DFSAdmin should fail due to bad args", -1, exitCode);
+      assertEquals(-1, exitCode, "DFSAdmin should fail due to bad args");
   }
 
   @Test
@@ -105,7 +99,7 @@ public class TestGenericRefresh {
     String [] args = new String[]{"-refresh", "localhost:" + 
         cluster.getNameNodePort(), "unregisteredIdentity"};
     int exitCode = admin.run(args);
-    assertEquals("DFSAdmin should fail due to no handler registered", -1, exitCode);
+      assertEquals(-1, exitCode, "DFSAdmin should fail due to no handler registered");
   }
 
   @Test
@@ -114,7 +108,7 @@ public class TestGenericRefresh {
     String[] args = new String[]{"-refresh",
         "localhost:" + cluster.getNameNodePort(), "firstHandler"};
     int exitCode = admin.run(args);
-    assertEquals("DFSAdmin should succeed", 0, exitCode);
+      assertEquals(0, exitCode, "DFSAdmin should succeed");
 
     Mockito.verify(firstHandler).handleRefresh("firstHandler", new String[]{});
     // Second handler was never called
@@ -128,11 +122,11 @@ public class TestGenericRefresh {
     String[] args = new String[]{"-refresh", "localhost:" +
         cluster.getNameNodePort(), "secondHandler", "one"};
     int exitCode = admin.run(args);
-    assertEquals("DFSAdmin should return 2", 2, exitCode);
+      assertEquals(2, exitCode, "DFSAdmin should return 2");
 
     exitCode = admin.run(new String[]{"-refresh", "localhost:" +
         cluster.getNameNodePort(), "secondHandler", "one", "two"});
-    assertEquals("DFSAdmin should now return 3", 3, exitCode);
+      assertEquals(3, exitCode, "DFSAdmin should now return 3");
 
     Mockito.verify(secondHandler).handleRefresh("secondHandler", new String[]{"one"});
     Mockito.verify(secondHandler).handleRefresh("secondHandler", new String[]{"one", "two"});
@@ -147,7 +141,7 @@ public class TestGenericRefresh {
     String[] args = new String[]{"-refresh", "localhost:" +
         cluster.getNameNodePort(), "firstHandler"};
     int exitCode = admin.run(args);
-    assertEquals("DFSAdmin should return -1", -1, exitCode);
+      assertEquals(-1, exitCode, "DFSAdmin should return -1");
   }
 
   @Test

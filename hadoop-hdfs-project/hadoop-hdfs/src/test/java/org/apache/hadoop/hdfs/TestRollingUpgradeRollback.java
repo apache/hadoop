@@ -31,8 +31,8 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests rollback for rolling upgrade.
@@ -56,35 +56,35 @@ public class TestRollingUpgradeRollback {
     List<File> finalizedEdits = storage.getFiles(
         NNStorage.NameNodeDirType.EDITS,
         NNStorage.getFinalizedEditsFileName(1, imageTxId));
-    Assert.assertTrue(fileExists(finalizedEdits));
+    Assertions.assertTrue(fileExists(finalizedEdits));
     List<File> inprogressEdits = storage.getFiles(
         NNStorage.NameNodeDirType.EDITS,
         NNStorage.getInProgressEditsFileName(imageTxId + 1));
     // For rollback case we will have an inprogress file for future transactions
-    Assert.assertTrue(fileExists(inprogressEdits));
+    Assertions.assertTrue(fileExists(inprogressEdits));
     if (trashEndTxId > 0) {
       List<File> trashedEdits = storage.getFiles(
           NNStorage.NameNodeDirType.EDITS,
           NNStorage.getFinalizedEditsFileName(imageTxId + 1, trashEndTxId)
               + ".trash");
-      Assert.assertTrue(fileExists(trashedEdits));
+      Assertions.assertTrue(fileExists(trashedEdits));
     }
     String imageFileName = trashEndTxId > 0 ? NNStorage
         .getImageFileName(imageTxId) : NNStorage
         .getRollbackImageFileName(imageTxId);
     List<File> imageFiles = storage.getFiles(
         NNStorage.NameNodeDirType.IMAGE, imageFileName);
-    Assert.assertTrue(fileExists(imageFiles));
+    Assertions.assertTrue(fileExists(imageFiles));
   }
 
   private void checkJNStorage(File dir, long discardStartTxId,
       long discardEndTxId) {
     File finalizedEdits = new File(dir, NNStorage.getFinalizedEditsFileName(1,
         discardStartTxId - 1));
-    Assert.assertTrue(finalizedEdits.exists());
+    Assertions.assertTrue(finalizedEdits.exists());
     File trashEdits = new File(dir, NNStorage.getFinalizedEditsFileName(
         discardStartTxId, discardEndTxId) + ".trash");
-    Assert.assertTrue(trashEdits.exists());
+    Assertions.assertTrue(trashEdits.exists());
   }
 
   @Test
@@ -103,7 +103,7 @@ public class TestRollingUpgradeRollback {
 
       // start rolling upgrade
       dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      Assert.assertEquals(0,
+      Assertions.assertEquals(0,
           dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
       dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       // create new directory
@@ -125,10 +125,10 @@ public class TestRollingUpgradeRollback {
       // make sure /foo is still there, but /bar is not
       INode fooNode = nn.getNamesystem().getFSDirectory()
           .getINode4Write(foo.toString());
-      Assert.assertNotNull(fooNode);
+      Assertions.assertNotNull(fooNode);
       INode barNode = nn.getNamesystem().getFSDirectory()
           .getINode4Write(bar.toString());
-      Assert.assertNull(barNode);
+      Assertions.assertNull(barNode);
 
       // check the details of NNStorage
       NNStorage storage = nn.getNamesystem().getFSImage().getStorage();
@@ -165,7 +165,7 @@ public class TestRollingUpgradeRollback {
 
       // start rolling upgrade
       dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      Assert.assertEquals(0,
+      Assertions.assertEquals(0,
           dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
       dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       // create new directory
@@ -176,8 +176,8 @@ public class TestRollingUpgradeRollback {
       cluster.restartNameNode("-rollingUpgrade", "rollback");
       // make sure /foo is still there, but /bar is not
       dfs = cluster.getFileSystem();
-      Assert.assertTrue(dfs.exists(foo));
-      Assert.assertFalse(dfs.exists(bar));
+      Assertions.assertTrue(dfs.exists(foo));
+      Assertions.assertFalse(dfs.exists(bar));
 
       // check storage in JNs
       for (int i = 0; i < NUM_JOURNAL_NODES; i++) {
@@ -223,7 +223,7 @@ public class TestRollingUpgradeRollback {
 
       // start rolling upgrade
       RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
-      Assert.assertTrue(info.isStarted());
+      Assertions.assertTrue(info.isStarted());
 
       // create new directory
       dfs.mkdirs(bar);
@@ -234,9 +234,9 @@ public class TestRollingUpgradeRollback {
 
       // If the query returns true, both active and the standby NN should have
       // rollback fsimage ready.
-      Assert.assertTrue(dfsCluster.getNameNode(0).getFSImage()
+      Assertions.assertTrue(dfsCluster.getNameNode(0).getFSImage()
           .hasRollbackFSImage());
-      Assert.assertTrue(dfsCluster.getNameNode(1).getFSImage()
+      Assertions.assertTrue(dfsCluster.getNameNode(1).getFSImage()
           .hasRollbackFSImage());
       
       // rollback NN0
@@ -248,8 +248,8 @@ public class TestRollingUpgradeRollback {
 
       // make sure /foo is still there, but /bar is not
       dfs = dfsCluster.getFileSystem(0);
-      Assert.assertTrue(dfs.exists(foo));
-      Assert.assertFalse(dfs.exists(bar));
+      Assertions.assertTrue(dfs.exists(foo));
+      Assertions.assertFalse(dfs.exists(bar));
 
       // check the details of NNStorage
       NNStorage storage = dfsCluster.getNamesystem(0).getFSImage()

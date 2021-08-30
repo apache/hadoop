@@ -17,17 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestEditsDoubleBuffer {
   @Test
@@ -37,16 +34,16 @@ public class TestEditsDoubleBuffer {
     assertTrue(buf.isFlushed());
     byte[] data = new byte[100];
     buf.writeRaw(data, 0, data.length);
-    assertEquals("Should count new data correctly",
-        data.length, buf.countBufferedBytes());
+      assertEquals(
+              data.length, buf.countBufferedBytes(), "Should count new data correctly");
 
-    assertTrue("Writing to current buffer should not affect flush state",
-        buf.isFlushed());
+      assertTrue(
+              buf.isFlushed(), "Writing to current buffer should not affect flush state");
 
     // Swap the buffers
     buf.setReadyToFlush();
-    assertEquals("Swapping buffers should still count buffered bytes",
-        data.length, buf.countBufferedBytes());
+      assertEquals(
+              data.length, buf.countBufferedBytes(), "Swapping buffers should still count buffered bytes");
     assertFalse(buf.isFlushed());
  
     // Flush to a stream
@@ -58,8 +55,8 @@ public class TestEditsDoubleBuffer {
     
     // Write some more
     buf.writeRaw(data, 0, data.length);
-    assertEquals("Should count new data correctly",
-        data.length, buf.countBufferedBytes());
+      assertEquals(
+              data.length, buf.countBufferedBytes(), "Should count new data correctly");
     buf.setReadyToFlush();
     buf.flushTo(outBuf);
     
@@ -130,12 +127,12 @@ public class TestEditsDoubleBuffer {
       EditsDoubleBuffer.LOG.info("Exception expected: ", ioe);
     }
     logs.stopCapturing();
-    // Make sure ops are dumped into log in human readable format.
-    Assert.assertTrue("expected " + op.toString() + " in the log",
-        logs.getOutput().contains(op.toString()));
-    Assert.assertTrue("expected " + op2.toString() + " in the log",
-        logs.getOutput().contains(op2.toString()));
-    Assert.assertTrue("expected " + op3.toString() + " in the log",
-        logs.getOutput().contains(op3.toString()));
+      // Make sure ops are dumped into log in human readable format.
+      Assertions.assertTrue(
+              logs.getOutput().contains(op.toString()), "expected " + op.toString() + " in the log");
+      Assertions.assertTrue(
+              logs.getOutput().contains(op2.toString()), "expected " + op2.toString() + " in the log");
+      Assertions.assertTrue(
+              logs.getOutput().contains(op3.toString()), "expected " + op3.toString() + " in the log");
   }
 }

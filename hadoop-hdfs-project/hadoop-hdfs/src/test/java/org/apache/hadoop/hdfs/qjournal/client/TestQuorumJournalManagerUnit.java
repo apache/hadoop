@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -33,7 +33,6 @@ import java.util.List;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Lists;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -53,8 +52,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
@@ -84,7 +84,7 @@ public class TestQuorumJournalManagerUnit {
   private List<AsyncLogger> spyLoggers;
   private QuorumJournalManager qjm;
   
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     spyLoggers = ImmutableList.of(
         mockLogger(),
@@ -184,7 +184,7 @@ public class TestQuorumJournalManagerUnit {
     QuorumOutputStream os = (QuorumOutputStream) qjm.startLogSegment(1,
         NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     String report = os.generateReport();
-    Assert.assertFalse("Report should be plain text", report.contains("<"));
+      Assertions.assertFalse(report.contains("<"), "Report should be plain text");
   }
 
   @Test

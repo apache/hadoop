@@ -34,16 +34,16 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.util.Lists;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestFSImageWithAcl {
   private static Configuration conf;
   private static MiniDFSCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
@@ -51,7 +51,7 @@ public class TestFSImageWithAcl {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -73,7 +73,7 @@ public class TestFSImageWithAcl {
     AclStatus s = cluster.getNamesystem().getAclStatus(p.toString());
     AclEntry[] returned = Lists.newArrayList(s.getEntries()).toArray(
         new AclEntry[0]);
-    Assert.assertArrayEquals(new AclEntry[] {
+    Assertions.assertArrayEquals(new AclEntry[] {
         aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
         aclEntry(ACCESS, GROUP, READ) }, returned);
 
@@ -90,12 +90,12 @@ public class TestFSImageWithAcl {
 
     s = cluster.getNamesystem().getAclStatus(p.toString());
     returned = Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(new AclEntry[] { }, returned);
+    Assertions.assertArrayEquals(new AclEntry[] { }, returned);
 
     fs.modifyAclEntries(p, Lists.newArrayList(e));
     s = cluster.getNamesystem().getAclStatus(p.toString());
     returned = Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(new AclEntry[] {
+    Assertions.assertArrayEquals(new AclEntry[] {
         aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
         aclEntry(ACCESS, GROUP, READ) }, returned);
   }
@@ -140,20 +140,20 @@ public class TestFSImageWithAcl {
 
     AclEntry[] fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(fileExpected, fileReturned);
+    Assertions.assertArrayEquals(fileExpected, fileReturned);
     AclEntry[] subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    Assertions.assertArrayEquals(subdirExpected, subdirReturned);
     assertPermission(fs, subdirPath, permExpected);
 
     restart(fs, persistNamespace);
 
     fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(fileExpected, fileReturned);
+    Assertions.assertArrayEquals(fileExpected, fileReturned);
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    Assertions.assertArrayEquals(subdirExpected, subdirReturned);
     assertPermission(fs, subdirPath, permExpected);
 
     aclSpec = Lists.newArrayList(aclEntry(DEFAULT, USER, "foo", READ_WRITE));
@@ -161,40 +161,40 @@ public class TestFSImageWithAcl {
 
     fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(fileExpected, fileReturned);
+    Assertions.assertArrayEquals(fileExpected, fileReturned);
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    Assertions.assertArrayEquals(subdirExpected, subdirReturned);
     assertPermission(fs, subdirPath, permExpected);
 
     restart(fs, persistNamespace);
 
     fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(fileExpected, fileReturned);
+    Assertions.assertArrayEquals(fileExpected, fileReturned);
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    Assertions.assertArrayEquals(subdirExpected, subdirReturned);
     assertPermission(fs, subdirPath, permExpected);
 
     fs.removeAcl(dirPath);
 
     fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(fileExpected, fileReturned);
+    Assertions.assertArrayEquals(fileExpected, fileReturned);
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    Assertions.assertArrayEquals(subdirExpected, subdirReturned);
     assertPermission(fs, subdirPath, permExpected);
 
     restart(fs, persistNamespace);
 
     fileReturned = fs.getAclStatus(filePath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(fileExpected, fileReturned);
+    Assertions.assertArrayEquals(fileExpected, fileReturned);
     subdirReturned = fs.getAclStatus(subdirPath).getEntries()
       .toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    Assertions.assertArrayEquals(subdirExpected, subdirReturned);
     assertPermission(fs, subdirPath, permExpected);
   }
 
@@ -221,7 +221,7 @@ public class TestFSImageWithAcl {
     AclStatus s = cluster.getNamesystem().getAclStatus(rootdir.toString());
     AclEntry[] returned =
         Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new AclEntry[] { aclEntry(ACCESS, GROUP, READ_EXECUTE),
             aclEntry(ACCESS, GROUP, "bar", READ),
             aclEntry(ACCESS, GROUP, "foo", ALL) }, returned);
@@ -231,7 +231,7 @@ public class TestFSImageWithAcl {
 
     s = cluster.getNamesystem().getAclStatus(rootdir.toString());
     returned = Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new AclEntry[] { aclEntry(ACCESS, GROUP, READ_EXECUTE),
             aclEntry(ACCESS, GROUP, "bar", READ),
             aclEntry(ACCESS, GROUP, "foo", ALL) }, returned);

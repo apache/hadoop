@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State.*;
 
 import java.io.IOException;
@@ -47,10 +47,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 /**
@@ -92,7 +91,7 @@ public class TestReadOnlySharedStorage {
    * Setup a {@link MiniDFSCluster}.
    * Create a block with both {@link State#NORMAL} and {@link State#READ_ONLY_SHARED} replicas.
    */
-  @Before
+  @BeforeEach
   public void setup() throws IOException, InterruptedException {
     conf = new HdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
@@ -152,7 +151,7 @@ public class TestReadOnlySharedStorage {
     waitForLocations(2);
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     fs.delete(PATH, false);
     

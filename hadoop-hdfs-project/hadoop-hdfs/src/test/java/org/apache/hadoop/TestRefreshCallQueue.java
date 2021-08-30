@@ -18,10 +18,7 @@
 
 package org.apache.hadoop;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -40,8 +37,8 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.ipc.FairCallQueue;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public class TestRefreshCallQueue {
   private MiniDFSCluster cluster;
@@ -77,7 +74,7 @@ public class TestRefreshCallQueue {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -115,9 +112,9 @@ public class TestRefreshCallQueue {
     mockQueuePuts = 0;
     setUp(MockCallQueue.class);
 
-    assertTrue("Mock queue should have been constructed",
-        mockQueueConstructions > 0);
-    assertTrue("Puts are routed through MockQueue", canPutInMockQueue());
+      assertTrue(
+              mockQueueConstructions > 0, "Mock queue should have been constructed");
+      assertTrue(canPutInMockQueue(), "Puts are routed through MockQueue");
     int lastMockQueueConstructions = mockQueueConstructions;
 
     // Replace queue with the queue specified in core-site.xml, which would be
@@ -125,13 +122,13 @@ public class TestRefreshCallQueue {
     DFSAdmin admin = new DFSAdmin(config);
     String [] args = new String[]{"-refreshCallQueue"};
     int exitCode = admin.run(args);
-    assertEquals("DFSAdmin should return 0", 0, exitCode);
+      assertEquals(0, exitCode, "DFSAdmin should return 0");
 
-    assertEquals("Mock queue should have no additional constructions",
-        lastMockQueueConstructions, mockQueueConstructions);
+      assertEquals(
+              lastMockQueueConstructions, mockQueueConstructions, "Mock queue should have no additional constructions");
     try {
-      assertFalse("Puts are routed through LBQ instead of MockQueue",
-          canPutInMockQueue());
+        assertFalse(
+                canPutInMockQueue(), "Puts are routed through LBQ instead of MockQueue");
     } catch (IOException ioe) {
       fail("Could not put into queue at all");
     }

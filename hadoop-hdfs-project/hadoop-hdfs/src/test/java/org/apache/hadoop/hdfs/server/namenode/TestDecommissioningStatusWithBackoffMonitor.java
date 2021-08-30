@@ -35,12 +35,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Extends the TestDecommissioningStatus class to provide the same set of
@@ -85,7 +85,7 @@ public class TestDecommissioningStatusWithBackoffMonitor
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info =
         client.datanodeReport(HdfsConstants.DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", 2, info.length);
+      assertEquals(2, info.length, "Number of Datanodes ");
     DistributedFileSystem distFileSys = cluster.getFileSystem();
     DFSAdmin admin = new DFSAdmin(cluster.getConfiguration(0));
 

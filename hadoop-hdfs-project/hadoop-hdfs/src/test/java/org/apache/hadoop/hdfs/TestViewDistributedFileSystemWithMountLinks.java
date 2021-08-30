@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.fs.viewfs.TestViewFileSystemOverloadSchemeWithHdfsScheme;
 import org.apache.hadoop.fs.viewfs.ViewFsTestSetup;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.net.URI;
@@ -144,14 +144,14 @@ public class TestViewDistributedFileSystemWithMountLinks extends
       dst = new Path("/InternalDirDoesNotExistInFallback/file");
       fs.create(src).close();
       // If fallback does not have same structure as internal, rename will fail.
-      Assert.assertFalse(fs.rename(src, dst));
+      Assertions.assertFalse(fs.rename(src, dst));
     }
   }
 
   private void verifyRename(FileSystem fs, Path src, Path dst)
       throws IOException {
     fs.rename(src, dst);
-    Assert.assertFalse(fs.exists(src));
-    Assert.assertTrue(fs.exists(dst));
+    Assertions.assertFalse(fs.exists(src));
+    Assertions.assertTrue(fs.exists(dst));
   }
 }

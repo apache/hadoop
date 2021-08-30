@@ -21,9 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -49,10 +47,10 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.util.Shell;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+
 /**
  * Startup and checkpoint tests
  * 
@@ -69,7 +67,7 @@ public class TestStorageRestore {
   static final int fileSize = 8192;
   private File path1, path2, path3;
   private MiniDFSCluster cluster;  
-  @Before
+  @BeforeEach
   public void setUpNameDirs() throws Exception {
     config = new HdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory()).getCanonicalFile();
@@ -199,17 +197,17 @@ public class TestStorageRestore {
     FSImageTestUtil.assertFileContentsSame(
         new File(path1, "current/" + getImageFileName(4)),
         new File(path2, "current/" + getImageFileName(4)));
-    assertFalse("Should not have any image in an edits-only directory",
-        new File(path3, "current/" + getImageFileName(4)).exists());
+      assertFalse(
+              new File(path3, "current/" + getImageFileName(4)).exists(), "Should not have any image in an edits-only directory");
 
-    // Should have finalized logs in the directory that didn't fail
-    assertTrue("Should have finalized logs in the directory that didn't fail",
-        new File(path1, "current/" + getFinalizedEditsFileName(1,4)).exists());
-    // Should not have finalized logs in the failed directories
-    assertFalse("Should not have finalized logs in the failed directories",
-        new File(path2, "current/" + getFinalizedEditsFileName(1,4)).exists());
-    assertFalse("Should not have finalized logs in the failed directories",
-        new File(path3, "current/" + getFinalizedEditsFileName(1,4)).exists());
+      // Should have finalized logs in the directory that didn't fail
+      assertTrue(
+              new File(path1, "current/" + getFinalizedEditsFileName(1, 4)).exists(), "Should have finalized logs in the directory that didn't fail");
+      // Should not have finalized logs in the failed directories
+      assertFalse(
+              new File(path2, "current/" + getFinalizedEditsFileName(1, 4)).exists(), "Should not have finalized logs in the failed directories");
+      assertFalse(
+              new File(path3, "current/" + getFinalizedEditsFileName(1, 4)).exists(), "Should not have finalized logs in the failed directories");
     
     // The new log segment should be in all of the directories.
     FSImageTestUtil.assertFileContentsSame(
@@ -280,19 +278,19 @@ public class TestStorageRestore {
 
       executor.executeCommand(cmd);
       restore = fsi.getStorage().getRestoreFailedStorage();
-      assertFalse("After set true call restore is " + restore, restore);
+        assertFalse(restore, "After set true call restore is " + restore);
 
       // run one more time - to set it to true again
       cmd = "-fs NAMENODE -restoreFailedStorage true";
       executor.executeCommand(cmd);
       restore = fsi.getStorage().getRestoreFailedStorage();
-      assertTrue("After set false call restore is " + restore, restore);
+        assertTrue(restore, "After set false call restore is " + restore);
       
       // run one more time - no change in value
       cmd = "-fs NAMENODE -restoreFailedStorage check";
       CommandExecutor.Result cmdResult = executor.executeCommand(cmd);
       restore = fsi.getStorage().getRestoreFailedStorage();
-      assertTrue("After check call restore is " + restore, restore);
+        assertTrue(restore, "After check call restore is " + restore);
       String commandOutput = cmdResult.getCommandOutput();
       commandOutput.trim();
       assertTrue(commandOutput.contains("restoreFailedStorage is set to true"));
@@ -343,18 +341,18 @@ public class TestStorageRestore {
       secondary.doCheckpoint();
       
       printStorages(fsImage);
-      
-      // The created file should still exist in the in-memory FS state after the
-      // checkpoint.
-      assertTrue("path exists before restart", fs.exists(testPath));
+
+        // The created file should still exist in the in-memory FS state after the
+        // checkpoint.
+        assertTrue(fs.exists(testPath), "path exists before restart");
       
       secondary.shutdown();
       
       // Restart the NN so it reloads the edits from on-disk.
       cluster.restartNameNode();
-  
-      // The created file should still exist after the restart.
-      assertTrue("path should still exist after restart", fs.exists(testPath));
+
+        // The created file should still exist after the restart.
+        assertTrue(fs.exists(testPath), "path should still exist after restart");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

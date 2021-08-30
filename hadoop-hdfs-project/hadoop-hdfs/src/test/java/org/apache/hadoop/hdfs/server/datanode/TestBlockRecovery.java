@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -93,11 +93,11 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.slf4j.event.Level;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -170,7 +170,7 @@ public class TestBlockRecovery {
    * Starts an instance of DataNode
    * @throws IOException
    */
-  @Before
+  @BeforeEach
   public void startUp() throws IOException, URISyntaxException {
     tearDownDone = false;
     conf = new HdfsConfiguration();
@@ -228,7 +228,7 @@ public class TestBlockRecovery {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {
-        Assert.assertEquals(NN_ADDR, nnAddr);
+        Assertions.assertEquals(NN_ADDR, nnAddr);
         return namenode;
       }
     };
@@ -259,15 +259,15 @@ public class TestBlockRecovery {
     } catch (InterruptedException e) {
       LOG.warn("InterruptedException while waiting to see active NN", e);
     }
-    Assert.assertNotNull("Failed to get ActiveNN",
-        dn.getAllBpOs().get(0).getActiveNN());
+      Assertions.assertNotNull(
+              dn.getAllBpOs().get(0).getActiveNN(), "Failed to get ActiveNN");
   }
 
   /**
    * Cleans the resources and closes the instance of datanode
    * @throws IOException if an error occurred
    */
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (!tearDownDone && dn != null) {
       try {
@@ -277,8 +277,8 @@ public class TestBlockRecovery {
       } finally {
         File dir = new File(DATA_DIR);
         if (dir.exists())
-          Assert.assertTrue(
-              "Cannot delete data-node dirs", FileUtil.fullyDelete(dir));
+            Assertions.assertTrue(FileUtil.fullyDelete(dir),
+                    "Cannot delete data-node dirs");
       }
       tearDownDone = true;
     }
@@ -344,9 +344,9 @@ public class TestBlockRecovery {
 
     try {
       testSyncReplicas(replica1, replica2, dn1, dn2);
-      Assert.fail("Two finalized replicas should not have different lengthes!");
+      Assertions.fail("Two finalized replicas should not have different lengthes!");
     } catch (IOException e) {
-      Assert.assertTrue(e.getMessage().startsWith(
+      Assertions.assertTrue(e.getMessage().startsWith(
           "Inconsistent size of finalized replicas. "));
     }
   }
@@ -724,9 +724,9 @@ public class TestBlockRecovery {
     } catch (IOException e) {
       // expect IOException to be thrown here
       e.printStackTrace();
-      assertTrue("Wrong exception was thrown: " + e.getMessage(),
-          e.getMessage().contains("Found 1 replica(s) for block " + block +
-          " but none is in RWR or better state"));
+        assertTrue(
+                e.getMessage().contains("Found 1 replica(s) for block " + block +
+                        " but none is in RWR or better state"), "Wrong exception was thrown: " + e.getMessage());
       exceptionThrown = true;
     } finally {
       assertTrue(exceptionThrown);
@@ -752,8 +752,8 @@ public class TestBlockRecovery {
             blockLengths[id], 0, null);
         syncList.put((long) id, new BlockRecord(null, null, rInfo));
       }
-      Assert.assertEquals("BLOCK_LENGTHS_SUITE[" + i + "]", safeLength,
-          recoveryTask.getSafeLength(syncList));
+        Assertions.assertEquals(safeLength,
+                recoveryTask.getSafeLength(syncList), "BLOCK_LENGTHS_SUITE[" + i + "]");
     }
   }
 
@@ -885,7 +885,7 @@ public class TestBlockRecovery {
     // We need a long value for the data xceiver stop timeout.
     // Otherwise the timeout will trigger, and we will not have tested that
     // thread join was done locklessly.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TEST_STOP_WORKER_XCEIVER_STOP_TIMEOUT_MILLIS,
         dn.getDnConf().getXceiverStopTimeout());
     final TestStopWorkerSemaphore progressParent =
@@ -966,7 +966,7 @@ public class TestBlockRecovery {
     // unit test framework, so we have to do it manually here.
     String failureReason = failure.get();
     if (failureReason != null) {
-      Assert.fail("Thread failure: " + failureReason);
+      Assertions.fail("Thread failure: " + failureReason);
     }
   }
 

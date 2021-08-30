@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * A JUnit test for checking if restarting DFS preserves integrity.
@@ -70,8 +70,8 @@ public class TestRestartDFS {
       // Here we restart the MiniDFScluster without formatting namenode
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).format(false).build(); 
       FileSystem fs = cluster.getFileSystem();
-      assertTrue("Filesystem corrupted after restart.",
-                 files.checkFiles(fs, dir));
+        assertTrue(
+                files.checkFiles(fs, dir), "Filesystem corrupted after restart.");
 
       final FileStatus newrootstatus = fs.getFileStatus(rootpath);
       assertEquals(rootmtime, newrootstatus.getModificationTime());
@@ -94,8 +94,8 @@ public class TestRestartDFS {
       // the image written in parallel to both places did not get corrupted
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).format(false).build();
       FileSystem fs = cluster.getFileSystem();
-      assertTrue("Filesystem corrupted after restart.",
-                 files.checkFiles(fs, dir));
+        assertTrue(
+                files.checkFiles(fs, dir), "Filesystem corrupted after restart.");
 
       final FileStatus newrootstatus = fs.getFileStatus(rootpath);
       assertEquals(rootmtime, newrootstatus.getModificationTime());

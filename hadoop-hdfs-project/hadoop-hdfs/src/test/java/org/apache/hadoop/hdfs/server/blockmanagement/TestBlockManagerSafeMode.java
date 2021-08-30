@@ -30,18 +30,15 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -81,7 +78,7 @@ public class TestBlockManagerSafeMode {
    *
    * @throws IOException
    */
-  @Before
+  @BeforeEach
   public void setupMockCluster() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setDouble(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
@@ -115,8 +112,8 @@ public class TestBlockManagerSafeMode {
    */
   @Test(timeout = 30000)
   public void testInitialize() {
-    assertFalse("Block manager should not be in safe mode at beginning.",
-        bmSafeMode.isInSafeMode());
+      assertFalse(
+              bmSafeMode.isInSafeMode(), "Block manager should not be in safe mode at beginning.");
     bmSafeMode.activate(BLOCK_TOTAL);
     assertEquals(BMSafeModeStatus.PENDING_THRESHOLD, getSafeModeStatus());
     assertTrue(bmSafeMode.isInSafeMode());
@@ -485,14 +482,14 @@ public class TestBlockManagerSafeMode {
     // PENDING_THRESHOLD -> EXTENSION
     bmSafeMode.checkSafeMode();
 
-    assertFalse("Shouldn't leave safe mode in case of blocks with future GS! ",
-        bmSafeMode.leaveSafeMode(false));
-    assertTrue("Leaving safe mode forcefully should succeed regardless of " +
-        "blocks with future GS.", bmSafeMode.leaveSafeMode(true));
-    assertEquals("Number of blocks with future GS should have been cleared " +
-        "after leaving safe mode", 0L, bmSafeMode.getBytesInFuture());
-    assertTrue("Leaving safe mode should succeed after blocks with future GS " +
-        "are cleared.", bmSafeMode.leaveSafeMode(false));
+      assertFalse(
+              bmSafeMode.leaveSafeMode(false), "Shouldn't leave safe mode in case of blocks with future GS! ");
+      assertTrue(bmSafeMode.leaveSafeMode(true), "Leaving safe mode forcefully should succeed regardless of " +
+              "blocks with future GS.");
+      assertEquals(0L, bmSafeMode.getBytesInFuture(), "Number of blocks with future GS should have been cleared " +
+              "after leaving safe mode");
+      assertTrue(bmSafeMode.leaveSafeMode(false), "Leaving safe mode should succeed after blocks with future GS " +
+              "are cleared.");
   }
 
   @Test(timeout = 10000)
@@ -705,16 +702,16 @@ public class TestBlockManagerSafeMode {
 
   private void assertSafeModeIsLeftAtThreshold(long blockIndex) {
     if (blockIndex < BLOCK_THRESHOLD) {
-      assertEquals("Current block index should be equal to " +
-          "the safe block counter.", blockIndex, getblockSafe());
-      assertTrue("Block Manager should stay in safe mode until " +
-          "the safe block threshold is reached.", bmSafeMode.isInSafeMode());
+        assertEquals(blockIndex, getblockSafe(), "Current block index should be equal to " +
+                "the safe block counter.");
+        assertTrue(bmSafeMode.isInSafeMode(), "Block Manager should stay in safe mode until " +
+                "the safe block threshold is reached.");
     } else {
-      assertEquals("If safe block threshold is reached, safe block " +
-          "counter should not increase further.",
-          BLOCK_THRESHOLD, getblockSafe());
-      assertFalse("Block manager leaves safe mode if block " +
-          "threshold is met.", bmSafeMode.isInSafeMode());
+        assertEquals(
+                BLOCK_THRESHOLD, getblockSafe(), "If safe block threshold is reached, safe block " +
+                "counter should not increase further.");
+        assertFalse(bmSafeMode.isInSafeMode(), "Block manager leaves safe mode if block " +
+                "threshold is met.");
     }
   }
 }

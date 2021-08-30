@@ -36,14 +36,15 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.TestPermission;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /**
@@ -77,7 +78,7 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     this.qopValue = qopValue;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = createSecureConfig(this.configKey);
     conf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY, "12000");
@@ -109,7 +110,7 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     dfs = (DistributedFileSystem) FileSystem.get(uriAuxiliary, conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

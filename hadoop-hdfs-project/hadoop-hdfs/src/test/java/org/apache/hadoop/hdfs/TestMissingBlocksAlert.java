@@ -27,16 +27,16 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.management.*;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -105,7 +105,7 @@ public class TestMissingBlocksAlert {
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName = new ObjectName(
               "Hadoop:service=NameNode,name=NameNodeInfo");
-      Assert.assertEquals(1, (long)(Long) mbs.getAttribute(mxbeanName,
+      Assertions.assertEquals(1, (long)(Long) mbs.getAttribute(mxbeanName,
                       "NumberOfMissingBlocks"));
 
       // now do the reverse : remove the file expect the number of missing 
@@ -121,7 +121,7 @@ public class TestMissingBlocksAlert {
       assertEquals(2, dfs.getLowRedundancyBlocksCount());
       assertEquals(2, bm.getUnderReplicatedNotMissingBlocks());
 
-      Assert.assertEquals(0, (long)(Long) mbs.getAttribute(mxbeanName,
+      Assertions.assertEquals(0, (long)(Long) mbs.getAttribute(mxbeanName,
               "NumberOfMissingBlocks"));
 
       Path replOneFile = new Path("/testMissingBlocks/replOneFile");
@@ -138,7 +138,7 @@ public class TestMissingBlocksAlert {
       }
       in.close();
       assertEquals(1, dfs.getMissingReplOneBlocksCount());
-      Assert.assertEquals(1, (long)(Long) mbs.getAttribute(mxbeanName,
+      Assertions.assertEquals(1, (long)(Long) mbs.getAttribute(mxbeanName,
           "NumberOfMissingBlocksWithReplicationFactorOne"));
     } finally {
       if (cluster != null) {

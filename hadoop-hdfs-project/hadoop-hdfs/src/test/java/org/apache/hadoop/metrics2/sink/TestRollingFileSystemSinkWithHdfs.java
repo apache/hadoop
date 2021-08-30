@@ -29,12 +29,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.sink.RollingFileSystemSinkTestBase.MyMetrics1;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test the {@link RollingFileSystemSink} class in the context of HDFS.
@@ -51,7 +50,7 @@ public class TestRollingFileSystemSinkWithHdfs
    *
    * @throws IOException thrown if cluster creation fails
    */
-  @Before
+  @BeforeEach
   public void setupHdfs() throws IOException {
     Configuration conf = new Configuration();
 
@@ -66,7 +65,7 @@ public class TestRollingFileSystemSinkWithHdfs
   /**
    * Stop the {@link MiniDFSCluster}.
    */
-  @After
+  @AfterEach
   public void shutdownHdfs() {
     if (cluster != null) {
       cluster.shutdown();
@@ -156,8 +155,8 @@ public class TestRollingFileSystemSinkWithHdfs
 
     ms.publishMetricsNow(); // publish the metrics
 
-    assertTrue("No exception was generated while writing metrics "
-        + "even though HDFS was unavailable", MockSink.errored);
+      assertTrue(MockSink.errored, "No exception was generated while writing metrics "
+              + "even though HDFS was unavailable");
 
     try {
       ms.stop();
@@ -187,8 +186,8 @@ public class TestRollingFileSystemSinkWithHdfs
     try {
       ms.stop();
 
-      assertTrue("No exception was generated while stopping sink "
-          + "even though HDFS was unavailable", MockSink.errored);
+        assertTrue(MockSink.errored, "No exception was generated while stopping sink "
+                + "even though HDFS was unavailable");
     } catch (MetricsException ex) {
       // Expected
     } finally {
@@ -215,9 +214,9 @@ public class TestRollingFileSystemSinkWithHdfs
 
     ms.publishMetricsNow(); // publish the metrics
 
-    assertFalse("An exception was generated writing metrics "
-        + "while HDFS was unavailable, even though the sink is set to "
-        + "ignore errors", MockSink.errored);
+      assertFalse(MockSink.errored, "An exception was generated writing metrics "
+              + "while HDFS was unavailable, even though the sink is set to "
+              + "ignore errors");
 
     try {
       ms.stop();
@@ -247,9 +246,9 @@ public class TestRollingFileSystemSinkWithHdfs
     try {
       ms.stop();
 
-      assertFalse("An exception was generated stopping sink "
-          + "while HDFS was unavailable, even though the sink is set to "
-          + "ignore errors", MockSink.errored);
+        assertFalse(MockSink.errored, "An exception was generated stopping sink "
+                + "while HDFS was unavailable, even though the sink is set to "
+                + "ignore errors");
     } finally {
       ms.shutdown();
     }
@@ -299,10 +298,10 @@ public class TestRollingFileSystemSinkWithHdfs
           findMostRecentLogFile(fs, new Path(currentDir, getLogFilename()));
       FileStatus status = fs.getFileStatus(currentFile);
 
-      // Each metrics record is 118+ bytes, depending on hostname
-      assertTrue("The flusher thread didn't flush the log contents. Expected "
-          + "at least 236 bytes in the log file, but got " + status.getLen(),
-          status.getLen() >= 236);
+        // Each metrics record is 118+ bytes, depending on hostname
+        assertTrue(
+                status.getLen() >= 236, "The flusher thread didn't flush the log contents. Expected "
+                + "at least 236 bytes in the log file, but got " + status.getLen());
     } finally {
       RollingFileSystemSink.forceFlush = false;
 
@@ -326,9 +325,9 @@ public class TestRollingFileSystemSinkWithHdfs
     MockSink.errored = false;
     initMetricsSystem(path, true, false);
 
-    assertTrue("The sink was not initialized as expected",
-        MockSink.initialized);
-    assertFalse("The sink threw an unexpected error on initialization",
-        MockSink.errored);
+      assertTrue(
+              MockSink.initialized, "The sink was not initialized as expected");
+      assertFalse(
+              MockSink.errored, "The sink threw an unexpected error on initialization");
   }
 }

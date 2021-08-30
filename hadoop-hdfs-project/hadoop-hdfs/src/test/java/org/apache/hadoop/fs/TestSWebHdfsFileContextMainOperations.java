@@ -25,8 +25,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import javax.security.auth.login.LoginException;
 import java.io.File;
@@ -57,7 +57,7 @@ public class TestSWebHdfsFileContextMainOperations
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBeginning()
       throws IOException, LoginException, URISyntaxException {
 
@@ -104,7 +104,7 @@ public class TestSWebHdfsFileContextMainOperations
     return webhdfsUrl;
   }
 
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

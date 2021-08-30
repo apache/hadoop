@@ -28,9 +28,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.test.Whitebox;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.LoggerFactory;
@@ -45,9 +45,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertTrue;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REENCRYPT_THROTTLE_LIMIT_HANDLER_RATIO_KEY;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test class for ReencryptionHandler.
@@ -60,7 +60,7 @@ public class TestReencryptionHandler {
   @Rule
   public Timeout globalTimeout = new Timeout(180 * 1000);
 
-  @Before
+  @BeforeEach
   public void setup() {
     GenericTestUtils.setLogLevel(ReencryptionHandler.LOG, Level.TRACE);
   }
@@ -108,10 +108,10 @@ public class TestReencryptionHandler {
     final StopWatch sw = new StopWatch().start();
     rh.getTraverser().throttle();
     sw.stop();
-    assertTrue("should have throttled for at least 8 second",
-        sw.now(TimeUnit.MILLISECONDS) > 8000);
-    assertTrue("should have throttled for at most 12 second",
-        sw.now(TimeUnit.MILLISECONDS) < 12000);
+      assertTrue(
+              sw.now(TimeUnit.MILLISECONDS) > 8000, "should have throttled for at least 8 second");
+      assertTrue(
+              sw.now(TimeUnit.MILLISECONDS) < 12000, "should have throttled for at most 12 second");
   }
 
   @Test
@@ -139,8 +139,8 @@ public class TestReencryptionHandler {
     StopWatch sw = new StopWatch().start();
     rh.getTraverser().throttle();
     sw.stop();
-    assertTrue("should not have throttled",
-        sw.now(TimeUnit.MILLISECONDS) < 1000);
+      assertTrue(
+              sw.now(TimeUnit.MILLISECONDS) < 1000, "should not have throttled");
   }
 
   @Test
@@ -199,7 +199,7 @@ public class TestReencryptionHandler {
     rh.getTraverser().throttle();
     sw.stop();
     LOG.info("Throttle completed, consumed {}", sw.now(TimeUnit.MILLISECONDS));
-    assertTrue("should have throttled for at least 3 second",
-        sw.now(TimeUnit.MILLISECONDS) >= 3000);
+      assertTrue(
+              sw.now(TimeUnit.MILLISECONDS) >= 3000, "should have throttled for at least 3 second");
   }
 }

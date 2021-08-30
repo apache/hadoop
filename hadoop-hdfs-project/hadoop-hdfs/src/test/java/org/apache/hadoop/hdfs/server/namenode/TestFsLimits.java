@@ -19,8 +19,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongExce
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestFsLimits {
   static Configuration conf;
@@ -59,7 +59,7 @@ public class TestFsLimits {
     return fsn;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,

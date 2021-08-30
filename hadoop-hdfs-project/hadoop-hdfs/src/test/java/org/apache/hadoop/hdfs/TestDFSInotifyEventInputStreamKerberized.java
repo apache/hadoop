@@ -33,10 +33,10 @@ import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,10 +64,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Class for Kerberized test cases for {@link DFSInotifyEventInputStream}.
@@ -131,7 +128,7 @@ public class TestDFSInotifyEventInputStreamKerberized {
           while ((batch = eis.poll()) != null) {
             LOG.info("txid: " + batch.getTxid());
           }
-          assertNull("poll should not return anything", eis.poll());
+            assertNull(eis.poll(), "poll should not return anything");
 
           Thread.sleep(6000);
           LOG.info("Slept 6 seconds to make sure the TGT has expired.");
@@ -143,16 +140,16 @@ public class TestDFSInotifyEventInputStreamKerberized {
 
           // verify we can poll after a tgt expiration interval
           batch = eis.poll();
-          assertNotNull("poll should return something", batch);
+            assertNotNull(batch, "poll should return something");
           assertEquals(1, batch.getEvents().length);
-          assertNull("poll should not return anything", eis.poll());
+            assertNull(eis.poll(), "poll should not return anything");
           return null;
         }
       }
     });
   }
 
-  @Before
+  @BeforeEach
   public void initKerberizedCluster() throws Exception {
     baseDir = new File(System.getProperty("test.build.dir", "target/test-dir"),
         TestDFSInotifyEventInputStreamKerberized.class.getSimpleName());
@@ -169,8 +166,8 @@ public class TestDFSInotifyEventInputStreamKerberized {
     SecurityUtil.setAuthenticationMethod(
         UserGroupInformation.AuthenticationMethod.KERBEROS, baseConf);
     UserGroupInformation.setConfiguration(baseConf);
-    assertTrue("Expected configuration to enable security",
-        UserGroupInformation.isSecurityEnabled());
+      assertTrue(
+              UserGroupInformation.isSecurityEnabled(), "Expected configuration to enable security");
 
     final String userName = "hdfs";
     nnKeytabFile = new File(baseDir, userName + ".keytab");
@@ -218,7 +215,7 @@ public class TestDFSInotifyEventInputStreamKerberized {
         KeyStoreTestUtil.getServerSSLConfigFileName());
   }
 
-  @After
+  @AfterEach
   public void shutdownCluster() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

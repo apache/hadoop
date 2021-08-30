@@ -42,9 +42,9 @@ import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
@@ -52,10 +52,7 @@ import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesEqual;
 import static org.apache.hadoop.hdfs.DFSTestUtil.verifyFilesNotEqual;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.GenericTestUtils.assertMatches;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestReservedRawPaths {
 
@@ -72,7 +69,7 @@ public class TestReservedRawPaths {
   protected static final EnumSet< CreateEncryptionZoneFlag > NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     fsHelper = new FileSystemTestHelper();
@@ -98,7 +95,7 @@ public class TestReservedRawPaths {
     DFSTestUtil.createKey(TEST_KEY, cluster, conf);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -160,18 +157,18 @@ public class TestReservedRawPaths {
     final FileStatus p1Stat = fs.getFileStatus(p1);
     final FileStatus p2Stat = fs.getFileStatus(p2);
 
-    /*
-     * Use accessTime and modificationTime as substitutes for INode to check
-     * for resolution to the same underlying file.
-     */
-    assertEquals("Access times not equal", p1Stat.getAccessTime(),
-        p2Stat.getAccessTime());
-    assertEquals("Modification times not equal", p1Stat.getModificationTime(),
-        p2Stat.getModificationTime());
-    assertEquals("pathname1 not equal", p1,
-        Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()));
-    assertEquals("pathname1 not equal", p2,
-            Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()));
+      /*
+       * Use accessTime and modificationTime as substitutes for INode to check
+       * for resolution to the same underlying file.
+       */
+      assertEquals(p1Stat.getAccessTime(),
+              p2Stat.getAccessTime(), "Access times not equal");
+      assertEquals(p1Stat.getModificationTime(),
+              p2Stat.getModificationTime(), "Modification times not equal");
+      assertEquals(p1,
+              Path.getPathWithoutSchemeAndAuthority(p1Stat.getPath()), "pathname1 not equal");
+      assertEquals(p2,
+              Path.getPathWithoutSchemeAndAuthority(p2Stat.getPath()), "pathname1 not equal");
   }
 
   /**
@@ -343,7 +340,7 @@ public class TestReservedRawPaths {
     }
 
     final FileStatus[] fileStatuses = fs.listStatus(new Path("/.reserved/raw"));
-    assertEquals("expected 1 entry", fileStatuses.length, 1);
+      assertEquals(fileStatuses.length, 1, "expected 1 entry");
     assertMatches(fileStatuses[0].getPath().toString(), "/.reserved/raw/base");
   }
 

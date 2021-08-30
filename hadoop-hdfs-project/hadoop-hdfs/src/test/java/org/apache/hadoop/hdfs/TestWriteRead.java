@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestWriteRead {
 
@@ -67,7 +67,7 @@ public class TestWriteRead {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestWriteRead.class);
 
-  @Before
+  @BeforeEach
   public void initJunitModeTest() throws Exception {
     LOG.info("initJunitModeTest");
 
@@ -85,7 +85,7 @@ public class TestWriteRead {
     mfs.mkdirs(rootdir);
   }
 
-  @After
+  @AfterEach
   public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -113,7 +113,7 @@ public class TestWriteRead {
     // need to run long enough to fail: takes 25 to 35 seec on Mac
     int stat = testWriteAndRead(fname, WR_NTIMES, WR_CHUNK_SIZE, rdBeginPos);
     LOG.info("Summary status from test1: status= " + stat);
-    Assert.assertEquals(0, stat);
+    Assertions.assertEquals(0, stat);
   }
 
   /** Junit Test position read while writing. */
@@ -123,7 +123,7 @@ public class TestWriteRead {
     positionReadOption = true;   // position read
     long rdBeginPos = 0;
     int stat = testWriteAndRead(fname, WR_NTIMES, WR_CHUNK_SIZE, rdBeginPos);
-    Assert.assertEquals(0, stat);
+    Assertions.assertEquals(0, stat);
   }
 
   /** Junit Test position read of the current block being written. */
@@ -135,7 +135,7 @@ public class TestWriteRead {
     long rdBeginPos = blockSize+1;
     int numTimes=5;
     int stat = testWriteAndRead(fname, numTimes, wrChunkSize, rdBeginPos);
-    Assert.assertEquals(0, stat);
+    Assertions.assertEquals(0, stat);
   }
    
   // equivalent of TestWriteRead1

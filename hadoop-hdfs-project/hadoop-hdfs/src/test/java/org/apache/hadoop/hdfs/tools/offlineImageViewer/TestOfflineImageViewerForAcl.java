@@ -50,9 +50,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Lists;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -73,7 +73,7 @@ import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.NONE;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests OfflineImageViewer if the input fsimage has HDFS ACLs
@@ -94,7 +94,7 @@ public class TestOfflineImageViewerForAcl {
    * We only want to generate the fsimage file once and use it for
    * multiple tests.
    */
-  @BeforeClass
+  @BeforeAll
   public static void createOriginalFSImage() throws IOException {
     MiniDFSCluster cluster = null;
     try {
@@ -165,7 +165,7 @@ public class TestOfflineImageViewerForAcl {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void deleteOriginalFSImage() throws IOException {
     if (originalFsimage != null && originalFsimage.exists()) {
       originalFsimage.delete();

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,11 +30,11 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAProxyFactory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,7 +87,7 @@ public class TestStateAlignmentContextWithHA {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void startUpCluster() throws IOException {
     // Set short retry timeouts so this test runs faster
     CONF.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
@@ -100,20 +100,20 @@ public class TestStateAlignmentContextWithHA {
     cluster = qjmhaCluster.getDfsCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException, URISyntaxException {
     dfs = HATestUtil.configureObserverReadFs(
         cluster, CONF, ORPPwithAlignmentContexts.class, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDownCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
     }
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     killWorkers();
     cluster.transitionToStandby(1);

@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -28,10 +28,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests multiple ObserverNodes.
@@ -44,7 +44,7 @@ public class TestMultiObserverNode {
 
   private final Path testPath= new Path("/TestMultiObserverNode");
 
-  @BeforeClass
+  @BeforeAll
   public static void startUpCluster() throws Exception {
     conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
@@ -54,12 +54,12 @@ public class TestMultiObserverNode {
         dfsCluster, conf, ObserverReadProxyProvider.class, true);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     dfs.delete(testPath, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutDownCluster() throws IOException {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
@@ -155,7 +155,7 @@ public class TestMultiObserverNode {
   }
 
   private void assertSentTo(int... nnIndices) throws IOException {
-    assertTrue("Request was not sent to any of the expected namenodes.",
-        HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIndices));
+      assertTrue(
+              HATestUtil.isSentToAnyOfNameNodes(dfs, dfsCluster, nnIndices), "Request was not sent to any of the expected namenodes.");
   }
 }

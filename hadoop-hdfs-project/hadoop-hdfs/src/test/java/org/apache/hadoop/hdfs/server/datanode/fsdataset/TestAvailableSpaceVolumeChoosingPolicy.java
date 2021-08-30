@@ -28,8 +28,8 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 
 public class TestAvailableSpaceVolumeChoosingPolicy {
@@ -89,11 +89,11 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // than the threshold of 1MB.
     volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L * 3);
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
   }
   
@@ -121,24 +121,24 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // We should alternate assigning between the two volumes with a lot of free
     // space.
     initPolicy(policy, 1.0f);
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
         null));
 
     // All writes should be assigned to the volume with the least free space.
     initPolicy(policy, 0.0f);
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
   }
   
@@ -170,25 +170,25 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // We should alternate assigning between the two volumes with a lot of free
     // space.
     initPolicy(policy, 1.0f);
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
         null));
 
     // We should alternate assigning between the two volumes with less free
     // space.
     initPolicy(policy, 0.0f);
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
-    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
          null));
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
   }
   
@@ -214,7 +214,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // space to accept the replica size, and another volume does have enough
     // free space, that should be chosen instead.
     initPolicy(policy, 0.0f);
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
         1024L * 1024L * 2, null));
   }
   
@@ -242,7 +242,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
 
     // Should still be able to get a volume for the replica even though the
     // available space on the second volume changed.
-    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
+    Assertions.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
         100, null));
   }
   

@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ public class TestReconstructStripedFileWithValidator
     cluster.getDataNodes().stream()
         .map(DataNode::getMetrics)
         .map(DataNodeMetrics::getECInvalidReconstructionTasks)
-        .forEach(n -> Assert.assertEquals(0, (long) n));
+        .forEach(n -> Assertions.assertEquals(0, (long) n));
 
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     DataNodeFaultInjector badDecodingInjector = new DataNodeFaultInjector() {
@@ -93,7 +93,7 @@ public class TestReconstructStripedFileWithValidator
           .map(DataNode::getMetrics)
           .mapToLong(DataNodeMetrics::getECInvalidReconstructionTasks)
           .sum();
-      Assert.assertEquals(1, sum);
+      Assertions.assertEquals(1, sum);
     } finally {
       DataNodeFaultInjector.set(oldInjector);
     }

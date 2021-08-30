@@ -25,12 +25,13 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
-import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestPacketReceiver {
 

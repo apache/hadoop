@@ -21,8 +21,8 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Tests NameNode interaction for all XAttr APIs.
@@ -47,27 +47,27 @@ public class TestNameNodeXAttr extends FSXAttrBaseTest {
     fs.setXAttr(target, name2, value2);
     
     Map<String, byte[]> xattrs = fs.getXAttrs(link);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
+    Assertions.assertEquals(xattrs.size(), 2);
+    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    Assertions.assertArrayEquals(value2, xattrs.get(name2));
     
     fs.setXAttr(link, name3, null);
     xattrs = fs.getXAttrs(target);
-    Assert.assertEquals(xattrs.size(), 3);
-    Assert.assertArrayEquals(value1, xattrs.get(name1));
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
-    Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
+    Assertions.assertEquals(xattrs.size(), 3);
+    Assertions.assertArrayEquals(value1, xattrs.get(name1));
+    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    Assertions.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     fs.removeXAttr(link, name1);
     xattrs = fs.getXAttrs(target);
-    Assert.assertEquals(xattrs.size(), 2);
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
-    Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
+    Assertions.assertEquals(xattrs.size(), 2);
+    Assertions.assertArrayEquals(value2, xattrs.get(name2));
+    Assertions.assertArrayEquals(new byte[0], xattrs.get(name3));
     
     fs.removeXAttr(target, name3);
     xattrs = fs.getXAttrs(link);
-    Assert.assertEquals(xattrs.size(), 1);
-    Assert.assertArrayEquals(value2, xattrs.get(name2));
+    Assertions.assertEquals(xattrs.size(), 1);
+    Assertions.assertArrayEquals(value2, xattrs.get(name2));
     
     fs.delete(linkParent, true);
     fs.delete(targetParent, true);

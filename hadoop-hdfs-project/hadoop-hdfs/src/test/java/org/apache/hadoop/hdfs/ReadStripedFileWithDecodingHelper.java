@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -200,11 +200,11 @@ abstract public class ReadStripedFileWithDecodingHelper {
         + ", parityBlkDelNum = " + parityBlkDelNum
         + ", deleteBlockFile? " + deleteBlockFile);
     int recoverBlkNum = dataBlkDelNum + parityBlkDelNum;
-    Assert.assertTrue("dataBlkDelNum and parityBlkDelNum should be positive",
-        dataBlkDelNum >= 0 && parityBlkDelNum >= 0);
-    Assert.assertTrue("The sum of dataBlkDelNum and parityBlkDelNum " +
-        "should be between 1 ~ " + NUM_PARITY_UNITS, recoverBlkNum <=
-        NUM_PARITY_UNITS);
+      Assertions.assertTrue(
+              dataBlkDelNum >= 0 && parityBlkDelNum >= 0, "dataBlkDelNum and parityBlkDelNum should be positive");
+      Assertions.assertTrue(recoverBlkNum <=
+              NUM_PARITY_UNITS, "The sum of dataBlkDelNum and parityBlkDelNum " +
+              "should be between 1 ~ " + NUM_PARITY_UNITS);
 
     // write a file with the length of writeLen
     Path srcPath = new Path(src);
@@ -232,10 +232,10 @@ abstract public class ReadStripedFileWithDecodingHelper {
 
     int[] delDataBlkIndices = StripedFileTestUtil.randomArray(0, NUM_DATA_UNITS,
         dataBlkDelNum);
-    Assert.assertNotNull(delDataBlkIndices);
+    Assertions.assertNotNull(delDataBlkIndices);
     int[] delParityBlkIndices = StripedFileTestUtil.randomArray(NUM_DATA_UNITS,
         NUM_DATA_UNITS + NUM_PARITY_UNITS, parityBlkDelNum);
-    Assert.assertNotNull(delParityBlkIndices);
+    Assertions.assertNotNull(delParityBlkIndices);
 
     int[] delBlkIndices = new int[recoverBlkNum];
     System.arraycopy(delDataBlkIndices, 0,

@@ -18,9 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doThrow;
 
 import java.io.ByteArrayInputStream;
@@ -47,10 +45,10 @@ import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 import org.slf4j.event.Level;
 
@@ -81,7 +79,7 @@ public class TestDFSStripedOutputStream {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     /*
      * Initialize erasure coding policy.
@@ -110,7 +108,7 @@ public class TestDFSStripedOutputStream {
     fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -206,12 +204,12 @@ public class TestDFSStripedOutputStream {
     final byte[] bytes = StripedFileTestUtil.generateBytes(blockSize *
         dataBlocks * 3 + cellSize * dataBlocks + cellSize + 123);
     try (FSDataOutputStream os = fs.create(new Path("/ec-file-1"))) {
-      assertFalse(
-          "DFSStripedOutputStream should not have hflush() capability yet!",
-          os.hasCapability(StreamCapability.HFLUSH.getValue()));
-      assertFalse(
-          "DFSStripedOutputStream should not have hsync() capability yet!",
-          os.hasCapability(StreamCapability.HSYNC.getValue()));
+        assertFalse(
+                os.hasCapability(StreamCapability.HFLUSH.getValue()),
+                "DFSStripedOutputStream should not have hflush() capability yet!");
+        assertFalse(
+                os.hasCapability(StreamCapability.HSYNC.getValue()),
+                "DFSStripedOutputStream should not have hsync() capability yet!");
       try (InputStream is = new ByteArrayInputStream(bytes)) {
         IOUtils.copyBytes(is, os, bytes.length);
         os.hflush();
@@ -219,8 +217,8 @@ public class TestDFSStripedOutputStream {
         os.hsync();
         IOUtils.copyBytes(is, os, bytes.length);
       }
-      assertTrue("stream is not a DFSStripedOutputStream",
-          os.getWrappedStream() instanceof DFSStripedOutputStream);
+        assertTrue(
+                os.getWrappedStream() instanceof DFSStripedOutputStream, "stream is not a DFSStripedOutputStream");
       final DFSStripedOutputStream dfssos =
           (DFSStripedOutputStream) os.getWrappedStream();
       dfssos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
@@ -265,8 +263,8 @@ public class TestDFSStripedOutputStream {
         spyClient.create("/testExceptionInCloseECFileWithRecoverLease",
             FsPermission.getFileDefault(), EnumSet.of(CreateFlag.CREATE),
             (short) 3, 1024*1024, null, 1024, null);
-    assertTrue("stream should be a DFSStripedOutputStream",
-        dfsOutputStream instanceof DFSStripedOutputStream);
+      assertTrue(
+              dfsOutputStream instanceof DFSStripedOutputStream, "stream should be a DFSStripedOutputStream");
     DFSOutputStream spyDFSOutputStream = Mockito.spy(dfsOutputStream);
     doThrow(new IOException("Emulated IOException in close"))
         .when(spyDFSOutputStream).completeFile(Mockito.any());
@@ -290,8 +288,8 @@ public class TestDFSStripedOutputStream {
         spyClient.create("/testExceptionInCloseECFileWithoutRecoverLease",
             FsPermission.getFileDefault(), EnumSet.of(CreateFlag.CREATE),
             (short) 3, 1024*1024, null, 1024, null);
-    assertTrue("stream should be a DFSStripedOutputStream",
-        dfsOutputStream instanceof DFSStripedOutputStream);
+      assertTrue(
+              dfsOutputStream instanceof DFSStripedOutputStream, "stream should be a DFSStripedOutputStream");
     DFSOutputStream spyDFSOutputStream = Mockito.spy(dfsOutputStream);
     doThrow(new IOException("Emulated IOException in close"))
         .when(spyDFSOutputStream).completeFile(Mockito.any());

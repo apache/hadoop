@@ -24,9 +24,9 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestSnapshotNameWithInvalidCharacters {
   private static final long SEED = 0;
@@ -42,7 +42,7 @@ public class TestSnapshotNameWithInvalidCharacters {
   private final String snapshot1 = "a:b:c";
   private final String snapshot2 = "a/b/c";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
                                               .build();
@@ -50,7 +50,7 @@ public class TestSnapshotNameWithInvalidCharacters {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

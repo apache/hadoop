@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -26,8 +26,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.util.ExitUtil;
 
-import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -43,7 +43,7 @@ public class TestMetadataVersionOutput {
   private MiniDFSCluster dfsCluster = null;
   private final Configuration conf = new Configuration();
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (dfsCluster != null) {
       dfsCluster.shutdown();

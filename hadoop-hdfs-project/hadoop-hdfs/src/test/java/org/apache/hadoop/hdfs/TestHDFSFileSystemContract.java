@@ -27,16 +27,16 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   
   private MiniDFSCluster cluster;
   private String defaultWorkingDirectory;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
@@ -49,7 +49,7 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
            UserGroupInformation.getCurrentUser().getShortUserName();
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
     if (cluster != null) {

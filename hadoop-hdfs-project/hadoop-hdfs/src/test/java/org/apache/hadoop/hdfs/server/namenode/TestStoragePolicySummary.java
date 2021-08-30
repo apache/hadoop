@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.StoragePolicySummary.StorageTypeAllocation;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestStoragePolicySummary {
   
@@ -51,13 +51,13 @@ public class TestStoragePolicySummary {
     sts.add(new StorageType[]{StorageType.DISK,
         StorageType.DISK,StorageType.DISK,StorageType.DISK},hot);
     Map<String, Long> actualOutput = convertToStringMap(sts);
-    Assert.assertEquals(4,actualOutput.size());
+    Assertions.assertEquals(4,actualOutput.size());
     Map<String, Long>  expectedOutput = new HashMap<>();
     expectedOutput.put("HOT|DISK:1(HOT)", 1l);
     expectedOutput.put("HOT|DISK:2(HOT)", 1l);
     expectedOutput.put("HOT|DISK:3(HOT)", 1l);
     expectedOutput.put("HOT|DISK:4(HOT)", 1l);
-    Assert.assertEquals(expectedOutput,actualOutput);
+    Assertions.assertEquals(expectedOutput,actualOutput);
   }
   
   @Test
@@ -75,13 +75,13 @@ public class TestStoragePolicySummary {
     sts.add(new StorageType[]{StorageType.DISK,
         StorageType.DISK,StorageType.DISK,StorageType.DISK},hot);
     Map<String, Long> actualOutput = convertToStringMap(sts);
-    Assert.assertEquals(4,actualOutput.size());
+    Assertions.assertEquals(4,actualOutput.size());
     Map<String, Long> expectedOutput = new HashMap<>();
     expectedOutput.put("HOT|DISK:1(HOT)", 1l);
     expectedOutput.put("HOT|DISK:2(HOT)", 2l);
     expectedOutput.put("HOT|DISK:3(HOT)", 2l);
     expectedOutput.put("HOT|DISK:4(HOT)", 1l);
-    Assert.assertEquals(expectedOutput,actualOutput);
+    Assertions.assertEquals(expectedOutput,actualOutput);
   }
   
   @Test
@@ -110,13 +110,13 @@ public class TestStoragePolicySummary {
     sts.add(new StorageType[]{StorageType.ARCHIVE,
         StorageType.ARCHIVE,StorageType.DISK,StorageType.DISK},warm);
     Map<String, Long> actualOutput = convertToStringMap(sts);
-    Assert.assertEquals(4,actualOutput.size());
+    Assertions.assertEquals(4,actualOutput.size());
     Map<String, Long>  expectedOutput = new HashMap<>();
     expectedOutput.put("WARM|DISK:1,ARCHIVE:1(WARM)", 2l);
     expectedOutput.put("WARM|DISK:2,ARCHIVE:1", 3l);
     expectedOutput.put("WARM|DISK:1,ARCHIVE:2(WARM)", 3l);
     expectedOutput.put("WARM|DISK:2,ARCHIVE:2", 1l);
-    Assert.assertEquals(expectedOutput,actualOutput);
+    Assertions.assertEquals(expectedOutput,actualOutput);
   }
   
   @Test
@@ -150,7 +150,7 @@ public class TestStoragePolicySummary {
     sts.add(new StorageType[]{StorageType.ARCHIVE,
         StorageType.ARCHIVE,StorageType.ARCHIVE},cold);
     Map<String, Long> actualOutput = convertToStringMap(sts);
-    Assert.assertEquals(9,actualOutput.size());
+    Assertions.assertEquals(9,actualOutput.size());
     Map<String, Long>  expectedOutput = new HashMap<>();
     expectedOutput.put("HOT|DISK:3(HOT)", 2l);
     expectedOutput.put("COLD|DISK:1,ARCHIVE:2(WARM)", 2l);
@@ -161,7 +161,7 @@ public class TestStoragePolicySummary {
     expectedOutput.put("WARM|DISK:1,ARCHIVE:2(WARM)", 1l);
     expectedOutput.put("COLD|ARCHIVE:3(COLD)", 1l);
     expectedOutput.put("HOT|DISK:1,ARCHIVE:2(WARM)", 1l);
-    Assert.assertEquals(expectedOutput,actualOutput);
+    Assertions.assertEquals(expectedOutput,actualOutput);
   }
   
   @Test
@@ -191,11 +191,11 @@ public class TestStoragePolicySummary {
     sts.add(new StorageType[]{StorageType.ARCHIVE,
         StorageType.ARCHIVE,StorageType.ARCHIVE},cold);
     Map<String, Long> actualOutput = convertToStringMap(sts);
-    Assert.assertEquals(3,actualOutput.size());
+    Assertions.assertEquals(3,actualOutput.size());
     Map<String, Long>  expectedOutput = new LinkedHashMap<>();
     expectedOutput.put("COLD|ARCHIVE:3(COLD)", 4l);
     expectedOutput.put("WARM|DISK:1,ARCHIVE:2(WARM)", 3l);
     expectedOutput.put("HOT|DISK:3(HOT)", 2l);
-    Assert.assertEquals(expectedOutput.toString(),actualOutput.toString());
+    Assertions.assertEquals(expectedOutput.toString(),actualOutput.toString());
   }
 }

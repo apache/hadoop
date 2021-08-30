@@ -38,10 +38,10 @@ import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestWebHdfsWithAuthenticationFilter {
   private static boolean authorized = false;
@@ -83,7 +83,7 @@ public class TestWebHdfsWithAuthenticationFilter {
   private static MiniDFSCluster cluster;
   private static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     conf = new Configuration();
     conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
@@ -96,7 +96,7 @@ public class TestWebHdfsWithAuthenticationFilter {
     cluster.waitActive();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (fs != null) {
       fs.close();
@@ -112,7 +112,7 @@ public class TestWebHdfsWithAuthenticationFilter {
     authorized = false;
     try {
       fs.getFileStatus(new Path("/"));
-      Assert.fail("The filter fails to block the request");
+      Assertions.fail("The filter fails to block the request");
     } catch (IOException e) {
     }
     authorized = true;

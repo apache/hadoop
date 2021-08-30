@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -40,11 +40,11 @@ import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.PathUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -84,12 +84,12 @@ public class TestOfflineEditsViewer {
   @Rule
   public final TemporaryFolder folder = new TemporaryFolder();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     nnHelper.startCluster(buildDir + "/dfs/");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     nnHelper.shutdownCluster();
   }
@@ -117,14 +117,14 @@ public class TestOfflineEditsViewer {
         runOev(editsParsedXML_caseInSensitive, editsReparsed, "binary", false));
 
 
-    // judgment time
-    assertTrue("Edits " + edits + " should have all op codes",
-        hasAllOpCodes(edits));
+      // judgment time
+      assertTrue(
+              hasAllOpCodes(edits), "Edits " + edits + " should have all op codes");
     LOG.info("Comparing generated file " + editsReparsed
         + " with reference file " + edits);
-    assertTrue(
-        "Generated edits and reparsed (bin to XML to bin) should be same",
-        filesEqualIgnoreTrailingZeros(edits, editsReparsed));
+      assertTrue(
+              filesEqualIgnoreTrailingZeros(edits, editsReparsed),
+              "Generated edits and reparsed (bin to XML to bin) should be same");
   }
 
 
@@ -153,9 +153,9 @@ public class TestOfflineEditsViewer {
     assertEquals(0, runOev(editsParsedXml, editsReparsed, "binary", false));
     assertEquals(0, runOev(editsReparsed, editsParsedXml2, "xml", false));
 
-    // judgment time
-    assertTrue("Test round trip", FileUtils.contentEqualsIgnoreEOL(
-        new File(editsParsedXml), new File(editsParsedXml2), "UTF-8"));
+      // judgment time
+      assertTrue(FileUtils.contentEqualsIgnoreEOL(
+              new File(editsParsedXml), new File(editsParsedXml2), "UTF-8"), "Test round trip");
 
     os.close();
   }
@@ -177,15 +177,15 @@ public class TestOfflineEditsViewer {
     assertEquals(0,
         runOev(editsStoredParsedXml, editsStoredReparsed, "binary", false));
 
-    // judgement time
-    assertTrue("Edits " + editsStored + " should have all op codes",
-        hasAllOpCodes(editsStored));
-    assertTrue("Reference XML edits and parsed to XML should be same",
-        FileUtils.contentEqualsIgnoreEOL(new File(editsStoredXml),
-            new File(editsStoredParsedXml), "UTF-8"));
-    assertTrue(
-        "Reference edits and reparsed (bin to XML to bin) should be same",
-        filesEqualIgnoreTrailingZeros(editsStored, editsStoredReparsed));
+      // judgement time
+      assertTrue(
+              hasAllOpCodes(editsStored), "Edits " + editsStored + " should have all op codes");
+      assertTrue(
+              FileUtils.contentEqualsIgnoreEOL(new File(editsStoredXml),
+                      new File(editsStoredParsedXml), "UTF-8"), "Reference XML edits and parsed to XML should be same");
+      assertTrue(
+              filesEqualIgnoreTrailingZeros(editsStored, editsStoredReparsed),
+              "Reference edits and reparsed (bin to XML to bin) should be same");
   }
 
   /**
@@ -299,11 +299,11 @@ public class TestOfflineEditsViewer {
     try {
       System.setOut(out);
       int status = new OfflineEditsViewer().run(new String[] { "-h" });
-      assertTrue("" + "Exit code returned for help option is incorrect",
-          status == 0);
-      Assert.assertFalse(
-          "Invalid Command error displayed when help option is passed.", bytes
-              .toString().contains("Error parsing command-line options"));
+        assertTrue(
+                status == 0, "" + "Exit code returned for help option is incorrect");
+        Assertions.assertFalse(bytes
+                        .toString().contains("Error parsing command-line options"),
+                "Invalid Command error displayed when help option is passed.");
     } finally {
       System.setOut(oldOut);
       IOUtils.closeStream(out);
@@ -322,7 +322,7 @@ public class TestOfflineEditsViewer {
     if (oev.go(editFilename, outFilename, "stats", new Flags(), visitor) == 0) {
       statisticsStr = visitor.getStatisticsString();
     }
-    Assert.assertNotNull(statisticsStr);
+    Assertions.assertNotNull(statisticsStr);
 
     String str;
     Long count;

@@ -19,11 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 
@@ -43,10 +39,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Test cases for snapshot-related information in blocksMap.
@@ -66,7 +62,7 @@ public class TestSnapshotBlocksMap {
   BlockManager blockmanager;
   protected DistributedFileSystem hdfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCKSIZE);
@@ -80,7 +76,7 @@ public class TestSnapshotBlocksMap {
     hdfs = cluster.getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -100,8 +96,8 @@ public class TestSnapshotBlocksMap {
 
   static void assertBlockCollection(final BlockManager blkManager,
       final INodeFile file, final BlockInfo b) {
-    Assert.assertSame(b, blkManager.getStoredBlock(b));
-    Assert.assertEquals(file.getId(), b.getBlockCollectionId());
+    Assertions.assertSame(b, blkManager.getStoredBlock(b));
+    Assertions.assertEquals(file.getId(), b.getBlockCollectionId());
   }
 
   /**
@@ -150,7 +146,7 @@ public class TestSnapshotBlocksMap {
     {
       INodeFile f1 = assertBlockCollection(file1.toString(), 2, fsdir,
           blockmanager);
-      Assert.assertSame(INodeFile.class, f1.getClass());
+      Assertions.assertSame(INodeFile.class, f1.getClass());
       hdfs.setReplication(file1, (short)2);
       f1 = assertBlockCollection(file1.toString(), 2, fsdir, blockmanager);
       assertTrue(f1.isWithSnapshot());

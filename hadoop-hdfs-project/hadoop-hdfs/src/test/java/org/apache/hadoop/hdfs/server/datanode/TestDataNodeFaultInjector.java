@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -161,8 +161,8 @@ public class TestDataNodeFaultInjector {
       }
       LOG.info("delay info: " + mdnFaultInjector.getDelayMs() + ":"
           + datanodeSlowLogThresholdMs);
-      assertTrue("Injected delay should be longer than the configured one",
-          mdnFaultInjector.getDelayMs() > datanodeSlowLogThresholdMs);
+        assertTrue(
+                mdnFaultInjector.getDelayMs() > datanodeSlowLogThresholdMs, "Injected delay should be longer than the configured one");
     } finally {
       if (cluster != null) {
         cluster.shutdown();

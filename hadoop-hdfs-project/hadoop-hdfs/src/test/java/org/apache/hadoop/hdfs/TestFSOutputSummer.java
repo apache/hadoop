@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Random;
@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests if FSOutputSummer works correctly.
@@ -90,9 +90,9 @@ public class TestFSOutputSummer {
   private void checkAndEraseData(byte[] actual, int from, byte[] expected,
       String message) throws Exception {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                        expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+        assertEquals(
+                actual[idx], expected[from + idx], message + " byte " + (from + idx) + " differs. expected " +
+                expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }

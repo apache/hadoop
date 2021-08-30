@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -288,7 +288,7 @@ public class TestProcessCorruptBlocks {
       if (scanLogFile.exists()) {
         // wait for one minute for deletion to succeed;
         for (int i = 0; !scanLogFile.delete(); i++) {
-          assertTrue("Could not delete log file in one minute", i < 60);
+            assertTrue(i < 60, "Could not delete log file in one minute");
           try {
             Thread.sleep(1000);
           } catch (InterruptedException ignored) {

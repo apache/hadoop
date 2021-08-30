@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Make sure that ViewFs works when the root of an FS is mounted to a ViewFs
@@ -49,7 +49,7 @@ public class TestViewFsAtHdfsRoot extends ViewFsBaseTest {
     return new FileContextTestHelper("/tmp/TestViewFsAtHdfsRoot");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
@@ -62,7 +62,7 @@ public class TestViewFsAtHdfsRoot extends ViewFsBaseTest {
   }
 
       
-  @AfterClass
+  @AfterAll
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -70,7 +70,7 @@ public class TestViewFsAtHdfsRoot extends ViewFsBaseTest {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create the test root on local_fs
     fcTarget = fc;

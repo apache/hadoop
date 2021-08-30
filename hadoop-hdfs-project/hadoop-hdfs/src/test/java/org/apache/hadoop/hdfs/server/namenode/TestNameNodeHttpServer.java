@@ -33,10 +33,10 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -64,7 +64,7 @@ public class TestNameNodeHttpServer {
     this.policy = policy;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
@@ -81,7 +81,7 @@ public class TestNameNodeHttpServer {
         KeyStoreTestUtil.getServerSSLConfigFileName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
@@ -98,14 +98,14 @@ public class TestNameNodeHttpServer {
       server = new NameNodeHttpServer(conf, null, addr);
       server.start();
 
-      Assert.assertTrue(implies(policy.isHttpEnabled(),
+      Assertions.assertTrue(implies(policy.isHttpEnabled(),
           canAccess("http", server.getHttpAddress())));
-      Assert.assertTrue(implies(!policy.isHttpEnabled(),
+      Assertions.assertTrue(implies(!policy.isHttpEnabled(),
           server.getHttpAddress() == null));
 
-      Assert.assertTrue(implies(policy.isHttpsEnabled(),
+      Assertions.assertTrue(implies(policy.isHttpsEnabled(),
           canAccess("https", server.getHttpsAddress())));
-      Assert.assertTrue(implies(!policy.isHttpsEnabled(),
+      Assertions.assertTrue(implies(!policy.isHttpsEnabled(),
           server.getHttpsAddress() == null));
 
     } finally {

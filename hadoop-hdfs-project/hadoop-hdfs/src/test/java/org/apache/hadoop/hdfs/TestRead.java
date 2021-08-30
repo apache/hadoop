@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -40,6 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil.ShortCircuitTestContext;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class TestRead {
   final private int BLOCK_SIZE = 512;
@@ -51,14 +51,14 @@ public class TestRead {
     FSDataInputStream fis = fs.open(path);
     ByteBuffer empty = ByteBuffer.allocate(0);
     // A read into an empty bytebuffer at the beginning of the file gives 0.
-    Assert.assertEquals(0, fis.read(empty));
+    Assertions.assertEquals(0, fis.read(empty));
     fis.seek(fileLength);
     // A read into an empty bytebuffer at the end of the file gives -1.
-    Assert.assertEquals(-1, fis.read(empty));
+    Assertions.assertEquals(-1, fis.read(empty));
     if (fileLength > BLOCK_SIZE) {
       fis.seek(fileLength - BLOCK_SIZE + 1);
       ByteBuffer dbb = ByteBuffer.allocateDirect(BLOCK_SIZE);
-      Assert.assertEquals(BLOCK_SIZE - 1, fis.read(dbb));
+      Assertions.assertEquals(BLOCK_SIZE - 1, fis.read(dbb));
     }
     fis.close();
   }
@@ -106,7 +106,7 @@ public class TestRead {
     try {
       FileSystem fs = cluster.getFileSystem();
       fs.open(new Path("/.reserved/.inodes/file"));
-      Assert.fail("Open a non existing file should fail.");
+      Assertions.fail("Open a non existing file should fail.");
     } catch (FileNotFoundException e) {
       // Expected
     } finally {
@@ -149,7 +149,7 @@ public class TestRead {
       reader.interrupt();
       reader.join();
 
-      Assert.assertTrue(readInterrupted.get());
+      Assertions.assertTrue(readInterrupted.get());
     } finally {
       cluster.shutdown();
     }

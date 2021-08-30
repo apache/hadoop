@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.util.Lists;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,8 +47,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.HostConfigManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This class provide utilities for testing of the admin operations of nodes.
@@ -81,7 +81,7 @@ public class AdminStatesBaseTest {
     return cluster;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Set up the hosts/exclude files.
     hostsFileWriter = new HostsFileWriter();
@@ -108,7 +108,7 @@ public class AdminStatesBaseTest {
 
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException {
     hostsFileWriter.cleanup();
     shutdownCluster();
@@ -381,7 +381,7 @@ public class AdminStatesBaseTest {
   protected static void validateCluster(DFSClient client, int numDNs)
       throws IOException {
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    assertEquals("Number of Datanodes ", numDNs, info.length);
+      assertEquals(numDNs, info.length, "Number of Datanodes ");
   }
 
   /** Start a MiniDFSCluster.

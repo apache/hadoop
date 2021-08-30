@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -45,9 +43,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -61,7 +59,7 @@ public class TestFailoverWithBlockTokensEnabled {
   private Configuration conf;
   private MiniDFSCluster cluster;
 
-  @Before
+  @BeforeEach
   public void startCluster() throws IOException {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
@@ -73,7 +71,7 @@ public class TestFailoverWithBlockTokensEnabled {
         .build();
   }
   
-  @After
+  @AfterEach
   public void shutDownCluster() {
     if (cluster != null) {
       cluster.shutdown();
@@ -110,8 +108,8 @@ public class TestFailoverWithBlockTokensEnabled {
         }
         int first = btsms[i].getSerialNoForTesting();
         int second = btsms[j].getSerialNoForTesting();
-        assertFalse("Overlap found for set serial number (" + serialNumber + ") is " + i + ": "
-            + first + " == " + j + ": " + second, first == second);
+          assertFalse(first == second, "Overlap found for set serial number (" + serialNumber + ") is " + i + ": "
+                  + first + " == " + j + ": " + second);
       }
     }
   }

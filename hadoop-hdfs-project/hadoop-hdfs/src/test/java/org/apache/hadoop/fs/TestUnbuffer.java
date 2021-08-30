@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.PeerCache;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Assert;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
@@ -72,19 +72,19 @@ public class TestUnbuffer {
       // Read a byte.  This will trigger the creation of a block reader.
       stream.seek(2);
       int b = stream.read();
-      Assert.assertTrue(-1 != b);
+      Assertions.assertTrue(-1 != b);
 
       // The Peer cache should start off empty.
       PeerCache cache = dfs.getClient().getClientContext().getPeerCache();
-      Assert.assertEquals(0, cache.size());
+      Assertions.assertEquals(0, cache.size());
 
       // Unbuffer should clear the block reader and return the socket to the
       // cache.
       stream.unbuffer();
       stream.seek(2);
-      Assert.assertEquals(1, cache.size());
+      Assertions.assertEquals(1, cache.size());
       int b2 = stream.read();
-      Assert.assertEquals(b, b2);
+      Assertions.assertEquals(b, b2);
     } finally {
       if (stream != null) {
         IOUtils.cleanupWithLogger(null, stream);
@@ -117,7 +117,7 @@ public class TestUnbuffer {
       for (int i = 0; i < NUM_OPENS; i++) {
         streams[i] = dfs.open(TEST_PATH);
         LOG.info("opening file " + i + "...");
-        Assert.assertTrue(-1 != streams[i].read());
+        Assertions.assertTrue(-1 != streams[i].read());
         streams[i].unbuffer();
       }
     } finally {

@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -35,7 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.event.Level;
 
 /** Class contains a set of tests to verify the correctness of 
@@ -337,9 +335,9 @@ public class TestHFlush {
         // Check file length if updatelength is required
         if (isSync && syncFlags.contains(SyncFlag.UPDATE_LENGTH)) {
           long currentFileLength = fileSystem.getFileStatus(path).getLen();
-          assertEquals(
-            "File size doesn't match for hsync/hflush with updating the length",
-            tenth * (i + 1), currentFileLength);
+            assertEquals(
+                    tenth * (i + 1), currentFileLength,
+                    "File size doesn't match for hsync/hflush with updating the length");
         } else if (isSync && syncFlags.contains(SyncFlag.END_BLOCK)) {
           LocatedBlocks blocks = fileSystem.dfs.getLocatedBlocks(pathName, 0);
           assertEquals(i + 1, blocks.getLocatedBlocks().size());
@@ -353,7 +351,7 @@ public class TestHFlush {
         is.seek(tenth * i);
         int readBytes = is.read(toRead, 0, tenth);
         System.out.println("Has read " + readBytes);
-        assertTrue("Should've get more bytes", (readBytes > 0) && (readBytes <= tenth));
+          assertTrue((readBytes > 0) && (readBytes <= tenth), "Should've get more bytes");
         is.close();
         checkData(toRead, 0, readBytes, expected, "Partial verification");
       }
@@ -361,7 +359,7 @@ public class TestHFlush {
       stm.write(fileContent, tenth * SECTIONS, rounding);
       stm.close();
 
-      assertEquals("File size doesn't match ", AppendTestUtil.FILE_SIZE, fileSystem.getFileStatus(path).getLen());
+        assertEquals(AppendTestUtil.FILE_SIZE, fileSystem.getFileStatus(path).getLen(), "File size doesn't match ");
       AppendTestUtil.checkFullFile(fileSystem, path, fileContent.length, fileContent, "hflush()");
     } finally {
       fileSystem.close();
@@ -371,9 +369,9 @@ public class TestHFlush {
   static void checkData(final byte[] actual, int from, int len,
                         final byte[] expected, String message) {
     for (int idx = 0; idx < len; idx++) {
-      assertEquals(message+" byte "+(from+idx)+" differs. expected "+
-                   expected[from+idx]+" actual "+actual[idx],
-                   expected[from+idx], actual[idx]);
+        assertEquals(
+                expected[from + idx], actual[idx], message + " byte " + (from + idx) + " differs. expected " +
+                expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }

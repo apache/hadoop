@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestBlockMissingException {
   final static Logger LOG =
@@ -116,6 +116,6 @@ public class TestBlockMissingException {
       gotException = true;
     }
     stm.close();
-    assertTrue("Expected BlockMissingException ", gotException);
+      assertTrue(gotException, "Expected BlockMissingException ");
   }
 }

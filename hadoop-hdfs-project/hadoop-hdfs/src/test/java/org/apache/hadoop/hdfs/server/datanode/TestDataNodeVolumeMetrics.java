@@ -19,9 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.Timeout;
 
 /**
@@ -103,7 +101,7 @@ public class TestDataNodeVolumeMetrics {
       }
 
       ArrayList<DataNode> dns = cluster.getDataNodes();
-      assertTrue("DN1 should be up", dns.get(0).isDatanodeUp());
+        assertTrue(dns.get(0).isDatanodeUp(), "DN1 should be up");
       final File dn1Vol2 = cluster.getInstanceStorageDir(0, 1);
 
       DataNodeTestUtils.injectDataDirFailure(dn1Vol2);

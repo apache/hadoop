@@ -26,10 +26,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -44,12 +44,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_SUSPECT_NODE_INTERVAL_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for dead node detection in DFSClient.
@@ -59,7 +54,7 @@ public class TestDeadNodeDetection {
   private MiniDFSCluster cluster;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     cluster = null;
     conf = new HdfsConfiguration();
@@ -77,7 +72,7 @@ public class TestDeadNodeDetection {
     conf.setLong(DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY, 100);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
@@ -328,15 +323,15 @@ public class TestDeadNodeDetection {
       }
       waitForSuspectNode(din.getDFSClient());
       cluster.restartDataNode(one, true);
-      Assert.assertEquals(1,
+      Assertions.assertEquals(1,
           deadNodeDetector.getSuspectNodesProbeQueue().size());
-      Assert.assertEquals(0,
+      Assertions.assertEquals(0,
           deadNodeDetector.clearAndGetDetectedDeadNodes().size());
       deadNodeDetector.startProbeScheduler();
       Thread.sleep(1000);
-      Assert.assertEquals(0,
+      Assertions.assertEquals(0,
           deadNodeDetector.getSuspectNodesProbeQueue().size());
-      Assert.assertEquals(0,
+      Assertions.assertEquals(0,
           deadNodeDetector.clearAndGetDetectedDeadNodes().size());
     } finally {
       in.close();

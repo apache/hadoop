@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,9 +51,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.event.Level;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
@@ -77,7 +72,7 @@ public class TestBackupNode {
   static final int blockSize = 4096;
   static final int fileSize = 8192;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     File baseDir = new File(BASE_DIR);
     if(baseDir.exists())
@@ -110,10 +105,10 @@ public class TestBackupNode {
 
     BackupNode bn = (BackupNode)NameNode.createNameNode(
         new String[]{startupOpt.getName()}, c);
-    assertTrue(bn.getRole() + " must be in SafeMode.", bn.isInSafeMode());
-    assertTrue(bn.getRole() + " must be in StandbyState",
-               bn.getNamesystem().getHAState()
-                 .equalsIgnoreCase(HAServiceState.STANDBY.name()));
+      assertTrue(bn.isInSafeMode(), bn.getRole() + " must be in SafeMode.");
+      assertTrue(
+              bn.getNamesystem().getHAState()
+                      .equalsIgnoreCase(HAServiceState.STANDBY.name()), bn.getRole() + " must be in StandbyState");
     return bn;
   }
 
@@ -182,8 +177,8 @@ public class TestBackupNode {
     try {
       bn = (BackupNode)NameNode.createNameNode(
           new String[] {startupOpt.getName()}, c);
-      assertTrue("Namesystem in BackupNode should be null",
-          bn.getNamesystem() == null);
+        assertTrue(
+                bn.getNamesystem() == null, "Namesystem in BackupNode should be null");
       fail("Incorrect authentication setting should throw IOException");
     } catch (IOException e) {
       LOG.info("IOException thrown.", e);
@@ -247,10 +242,10 @@ public class TestBackupNode {
       // NN should have received a new image
       long nnImageAfter =
         nn.getFSImage().getStorage().getMostRecentCheckpointTxId();
-      
-      assertTrue("nn should have received new checkpoint. before: " +
-          nnImageBefore + " after: " + nnImageAfter,
-          nnImageAfter > nnImageBefore);
+
+        assertTrue(
+                nnImageAfter > nnImageBefore, "nn should have received new checkpoint. before: " +
+                nnImageBefore + " after: " + nnImageAfter);
 
       // BN should stay in sync after checkpoint
       testBNInSync(cluster, backup, 3);
@@ -265,8 +260,8 @@ public class TestBackupNode {
       EditLogFile editsLog = FSImageTestUtil.findLatestEditsLog(sd);
       assertEquals(editsLog.getFirstTxId(),
           nn.getFSImage().getEditLog().getCurSegmentTxId());
-      assertTrue("Should not have finalized " + editsLog,
-          editsLog.isInProgress());
+        assertTrue(
+                editsLog.isInProgress(), "Should not have finalized " + editsLog);
       
       // do some edits
       assertTrue(fileSys.mkdirs(new Path("/edit-while-bn-down")));
@@ -388,7 +383,7 @@ public class TestBackupNode {
       waitCheckpointDone(cluster, txid);
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
-      assertTrue(e.getLocalizedMessage(), false);
+        assertTrue(false, e.getLocalizedMessage());
     } finally {
       if(backup != null) backup.stop();
       if(fileSys != null) fileSys.close();
@@ -447,7 +442,7 @@ public class TestBackupNode {
         LOG.info("Write to " + backup.getRole() + " failed as expected: ", eio);
         canWrite = false;
       }
-      assertFalse("Write to BackupNode must be prohibited.", canWrite);
+        assertFalse(canWrite, "Write to BackupNode must be prohibited.");
 
       // Reads are allowed for BackupNode, but not for CheckpointNode
       boolean canRead = true;
@@ -457,18 +452,18 @@ public class TestBackupNode {
         LOG.info("Read from " + backup.getRole() + " failed: ", eio);
         canRead = false;
       }
-      assertEquals("Reads to BackupNode are allowed, but not CheckpointNode.",
-          canRead, backup.isRole(NamenodeRole.BACKUP));
+        assertEquals(
+                canRead, backup.isRole(NamenodeRole.BACKUP), "Reads to BackupNode are allowed, but not CheckpointNode.");
 
       DFSTestUtil.createFile(fileSys, file3, fileSize, fileSize, blockSize,
           replication, seed);
       
       TestCheckpoint.checkFile(fileSys, file3, replication);
-      // should also be on BN right away
-      assertTrue("file3 does not exist on BackupNode",
-          op != StartupOption.BACKUP ||
-          backup.getNamesystem().getFileInfo(
-              file3.toUri().getPath(), false, false, false) != null);
+        // should also be on BN right away
+        assertTrue(
+                op != StartupOption.BACKUP ||
+                        backup.getNamesystem().getFileInfo(
+                                file3.toUri().getPath(), false, false, false) != null, "file3 does not exist on BackupNode");
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
@@ -496,7 +491,7 @@ public class TestBackupNode {
       assertTrue(fileSys.exists(file2));
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode: ", e);
-      assertTrue(e.getLocalizedMessage(), false);
+        assertTrue(false, e.getLocalizedMessage());
     } finally {
       fileSys.close();
       if (cluster != null) {
@@ -546,11 +541,11 @@ public class TestBackupNode {
           new Path("hdfs://" + bnAddr).toUri(), conf);
       String nnData = DFSTestUtil.readFile(fileSys, file1);
       String bnData = DFSTestUtil.readFile(bnFS, file1);
-      assertEquals("Data read from BackupNode and NameNode is not the same.",
-          nnData, bnData);
+        assertEquals(
+                nnData, bnData, "Data read from BackupNode and NameNode is not the same.");
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode: ", e);
-      assertTrue(e.getLocalizedMessage(), false);
+        assertTrue(false, e.getLocalizedMessage());
     } finally {
       if(fileSys != null) fileSys.close();
       if(backup != null) backup.stop();

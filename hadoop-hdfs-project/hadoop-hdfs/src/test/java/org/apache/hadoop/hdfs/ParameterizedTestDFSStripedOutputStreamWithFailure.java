@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test striped file write operation with data node failures with parameterized
@@ -62,9 +62,9 @@ public class ParameterizedTestDFSStripedOutputStreamWithFailure extends
     }
     final int i = base;
     final Integer length = getLength(i);
-    assumeTrue("Skip test " + i + " since length=null.", length != null);
-    assumeTrue("Test " + i + ", length=" + length
-        + ", is not chosen to run.", RANDOM.nextInt(16) != 0);
+    assumeTrue(length != null, "Skip test " + i + " since length=null.");
+    assumeTrue(RANDOM.nextInt(16) != 0, "Test " + i + ", length=" + length
+        + ", is not chosen to run.");
     System.out.println("Run test " + i + ", length=" + length);
     runTest(length);
   }

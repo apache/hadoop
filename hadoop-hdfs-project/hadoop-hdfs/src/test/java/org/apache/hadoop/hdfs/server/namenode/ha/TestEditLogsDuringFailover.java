@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,10 +41,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
-
-import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 

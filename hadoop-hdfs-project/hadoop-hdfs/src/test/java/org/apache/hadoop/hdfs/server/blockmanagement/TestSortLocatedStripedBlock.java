@@ -38,9 +38,9 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +63,7 @@ public class TestSortLocatedStripedBlock {
   static DatanodeManager dm;
   static final long STALE_INTERVAL = 30 * 1000 * 60;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     dm = mockDatanodeManager();
   }
@@ -365,13 +365,13 @@ public class TestSortLocatedStripedBlock {
 
     for (LocatedBlock lb : lbs) {
       byte[] blockIndices = ((LocatedStripedBlock) lb).getBlockIndices();
-      // after sorting stale block index will be placed after normal nodes.
-      Assert.assertEquals("Failed to move stale node to bottom!", 1,
-          blockIndices[9]);
+        // after sorting stale block index will be placed after normal nodes.
+        Assertions.assertEquals(1,
+                blockIndices[9], "Failed to move stale node to bottom!");
       DatanodeInfo[] locations = lb.getLocations();
-      // After sorting stale node d13 will be placed after normal nodes
-      Assert.assertEquals("Failed to move stale dn after normal one!",
-          staleDns.remove(0), locations[9]);
+        // After sorting stale node d13 will be placed after normal nodes
+        Assertions.assertEquals(
+                staleDns.remove(0), locations[9], "Failed to move stale dn after normal one!");
     }
   }
 
@@ -392,17 +392,17 @@ public class TestSortLocatedStripedBlock {
         LOG.info("Block Locations size={}, locs={}, j=", nodes.length,
             dnInfo.toString(), j);
         if (j < blkGrpWidth) {
-          Assert.assertEquals("Node shouldn't be decommissioned",
-              AdminStates.NORMAL, dnInfo.getAdminState());
+            Assertions.assertEquals(
+                    AdminStates.NORMAL, dnInfo.getAdminState(), "Node shouldn't be decommissioned");
         } else {
-          // check against decommissioned list
-          Assert.assertTrue(
-              "For block " + blk.getBlock() + " decommissioned node " + dnInfo
-                  + " is not last node in list: " + j + "th index of "
-                  + nodes.length,
-              decommissionedNodeList.contains(dnInfo.getXferAddr()));
-          Assert.assertEquals("Node should be decommissioned",
-              AdminStates.DECOMMISSIONED, dnInfo.getAdminState());
+            // check against decommissioned list
+            Assertions.assertTrue(
+                    decommissionedNodeList.contains(dnInfo.getXferAddr()),
+                    "For block " + blk.getBlock() + " decommissioned node " + dnInfo
+                            + " is not last node in list: " + j + "th index of "
+                            + nodes.length);
+            Assertions.assertEquals(
+                    AdminStates.DECOMMISSIONED, dnInfo.getAdminState(), "Node should be decommissioned");
         }
       }
     }
@@ -552,10 +552,10 @@ public class TestSortLocatedStripedBlock {
           locToTokenList.get(i);
       DatanodeInfo[] di = lb.getLocations();
       for (int j = 0; j < di.length; j++) {
-        Assert.assertEquals("Block index value mismatches after sorting",
-            (byte) locToIndex.get(di[j]), stripedBlk.getBlockIndices()[j]);
-        Assert.assertEquals("Block token value mismatches after sorting",
-            locToToken.get(di[j]), stripedBlk.getBlockTokens()[j]);
+          Assertions.assertEquals(
+                  (byte) locToIndex.get(di[j]), stripedBlk.getBlockIndices()[j], "Block index value mismatches after sorting");
+          Assertions.assertEquals(
+                  locToToken.get(di[j]), stripedBlk.getBlockTokens()[j], "Block token value mismatches after sorting");
       }
     }
   }

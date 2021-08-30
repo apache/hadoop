@@ -42,8 +42,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.slf4j.event.Level;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 
 import java.io.DataOutputStream;
@@ -55,7 +55,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests state transition from active->standby, and manual failover
@@ -308,15 +308,15 @@ public class TestHAStateTransitions {
       long nn0t0 = NameNodeAdapter.getLeaseRenewalTime(nn0, TEST_FILE_STR);
       assertTrue(nn0t0 > 0);
       long nn1t0 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
-      assertEquals("Lease should not yet exist on nn1",
-          -1, nn1t0);
+        assertEquals(
+                -1, nn1t0, "Lease should not yet exist on nn1");
       
       Thread.sleep(5); // make sure time advances!
 
       HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
       long nn1t1 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
-      assertTrue("Lease should have been created on standby. Time was: " +
-          nn1t1, nn1t1 > nn0t0);
+        assertTrue(nn1t1 > nn0t0, "Lease should have been created on standby. Time was: " +
+                nn1t1);
           
       Thread.sleep(5); // make sure time advances!
       
@@ -324,8 +324,8 @@ public class TestHAStateTransitions {
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
       long nn1t2 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
-      assertTrue("Lease should have been renewed by failover process",
-          nn1t2 > nn1t1);
+        assertTrue(
+                nn1t2 > nn1t1, "Lease should have been renewed by failover process");
     } finally {
       IOUtils.closeStream(stm);
       cluster.shutdown();
@@ -362,7 +362,7 @@ public class TestHAStateTransitions {
       nn2.getRpcServer().renewDelegationToken(token);
       nn2.getRpcServer().cancelDelegationToken(token);
       token = nn2.getRpcServer().getDelegationToken(new Text(renewer));
-      Assert.assertTrue(token != null);
+      Assertions.assertTrue(token != null);
     } finally {
       cluster.shutdown();
     }
@@ -433,8 +433,8 @@ public class TestHAStateTransitions {
     StorageDirectory storageDir = new StorageDirectory(sharedEditsDir);
     File inProgressFile = NameNodeAdapter.getInProgressEditsFile(storageDir,
         txid + 1);
-    assertTrue("Failed to create in-progress edits file",
-        inProgressFile.createNewFile());
+      assertTrue(
+              inProgressFile.createNewFile(), "Failed to create in-progress edits file");
     
     if (writeHeader) {
       DataOutputStream out = new DataOutputStream(new FileOutputStream(

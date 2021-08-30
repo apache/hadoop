@@ -23,11 +23,7 @@ import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeTxns;
 import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.Closeable;
 import java.io.File;
@@ -65,10 +61,10 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
@@ -97,7 +93,7 @@ public class TestQuorumJournalManager {
   @Rule
   public TestName name = new TestName();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = new Configuration();
     if (!name.getMethodName().equals("testSelectThreadCounts")) {
@@ -123,7 +119,7 @@ public class TestQuorumJournalManager {
     assertEquals(1, qjm.getLoggerSetForTests().getEpoch());
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws IOException, InterruptedException,
       TimeoutException {
     IOUtils.cleanupWithLogger(LOG, toClose.toArray(new Closeable[0]));
@@ -1067,10 +1063,10 @@ public class TestQuorumJournalManager {
         "Logger channel (from parallel executor) to " + ipcAddr;
     long num = Thread.getAllStackTraces().keySet().stream()
         .filter((t) -> t.getName().contains(expectedName)).count();
-    // The number of threads for the stopped jn shouldn't be more than the
-    // configured value.
-    assertTrue("Number of threads are : " + num,
-        num <= DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT);
+      // The number of threads for the stopped jn shouldn't be more than the
+      // configured value.
+      assertTrue(
+              num <= DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT, "Number of threads are : " + num);
   }
 
   @Test
