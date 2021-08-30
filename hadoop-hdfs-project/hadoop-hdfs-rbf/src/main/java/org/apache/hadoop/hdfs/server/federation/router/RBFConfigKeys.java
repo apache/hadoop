@@ -99,11 +99,11 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_MONITOR_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.namenode";
   public static final String DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED =
-      FEDERATION_ROUTER_PREFIX + "monitor.namenode.nameservices.resolution-enabled";
+      FEDERATION_ROUTER_PREFIX + "monitor.namenode.nameservice.resolution-enabled";
   public static final boolean
       DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED_DEFAULT = false;
   public static final String DFS_ROUTER_MONITOR_NAMENODE_RESOLVER_IMPL
-      = FEDERATION_ROUTER_PREFIX + "monitor.namenode.nameservices.resolver.impl";
+      = FEDERATION_ROUTER_PREFIX + "monitor.namenode.nameservice.resolver.impl";
   public static final String DFS_ROUTER_MONITOR_LOCAL_NAMENODE =
       FEDERATION_ROUTER_PREFIX + "monitor.localnamenode.enable";
   public static final boolean DFS_ROUTER_MONITOR_LOCAL_NAMENODE_DEFAULT = true;

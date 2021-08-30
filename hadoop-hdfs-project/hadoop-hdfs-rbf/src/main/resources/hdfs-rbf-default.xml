@@ -473,7 +473,7 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.monitor.namenode.nameservices.resolver.impl</name>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolver.impl</name>
     <value></value>
     <description>
       Nameservice resolver implementation used by router.

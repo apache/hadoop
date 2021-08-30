@@ -225,12 +225,12 @@ public class TestRouterNamenodeHeartbeat {
     Router testRouter = new Router();
     testRouter.setConf(conf);
 
-    Collection<NamenodeHeartbeatService> services =
+    Collection<NamenodeHeartbeatService> heartbeatServices =
         testRouter.createNamenodeHeartbeatServices();
 
-    assertEquals(2, services.size());
+    assertEquals(2, heartbeatServices.size());
 
-    Iterator<NamenodeHeartbeatService> iterator = services.iterator();
+    Iterator<NamenodeHeartbeatService> iterator = heartbeatServices.iterator();
     NamenodeHeartbeatService service = iterator.next();
     service.init(conf);
     assertEquals("test-ns-nn-host01.test:host01.test:1001",
