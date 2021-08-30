@@ -147,7 +147,7 @@ public final class Constants {
 
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 48;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
