@@ -135,7 +135,7 @@ Configuration
 
   `CapacityScheduler` supports three different resource allocation configuration modes: percentage values (*relative mode*), weights and absolute resources.
 
-  Relative mode provides a way to describe queue's resources as a fraction of its parent's resources. For example if *capacity* is set as 50.0, users queue has 50% of its parent, root's resources set as minimum capacity.
+  Relative mode provides a way to describe queue's resources as a fraction of its parent's resources. For example if *capacity* is set as 50.0 for the queue `root.users`, users queue has 50% of root's resources set as minimum capacity.
 
   In weight mode the resources are divided based on how the queue's weight relates to the sum of configured weights under the same parent. For example if there are three queues under a parent with weights *3w*, *2w*, *5w*, the sum is 10, so the calculated minimum *capacity* will be 30%, 20% and 50% respectively. The benefit of using this mode is flexibility. When using percentages every time a new queue gets added the percentage values need to be manually recalculated, as the sum under a parent must to be 100%, but with weights this is performed automatically. Using the previous example when a new queue gets added under the same parent as the previous three with weight *10w* the new sum will be 20, so the new calculated *capacities* will be: 15%, 10%, 25%, 50%. Note: `yarn.scheduler.capacity.<queue-path>.max-capacity` must be configured with percentages, as there is no weight mode for *maximum-capacity*.
 
@@ -711,7 +711,7 @@ The parent queue which has the flexible auto queue creation enabled supports the
 
 Using the following example configuration snippet will instruct the `CapacityScheduler` to:
 * enable the flexible auto queue creation for root.parent
-* create **all** of the dynamic queues below root.parent with 80% as the maximum capacity, because of the wildcard queue path (root.parent.*)
+* create all of the dynamic queues **two levels below** `root.parent` (for example `root.parent.parent-auto.leaf-auto`) with 80% as the maximum capacity, because of the wildcard queue path (root.parent.*)
 * create the dynamic parent queues **directly** under root.parent with weight 2
 * add the GPU label to every leaf queue created **directly** under root.parent
 
