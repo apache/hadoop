@@ -747,7 +747,7 @@ public class TestCodec {
       byte[] b = new byte[inputSize];
       r.nextBytes(b);
 
-      compressor.setInput(b,0,  b.length);
+      compressor.setInput(b, 0, b.length);
       compressor.finish();
 
       byte[] output = new byte[inputSize + 1024];
@@ -767,9 +767,8 @@ public class TestCodec {
       assertThat(decom).as("decompressor should not be null").isNotNull();
       assertThat(decom).withFailMessage("should be BuiltInGzipDecompressor")
         .isInstanceOf(BuiltInGzipDecompressor.class);
-      try (InputStream gzin = codec.createInputStream(gzbuf, decom);) {
-
-        DataOutputBuffer dflbuf = new DataOutputBuffer();
+      try (InputStream gzin = codec.createInputStream(gzbuf, decom);
+           DataOutputBuffer dflbuf = new DataOutputBuffer()) {
         dflbuf.reset();
         IOUtils.copyBytes(gzin, dflbuf, 4096);
         final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
@@ -813,7 +812,7 @@ public class TestCodec {
       }
 
       try (DataOutputBuffer dflbuf = new DataOutputBuffer();
-           GZIPOutputStream gzout = new GZIPOutputStream(dflbuf);) {
+           GZIPOutputStream gzout = new GZIPOutputStream(dflbuf)) {
         gzout.write(b);
         gzout.close();
 
