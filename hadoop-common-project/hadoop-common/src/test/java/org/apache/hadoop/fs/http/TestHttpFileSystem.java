@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,13 +42,17 @@ import static org.junit.Assert.assertEquals;
  * Testing HttpFileSystem.
  */
 public class TestHttpFileSystem {
+  private final Configuration conf = new Configuration(false);
+
+  @BeforeEach
+  public void setUp() {
+    conf.set("fs.http.impl", HttpFileSystem.class.getCanonicalName());
+  }
+
   @Test
   public void testHttpFileSystem() throws IOException, URISyntaxException,
       InterruptedException {
-    Configuration conf = new Configuration(false);
-    conf.set("fs.http.impl", HttpFileSystem.class.getCanonicalName());
     final String data = "foo";
-
     try (MockWebServer server = new MockWebServer()) {
       IntStream.rangeClosed(1, 3).forEach(i -> server.enqueue(new MockResponse().setBody(data)));
       server.start();
@@ -60,6 +65,16 @@ public class TestHttpFileSystem {
       RecordedRequest req = server.takeRequest();
       assertEquals("/foo", req.getPath());
     }
+  }
+
+  @Test
+  public void testHttpFileStatus() throws IOException, URISyntaxException, InterruptedException {
+    URI uri = new URI("http://www.example.com");
+    FileSystem fs = FileSystem.get(uri, conf);
+    URI expectedUri = uri.resolve("/foo");
+    assertEquals(fs.getFileStatus(new Path(new Path(uri), "/foo")).getPath().toUri(), expectedUri);
+    assertEquals(fs.getFileStatus(new Path("/foo")).getPath().toUri(), expectedUri);
+    assertEquals(fs.getFileStatus(new Path("foo")).getPath().toUri(), expectedUri);
   }
 
   private void assertSameData(FileSystem fs, Path path, String data) throws IOException {

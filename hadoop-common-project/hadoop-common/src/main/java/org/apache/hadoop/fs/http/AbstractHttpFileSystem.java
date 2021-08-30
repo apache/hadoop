@@ -112,7 +112,7 @@ abstract class AbstractHttpFileSystem extends FileSystem {
 
   @Override
   public FileStatus getFileStatus(Path path) throws IOException {
-    return new FileStatus(-1, false, 1, DEFAULT_BLOCK_SIZE, 0, path);
+    return new FileStatus(-1, false, 1, DEFAULT_BLOCK_SIZE, 0, makeQualified(path));
   }
 
   /**
