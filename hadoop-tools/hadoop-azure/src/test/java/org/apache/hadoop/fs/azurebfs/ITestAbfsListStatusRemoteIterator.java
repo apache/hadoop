@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
@@ -28,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -285,14 +286,16 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
   private List<String> createFilesUnderDirectory(Path rootPath)
       throws ExecutionException, InterruptedException, IOException {
     final List<Future<Void>> tasks = new ArrayList<>();
-    final List<String> fileNames = new ArrayList<>();
+    final List<String> fileNames = Collections.synchronizedList(new ArrayList<>());
     ExecutorService es = Executors.newFixedThreadPool(10);
     try {
       for (int i = 0; i < ITestAbfsListStatusRemoteIterator.TEST_FILES_NUMBER; i++) {
         Path filePath = makeQualified(new Path(rootPath, "testListPath" + i));
         tasks.add(es.submit(() -> {
           touch(filePath);
-          Assert.assertTrue(fileNames.add(filePath.toString()));
+          synchronized (fileNames) {
+            Assert.assertTrue(fileNames.add(filePath.toString()));
+          }
           return null;
         }));
       }
@@ -303,7 +306,6 @@ public class ITestAbfsListStatusRemoteIterator extends AbstractAbfsIntegrationTe
       es.shutdownNow();
     }
     LOG.debug(fileNames.toString());
-    Assertions.assertThat(fileNames).doesNotContainNull();
     Assertions.assertThat(fileNames)
         .describedAs("File creation incorrect or fileNames not added to list")
         .hasSize(ITestAbfsListStatusRemoteIterator.TEST_FILES_NUMBER);
