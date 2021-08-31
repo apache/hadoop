@@ -195,7 +195,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getUsedCapacity();
     } catch (IOException e) {
-      LOG.debug("Failed to get the used capacity", e.getMessage());
+      LOG.debug("Failed to get the used capacity. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -205,7 +206,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getRemainingCapacity();
     } catch (IOException e) {
-      LOG.debug("Failed to get remaining capacity", e.getMessage());
+      LOG.debug("Failed to get remaining capacity. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -215,7 +217,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getTotalCapacity();
     } catch (IOException e) {
-      LOG.debug("Failed to Get total capacity", e.getMessage());
+      LOG.debug("Failed to Get total capacity. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -225,7 +228,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getProvidedSpace();
     } catch (IOException e) {
-      LOG.debug("Failed to get provided capacity", e.getMessage());
+      LOG.debug("Failed to get provided capacity. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -292,7 +296,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumBlocks();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks", e.getMessage());
+      LOG.debug("Failed to get number of blocks. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -302,7 +307,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfMissingBlocks();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of missing blocks", e.getMessage());
+      LOG.debug("Failed to get number of missing blocks. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -313,8 +319,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksPendingReplication();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks pending replica",
-          e.getMessage());
+      LOG.debug("Failed to get number of blocks pending replica. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -324,8 +330,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksPendingReplication();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks pending replica",
-          e.getMessage());
+      LOG.debug("Failed to get number of blocks pending replica. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -336,8 +342,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksUnderReplicated();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks under replicated",
-          e.getMessage());
+      LOG.debug("Failed to get number of blocks under replicated. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -347,8 +353,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksUnderReplicated();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks under replicated",
-          e.getMessage());
+      LOG.debug("Failed to get number of blocks under replicated. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -358,8 +364,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumOfBlocksPendingDeletion();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of blocks pending deletion",
-          e.getMessage());
+      LOG.debug("Failed to get number of blocks pending deletion. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -369,8 +375,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getScheduledReplicationBlocks();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of scheduled replication blocks.",
-          e.getMessage());
+      LOG.debug("Failed to get number of scheduled replication blocks. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -381,7 +387,7 @@ public class NamenodeBeanMetrics
       return getRBFMetrics().getNumberOfMissingBlocksWithReplicationFactorOne();
     } catch (IOException e) {
       LOG.debug("Failed to get number of missing blocks with replication "
-          + "factor one.", e.getMessage());
+          + "factor one. Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -392,7 +398,7 @@ public class NamenodeBeanMetrics
       return getRBFMetrics().getHighestPriorityLowRedundancyReplicatedBlocks();
     } catch (IOException e) {
       LOG.debug("Failed to get number of highest priority low redundancy "
-          + "replicated blocks.", e.getMessage());
+          + "replicated blocks. Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -403,8 +409,7 @@ public class NamenodeBeanMetrics
       return getRBFMetrics().getHighestPriorityLowRedundancyECBlocks();
     } catch (IOException e) {
       LOG.debug("Failed to get number of highest priority low redundancy EC "
-              + "blocks.",
-          e.getMessage());
+          + "blocks. Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -419,7 +424,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getCorruptFilesCount();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of corrupt files.", e.getMessage());
+      LOG.debug("Failed to get number of corrupt files. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -572,7 +578,8 @@ public class NamenodeBeanMetrics
     try {
       return getRouter().getStartTime();
     } catch (IOException e) {
-      LOG.debug("Failed to get the router startup time", e.getMessage());
+      LOG.debug("Failed to get the router startup time. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -633,7 +640,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumFiles();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of files", e.getMessage());
+      LOG.debug("Failed to get number of files. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -648,7 +656,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumLiveNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of live nodes", e.getMessage());
+      LOG.debug("Failed to get number of live nodes. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -658,7 +667,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumDeadNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of dead nodes", e.getMessage());
+      LOG.debug("Failed to get number of dead nodes. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -668,7 +678,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumStaleNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of stale nodes", e.getMessage());
+      LOG.debug("Failed to get number of stale nodes. Error message: {}",
+          e.getMessage());
     }
     return 0;
   }
@@ -678,8 +689,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumDecomLiveNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get the number of live decommissioned datanodes",
-          e.getMessage());
+      LOG.debug("Failed to get the number of live decommissioned datanodes. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -689,8 +700,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumDecomDeadNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get the number of dead decommissioned datanodes",
-          e.getMessage());
+      LOG.debug("Failed to get the number of dead decommissioned datanodes. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -700,7 +711,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumDecommissioningNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of decommissioning nodes",
+      LOG.debug("Failed to get number of decommissioning nodes. Error message: {}",
           e.getMessage());
     }
     return 0;
@@ -711,8 +722,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumInMaintenanceLiveDataNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of live in maintenance nodes",
-          e.getMessage());
+      LOG.debug("Failed to get number of live in maintenance nodes. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -722,8 +733,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumInMaintenanceDeadDataNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of dead in maintenance nodes",
-          e.getMessage());
+      LOG.debug("Failed to get number of dead in maintenance nodes. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -733,8 +744,8 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().getNumEnteringMaintenanceDataNodes();
     } catch (IOException e) {
-      LOG.debug("Failed to get number of entering maintenance nodes",
-          e.getMessage());
+      LOG.debug("Failed to get number of entering maintenance nodes. " +
+          "Error message: {}", e.getMessage());
     }
     return 0;
   }
@@ -822,8 +833,7 @@ public class NamenodeBeanMetrics
     try {
       return getRBFMetrics().isSecurityEnabled();
     } catch (IOException e) {
-      LOG.debug("Failed to get security status.",
-          e.getMessage());
+      LOG.debug("Failed to get security status. Error message: {}", e.getMessage());
     }
     return false;
   }
