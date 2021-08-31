@@ -645,6 +645,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
           "attempting to set up short-circuit access to " +
           fileName + resp.getMessage();
       LOG.debug("{}:{}", this, msg);
+      if (slot != null) {
+        cache.freeSlot(slot);
+      }
       return new ShortCircuitReplicaInfo(new InvalidToken(msg));
     default:
       final long expiration =
