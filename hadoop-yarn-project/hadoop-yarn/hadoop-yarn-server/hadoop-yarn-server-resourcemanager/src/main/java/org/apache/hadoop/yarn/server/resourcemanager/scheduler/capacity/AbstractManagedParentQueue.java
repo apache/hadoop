@@ -17,22 +17,17 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
-
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
-    .QueueEntitlement;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 /**
  * A container class for automatically created child leaf queues.
@@ -173,50 +168,31 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     return queueManagementPolicy;
   }
 
-  protected SortedMap<String, String> getConfigurationsWithPrefix
-      (SortedMap<String, String> sortedConfigs, String prefix) {
-    return sortedConfigs.subMap( prefix, prefix + Character.MAX_VALUE );
-  }
+  protected Map<String, String> getCSConfigurationsWithPrefix(String prefix) {
+    Map<String, String> configsWithPrefix = new HashMap<>();
 
-  protected SortedMap<String, String> sortCSConfigurations() {
-    SortedMap<String, String> sortedConfigs = new TreeMap(
-        new Comparator<String>() {
-          public int compare(String s1, String s2) {
-            return s1.compareToIgnoreCase(s2);
-          }
-
-        });
-
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         csContext.getConfiguration().iterator(); iterator.hasNext(); ) {
-      final Map.Entry<String, String> confKeyValuePair = iterator.next();
-      sortedConfigs.put(confKeyValuePair.getKey(), confKeyValuePair.getValue());
+    for (Map.Entry<String, String> confKeyValuePair :
+        csContext.getConfiguration().getPropsWithPrefix(prefix).entrySet()) {
+      configsWithPrefix.put(prefix + confKeyValuePair.getKey(), confKeyValuePair.getValue());
     }
-    return sortedConfigs;
+
+    return configsWithPrefix;
   }
 
-  protected CapacitySchedulerConfiguration initializeLeafQueueConfigs(String
-      configPrefix) {
+  protected CapacitySchedulerConfiguration initializeLeafQueueConfigs(String configPrefix) {
 
     CapacitySchedulerConfiguration leafQueueConfigs = new
-        CapacitySchedulerConfiguration(new Configuration(false), false);
+        CapacitySchedulerConfiguration(csContext.getConf(), false);
 
-    String prefix = YarnConfiguration.RESOURCE_TYPES + ".";
-    Map<String, String> rtProps = csContext
-        .getConfiguration().getPropsWithPrefix(prefix);
-    for (Map.Entry<String, String> entry : rtProps.entrySet()) {
-      leafQueueConfigs.set(prefix + entry.getKey(), entry.getValue());
+    String resourceTypePrefix = YarnConfiguration.RESOURCE_TYPES + ".";
+    Map<String, String> rtConfigs = getCSConfigurationsWithPrefix(resourceTypePrefix);
+    for (Map.Entry<String, String> confKeyValuePair: rtConfigs.entrySet()) {
+      leafQueueConfigs.set(confKeyValuePair.getKey(), confKeyValuePair.getValue());
     }
 
-    SortedMap<String, String> sortedConfigs = sortCSConfigurations();
-    SortedMap<String, String> templateConfigs = getConfigurationsWithPrefix
-        (sortedConfigs, configPrefix);
-
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         templateConfigs.entrySet().iterator(); iterator.hasNext(); ) {
-      Map.Entry<String, String> confKeyValuePair = iterator.next();
-      leafQueueConfigs.set(confKeyValuePair.getKey(),
-          confKeyValuePair.getValue());
+    Map<String, String> templateConfigs = getCSConfigurationsWithPrefix(configPrefix);
+    for (Map.Entry<String, String> confKeyValuePair : templateConfigs.entrySet()) {
+      leafQueueConfigs.set(confKeyValuePair.getKey(), confKeyValuePair.getValue());
     }
 
     return leafQueueConfigs;
