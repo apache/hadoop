@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Assert;
@@ -34,7 +33,6 @@ import org.mockito.Mockito;
 import java.io.FileNotFoundException;
 import java.net.URI;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController.TLDIR_PERMISSIONS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
