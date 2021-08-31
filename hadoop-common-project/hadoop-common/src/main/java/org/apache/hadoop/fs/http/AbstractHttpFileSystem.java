@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.http;
 
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -42,13 +43,19 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 abstract class AbstractHttpFileSystem extends FileSystem {
   private static final long DEFAULT_BLOCK_SIZE = 4096;
   private static final Path WORKING_DIR = new Path("/");
+  private static final String CONF_HTTP_READ_TIMEOUT = "yarn.nodemanager.localizer.http.read.timeout.ms";
+  private static final String CONF_HTTP_CONNECT_TIMEOUT = "yarn.nodemanager.localizer.http.connect.timeout.ms";
+  private static final Integer DEFAULT_HTTP_READ_TIMEOUT_IN_MILLIS = 5000;
+  private static final Integer DEFAULT_HTTP_CONNECT_TIMEOUT_IN_MILLIS = 5000;
 
   private URI uri;
+  private Configuration conf;
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
     this.uri = name;
+    this.conf = conf;
   }
 
   public abstract String getScheme();
@@ -60,7 +67,14 @@ abstract class AbstractHttpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path path, int bufferSize) throws IOException {
+    int httpConnectTimeoutInMillis = conf.getInt(CONF_HTTP_CONNECT_TIMEOUT, DEFAULT_HTTP_CONNECT_TIMEOUT_IN_MILLIS);
+    int httpReadTimeoutInMillis = conf.getInt(CONF_HTTP_READ_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT_IN_MILLIS);
+    Preconditions.checkState(httpConnectTimeoutInMillis > 0, "Http connection timeout has to greater than zero.");
+    Preconditions.checkState(httpReadTimeoutInMillis > 0, "Http read timeout has to greater than zero.");
+
     URLConnection conn = path.toUri().toURL().openConnection();
+    conn.setConnectTimeout(httpConnectTimeoutInMillis);
+    conn.setReadTimeout(httpReadTimeoutInMillis);
     InputStream in = conn.getInputStream();
     return new FSDataInputStream(new HttpDataInputStream(in));
   }

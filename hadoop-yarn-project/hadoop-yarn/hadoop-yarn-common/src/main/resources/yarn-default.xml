@@ -1333,6 +1333,18 @@
     <value>${yarn.nodemanager.hostname}:8040</value>
   </property>
 
+  <property>
+    <description>Http read timeout in milliseconds to use for the localization requests. Setting this configuration is necessary only if you are using either HttpFileSystem or HttpsFileSystem for localization.</description>
+    <name>yarn.nodemanager.localizer.http.read.timeout.ms</name>
+    <value>5000</value>
+  </property>
+
+  <property>
+    <description>Http connect timeout in milliseconds to use for the localization requests. Setting this configuration is necessary only if you are using either HttpFileSystem or HttpsFileSystem for localization.</description>
+    <name>yarn.nodemanager.localizer.http.connect.timeout.ms</name>
+    <value>5000</value>
+  </property>
+
 
   <property>
     <description>Address where the collector service IPC is.</description>
