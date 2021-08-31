@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -542,14 +543,11 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return;
     }
 
-    // TODO: revisit
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountSrcPathInfo =
         this.vfs.getMountPathInfo(src, getConf());
-    checkDFS(mountSrcPathInfo.getTargetFs(), "rename");
 
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountDstPathInfo =
-        this.vfs.getMountPathInfo(src, getConf());
-    checkDFS(mountDstPathInfo.getTargetFs(), "rename");
+        this.vfs.getMountPathInfo(dst, getConf());
 
     //Check both in same cluster.
     if (!mountSrcPathInfo.getTargetFs().getUri()
@@ -558,9 +556,9 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
           "Can't rename across file systems.");
     }
 
-    ((DistributedFileSystem) mountSrcPathInfo.getTargetFs())
-        .rename(mountSrcPathInfo.getPathOnTarget(),
-            mountDstPathInfo.getPathOnTarget(), options);
+    FileUtil.rename(mountSrcPathInfo.getTargetFs(),
+        mountSrcPathInfo.getPathOnTarget(), mountDstPathInfo.getPathOnTarget(),
+        options);
   }
 
   @Override
