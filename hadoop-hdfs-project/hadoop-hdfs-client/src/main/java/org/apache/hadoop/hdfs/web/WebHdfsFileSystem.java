@@ -40,6 +40,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Collection;
@@ -56,6 +57,7 @@ import java.util.concurrent.TimeUnit;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.collections.list.TreeList;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
@@ -99,12 +101,15 @@ import org.apache.hadoop.hdfs.HAUtilClient;
 import org.apache.hadoop.hdfs.HdfsKMSUtil;
 import org.apache.hadoop.hdfs.client.DfsPathCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.SnapshotDiffReportGenerator;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileEncryptionInfoProto;
@@ -128,6 +133,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Lists;
@@ -1445,12 +1451,18 @@ public class WebHdfsFileSystem extends FileSystem
         new SnapshotNameParam(snapshotNewName)).run();
   }
 
-  public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
-      final String fromSnapshot, final String toSnapshot) throws IOException {
-    statistics.incrementReadOps(1);
-    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
-    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTDIFF;
-    return new FsPathResponseRunner<SnapshotDiffReport>(op, snapshotDir,
+  private boolean isValidSnapshotName(String snapshotName) {
+    // If any of the snapshots specified in the getSnapshotDiffReport call
+    // is null or empty, it points to the current tree.
+    return (snapshotName != null && !snapshotName.isEmpty());
+  }
+
+  private SnapshotDiffReport getSnapshotDiffReportWithoutListing(
+      final Path snapshotDir, final String fromSnapshot, final String toSnapshot)
+      throws IOException {
+    return new FsPathResponseRunner<SnapshotDiffReport>(
+        GetOpParam.Op.GETSNAPSHOTDIFF,
+        snapshotDir,
         new OldSnapshotNameParam(fromSnapshot),
         new SnapshotNameParam(toSnapshot)) {
       @Override
@@ -1458,6 +1470,64 @@ public class WebHdfsFileSystem extends FileSystem
         return JsonUtilClient.toSnapshotDiffReport(json);
       }
     }.run();
+  }
+
+  public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
+      final String fromSnapshot, final String toSnapshot) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
+
+    if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(toSnapshot)) {
+      // In case the diff needs to be computed between a snapshot and the current
+      // tree, we should not do iterative diffReport computation as the iterative
+      // approach might fail if in between the rpc calls the current tree
+      // changes in absence of the global fsn lock.
+      return getSnapshotDiffReportWithoutListing(snapshotDir, fromSnapshot, toSnapshot);
+    } else {
+      byte[] startPath = DFSUtilClient.EMPTY_BYTES;
+      int index = -1;
+      SnapshotDiffReportGenerator snapshotDiffReport;
+      List<DiffReportListingEntry> modifiedList = new TreeList();
+      List<DiffReportListingEntry> createdList = new ChunkedArrayList<>();
+      List<DiffReportListingEntry> deletedList = new ChunkedArrayList<>();
+      SnapshotDiffReportListing report;
+
+      do {
+        try {
+          report = new FsPathResponseRunner<SnapshotDiffReportListing>(
+              GetOpParam.Op.GETSNAPSHOTDIFFLISTING,
+              snapshotDir,
+              new OldSnapshotNameParam(fromSnapshot),
+              new SnapshotNameParam(toSnapshot),
+              new SnapshotDiffStartPathParam(DFSUtilClient.bytes2String(startPath)),
+              new SnapshotDiffIndexParam(index)) {
+            @Override
+            SnapshotDiffReportListing decodeResponse(Map<?, ?> json) {
+              return JsonUtilClient.toSnapshotDiffReportListing(json);
+            }
+          }.run();
+        } catch (UnsupportedOperationException e) {
+          // In case the server doesn't support getSnapshotDiffReportListing,
+          // fallback to getSnapshotDiffReport.
+          LOG.warn("falling back to getSnapshotDiffReport. {}", e.getMessage());
+          return getSnapshotDiffReportWithoutListing(snapshotDir, fromSnapshot, toSnapshot);
+        }
+        startPath = report.getLastPath();
+        index = report.getLastIndex();
+        modifiedList.addAll(report.getModifyList());
+        createdList.addAll(report.getCreateList());
+        deletedList.addAll(report.getDeleteList());
+      } while (!(Arrays.equals(startPath, DFSUtilClient.EMPTY_BYTES) && index == -1));
+
+      return new SnapshotDiffReportGenerator(
+          snapshotDir.toUri().getPath(),
+          fromSnapshot,
+          toSnapshot,
+          report.getIsFromEarlier(),
+          modifiedList,
+          createdList,
+          deletedList).generateReport();
+    }
   }
 
   public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()

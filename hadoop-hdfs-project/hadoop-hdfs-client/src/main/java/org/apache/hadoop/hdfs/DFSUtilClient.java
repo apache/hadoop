@@ -361,6 +361,13 @@ public class DFSUtilClient {
   }
 
   /**
+   * Given a list of path components returns a string
+   */
+  public static String byteArray2String(byte[][] pathComponents) {
+    return bytes2String(byteArray2bytes(pathComponents));
+  }
+
+  /**
    * Decode a specific range of bytes of the given byte array to a string
    * using UTF8.
    *
