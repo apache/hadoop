@@ -172,7 +172,9 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
     LOG.debug("Loading identity map from file {}", fileLocation);
     int errorRecord = 0;
     File file = new File(fileLocation);
-    try (LineIterator it = FileUtils.lineIterator(file, "UTF-8")) {
+    LineIterator it = null;
+    try {
+      it = FileUtils.lineIterator(file, "UTF-8");
       while (it.hasNext()) {
         String line = it.nextLine();
         if (!Strings.isNullOrEmpty(line.trim()) && !line.startsWith(HASH)) {
@@ -186,6 +188,14 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
       LOG.debug("Loaded map stats - File: {}, Loaded: {}, Error: {} ", fileLocation, cache.size(), errorRecord);
     } catch (ArrayIndexOutOfBoundsException e) {
       LOG.error("Error while parsing mapping file", e);
+    } finally {
+      try {
+        if (it != null) {
+          it.close();
+        }
+      } catch (IOException ioe) {
+        LOG.error("IOException thrown on LineIterator close");
+      }
     }
   }
 }
