@@ -198,7 +198,7 @@ public class TestCapacitySchedulerWeightMode {
    *               a x(=100%), y(50%)   b y(=50%), z(=100%)
    *               ________________             ______________
    *              /                           /              \
-   *             a1 ([x,y]: w=100)    b1(no)          b2([y,z]: w=100)
+   *             a1 ([x,y]: w=1)    b1(no)          b2([y,z]: w=1)
    *
    * Parent uses percentages, child uses weights
    */
