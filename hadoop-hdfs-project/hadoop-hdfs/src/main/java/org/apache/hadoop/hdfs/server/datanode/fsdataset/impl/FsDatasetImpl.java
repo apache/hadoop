@@ -201,16 +201,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * The deepCopyReplica call doesn't use the datasetock since it will lead the
    * potential deadlock with the {@link FsVolumeList#addBlockPool} call.
    */
+  @SuppressWarnings("unchecked")
   @Override
   public Set<? extends Replica> deepCopyReplica(String bpid)
       throws IOException {
-    Set<? extends Replica> replicas = null;
+    Set<? extends Replica> replicas;
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
       replicas =
           new HashSet<>(volumeMap.replicas(bpid) == null ? Collections.EMPTY_SET
               : volumeMap.replicas(bpid));
     }
-
     return Collections.unmodifiableSet(replicas);
   }
 
