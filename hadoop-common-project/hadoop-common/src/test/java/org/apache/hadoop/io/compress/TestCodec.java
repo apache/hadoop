@@ -732,13 +732,13 @@ public class TestCodec {
     ZlibFactory.setNativeZlibLoaded(false);
     Configuration conf = new Configuration();
     CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    Random r = new Random();
 
     for (int i = 0; i < 100; i++){
       Compressor compressor = codec.createCompressor();
       assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
         .isInstanceOf(BuiltInGzipCompressor.class);
 
-      Random r = new Random();
       long seed = r.nextLong();
       r.setSeed(seed);
       LOG.info("seed: {}", seed);
@@ -783,13 +783,13 @@ public class TestCodec {
     ZlibFactory.setNativeZlibLoaded(false);
     Configuration conf = new Configuration();
     CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    Random r = new Random();
 
     for (int i = 0; i < 100; i++){
       Compressor compressor = codec.createCompressor();
       assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
         .isInstanceOf(BuiltInGzipCompressor.class);
 
-      Random r = new Random();
       long seed = r.nextLong();
       r.setSeed(seed);
       LOG.info("seed: {}", seed);
@@ -834,6 +834,7 @@ public class TestCodec {
     ZlibFactory.setNativeZlibLoaded(false);
     Configuration conf = new Configuration();
     CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    Random r = new Random();
 
     for (int i = 0; i < 100; i++){
       Compressor compressor = codec.createCompressor();
@@ -842,7 +843,6 @@ public class TestCodec {
           .isInstanceOf(BuiltInGzipCompressor.class);
         CompressionOutputStream compressionOutputStream = codec.createOutputStream(dflbuf, compressor);
 
-        Random r = new Random();
         long seed = r.nextLong();
         r.setSeed(seed);
         LOG.info("seed: {}", seed);
