@@ -215,10 +215,10 @@ public class TestRouterNamenodeHeartbeat {
   public void testNamenodeHeartbeatServiceNNResolution() {
     String nsId = "test-ns";
     String nnId = "nn";
-    String rpcPort = "1000";
-    String servicePort = "1001";
-    String lifelinePort = "1002";
-    String webAddressPort = "1003";
+    int rpcPort = 1000;
+    int servicePort = 1001;
+    int lifelinePort = 1002;
+    int webAddressPort = 1003;
     Configuration conf = generateNamenodeConfiguration(nsId, nnId,
         rpcPort, servicePort, lifelinePort, webAddressPort);
 
@@ -245,8 +245,8 @@ public class TestRouterNamenodeHeartbeat {
 
   private Configuration generateNamenodeConfiguration(
       String nsId, String nnId,
-      String rpcPort, String servicePort,
-      String lifelinePort, String webAddressPort) {
+      int rpcPort, int servicePort,
+      int lifelinePort, int webAddressPort) {
     Configuration conf = new HdfsConfiguration();
     String suffix = nsId + "." + nnId;
 

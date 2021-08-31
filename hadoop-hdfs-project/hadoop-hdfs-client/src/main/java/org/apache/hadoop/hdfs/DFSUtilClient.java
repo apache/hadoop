@@ -426,18 +426,19 @@ public class DFSUtilClient {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
-      getResolvedAddressesForNnId(
-          conf, nsId, nnId, dnr, defaultValue, ret, keys);
+      ret.putAll(getResolvedAddressesForNnId(
+          conf, nsId, nnId, dnr, defaultValue, keys));
     }
     return ret;
   }
 
-  public static void getResolvedAddressesForNnId(
+  public static Map<String, InetSocketAddress> getResolvedAddressesForNnId(
       Configuration conf, String nsId, String nnId,
       DomainNameResolver dnr, String defaultValue,
-      Map<String, InetSocketAddress> ret, String... keys) {
+      String... keys) {
     String suffix = concatSuffixes(nsId, nnId);
     String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
+    Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     if (address != null) {
       InetSocketAddress isa = NetUtils.createSocketAddr(address);
       try {
@@ -448,20 +449,28 @@ public class DFSUtilClient {
           InetSocketAddress inetSocketAddress = new InetSocketAddress(
               hostname, port);
           // Concat nn info with host info to make uniq ID
-          String concatId;
-          if (nnId == null || nnId.isEmpty()) {
-            concatId = String
-                .join("-", nsId, hostname, String.valueOf(port));
-          } else {
-            concatId = String
-                .join("-", nsId, nnId, hostname, String.valueOf(port));
-          }
+          String concatId = getConcatNnId(nsId, nnId, hostname, port);
           ret.put(concatId, inetSocketAddress);
         }
       } catch (UnknownHostException e) {
-        LOG.error("Failed to resolve address: " + address);
+        LOG.error("Failed to resolve address: {}", address);
       }
     }
+    return ret;
+  }
+
+  /**
+   * Concat nn info with host info to make uniq ID.
+   * This is mainly used when configured nn is
+   * a domain record that has multiple hosts behind it.
+   */
+  static String getConcatNnId(String nsId, String nnId, String hostname, int port) {
+    if (nnId == null || nnId.isEmpty()) {
+      return String
+          .join("-", nsId, hostname, String.valueOf(port));
+    }
+    return String
+          .join("-", nsId, nnId, hostname, String.valueOf(port));
   }
 
   /**

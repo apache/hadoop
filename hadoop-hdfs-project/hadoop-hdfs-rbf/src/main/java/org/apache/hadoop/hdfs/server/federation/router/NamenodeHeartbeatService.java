@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.net.NetUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -126,9 +127,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
    */
   public NamenodeHeartbeatService(
       ActiveNamenodeResolver resolver, String nsId, String nnId, String resolvedHost) {
-    super(NamenodeHeartbeatService.class.getSimpleName() +
-        (nsId == null ? "" : " " + nsId) +
-        (nnId == null ? "" : " " + nnId));
+    super(getNnHeartBeatServiceName(nsId, nnId));
 
     this.resolver = resolver;
 
@@ -160,7 +159,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
     // Get the RPC address for the clients to connect
     this.rpcAddress = getRpcAddress(conf, nameserviceId, originalNnId);
     if (resolvedHost != null) {
-      rpcAddress = resolvedHost + ":" + rpcAddress.split(":")[1];
+      rpcAddress = resolvedHost + ":"
+          + NetUtils.createSocketAddr(rpcAddress).getPort();
     }
     LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
 
@@ -173,7 +173,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
       this.serviceAddress = this.rpcAddress;
     }
     if (resolvedHost != null) {
-      serviceAddress = resolvedHost + ":" + serviceAddress.split(":")[1];
+      serviceAddress = resolvedHost + ":"
+          + NetUtils.createSocketAddr(serviceAddress).getPort();
     }
     LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
 
@@ -184,7 +185,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
       this.lifelineAddress = this.serviceAddress;
     }
     if (resolvedHost != null) {
-      lifelineAddress = resolvedHost + ":" + lifelineAddress.split(":")[1];
+      lifelineAddress = resolvedHost + ":"
+          + NetUtils.createSocketAddr(lifelineAddress).getPort();
     }
     LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
 
@@ -192,13 +194,14 @@ public class NamenodeHeartbeatService extends PeriodicService {
     this.webAddress =
         DFSUtil.getNamenodeWebAddr(conf, nameserviceId, originalNnId);
     if (resolvedHost != null) {
-      webAddress = resolvedHost + ":" + webAddress.split(":")[1];
+      webAddress = resolvedHost + ":"
+          + NetUtils.createSocketAddr(webAddress).getPort();
     }
     LOG.info("{} Web address: {}", nnDesc, webAddress);
 
     if (this.namenodeId != null && !this.namenodeId.isEmpty()) {
       this.localTarget = new NNHAServiceTarget(
-          conf, nameserviceId, namenodeId, serviceAddress, rpcAddress, lifelineAddress);
+          conf, nameserviceId, namenodeId, serviceAddress, lifelineAddress);
     }
 
     this.connectionFactory =
@@ -381,6 +384,12 @@ public class NamenodeHeartbeatService extends PeriodicService {
     } else {
       return nameserviceId + ":" + serviceAddress;
     }
+  }
+
+  private static String getNnHeartBeatServiceName(String nsId, String nnId) {
+    return NamenodeHeartbeatService.class.getSimpleName() +
+        (nsId == null ? "" : " " + nsId) +
+        (nnId == null ? "" : " " + nnId);
   }
 
   /**

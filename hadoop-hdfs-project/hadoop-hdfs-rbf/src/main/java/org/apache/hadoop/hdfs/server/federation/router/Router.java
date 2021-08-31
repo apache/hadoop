@@ -550,9 +550,9 @@ public class Router extends CompositeService implements
               conf, nsId, RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE_RESOLVER_IMPL);
 
           Map<String, InetSocketAddress> hosts = Maps.newLinkedHashMap();
-          DFSUtilClient.getResolvedAddressesForNnId(conf, nsId, nnId, dnr,
-              null, hosts, DFS_NAMENODE_RPC_ADDRESS_KEY,
-              DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+          hosts.putAll(DFSUtilClient.getResolvedAddressesForNnId(conf, nsId, nnId, dnr,
+              null, DFS_NAMENODE_RPC_ADDRESS_KEY,
+              DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY));
           for (InetSocketAddress isa : hosts.values()) {
             NamenodeHeartbeatService heartbeatService =
                 createNamenodeHeartbeatService(nsId, nnId, isa.getHostName());
