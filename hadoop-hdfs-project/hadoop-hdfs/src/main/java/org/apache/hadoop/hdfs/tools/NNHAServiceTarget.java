@@ -68,7 +68,7 @@ public class NNHAServiceTarget extends HAServiceTarget {
    */
   public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId) {
-    initializeConfig(conf, nsId, nnId);
+    initializeNnConfig(conf, nsId, nnId);
 
     String serviceAddr =
         DFSUtil.getNamenodeServiceAddr(targetConf, nsId, nnId);
@@ -84,6 +84,8 @@ public class NNHAServiceTarget extends HAServiceTarget {
         DFSUtil.getNamenodeLifelineAddr(targetConf, nsId, nnId);
     this.lifelineAddr = (lifelineAddrStr != null) ?
         NetUtils.createSocketAddr(lifelineAddrStr) : null;
+
+    initializeFailoverConfig();
   }
 
   /**
@@ -99,13 +101,15 @@ public class NNHAServiceTarget extends HAServiceTarget {
   public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId,
       String addr, String lifelineAddr) {
-    initializeConfig(conf, nsId, nnId);
+    initializeNnConfig(conf, nsId, nnId);
 
     this.addr = NetUtils.createSocketAddr(addr);
     this.lifelineAddr = NetUtils.createSocketAddr(lifelineAddr);
+
+    initializeFailoverConfig();
   }
 
-  private void initializeConfig(Configuration conf, String nsId, String nnId) {
+  private void initializeNnConfig(Configuration conf, String nsId, String nnId) {
     Preconditions.checkNotNull(nnId);
 
     if (nsId == null) {
@@ -128,6 +132,12 @@ public class NNHAServiceTarget extends HAServiceTarget {
     this.targetConf = new HdfsConfiguration(conf);
     NameNode.initializeGenericKeys(targetConf, nsId, nnId);
 
+    this.nsId = nsId;
+    this.nnId = nnId;
+  }
+
+  private void initializeFailoverConfig() {
+
     this.autoFailoverEnabled = targetConf.getBoolean(
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
@@ -144,9 +154,6 @@ public class NNHAServiceTarget extends HAServiceTarget {
     } catch (BadFencingConfigurationException e) {
       this.fenceConfigError = e;
     }
-
-    this.nsId = nsId;
-    this.nnId = nnId;
   }
 
   /**
