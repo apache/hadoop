@@ -140,6 +140,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected CapacityConfigType capacityConfigType =
       CapacityConfigType.NONE;
 
+  protected Map<String, QueueCapacityVector> configuredCapacityVectors;
+
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   protected CapacitySchedulerContext csContext;
@@ -398,6 +400,9 @@ public abstract class AbstractCSQueue implements CSQueue {
         this.configuredNodeLabels = csContext.getConfiguration()
             .getConfiguredNodeLabels(queuePath);
       }
+
+      configuredCapacityVectors = csContext.getConfiguration()
+          .parseConfiguredResourceVector(queuePath, configuredNodeLabels);
 
       // After we setup labels, we can setup capacities
       setupConfigurableCapacities(configuration);
@@ -702,6 +707,12 @@ public abstract class AbstractCSQueue implements CSQueue {
     return Resources.normalizeDown(resourceCalculator,
         getQueueResourceQuotas().getEffectiveMaxResource(label),
         minimumAllocation);
+  }
+
+  @Override
+  public QueueCapacityVector getConfiguredCapacityVector(
+      String label) {
+    return configuredCapacityVectors.get(label);
   }
 
   private void initializeQueueState(QueueState previousState,
