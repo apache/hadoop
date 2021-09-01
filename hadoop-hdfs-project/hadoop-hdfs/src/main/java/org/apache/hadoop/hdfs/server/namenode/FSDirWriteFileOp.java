@@ -277,7 +277,7 @@ class FSDirWriteFileOp {
     // If client locality is ignored, clientNode remains 'null' to indicate
     if (!ignoreClientLocality) {
       clientNode = bm.getDatanodeManager().getDatanodeByHost(r.clientMachine);
-      if (clientNode == null) {
+      if (clientNode == null && !bm.isTopologySortDisabled()) {
         clientNode = getClientNode(bm, r.clientMachine);
       }
     }

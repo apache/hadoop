@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -84,8 +85,14 @@ public class TestDatanodeManager {
   final int NUM_ITERATIONS = 500;
 
   private static DatanodeManager mockDatanodeManager(
-      FSNamesystem fsn, Configuration conf) throws IOException {
+          FSNamesystem fsn, Configuration conf) throws IOException {
+    return mockDatanodeManager(fsn, conf, false);
+  }
+
+  private static DatanodeManager mockDatanodeManager(
+          FSNamesystem fsn, Configuration conf, boolean topologySortDisabled) throws IOException {
     BlockManager bm = Mockito.mock(BlockManager.class);
+    Mockito.when(bm.isTopologySortDisabled()).thenReturn(topologySortDisabled);
     BlockReportLeaseManager blm = new BlockReportLeaseManager(conf);
     Mockito.when(bm.getBlockReportLeaseManager()).thenReturn(blm);
     DatanodeManager dm = new DatanodeManager(bm, fsn, conf);
@@ -325,8 +332,7 @@ public class TestDatanodeManager {
 
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
-    DatanodeManager dm = mockDatanodeManager(fsn, conf);
-
+    DatanodeManager dm = mockDatanodeManager(fsn, conf, true);
     // register 5 datanodes, each with different storage ID and type
     DatanodeInfo[] locs = new DatanodeInfo[5];
     String[] storageIDs = new String[5];

@@ -294,6 +294,10 @@ public class BlockManager implements BlockStatsMXBean {
     return blocksMap.getECBlockGroups();
   }
 
+  public boolean isTopologySortDisabled() {
+    return this.topologySortDisabled;
+  }
+
   /**
    * redundancyRecheckInterval is how often namenode checks for new
    * reconstruction work.
@@ -458,12 +462,24 @@ public class BlockManager implements BlockStatsMXBean {
   /** Storages accessible from multiple DNs. */
   private final ProvidedStorageMap providedStorageMap;
 
+  /**
+   * Enable/disable topology sorting for datanodes. Enable for colocated clusters
+   * while disable for compute/storage separate clusters since they won't be in
+   * the same host or rack.
+   */
+   private final boolean topologySortDisabled;
+
   public BlockManager(final Namesystem namesystem, boolean haEnabled,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
     this.blockIdManager = new BlockIdManager(this);
+
+    this.topologySortDisabled = conf.getBoolean(
+            DFSConfigKeys.DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY,
+            DFSConfigKeys.DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY_DEFAULT);
+
     blocksPerPostpondedRescan = (int)Math.min(Integer.MAX_VALUE,
         datanodeManager.getBlocksPerPostponedMisreplicatedBlocksRescan());
     rescannedMisreplicatedBlocks =

@@ -169,12 +169,6 @@ public class DatanodeManager {
   /** The number of stale storages */
   private volatile int numStaleStorages;
 
-  /** Enable/disable topology sorting for datanodes. Enable for colocated clusters
-   * while disable for compute/storage separate clusters since they won't be in
-   * the same host or rack.
-   */
-  private final boolean topologySortDisabled;
-
   /**
    * Number of blocks to check for each postponedMisreplicatedBlocks iteration
    */
@@ -242,11 +236,6 @@ public class DatanodeManager {
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
-
-    this.topologySortDisabled = conf.getBoolean(
-        DFSConfigKeys.DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY,
-        DFSConfigKeys.DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY_DEFAULT);
-
     this.useDfsNetworkTopology = conf.getBoolean(
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY,
         DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_DEFAULT);
@@ -604,7 +593,7 @@ public class DatanodeManager {
     // by comparing the distances between nodemanager and the datanodes.
     boolean nonDatanodeReader = false;
     Node client = getDatanodeByHost(targetHost);
-    if (client == null && !this.topologySortDisabled) {
+    if (client == null && !blockManager.isTopologySortDisabled()) {
       nonDatanodeReader = true;
       List<String> hosts = new ArrayList<>(1);
       hosts.add(targetHost);
