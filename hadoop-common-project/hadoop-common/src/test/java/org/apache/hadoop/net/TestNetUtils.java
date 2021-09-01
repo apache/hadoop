@@ -44,6 +44,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -766,22 +767,15 @@ public class TestNetUtils {
   }
 
   @Test
-  public void testGetPortFromHostPortString() {
+  public void testGetPortFromHostPortString() throws Exception {
 
     assertEquals(1002, NetUtils.getPortFromHostPortString("testHost:1002"));
-    try {
-      NetUtils.getPortFromHostPortString("testHost");
-      fail("Should throw exception for wrong format");
-    } catch (IllegalArgumentException e) {
-      // Expected
-    }
 
-    try {
-      NetUtils.getPortFromHostPortString("testHost:randomString");
-      fail("Should throw exception for wrong format");
-    } catch (IllegalArgumentException e) {
-      // Expected
-    }
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () ->  NetUtils.getPortFromHostPortString("testHost"));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () ->  NetUtils.getPortFromHostPortString("testHost:randomString"));
   }
 
   @Test
