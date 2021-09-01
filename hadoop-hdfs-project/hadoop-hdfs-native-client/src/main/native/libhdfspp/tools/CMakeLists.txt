@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+find_package(Boost 1.72 COMPONENTS program_options REQUIRED)
+
 # Default LIBHDFSPP_DIR to the default install location.  You can override
 #    it by add -DLIBHDFSPP_DIR=... to your cmake invocation
 set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
@@ -91,3 +93,7 @@ target_link_libraries(hdfs_deleteSnapshot tools_common hdfspp_static)
 
 add_executable(hdfs_tail hdfs_tail.cc)
 target_link_libraries(hdfs_tail tools_common hdfspp_static)
+
+add_executable(allow_snapShot allow-snapshot/allow-snapshot.cc allow-snapshot/main.cc)
+target_include_directories(allow_snapShot PRIVATE ../tools allow-snapshot ${Boost_INCLUDE_DIRS})
+target_link_libraries(allow_snapShot PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
