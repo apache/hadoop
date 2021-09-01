@@ -882,6 +882,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.ec.reconstruction.validation";
   public static final boolean DFS_DN_EC_RECONSTRUCTION_VALIDATION_VALUE = false;
 
+  public static final String DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY =
+          "dfs.disable.datanode.topology.sort";
+  public static final boolean DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY_DEFAULT = false;
+
+
   public static final String
       DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY =
       "dfs.datanode.directoryscan.throttle.limit.ms.per.sec";

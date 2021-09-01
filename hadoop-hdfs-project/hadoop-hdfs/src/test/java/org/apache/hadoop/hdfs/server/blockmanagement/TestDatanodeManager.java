@@ -311,6 +311,65 @@ public class TestDatanodeManager {
   }
 
   /**
+   * This test tests the case of disabling topology sorting
+   */
+  @Test
+  public void testDisableTopologySorting() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_DISABLE_DATANODE_TOPOLOGY_SORT_KEY, true);
+    conf.setClass(
+            CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            TestDatanodeManager.MyResolver.class, DNSToSwitchMapping.class);
+
+    GenericTestUtils.LogCapturer log = GenericTestUtils.LogCapturer.captureLogs(DatanodeManager.LOG);
+
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    // register 5 datanodes, each with different storage ID and type
+    DatanodeInfo[] locs = new DatanodeInfo[5];
+    String[] storageIDs = new String[5];
+    StorageType[] storageTypes = new StorageType[]{
+            StorageType.ARCHIVE,
+            StorageType.DEFAULT,
+            StorageType.DISK,
+            StorageType.RAM_DISK,
+            StorageType.SSD
+    };
+    for (int i = 0; i < 5; i++) {
+      // register new datanode
+      String uuid = "UUID-" + i;
+      String ip = "IP-" + i;
+      DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+      Mockito.when(dr.getDatanodeUuid()).thenReturn(uuid);
+      Mockito.when(dr.getIpAddr()).thenReturn(ip);
+      Mockito.when(dr.getXferAddr()).thenReturn(ip + ":9000");
+      Mockito.when(dr.getXferPort()).thenReturn(9000);
+      Mockito.when(dr.getSoftwareVersion()).thenReturn("version1");
+      dm.registerDatanode(dr);
+
+      // get location and storage information
+      locs[i] = dm.getDatanode(uuid);
+      storageIDs[i] = "storageID-" + i;
+    }
+
+    // create LocatedBlock with above locations
+    ExtendedBlock b = new ExtendedBlock("somePoolID", 1234);
+    LocatedBlock block = new LocatedBlock(b, locs, storageIDs, storageTypes);
+    List<LocatedBlock> blocks = new ArrayList<>();
+    blocks.add(block);
+
+    final String targetIp = "random_ip";
+
+    // sort block locations
+    dm.sortLocatedBlocks(targetIp, blocks);
+
+    // No node topology resolution
+    assertFalse(log.getOutput().contains("Node Resolution failed"));
+  }
+
+  /**
    * Execute a functional topology script and make sure that helper
    * function works correctly
    *
