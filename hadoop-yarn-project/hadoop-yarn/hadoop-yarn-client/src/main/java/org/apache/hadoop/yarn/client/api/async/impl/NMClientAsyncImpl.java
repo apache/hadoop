@@ -433,7 +433,7 @@ public class NMClientAsyncImpl extends NMClientAsync {
   }
 
   protected enum ContainerState {
-    PREP, FAILED, RUNNING, DONE,
+    PREP, FAILED, RUNNING, DONE
   }
 
   protected boolean isCompletelyDone(StatefulContainer container) {
