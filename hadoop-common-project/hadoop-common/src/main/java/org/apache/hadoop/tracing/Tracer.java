@@ -17,20 +17,28 @@
  */
 package org.apache.hadoop.tracing;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.sdk.autoconfigure.OpenTelemetrySdkAutoConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * No-Op Tracer (for now) to remove HTrace without changing too many files.
  */
 public class Tracer {
+  public static final Logger LOG = LoggerFactory.getLogger(Tracer.class.getName());
   // Singleton
-  private static final Tracer globalTracer = null;
+  private static Tracer globalTracer = null;
+  io.opentelemetry.api.trace.Tracer OTelTracer;
   private final NullTraceScope nullTraceScope;
   private final String name;
 
   public final static String SPAN_RECEIVER_CLASSES_KEY =
       "span.receiver.classes";
 
-  public Tracer(String name) {
+  private Tracer(String name, io.opentelemetry.api.trace.Tracer tracer) {
     this.name = name;
+    OTelTracer = tracer;
     nullTraceScope = NullTraceScope.INSTANCE;
   }
 
@@ -45,28 +53,32 @@ public class Tracer {
    * @return org.apache.hadoop.tracing.Span
    */
   public static Span getCurrentSpan() {
-    return null;
+    io.opentelemetry.api.trace.Span span = io.opentelemetry.api.trace.Span.current();
+    return span.getSpanContext().isValid()? new Span(span): null;
   }
 
   public TraceScope newScope(String description) {
-    return nullTraceScope;
+    Span span = new Span(OTelTracer.spanBuilder(description).startSpan());
+    return new TraceScope(span);
   }
 
   public Span newSpan(String description, SpanContext spanCtx) {
-    return new Span();
+    io.opentelemetry.api.trace.Span parentSpan = io.opentelemetry.api.trace.Span.wrap(spanCtx.getSpanContext());
+    io.opentelemetry.api.trace.Span span = OTelTracer.spanBuilder(description).setParent(Context.current().with(parentSpan)).startSpan();
+    return new Span(span);
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx) {
-    return nullTraceScope;
+    return new TraceScope(newSpan(description, spanCtx));
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx,
       boolean finishSpanOnClose) {
-    return nullTraceScope;
+    return new TraceScope(newSpan(description, spanCtx));
   }
 
   public TraceScope activateSpan(Span span) {
-    return nullTraceScope;
+    return new TraceScope(span);
   }
 
   public void close() {
@@ -75,6 +87,8 @@ public class Tracer {
   public String getName() {
     return name;
   }
+
+
 
   public static class Builder {
     static Tracer globalTracer;
@@ -88,9 +102,32 @@ public class Tracer {
       return this;
     }
 
-    public Tracer build() {
+    static OpenTelemetry initialiseTracer(String name) {
+      //added to avoid test failures
+      setOTelEnvVariables("none", "none");
+      System.setProperty("otel.resource.attributes", String.format("service.name=%s", name));
+      OpenTelemetry openTelemetry = OpenTelemetrySdkAutoConfiguration.initialize();
+      return openTelemetry;
+    }
+
+    //this method is added to set the environment variables for testing
+    private static void setOTelEnvVariables(String metricsExporter, String tracesExporter) {
+      if(System.getenv().get("OTEL_TRACES_EXPORTER") == null){
+        System.setProperty("otel.metrics.exporter", metricsExporter);
+      } else {
+        LOG.info("Tracing Span Exporter set to :" + System.getenv().get("OTEL_TRACES_EXPORTER"));
+      }
+      if(System.getenv().get("OTEL_METRICS_EXPORTER") == null){
+        System.setProperty("otel.traces.exporter", tracesExporter);
+      } else {
+        LOG.info("Tracing Span Exporter set to :" + System.getenv().get("OTEL_METRICS_EXPORTER"));
+      }
+    }
+
+    public synchronized Tracer build() {
       if (globalTracer == null) {
-        globalTracer = new Tracer(name);
+        globalTracer = new Tracer(name, initialiseTracer(name).getTracer(name));
+        Tracer.globalTracer = globalTracer;
       }
       return globalTracer;
     }

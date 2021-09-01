@@ -17,28 +17,54 @@
  */
 package org.apache.hadoop.tracing;
 
+import io.opentelemetry.context.Scope;
+
 import java.io.Closeable;
 
 public class Span implements Closeable {
-
+  private io.opentelemetry.api.trace.Span span = null;
   public Span() {
   }
 
+  public Span(io.opentelemetry.api.trace.Span span){
+    this.span = span;
+  }
+
   public Span addKVAnnotation(String key, String value) {
+    if(span != null){
+      span.setAttribute(key, value);
+    }
     return this;
   }
 
   public Span addTimelineAnnotation(String msg) {
+    if(span != null){
+      span.addEvent(msg);
+    }
     return this;
   }
 
   public SpanContext getContext() {
+    if(span != null){
+      return  new SpanContext(span.getSpanContext());
+    }
     return null;
   }
 
   public void finish() {
+    close();
   }
 
   public void close() {
+    if(span != null){
+      span.end();
+    }
+  }
+
+  public Scope makeCurrent() {
+    if(span != null){
+      return span.makeCurrent();
+    }
+    return null;
   }
 }
