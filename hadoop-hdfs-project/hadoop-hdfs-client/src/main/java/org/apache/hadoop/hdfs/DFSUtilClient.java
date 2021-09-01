@@ -426,8 +426,9 @@ public class DFSUtilClient {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
-      ret.putAll(getResolvedAddressesForNnId(
-          conf, nsId, nnId, dnr, defaultValue, keys));
+      Map<String, InetSocketAddress> resolvedAddressesForNnId =
+          getResolvedAddressesForNnId(conf, nsId, nnId, dnr, defaultValue, keys);
+      ret.putAll(resolvedAddressesForNnId);
     }
     return ret;
   }
@@ -463,8 +464,14 @@ public class DFSUtilClient {
    * Concat nn info with host info to make uniq ID.
    * This is mainly used when configured nn is
    * a domain record that has multiple hosts behind it.
+   *
+   * @param nsId      nsId to be concatenated to a uniq ID.
+   * @param nnId      nnId to be concatenated to a uniq ID.
+   * @param hostname  hostname to be concatenated to a uniq ID.
+   * @param port      port to be concatenated to a uniq ID.
+   * @return          Concatenated uniq id.
    */
-  static String getConcatNnId(String nsId, String nnId, String hostname, int port) {
+  private static String getConcatNnId(String nsId, String nnId, String hostname, int port) {
     if (nnId == null || nnId.isEmpty()) {
       return String
           .join("-", nsId, hostname, String.valueOf(port));

@@ -114,7 +114,6 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
     this.nameserviceId = nsId;
     this.namenodeId = nnId;
-
   }
 
   /**
@@ -155,14 +154,8 @@ public class NamenodeHeartbeatService extends PeriodicService {
     if (originalNnId == null) {
       originalNnId = namenodeId;
     }
-
     // Get the RPC address for the clients to connect
     this.rpcAddress = getRpcAddress(conf, nameserviceId, originalNnId);
-    if (resolvedHost != null) {
-      rpcAddress = resolvedHost + ":"
-          + NetUtils.createSocketAddr(rpcAddress).getPort();
-    }
-    LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
 
     // Get the Service RPC address for monitoring
     this.serviceAddress =
@@ -172,11 +165,6 @@ public class NamenodeHeartbeatService extends PeriodicService {
           "using RPC address {}", nnDesc, this.rpcAddress);
       this.serviceAddress = this.rpcAddress;
     }
-    if (resolvedHost != null) {
-      serviceAddress = resolvedHost + ":"
-          + NetUtils.createSocketAddr(serviceAddress).getPort();
-    }
-    LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
 
     // Get the Lifeline RPC address for faster monitoring
     this.lifelineAddress =
@@ -184,19 +172,26 @@ public class NamenodeHeartbeatService extends PeriodicService {
     if (this.lifelineAddress == null) {
       this.lifelineAddress = this.serviceAddress;
     }
-    if (resolvedHost != null) {
-      lifelineAddress = resolvedHost + ":"
-          + NetUtils.createSocketAddr(lifelineAddress).getPort();
-    }
-    LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
 
     // Get the Web address for UI
     this.webAddress =
         DFSUtil.getNamenodeWebAddr(conf, nameserviceId, originalNnId);
+
     if (resolvedHost != null) {
+      // Get the addresses from resolvedHost plus the configured ports.
+      rpcAddress = resolvedHost + ":"
+          + rpcAddress.split(":")[1];
+      serviceAddress = resolvedHost + ":"
+          + serviceAddress.split(":")[1];
+      lifelineAddress = resolvedHost + ":"
+          + lifelineAddress.split(":")[1];
       webAddress = resolvedHost + ":"
-          + NetUtils.createSocketAddr(webAddress).getPort();
+          + webAddress.split(":")[1];
     }
+
+    LOG.info("{} RPC address: {}", nnDesc, rpcAddress);
+    LOG.info("{} Service RPC address: {}", nnDesc, serviceAddress);
+    LOG.info("{} Lifeline RPC address: {}", nnDesc, lifelineAddress);
     LOG.info("{} Web address: {}", nnDesc, webAddress);
 
     if (this.namenodeId != null && !this.namenodeId.isEmpty()) {

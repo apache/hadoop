@@ -109,12 +109,13 @@ public class NNHAServiceTarget extends HAServiceTarget {
     initializeFailoverConfig();
   }
 
-  private void initializeNnConfig(Configuration conf, String nsId, String nnId) {
-    Preconditions.checkNotNull(nnId);
+  private void initializeNnConfig(Configuration conf,
+      String providedNsId, String providedNnId) {
+    Preconditions.checkNotNull(providedNnId);
 
-    if (nsId == null) {
-      nsId = DFSUtil.getOnlyNameServiceIdOrNull(conf);
-      if (nsId == null) {
+    if (providedNsId == null) {
+      providedNsId = DFSUtil.getOnlyNameServiceIdOrNull(conf);
+      if (providedNsId == null) {
         String errorString = "Unable to determine the name service ID.";
         String[] dfsNames = conf.getStrings(DFS_NAMESERVICES);
         if ((dfsNames != null) && (dfsNames.length > 1)) {
@@ -130,14 +131,13 @@ public class NNHAServiceTarget extends HAServiceTarget {
     // Make a copy of the conf, and override configs based on the
     // target node -- not the node we happen to be running on.
     this.targetConf = new HdfsConfiguration(conf);
-    NameNode.initializeGenericKeys(targetConf, nsId, nnId);
+    NameNode.initializeGenericKeys(targetConf, providedNsId, providedNnId);
 
-    this.nsId = nsId;
-    this.nnId = nnId;
+    this.nsId = providedNsId;
+    this.nnId = providedNnId;
   }
 
   private void initializeFailoverConfig() {
-
     this.autoFailoverEnabled = targetConf.getBoolean(
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
