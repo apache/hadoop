@@ -180,13 +180,13 @@ public class NamenodeHeartbeatService extends PeriodicService {
     if (resolvedHost != null) {
       // Get the addresses from resolvedHost plus the configured ports.
       rpcAddress = resolvedHost + ":"
-          + rpcAddress.split(":")[1];
+          + NetUtils.getPortFromHostPortString(rpcAddress);
       serviceAddress = resolvedHost + ":"
-          + serviceAddress.split(":")[1];
+          + NetUtils.getPortFromHostPortString(serviceAddress);
       lifelineAddress = resolvedHost + ":"
-          + lifelineAddress.split(":")[1];
+          + NetUtils.getPortFromHostPortString(lifelineAddress);
       webAddress = resolvedHost + ":"
-          + webAddress.split(":")[1];
+          + NetUtils.getPortFromHostPortString(webAddress);
     }
 
     LOG.info("{} RPC address: {}", nnDesc, rpcAddress);

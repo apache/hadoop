@@ -766,6 +766,25 @@ public class TestNetUtils {
   }
 
   @Test
+  public void testGetPortFromHostPortString() {
+
+    assertEquals(1002, NetUtils.getPortFromHostPortString("testHost:1002"));
+    try {
+      NetUtils.getPortFromHostPortString("testHost");
+      fail("Should throw exception for wrong format");
+    } catch (IllegalArgumentException e) {
+      // Expected
+    }
+
+    try {
+      NetUtils.getPortFromHostPortString("testHost:randomString");
+      fail("Should throw exception for wrong format");
+    } catch (IllegalArgumentException e) {
+      // Expected
+    }
+  }
+
+  @Test
   public void testBindToLocalAddress() throws Exception {
     assertNotNull(NetUtils
         .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), false));
