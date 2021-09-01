@@ -1591,8 +1591,8 @@ public class FSDirectory implements Closeable {
     }
 
     if (count != totalInodes) {
-      String msg = String.format("moveInodes: expected to move %l inodes, " +
-          "but moved %l inodes", totalInodes, count);
+      String msg = String.format("moveInodes: expected to move %d inodes, " +
+          "but moved %d inodes", totalInodes, count);
       throw new IOException(msg);
     }
 
