@@ -19,11 +19,10 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -52,8 +51,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
@@ -66,60 +65,33 @@ public class TestBlockTokenWithShortCircuitRead {
   private static final int BLOCK_SIZE = 1024;
   private static final int FILE_SIZE = 2 * BLOCK_SIZE;
   private static final String FILE_TO_SHORT_CIRCUIT_READ = "/fileToSSR.dat";
-  private final byte[] rawData = new byte[FILE_SIZE];
 
-  {
+  static {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    Random r = new Random();
-    r.nextBytes(rawData);
   }
 
-  private void createFile(FileSystem fs, Path filename) throws IOException {
-    FSDataOutputStream out = fs.create(filename);
-    out.write(rawData);
-    out.close();
-  }
-
-  // read a file using blockSeekTo()
-  private boolean checkFile1(FSDataInputStream in) {
+  private void readFile(FSDataInputStream in) throws IOException {
     byte[] toRead = new byte[FILE_SIZE];
     int totalRead = 0;
     int nRead;
-    try {
-      while ((nRead = in.read(toRead, totalRead,
-        toRead.length - totalRead)) > 0) {
-        totalRead += nRead;
-      }
-    } catch (IOException e) {
-      return false;
+    while ((nRead = in.read(toRead, totalRead,
+      toRead.length - totalRead)) > 0) {
+      totalRead += nRead;
     }
     assertEquals("Cannot read file.", toRead.length, totalRead);
-    return checkFile(toRead);
-  }
-
-  private boolean checkFile(byte[] fileToCheck) {
-    if (fileToCheck.length != rawData.length) {
-      return false;
-    }
-    for (int i = 0; i < fileToCheck.length; i++) {
-      if (fileToCheck[i] != rawData[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   @Test
   public void testShortCircuitReadWithInvalidToken() throws Exception {
     MiniDFSCluster cluster = null;
-    int numDataNodes = 1;
+    short numDataNodes = 1;
     Configuration conf = new Configuration();
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
-    conf.setInt("ipc.client.connect.max.retries", 0);
+    conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
     // Set short retry timeouts so this test runs faster
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
@@ -161,45 +133,46 @@ public class TestBlockTokenWithShortCircuitRead {
       });
 
       // create file to read
-      createFile(fs, fileToRead);
+      DFSTestUtil.createFile(fs, fileToRead, FILE_SIZE, numDataNodes, 0);
 
-      // acquire access token
-      FSDataInputStream in = fs.open(fileToRead);
-      assertTrue(checkFile1(in));
+      try(FSDataInputStream in = fs.open(fileToRead)) {
+        // acquire access token
+        readFile(in);
 
-      // verify token is not expired
-      List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
-        FILE_TO_SHORT_CIRCUIT_READ, 0, FILE_SIZE).getLocatedBlocks();
-      LocatedBlock lblock = locatedBlocks.get(0); // first block
-      Token<BlockTokenIdentifier> myToken = lblock.getBlockToken();
-      assertFalse(SecurityTestUtil.isBlockTokenExpired(myToken));
+        // verify token is not expired
+        List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
+          FILE_TO_SHORT_CIRCUIT_READ, 0, FILE_SIZE).getLocatedBlocks();
+        LocatedBlock lblock = locatedBlocks.get(0); // first block
+        Token<BlockTokenIdentifier> myToken = lblock.getBlockToken();
+        assertFalse(SecurityTestUtil.isBlockTokenExpired(myToken));
 
-      // wait token expiration
-      while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException ignored) {
+        // wait token expiration
+        while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException ignored) {
+          }
         }
-      }
 
-      // short circuit read after token expiration
-      in.seek(0);
-      assertTrue(checkFile1(in));
-      checkShmAndSlots(cache, datanode, 1);
+        // short circuit read after token expiration
+        in.seek(0);
+        readFile(in);
+        checkShmAndSlots(cache, datanode, 1);
 
-      // wait token expiration again
-      while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException ignored) {
+        // wait token expiration again
+        while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
+          try {
+            Thread.sleep(200);
+          } catch (InterruptedException ignored) {
+          }
         }
-      }
 
-      // short circuit read after token expiration again
-      in.seek(0);
-      assertTrue(checkFile1(in));
-      // slotCnt should not be increased
-      checkShmAndSlots(cache, datanode, 1);
+        // short circuit read after token expiration again
+        in.seek(0);
+        readFile(in);
+        // slotCnt should not be increased
+        checkShmAndSlots(cache, datanode, 1);
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
@@ -209,8 +182,8 @@ public class TestBlockTokenWithShortCircuitRead {
   }
 
   private void checkShmAndSlots(ShortCircuitCache cache,
-      final DatanodeInfo datanode,
-      final int expectedSlotCnt) throws IOException {
+                                final DatanodeInfo datanode,
+                                final int expectedSlotCnt) throws IOException {
     cache.getDfsClientShmManager().visit(new Visitor() {
       @Override
       public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info) {
