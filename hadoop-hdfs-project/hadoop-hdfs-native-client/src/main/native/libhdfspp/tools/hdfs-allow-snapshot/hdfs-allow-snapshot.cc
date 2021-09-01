@@ -25,7 +25,7 @@
 
 #include <google/protobuf/stubs/common.h>
 
-#include "allow-snapshot.h"
+#include "hdfs-allow-snapshot.h"
 #include "tools_common.h"
 
 HdfsAllowSnapshot::HdfsAllowSnapshot(const int argc, char **argv)

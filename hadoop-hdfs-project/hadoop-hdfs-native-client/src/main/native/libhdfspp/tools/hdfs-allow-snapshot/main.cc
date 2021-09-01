@@ -21,7 +21,7 @@
 #include <exception>
 #include <iostream>
 
-#include "allow-snapshot.h"
+#include "hdfs-allow-snapshot.h"
 
 int main(int argc, char *argv[]) {
   HdfsAllowSnapshot allow_snapshot(argc, argv);
