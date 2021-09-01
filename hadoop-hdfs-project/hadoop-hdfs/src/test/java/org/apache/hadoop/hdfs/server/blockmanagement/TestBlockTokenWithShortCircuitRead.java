@@ -42,9 +42,9 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,7 +58,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 public class TestBlockTokenWithShortCircuitRead {
 
@@ -67,7 +66,7 @@ public class TestBlockTokenWithShortCircuitRead {
   private static final String FILE_TO_SHORT_CIRCUIT_READ = "/fileToSSR.dat";
 
   static {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
   }
 
   private void readFile(FSDataInputStream in) throws IOException {
@@ -96,7 +95,7 @@ public class TestBlockTokenWithShortCircuitRead {
     conf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
     TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
     conf.set(DFS_DOMAIN_SOCKET_PATH_KEY, new File(sockDir.getDir(),
-      "testShortCircuitReadWithInvalidToken").getAbsolutePath());
+        "testShortCircuitReadWithInvalidToken").getAbsolutePath());
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     // avoid caching
     conf.setInt(HdfsClientConfigKeys.Read.ShortCircuit.STREAMS_CACHE_SIZE_KEY, 0);
@@ -118,9 +117,9 @@ public class TestBlockTokenWithShortCircuitRead {
       DistributedFileSystem fs = cluster.getFileSystem();
 
       final ShortCircuitCache cache =
-        fs.getClient().getClientContext().getShortCircuitCache();
+          fs.getClient().getClientContext().getShortCircuitCache();
       final DatanodeInfo datanode =
-        new DatanodeInfo.DatanodeInfoBuilder()
+          new DatanodeInfo.DatanodeInfoBuilder()
           .setNodeID(cluster.getDataNodes().get(0).getDatanodeId())
           .build();
 
@@ -141,7 +140,7 @@ public class TestBlockTokenWithShortCircuitRead {
 
         // verify token is not expired
         List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
-          FILE_TO_SHORT_CIRCUIT_READ, 0, FILE_SIZE).getLocatedBlocks();
+            FILE_TO_SHORT_CIRCUIT_READ, 0, FILE_SIZE).getLocatedBlocks();
         LocatedBlock lblock = locatedBlocks.get(0); // first block
         Token<BlockTokenIdentifier> myToken = lblock.getBlockToken();
         assertFalse(SecurityTestUtil.isBlockTokenExpired(myToken));
@@ -182,8 +181,8 @@ public class TestBlockTokenWithShortCircuitRead {
   }
 
   private void checkShmAndSlots(ShortCircuitCache cache,
-                                final DatanodeInfo datanode,
-                                final int expectedSlotCnt) throws IOException {
+      final DatanodeInfo datanode,
+      final int expectedSlotCnt) throws IOException {
     cache.getDfsClientShmManager().visit(new Visitor() {
       @Override
       public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info) {
@@ -195,7 +194,7 @@ public class TestBlockTokenWithShortCircuitRead {
 
         int slotCnt = 0;
         DfsClientShm shm = vinfo.notFull.values().iterator().next();
-        for (Iterator<Slot> iter = shm.slotIterator(); iter.hasNext(); ) {
+        for (Iterator<Slot> iter = shm.slotIterator(); iter.hasNext();) {
           iter.next();
           slotCnt++;
         }
