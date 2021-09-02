@@ -2785,7 +2785,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (!skipSync) {
         getEditLog().logSync();
         if (toRemoveBlocks != null) {
-          removeBlocks(toRemoveBlocks);
+          removeBlocksWithFGL(toRemoveBlocks, iip.getPath(), pc);
           toRemoveBlocks.clear();
         }
       }
@@ -3349,9 +3349,52 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     getEditLog().logSync();
     logAuditEvent(ret, operationName, src);
     if (toRemovedBlocks != null) {
-      removeBlocks(toRemovedBlocks); // Incremental deletion of blocks
+      removeBlocksWithFGL(toRemovedBlocks, src, pc); // Incremental deletion of blocks
     }
     return ret;
+  }
+
+  /** Duplicate of removeBlocks(blocks), difference is it acquire partition
+   * lock instead of global write lock.
+   * @param blocks blocks to be removed.
+   * @param src    Source file on which partition lock held.
+   * @param pc     Permission checker for resolving the path.
+   * @throws IOException
+   * @see this.removeBlocks(BlocksMapUpdateInfo ), duplicate method.
+   * Remove the above one once all APIs implemented FGL.
+   */
+  private void removeBlocksWithFGL(BlocksMapUpdateInfo blocks, String src,
+      FSPermissionChecker pc) throws IOException {
+    List<BlockInfo> toDeleteList = blocks.getToDeleteList();
+    Iterator<BlockInfo> iter = toDeleteList.iterator();
+    while (iter.hasNext()) {
+      writeLock();
+      try {
+        switchToPartitionLock(src, pc);
+        for (int i = 0; i < blockDeletionIncrement && iter.hasNext(); i++) {
+          blockManager.removeBlock(iter.next());
+        }
+      } finally {
+        writeUnlock("removeBlocks");
+      }
+    }
+  }
+
+  /**
+   * Switch global write lock with the partition lock.
+   *
+   * @param src source file on which lock to be acquired
+   * @param pc  PermissionChecker to resolve the source
+   * @throws IOException when fails to access the path.
+   */
+  private void switchToPartitionLock(String src, FSPermissionChecker pc)
+      throws IOException {
+    INodesInPath iip = dir.resolvePath(pc, src, DirOp.WRITE_LINK);
+    iip = iip.getExistingINodes();
+    if (null != iip.getParentINodesInPath())
+      // switch the locks
+      // Only content gets deleted, acquire only file / directory level lock.
+      dir.getINodeMap().latchWriteLock(iip, new INode[0]);
   }
 
   FSPermissionChecker getPermissionChecker()
