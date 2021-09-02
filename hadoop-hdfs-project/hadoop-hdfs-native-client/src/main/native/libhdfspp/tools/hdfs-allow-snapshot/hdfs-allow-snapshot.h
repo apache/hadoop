@@ -23,6 +23,7 @@
 
 #include <boost/program_options.hpp>
 
+namespace hdfs::tools {
 namespace po = boost::program_options;
 
 class HdfsAllowSnapshot {
@@ -44,4 +45,5 @@ private:
   po::positional_options_description pos_opt_desc_;
 };
 
+} // namespace hdfs::tools
 #endif

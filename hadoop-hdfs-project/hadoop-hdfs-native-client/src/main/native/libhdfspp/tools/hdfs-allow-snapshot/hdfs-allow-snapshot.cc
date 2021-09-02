@@ -28,6 +28,7 @@
 #include "hdfs-allow-snapshot.h"
 #include "tools_common.h"
 
+namespace hdfs::tools {
 HdfsAllowSnapshot::HdfsAllowSnapshot(const int argc, char **argv)
     : argc_{argc}, argv_{argv}, opt_desc_{"hdfs_allowSnapshot"} {}
 
@@ -114,3 +115,4 @@ bool HdfsAllowSnapshot::HandlePath(const std::string &path) const {
   google::protobuf::ShutdownProtobufLibrary();
   return true;
 }
+} // namespace hdfs::tools
