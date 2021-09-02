@@ -106,6 +106,11 @@ final class FSDirAppendOp {
             "Failed to append to non-existent file " + path + " for client "
                 + clientMachine);
       }
+
+      INode[] iNodes = new INode[]{inode};
+      // switch the locks
+      fsd.getINodeMap().latchWriteLock(iip.getParentINodesInPath(), iNodes);
+
       final INodeFile file = INodeFile.valueOf(inode, path, true);
 
       if (file.isStriped() && !newBlock) {
