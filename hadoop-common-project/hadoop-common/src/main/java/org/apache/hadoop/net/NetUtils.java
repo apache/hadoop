@@ -741,9 +741,9 @@ public class NetUtils {
   }
 
   /**
-   * Get port as integer from host port string like <host>:<port>.
+   * Get port as integer from host port string like host:port.
    *
-   * @param addr host + port string like <host>:<port>.
+   * @param addr host + port string like host:port.
    * @return an integer value representing the port.
    * @throws IllegalArgumentException if the input is not in the correct format.
    */
