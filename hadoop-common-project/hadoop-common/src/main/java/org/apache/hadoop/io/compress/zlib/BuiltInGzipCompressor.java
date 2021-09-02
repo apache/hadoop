@@ -86,10 +86,6 @@ public class BuiltInGzipCompressor implements Compressor {
 
     int compressedBytesWritten = 0;
 
-    if (currentBufLen <= 0) {
-      return compressedBytesWritten;
-    }
-
     // If we are not within uncompressed data yet, output the header.
     if (state == BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC) {
       int outputHeaderSize = writeHeader(b, off, len);
