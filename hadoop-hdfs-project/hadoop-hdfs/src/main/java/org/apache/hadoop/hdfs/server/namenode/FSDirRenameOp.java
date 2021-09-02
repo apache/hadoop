@@ -42,6 +42,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import static org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import static org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
@@ -61,6 +62,8 @@ class FSDirRenameOp {
     INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
     INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.CREATE_LINK);
     dstIIP = dstForRenameTo(srcIIP, dstIIP);
+    // switch the GLOBAL Lock with partition locks
+    switchToFGL(fsd, srcIIP, dstIIP);
     return renameTo(fsd, pc, srcIIP, dstIIP, logRetryCache);
   }
 
@@ -264,6 +267,9 @@ class FSDirRenameOp {
     final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
     final INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.CREATE_LINK);
 
+    // switch the GLOBAL Lock with partition locks
+    switchToFGL(fsd, srcIIP, dstIIP);
+
     if(fsd.isNonEmptyDirectory(srcIIP)) {
       DFSUtil.checkProtectedDescendants(fsd, srcIIP);
     }
@@ -316,6 +322,99 @@ class FSDirRenameOp {
     fsd.getEditLog().logRename(
         srcIIP.getPath(), dstIIP.getPath(), mtime, logRetryCache, options);
     return result;
+  }
+
+  /**
+   * Switch the global lock with FGL.
+   * @param fsd FSDirectory
+   * @param srcIIP Source IIP
+   * @param dstIIP destination IIP
+   * @throws IOException when rename fails
+   */
+  private static void switchToFGL(FSDirectory fsd, INodesInPath srcIIP,
+      INodesInPath dstIIP) throws IOException {
+    final INode lastSrcINode = srcIIP.getLastINode();
+    final INode lastDstINode = dstIIP.getLastINode();
+    INode[] destINodes4PartLock = null;
+    if (null == lastSrcINode) {
+      NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: ");
+      //Error case, this shouldn't happen. Return from here, which fails as
+      // before.
+      return;
+    }
+
+    //Directory rename
+    final INode srcParent = srcIIP.getParentINodesInPath().getLastINode();
+    final INode dstParent = dstIIP.getParentINodesInPath().getLastINode();
+    if (lastSrcINode.isDirectory()) {
+      //Source/Destination is ROOT directory, cannot rename to/from ROOT dir.
+      if (null == srcParent || (dstParent == null
+          && dstIIP.getPathComponents().length == 1)) {
+        throw new IllegalArgumentException(
+            "Rename failed, cannot rename root " + "dir. Source=" + srcIIP
+                .getPath() + ", destination=" + dstIIP.getPath());
+      } else {
+        //Src & Dest parents are same, then acquire lock only once on parent
+        if (srcParent.equals(dstParent)) {
+          destINodes4PartLock = new INode[] {lastDstINode };
+        } else {
+          destINodes4PartLock = new INode[] {dstParent, lastDstINode };
+        }
+      }
+    } else {
+      //File / symbolic name rename
+      //Src & Dest parents are same, then acquire lock only once on parent
+      if (srcParent.equals(dstParent)) {
+        // Same parents, so just lock only destination node. Source parent
+        // will be added later.
+        destINodes4PartLock = new INode[] {lastDstINode };
+      } else if (null == lastDstINode || !lastDstINode.isDirectory()) {
+        if (null == lastDstINode) {
+          //Destination file doesn't exists, then just lock parent dst folder.
+          destINodes4PartLock = new INode[] {dstParent };
+        } else {
+          //Destination file exists, then lock on file & its parent partition.
+          destINodes4PartLock = new INode[] {dstParent, lastDstINode };
+        }
+      } else {
+        // Destination is directory, just acquire lock only on the last
+        // directory into which src file will be moved
+        destINodes4PartLock = new INode[] {lastDstINode };
+      }
+    }
+    //Add all iNodes to set, which eliminates duplicate inodes
+    LinkedHashSet<INode> allNodes4PartLock = new LinkedHashSet<>();
+    //Add the last Src node for partition locking
+    allNodes4PartLock.add(srcIIP.getLastINode());
+
+    for (INode node : destINodes4PartLock) {
+      if (null == node) {
+        if (FSNamesystem.LOG.isDebugEnabled()) {
+          FSNamesystem.LOG.debug(
+              "Node is null, ignoring and continue with " + "other nodes, src="
+                  + srcIIP.getPath() + ", dst=" + dstIIP.getPath());
+        }
+        continue;
+      }
+      allNodes4PartLock.add(node);
+    }
+
+    if (FSNamesystem.LOG.isDebugEnabled()) {
+      FSNamesystem.LOG.debug(
+          "Lock acquired on INodes Length=" + allNodes4PartLock.size()
+              + "INodes=" + allNodes4PartLock + " Src" + srcIIP.getPath()
+              + ", dst=" + dstIIP.getPath());
+    }
+    try {
+      // Switch from GLOBAL Lock to source & destination dir partition locks
+      fsd.getINodeMap().latchWriteLock(srcIIP.getParentINodesInPath(),
+          allNodes4PartLock.toArray(
+              allNodes4PartLock.toArray(new INode[allNodes4PartLock.size()])));
+    } catch (Exception e) {
+      FSNamesystem.LOG.error(
+          "Error while acquiring the lock " + ", source=" + srcIIP.getPath()
+              + ", dest=" + allNodes4PartLock);
+    }
   }
 
   /**
