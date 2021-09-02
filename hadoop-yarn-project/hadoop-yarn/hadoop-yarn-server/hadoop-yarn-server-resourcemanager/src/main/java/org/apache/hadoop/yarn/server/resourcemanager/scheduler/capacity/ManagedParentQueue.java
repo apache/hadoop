@@ -463,17 +463,13 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
   public CapacitySchedulerConfiguration getLeafQueueConfigs(
       CapacitySchedulerConfiguration templateConfig, String leafQueueName) {
-    CapacitySchedulerConfiguration leafQueueConfigTemplate = new
-        CapacitySchedulerConfiguration(new Configuration(false), false);
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         templateConfig.iterator(); iterator.hasNext(); ) {
-      Map.Entry<String, String> confKeyValuePair = iterator.next();
+    for (Map.Entry<String, String> confKeyValuePair : templateConfig) {
       final String name = confKeyValuePair.getKey().replaceFirst(
           CapacitySchedulerConfiguration
               .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX,
           leafQueueName);
-      leafQueueConfigTemplate.set(name, confKeyValuePair.getValue());
+      templateConfig.set(name, confKeyValuePair.getValue());
     }
-    return leafQueueConfigTemplate;
+    return templateConfig;
   }
 }

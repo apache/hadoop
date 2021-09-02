@@ -18,14 +18,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -169,26 +167,14 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   }
 
   protected Map<String, String> getCSConfigurationsWithPrefix(String prefix) {
-    Map<String, String> configsWithPrefix = new HashMap<>();
-
-    for (Map.Entry<String, String> confKeyValuePair :
-        csContext.getConfiguration().getPropsWithPrefix(prefix).entrySet()) {
-      configsWithPrefix.put(prefix + confKeyValuePair.getKey(), confKeyValuePair.getValue());
-    }
-
-    return configsWithPrefix;
+    ConfigurationProperties properties = csContext.getConfiguration().getConfigurationProperties();
+    return properties.getPropertiesWithPrefix(prefix, true);
   }
 
   protected CapacitySchedulerConfiguration initializeLeafQueueConfigs(String configPrefix) {
 
     CapacitySchedulerConfiguration leafQueueConfigs = new
         CapacitySchedulerConfiguration(csContext.getConf(), false);
-
-    String resourceTypePrefix = YarnConfiguration.RESOURCE_TYPES + ".";
-    Map<String, String> rtConfigs = getCSConfigurationsWithPrefix(resourceTypePrefix);
-    for (Map.Entry<String, String> confKeyValuePair: rtConfigs.entrySet()) {
-      leafQueueConfigs.set(confKeyValuePair.getKey(), confKeyValuePair.getValue());
-    }
 
     Map<String, String> templateConfigs = getCSConfigurationsWithPrefix(configPrefix);
     for (Map.Entry<String, String> confKeyValuePair : templateConfigs.entrySet()) {
