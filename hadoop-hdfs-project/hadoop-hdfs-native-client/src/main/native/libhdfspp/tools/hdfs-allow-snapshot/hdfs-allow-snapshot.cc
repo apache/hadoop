@@ -29,10 +29,10 @@
 #include "tools_common.h"
 
 namespace hdfs::tools {
-HdfsAllowSnapshot::HdfsAllowSnapshot(const int argc, char **argv)
+AllowSnapshot::AllowSnapshot(const int argc, char **argv)
     : argc_{argc}, argv_{argv}, opt_desc_{"hdfs_allowSnapshot"} {}
 
-bool HdfsAllowSnapshot::Initialize() {
+bool AllowSnapshot::Initialize() {
   opt_desc_.add_options()("help,h", "Show the help for hdfs_allowSnapshot")(
       "path", po::value<std::string>(),
       "The path to the directory to make it snapshot-able");
@@ -48,7 +48,7 @@ bool HdfsAllowSnapshot::Initialize() {
   return true;
 }
 
-std::string HdfsAllowSnapshot::GetDescription() {
+std::string AllowSnapshot::GetDescription() {
   std::stringstream desc;
   desc << "Usage: hdfs_allowSnapshot [OPTION] PATH" << std::endl
        << std::endl
@@ -67,7 +67,7 @@ std::string HdfsAllowSnapshot::GetDescription() {
   return desc.str();
 }
 
-bool HdfsAllowSnapshot::Do() {
+bool AllowSnapshot::Do() {
   if (!Initialize()) {
     std::cerr << "Unable to initialize HDFS allow snapshot tool" << std::endl;
     return false;
@@ -90,12 +90,12 @@ bool HdfsAllowSnapshot::Do() {
   return true;
 }
 
-bool HdfsAllowSnapshot::HandleHelp() const {
+bool AllowSnapshot::HandleHelp() const {
   std::cout << GetDescription();
   return true;
 }
 
-bool HdfsAllowSnapshot::HandlePath(const std::string &path) const {
+bool AllowSnapshot::HandlePath(const std::string &path) const {
   // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(path);
 

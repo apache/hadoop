@@ -26,9 +26,9 @@
 namespace hdfs::tools {
 namespace po = boost::program_options;
 
-class HdfsAllowSnapshot {
+class AllowSnapshot {
 public:
-  HdfsAllowSnapshot(int argc, char **argv);
+  AllowSnapshot(int argc, char **argv);
 
   [[nodiscard]] bool Initialize();
   [[nodiscard]] bool ValidateConstraints() const { return argc_ > 1; }
