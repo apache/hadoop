@@ -65,22 +65,22 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
    */
   public void init(final String method, List<AbfsHttpHeader> requestHeaders)
       throws IOException {
-    this.connection = openConnection();
-    if (this.connection instanceof HttpsURLConnection) {
-      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
+    connection = openConnection();
+    if (connection instanceof HttpsURLConnection) {
+      HttpsURLConnection secureConn = (HttpsURLConnection) connection;
       SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
       if (sslSocketFactory != null) {
         secureConn.setSSLSocketFactory(sslSocketFactory);
       }
     }
 
-    this.connection.setConnectTimeout(getConnectTimeout());
-    this.connection.setReadTimeout(getReadTimeout());
+    connection.setConnectTimeout(getConnectTimeout());
+    connection.setReadTimeout(getReadTimeout());
 
-    this.connection.setRequestMethod(method);
+    connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {
-      this.connection.setRequestProperty(header.getName(), header.getValue());
+      connection.setRequestProperty(header.getName(), header.getValue());
     }
   }
 
@@ -97,7 +97,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
   }
 
   public void setHeader(String header, String value) {
-    this.getConnection().setRequestProperty(header, value);
+    getConnection().setRequestProperty(header, value);
   }
 
   public Map<String, List<String>> getRequestHeaders() {
@@ -109,7 +109,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
   }
 
   public String getClientRequestId() {
-    return this.connection
+    return connection
         .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
   /**
@@ -124,8 +124,8 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
    * @throws IOException if an error occurs.
    */
   public void sendRequest(byte[] buffer, int offset, int length) throws IOException {
-    this.connection.setDoOutput(true);
-    this.connection.setFixedLengthStreamingMode(length);
+    connection.setDoOutput(true);
+    connection.setFixedLengthStreamingMode(length);
     if (buffer == null) {
       // An empty buffer is sent to set the "Content-Length: 0" header, which
       // is required by our endpoint.
@@ -140,7 +140,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
     if (isTraceEnabled()) {
       startTime = System.nanoTime();
     }
-    try (OutputStream outputStream = this.connection.getOutputStream()) {
+    try (OutputStream outputStream = connection.getOutputStream()) {
       // update bytes sent before they are sent so we may observe
       // attempted sends as well as successful sends via the
       // accompanying statusCode
@@ -170,15 +170,15 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       startTime = System.nanoTime();
     }
 
-    setStatusCode(this.connection.getResponseCode());
+    setStatusCode(connection.getResponseCode());
 
     if (isTraceEnabled()) {
       setRecvResponseTimeMs(elapsedTimeMs(startTime));
     }
 
-    setStatusDescription(this.connection.getResponseMessage());
+    setStatusDescription(connection.getResponseMessage());
 
-    setRequestId(this.connection.getHeaderField(
+    setRequestId(connection.getHeaderField(
         HttpHeaderConfigurations.X_MS_REQUEST_ID));
     if (getRequestId() == null) {
       setRequestId(AbfsHttpConstants.EMPTY_STRING);
@@ -201,13 +201,13 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
       if (isTraceEnabled()) {
         setRecvResponseTimeMs(getRecvResponseTimeMs() + elapsedTimeMs(startTime));
       }
-      setBytesReceived(this.connection.getHeaderFieldLong(
+      setBytesReceived(connection.getHeaderFieldLong(
           HttpHeaderConfigurations.CONTENT_LENGTH, 0));
     } else {
       // consume the input stream to release resources
       int totalBytesRead = 0;
 
-      try (InputStream stream = this.connection.getInputStream()) {
+      try (InputStream stream = connection.getInputStream()) {
         if (isNullInputStream(stream)) {
           return;
         }
@@ -219,7 +219,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
             && buffer == null) {
           parseListFilesResponse(stream);
         } else if (AbfsHttpConstants.HTTP_METHOD_POST.equals(getMethod())) {
-          int contentLen = this.connection.getContentLength();
+          int contentLen = connection.getContentLength();
           if (contentLen != 0) {
             try (DataInputStream dis = new DataInputStream(stream)) {
               byte[] contentBuffer  = new byte[contentLen];
@@ -358,7 +358,7 @@ public class AbfsHttpConnection extends AbfsHttpOperation {
 
     try {
       final ObjectMapper objectMapper = new ObjectMapper();
-      this.listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
+      listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
     } catch (IOException ex) {
       LOG.error("Unable to deserialize list results", ex);
       throw ex;
