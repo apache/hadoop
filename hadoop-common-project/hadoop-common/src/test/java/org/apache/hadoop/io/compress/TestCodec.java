@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.compress;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1049,6 +1050,47 @@ public class TestCodec {
       if (poolDecompressor != poolDecompressor2) {
         fail("Did not reuse native gzip decompressor in pool");
       }
+    }
+  }
+
+  @Test(timeout=20000)
+  public void testGzipCompressorWithEmptyInput() throws IOException {
+    // don't use native libs
+    ZlibFactory.setNativeZlibLoaded(false);
+    Configuration conf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+
+    Compressor compressor = codec.createCompressor();
+    assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
+            .isInstanceOf(BuiltInGzipCompressor.class);
+
+    byte[] b = new byte[0];
+    compressor.setInput(b, 0, b.length);
+    compressor.finish();
+
+    byte[] output = new byte[100];
+    int outputOff = 0;
+
+    while (!compressor.finished()) {
+      byte[] buf = new byte[100];
+      int compressed = compressor.compress(buf, 0, buf.length);
+      System.arraycopy(buf, 0, output, outputOff, compressed);
+      outputOff += compressed;
+    }
+
+    DataInputBuffer gzbuf = new DataInputBuffer();
+    gzbuf.reset(output, outputOff);
+
+    Decompressor decom = codec.createDecompressor();
+    assertThat(decom).as("decompressor should not be null").isNotNull();
+    assertThat(decom).withFailMessage("should be BuiltInGzipDecompressor")
+            .isInstanceOf(BuiltInGzipDecompressor.class);
+    try (InputStream gzin = codec.createInputStream(gzbuf, decom);
+         DataOutputBuffer dflbuf = new DataOutputBuffer()) {
+      dflbuf.reset();
+      IOUtils.copyBytes(gzin, dflbuf, 4096);
+      final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+      assertThat(b).as("check decompressed output").isEqualTo(dflchk);
     }
   }
 }
