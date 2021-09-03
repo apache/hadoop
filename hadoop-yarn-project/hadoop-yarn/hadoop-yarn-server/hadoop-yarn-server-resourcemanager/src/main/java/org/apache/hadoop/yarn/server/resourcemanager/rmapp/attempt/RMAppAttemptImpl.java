@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -712,6 +713,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @Override
+  public Collection<RMContainer> getLiveContainers(){
+    return this.scheduler.getLiveContainers(applicationAttemptId);
   }
 
   @Private

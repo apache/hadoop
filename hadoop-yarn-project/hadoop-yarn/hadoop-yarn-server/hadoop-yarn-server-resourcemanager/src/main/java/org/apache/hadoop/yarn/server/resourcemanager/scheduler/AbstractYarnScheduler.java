@@ -1453,6 +1453,11 @@ public abstract class AbstractYarnScheduler
         rmContext, demotedContainer, false);
   }
 
+  @Override
+  public Collection<RMContainer> getLiveContainers(ApplicationAttemptId applicationAttemptId) {
+    return getApplicationAttempt(applicationAttemptId).getLiveContainers();
+  }
+
   /**
    * Rollback container update after expiry.
    * @param containerId ContainerId.

@@ -679,11 +679,14 @@ static JNIEnv* getGlobalJNIEnv(void)
 
     if (noVMs == 0) {
         //Get the environment variables for initializing the JVM
-        hadoopClassPath = getClassPath();
+        hadoopClassPath = getenv("LIBHDFS_CLASSPATH");
         if (hadoopClassPath == NULL) {
-            fprintf(stderr, "Environment variable CLASSPATH not set!\n");
+          hadoopClassPath = getenv("CLASSPATH");
+          if (hadoopClassPath == NULL) {
+            fprintf(stderr, "Environment variables LIBHDFS_CLASSPATH or CLASSPATH not set!\n");
             return NULL;
-        } 
+          }
+        }
         optHadoopClassPathLen = strlen(hadoopClassPath) + 
           strlen(hadoopClassPathVMArg) + 1;
         optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);

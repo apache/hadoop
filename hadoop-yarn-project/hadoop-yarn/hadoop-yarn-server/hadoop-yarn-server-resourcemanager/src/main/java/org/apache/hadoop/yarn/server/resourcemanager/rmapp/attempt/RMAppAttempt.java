@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
 /**
  * Interface to an Application Attempt in the Resource Manager.
@@ -163,6 +165,12 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return The AMRMToken belonging to this app attempt
    */
   Token<AMRMTokenIdentifier> getAMRMToken();
+
+  /**
+   * The live containers of this appAttempt
+   * @return The list of live containers
+   */
+  Collection<RMContainer> getLiveContainers();
 
   /**
    * The master key for client-to-AM tokens for this app attempt. This is only
