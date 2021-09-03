@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 /**
+ * {@link AuthToken} contains information about authenticated and can double
+ * as a {@link Principal} return.
  */
 public class AuthToken implements Principal {
 
