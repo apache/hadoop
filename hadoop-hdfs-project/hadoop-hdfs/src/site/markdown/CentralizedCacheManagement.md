@@ -256,7 +256,7 @@ The following properties are not required, but may be specified for tuning:
 
 *   dfs.namenode.caching.enabled
 
-    This parameter can be used to enable/disable the centralized caching in NameNode. When centralized caching is disabled, NameNode will not process cache reports or store information about block cache locations on the cluster. Note that NameNode will continute to store the path based cache locations in the file-system metadata, even though it will not act on this information until the caching is enabled. The default value for this parameter is true (i.e. centralized caching is enabled).
+    This parameter can be used to enable/disable the centralized caching in NameNode. When centralized caching is disabled, NameNode will not process cache reports or store information about block cache locations on the cluster. Note that NameNode will continute to store the path based cache locations in the file-system metadata, even though it will not act on this information until the caching is enabled. The default value for this parameter is false (i.e. centralized caching is disabled).
 
 *   dfs.datanode.pmem.cache.recovery
 

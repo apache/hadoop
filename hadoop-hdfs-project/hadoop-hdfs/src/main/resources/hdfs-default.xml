@@ -2862,7 +2862,7 @@
 
 <property>
   <name>dfs.namenode.caching.enabled</name>
-  <value>true</value>
+  <value>false</value>
   <description>
     Set to true to enable block caching.  This flag enables the NameNode to
     maintain a mapping of cached blocks to DataNodes via processing DataNode
