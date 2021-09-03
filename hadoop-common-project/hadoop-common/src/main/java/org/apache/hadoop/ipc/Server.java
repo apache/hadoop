@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -184,8 +185,11 @@ public abstract class Server {
    * e.g., terse exception group for concise logging messages
    */
   static class ExceptionsHandler {
-    private volatile Set<String> terseExceptions = new HashSet<>();
-    private volatile Set<String> suppressedExceptions = new HashSet<>();
+
+    private final Set<String> terseExceptions =
+        ConcurrentHashMap.newKeySet();
+    private final Set<String> suppressedExceptions =
+        ConcurrentHashMap.newKeySet();
 
     /**
      * Add exception classes for which server won't log stack traces.
@@ -193,8 +197,10 @@ public abstract class Server {
      * @param exceptionClass exception classes 
      */
     void addTerseLoggingExceptions(Class<?>... exceptionClass) {
-      // Thread-safe replacement of terseExceptions.
-      terseExceptions = addExceptions(terseExceptions, exceptionClass);
+      terseExceptions.addAll(Arrays
+          .stream(exceptionClass)
+          .map(Class::toString)
+          .collect(Collectors.toSet()));
     }
 
     /**
@@ -203,9 +209,10 @@ public abstract class Server {
      * @param exceptionClass exception classes
      */
     void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {
-      // Thread-safe replacement of suppressedExceptions.
-      suppressedExceptions = addExceptions(
-          suppressedExceptions, exceptionClass);
+      suppressedExceptions.addAll(Arrays
+          .stream(exceptionClass)
+          .map(Class::toString)
+          .collect(Collectors.toSet()));
     }
 
     boolean isTerseLog(Class<?> t) {
@@ -216,23 +223,6 @@ public abstract class Server {
       return suppressedExceptions.contains(t.toString());
     }
 
-    /**
-     * Return a new set containing all the exceptions in exceptionsSet
-     * and exceptionClass.
-     * @return
-     */
-    private static Set<String> addExceptions(
-        final Set<String> exceptionsSet, Class<?>[] exceptionClass) {
-      // Make a copy of the exceptionSet for performing modification
-      final HashSet<String> newSet = new HashSet<>(exceptionsSet);
-
-      // Add all class names into the HashSet
-      for (Class<?> name : exceptionClass) {
-        newSet.add(name.toString());
-      }
-
-      return Collections.unmodifiableSet(newSet);
-    }
   }
 
   
