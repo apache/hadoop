@@ -16,35 +16,9 @@
  * limitations under the License.
  */
 
-#ifndef LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT
-#define LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT
+#include <gtest/gtest.h>
 
-#include <string>
-
-#include <boost/program_options.hpp>
-
-namespace hdfs::tools {
-namespace po = boost::program_options;
-
-class AllowSnapshot {
-public:
-  AllowSnapshot(int argc, char **argv);
-  virtual ~AllowSnapshot() = default;
-
-  [[nodiscard]] bool Initialize();
-  [[nodiscard]] bool ValidateConstraints() const { return argc_ > 1; }
-  static std::string GetDescription();
-  [[nodiscard]] bool Do();
-  [[nodiscard]] virtual bool HandleHelp() const;
-  [[nodiscard]] virtual bool HandlePath(const std::string &path) const;
-
-private:
-  int argc_;
-  char **argv_;
-  po::variables_map opt_val_;
-  po::options_description opt_desc_;
-  po::positional_options_description pos_opt_desc_;
-};
-
-} // namespace hdfs::tools
-#endif
+int main(int argc, char *argv[]) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
