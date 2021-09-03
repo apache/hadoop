@@ -75,6 +75,8 @@ public enum AbfsStatistic {
       "Total bytes uploaded."),
   BYTES_RECEIVED("bytes_received",
       "Total bytes received."),
+  BYTES_DISCARDED_AT_SOCKET_READ("bytes_discarded_at_socket_read",
+      "Total bytes discarded at socket read"),
   READ_THROTTLES("read_throttles",
       "Total number of times a read operation is throttled."),
   WRITE_THROTTLES("write_throttles",

@@ -43,6 +43,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
+import static java.util.Locale.ENGLISH;
+
 /**
  * Represents an HTTP operation.
  */
@@ -74,6 +76,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   // metrics
   private int bytesSent;
   private long bytesReceived;
+  private long bytesDiscarded;
 
   // optional trace enabled metrics
   private final boolean isTraceEnabled;
@@ -157,6 +160,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public long getBytesReceived() {
     return bytesReceived;
+  }
+
+  public long getBytesDiscarded() {
+    return bytesDiscarded;
   }
 
   public ListResultSchema getListResultSchema() {
@@ -336,7 +343,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  public void processResponse(final byte[] buffer, final int offset, final int length) throws IOException {
+  public void processResponse(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
 
     // get the response
     long startTime = 0;
@@ -369,58 +378,75 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       startTime = System.nanoTime();
     }
 
-    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
-      processStorageErrorResponse();
+    long totalBytesRead = 0;
+
+    try {
+      totalBytesRead = parseResponse(buffer, offset, length);
+    } finally {
       if (this.isTraceEnabled) {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
       }
-      this.bytesReceived = this.connection.getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
-    } else {
-      // consume the input stream to release resources
-      int totalBytesRead = 0;
+      this.bytesReceived = totalBytesRead;
+    }
+  }
 
+  public long parseResponse(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
+      processStorageErrorResponse();
+      return this.connection.getHeaderFieldLong(
+          HttpHeaderConfigurations.CONTENT_LENGTH, 0);
+    } else {
       try (InputStream stream = this.connection.getInputStream()) {
         if (isNullInputStream(stream)) {
-          return;
+          return 0;
         }
-        boolean endOfStream = false;
 
-        // this is a list operation and need to retrieve the data
-        // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+            && buffer == null) {
           parseListFilesResponse(stream);
         } else {
-          if (buffer != null) {
-            while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
-              if (bytesRead == -1) {
-                endOfStream = true;
-                break;
-              }
-              totalBytesRead += bytesRead;
-            }
-          }
-          if (!endOfStream && stream.read() != -1) {
-            // read and discard
-            int bytesRead = 0;
-            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-            while ((bytesRead = stream.read(b)) >= 0) {
-              totalBytesRead += bytesRead;
-            }
-          }
+          return readDataFromStream(stream, buffer, offset, length);
         }
-      } catch (IOException ex) {
-        LOG.warn("IO/Network error: {} {}: {}",
-            method, getMaskedUrl(), ex.getMessage());
-        LOG.debug("IO Error: ", ex);
-        throw ex;
-      } finally {
-        if (this.isTraceEnabled) {
-          this.recvResponseTimeMs += elapsedTimeMs(startTime);
-        }
-        this.bytesReceived = totalBytesRead;
       }
     }
+
+    return 0;
+  }
+
+  public long readDataFromStream(final InputStream stream,
+      final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    // consume the input stream to release resources
+    int totalBytesRead = 0;
+    boolean endOfStream = false;
+
+    if (buffer != null) {
+      while (totalBytesRead < length) {
+        int bytesRead = stream.read(buffer, offset + totalBytesRead,
+            length - totalBytesRead);
+        if (bytesRead == -1) {
+          endOfStream = true;
+          break;
+        }
+        totalBytesRead += bytesRead;
+      }
+    }
+
+    if (!endOfStream && stream.read() != -1) {
+      // read and discard
+      int bytesRead = 0;
+      byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
+      while ((bytesRead = stream.read(b)) >= 0) {
+        bytesDiscarded += bytesRead;
+      }
+
+      totalBytesRead += bytesDiscarded;
+    }
+
+    return totalBytesRead;
   }
 
   public void setRequestProperty(String key, String value) {
@@ -445,7 +471,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   /**
-   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * When the request fails, this function is used to parse the response
    * and extract the storageErrorCode and storageErrorMessage.  Any errors
    * encountered while attempting to process the error response are logged,
    * but otherwise ignored.
@@ -463,7 +489,13 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   private void processStorageErrorResponse() {
     try (InputStream stream = connection.getErrorStream()) {
-      if (stream == null) {
+      if ((stream == null)
+          // As per RFC7231, content type string can have uppercase letters
+          // and charset can be specified with or without space
+          // restricting the check to media type
+          || (!connection.getContentType()
+          .toLowerCase(ENGLISH)
+          .contains("application/json"))) {
         return;
       }
       JsonFactory jf = new JsonFactory();
