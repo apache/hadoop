@@ -781,7 +781,7 @@ public class RouterAdminServer extends AbstractService
   public void refreshCallQueue() throws IOException {
     LOG.info("Refreshing call queue.");
 
-    Configuration conf = new Configuration();
-    router.getRpcServer().getServer().refreshCallQueue(conf);
+    Configuration configuration = new Configuration();
+    router.getRpcServer().getServer().refreshCallQueue(configuration);
   }
 }

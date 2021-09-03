@@ -1263,15 +1263,15 @@ public class RouterAdmin extends Configured implements Tool {
   }
 
   /**
-   * Refresh Router's call Queue
+   * Refresh Router's call Queue.
    *
    * @throws IOException if the operation was not successful.
    */
   private int refreshCallQueue() throws IOException {
     Configuration conf = getConf();
     String hostport =  getConf().getTrimmed(
-            RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
-            RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
 
     // Create the client
     Class<?> xface = RefreshCallQueueProtocolPB.class;
@@ -1279,13 +1279,13 @@ public class RouterAdmin extends Configured implements Tool {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
-      RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB) RPC.getProxy(
-            xface, RPC.getProtocolVersion(xface), address, ugi, conf,
-            NetUtils.getDefaultSocketFactory(conf), 0);
+    RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB)RPC.getProxy(
+        xface, RPC.getProtocolVersion(xface), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), 0);
 
     int returnCode = -1;
     try (RefreshCallQueueProtocolClientSideTranslatorPB xlator =
-      new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
+        new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
       xlator.refreshCallQueue();
       System.out.println("Refresh call queue successful for " + hostport);
       returnCode = 0;
