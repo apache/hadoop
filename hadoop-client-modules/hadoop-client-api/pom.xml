@@ -223,6 +223,9 @@
                         <!-- Exclude config keys for Hadoop that look like package names -->
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
+                        <!-- Exclude lz4-java -->
+                        <exclude>net/jpountz/*</exclude>
+                        <exclude>net/jpountz/**/*</exclude>
                       </excludes>
                     </relocation>
                     <!-- okio declares a top level package instead of nested -->
