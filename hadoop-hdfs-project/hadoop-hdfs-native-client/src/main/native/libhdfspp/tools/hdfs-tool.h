@@ -16,31 +16,31 @@
  * limitations under the License.
  */
 
-#ifndef LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT
-#define LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT
-
-#include <string>
+#ifndef LIBHDFSPP_TOOLS_HDFS_TOOL
+#define LIBHDFSPP_TOOLS_HDFS_TOOL
 
 #include <boost/program_options.hpp>
 
-#include "hdfs-tool.h"
-
 namespace hdfs::tools {
-class AllowSnapshot : public HdfsTool {
+namespace po = boost::program_options;
+
+class HdfsTool {
 public:
-  AllowSnapshot(int argc, char **argv);
-  ~AllowSnapshot() override = default;
+  HdfsTool(const int argc, char **argv) : argc_{argc}, argv_{argv} {}
+  virtual ~HdfsTool();
 
-  [[nodiscard]] bool Initialize() override;
-  [[nodiscard]] bool ValidateConstraints() const override { return argc_ > 1; }
-  [[nodiscard]] std::string GetDescription() const override;
-  [[nodiscard]] bool Do() override;
-  [[nodiscard]] bool HandleHelp() const override;
-  [[nodiscard]] virtual bool HandlePath(const std::string &path) const;
+  [[nodiscard]] virtual bool Initialize() = 0;
+  [[nodiscard]] virtual bool ValidateConstraints() const = 0;
+  [[nodiscard]] virtual std::string GetDescription() const = 0;
+  [[nodiscard]] virtual bool Do() = 0;
+  [[nodiscard]] virtual bool HandleHelp() const = 0;
 
-private:
-  po::positional_options_description pos_opt_desc_;
+protected:
+  int argc_;
+  char **argv_;
+  po::variables_map opt_val_;
+  po::options_description opt_desc_;
 };
-
 } // namespace hdfs::tools
+
 #endif

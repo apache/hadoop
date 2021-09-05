@@ -94,7 +94,10 @@ target_link_libraries(hdfs_deleteSnapshot tools_common hdfspp_static)
 add_executable(hdfs_tail hdfs_tail.cc)
 target_link_libraries(hdfs_tail tools_common hdfspp_static)
 
-add_library(allow_snapShot_lib STATIC hdfs-allow-snapshot/hdfs-allow-snapshot.cc)
+add_library(hdfs_tool_obj OBJECT hdfs-tool.cc)
+target_include_directories(hdfs_tool_obj PRIVATE ../tools)
+
+add_library(allow_snapShot_lib STATIC  $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-allow-snapshot/hdfs-allow-snapshot.cc)
 target_include_directories(allow_snapShot_lib PRIVATE ../tools allow-snapshot ${Boost_INCLUDE_DIRS})
 target_link_libraries(allow_snapShot_lib PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
 

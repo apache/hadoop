@@ -30,7 +30,7 @@
 
 namespace hdfs::tools {
 AllowSnapshot::AllowSnapshot(const int argc, char **argv)
-    : argc_{argc}, argv_{argv}, opt_desc_{"hdfs_allowSnapshot"} {}
+    : HdfsTool(argc, argv) {}
 
 bool AllowSnapshot::Initialize() {
   opt_desc_.add_options()("help,h", "Show the help for hdfs_allowSnapshot")(
@@ -48,7 +48,7 @@ bool AllowSnapshot::Initialize() {
   return true;
 }
 
-std::string AllowSnapshot::GetDescription() {
+std::string AllowSnapshot::GetDescription() const {
   std::stringstream desc;
   desc << "Usage: hdfs_allowSnapshot [OPTION] PATH" << std::endl
        << std::endl

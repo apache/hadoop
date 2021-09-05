@@ -17,6 +17,6 @@
 #
 
 add_executable(hdfs_allow_snapshot_test hdfs-allow-snapshot-mock.cc hdfs-tools-test.cc main.cc)
-target_include_directories(hdfs_allow_snapshot_test PRIVATE ../tools ../../tools/hdfs-allow-snapshot)
+target_include_directories(hdfs_allow_snapshot_test PRIVATE ../tools ../../tools ../../tools/hdfs-allow-snapshot)
 target_link_libraries(hdfs_allow_snapshot_test PRIVATE gmock_main allow_snapShot_lib)
 add_test(hdfs_allow_snapshot_test hdfs_allow_snapshot_test)

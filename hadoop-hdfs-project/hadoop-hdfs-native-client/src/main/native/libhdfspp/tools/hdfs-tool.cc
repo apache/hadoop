@@ -16,31 +16,6 @@
  * limitations under the License.
  */
 
-#ifndef LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT
-#define LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT
-
-#include <string>
-
-#include <boost/program_options.hpp>
-
 #include "hdfs-tool.h"
 
-namespace hdfs::tools {
-class AllowSnapshot : public HdfsTool {
-public:
-  AllowSnapshot(int argc, char **argv);
-  ~AllowSnapshot() override = default;
-
-  [[nodiscard]] bool Initialize() override;
-  [[nodiscard]] bool ValidateConstraints() const override { return argc_ > 1; }
-  [[nodiscard]] std::string GetDescription() const override;
-  [[nodiscard]] bool Do() override;
-  [[nodiscard]] bool HandleHelp() const override;
-  [[nodiscard]] virtual bool HandlePath(const std::string &path) const;
-
-private:
-  po::positional_options_description pos_opt_desc_;
-};
-
-} // namespace hdfs::tools
-#endif
+hdfs::tools::HdfsTool::~HdfsTool() {}
