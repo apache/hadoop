@@ -26,6 +26,6 @@
 bool HdfsAllowSnapshotMock::HandleHelp() const { return true; }
 
 bool HdfsAllowSnapshotMock::HandlePath(const std::string &path) const {
-  EXPECT_STREQ(path.c_str(), "a/b/c");
+  EXPECT_STREQ(path.c_str(), "a/b/c") << "Expecting the path a/b/c here";
   return true;
 }

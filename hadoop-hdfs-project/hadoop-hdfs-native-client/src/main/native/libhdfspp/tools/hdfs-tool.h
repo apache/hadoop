@@ -36,8 +36,8 @@ public:
   [[nodiscard]] virtual bool HandleHelp() const = 0;
 
 protected:
-  int argc_;
-  char **argv_;
+  int argc_{0};
+  char **argv_{nullptr};
   po::variables_map opt_val_;
   po::options_description opt_desc_;
 };

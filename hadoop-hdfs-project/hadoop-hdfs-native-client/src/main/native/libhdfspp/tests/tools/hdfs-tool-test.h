@@ -17,13 +17,29 @@
   under the License.
 */
 
+#ifndef LIBHDFSPP_TOOLS_HDFS_TOOL_TEST
+#define LIBHDFSPP_TOOLS_HDFS_TOOL_TEST
+
+#include <functional>
+
 #include <gtest/gtest.h>
 
-#include "hdfs-allow-snapshot-mock.h"
+#include "hdfs-tool.h"
 
-TEST(HdfsTools, AllowSnapshotPositiveTest) {
-  constexpr auto argc = 2;
-  char *argv[] = {"hdfs_allow_Snapshot", "a/b/c"};
-  HdfsAllowSnapshotMock allow_snapshot(argc, argv);
-  EXPECT_TRUE(allow_snapshot.Do());
+class HdfsToolBasicTest
+    : public testing::TestWithParam<std::function<hdfs::tools::HdfsTool *()>> {
+protected:
+  void SetUp() override { hdfs_tool_ = GetParam()(); }
+
+  hdfs::tools::HdfsTool *hdfs_tool_{nullptr};
+};
+
+TEST_P(HdfsToolBasicTest, RunTool) { EXPECT_TRUE(this->hdfs_tool_->Do()); }
+
+class HdfsToolNegativeTest : public HdfsToolBasicTest {};
+
+TEST_P(HdfsToolNegativeTest, RunTool) {
+  EXPECT_ANY_THROW({ std::ignore = this->hdfs_tool_->Do(); });
 }
+
+#endif

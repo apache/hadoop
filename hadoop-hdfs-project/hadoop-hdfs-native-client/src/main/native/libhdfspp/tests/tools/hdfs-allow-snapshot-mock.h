@@ -27,6 +27,7 @@ class HdfsAllowSnapshotMock : public hdfs::tools::AllowSnapshot {
 public:
   HdfsAllowSnapshotMock(const int argc, char **argv)
       : AllowSnapshot(argc, argv) {}
+  ~HdfsAllowSnapshotMock() override = default;
 
   [[nodiscard]] bool HandleHelp() const override;
   [[nodiscard]] bool HandlePath(const std::string &path) const override;
