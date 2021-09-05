@@ -21,6 +21,7 @@
 #define LIBHDFSPP_TOOLS_HDFS_TOOL_TEST
 
 #include <functional>
+#include <memory>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -28,11 +29,12 @@
 #include "hdfs-tool.h"
 
 class HdfsToolBasicTest
-    : public testing::TestWithParam<std::function<hdfs::tools::HdfsTool *()>> {
+    : public testing::TestWithParam<
+          std::function<std::unique_ptr<hdfs::tools::HdfsTool>()>> {
 protected:
   void SetUp() override { hdfs_tool_ = GetParam()(); }
 
-  hdfs::tools::HdfsTool *hdfs_tool_{nullptr};
+  std::unique_ptr<hdfs::tools::HdfsTool> hdfs_tool_{nullptr};
 };
 
 TEST_P(HdfsToolBasicTest, RunTool) { EXPECT_TRUE(this->hdfs_tool_->Do()); }
@@ -43,32 +45,32 @@ TEST_P(HdfsToolNegativeTest, RunTool) {
   EXPECT_ANY_THROW({ std::ignore = this->hdfs_tool_->Do(); });
 }
 
-template <class T> hdfs::tools::HdfsTool *PassAPath() {
+template <class T> std::unique_ptr<hdfs::tools::HdfsTool> PassAPath() {
   constexpr auto argc = 2;
-  std::string exe("hdfs_tool_name");
-  std::string arg1("a/b/c");
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("a/b/c");
 
   static char *argv[] = {exe.data(), arg1.data()};
-  return new T(argc, argv);
+  return std::make_unique<T>(argc, argv);
 }
 
-template <class T> hdfs::tools::HdfsTool *CallHelp() {
+template <class T> std::unique_ptr<hdfs::tools::HdfsTool> CallHelp() {
   constexpr auto argc = 2;
-  std::string exe("hdfs_tool_name");
-  std::string arg1("-h");
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-h");
 
   static char *argv[] = {exe.data(), arg1.data()};
-  return new T(argc, argv);
+  return std::make_unique<T>(argc, argv);
 }
 
-template <class T> hdfs::tools::HdfsTool *Pass2Paths() {
+template <class T> std::unique_ptr<hdfs::tools::HdfsTool> Pass2Paths() {
   constexpr auto argc = 3;
-  std::string exe("hdfs_tool_name");
-  std::string arg1("a/b/c");
-  std::string arg2("d/e/f");
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("a/b/c");
+  static std::string arg2("d/e/f");
 
   static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
-  return new T(argc, argv);
+  return std::make_unique<T>(argc, argv);
 }
 
 #endif
