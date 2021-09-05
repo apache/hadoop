@@ -131,7 +131,7 @@ class BlockPoolSlice {
    * Only tests can use true value to bypass processing RBW and Finalized
    * replicas.
    */
-  private static boolean disableAddingFinalizedReplicaForTest = false;
+  private static boolean disableProcessingReplicaForTest = false;
 
   /**
    * Only to be used by "tests" and not by "source code". The intention of this
@@ -148,7 +148,7 @@ class BlockPoolSlice {
    */
   @VisibleForTesting
   public static void disableFinalizedReplicaAdditionForTest(boolean newVal) {
-    disableAddingFinalizedReplicaForTest = newVal;
+    disableProcessingReplicaForTest = newVal;
   }
 
   /**
@@ -466,7 +466,7 @@ class BlockPoolSlice {
     }
 
     boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
-    if (!success && !disableAddingFinalizedReplicaForTest) {
+    if (!success && !disableProcessingReplicaForTest) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
       Queue<RecursiveAction> subTaskQueue =
