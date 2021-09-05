@@ -22,8 +22,8 @@
 #include "hdfs-allow-snapshot-mock.h"
 
 TEST(HdfsTools, AllowSnapshotPositiveTest) {
-  auto argc = 2;
+  constexpr auto argc = 2;
   char *argv[] = {"hdfs_allow_Snapshot", "a/b/c"};
-  HdfsAllowSnapshotMock allowSnapshot(argc, argv);
-  EXPECT_TRUE(allowSnapshot.Do());
+  HdfsAllowSnapshotMock allow_snapshot(argc, argv);
+  EXPECT_TRUE(allow_snapshot.Do());
 }
