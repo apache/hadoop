@@ -6537,7 +6537,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (node.getUpgradeDomain() != null) {
         innerinfo.put("upgradeDomain", node.getUpgradeDomain());
       }
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo.build());
+      info.put(node.getXferAddrWithHostname(), innerinfo.build());
     }
     return JSON.toString(info);
   }
@@ -6560,7 +6560,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
           .build();
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
+      info.put(node.getXferAddrWithHostname(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -6588,7 +6588,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
           node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
+      info.put(node.getXferAddrWithHostname(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -6616,7 +6616,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
               node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
-      nodesMap.put(node.getHostName() + ":" + node.getXferPort(), attrMap);
+      nodesMap.put(node.getXferAddrWithHostname(), attrMap);
     }
     return JSON.toString(nodesMap);
   }
