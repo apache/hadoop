@@ -127,6 +127,31 @@ class BlockPoolSlice {
   private final GetSpaceUsed dfsUsage;
 
   /**
+   * Important only for tests. For source code, the value must always be false.
+   * Only tests can use true value to bypass processing RBW and Finalized
+   * replicas.
+   */
+  private static boolean disableAddingFinalizedReplicaForTest = false;
+
+  /**
+   * Only to be used by "tests" and not by "source code". The intention of this
+   * is to enable/disable adding AddReplicaProcessor to the addReplicaThreadPool
+   * fork-join pool when reading replicas from cache is not successful
+   * (typically when Datanode is just started).
+   * By disabling flag 'disableAddingFinalizedReplicaForTest' (i.e. true value),
+   * we will never let AddReplicaProcessor take care of deleting duplicate
+   * Finalized or RBW replica if one exists, and this is often useful for
+   * some tests.
+   *
+   * @param newVal true if test needs to disable processing duplicate Finalized
+   *     or RBW replicas.
+   */
+  @VisibleForTesting
+  public static void disableFinalizedReplicaAdditionForTest(boolean newVal) {
+    disableAddingFinalizedReplicaForTest = newVal;
+  }
+
+  /**
    * Create a blook pool slice
    * @param bpid Block pool Id
    * @param volume {@link FsVolumeImpl} to which this BlockPool belongs to
@@ -440,8 +465,8 @@ class BlockPoolSlice {
           "Recovered " + numRecovered + " replicas from " + lazypersistDir);
     }
 
-    boolean  success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
-    if (!success) {
+    boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
+    if (!success && !disableAddingFinalizedReplicaForTest) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
       Queue<RecursiveAction> subTaskQueue =

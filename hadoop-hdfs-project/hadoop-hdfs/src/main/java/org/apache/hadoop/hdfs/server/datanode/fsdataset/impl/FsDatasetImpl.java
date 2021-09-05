@@ -1050,8 +1050,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       File dstFile)
       throws IOException {
     // Create parent folder if not exists.
-    srcReplica.getFileIoProvider()
+    boolean isDirCreated = srcReplica.getFileIoProvider()
         .mkdirs(srcReplica.getVolume(), dstFile.getParentFile());
+    LOG.trace("Dir creation of {} on volume {} {}", dstFile.getParentFile(),
+        srcReplica.getVolume(), isDirCreated ? "succeeded" : "failed");
     try {
       HardLink.createHardLink(
           new File(srcReplica.getBlockURI()), dstFile);
@@ -1068,9 +1070,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + srcReplica + " metadata to "
           + dstMeta, e);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
-    }
+    LOG.info("Linked {} to {} . Dest meta file: {}",
+        srcReplica.getBlockURI(), dstFile, dstMeta);
     return new File[]{dstMeta, dstFile};
   }
 

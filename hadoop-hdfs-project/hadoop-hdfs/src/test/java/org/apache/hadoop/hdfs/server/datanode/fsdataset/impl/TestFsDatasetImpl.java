@@ -50,10 +50,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -78,7 +76,9 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -124,7 +124,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TestFsDatasetImpl {
-  Logger LOG = LoggerFactory.getLogger(TestFsDatasetImpl.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestFsDatasetImpl.class);
+
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
   private String replicaCacheRootDir = BASE_DIR + Path.SEPARATOR + "cache";
@@ -132,16 +135,15 @@ public class TestFsDatasetImpl {
   private static final String CLUSTER_ID = "cluser-id";
   private static final String[] BLOCK_POOL_IDS = {"bpid-0", "bpid-1"};
 
-  // Use to generate storageUuid
-  private static final DataStorage dsForStorageUuid = new DataStorage(
-      new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE));
-
   private Configuration conf;
   private DataNode datanode;
   private DataStorage storage;
   private FsDatasetImpl dataset;
   
   private final static String BLOCKPOOL = "BP-TEST";
+
+  @Rule
+  public TestName name = new TestName();
 
   private static Storage.StorageDirectory createStorageDirectory(File root,
       Configuration conf)
@@ -228,6 +230,7 @@ public class TestFsDatasetImpl {
     assertEquals(NUM_INIT_VOLUMES, getNumVolumes());
     assertEquals(0, dataset.getNumFailedVolumes());
   }
+
   @Test(timeout=10000)
   public void testReadLockEnabledByDefault()
       throws Exception {
@@ -1132,7 +1135,7 @@ public class TestFsDatasetImpl {
       Assert.assertEquals(0, cluster.getNamesystem().getCorruptReplicaBlocks());
 
       FileSystem fs = cluster.getFileSystem();
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       DFSTestUtil.createFile(fs, filePath, 1, (short) 1, 0);
 
       block = DFSTestUtil.getFirstBlock(fs, filePath);
@@ -1179,7 +1182,7 @@ public class TestFsDatasetImpl {
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       long fileLen = 100;
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
 
@@ -1227,7 +1230,7 @@ public class TestFsDatasetImpl {
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
 
@@ -1266,7 +1269,7 @@ public class TestFsDatasetImpl {
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       long fileLen = 100;
 
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
@@ -1307,7 +1310,7 @@ public class TestFsDatasetImpl {
    * DiskScanner should clean up the hardlink correctly.
    */
   @Test(timeout = 30000)
-  public void testDnRestartWithHardLink() {
+  public void testDnRestartWithHardLink() throws Exception {
     MiniDFSCluster cluster = null;
     try {
       conf.setBoolean(DFSConfigKeys
@@ -1320,10 +1323,11 @@ public class TestFsDatasetImpl {
               new StorageType[]{StorageType.DISK, StorageType.ARCHIVE})
           .storagesPerDatanode(2)
           .build();
+      cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       long fileLen = 100;
 
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
@@ -1331,11 +1335,34 @@ public class TestFsDatasetImpl {
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
 
       final ReplicaInfo oldReplicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      StorageType oldStorageType = oldReplicaInfo.getVolume().getStorageType();
 
       fsDataSetImpl.finalizeNewReplica(
           createNewReplicaObjWithLink(block, fsDataSetImpl), block);
 
       ReplicaInfo newReplicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      StorageType newStorageType = newReplicaInfo.getVolume().getStorageType();
+      assertEquals(StorageType.DISK, oldStorageType);
+      assertEquals(StorageType.ARCHIVE, newStorageType);
+
+      // Why do we need to do this?
+      // When Datanode comes up, BPServiceActors handshakes to Namenode and
+      // tries to initialize Block pool and in the process, it tries to get
+      // VolumeMap using BlockPoolSlice instance. While doing so, reading
+      // replicas from cache fails and hence, the thread tries to add
+      // Finalized and RBW replicas to addReplicaThreadPool fork-join pool
+      // in order to build the map. This process also tries to identify if
+      // there exists any duplicate replica. For this particular test, sometimes
+      // this process can detect duplicate replica on /data2 while processing
+      // finalized replica of /data1. Hence, before we can confirm
+      // newReplicaInfo.getBlockURI() exists, finalized replica on /data2
+      // might get deleted (rare and flaky case). Although the probability for
+      // the thread processing the identification and deletion of duplicate
+      // finalized replica to be faster than main thread is less, it cannot be
+      // avoided. Hence, we disable adding Finalized and RBW replicas to
+      // addReplicaThreadPool in BlockPoolSlice here and re-enable it only after
+      // we confirm the existence of newReplicaInfo on "/data2" ARCHIVE storage.
+      BlockPoolSlice.disableFinalizedReplicaAdditionForTest(true);
 
       cluster.restartDataNode(0);
       cluster.waitDatanodeFullyStarted(cluster.getDataNodes().get(0), 60000);
@@ -1344,26 +1371,30 @@ public class TestFsDatasetImpl {
       assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
       assertTrue(Files.exists(Paths.get(oldReplicaInfo.getBlockURI())));
 
+      BlockPoolSlice.disableFinalizedReplicaAdditionForTest(false);
+
       DirectoryScanner scanner = new DirectoryScanner(
           cluster.getDataNodes().get(0).getFSDataset(), conf);
       scanner.start();
       scanner.run();
 
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override public Boolean get() {
-          return !Files.exists(Paths.get(oldReplicaInfo.getBlockURI()));
-        }
-      }, 100, 10000);
+      GenericTestUtils.waitFor(
+          () -> !Files.exists(Paths.get(oldReplicaInfo.getBlockURI())),
+          100, 10000, "Old replica is not deleted by DirScanner even after "
+              + "10s of waiting has elapsed");
       assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
 
       validateFileLen(fs, fileLen, filePath);
 
-    } catch (Exception ex) {
-      LOG.info("Exception in testDnRestartWithHardLink ", ex);
-      fail("Exception while testing testDnRestartWithHardLink ");
+      // Additional tests to ensure latest replica gets deleted after file
+      // deletion.
+      fs.delete(filePath, false);
+      GenericTestUtils.waitFor(
+          () -> !Files.exists(Paths.get(newReplicaInfo.getBlockURI())),
+          100, 10000);
     } finally {
-      if (cluster.isClusterUp()) {
-        cluster.shutdown();
+      if (cluster != null && cluster.isClusterUp()) {
+        cluster.shutdown(true, true);
       }
     }
   }
@@ -1384,7 +1415,7 @@ public class TestFsDatasetImpl {
           .build();
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       long fileLen = 100;
 
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
@@ -1432,7 +1463,7 @@ public class TestFsDatasetImpl {
           .build();
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
-      Path filePath = new Path("testData");
+      Path filePath = new Path(name.getMethodName());
       long fileLen = 100;
 
       ExtendedBlock block = createTestFile(fs, fileLen, filePath);
