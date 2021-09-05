@@ -27,32 +27,8 @@
 #include "hdfs-tool-test.h"
 
 INSTANTIATE_TEST_SUITE_P(HdfsAllowSnapshot, HdfsToolBasicTest,
-                         testing::Values(
-                             []() -> hdfs::tools::HdfsTool * {
-                               constexpr auto argc = 2;
-                               std::string exe("hdwfs_allow_Snapshot");
-                               std::string arg1("a/b/c");
+                         testing::Values(PassAPath<HdfsAllowSnapshotMock>,
+                                         CallHelp<HdfsAllowSnapshotMock>));
 
-                               static char *argv[] = {exe.data(), arg1.data()};
-                               return new HdfsAllowSnapshotMock(argc, argv);
-                             },
-                             []() -> hdfs::tools::HdfsTool * {
-                               constexpr auto argc = 2;
-                               std::string exe("hdwfs_allow_Snapshot");
-                               std::string arg1("-h");
-
-                               static char *argv[] = {exe.data(), arg1.data()};
-                               return new HdfsAllowSnapshotMock(argc, argv);
-                             }));
-
-INSTANTIATE_TEST_SUITE_P(
-    HdfsAllowSnapshot, HdfsToolNegativeTest,
-    testing::Values([]() -> hdfs::tools::HdfsTool * {
-      constexpr auto argc = 3;
-      std::string exe("hdwfs_allow_Snapshot");
-      std::string arg1("a/b/c");
-      std::string arg2("d/e/f");
-
-      static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
-      return new HdfsAllowSnapshotMock(argc, argv);
-    }));
+INSTANTIATE_TEST_SUITE_P(HdfsAllowSnapshot, HdfsToolNegativeTest,
+                         testing::Values(Pass2Paths<HdfsAllowSnapshotMock>));

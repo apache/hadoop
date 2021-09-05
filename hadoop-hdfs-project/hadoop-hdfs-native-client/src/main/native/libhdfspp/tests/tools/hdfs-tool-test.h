@@ -21,6 +21,7 @@
 #define LIBHDFSPP_TOOLS_HDFS_TOOL_TEST
 
 #include <functional>
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -40,6 +41,34 @@ class HdfsToolNegativeTest : public HdfsToolBasicTest {};
 
 TEST_P(HdfsToolNegativeTest, RunTool) {
   EXPECT_ANY_THROW({ std::ignore = this->hdfs_tool_->Do(); });
+}
+
+template <class T> hdfs::tools::HdfsTool *PassAPath() {
+  constexpr auto argc = 2;
+  std::string exe("hdfs_tool_name");
+  std::string arg1("a/b/c");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+  return new T(argc, argv);
+}
+
+template <class T> hdfs::tools::HdfsTool *CallHelp() {
+  constexpr auto argc = 2;
+  std::string exe("hdfs_tool_name");
+  std::string arg1("-h");
+
+  static char *argv[] = {exe.data(), arg1.data()};
+  return new T(argc, argv);
+}
+
+template <class T> hdfs::tools::HdfsTool *Pass2Paths() {
+  constexpr auto argc = 3;
+  std::string exe("hdfs_tool_name");
+  std::string arg1("a/b/c");
+  std::string arg2("d/e/f");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
+  return new T(argc, argv);
 }
 
 #endif
