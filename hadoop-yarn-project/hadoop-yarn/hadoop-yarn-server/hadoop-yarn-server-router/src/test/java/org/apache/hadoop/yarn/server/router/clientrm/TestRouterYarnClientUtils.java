@@ -133,20 +133,20 @@ public class TestRouterYarnClientUtils {
   public void testMergeApplicationsNullResourceUsage() {
     ApplicationId appId = ApplicationId.newInstance(1234, 1);
     ApplicationReport appReport = ApplicationReport.newInstance(
-            appId, ApplicationAttemptId.newInstance(appId, 1),
-            "user", "queue", "app1", "host",
-            124, null, YarnApplicationState.RUNNING,
-            "diagnostics", "url", 0, 0,
-            0, FinalApplicationStatus.SUCCEEDED, null, "N/A",
-            0.53789f, "YARN", null, null, false, null, null, null);
+        appId, ApplicationAttemptId.newInstance(appId, 1),
+        "user", "queue", "app1", "host",
+        124, null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0,
+        0, FinalApplicationStatus.SUCCEEDED, null, "N/A",
+        0.53789f, "YARN", null, null, false, null, null, null);
 
     ApplicationReport uamAppReport = ApplicationReport.newInstance(
-            appId, ApplicationAttemptId.newInstance(appId, 1),
-            "user", "queue", "app1", "host",
-            124, null, YarnApplicationState.RUNNING,
-            "diagnostics", "url", 0, 0,
-            0, FinalApplicationStatus.SUCCEEDED, null, "N/A",
-            0.53789f, "YARN", null, null, true, null, null, null);
+        appId, ApplicationAttemptId.newInstance(appId, 1),
+        "user", "queue", "app1", "host",
+        124, null, YarnApplicationState.RUNNING,
+        "diagnostics", "url", 0, 0,
+        0, FinalApplicationStatus.SUCCEEDED, null, "N/A",
+        0.53789f, "YARN", null, null, true, null, null, null);
 
 
     ArrayList<GetApplicationsResponse> responses = new ArrayList<>();
@@ -156,15 +156,14 @@ public class TestRouterYarnClientUtils {
     responses.add(GetApplicationsResponse.newInstance(applications));
 
     GetApplicationsResponse result = RouterYarnClientUtils.
-            mergeApplications(responses, false);
+        mergeApplications(responses, false);
     Assert.assertNotNull(result);
     Assert.assertEquals(1, result.getApplicationList().size());
 
     String appName = result.getApplicationList().get(0).getName();
 
     // Check that no Unmanaged applications are added to the result
-    Assert.assertEquals(false,
-            appName.contains(UnmanagedApplicationManager.APP_NAME));
+    Assert.assertFalse(appName.contains(UnmanagedApplicationManager.APP_NAME));
   }
 
   /**
