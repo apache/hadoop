@@ -146,32 +146,11 @@ public class TestBlockTokenWithShortCircuitRead {
         Token<BlockTokenIdentifier> myToken = lblock.getBlockToken();
         assertFalse(SecurityTestUtil.isBlockTokenExpired(myToken));
 
-        // wait token expiration
-        while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
-          try {
-            Thread.sleep(200);
-          } catch (InterruptedException ignored) {
-          }
-        }
+        // check the number of slot objects
+        checkSlotsAfterSSRWithTokenExpiration(cache, datanode, in, myToken);
 
-        // short circuit read after token expiration
-        in.seek(0);
-        readFile(in);
-        checkShmAndSlots(cache, datanode, 1);
-
-        // wait token expiration again
-        while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
-          try {
-            Thread.sleep(200);
-          } catch (InterruptedException ignored) {
-          }
-        }
-
-        // short circuit read after token expiration again
-        in.seek(0);
-        readFile(in);
-        // slotCnt should not be increased
-        checkShmAndSlots(cache, datanode, 1);
+        // check once more. the number of slot objects should not be changed
+        checkSlotsAfterSSRWithTokenExpiration(cache, datanode, in, myToken);
       }
     } finally {
       if (cluster != null) {
@@ -179,6 +158,24 @@ public class TestBlockTokenWithShortCircuitRead {
       }
       sockDir.close();
     }
+  }
+
+  private void checkSlotsAfterSSRWithTokenExpiration(
+      ShortCircuitCache cache, DatanodeInfo datanode, FSDataInputStream in,
+      Token<BlockTokenIdentifier> myToken) throws IOException {
+    // wait token expiration
+    while (!SecurityTestUtil.isBlockTokenExpired(myToken)) {
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException ignored) {
+      }
+    }
+
+    // short circuit read after token expiration
+    in.seek(0);
+    readFile(in);
+
+    checkShmAndSlots(cache, datanode, 1);
   }
 
   private void checkShmAndSlots(ShortCircuitCache cache,
