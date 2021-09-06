@@ -688,10 +688,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return orderingPolicy;
   }
 
-    public void setUserLimit(String queue, float userLimit) {
+  public void setUserLimit(String queue, float userLimit) {
     setFloat(getQueuePrefix(queue) + USER_LIMIT, userLimit);
     LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
         getQueuePrefix(queue), getUserLimit(queue));
+  }
+
+  public void setDefaultUserLimit(float defaultUserLimit) {
+    setFloat(PREFIX + USER_LIMIT, defaultUserLimit);
   }
 
   public float getUserLimitFactor(String queue) {
@@ -704,6 +708,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setUserLimitFactor(String queue, float userLimitFactor) {
     setFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR, userLimitFactor);
+  }
+
+  public void setDefaultUserLimitFactor(float defaultUserLimitFactor) {
+    setFloat(PREFIX + USER_LIMIT_FACTOR, defaultUserLimitFactor);
   }
 
   public QueueState getConfiguredState(String queue) {
