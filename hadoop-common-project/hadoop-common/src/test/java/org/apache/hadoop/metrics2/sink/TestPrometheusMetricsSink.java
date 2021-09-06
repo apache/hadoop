@@ -220,18 +220,20 @@ public class TestPrometheusMetricsSink {
    */
   @Metrics(about = "Test Metrics", context = "dfs")
   private static class TestMetrics {
-    String id;
+    private String id;
 
-    public TestMetrics() {
+    TestMetrics() {
       this("1");
     }
 
-    public TestMetrics(String id) {
+    TestMetrics(String id) {
       this.id = id;
     }
 
     @Metric(value={"testTag", ""}, type=Type.TAG)
-    String testTag1() { return "testTagValue" + id; }
+    String testTag1() {
+      return "testTagValue" + id;
+    }
 
     @Metric
     private MutableCounterLong numBucketCreateFails;

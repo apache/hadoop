@@ -43,8 +43,10 @@ public class PrometheusMetricsSink implements MetricsSink {
   /**
    * Cached output lines for each metrics.
    */
-  private Map<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetrics = new ConcurrentHashMap<>();
-  private Map<String, Map<Collection<MetricsTag>, AbstractMetric>> nextPromMetrics = new ConcurrentHashMap<>();
+  private Map<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetrics =
+      new ConcurrentHashMap<>();
+  private Map<String, Map<Collection<MetricsTag>, AbstractMetric>> nextPromMetrics =
+      new ConcurrentHashMap<>();
 
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
@@ -63,8 +65,8 @@ public class PrometheusMetricsSink implements MetricsSink {
             metricsRecord.name(), metric.name());
 
         nextPromMetrics.computeIfAbsent(key,
-          any -> new ConcurrentHashMap<>())
-          .put(metricsRecord.tags(), metric);
+            any -> new ConcurrentHashMap<>())
+            .put(metricsRecord.tags(), metric);
       }
     }
   }
@@ -93,7 +95,8 @@ public class PrometheusMetricsSink implements MetricsSink {
   }
 
   public void writeMetrics(Writer writer) throws IOException {
-    for (Map.Entry<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetric : promMetrics.entrySet()) {
+    for (Map.Entry<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetric :
+        promMetrics.entrySet()) {
       AbstractMetric firstMetric = promMetric.getValue().values().iterator().next();
 
       StringBuilder builder = new StringBuilder();
@@ -108,9 +111,10 @@ public class PrometheusMetricsSink implements MetricsSink {
           .append(firstMetric.type().toString().toLowerCase())
           .append("\n");
 
-      for (Map.Entry<Collection<MetricsTag>, AbstractMetric> metric : promMetric.getValue().entrySet()) {
+      for (Map.Entry<Collection<MetricsTag>, AbstractMetric> metric :
+          promMetric.getValue().entrySet()) {
         builder.append(promMetric.getKey())
-          .append("{");
+            .append("{");
 
         String sep = "";
         for (MetricsTag tag : metric.getKey()) {
