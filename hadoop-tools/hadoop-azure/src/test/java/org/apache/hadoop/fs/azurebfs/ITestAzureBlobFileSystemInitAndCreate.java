@@ -19,9 +19,16 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
@@ -48,5 +55,40 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
   public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
     final AzureBlobFileSystem fs = this.createFileSystem();
     FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+  }
+
+  @Test
+  public void ensureFilesystemWillBeCreatedIfCreationConfigIsSet() throws Exception {
+    final AzureBlobFileSystem fs = createFileSystem();
+    Configuration config = getRawConfiguration();
+    fs.initialize(FileSystem.getDefaultUri(config), config);
+
+    // Make sure createFileSystemIfNotExists is working as intended.
+    final MockAzureBlobFileSystemStore store = new MockAzureBlobFileSystemStore(config);
+    fs.setAbfsStore(store);
+    fs.createFileSystemIfNotExist(getTestTracingContext(fs, true));
+    assert(store.isCreateFileSystemCalled);
+  }
+
+  /**
+   * Mock AzureBlobFileSystemStore to simulate container already exists
+   * exception when calling createFileSystem command.
+   */
+  static class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
+    boolean isCreateFileSystemCalled = false;
+
+    public MockAzureBlobFileSystemStore(Configuration config) throws IOException {
+      super(FileSystem.getDefaultUri(config), true, config, null);
+    }
+
+    @Override
+    public void createFilesystem(TracingContext tracingContext) throws AzureBlobFileSystemException {
+      isCreateFileSystemCalled = true;
+      // Make sure createFileSystemIfNotExists works when the filesystem/container already exists.
+      throw new AbfsRestOperationException(
+          AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS.getStatusCode(),
+          AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS.getErrorCode(),
+          "This container is already exists", null);
+    }
   }
 }

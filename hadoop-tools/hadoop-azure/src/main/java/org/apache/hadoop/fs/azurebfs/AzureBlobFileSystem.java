@@ -150,13 +150,7 @@ public class AzureBlobFileSystem extends FileSystem
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
-      if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
-        try {
-          this.createFileSystem(tracingContext);
-        } catch (AzureBlobFileSystemException ex) {
-          checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
-        }
-      }
+      this.createFileSystemIfNotExist(tracingContext);
     }
 
     LOG.trace("Initiate check for delegation token manager");
@@ -1409,6 +1403,30 @@ public class AzureBlobFileSystem extends FileSystem
   @VisibleForTesting
   AzureBlobFileSystemStore getAbfsStore() {
     return abfsStore;
+  }
+
+  @VisibleForTesting
+  void setAbfsStore(AzureBlobFileSystemStore abfsStore) {
+    this.abfsStore = abfsStore;
+  }
+
+  @VisibleForTesting
+  void createFileSystemIfNotExist(TracingContext tracingContext) throws IOException {
+    if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
+      try {
+        this.createFileSystem(tracingContext);
+      } catch (IOException ex) {
+        if (ex instanceof AzureBlobFileSystemException) {
+          checkException(null, (AzureBlobFileSystemException) ex,
+              AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+        } else if (ex.getCause() != null && ex.getCause() instanceof AzureBlobFileSystemException) {
+          checkException(null, (AzureBlobFileSystemException) ex.getCause(),
+              AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
+        } else {
+          throw ex;
+        }
+      }
+    }
   }
 
   @VisibleForTesting
