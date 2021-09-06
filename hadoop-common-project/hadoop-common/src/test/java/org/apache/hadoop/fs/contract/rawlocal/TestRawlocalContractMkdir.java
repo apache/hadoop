@@ -19,8 +19,11 @@
 package org.apache.hadoop.fs.contract.rawlocal;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.junit.Test;
 
 /**
  * Test dir operations on a the local FS.
@@ -30,5 +33,12 @@ public class TestRawlocalContractMkdir extends AbstractContractMkdirTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new RawlocalFSContract(conf);
+  }
+
+  @Test
+  public void testMkDirRmDirUnicode() throws Throwable {
+    FileSystem fs = getFileSystem();
+    Path dir = path("testMkDirRmDirUnicode/dir-\\U0001f63b");
+    fs.mkdirs(dir); // this should not fail.
   }
 }
