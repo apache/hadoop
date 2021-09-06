@@ -1287,10 +1287,10 @@ public class RouterAdmin extends Configured implements Tool {
     try (RefreshCallQueueProtocolClientSideTranslatorPB xlator =
         new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
       xlator.refreshCallQueue();
-      System.out.println("Refresh call queue successful for " + hostport);
+      System.out.println("Refresh call queue successfully for " + hostport);
       returnCode = 0;
     } catch (IOException ioe){
-      System.out.println("Refresh call queue failed for " + hostport);
+      System.out.println("Refresh call queue unsuccessfully for " + hostport);
     }
     return returnCode;
   }

@@ -1746,7 +1746,7 @@ public class TestRouterAdminCLI {
     System.setOut(new PrintStream(out));
     String[] argv = new String[]{"-refreshCallQueue"};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("Refresh call queue successful"));
+    assertTrue(out.toString().contains("Refresh call queue successfully"));
   }
 
   private void addMountTable(String src, String nsId, String dst)
