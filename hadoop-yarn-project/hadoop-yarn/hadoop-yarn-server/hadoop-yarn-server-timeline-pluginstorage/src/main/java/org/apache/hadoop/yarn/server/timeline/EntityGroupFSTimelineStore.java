@@ -770,12 +770,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
           }
           String filename = statCache.getPath().getName();
           String owner = statCache.getOwner();
-          //YARN-10884: Owner of File is set to Null on WASB Append Operation. ATS fails to read such
-          //files as UGI cannot be constructed using Null User.To Fix this,anonymous user is set when
-          //ACL us Disabled as the UGI is not needed there
+          //YARN-10884:Owner of File is set to Null on WASB Append Operation.ATS fails to read such
+          //files as UGI cannot be constructed using Null User.To Fix this,anonymous user is set
+          //when ACL us Disabled as the UGI is not needed there
           if ((owner == null || owner.isEmpty()) && !aclsEnabled) {
-             LOG.debug("The owner was null when acl disabled, hence making the owner anonymous");
-             owner = "anonymous";
+            LOG.debug("The owner was null when acl disabled, hence making the owner anonymous");
+            owner = "anonymous";
           }
           // We should only update time for log files.
           boolean shouldSetTime = true;
