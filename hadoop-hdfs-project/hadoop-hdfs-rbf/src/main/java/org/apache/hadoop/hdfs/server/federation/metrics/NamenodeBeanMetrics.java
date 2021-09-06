@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
@@ -53,6 +54,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoR
 import org.apache.hadoop.hdfs.server.namenode.NameNodeMXBean;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeStatusMXBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
@@ -462,9 +465,11 @@ public class NamenodeBeanMetrics
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
       RouterRpcServer rpcServer = this.router.getRpcServer();
-      DatanodeInfo[] datanodes =
-          rpcServer.getDatanodeReport(type, false, dnReportTimeOut);
-      for (DatanodeInfo node : datanodes) {
+      DatanodeStorageReport[] datanodeStorageReports =
+          rpcServer.getDatanodeStorageReport(type);
+      for (DatanodeStorageReport datanodeStorageReport : datanodeStorageReports) {
+        DatanodeInfo node = datanodeStorageReport.getDatanodeInfo();
+        StorageReport[] storageReports = datanodeStorageReport.getStorageReports();
         Map<String, Object> innerinfo = new HashMap<>();
         innerinfo.put("infoAddr", node.getInfoAddr());
         innerinfo.put("infoSecureAddr", node.getInfoSecureAddr());
@@ -484,6 +489,8 @@ public class NamenodeBeanMetrics
         innerinfo.put("blockPoolUsed", node.getBlockPoolUsed());
         innerinfo.put("blockPoolUsedPercent", node.getBlockPoolUsedPercent());
         innerinfo.put("volfails", -1); // node.getVolumeFailures()
+        innerinfo.put("blockPoolUsedPercentStdDev",
+            Util.getBlockPoolUsedPercentStdDev(storageReports));
         info.put(node.getXferAddrWithHostname(),
             Collections.unmodifiableMap(innerinfo));
       }
