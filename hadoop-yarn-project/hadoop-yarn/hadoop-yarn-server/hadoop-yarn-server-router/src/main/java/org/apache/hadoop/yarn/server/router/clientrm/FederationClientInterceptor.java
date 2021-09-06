@@ -643,7 +643,7 @@ public class FederationClientInterceptor
 
     try {
       applications = invokeConcurrent(subclusters.keySet(), remoteMethod,
-              GetApplicationsResponse.class);
+          GetApplicationsResponse.class);
 
     } catch (Exception ex) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
@@ -670,7 +670,7 @@ public class FederationClientInterceptor
 
     try {
       clusterMetrics = invokeConcurrent(clusterList, remoteMethod,
-              GetClusterMetricsResponse.class);
+          GetClusterMetricsResponse.class);
 
     } catch (Exception ex) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();

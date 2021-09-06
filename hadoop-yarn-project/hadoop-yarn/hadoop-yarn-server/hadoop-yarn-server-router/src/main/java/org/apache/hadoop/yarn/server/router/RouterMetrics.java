@@ -72,7 +72,7 @@ public final class RouterMetrics {
           "appAttempt reports and latency(ms)")
   private MutableRate totalSucceededAppAttemptsRetrieved;
   @Metric("Total number of successful Retrieved getClusterMetrics and "
-          + "latency(ms)")
+      + "latency(ms)")
   private MutableRate totalSucceededGetClusterMetricsRetrieved;
 
 
@@ -111,7 +111,7 @@ public final class RouterMetrics {
                             "report", "ops", "latency", 10);
     getClusterMetricsLatency =
         registry.newQuantiles("getClusterMetricsLatency",
-                    "latency of get cluster metrics", "ops", "latency", 10);
+            "latency of get cluster metrics", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {

@@ -288,14 +288,14 @@ public class TestRouterMetrics {
     long totalGoodBefore = metrics.getNumSucceededGetClusterMetricsRetrieved();
     goodSubCluster.getClusterMetrics(100);
     Assert.assertEquals(totalGoodBefore + 1,
-            metrics.getNumSucceededGetClusterMetricsRetrieved());
+        metrics.getNumSucceededGetClusterMetricsRetrieved());
     Assert.assertEquals(100, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
-            0);
+        0);
     goodSubCluster.getClusterMetrics(200);
     Assert.assertEquals(totalGoodBefore + 2,
-            metrics.getNumSucceededGetClusterMetricsRetrieved());
+        metrics.getNumSucceededGetClusterMetricsRetrieved());
     Assert.assertEquals(150, metrics.getLatencySucceededGetClusterMetricsRetrieved(),
-            0);
+        0);
   }
 
   /**
@@ -307,7 +307,7 @@ public class TestRouterMetrics {
     long totalBadbefore = metrics.getClusterMetricsFailedRetrieved();
     badSubCluster.getClusterMetrics();
     Assert.assertEquals(totalBadbefore + 1,
-            metrics.getClusterMetricsFailedRetrieved());
+        metrics.getClusterMetricsFailedRetrieved());
   }
 
   // Records failures for all calls
