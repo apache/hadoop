@@ -29,6 +29,10 @@ namespace hdfs::tools {
 class AllowSnapshot : public HdfsTool {
 public:
   AllowSnapshot(int argc, char **argv);
+  AllowSnapshot(const AllowSnapshot &) = default;
+  AllowSnapshot(AllowSnapshot &&) = default;
+  AllowSnapshot &operator=(const AllowSnapshot &) = delete;
+  AllowSnapshot &operator=(AllowSnapshot &&) = delete;
   ~AllowSnapshot() override = default;
 
   [[nodiscard]] bool Initialize() override;

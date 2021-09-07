@@ -27,6 +27,10 @@ namespace po = boost::program_options;
 class HdfsTool {
 public:
   HdfsTool(const int argc, char **argv) : argc_{argc}, argv_{argv} {}
+  HdfsTool(const HdfsTool &) = default;
+  HdfsTool(HdfsTool &&) = default;
+  HdfsTool &operator=(const HdfsTool &) = delete;
+  HdfsTool &operator=(HdfsTool &&) = delete;
   virtual ~HdfsTool();
 
   [[nodiscard]] virtual bool Initialize() = 0;

@@ -27,6 +27,10 @@ namespace hdfs::tools::test {
 class AllowSnapshotMock : public hdfs::tools::AllowSnapshot {
 public:
   AllowSnapshotMock(const int argc, char **argv) : AllowSnapshot(argc, argv) {}
+  AllowSnapshotMock(const AllowSnapshotMock &) = default;
+  AllowSnapshotMock(AllowSnapshotMock &&) = default;
+  AllowSnapshotMock &operator=(const AllowSnapshotMock &) = delete;
+  AllowSnapshotMock &operator=(AllowSnapshotMock &&) = delete;
   ~AllowSnapshotMock() override = default;
 
   [[nodiscard]] bool HandleHelp() const override;
