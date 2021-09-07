@@ -707,11 +707,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return userLimitFactor;
   }
 
-  @VisibleForTesting
   public void setUserLimitFactor(String queue, float userLimitFactor) {
     setFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR, userLimitFactor);
   }
 
+  @VisibleForTesting
   public void setDefaultUserLimitFactor(float defaultUserLimitFactor) {
     setFloat(PREFIX + USER_LIMIT_FACTOR, defaultUserLimitFactor);
   }
