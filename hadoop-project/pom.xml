@@ -100,6 +100,8 @@
     <tomcat.version>8.5.43</tomcat.version>
     <joda-time.version>2.9.4</joda-time.version>
 
+    <bouncycastle.version>1.69</bouncycastle.version>
+
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0-M15</apacheds.version>
 
@@ -1188,12 +1190,16 @@
        <artifactId>curator-test</artifactId>
        <version>${curator.version}</version>
      </dependency>
-     <dependency>
-       <groupId>org.bouncycastle</groupId>
-       <artifactId>bcprov-jdk16</artifactId>
-       <version>1.46</version>
-       <scope>test</scope>
-     </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
      <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
