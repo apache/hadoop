@@ -29,10 +29,22 @@
 
 #include "hdfs-tool.h"
 
+/**
+ * {@class HdfsToolBasicTest} is a fixture that houses basic tests on {@class
+ * hdfs::tools::HdfsTool} interface. It contains the "Happy path" tests which
+ * covers the scenarios where {@class hdfs::tools::HdfsTool} is expected to
+ * work just fine.
+ *
+ * {@class HdfsToolBasicTest} is parameterized on a lambda returning an instance
+ * of {@class hdfs::tools::HdfsTool} wrapped in a std::unique_ptr. We then run
+ * the tests on this instance. Each test runs in isolation. So, a new instance
+ * is created for each test.
+ */
 class HdfsToolBasicTest
     : public testing::TestWithParam<
           std::function<std::unique_ptr<hdfs::tools::HdfsTool>()>> {
 public:
+  // Abiding to the rule of 5
   HdfsToolBasicTest() = default;
   HdfsToolBasicTest(const HdfsToolBasicTest &) = delete;
   HdfsToolBasicTest(HdfsToolBasicTest &&) = delete;
@@ -46,8 +58,15 @@ protected:
   std::unique_ptr<hdfs::tools::HdfsTool> hdfs_tool_{nullptr};
 };
 
+/**
+ * {@class HdfsToolNegativeTest} is a fixture that houses negative tests on
+ * {@class hdfs::tools::HdfsTool} interface. It covers the tests where
+ * unfavorable inputs are presented to the {@class hdfs::tools::HdfsTool}
+ * instance and is expected to not crash and is handled gracefully.
+ */
 class HdfsToolNegativeTest : public HdfsToolBasicTest {
 public:
+  // Abiding to the rule of 5
   HdfsToolNegativeTest() = default;
   HdfsToolNegativeTest(const HdfsToolNegativeTest &) = delete;
   HdfsToolNegativeTest(HdfsToolNegativeTest &&) = delete;

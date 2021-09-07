@@ -37,6 +37,8 @@ bool AllowSnapshot::Initialize() {
       "path", po::value<std::string>(),
       "The path to the directory to make it snapshot-able");
 
+  // We allow only one argument to be passed to this tool. An exception is
+  // thrown if multiple arguments are passed.
   pos_opt_desc_.add("path", 1);
 
   po::store(po::command_line_parser(argc_, argv_)

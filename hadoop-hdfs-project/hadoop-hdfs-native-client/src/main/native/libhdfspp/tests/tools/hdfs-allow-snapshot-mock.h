@@ -24,16 +24,32 @@
 #include "hdfs-allow-snapshot.h"
 
 namespace hdfs::tools::test {
+/**
+ * {@class AllowSnapshotMock} is an {@class AllowSnapshot} whereby it mocks the
+ * HandleHelp and HandlePath methods for testing their functionality.
+ */
 class AllowSnapshotMock : public hdfs::tools::AllowSnapshot {
 public:
+  /**
+   * {@inheritdoc}
+   */
   AllowSnapshotMock(const int argc, char **argv) : AllowSnapshot(argc, argv) {}
+
+  // Abiding to the Rule of 5
   AllowSnapshotMock(const AllowSnapshotMock &) = default;
   AllowSnapshotMock(AllowSnapshotMock &&) = default;
   AllowSnapshotMock &operator=(const AllowSnapshotMock &) = delete;
   AllowSnapshotMock &operator=(AllowSnapshotMock &&) = delete;
   ~AllowSnapshotMock() override = default;
 
+  /**
+   * {@inheritdoc}
+   */
   [[nodiscard]] bool HandleHelp() const override;
+
+  /**
+   * {@inheritdoc}
+   */
   [[nodiscard]] bool HandlePath(const std::string &path) const override;
 };
 } // namespace hdfs::tools::test

@@ -18,4 +18,9 @@
 
 #include "hdfs-tool.h"
 
+/**
+ * Need to implement the destructor out-of-line since it's a virtual destructor.
+ * An inline destructor would cause all the v-table entries pertaining to the
+ * HdfsTool to copy its definition everywhere, making it bulky.
+ */
 hdfs::tools::HdfsTool::~HdfsTool() {}
