@@ -270,7 +270,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
       appLogs.parseSummaryLogs(tdm);
       PluginStoreTestUtils.verifyTestEntities(tdm);
     } catch (IllegalArgumentException ie) {
-      Assert.fail("Should not have thrown any exception as there should be a anonymous user configured");
+      Assert.fail("No exception needs to be thrown as anonymous user is configured");
     }
   }
 
