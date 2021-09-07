@@ -173,8 +173,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
 
   protected CapacitySchedulerConfiguration initializeLeafQueueConfigs(String configPrefix) {
 
-    CapacitySchedulerConfiguration leafQueueConfigs = new
-        CapacitySchedulerConfiguration(csContext.getConf(), false);
+    CapacitySchedulerConfiguration leafQueueConfigs = csContext.getConfiguration();
 
     Map<String, String> templateConfigs = getCSConfigurationsWithPrefix(configPrefix);
     for (Map.Entry<String, String> confKeyValuePair : templateConfigs.entrySet()) {
