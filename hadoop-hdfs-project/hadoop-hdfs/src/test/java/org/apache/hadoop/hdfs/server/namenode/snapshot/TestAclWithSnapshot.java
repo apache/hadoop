@@ -291,8 +291,6 @@ public class TestAclWithSnapshot {
       throws Exception {
     Path filePath = new Path(path, "file1");
     Path subdirPath = new Path(path, "subdir1");
-    Path fileSnapshotPath = new Path(snapshotPath, "file1");
-    Path subdirSnapshotPath = new Path(snapshotPath, "subdir1");
     FileSystem.mkdirs(hdfs, path, FsPermission.createImmutable((short) 0777));
     FileSystem.create(hdfs, filePath, FsPermission.createImmutable((short) 0600))
         .close();
@@ -309,7 +307,7 @@ public class TestAclWithSnapshot {
     assertFilePermissionDenied(fsAsDiana, DIANA, filePath);
     assertDirPermissionGranted(fsAsBruce, BRUCE, subdirPath);
     assertDirPermissionDenied(fsAsDiana, DIANA, subdirPath);
-
+    hdfs.allowSnapshot(path);
     hdfs.createSnapshot(path, snapshotName);
     SnapshotDiffReport report =
         hdfs.getSnapshotDiffReport(path, snapshotName, "");

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -93,6 +94,11 @@ public class XAttrFeature implements INode.Feature {
       return false;
     }
     return getXAttrs().equals(((XAttrFeature) o).getXAttrs());
+  }
+
+  @Override
+  public int hashCode() {
+    return Arrays.hashCode(getXAttrs().toArray());
   }
 
   /**
