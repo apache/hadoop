@@ -68,7 +68,7 @@ public abstract class CredentialProviderFactory {
    * that only one thread can be active at a time. An atomic is used
    * for rigorousness.
    */
-  private static final AtomicBoolean serviceLoaderLocked = new AtomicBoolean(false);
+  private static final AtomicBoolean SERVICE_LOADER_LOCKED = new AtomicBoolean(false);
 
   public static List<CredentialProvider> getProviders(Configuration conf
                                                ) throws IOException {
@@ -81,9 +81,11 @@ public abstract class CredentialProviderFactory {
         // serviceLoader iterator is not thread-safe.
         synchronized (serviceLoader) {
           try {
-            if (serviceLoaderLocked.getAndSet(true)) {
+            if (SERVICE_LOADER_LOCKED.getAndSet(true)) {
               throw new PathIOException(path,
-                  "Recursive load of credential provider!");
+                  "Recursive load of credential provider; " +
+                      "if loading a JCEKS file, this means that the filesystem connector is " +
+                      "trying to load the same file");
             }
             for (CredentialProviderFactory factory : serviceLoader) {
               CredentialProvider kp = factory.createProvider(uri, conf);
@@ -94,7 +96,7 @@ public abstract class CredentialProviderFactory {
               }
             }
           } finally {
-            serviceLoaderLocked.set(false);
+            SERVICE_LOADER_LOCKED.set(false);
           }
         }
         if (!found) {
