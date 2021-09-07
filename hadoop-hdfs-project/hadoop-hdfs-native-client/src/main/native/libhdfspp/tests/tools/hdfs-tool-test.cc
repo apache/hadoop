@@ -17,14 +17,13 @@
   under the License.
 */
 
-#include <functional>
-#include <string>
-#include <tuple>
-
 #include <gtest/gtest.h>
 
 #include "hdfs-allow-snapshot-mock.h"
 #include "hdfs-tool-test.h"
+
+HdfsToolBasicTest::~HdfsToolBasicTest() {}
+HdfsToolNegativeTest::~HdfsToolNegativeTest() {}
 
 INSTANTIATE_TEST_SUITE_P(HdfsAllowSnapshot, HdfsToolBasicTest,
                          testing::Values(PassAPath<HdfsAllowSnapshotMock>,

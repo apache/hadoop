@@ -23,6 +23,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include <gtest/gtest.h>
 
@@ -31,15 +32,31 @@
 class HdfsToolBasicTest
     : public testing::TestWithParam<
           std::function<std::unique_ptr<hdfs::tools::HdfsTool>()>> {
+public:
+  HdfsToolBasicTest() = default;
+  HdfsToolBasicTest(const HdfsToolBasicTest &) = delete;
+  HdfsToolBasicTest(HdfsToolBasicTest &&) = delete;
+  HdfsToolBasicTest &operator=(const HdfsToolBasicTest &) = delete;
+  HdfsToolBasicTest &operator=(HdfsToolBasicTest &&) = delete;
+  ~HdfsToolBasicTest() override;
+
 protected:
   void SetUp() override { hdfs_tool_ = GetParam()(); }
 
   std::unique_ptr<hdfs::tools::HdfsTool> hdfs_tool_{nullptr};
 };
 
-TEST_P(HdfsToolBasicTest, RunTool) { EXPECT_TRUE(this->hdfs_tool_->Do()); }
+class HdfsToolNegativeTest : public HdfsToolBasicTest {
+public:
+  HdfsToolNegativeTest() = default;
+  HdfsToolNegativeTest(const HdfsToolNegativeTest &) = delete;
+  HdfsToolNegativeTest(HdfsToolNegativeTest &&) = delete;
+  HdfsToolNegativeTest &operator=(const HdfsToolNegativeTest &) = delete;
+  HdfsToolNegativeTest &operator=(HdfsToolNegativeTest &&) = delete;
+  ~HdfsToolNegativeTest() override;
+};
 
-class HdfsToolNegativeTest : public HdfsToolBasicTest {};
+TEST_P(HdfsToolBasicTest, RunTool) { EXPECT_TRUE(this->hdfs_tool_->Do()); }
 
 TEST_P(HdfsToolNegativeTest, RunTool) {
   EXPECT_ANY_THROW({ std::ignore = this->hdfs_tool_->Do(); });
