@@ -23,9 +23,11 @@
 
 #include "hdfs-allow-snapshot-mock.h"
 
-bool HdfsAllowSnapshotMock::HandleHelp() const { return true; }
+namespace hdfs::tools::test {
+bool AllowSnapshotMock::HandleHelp() const { return true; }
 
-bool HdfsAllowSnapshotMock::HandlePath(const std::string &path) const {
+bool AllowSnapshotMock::HandlePath(const std::string &path) const {
   EXPECT_STREQ(path.c_str(), "a/b/c") << "Expecting the path a/b/c here";
   return true;
 }
+} // namespace hdfs::tools::test

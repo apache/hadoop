@@ -25,9 +25,11 @@
 HdfsToolBasicTest::~HdfsToolBasicTest() {}
 HdfsToolNegativeTest::~HdfsToolNegativeTest() {}
 
-INSTANTIATE_TEST_SUITE_P(HdfsAllowSnapshot, HdfsToolBasicTest,
-                         testing::Values(PassAPath<HdfsAllowSnapshotMock>,
-                                         CallHelp<HdfsAllowSnapshotMock>));
+INSTANTIATE_TEST_SUITE_P(
+    HdfsAllowSnapshot, HdfsToolBasicTest,
+    testing::Values(PassAPath<hdfs::tools::test::AllowSnapshotMock>,
+                    CallHelp<hdfs::tools::test::AllowSnapshotMock>));
 
-INSTANTIATE_TEST_SUITE_P(HdfsAllowSnapshot, HdfsToolNegativeTest,
-                         testing::Values(Pass2Paths<HdfsAllowSnapshotMock>));
+INSTANTIATE_TEST_SUITE_P(
+    HdfsAllowSnapshot, HdfsToolNegativeTest,
+    testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));

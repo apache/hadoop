@@ -23,14 +23,15 @@
 
 #include "hdfs-allow-snapshot.h"
 
-class HdfsAllowSnapshotMock : public hdfs::tools::AllowSnapshot {
+namespace hdfs::tools::test {
+class AllowSnapshotMock : public hdfs::tools::AllowSnapshot {
 public:
-  HdfsAllowSnapshotMock(const int argc, char **argv)
-      : AllowSnapshot(argc, argv) {}
-  ~HdfsAllowSnapshotMock() override = default;
+  AllowSnapshotMock(const int argc, char **argv) : AllowSnapshot(argc, argv) {}
+  ~AllowSnapshotMock() override = default;
 
   [[nodiscard]] bool HandleHelp() const override;
   [[nodiscard]] bool HandlePath(const std::string &path) const override;
 };
+} // namespace hdfs::tools::test
 
 #endif
