@@ -361,7 +361,7 @@ public class DFSUtilClient {
   }
 
   /**
-   * Given a list of path components returns a string
+   * Given a list of path components returns a string.
    */
   public static String byteArray2String(byte[][] pathComponents) {
     return bytes2String(byteArray2bytes(pathComponents));

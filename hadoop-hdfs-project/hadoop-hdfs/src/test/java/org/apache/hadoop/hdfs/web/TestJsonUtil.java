@@ -457,14 +457,14 @@ public class TestJsonUtil {
             DFSUtilClient.byteArray2bytes(a.getSourcePath()),
             DFSUtilClient.byteArray2bytes(b.getSourcePath()));
       } else {
-        Assert.assertEquals(a.getSourcePath(), b.getSourcePath());
+        Assert.assertArrayEquals(a.getSourcePath(), b.getSourcePath());
       }
       if (a.getTargetPath() != null) {
         Assert.assertArrayEquals(
             DFSUtilClient.byteArray2bytes(a.getTargetPath()),
             DFSUtilClient.byteArray2bytes(b.getTargetPath()));
       } else {
-        Assert.assertEquals(a.getTargetPath(), b.getTargetPath());
+        Assert.assertArrayEquals(a.getTargetPath(), b.getTargetPath());
       }
     }
   }
