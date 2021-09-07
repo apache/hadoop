@@ -883,6 +883,9 @@
                         <exclude>org/xml/sax/**/*</exclude>
                         <exclude>org/bouncycastle/*</exclude>
                         <exclude>org/bouncycastle/**/*</exclude>
+                        <!-- Exclude snappy-java -->
+                        <exclude>org/xerial/snappy/*</exclude>
+                        <exclude>org/xerial/snappy/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
