@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckC
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -400,11 +401,12 @@ public class DatasetVolumeChecker {
         LOG.warn("Volume {} Exception Count is {}", reference.getVolume().toString(),
                 reference.getVolume().getExCountPair().getIoExceptionCnt());
         if (volumeExCountPair.getIoExceptionCnt() == 0) {
-          volumeExCountPair.setNewPair(System.currentTimeMillis(), totalFileIoErrors);
+          volumeExCountPair.setNewPair(Time.monotonicNow(), totalFileIoErrors);
         }else{
-          if((System.currentTimeMillis() - reference.getVolume().getExCountPair().getPrevTs())/1000/60/60 > 2){
+          long lastTime = reference.getVolume().getExCountPair().getPrevTs();
+          if((Time.monotonicNow() - lastTime)/1000/60/60 > 2){
             long cnt = reference.getVolume().getExCountPair().getPair().getIoExceptionCnt();
-            if(cnt > 100){
+            if(cnt > 30){
               failedVolumes.add(reference.getVolume());
               return;
             }
