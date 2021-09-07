@@ -35,10 +35,12 @@ public:
   AllowSnapshot &operator=(AllowSnapshot &&) = delete;
   ~AllowSnapshot() override = default;
 
-  [[nodiscard]] bool Initialize() override;
-  [[nodiscard]] bool ValidateConstraints() const override { return argc_ > 1; }
   [[nodiscard]] std::string GetDescription() const override;
   [[nodiscard]] bool Do() override;
+
+protected:
+  [[nodiscard]] bool Initialize() override;
+  [[nodiscard]] bool ValidateConstraints() const override { return argc_ > 1; }
   [[nodiscard]] bool HandleHelp() const override;
   [[nodiscard]] virtual bool HandlePath(const std::string &path) const;
 

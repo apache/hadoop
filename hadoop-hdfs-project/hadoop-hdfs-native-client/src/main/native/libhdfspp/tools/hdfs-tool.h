@@ -33,13 +33,14 @@ public:
   HdfsTool &operator=(HdfsTool &&) = delete;
   virtual ~HdfsTool();
 
-  [[nodiscard]] virtual bool Initialize() = 0;
-  [[nodiscard]] virtual bool ValidateConstraints() const = 0;
   [[nodiscard]] virtual std::string GetDescription() const = 0;
   [[nodiscard]] virtual bool Do() = 0;
-  [[nodiscard]] virtual bool HandleHelp() const = 0;
 
 protected:
+  [[nodiscard]] virtual bool Initialize() = 0;
+  [[nodiscard]] virtual bool ValidateConstraints() const = 0;
+  [[nodiscard]] virtual bool HandleHelp() const = 0;
+
   int argc_{0};
   char **argv_{nullptr};
   po::variables_map opt_val_;
