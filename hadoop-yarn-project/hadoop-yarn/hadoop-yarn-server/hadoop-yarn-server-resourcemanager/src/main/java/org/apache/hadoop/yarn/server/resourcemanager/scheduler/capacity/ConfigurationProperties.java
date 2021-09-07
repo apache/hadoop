@@ -132,7 +132,8 @@ public class ConfigurationProperties {
       String prefixToTrim = trimPrefix;
 
       if (!trimPrefix.isEmpty()) {
-        if (!key.equals(trimPrefix)) {
+        if (!key.equals(trimPrefix) &&
+            !trimPrefix.endsWith(CapacitySchedulerConfiguration.DOT)) {
           prefixToTrim += CapacitySchedulerConfiguration.DOT;
         }
         key = configEntry.getKey().substring(prefixToTrim.length());
