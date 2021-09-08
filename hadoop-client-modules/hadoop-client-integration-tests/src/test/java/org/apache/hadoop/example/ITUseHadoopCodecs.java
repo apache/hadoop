@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -43,40 +42,40 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Ensure that we can perform codec operations against the shaded minicluster
- * given the API and runtime jars by performing some simple smoke tests.
+ * Ensure that we can perform codec operations given the API and runtime jars
+ * by performing some simple smoke tests.
  */
 public class ITUseHadoopCodecs {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITUseHadoopCodecs.class);
 
-  private Configuration conf = new Configuration();
-  private int count = 100;
-  private int seed = new Random().nextInt();
+  private Configuration haddopConf = new Configuration();
+  private int dataCount = 100;
+  private int dataSeed = new Random().nextInt();
 
   @Test
   public void testGzipCodec() throws IOException {
     ZlibFactory.setNativeZlibLoaded(false);
-    assertFalse(ZlibFactory.isNativeZlibLoaded(conf));
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.GzipCodec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
+    assertFalse(ZlibFactory.isNativeZlibLoaded(haddopConf));
+    codecTest(haddopConf, dataSeed, 0, "org.apache.hadoop.io.compress.GzipCodec");
+    codecTest(haddopConf, dataSeed, dataCount, "org.apache.hadoop.io.compress.GzipCodec");
   }
 
   @Test
   public void testSnappyCodec() throws IOException {
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
+    codecTest(haddopConf, dataSeed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+    codecTest(haddopConf, dataSeed, dataCount, "org.apache.hadoop.io.compress.SnappyCodec");
   }
 
   @Test
   public void testLz4Codec() {
     Arrays.asList(false, true).forEach(config -> {
-      conf.setBoolean(
-        CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
-        config);
+      haddopConf.setBoolean(
+          CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
+          config);
       try {
-        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
-        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
+        codecTest(haddopConf, dataSeed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
+        codecTest(haddopConf, dataSeed, dataCount, "org.apache.hadoop.io.compress.Lz4Codec");
       } catch (IOException e) {
         throw new RuntimeException("failed when running codecTest", e);
       }
@@ -84,7 +83,7 @@ public class ITUseHadoopCodecs {
   }
 
   private void codecTest(Configuration conf, int seed, int count, String codecClass)
-    throws IOException {
+      throws IOException {
 
     // Create the codec
     CompressionCodec codec = null;
@@ -112,9 +111,9 @@ public class ITUseHadoopCodecs {
     // Compress data
     DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
     try (CompressionOutputStream deflateFilter =
-      codec.createOutputStream(compressedDataBuffer);
-      DataOutputStream deflateOut =
-        new DataOutputStream(new BufferedOutputStream(deflateFilter))) {
+        codec.createOutputStream(compressedDataBuffer);
+        DataOutputStream deflateOut =
+            new DataOutputStream(new BufferedOutputStream(deflateFilter))) {
       deflateOut.write(data.getData(), 0, data.getLength());
       deflateOut.flush();
       deflateFilter.finish();
@@ -127,9 +126,9 @@ public class ITUseHadoopCodecs {
     DataInputBuffer originalData = new DataInputBuffer();
     originalData.reset(data.getData(), 0, data.getLength());
     try (CompressionInputStream inflateFilter =
-      codec.createInputStream(deCompressedDataBuffer);
-      DataInputStream originalIn =
-        new DataInputStream(new BufferedInputStream(originalData))) {
+        codec.createInputStream(deCompressedDataBuffer);
+        DataInputStream originalIn =
+            new DataInputStream(new BufferedInputStream(originalData))) {
 
       // Check
       int expected;
