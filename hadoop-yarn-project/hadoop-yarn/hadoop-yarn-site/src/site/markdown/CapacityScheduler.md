@@ -261,7 +261,7 @@ Below example covers single mapping separately. In case of multiple mappings wit
 
   In order to make the queue mapping feature more versatile, a new format and evaluation engine has been added to Capacity Scheduler. The new engine is fully backwards compatible with the old one and adds several new features. Note that it can also parse the old format, but the new features are only available if you specify the mappings in JSON.
 
-  * Syntax
+####Syntax
 
   Based on the current JSON schema, users can define mapping rules the following way:
 
@@ -288,7 +288,27 @@ Below example covers single mapping separately. In case of multiple mappings wit
 
 Rules are evaluated from top to bottom. Compared to the legacy mapping rule evaluator, it can be adjusted more flexibly what happens when the evaluation stops and a given rule does not match.
 
-  * Rules
+####How to enable JSON-based queue mapping
+
+The following properties control how the new placement engine expects rules.
+
+| Setting | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.mapping-rule-format` | Allowed values are `legacy` or `json`. If it is not set, then the engine assumes that the old format might be in use so it also checks the value of `yarn.scheduler.capacity.queue-mappings`. Therefore, this must be set to `json` and cannot be left empty. |
+| `yarn.scheduler.capacity.mapping-rule-json` | The value of this property should contain the entire chain of rules inline. This is the preferred way of configuring Capacity Scheduler if you use the Mutation API, ie. modify configuration real-time via the REST interface. |
+| `yarn.scheduler.capacity.mapping-rule-json-file` | Defines an absolute path to a JSON file which contains the rules. For example, `/opt/hadoop/config/mapping-rules.json`. |
+
+The property `yarn.scheduler.capacity.mapping-rule-json` takes precedence over `yarn.scheduler.capacity.mapping-rule-json-file`. If the format is set to `json` but you don't define either of these, then you'll get a warning but the initialization of Capacity Scheduler will not fail.
+
+####Differences between legacy and flexible queue auto-creation modes
+
+To use the flexible Queue Auto-Creation under a parent the queue capacities must be configured with weights. The flexible mode gives the user much more freedom to automatically create new leaf queues or entire queue hierarchies based on mapping rules. "Legacy" mode refers to either percentage-based configuration or where capacities are defined with absolute resources.
+
+In flexible Queue Auto-Creation mode, every parent queue can have dynamically created parent or leaf queues (if the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` property is set to true), even if it already has static child queues. This also means that certain settings influence the outcome of the queue placement depending on how the scheduler is configured.
+
+When the mode is relevant, the document explains how certain settings or flags affect the overall logic.
+
+####Rules
 
   Each mapping rule can have the following settings:
 
@@ -298,21 +318,28 @@ Rules are evaluated from top to bottom. Compared to the legacy mapping rule eval
 | `matches` | The string to match, or an asterisk "&ast;" which means "all". For example, if the type is `user` and this string is "hadoop" then the rule will only be evaluated if the submitter user is "hadoop". The "&ast;" does not work with groups. |
 | `policy` | Selects a list of pre-defined policies which defines where the application should be placed. This will be explained later in the "Policies" section. |
 | `parentQueue` | In case of `user`, `primaryGroup`, `primaryGroupUser`, `secondaryGroup`, `secondaryGroupUser` policies, this tells the engine where the matching queue should be looked for. For example, if the policy is `primaryGroup`, parent is `root.groups` and the submitter's group is "admins", then the resulting queue will be "root.groups.admin" |
-| `fallbackResult` | If the target queue does not exist or it cannot be created (ie. it exists under a regular parent), it defines a fallback action. Valid values are `skip`, `reject` and `placeDefault`. |
-| `create` | Only applies to managed queue parents. If set to "false", then the queue will not be created if it does not exist. |
+| `fallbackResult` | If the target queue does not exist or it cannot be created, it defines a fallback action. Valid values are `skip`, `reject` and `placeDefault`. |
+| `create` | If set to "false", then the queue will not be created if it does not exist. This flag works differently in flexible and in legacy mode (see below). |
 | `value` | If the policy is `setDefaultQueue`, then the default queue will change to this setting from "root.default". Otherwise ignored. |
 | `customPlacement` | Only works with `custom` placement policy. The value of this field will be evaluated directly by the engine, which means that various placeholders such as `%application` or `%primary_group` will be replaced with their respective values. |
 
 
   `type` is the equivalent of the first column in the old format. It is either "g" or "u" and there is a separate property for application mappings. `matches` is the second column. The only difference is that `%user` means to match all users, but it's not expressive enough. So in the new format, it's been changed to `*`.
   The `fallbackResult` setting is checked what to do when the target queue cannot be created or does not exist. The three settings work the following way:
+
 * `skip`: ignore the current rule and proceed to the next. This is how Fair Scheduler evaluates placement rules.
+
 * `placeDefault`: place the application to the default queue `root.default` (unless it's overridden to something else). This is how Capacity Scheduler works with the old mapping rules.
+
 * `reject`: rejects the submission.
 
-  The `create` flag has no effect on the queue if the parent is not managed.
+The `create` flag is affected by the mode:
 
- * Policies
+* **Legacy** mode: applies to all parent queues that have the `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.enabled` set to true.
+
+* **Flexible** mode: applies to all parent queues that have the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` set to true.
+
+####Policies
 
   There are a number of pre-defined placement policies which are similar to those in Fair Scheduler. Many of them can be expressed as a "custom" placement policy as you will see soon, but in many cases, it's safer and more straightforward to use them directly.
 
@@ -327,19 +354,21 @@ Rules are evaluated from top to bottom. Compared to the legacy mapping rule eval
 | `primaryGroupUser` | Places the application into the queue hierarchy `root.[parentQueue].<primaryGroup>.<userName>`. Note that `parentQueue` is optional. |
 | `secondaryGroup` | Places the application into a queue which matches the secondary group of the submitter. |
 | `secondaryGroupUser` | Places the application into the queue hierarchy `root.[parentQueue].<secondaryGroup>.<userName>`. Note that `parentQueue` is optional. |
-| `setDefaultQueue` | Changes the default queue from `root.default`. The change is permament in a sense that it is not restored in the next rule. You can change the default queue at any point and as many times as necessary. |
+| `setDefaultQueue` | Changes the default queue from `root.default`. The change is permanent in a sense that it is not restored in the next rule. You can change the default queue at any point and as many times as necessary. |
 | `custom` | Enables the user to use custom placement strings. See explanation below. |
 
 Notes:
 
 1. The `setDefaultQueue` rule only changes the default queue. If you want to restore the default queue back to `root.default`, then it has to be added to the rule chain again.
 
-2. The nested rules `primaryGroupUser` and `secondaryGroupUser` expects the parent queues to exist, ie. they cannot be created automatically. More specifically: when you use `primaryGroupUser`, it will result in a queue path like `root.<primaryGroup>.<userName>` and `root.<primaryGroup>` must exist. It can be a managed parent in order to have `userName` leaf created automatically, but the parent still has to be created by hand (this is in contrast to Fair Scheduler, where this scenario is more flexible).
+2. The nested rules `primaryGroupUser` and `secondaryGroupUser` also work differently in legacy and flexible mode:
+    * **Legacy** mode: they expect the parent queues to exist, ie. they cannot be created automatically. More specifically: when you use `primaryGroupUser`, it will result in a queue path like `root.<primaryGroup>.<userName>` and `root.<primaryGroup>` must exist. It can be a managed parent in order to have `userName` leaf created automatically, but the parent still has to be created by hand.
+    * **Flexible** mode: as long as the parent allows dynamic queues to be created, there are no limitations. The requested queues will be created.
 
 3. The `custom` placement policy can describe other policies with the appropriate variable placeholders (see below). For example, `primaryGroupUser` with the parent queue `root.groups` can be expressed as `root.groups.%primary_group.%user`. The primary reason for the rules to exist is that its easier to understand for user who have background in configuring Fair Scheduler and it is more natural to configure the mapping rules this way. It is also more robust because it's less likely that the user makes a mistake. The "Variables" section describes what variables are available if you intend to use the `custom` policy.
 
 
-  * Variables
+####Variables
 
   Internally, the tool populates certain variables with appropriate values. These can be used if `custom` mapping policy is selected. Note that the engine does only minimal verification when it comes to replacing them - therefore it is your responsibility to provide the correct string.
 
@@ -357,7 +386,7 @@ Example: let's say we submit a MapReduce application to a queue `root.users.mrjo
 As explained in the "Policies" section, quite a few policies can be achieved with `custom`. So, instead of using the `specified` policy, you can use `custom` with setting the `customPlacement` field to `%specified`. However, you have much greater control over it, because you can also append or prepend an extra string to these variables. So the following setting is possible: `%specified.%user.largejobs`. Keep in mind that the string must be resolved to a valid queue path in order to have a proper placement.
 
 
-  * Converting the old mapping rule format to the new one
+####Converting the old mapping rule format to the new one
 
   In this table, you can see how to rewrite the old, colon-separated rules to the new format.
 
@@ -378,7 +407,7 @@ As explained in the "Policies" section, quite a few policies can be achieved wit
 
   It's worth noting that `%application:%application` requires a `user` type matcher. It is because internally, the "&ast;" is interpreted only for users. If you set the `type` to `application`, then the "&ast;" means to match an application which is named "&ast;".
 
-  * Example
+####Example
 
   We have a cluster which is shared among developers, QA engineers and test developers.
 
