@@ -109,8 +109,6 @@ public class LeafQueue extends AbstractCSQueue {
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
-  private CapacitySchedulerContext scheduler;
-  
   private final UsersManager usersManager;
 
   // cache last cluster resource to compute actual capacity
@@ -162,9 +160,8 @@ public class LeafQueue extends AbstractCSQueue {
       IOException {
     super(cs, configuration, queueName, parent, old);
     setDynamicQueue(isDynamic);
-    this.scheduler = cs;
 
-    this.usersManager = new UsersManager(metrics, this, labelManager, scheduler,
+    this.usersManager = new UsersManager(metrics, this, labelManager, csContext,
         resourceCalculator);
 
     // One time initialization is enough since it is static ordering policy
@@ -217,7 +214,7 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       priorityAcls = conf.getPriorityAcls(getQueuePath(),
-          scheduler.getMaxClusterLevelAppPriority());
+          csContext.getMaxClusterLevelAppPriority());
 
       if (!SchedulerUtils.checkQueueLabelExpression(this.accessibleLabels,
           this.defaultLabelExpression, null)) {
@@ -2031,7 +2028,7 @@ public class LeafQueue extends AbstractCSQueue {
     // Careful! Locking order is important!
     writeLock.lock();
     try {
-      FiCaSchedulerNode node = scheduler.getNode(
+      FiCaSchedulerNode node = csContext.getNode(
           rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, attempt,
           rmContainer.getContainer().getResource(), node.getPartition(),
@@ -2158,7 +2155,7 @@ public class LeafQueue extends AbstractCSQueue {
     if (application != null && rmContainer != null
         && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       FiCaSchedulerNode node =
-          scheduler.getNode(rmContainer.getContainer().getNodeId());
+          csContext.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, application, rmContainer.getContainer()
           .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
@@ -2178,7 +2175,7 @@ public class LeafQueue extends AbstractCSQueue {
     if (application != null && rmContainer != null
           && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       FiCaSchedulerNode node =
-          scheduler.getNode(rmContainer.getContainer().getNodeId());
+          csContext.getNode(rmContainer.getContainer().getNodeId());
       releaseResource(clusterResource, application, rmContainer.getContainer()
           .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
