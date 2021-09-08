@@ -464,4 +464,40 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IOStatistics logging level. */
   public static final String IOSTATISTICS_LOGGING_LEVEL_DEFAULT
       = IOSTATISTICS_LOGGING_LEVEL_DEBUG;
+
+  /**
+   * What buffer to use.
+   * Default is {@link #DATA_BLOCKS_BUFFER_DEFAULT}.
+   * Value: {@value}
+   */
+  public static final String DATA_BLOCKS_BUFFER =
+      "fs.data.blocks.buffer";
+
+  /**
+   * Buffer blocks to disk: {@value}.
+   * Capacity is limited to available disk space.
+   */
+  public static final String DATA_BLOCKS_BUFFER_DISK = "disk";
+
+  /**
+   * Use a byte buffer.
+   * {@value}.
+   */
+  public static final String DATA_BLOCKS_BYTEBUFFER = "bytebuffer";
+
+  /**
+   * Use an in-memory array. Fast but will run of heap rapidly: {@value}.
+   */
+  public static final String DATA_BLOCKS_BUFFER_ARRAY = "array";
+
+  /**
+   * Default buffer option: {@value}.
+   */
+  public static final String DATA_BLOCKS_BUFFER_DEFAULT =
+      DATA_BLOCKS_BUFFER_DISK;
+
+  /**
+   * default hadoop temp dir on local system: {@value}.
+   */
+  public static final String HADOOP_TMP_DIR = "hadoop.tmp.dir";
 }

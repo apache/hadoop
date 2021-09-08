@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.store.DataBlocks;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -98,9 +99,14 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DATA_BLOCKS_BUFFER;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DATA_BLOCKS_BUFFER_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 
@@ -125,6 +131,13 @@ public class AzureBlobFileSystem extends FileSystem
   private TracingHeaderFormat tracingHeaderFormat;
   private Listener listener;
 
+  /** Name of blockFactory to be used by AbfsOutputStream. */
+  private String blockOutputBuffer;
+  /** BlockFactory instance to be used. */
+  private DataBlocks.BlockFactory blockFactory;
+  /** Maximum Active blocks per OutputStream. */
+  private int blockOutputActiveBlocks;
+
   @Override
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
@@ -136,8 +149,33 @@ public class AzureBlobFileSystem extends FileSystem
 
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     abfsCounters = new AbfsCountersImpl(uri);
-    this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(),
-        configuration, abfsCounters);
+    // name of the blockFactory to be used.
+    this.blockOutputBuffer = configuration.getTrimmed(DATA_BLOCKS_BUFFER,
+        DATA_BLOCKS_BUFFER_DEFAULT);
+    // blockFactory used for this FS instance.
+    this.blockFactory =
+        DataBlocks.createFactory(FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR,
+            configuration, blockOutputBuffer);
+    this.blockOutputActiveBlocks =
+        configuration.getInt(FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS,
+            BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT);
+    if (blockOutputActiveBlocks < 1) {
+      blockOutputActiveBlocks = 1;
+    }
+
+    // AzureBlobFileSystemStore with params in builder.
+    AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder
+        systemStoreBuilder =
+        new AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder()
+            .withUri(uri)
+            .withSecureScheme(this.isSecureScheme())
+            .withConfiguration(configuration)
+            .withAbfsCounters(abfsCounters)
+            .withBlockFactory(blockFactory)
+            .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
+            .build();
+
+    this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder);
     LOG.trace("AzureBlobFileSystemStore init complete");
 
     final AbfsConfiguration abfsConfiguration = abfsStore
