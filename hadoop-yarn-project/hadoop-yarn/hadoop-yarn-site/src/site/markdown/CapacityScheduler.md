@@ -831,6 +831,14 @@ Changing queue/scheduler properties and adding/removing queues can be done in tw
 
   Remove the queue configurations from the file and run refresh as described above
 
+### Enabling periodic configuration refresh
+Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessicity of calling yarn rmadmin -refreshQueues.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.resourcemanager.scheduler.monitor.enable` | Enabling monitoring is necessary for the periodic refresh. Default value is false. |
+| `yarn.resourcemanager.scheduler.monitor.policies` | This is a configuration property that holds a list of classes. Adding more classes means more monitor tasks will be launched, Add `org.apache.hadoop.yarn.server.resourcemanager.capacity.QueueConfigurationAutoRefreshPolicy` to the policies list to enable the periodic refresh. Default value of this property is `org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy`, it means the preemption feature is enabled by default. If the ProportionalCapacityPreemptionPolicy class is removed from the list, it disables the preemption feature. |
+| `yarn.resourcemanager.queue.auto.refresh.monitoring-interval` | Adjusting the auto-refresh monitoring interval is possible with this configuration property. The value is in milliseconds. The default value is 5000 (5 seconds). |
 ### Changing queue configuration via API
 
   Editing by API uses a backing store for the scheduler configuration. To enable this, the following parameters can be configured in yarn-site.xml.
