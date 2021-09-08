@@ -131,14 +131,14 @@ class BlockPoolSlice {
    * Only tests can use true value to bypass processing RBW and Finalized
    * replicas.
    */
-  private static boolean disableProcessingReplicaForTest = false;
+  private static boolean isReplicaProcessingDisabledForTest = false;
 
   /**
    * Only to be used by "tests" and not by "source code". The intention of this
    * is to enable/disable adding AddReplicaProcessor to the addReplicaThreadPool
    * fork-join pool when reading replicas from cache is not successful
    * (typically when Datanode is just started).
-   * By disabling flag 'disableAddingFinalizedReplicaForTest' (i.e. true value),
+   * By disabling flag 'isReplicaProcessingDisabledForTest' (i.e. true value),
    * we will never let AddReplicaProcessor take care of deleting duplicate
    * Finalized or RBW replica if one exists, and this is often useful for
    * some tests.
@@ -147,8 +147,8 @@ class BlockPoolSlice {
    *     or RBW replicas.
    */
   @VisibleForTesting
-  public static void disableFinalizedReplicaAdditionForTest(boolean newVal) {
-    disableProcessingReplicaForTest = newVal;
+  public static void disableReplicaProcessingForTest(boolean newVal) {
+    isReplicaProcessingDisabledForTest = newVal;
   }
 
   /**
@@ -466,7 +466,7 @@ class BlockPoolSlice {
     }
 
     boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
-    if (!success && !disableProcessingReplicaForTest) {
+    if (!success && !isReplicaProcessingDisabledForTest) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
       Queue<RecursiveAction> subTaskQueue =

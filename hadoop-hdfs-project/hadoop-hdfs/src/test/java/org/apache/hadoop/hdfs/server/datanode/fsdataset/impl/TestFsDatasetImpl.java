@@ -1362,7 +1362,7 @@ public class TestFsDatasetImpl {
       // avoided. Hence, we disable adding Finalized and RBW replicas to
       // addReplicaThreadPool in BlockPoolSlice here and re-enable it only after
       // we confirm the existence of newReplicaInfo on "/data2" ARCHIVE storage.
-      BlockPoolSlice.disableFinalizedReplicaAdditionForTest(true);
+      BlockPoolSlice.disableReplicaProcessingForTest(true);
 
       cluster.restartDataNode(0);
       cluster.waitDatanodeFullyStarted(cluster.getDataNodes().get(0), 60000);
@@ -1371,7 +1371,7 @@ public class TestFsDatasetImpl {
       assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
       assertTrue(Files.exists(Paths.get(oldReplicaInfo.getBlockURI())));
 
-      BlockPoolSlice.disableFinalizedReplicaAdditionForTest(false);
+      BlockPoolSlice.disableReplicaProcessingForTest(false);
 
       DirectoryScanner scanner = new DirectoryScanner(
           cluster.getDataNodes().get(0).getFSDataset(), conf);
