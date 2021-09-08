@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -68,17 +69,18 @@ public class ITUseHadoopCodecs {
   }
 
   @Test
-  public void testLz4Codec() throws IOException {
-    conf.setBoolean(
-      CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
-      false);
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
-    conf.setBoolean(
-      CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
-      true);
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
+  public void testLz4Codec() {
+    Arrays.asList(false, true).forEach(config -> {
+      conf.setBoolean(
+        CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
+        config);
+      try {
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
+        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
+      } catch (IOException e) {
+        throw new RuntimeException("failed when running codecTest", e);
+      }
+    });
   }
 
   private void codecTest(Configuration conf, int seed, int count, String codecClass)
