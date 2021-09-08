@@ -120,12 +120,14 @@ public class PrometheusMetricsSink implements MetricsSink {
         for (MetricsTag tag : metric.getKey()) {
           String tagName = tag.name().toLowerCase();
 
-          builder.append(sep)
-              .append(tagName)
-              .append("=\"")
-              .append(tag.value())
-              .append("\"");
-          sep = ",";
+          if (!tagName.equals("numopenconnectionsperuser")) {
+            builder.append(sep)
+                .append(tagName)
+                .append("=\"")
+                .append(tag.value())
+                .append("\"");
+            sep = ",";
+          }
         }
         builder.append("} ");
         builder.append(metric.getValue().value());
