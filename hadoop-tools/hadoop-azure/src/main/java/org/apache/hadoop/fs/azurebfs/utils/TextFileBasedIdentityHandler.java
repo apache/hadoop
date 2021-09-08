@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
@@ -189,13 +190,7 @@ public class TextFileBasedIdentityHandler implements IdentityHandler {
     } catch (ArrayIndexOutOfBoundsException e) {
       LOG.error("Error while parsing mapping file", e);
     } finally {
-      try {
-        if (it != null) {
-          it.close();
-        }
-      } catch (IOException ioe) {
-        LOG.error("IOException thrown on LineIterator close");
-      }
+      IOUtils.cleanupWithLogger(LOG, it);
     }
   }
 }
