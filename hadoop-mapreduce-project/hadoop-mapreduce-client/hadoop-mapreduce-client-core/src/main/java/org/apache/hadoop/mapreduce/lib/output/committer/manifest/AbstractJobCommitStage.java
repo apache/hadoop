@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,12 +31,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.OperationDuration;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
@@ -43,6 +45,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_ST
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTracker;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AuditingIntegration.enterStageWorker;
@@ -68,7 +71,15 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractJobCommitStage.class);
 
+  /**
+   * Error text on rename failure: {@value}.
+   */
   public static final String FAILED_TO_RENAME = "Failed to rename";
+
+  /**
+   * Error text on when clean up is to trash, but
+   * the FS has trash disabled: {@value}.
+   */
   public static final String E_TRASH_DISABLED = "Trash is disabled";
 
   /**
@@ -106,6 +117,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * This is an execute-once operation.
    */
   private final AtomicBoolean executed = new AtomicBoolean(false);
+
+  /**
+   * Tracker of the duration of the execution of the stage.
+   * set after {@link #executeStage(Object)} completes.
+   */
+  private DurationTracker stageExecutionTracker;
 
   /**
    * Constructor.
@@ -146,8 +163,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return the processor binding
    * @throws NullPointerException if required == true and processor is null.
    */
-  private TaskPool.Submitter bindProcessor(boolean required,
-      TaskPool.Submitter processor) {
+  private TaskPool.Submitter bindProcessor(
+      final boolean required,
+      final TaskPool.Submitter processor) {
     return required
         ? requireNonNull(processor, "required IO processor is null")
         : null;
@@ -171,15 +189,33 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     String stageName = getStageName(arguments);
     getStageConfig().enterStage(stageName);
     String statisticName = getStageStatisticName(arguments);
-    try (DurationInfo ignored = new DurationInfo(LOG,
-        false, "Executing stage %s", statisticName)) {
-      return trackDuration(getIOStatistics(), statisticName, () ->
-          executeStage(arguments));
-    } catch (IOException e) {
-      LOG.error("Stage {} failed: {}", stageName, e.toString());
+    // The tracker here
+    LOG.info("Executing Stage {}", stageName);
+    stageExecutionTracker = createTracker(getIOStatistics(), statisticName);
+    try {
+      // exec the input function and return its value
+      final OUT out = executeStage(arguments);
+      LOG.info("Stage {} completed after {}",
+          stageName,
+          OperationDuration.humanTime(
+              stageExecutionTracker.asDuration().toMillis()));
+      return out;
+    } catch (IOException | RuntimeException e) {
+      LOG.error("Stage {} failed: after {}: {}",
+          stageName,
+          OperationDuration.humanTime(
+              stageExecutionTracker.asDuration().toMillis()),
+          e.toString());
       LOG.debug("Stage failure:", e);
+      // input function failed: note it
+      stageExecutionTracker.failed();
+      // and rethrow
       throw e;
     } finally {
+      // update the tracker.
+      // this is called after the catch() call would have
+      // set the failed flag.
+      stageExecutionTracker.close();
       progress();
       getStageConfig().exitStage(stageName);
     }
@@ -224,6 +260,28 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     return getStageStatisticName(arguments);
   }
 
+  /**
+   * Get the execution tracker; non-null
+   * after stage execution.
+   * @return a tracker or null.
+   */
+  public DurationTracker getStageExecutionTracker() {
+    return stageExecutionTracker;
+  }
+
+  /**
+   * Adds the duration of the job to an IOStatistics store
+   * (such as the manifest to be saved).
+   * @param iostats store
+   * @param statistic statistic name.
+   */
+  public void addExecutionDurationToStatistics(IOStatisticsStore iostats,
+      String statistic) {
+    iostats.addTimedOperation(
+        statistic,
+        getStageExecutionTracker().asDuration());
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -258,7 +316,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * to ensure that they are all annotated with job and stage.
    * @param stage stage name.
    */
-  protected void updateAuditContext(String stage) {
+  protected void updateAuditContext(final String stage) {
     enterStageWorker(stageConfig.getJobId(), stage);
   }
 
@@ -287,7 +345,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return status or null
    * @throws IOException IO Failure.
    */
-  protected final FileStatus getFileStatusOrNull(Path path)
+  protected final FileStatus getFileStatusOrNull(
+      final Path path)
       throws IOException {
     try {
       return getFileStatus(path);
@@ -302,7 +361,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return status or null
    * @throws IOException IO Failure.
    */
-  protected final FileStatus getFileStatus(Path path) throws IOException {
+  protected final FileStatus getFileStatus(
+      final Path path)
+      throws IOException {
     LOG.trace("getFileStatus('{}')", path);
     return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () ->
         operations.getFileStatus(path));
@@ -315,10 +376,28 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return status or null
    * @throws IOException IO Failure.
    */
-  protected final boolean delete(Path path, final boolean recursive)
+  protected final boolean delete(
+      final Path path,
+      final boolean recursive)
       throws IOException {
     LOG.trace("delete('{}, {}')", path, recursive);
-    return trackDuration(getIOStatistics(), OP_DELETE, () ->
+    return delete(path, recursive, OP_DELETE);
+  }
+
+  /**
+   * Delete a path.
+   * @param path path
+   * @param recursive recursive delete.
+   * @param statistic statistic to update
+   * @return status or null
+   * @throws IOException IO Failure.
+   */
+  protected Boolean delete(
+      final Path path,
+      final boolean recursive,
+      final String statistic)
+      throws IOException {
+    return trackDuration(getIOStatistics(), statistic, () ->
         operations.delete(path, recursive));
   }
 
@@ -326,10 +405,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * Create a directory.
    * @param path path
    * @param escalateFailure escalate "false" to PathIOE
-   * @return true if the directory was created.
+   * @return true if the directory was created/exists.
    * @throws IOException IO Failure.
    */
-  protected final boolean mkdirs(Path path, boolean escalateFailure)
+  protected final boolean mkdirs(
+      final Path path,
+      final boolean escalateFailure)
       throws IOException {
     LOG.trace("mkdirs('{}')", path);
     return trackDuration(getIOStatistics(), OP_MKDIRS, () -> {
@@ -350,7 +431,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return iterator over the results.
    * @throws IOException IO Failure.
    */
-  protected final RemoteIterator<FileStatus> listStatusIterator(Path path)
+  protected final RemoteIterator<FileStatus> listStatusIterator(
+      final Path path)
       throws IOException {
     LOG.trace("listStatusIterator('{}')", path);
     return trackDuration(getIOStatistics(), OP_LIST_STATUS, () ->
@@ -363,7 +445,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @return the manifest.
    * @throws IOException IO Failure.
    */
-  protected final TaskManifest loadManifest(final FileStatus status)
+  protected final TaskManifest loadManifest(
+      final FileStatus status)
       throws IOException {
     LOG.trace("loadManifest('{}')", status);
     return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () ->
@@ -402,11 +485,21 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws PathIOException mkdirs failed.
    * @throws FileAlreadyExistsException destination exists.
    */
-  protected final Path createNewDirectory(String operation,
-      Path path) throws IOException {
-    // rely on mkdirs returning false if dir exists as the sign of failure.
-    mkdirs(path, true);
-    return path;
+  protected final Path createNewDirectory(
+      final String operation,
+      final Path path) throws IOException {
+    // check for dir existence before trying to create.
+    try {
+      final FileStatus status = getFileStatus(path);
+      // no exception, so the path exists.
+      throw new FileAlreadyExistsException(operation
+          + ": path " + path
+          + " already exists and has status " + status);
+    } catch (FileNotFoundException e) {
+      // the path does not exist, so create it.
+      mkdirs(path, true);
+      return path;
+    }
   }
 
   /**
@@ -418,8 +511,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws PathIOException mkdirs failed.
    * @throws FileAlreadyExistsException destination exists.
    */
-  protected final Path directoryMustExist(String operation,
-      Path path) throws IOException {
+  protected final Path directoryMustExist(
+      final String operation,
+      final Path path) throws IOException {
     final FileStatus status = getFileStatus(path);
     if (!status.isDirectory()) {
       throw new PathIOException(path.toString(),
@@ -580,7 +674,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws IOException exceptions raised in delete if not suppressed.
    * @return any exception caught and suppressed
    */
-  protected IOException deleteDir(final Path dir,
+  protected IOException deleteDir(
+      final Path dir,
       final Boolean suppressExceptions)
       throws IOException {
     try {
@@ -615,20 +710,4 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         operations.moveToTrash(getJobId(), dir));
   }
 
-  /**
-   * Add a statistics sample as a min, max and mean and count.
-   * This should be added to the IOStatisticsStore API.
-   * @param key key to add.
-   * @param count count.
-   */
-  protected void addStatsSample(String key, long count) {
-    IOStatisticsStore iostats = getIOStatistics();
-    iostats.incrementCounter(key, count);
-    iostats.addMeanStatisticSample(
-        key, count);
-    iostats.addMaximumSample(
-        key, count);
-    iostats.addMinimumSample(
-        key, count);
-  }
 }

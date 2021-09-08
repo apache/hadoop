@@ -31,6 +31,7 @@
  *
  * Consult the individual formats for their declarations of access;
  * the _SUCCESS file is one which tests may use.
+ *
  */
 @InterfaceStability.Unstable
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;

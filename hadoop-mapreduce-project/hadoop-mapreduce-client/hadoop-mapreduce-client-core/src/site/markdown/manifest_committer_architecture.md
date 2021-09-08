@@ -473,7 +473,7 @@ other than already implemented for the S3A Committers
 * Integrated: MUST bind via `PathOutputCommitterFactory`.
 
 As a result of this there's a bit of copy and paste from elsewhere,
-e.g. `org.apache.hadoop.mapreduce.lib.output.committer.manifest.TaskPool`
+e.g. `org.apache.hadoop.util.functional.TaskPool`
 is based on S3ACommitter's `org.apache.hadoop.fs.s3a.commit.Tasks`.
 
 The` _SUCCESS` file MUST be compatible with the S3A JSON file.

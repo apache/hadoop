@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -36,10 +38,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -109,38 +112,50 @@ public final class ManifestCommitterTestSupport {
 
   /**
    * Load in the success data marker.
-   * @param outputPath path of job
    * @param fs filesystem
-   * @param origin origin (e.g. "teragen" for messages)
+   * @param outputDir ouptu path of job
    * @param minimumFileCount minimum number of files to have been created
    * @param jobId job ID, only verified if non-empty
    * @return the success data
    * @throws IOException IO failure
    */
-  public static ManifestSuccessData validateSuccessFile(final Path outputPath,
+  public static ManifestSuccessData validateSuccessFile(
       final FileSystem fs,
-      final String origin,
+      final Path outputDir,
       final int minimumFileCount,
       final String jobId) throws IOException {
-    ManifestSuccessData successData = loadSuccessFile(fs, outputPath);
-    String commitDetails = successData.toString();
-    LOG.info("Manifest {}\n{}", outputPath, commitDetails);
-    LOG.info("Job IOStatistics: \n{}",
-        ioStatisticsToPrettyString(successData.getIOStatistics()));
-    LOG.info("Diagnostics\n{}",
-        successData.dumpDiagnostics("  ", " = ", "\n"));
+    Path successPath = new Path(outputDir, SUCCESS_MARKER);
+    ManifestSuccessData successData
+        = loadAndPrintManifest(fs, successPath);
     assertThat(successData.getCommitter())
-        .describedAs("Committer field in " + commitDetails)
-        .isEqualTo("org.apache.hadoop.mapreduce.lib.output.committer"
-            + ".manifest.ManifestCommitter");
+        .describedAs("Committer field")
+        .isEqualTo(MANIFEST_COMMITTER_CLASSNAME);
     assertThat(successData.getFilenames())
-        .describedAs("Files committed in " + commitDetails)
+        .describedAs("Files committed")
         .hasSizeGreaterThanOrEqualTo(minimumFileCount);
     if (isNotEmpty(jobId)) {
       assertThat(successData.getJobId())
-          .describedAs("JobID in " + commitDetails)
+          .describedAs("JobID")
           .isEqualTo(jobId);
     }
+    return successData;
+  }
+
+  /**
+   * Load in and print a success data manifest.
+   * @param fs filesystem
+   * @param successPath full path sto success file.
+   * @return the success data
+   * @throws IOException IO failure
+   */
+  public static ManifestSuccessData loadAndPrintManifest(FileSystem fs, Path successPath)
+      throws IOException {
+    LOG.info("Manifest {}", successPath);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream ps = new PrintStream(baos);
+    final ManifestPrinter showManifest = new ManifestPrinter(fs.getConf(), ps);
+    ManifestSuccessData successData = showManifest.loadAndPrintManifest(fs, successPath);
+    LOG.info("{}", baos);
     return successData;
   }
 

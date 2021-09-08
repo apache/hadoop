@@ -33,9 +33,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
 
 /**
@@ -50,18 +52,18 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  *
  * The stage returns the list of directories created.
  */
-public class PrepareDirectoriesStage extends
+public class CreateOutputDirectoriesStage extends
     AbstractJobCommitStage<List<TaskManifest>, List<Path>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      PrepareDirectoriesStage.class);
+      CreateOutputDirectoriesStage.class);
 
   /**
    * Directories as a map of (path, created).
    */
   private final Map<Path, Path> dirMap = new ConcurrentHashMap<>();
 
-  public PrepareDirectoriesStage(final StageConfig stageConfig) {
+  public CreateOutputDirectoriesStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_CREATE_TARGET_DIRS, true);
     dirMap.put(getDestinationDir(), getDestinationDir());
   }
@@ -146,7 +148,7 @@ public class PrepareDirectoriesStage extends
     if (dirMap.get(path) == null) {
       // there's no entry in the map.
 
-      // TODO: only do GFS if mkdirs() fails.
+      // TODO: maybe only do getFileStatusOrNull checks if mkdirs() fails.
 
       // See if it exists
       final FileStatus st = getFileStatusOrNull(path);
@@ -158,7 +160,7 @@ public class PrepareDirectoriesStage extends
         } else {
           // is bad: delete a file
           LOG.info("Deleting file where a directory should go: {}", st);
-          delete(path, false);
+          delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
           create = true;
         }
       } else {

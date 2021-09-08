@@ -22,6 +22,8 @@ import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.util.functional.TaskPool;
+
 import static java.util.Objects.requireNonNull;
 
 /**

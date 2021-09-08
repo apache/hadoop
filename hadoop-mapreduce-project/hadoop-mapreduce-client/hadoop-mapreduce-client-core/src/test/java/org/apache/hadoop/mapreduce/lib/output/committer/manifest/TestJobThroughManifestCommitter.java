@@ -49,6 +49,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.manifestPathForTask;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadAndPrintManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.PRINCIPAL;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
 import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
@@ -155,6 +156,11 @@ public class TestJobThroughManifestCommitter
     ta11Config = createStageConfig(JOB1, TASK1, TA1, destDir).build();
   }
 
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+  }
+
   /**
    * Test dir deletion is removed from test case teardown so the
    * subsequent tests see the output.
@@ -210,9 +216,18 @@ public class TestJobThroughManifestCommitter
         new SetupJobStage(jobStageConfig).apply(true));
   }
 
+  /**
+   * And the check that the stage worked.
+   * @throws IOException failure.
+   */
+  private void verifyJobSetupCompleted() throws IOException {
+    assertPathExists("Job attempt dir from test_0100", dirs.getJobAttemptDir());
+  }
+
   @Test
   public void test_0110_setupJobOnlyAllowedOnce() throws Throwable {
     describe("a second creation of a job attempt must fail");
+    verifyJobSetupCompleted();
     intercept(FileAlreadyExistsException.class, "", () ->
         new SetupJobStage(jobStageConfig).apply(true));
     // job is still there
@@ -222,6 +237,7 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0120_setupJobNewAttemptNumber() throws Throwable {
     describe("Creating a new job attempt is supported");
+    verifyJobSetupCompleted();
     Path path = pathMustExist("Job attempt 2 dir",
         new SetupJobStage(createStageConfig(2, -1, 0, destDir))
             .apply(false));
@@ -233,14 +249,24 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0200_setupTask00() throws Throwable {
     describe("Set up a task; job must have been set up first");
+    verifyJobSetupCompleted();
     verifyPath("Task attempt 00",
         dirs.getTaskAttemptPath(taskAttempt00),
         new SetupTaskStage(ta00Config).apply("first"));
   }
 
+  /**
+   * Verify TA00 is set up.
+   */
+  private void verifyTaskAttempt00SetUp() throws IOException {
+    pathMustExist("Dir from taskAttempt00 setup",
+        dirs.getTaskAttemptPath(taskAttempt00));
+  }
+
   @Test
   public void test_0210_setupTask00OnlyAllowedOnce() throws Throwable {
     describe("Second attempt to set up task00 must fail.");
+    verifyTaskAttempt00SetUp();
     intercept(FileAlreadyExistsException.class, "second", () ->
         new SetupTaskStage(ta00Config).apply("second"));
   }
@@ -248,6 +274,7 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0220_setupTask01() throws Throwable {
     describe("Setup task attempt 01");
+    verifyTaskAttempt00SetUp();
     verifyPath("Task attempt 01",
         dirs.getTaskAttemptPath(taskAttempt01),
         new SetupTaskStage(ta01Config)
@@ -257,6 +284,7 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0230_setupTask10() throws Throwable {
     describe("Setup task attempt 10");
+    verifyJobSetupCompleted();
     verifyPath("Task attempt 10",
         dirs.getTaskAttemptPath(taskAttempt10),
         new SetupTaskStage(ta10Config)
@@ -270,6 +298,7 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0240_setupThenAbortTask11() throws Throwable {
     describe("Setup then abort task attempt 11");
+    verifyJobSetupCompleted();
     Path ta11Path = new SetupTaskStage(ta11Config).apply("11");
     Path deletedDir = new AbortTaskStage(ta11Config).apply(false);
     Assertions.assertThat(ta11Path)
@@ -299,7 +328,7 @@ public class TestJobThroughManifestCommitter
     Pair<Path, TaskManifest> pair = new CommitTaskStage(ta00Config)
         .apply(null);
     verifyPathExists(getFileSystem(), "manifest",
-        pair.getLeft()).getPath();
+        pair.getLeft());
 
     TaskManifest manifest = pair.getRight();
     manifest.validate();
@@ -429,9 +458,11 @@ public class TestJobThroughManifestCommitter
         + " stage");
 
     // load in the success data.
-    ManifestSuccessData successData = ManifestSuccessData.load(
+    ManifestSuccessData successData = loadAndPrintManifest(
         getFileSystem(),
         ta00Config.getJobSuccessMarkerPath());
+
+
 
     // load manifests stage will load all the task manifests again
     List<TaskManifest> manifests = new LoadManifestsStage(jobStageConfig)

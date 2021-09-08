@@ -29,20 +29,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
-import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_DIRECTORY_COUNT_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_DIRECTORY_DEPTH_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_COUNT_MEAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_SIZE_MEAN;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DIRECTORY_SCAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SCAN_DIRECTORY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.createTaskManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.maybeAddIOStatistics;
@@ -79,12 +74,9 @@ public final class ScanTaskAttemptDirectoryStage
 
     LOG.info("Task Attempt {} scanning directory {}",
         taskAttemptId, taskAttemptDir);
-    // build up the manifest statistics, picking up whatever statistic
-    // names the store uses in its listing (if any)
-    final IOStatisticsSnapshot manifestStats = snapshotIOStatistics();
+
     final int depth = scanDirectoryTree(manifest, taskAttemptDir,
         getDestinationDir(),
-        manifestStats,
         0);
     List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
     LongSummaryStatistics fileSummary = filesToCommit.stream()
@@ -105,14 +97,10 @@ public final class ScanTaskAttemptDirectoryStage
     // add statistics about the task output which, when aggregated, provides
     // insight into structure of job, task skew, etc.
     IOStatisticsStore iostats = getIOStatistics();
-    addStatsSample(COMMITTER_TASK_DIRECTORY_COUNT_MEAN, dirCount);
-    addStatsSample(COMMITTER_TASK_DIRECTORY_DEPTH_MEAN, depth);
-    addStatsSample(COMMITTER_TASK_FILE_COUNT_MEAN, fileCount);
-    addStatsSample(COMMITTER_TASK_FILE_SIZE_MEAN, fileDataSize);
-
-    // save a snapshot of the IO Statistics
-    manifestStats.aggregate(iostats);
-    manifest.setIOStatistics(manifestStats);
+    iostats.addSample(COMMITTER_TASK_DIRECTORY_COUNT_MEAN, dirCount);
+    iostats.addSample(COMMITTER_TASK_DIRECTORY_DEPTH_MEAN, depth);
+    iostats.addSample(COMMITTER_TASK_FILE_COUNT_MEAN, fileCount);
+    iostats.addSample(COMMITTER_TASK_FILE_SIZE_MEAN, fileDataSize);
 
     return manifest;
   }
@@ -138,7 +126,6 @@ public final class ScanTaskAttemptDirectoryStage
       TaskManifest manifest,
       Path srcDir,
       Path destDir,
-      IOStatisticsAggregator ios,
       int depth) throws IOException {
 
     // generate some task progress in case directory scanning is very slow.
@@ -154,9 +141,7 @@ public final class ScanTaskAttemptDirectoryStage
       // list the directory. This may block until the listing is complete,
       // or, if the FS does incremental or asynchronous fetching, until the
       // first page of results is ready.
-      final RemoteIterator<FileStatus> listing =
-          trackDuration(getIOStatistics(), OP_DIRECTORY_SCAN, () ->
-              listStatusIterator(srcDir));
+      final RemoteIterator<FileStatus> listing = listStatusIterator(srcDir);
 
       while (listing.hasNext()) {
         final FileStatus st = listing.next();
@@ -176,7 +161,7 @@ public final class ScanTaskAttemptDirectoryStage
         }
       }
       // add any statistics provided by the listing.
-      maybeAddIOStatistics(ios, listing);
+      maybeAddIOStatistics(getIOStatistics(), listing);
     }
     // if files were added and this is not the base directory.
     // it will need to be created.
@@ -188,15 +173,14 @@ public final class ScanTaskAttemptDirectoryStage
     // now scan the subdirectories
     LOG.debug("Number of subdirectories under {} found: {}",
         srcDir, subdirs.size());
-    for (FileStatus st: subdirs) {
+    for (FileStatus st : subdirs) {
       Path destSubDir = new Path(destDir, st.getPath().getName());
       final int d = scanDirectoryTree(manifest, st.getPath(), destSubDir,
-          ios, depth + 1);
+          depth + 1);
       maxDepth = Math.max(maxDepth, d);
     }
 
     return 1 + maxDepth;
   }
-
 
 }

@@ -76,7 +76,7 @@ public class CommitJobStage extends
     iostats.aggregate(summary.getIOStatistics());
 
     // prepare destination directories.
-    new PrepareDirectoriesStage(getStageConfig())
+    new CreateOutputDirectoriesStage(getStageConfig())
         .apply(manifests);
 
     // commit all the tasks.

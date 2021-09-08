@@ -154,9 +154,20 @@ public class TestTaskManifestFile extends AbstractManifestCommitterTest {
     assertValidationFailureOnRoundTrip(source);
   }
 
+  @Test
+  public void testRejectIncompatibleVersion() throws Throwable {
+    source.setVersion(5);
+    assertValidationFailureOnRoundTrip(source);
+  }
 
-  private void assertValidationFailureOnRoundTrip(TaskManifest
-      manifest) throws Exception {
+  @Test
+  public void testRejectIncompatibleType() throws Throwable {
+    source.setType("Incompatible type");
+    assertValidationFailureOnRoundTrip(source);
+  }
+
+  private void assertValidationFailureOnRoundTrip(
+      final TaskManifest manifest) throws Exception {
     JsonSerialization<TaskManifest> serializer
         = TaskManifest.serializer();
     String json = serializer.toJson(manifest);

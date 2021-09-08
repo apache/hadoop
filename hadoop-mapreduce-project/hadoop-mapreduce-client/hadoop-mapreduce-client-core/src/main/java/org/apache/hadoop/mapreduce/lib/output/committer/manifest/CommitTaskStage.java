@@ -22,8 +22,10 @@ import java.io.IOException;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_COMMIT;
 
 /**
@@ -53,9 +55,20 @@ public class CommitTaskStage extends
   protected Pair<Path, TaskManifest> executeStage(final Void arguments)
       throws IOException {
 
-    TaskManifest manifest = new ScanTaskAttemptDirectoryStage(
-        getStageConfig())
-        .apply(arguments);
+    // execute the scan
+    final ScanTaskAttemptDirectoryStage scanStage =
+        new ScanTaskAttemptDirectoryStage(getStageConfig());
+    TaskManifest manifest = scanStage.apply(arguments);
+
+    // add the scan as task commit. It's not quite, as it doesn't include
+    // the saving, but ...
+    scanStage.addExecutionDurationToStatistics(getIOStatistics(), OP_STAGE_TASK_COMMIT);
+
+    // save a snapshot of the IO Statistics
+    final IOStatisticsSnapshot manifestStats = snapshotIOStatistics();
+    manifestStats.aggregate(getIOStatistics());
+    manifest.setIOStatistics(manifestStats);
+
     // Now save with rename
     Path manifestPath = new SaveTaskManifestStage(getStageConfig())
         .apply(manifest);

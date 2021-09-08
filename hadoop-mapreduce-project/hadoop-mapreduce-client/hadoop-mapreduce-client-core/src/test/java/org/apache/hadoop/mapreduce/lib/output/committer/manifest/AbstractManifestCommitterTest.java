@@ -52,6 +52,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManif
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
@@ -532,18 +533,18 @@ public abstract class AbstractManifestCommitterTest
    * Assert that a path must exist; return the path.
    * It must also equal the expected value.
    * @param message text for error message.
-   * @param expected expected path.
-   * @param path path to validate.
+   * @param expectedPath expected path.
+   * @param actualPath path to validate.
    * @return the path
    * @throws IOException IO Failure
    */
   Path verifyPath(final String message,
-      final Path expected,
-      final Path path) throws IOException {
-    Assertions.assertThat(path)
+      final Path expectedPath,
+      final Path actualPath) throws IOException {
+    Assertions.assertThat(actualPath)
         .describedAs(message)
-        .isEqualTo(expected);
-    return pathMustExist(message, path);
+        .isEqualTo(expectedPath);
+    return pathMustExist(message, actualPath);
   }
 
   /**
@@ -557,7 +558,7 @@ public abstract class AbstractManifestCommitterTest
    */
   protected ManifestSuccessData verifySuccessMarker(Path dir, String jobId)
       throws IOException {
-    return validateSuccessFile(dir, getFileSystem(), "query", 0, jobId);
+    return validateSuccessFile(getFileSystem(), dir, 0, jobId);
   }
 
   /**

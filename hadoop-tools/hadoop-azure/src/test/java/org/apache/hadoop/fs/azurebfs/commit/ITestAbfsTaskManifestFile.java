@@ -18,25 +18,20 @@
 
 package org.apache.hadoop.fs.azurebfs.commit;
 
-import org.junit.FixMethodOrder;
-import org.junit.runners.MethodSorters;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestJobThroughManifestCommitter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestTaskManifestFile;
 
 /**
- * Test the Manifest committer stages against ABFS.
+ * Test Reading/writing manifest file through ABFS.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class ITestAbfsJobThroughManifestCommitter
-    extends TestJobThroughManifestCommitter {
+public class ITestAbfsTaskManifestFile extends TestTaskManifestFile {
 
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsJobThroughManifestCommitter() throws Exception {
+  public ITestAbfsTaskManifestFile() throws Exception {
     binding = new ABFSContractTestBinding();
   }
 
@@ -48,7 +43,7 @@ public class ITestAbfsJobThroughManifestCommitter
 
   @Override
   protected Configuration createConfiguration() {
-    return enableManifestCommitter(binding.getRawConfiguration());
+    return binding.getRawConfiguration();
   }
 
   @Override

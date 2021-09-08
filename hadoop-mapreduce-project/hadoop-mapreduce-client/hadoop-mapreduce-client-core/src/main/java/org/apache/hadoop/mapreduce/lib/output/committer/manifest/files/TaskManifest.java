@@ -44,15 +44,59 @@ import org.apache.hadoop.util.JsonSerialization;
  * This is the manifest of files which were created by
  * this task attempt.
  * Although based on the same design as the S3A PendingSet manifest,
- * there is no expectation that they should be
+ * there is no expectation that they should be compatible.
+ *
+ * Versioning:
+ * In a rolling cluster update, MR or Spark workers deployed on a newer
+ * node (and/or with a newer version of artifacts in a cluster-FS hosted
+ * tar.gz file) may be a later version of this class than that of
+ * job committer.
+ * If any changes are made to the manifest which are backwards compatible,
+ * this new manifest can still be loaded from JSON and processed.
+ *
+ * If the manifest is no longer compatible, the job output may
+ * be invalid.
+ *
+ * It is CRITICAL that the {@link #VERSION} constant is updated whenever
+ * such an incompatible change is made.
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TaskManifest extends AbstractManifestData<TaskManifest> {
 
+  /**
+   * Supported version value: {@value}.
+   * If this is changed the value of {@code serialVersionUID} will change,
+   * to avoid deserialization problems.
+   */
+  public static final int VERSION = 1;
+
+  /**
+   * Manifest type.
+   */
+  public static final String TYPE =
+      "org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest/"
+      + VERSION;
+
+
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskManifest.class);
+
+  /**
+   * Serialization version.
+   */
+  private static final long serialVersionUID = 7090285511966046094L + VERSION;
+
+  /**
+   * Manifest type.
+   */
+  @JsonProperty("type")
+  private String type = TYPE;
+
+  /** Version marker. */
+  @JsonProperty("version")
+  private int version = VERSION;
 
   /**
    * Job ID; constant over multiple attempts.
@@ -116,6 +160,22 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * code.
    */
   public TaskManifest() {
+  }
+
+  public String getType() {
+    return type;
+  }
+
+  public void setType(String type) {
+    this.type = type;
+  }
+
+  public int getVersion() {
+    return version;
+  }
+
+  public void setVersion(int version) {
+    this.version = version;
   }
 
   @Override
@@ -230,7 +290,8 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * @throws IOException if the data is invalid
    */
   public void validate() throws IOException {
-    // verify(version == VERSION, "Wrong version: %s", version);
+    verify(TYPE.equals(type), "Wrong type: %s", type);
+    verify(version == VERSION, "Wrong version: %s", version);
     validateCollectionClass(extraData.keySet(), String.class);
     validateCollectionClass(extraData.values(), String.class);
     Set<String> destinations = new HashSet<>(filesToCommit.size());
@@ -261,7 +322,6 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
     return new JsonSerialization<>(TaskManifest.class, false, true);
   }
 
-
   /**
    * Load an instance from a file, then validate it.
    * @param fs filesystem
@@ -282,14 +342,18 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
    * If loading through a listing; use this API so that filestatus
    * hints can be used.
    * @param fs filesystem
+   * @param path path to load from
    * @param status status of file to load
    * @return the loaded instance
    * @throws IOException IO failure
    * @throws IOException IO failure/the data is invalid
    */
-  public static TaskManifest load(FileSystem fs, FileStatus status)
+  public static TaskManifest load(FileSystem fs, Path path, FileStatus status)
       throws IOException {
-    return load(fs, status.getPath());
+    LOG.debug("Reading Manifest in file {}", path);
+    TaskManifest instance = serializer().load(fs, path, status);
+    instance.validate();
+    return instance;
   }
 
 }

@@ -40,12 +40,6 @@ import org.apache.hadoop.util.JsonSerialization;
 public abstract class AbstractManifestData<T extends AbstractManifestData>
     implements Serializable, IOStatisticsSource {
 
-  /**
-   * Supported version value: {@value}.
-   * If this is changed the value of {@code serialVersionUID} will change,
-   * to avoid deserialization problems.
-   */
-  public static final int VERSION = 2;
 
   /**
    * Convert a path to a string which can be included in the JSON.

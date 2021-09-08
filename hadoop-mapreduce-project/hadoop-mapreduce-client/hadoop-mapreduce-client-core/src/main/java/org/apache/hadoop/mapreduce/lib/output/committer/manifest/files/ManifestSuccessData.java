@@ -56,6 +56,9 @@ import org.apache.hadoop.util.JsonSerialization;
  * IOStatisticsSnapshot has a lot of complexity in marshalling
  * there; this class doesn't worry about concurrent access
  * so is simpler.
+ *
+ * Versioning:
+ *  t
  */
 @SuppressWarnings({"unused", "CollectionDeclaredAsConcreteClass"})
 @InterfaceAudience.Public
@@ -436,6 +439,10 @@ public class ManifestSuccessData
 
   public void setState(String state) {
     this.state = state;
+  }
+
+  public String getStage() {
+    return stage;
   }
 
   /**

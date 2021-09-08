@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.util.DurationInfo;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
@@ -160,16 +161,18 @@ public abstract class AbstractAbfsClusterITest extends
    */
   protected static ClusterBinding createCluster(
       final JobConf conf) throws IOException {
-    conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
-    // create a unique cluster name based on the current time in millis.
-    String timestamp = LocalDateTime.now().format(
-        DateTimeFormatter.ofPattern("yyyy-MM-dd-HH.mm.ss.SS"));
-    String clusterName = "yarn-" + timestamp;
-    MiniMRYarnCluster yarnCluster =
-        new MiniMRYarnCluster(clusterName, NO_OF_NODEMANAGERS);
-    yarnCluster.init(conf);
-    yarnCluster.start();
-    return new ClusterBinding(clusterName, yarnCluster);
+    try (DurationInfo d = new DurationInfo(LOG, "Creating YARN MiniCluster")) {
+      conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
+      // create a unique cluster name based on the current time in millis.
+      String timestamp = LocalDateTime.now().format(
+          DateTimeFormatter.ofPattern("yyyy-MM-dd-HH.mm.ss.SS"));
+      String clusterName = "yarn-" + timestamp;
+      MiniMRYarnCluster yarnCluster =
+          new MiniMRYarnCluster(clusterName, NO_OF_NODEMANAGERS);
+      yarnCluster.init(conf);
+      yarnCluster.start();
+      return new ClusterBinding(clusterName, yarnCluster);
+    }
   }
 
   /**

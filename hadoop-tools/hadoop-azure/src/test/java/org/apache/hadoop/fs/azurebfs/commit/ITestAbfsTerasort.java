@@ -39,7 +39,10 @@ import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -47,6 +50,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static java.util.Optional.empty;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
 
@@ -69,6 +74,11 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
   public static final int ROW_COUNT = 1000;
 
   /**
+   * This has to be common across all test methods.
+   */
+  private static final Path TERASORT_PATH = new Path("/ITestAbfsTerasort");
+
+  /**
    * Duration tracker created in the first of the test cases and closed
    * in {@link #test_140_teracomplete()}.
    */
@@ -77,7 +87,13 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
   /**
    * Tracker of which stages are completed and how long they took.
    */
-  private static Map<String, DurationInfo> completedStages = new HashMap<>();
+  private static final Map<String, DurationInfo> COMPLETED_STAGES = new HashMap<>();
+
+  /**
+   * FileSystem statistics are collected from the _SUCCESS markers.
+   */
+  protected static final IOStatisticsSnapshot JOB_IOSTATS =
+      snapshotIOStatistics();
 
   /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
@@ -97,6 +113,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
 
   @Override
   public void setup() throws Exception {
+    // superclass calls requireScaleTestsEnabled();
     super.setup();
     prepareToTerasort();
   }
@@ -136,13 +153,10 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * common across all test cases in a single parameterized run.
    */
   private void prepareToTerasort() {
-    // small sample size for faster runs
-
-    terasortPath = getFileSystem().makeQualified(new Path("/terasort"));
+    terasortPath = getFileSystem().makeQualified(TERASORT_PATH);
     sortInput = new Path(terasortPath, "sortin");
     sortOutput = new Path(terasortPath, "sortout");
     sortValidate = new Path(terasortPath, "validate");
-
   }
 
   /**
@@ -152,7 +166,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    */
   private static void completedStage(final String stage,
       final DurationInfo d) {
-    completedStages.put(stage, d);
+    COMPLETED_STAGES.put(stage, d);
   }
 
   /**
@@ -162,7 +176,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
   private static void requireStage(final String stage) {
     Assume.assumeTrue(
         "Required stage was not completed: " + stage,
-        completedStages.get(stage) != null);
+        COMPLETED_STAGES.get(stage) != null);
   }
 
   /**
@@ -184,6 +198,9 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
       final String[] args,
       final int minimumFileCount) throws Exception {
     int result;
+
+    // the duration info is created outside a try-with-resources
+    // clause as it is used later.
     DurationInfo d = new DurationInfo(LOG, stage);
     try {
       result = ToolRunner.run(jobConf, tool, args);
@@ -194,8 +211,10 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
     assertEquals(stage
         + "(" + StringUtils.join(", ", args) + ")"
         + " failed", 0, result);
-    validateSuccessFile(dest, getFileSystem(), stage,
+    final ManifestSuccessData successFile = validateSuccessFile(getFileSystem(), dest,
         minimumFileCount, "");
+    JOB_IOSTATS.aggregate(successFile.getIOStatistics());
+
     completedStage(stage, d);
   }
 
@@ -212,7 +231,6 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
     describe("Setting up for a terasort");
 
     getFileSystem().delete(terasortPath, true);
-    completedStages = new HashMap<>();
     terasortDuration = Optional.of(new DurationInfo(LOG, false, "Terasort"));
   }
 
@@ -276,6 +294,10 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
       completedStage("overall", d);
     });
 
+    // IO Statistics
+    IOStatisticsLogging.logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, JOB_IOSTATS);
+
+    // and the summary
     final StringBuilder results = new StringBuilder();
     results.append("\"Operation\"\t\"Duration\"\n");
 
@@ -283,7 +305,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
     // for use afterwards.
     // Works because there's no IOEs being raised in this sequence.
     Consumer<String> stage = (s) -> {
-      DurationInfo duration = completedStages.get(s);
+      DurationInfo duration = COMPLETED_STAGES.get(s);
       results.append(String.format("\"%s\"\t\"%s\"\n",
           s,
           duration == null ? "" : duration));

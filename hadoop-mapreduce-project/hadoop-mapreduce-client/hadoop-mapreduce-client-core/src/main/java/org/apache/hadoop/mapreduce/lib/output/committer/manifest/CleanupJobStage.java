@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
@@ -218,6 +219,10 @@ public class CleanupJobStage extends
 
       case RENAMED_TO_TRASH:
         outcome = Outcome.RENAMED_TO_TRASH;
+        break;
+
+      default:
+        // this doesn't exist, but is needed to keep checkstyle quiet
         break;
       }
     }

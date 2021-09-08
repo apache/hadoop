@@ -94,12 +94,14 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
 
   @Override
   public TaskManifest loadTaskManifest(FileStatus st) throws IOException {
-    return TaskManifest.load(fileSystem, st);
+    return TaskManifest.load(fileSystem, st.getPath(), st);
   }
 
   @Override
-  public <T extends AbstractManifestData<T>> void save(T manifestData,
-      final Path path, boolean overwrite) throws IOException {
+  public <T extends AbstractManifestData<T>> void save(
+      final T manifestData,
+      final Path path,
+      final boolean overwrite) throws IOException {
     manifestData.save(fileSystem, path, overwrite);
   }
 

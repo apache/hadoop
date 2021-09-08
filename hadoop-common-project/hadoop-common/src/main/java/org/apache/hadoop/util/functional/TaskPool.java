@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.util.functional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,7 +36,9 @@ import org.slf4j.LoggerFactory;
  * actions.
  * There is no retry logic: it is expected to be handled by the closures.
  * From {@code org.apache.hadoop.fs.s3a.commit.Tasks} which came from
- * the Netflix committer patch; Iceberg has its own version of this.
+ * the Netflix committer patch.
+ * Apoche Iceberg has its own version of this, with a common ancestor
+ * at some point in its history.
  */
 public final class TaskPool {
   private static final Logger LOG =
@@ -245,57 +247,54 @@ public final class TaskPool {
 
       for (final I item : items) {
         // submit a task for each item that will either run or abort the task
-        futures.add(service.submit(new Runnable() {
-          @Override
-          public void run() {
-            if (!(stopOnFailure && taskFailed.get())) {
-              // run the task
-              boolean threw = true;
-              try {
-                LOG.debug("Executing task");
-                task.run(item);
-                succeeded.add(item);
-                LOG.debug("Task succeeded");
+        futures.add(service.submit(() -> {
+          if (!(stopOnFailure && taskFailed.get())) {
+            // run the task
+            boolean threw = true;
+            try {
+              LOG.debug("Executing task");
+              task.run(item);
+              succeeded.add(item);
+              LOG.debug("Task succeeded");
 
-                threw = false;
+              threw = false;
 
-              } catch (Exception e) {
+            } catch (Exception e) {
+              taskFailed.set(true);
+              exceptions.add(e);
+              LOG.info("Task failed", e);
+
+              if (onFailure != null) {
+                try {
+                  onFailure.run(item, e);
+                } catch (Exception failException) {
+                  LOG.error("Failed to clean up on failure", e);
+                  // swallow the exception
+                }
+              }
+            } finally {
+              if (threw) {
                 taskFailed.set(true);
-                exceptions.add(e);
-                LOG.info("Task failed", e);
-
-                if (onFailure != null) {
-                  try {
-                    onFailure.run(item, e);
-                  } catch (Exception failException) {
-                    LOG.error("Failed to clean up on failure", e);
-                    // swallow the exception
-                  }
-                }
-              } finally {
-                if (threw) {
-                  taskFailed.set(true);
-                }
               }
+            }
 
-            } else if (abortTask != null) {
-              // abort the task instead of running it
-              if (stopAbortsOnFailure && abortFailed.get()) {
-                return;
-              }
+          } else if (abortTask != null) {
+            // abort the task instead of running it
+            if (stopAbortsOnFailure && abortFailed.get()) {
+              return;
+            }
 
-              boolean failed = true;
-              try {
-                LOG.info("Aborting task");
-                abortTask.run(item);
-                failed = false;
-              } catch (Exception e) {
-                LOG.error("Failed to abort task", e);
-                // swallow the exception
-              } finally {
-                if (failed) {
-                  abortFailed.set(true);
-                }
+            boolean failed = true;
+            try {
+              LOG.info("Aborting task");
+              abortTask.run(item);
+              failed = false;
+            } catch (Exception e) {
+              LOG.error("Failed to abort task", e);
+              // swallow the exception
+            } finally {
+              if (failed) {
+                abortFailed.set(true);
               }
             }
           }

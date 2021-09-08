@@ -622,7 +622,7 @@ public final class IOStatisticsBinding {
    * @param statistic statistic to track
    * @return a duration tracker.
    */
-  private static DurationTracker createTracker(
+  public static DurationTracker createTracker(
       @Nullable final DurationTrackerFactory factory,
       final String statistic) {
     return factory != null

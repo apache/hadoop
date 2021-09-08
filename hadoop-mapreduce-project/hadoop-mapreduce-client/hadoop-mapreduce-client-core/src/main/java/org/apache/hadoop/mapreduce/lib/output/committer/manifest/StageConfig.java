@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
@@ -189,8 +190,9 @@ public class StageConfig {
    * @param dirs source of directories.
    * @return this
    */
-  public StageConfig withJobDirectories(final
-  ManifestCommitterSupport.AttemptDirectories dirs) {
+  public StageConfig withJobDirectories(
+      final ManifestCommitterSupport.AttemptDirectories dirs) {
+
     checkOpen();
     withJobAttemptDir(dirs.getJobAttemptDir())
         .withDestinationDir(dirs.getOutputPath())

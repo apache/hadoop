@@ -116,7 +116,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
         .containsExactlyInAnyOrderElementsOf(manifestTaskIds);
 
     // now let's see about aggregating a large set of directories
-    List<Path> createdDirectories = new PrepareDirectoriesStage(
+    List<Path> createdDirectories = new CreateOutputDirectoriesStage(
         getJobStageConfig())
         .apply(loadedManifests);
 

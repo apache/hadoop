@@ -1056,7 +1056,7 @@ public class TestManifestCommitProtocol
 
     // validate output
     FileSystem fs = getFileSystem();
-    ManifestSuccessData successData = validateSuccessFile(outputDir, fs, "query",
+    ManifestSuccessData successData = validateSuccessFile(fs, outputDir,
         1,
         "");
     Assertions.assertThat(successData.getFilenames())
@@ -1420,6 +1420,8 @@ public class TestManifestCommitProtocol
     taCtx[0] = new TaskAttemptContextImpl(conf, taskAttempt0);
     taCtx[1] = new TaskAttemptContextImpl(conf, taskAttempt1);
 
+    // IDE/checkstyle complain here about type casting but they
+    // are confused.
     final TextOutputFormat<Writable, Object>[] tof =
         new TextOutputForTests[2];
 
