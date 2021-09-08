@@ -1157,7 +1157,7 @@ public final class S3AUtils {
   public static Configuration propagateBucketOptions(Configuration source,
       String bucket) {
 
-    Preconditions.checkArgument(StringUtils.isNotEmpty(bucket), "bucket");
+    Preconditions.checkArgument(StringUtils.isNotEmpty(bucket), "bucket is null/empty");
     final String bucketPrefix = FS_S3A_BUCKET_PREFIX + bucket +'.';
     LOG.debug("Propagating entries under {}", bucketPrefix);
     final Configuration dest = new Configuration(source);

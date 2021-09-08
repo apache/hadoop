@@ -1381,7 +1381,7 @@
 
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>48</value>
+  <value>96</value>
   <description>Controls the maximum number of simultaneous connections to S3.
     This must be bigger than the value of fs.s3a.threads.max so as to stop
     threads being blocked waiting for new HTTPS connections.
@@ -2458,6 +2458,14 @@
      various services. If this value is set to true then we log requests that
      fall into 99th percentile as well as increment RpcSlowCalls counter.
     </description>
+</property>
+
+<property>
+  <name>ipc.server.purge.interval</name>
+  <value>15</value>
+  <description>Define how often calls are cleaned up in the server.
+    The default is 15 minutes. The unit is minutes.
+  </description>
 </property>
 
 <property>
