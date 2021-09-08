@@ -713,7 +713,8 @@ Using the following example configuration snippet will instruct the `CapacitySch
 * enable the flexible auto queue creation for root.parent
 * create all of the dynamic queues **two levels below** `root.parent` (for example `root.parent.parent-auto.leaf-auto`) with 80% as the maximum capacity, because of the wildcard queue path (root.parent.*)
 * create the dynamic parent queues **directly** under root.parent with weight 2
-* add the GPU label to every leaf queue created **directly** under root.parent
+* add the GPU label to every leaf queue created **directly** under `root.parent`
+* set the GPU label related weight of every queue **directly** under `root.parent` 
 
 ```
  <property>
