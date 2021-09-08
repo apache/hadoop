@@ -67,6 +67,7 @@ public class TestPrometheusMetricsSink {
             "test_metrics_num_bucket_create_fails{context=\"dfs\"")
     );
 
+    metrics.unregisterSource("TestMetrics");
     metrics.stop();
     metrics.shutdown();
   }
@@ -112,6 +113,8 @@ public class TestPrometheusMetricsSink {
             "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\"")
     );
 
+    metrics.unregisterSource("TestMetrics1");
+    metrics.unregisterSource("TestMetrics2");
     metrics.stop();
     metrics.shutdown();
   }
@@ -161,6 +164,7 @@ public class TestPrometheusMetricsSink {
             "test_metrics_num_bucket_create_fails{context=\"dfs\",testtag=\"testTagValue2\"")
     );
 
+    metrics.unregisterSource("TestMetrics");
     metrics.stop();
     metrics.shutdown();
   }
