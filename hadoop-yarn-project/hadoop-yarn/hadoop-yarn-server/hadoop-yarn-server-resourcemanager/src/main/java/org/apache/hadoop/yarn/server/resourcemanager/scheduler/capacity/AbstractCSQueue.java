@@ -272,10 +272,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public String getQueueName() {
-    boolean fullPathQueueNamingPolicy = false;
-    if (fullPathQueueNamingPolicy) {
-      return queuePath;
-    }
     return queueName;
   }
 
