@@ -750,7 +750,7 @@ Enabling queue configuration periodic refresh allows reloading and applying the 
 | Property | Description |
 |:---- |:---- |
 | `yarn.resourcemanager.scheduler.monitor.enable` | Enabling monitoring is necessary for the periodic refresh. Default value is false. |
-| `yarn.resourcemanager.scheduler.monitor.policies` | This is a configuration property that holds a list of classes. Adding more classes means more monitor tasks will be launched, Adding `org.apache.hadoop.yarn.server.resourcemanager.capacity.QueueConfigurationAutoRefreshPolicy` to the policies list for the periodic refresh. Default value is `org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy`, it means the preemption feature is enabled by default, it would turn off the preemption feature when removing the ProportionalCapacityPreemptionPolicy. |
+| `yarn.resourcemanager.scheduler.monitor.policies` | This is a configuration property that holds a list of classes. Adding more classes means more monitor tasks will be launched, Add `org.apache.hadoop.yarn.server.resourcemanager.capacity.QueueConfigurationAutoRefreshPolicy` to the policies list to enable the periodic refresh. Default value of this property is `org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy`, it means the preemption feature is enabled by default. If the ProportionalCapacityPreemptionPolicy class is removed from the list, it disables the preemption feature. |
 | `yarn.resourcemanager.queue.auto.refresh.monitoring-interval` | Adjusting the auto-refresh monitoring interval is possible with this configuration property. The value is in milliseconds. The default value is 5000 (5 seconds). |
 ### Changing queue configuration via API
 
