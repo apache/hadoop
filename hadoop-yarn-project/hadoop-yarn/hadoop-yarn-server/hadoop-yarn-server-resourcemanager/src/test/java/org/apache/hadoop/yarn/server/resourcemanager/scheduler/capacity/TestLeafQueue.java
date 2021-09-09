@@ -218,6 +218,7 @@ public class TestLeafQueue {
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
+    when(csContext.isReservationEnabled()).thenReturn(true);
 
     root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,

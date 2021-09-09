@@ -42,6 +42,7 @@ public class ResourceLimits {
   private Resource blockedHeadroom;
 
   private boolean allowPreempt = false;
+  private boolean allowReserve = true;
 
   public ResourceLimits(Resource limit) {
     this(limit, Resources.none());
@@ -83,6 +84,14 @@ public class ResourceLimits {
 
   public void setIsAllowPreemption(boolean allowPreempt) {
    this.allowPreempt = allowPreempt;
+  }
+
+  public boolean isAllowReservation() {
+    return allowReserve;
+  }
+
+  public void setAllowReservation(boolean allowReserve) {
+    this.allowReserve = allowReserve;
   }
 
   public void addBlockedHeadroom(Resource resource) {

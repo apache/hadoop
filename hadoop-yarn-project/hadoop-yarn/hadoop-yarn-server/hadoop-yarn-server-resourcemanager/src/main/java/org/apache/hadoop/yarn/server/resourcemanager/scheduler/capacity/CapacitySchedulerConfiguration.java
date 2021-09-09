@@ -140,6 +140,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String DEFAULT_NODE_LABEL_EXPRESSION =
       "default-node-label-expression";
 
+  @Private
+  public static final String RESERVATION_ENABLED = PREFIX + "reservation.enabled";
+
+  @Private
+  public static final boolean DEFAULT_RESERVATION_ENABLED = true;
+
   public static final String RESERVE_CONT_LOOK_ALL_NODES = PREFIX
       + "reservations-continue-look-all-nodes";
 
@@ -855,6 +861,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String label, float percent) {
     setFloat(getNodeLabelPrefix(queue, label)
         + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
+  }
+
+  public boolean isReservationEnabled() {
+    return getBoolean(RESERVATION_ENABLED, DEFAULT_RESERVATION_ENABLED);
   }
 
   /*

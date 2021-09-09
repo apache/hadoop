@@ -622,7 +622,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     } else {
       // if we are allowed to allocate but this node doesn't have space, reserve
       // it or if this was an already a reserved container, reserve it again
-      if (shouldAllocOrReserveNewContainer || rmContainer != null) {
+      if (currentResoureLimits.isAllowReservation() &&
+              (shouldAllocOrReserveNewContainer || rmContainer != null)) {
         if (reservationsContinueLooking && rmContainer == null) {
           // we could possibly ignoring queue capacity or user limits when
           // reservationsContinueLooking is set. Make sure we didn't need to
