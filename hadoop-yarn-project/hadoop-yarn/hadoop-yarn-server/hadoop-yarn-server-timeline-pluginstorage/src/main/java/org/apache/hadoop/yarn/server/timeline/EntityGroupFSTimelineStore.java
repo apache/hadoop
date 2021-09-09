@@ -134,6 +134,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
   private int appCacheMaxSize = 0;
   private List<TimelineEntityGroupPlugin> cacheIdPlugins;
   private Map<TimelineEntityGroupId, EntityCacheItem> cachedLogs;
+  private boolean aclsEnabled;
 
   @VisibleForTesting
   @InterfaceAudience.Private
@@ -204,6 +205,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
         YarnConfiguration
             .TIMELINE_SERVICE_ENTITYGROUP_FS_STORE_DONE_DIR_DEFAULT));
     fs = activeRootPath.getFileSystem(conf);
+    aclsEnabled = conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
+    YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
     CallerContext.setCurrent(
         new CallerContext.Builder(ATS_V15_SERVER_DFS_CALLER_CTXT).build());
     super.serviceInit(conf);
@@ -766,16 +769,24 @@ public class EntityGroupFSTimelineStore extends CompositeService
             continue;
           }
           String filename = statCache.getPath().getName();
+          String owner = statCache.getOwner();
+          //YARN-10884:Owner of File is set to Null on WASB Append Operation.ATS fails to read such
+          //files as UGI cannot be constructed using Null User.To Fix this,anonymous user is set
+          //when ACL us Disabled as the UGI is not needed there
+          if ((owner == null || owner.isEmpty()) && !aclsEnabled) {
+            LOG.debug("The owner was null when acl disabled, hence making the owner anonymous");
+            owner = "anonymous";
+          }
           // We should only update time for log files.
           boolean shouldSetTime = true;
           LOG.debug("scan for log file: {}", filename);
           if (filename.startsWith(DOMAIN_LOG_PREFIX)) {
-            addSummaryLog(attemptDirName, filename, statCache.getOwner(), true);
+            addSummaryLog(attemptDirName, filename, owner, true);
           } else if (filename.startsWith(SUMMARY_LOG_PREFIX)) {
-            addSummaryLog(attemptDirName, filename, statCache.getOwner(),
+            addSummaryLog(attemptDirName, filename, owner,
                 false);
           } else if (filename.startsWith(ENTITY_LOG_PREFIX)) {
-            addDetailLog(attemptDirName, filename, statCache.getOwner());
+            addDetailLog(attemptDirName, filename, owner);
           } else {
             shouldSetTime = false;
           }

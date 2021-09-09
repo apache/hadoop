@@ -2868,6 +2868,10 @@
     maintain a mapping of cached blocks to DataNodes via processing DataNode
     cache reports.  Based on these reports and addition and removal of caching
     directives, the NameNode will schedule caching and uncaching work.
+    In the current implementation, centralized caching introduces additional
+    write lock overhead (see CacheReplicationMonitor#rescan) even if no path
+    to cache is specified, so we recommend disabling this feature when not in
+    use. We will disable centralized caching by default in later versions.
   </description>
 </property>
 

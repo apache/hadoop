@@ -187,6 +187,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -401,6 +402,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
+
+      // HADOOP-17894. remove references to s3a stores in JCEKS credentials.
+      conf = ProviderUtils.excludeIncompatibleCredentialProviders(
+          conf, S3AFileSystem.class);
+
       // fix up the classloader of the configuration to be whatever
       // classloader loaded this filesystem.
       // See: HADOOP-17372
