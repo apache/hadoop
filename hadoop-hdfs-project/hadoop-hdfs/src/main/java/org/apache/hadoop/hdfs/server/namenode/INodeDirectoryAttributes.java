@@ -62,7 +62,7 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
     public boolean metadataEquals(INodeDirectoryAttributes other) {
       return other != null && getQuotaCounts().equals(other.getQuotaCounts())
           && getPermissionLong() == other.getPermissionLong()
-          && Objects.equals(getAclFeature(), other.getAclFeature())
+          && getAclFeature() == other.getAclFeature()
           && Objects.equals(getXAttrFeature(), other.getXAttrFeature());
     }
   }
