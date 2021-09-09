@@ -76,7 +76,17 @@ public class ConfigurationProperties {
       String prefix, boolean fullyQualifiedKey) {
     List<String> propertyPrefixParts = splitPropertyByDelimiter(prefix);
     Map<String, String> properties = new HashMap<>();
-    String trimPrefix = fullyQualifiedKey ? "" : prefix;
+    String trimPrefix;
+    if (fullyQualifiedKey) {
+      trimPrefix = "";
+    } else {
+      // To support the behaviour where the
+      // CapacitySchedulerConfiguration.getQueuePrefix(String queue) method
+      // returned with the queue prefix with a dot appended to it the last dot
+      // should be removed
+      trimPrefix = prefix.endsWith(CapacitySchedulerConfiguration.DOT) ?
+          prefix.substring(0, prefix.length() - 1) : prefix;
+    }
 
     collectPropertiesRecursively(nodes, properties,
         propertyPrefixParts.iterator(), trimPrefix);
@@ -132,8 +142,7 @@ public class ConfigurationProperties {
       String prefixToTrim = trimPrefix;
 
       if (!trimPrefix.isEmpty()) {
-        if (!key.equals(trimPrefix) &&
-            !trimPrefix.endsWith(CapacitySchedulerConfiguration.DOT)) {
+        if (!key.equals(trimPrefix)) {
           prefixToTrim += CapacitySchedulerConfiguration.DOT;
         }
         key = configEntry.getKey().substring(prefixToTrim.length());
