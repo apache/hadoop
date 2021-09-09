@@ -67,6 +67,13 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- snappy-java is native library and cannot be relocated. So we explicitly exclude it
+         from shaded jar to prevent possible conflict. Make it as transitive dependency to
+         make the downstream pull it. -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
