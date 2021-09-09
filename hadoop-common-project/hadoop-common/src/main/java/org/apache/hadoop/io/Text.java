@@ -34,7 +34,6 @@ import java.text.StringCharacterIterator;
 import java.util.Arrays;
 
 import org.apache.avro.reflect.Stringable;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -268,8 +267,7 @@ public class Text extends BinaryComparable
    */
   public void append(byte[] utf8, int start, int len) {
     byte[] original = bytes;
-    int capacity = Math.max(length + len, length + (length >> 1));
-    if (ensureCapacity(capacity)) {
+    if (ensureCapacity(length + len)) {
       System.arraycopy(original, 0, bytes, 0, length);
     }
     System.arraycopy(utf8, start, bytes, length, len);
@@ -302,7 +300,8 @@ public class Text extends BinaryComparable
    */
   private boolean ensureCapacity(final int capacity) {
     if (bytes.length < capacity) {
-      bytes = new byte[capacity];
+      int targetSize = Math.max(capacity, bytes.length + (bytes.length >> 1));
+      bytes = new byte[targetSize];
       return true;
     }
     return false;
