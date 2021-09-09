@@ -1029,7 +1029,9 @@ public abstract class AbstractCSQueue implements CSQueue {
       throw new YarnRuntimeException(
           "Default lifetime " + defaultAppLifetime
               + " can't exceed maximum lifetime " + myMaxAppLifetime);
-    } else if (defaultAppLifetime <= 0) {
+    } 
+    
+    if (defaultAppLifetime <= 0) {
       defaultAppLifetime =  myMaxAppLifetime;
     }
     return defaultAppLifetime;
