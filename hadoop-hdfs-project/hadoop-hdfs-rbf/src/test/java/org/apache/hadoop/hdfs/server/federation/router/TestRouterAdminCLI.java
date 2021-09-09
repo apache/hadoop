@@ -1740,6 +1740,15 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
   }
 
+  @Test
+  public void testRefreshCallQueue() throws Exception {
+
+    System.setOut(new PrintStream(out));
+    String[] argv = new String[]{"-refreshCallQueue"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("Refresh call queue successfully"));
+  }
+
   private void addMountTable(String src, String nsId, String dst)
       throws Exception {
     String[] argv = new String[] {"-add", src, nsId, dst};

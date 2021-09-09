@@ -77,6 +77,8 @@ import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -388,6 +390,8 @@ public class RouterAdmin extends Configured implements Tool {
         exitCode = genericRefresh(argv, i);
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
         exitCode = refreshSuperUserGroupsConfiguration();
+      } else if ("-refreshCallQueue".equals(cmd)) {
+        exitCode = refreshCallQueue();
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -1256,6 +1260,39 @@ public class RouterAdmin extends Configured implements Tool {
         return -1;
       }
     }
+  }
+
+  /**
+   * Refresh Router's call Queue.
+   *
+   * @throws IOException if the operation was not successful.
+   */
+  private int refreshCallQueue() throws IOException {
+    Configuration conf = getConf();
+    String hostport =  getConf().getTrimmed(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+
+    // Create the client
+    Class<?> xface = RefreshCallQueueProtocolPB.class;
+    InetSocketAddress address = NetUtils.createSocketAddr(hostport);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
+    RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB)RPC.getProxy(
+        xface, RPC.getProtocolVersion(xface), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), 0);
+
+    int returnCode = -1;
+    try (RefreshCallQueueProtocolClientSideTranslatorPB xlator =
+        new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
+      xlator.refreshCallQueue();
+      System.out.println("Refresh call queue successfully for " + hostport);
+      returnCode = 0;
+    } catch (IOException ioe){
+      System.out.println("Refresh call queue unsuccessfully for " + hostport);
+    }
+    return returnCode;
   }
 
   /**
