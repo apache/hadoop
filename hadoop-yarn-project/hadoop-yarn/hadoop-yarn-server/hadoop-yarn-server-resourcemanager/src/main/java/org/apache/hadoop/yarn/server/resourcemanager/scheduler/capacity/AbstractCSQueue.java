@@ -1722,7 +1722,7 @@ public abstract class AbstractCSQueue implements CSQueue {
             getAutoExpiredDeletionTime());
   }
 
-  public void updateLastSubmittedTimeStamp() {
+  void updateLastSubmittedTimeStamp() {
     writeLock.lock();
     try {
       this.lastSubmittedTimestamp = Time.monotonicNow();
