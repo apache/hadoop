@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
@@ -3250,7 +3251,7 @@ public class TestDFSShell {
         String str = out.toString();
         assertTrue("xattr value was incorrectly returned",
           str.indexOf(
-              "getfattr: At least one of the attributes provided was not found")
+              "getfattr: " + XAttrNotFoundException.DEFAULT_EXCEPTION_MSG)
                >= 0);
         out.reset();
       }
