@@ -833,7 +833,8 @@ public class TestLeafQueue {
     // The max resources can be used are 0.99 * [100 * GB, 100]
     b.setUserLimitFactor(10.0f);
 
-    Map<ApplicationAttemptId, FiCaSchedulerApp> apps = ImmutableMap.of(app0.getApplicationAttemptId(), app0);
+    Map<ApplicationAttemptId, FiCaSchedulerApp> apps =
+        ImmutableMap.of(app0.getApplicationAttemptId(), app0);
     Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(), node0);
 
     Priority priority = TestUtils.createMockPriority(1);
@@ -850,7 +851,8 @@ public class TestLeafQueue {
             priority, recordFactory, NO_LABEL)));
     assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
         clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-    // This assignment should have no containers assigned, because the used memory (90 + 10)GB will exceed the max 99GB
+    // This assignment should have no containers assigned,
+    // because the used memory (90 + 10)GB will exceed the max 99GB
     verifyNoContainerAllocated(assignment);
   }
 
