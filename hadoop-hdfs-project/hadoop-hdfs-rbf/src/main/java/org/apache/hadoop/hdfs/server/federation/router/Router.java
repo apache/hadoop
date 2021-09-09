@@ -644,6 +644,18 @@ public class Router extends CompositeService implements
   }
 
   /**
+   * Get the metrics system for the Router Client.
+   *
+   * @return Router Client metrics.
+   */
+  public RouterClientMetrics getRouterClientMetrics() {
+    if (this.metrics != null) {
+      return this.metrics.getRouterClientMetrics();
+    }
+    return null;
+  }
+
+  /**
    * Get the federation metrics.
    *
    * @return Federation metrics.
