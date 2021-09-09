@@ -155,6 +155,8 @@
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>

@@ -109,6 +109,10 @@
                     <includes>
                       <include>org.apache.hadoop:*</include>
                     </includes>
+                    <excludes>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
+                    </excludes>
                   </artifactSet>
                   <filters>
                     <!-- We get these package level classes from various yarn api jars -->
