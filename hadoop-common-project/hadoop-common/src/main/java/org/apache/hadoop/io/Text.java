@@ -34,6 +34,7 @@ import java.text.StringCharacterIterator;
 import java.util.Arrays;
 
 import org.apache.avro.reflect.Stringable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -300,7 +301,7 @@ public class Text extends BinaryComparable
    */
   private boolean ensureCapacity(final int capacity) {
     if (bytes.length < capacity) {
-      // Try to expand  the backing array by the factor of 1.5x  
+      // Try to expand the backing array by the factor of 1.5x
       // (by taking the current size + diving it by half)
       int targetSize = Math.max(capacity, bytes.length + (bytes.length >> 1));
       bytes = new byte[targetSize];
