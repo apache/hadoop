@@ -30,8 +30,9 @@ def publishJUnitResults() {
     boolean surefireReportsExist = findCmdExitCode == 0
     if (surefireReportsExist) {
         echo "XML files found under surefire-reports, running junit"
+        SRC = "${SOURCEDIR}/**/target/surefire-reports/*.xml".replace("$WORKSPACE/","")
         try {
-            junit "${SOURCEDIR}/**/target/surefire-reports/*.xml"
+            junit "${SRC}"
         } catch(e) {
             echo 'junit processing: ' + e.toString()
         }
