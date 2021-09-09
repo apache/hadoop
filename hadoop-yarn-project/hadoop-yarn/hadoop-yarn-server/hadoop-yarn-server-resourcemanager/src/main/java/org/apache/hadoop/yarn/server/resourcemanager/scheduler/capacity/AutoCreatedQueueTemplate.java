@@ -50,7 +50,7 @@ public class AutoCreatedQueueTemplate {
   private final Map<String, String> leafOnlyProperties = new HashMap<>();
   private final Map<String, String> parentOnlyProperties = new HashMap<>();
 
-  public AutoCreatedQueueTemplate(Configuration configuration,
+  public AutoCreatedQueueTemplate(CapacitySchedulerConfiguration configuration,
                                   String queuePath) {
     setTemplateConfigEntries(configuration, queuePath);
   }
@@ -91,7 +91,7 @@ public class AutoCreatedQueueTemplate {
  * @param conf configuration to set
    * @param childQueuePath child queue path used for prefixing the properties
    */
-  public void setTemplateEntriesForChild(Configuration conf,
+  public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
                                          String childQueuePath) {
     setTemplateEntriesForChild(conf, childQueuePath, false);
   }
@@ -105,7 +105,7 @@ public class AutoCreatedQueueTemplate {
    *               parent specific template properties
    * @param childQueuePath child queue path used for prefixing the properties
    */
-  public void setTemplateEntriesForChild(Configuration conf,
+  public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
                                          String childQueuePath,
                                          boolean isLeaf) {
     if (childQueuePath.equals(ROOT)) {
@@ -113,7 +113,7 @@ public class AutoCreatedQueueTemplate {
     }
 
     ConfigurationProperties configurationProperties =
-        ((CapacitySchedulerConfiguration) conf).getConfigurationProperties();
+        conf.getConfigurationProperties();
 
     // Get all properties that are explicitly set
     Set<String> alreadySetProps = configurationProperties
@@ -155,10 +155,10 @@ public class AutoCreatedQueueTemplate {
    * yarn.scheduler.capacity.root.a.auto-queue-creation-v2.template.capacity
    * yarn.scheduler.capacity.root.*.auto-queue-creation-v2.template.capacity
    */
-  private void setTemplateConfigEntries(Configuration configuration,
+  private void setTemplateConfigEntries(CapacitySchedulerConfiguration configuration,
                                         String queuePath) {
     ConfigurationProperties configurationProperties =
-        ((CapacitySchedulerConfiguration) configuration).getConfigurationProperties();
+        configuration.getConfigurationProperties();
 
     List<String> queuePathParts = new ArrayList<>(Arrays.asList(
         queuePath.split("\\.")));
