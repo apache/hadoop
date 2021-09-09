@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
@@ -452,8 +453,7 @@ class FSImageLoader {
         }
 
         if (!found) {
-          throw new IOException(
-              "At least one of the attributes provided was not found.");
+          throw new XAttrNotFoundException();
         }
       }
 
