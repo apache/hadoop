@@ -926,7 +926,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     initCannedAcls(getConf());
 
     // Any encoding type
-    String contentEncoding = getConf().get(CONTENT_ENCODING, DEFAULT_CONTENT_ENCODING);
+    String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
 
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))

@@ -605,7 +605,7 @@ public class RequestFactoryImpl implements RequestFactory {
     private boolean requesterPays = false;
 
     /** Content Encoding. */
-    private String contentEncoding = null;
+    private String contentEncoding;
 
     /**
      * Multipart limit.
