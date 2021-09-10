@@ -1853,6 +1853,7 @@ public class TestLeafQueue {
         + ".user-settings.firstname.lastname."
         + CapacitySchedulerConfiguration.USER_WEIGHT,
         0.7f);
+    csConf.reinitializeConfigurationProperties();
 
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));

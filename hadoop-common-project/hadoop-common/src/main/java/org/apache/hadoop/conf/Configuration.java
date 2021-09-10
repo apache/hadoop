@@ -1126,7 +1126,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IllegalArgumentException when more than
    * {@link Configuration#MAX_SUBST} replacements are required
    */
-  private String substituteVars(String expr) {
+  protected String substituteVars(String expr) {
     if (expr == null) {
       return null;
     }
