@@ -1196,13 +1196,28 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @FunctionalInterface
   interface Counter {
-    void count(String partition, Resource reservedRes);
+    void count(String partition, Resource resource);
+  }
+
+  @FunctionalInterface
+  interface CounterWithApp {
+    void count(String partition, Resource reservedRes, SchedulerApplicationAttempt application);
   }
 
   private void count(String partition, Resource resource, Counter counter, Counter parentCounter) {
-    final String partitionChecked = ensurePartition(partition);
-    counter.count(partitionChecked, resource);
-    Optional.ofNullable(parentCounter).ifPresent(c -> c.count(partitionChecked, resource));
+    final String checkedPartition = ensurePartition(partition);
+    counter.count(checkedPartition, resource);
+    Optional.ofNullable(parentCounter).ifPresent(c -> c.count(checkedPartition, resource));
+  }
+
+  private void countAndUpdate(String partition, Resource resource,
+                              Counter counter, CounterWithApp parentCounter) {
+    final String checkedPartition = ensurePartition(partition);
+    counter.count(checkedPartition, resource);
+    CSQueueUtils.updateUsedCapacity(resourceCalculator,
+        labelManager.getResourceByLabel(checkedPartition, Resources.none()),
+        checkedPartition, this);
+    Optional.ofNullable(parentCounter).ifPresent(c -> c.count(checkedPartition, resource, null));
   }
 
   @Override
@@ -1227,21 +1242,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   public void decPendingResource(String nodeLabel, Resource resourceToDec) {
     count(nodeLabel, resourceToDec, queueUsage::decPending,
         parent == null ? null : parent::decPendingResource);
-  }
-
-  @FunctionalInterface
-  interface CounterWithApp {
-    void count(String partition, Resource reservedRes, SchedulerApplicationAttempt application);
-  }
-
-  private void countAndUpdate(String partition, Resource resource,
-                              Counter counter, CounterWithApp parentCounter) {
-    final String partitionChecked = ensurePartition(partition);
-    counter.count(partitionChecked, resource);
-    CSQueueUtils.updateUsedCapacity(resourceCalculator,
-        labelManager.getResourceByLabel(partitionChecked, Resources.none()),
-        partitionChecked, this);
-    Optional.ofNullable(parentCounter).ifPresent(c -> c.count(partitionChecked, resource, null));
   }
 
   @Override
