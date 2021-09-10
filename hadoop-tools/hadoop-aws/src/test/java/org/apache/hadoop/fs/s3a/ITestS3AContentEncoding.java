@@ -41,9 +41,6 @@ import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
  */
 public class ITestS3AContentEncoding extends AbstractS3ATestBase {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3ACannedACLs.class);
-
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -62,7 +59,7 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
     assertObjectHasEncoding(path);
     Path path2 = new Path(dir, "2");
     fs.rename(path, path2);
-    assertObjectHasEncoding(path);
+    assertObjectHasEncoding(path2);
   }
 
   /**
@@ -76,7 +73,7 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
     Map<String, byte[]> xAttrs = fs.getXAttrs(path);
     String encoding = decodeBytes(xAttrs.get(XA_CONTENT_ENCODING));
     Assertions.assertThat(encoding)
-        .describedAs("Encoding of object %s is gzip", path)
+        .describedAs("Encoding of object %s should be gzip, is %s", path, encoding)
         .isEqualTo("gzip");
   }
 }

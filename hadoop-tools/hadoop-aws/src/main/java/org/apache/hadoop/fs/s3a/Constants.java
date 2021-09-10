@@ -412,7 +412,6 @@ public final class Constants {
 
   // gzip, deflate, compress, br, etc.
   public static final String CONTENT_ENCODING = "fs.s3a.content.encoding";
-  public static final String DEFAULT_CONTENT_ENCODING = null;
 
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
