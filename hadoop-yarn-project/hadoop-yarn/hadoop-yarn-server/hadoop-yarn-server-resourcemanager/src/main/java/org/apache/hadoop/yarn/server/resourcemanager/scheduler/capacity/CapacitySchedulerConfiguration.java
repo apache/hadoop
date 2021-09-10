@@ -128,6 +128,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String USER_SETTINGS = "user-settings";
 
   @Private
+  public static final String USER_WEIGHT_REGEX = "\\S+\\." + USER_WEIGHT;
+
+  @Private
+  public static final Pattern USER_WEIGHT_PATTERN = Pattern.compile(
+      USER_WEIGHT_REGEX);
+
+  @Private
   public static final float DEFAULT_USER_WEIGHT = 1.0f;
 
   @Private
@@ -2031,18 +2038,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * @return map of user weights, if they exists. Otherwise, return empty map.
    */
   public Map<String, Float> getAllUserWeightsForQueue(String queuePath) {
-    Map <String, Float> userWeights = new HashMap <String, Float>();
-    String qPathPlusPrefix =
-        getQueuePrefix(queuePath).replaceAll("\\.", "\\\\.")
-        + USER_SETTINGS + "\\.";
-    String weightKeyRegex =
-        qPathPlusPrefix + "\\S+\\." + USER_WEIGHT;
-    Map<String, String> props = getValByRegex(weightKeyRegex);
-    for (Entry<String, String> e : props.entrySet()) {
+    Map <String, Float> userWeights = new HashMap <>();
+    String qPathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
+    Map<String, String> props = getConfigurationProperties()
+        .getPropertiesWithPrefix(qPathPlusPrefix);
+
+    Map<String, String> result = new HashMap<>();
+    for(Map.Entry<String, String> item: props.entrySet()) {
+      Matcher m = USER_WEIGHT_PATTERN.matcher(item.getKey());
+      if(m.find()) {
+        result.put(item.getKey(), substituteVars(item.getValue()));
+      }
+    }
+
+    for (Entry<String, String> e : result.entrySet()) {
       String userName =
-          e.getKey().replaceFirst(qPathPlusPrefix, "")
-          .replaceFirst("\\." + USER_WEIGHT, "");
-      if (userName != null && !userName.isEmpty()) {
+          e.getKey().replaceFirst("\\." + USER_WEIGHT, "");
+      if (!userName.isEmpty()) {
         userWeights.put(userName, new Float(e.getValue()));
       }
     }
