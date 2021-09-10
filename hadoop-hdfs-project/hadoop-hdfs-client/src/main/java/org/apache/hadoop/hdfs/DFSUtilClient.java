@@ -426,35 +426,58 @@ public class DFSUtilClient {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
-      String suffix = concatSuffixes(nsId, nnId);
-      String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
-      if (address != null) {
-        InetSocketAddress isa = NetUtils.createSocketAddr(address);
-        try {
-          // Datanode should just use FQDN
-          String[] resolvedHostNames = dnr
-              .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
-          int port = isa.getPort();
-          for (String hostname : resolvedHostNames) {
-            InetSocketAddress inetSocketAddress = new InetSocketAddress(
-                hostname, port);
-            // Concat nn info with host info to make uniq ID
-            String concatId;
-            if (nnId == null || nnId.isEmpty()) {
-              concatId = String
-                  .join("-", nsId, hostname, String.valueOf(port));
-            } else {
-              concatId = String
-                  .join("-", nsId, nnId, hostname, String.valueOf(port));
-            }
-            ret.put(concatId, inetSocketAddress);
-          }
-        } catch (UnknownHostException e) {
-          LOG.error("Failed to resolve address: " + address);
+      Map<String, InetSocketAddress> resolvedAddressesForNnId =
+          getResolvedAddressesForNnId(conf, nsId, nnId, dnr, defaultValue, keys);
+      ret.putAll(resolvedAddressesForNnId);
+    }
+    return ret;
+  }
+
+  public static Map<String, InetSocketAddress> getResolvedAddressesForNnId(
+      Configuration conf, String nsId, String nnId,
+      DomainNameResolver dnr, String defaultValue,
+      String... keys) {
+    String suffix = concatSuffixes(nsId, nnId);
+    String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
+    Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
+    if (address != null) {
+      InetSocketAddress isa = NetUtils.createSocketAddr(address);
+      try {
+        String[] resolvedHostNames = dnr
+            .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
+        int port = isa.getPort();
+        for (String hostname : resolvedHostNames) {
+          InetSocketAddress inetSocketAddress = new InetSocketAddress(
+              hostname, port);
+          // Concat nn info with host info to make uniq ID
+          String concatId = getConcatNnId(nsId, nnId, hostname, port);
+          ret.put(concatId, inetSocketAddress);
         }
+      } catch (UnknownHostException e) {
+        LOG.error("Failed to resolve address: {}", address);
       }
     }
     return ret;
+  }
+
+  /**
+   * Concat nn info with host info to make uniq ID.
+   * This is mainly used when configured nn is
+   * a domain record that has multiple hosts behind it.
+   *
+   * @param nsId      nsId to be concatenated to a uniq ID.
+   * @param nnId      nnId to be concatenated to a uniq ID.
+   * @param hostname  hostname to be concatenated to a uniq ID.
+   * @param port      port to be concatenated to a uniq ID.
+   * @return          Concatenated uniq id.
+   */
+  private static String getConcatNnId(String nsId, String nnId, String hostname, int port) {
+    if (nnId == null || nnId.isEmpty()) {
+      return String
+          .join("-", nsId, hostname, String.valueOf(port));
+    }
+    return String
+          .join("-", nsId, nnId, hostname, String.valueOf(port));
   }
 
   /**
