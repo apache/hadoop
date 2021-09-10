@@ -753,9 +753,7 @@ public class AbfsClient implements Closeable {
     addCustomerProvidedKeyHeaders(requestHeaders);
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
-    if (!eTag.equals(EMPTY_STRING)) {
-      requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
-    }
+    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
