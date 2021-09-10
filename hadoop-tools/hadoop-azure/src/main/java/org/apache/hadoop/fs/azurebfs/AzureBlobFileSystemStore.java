@@ -47,7 +47,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -132,7 +131,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLU
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
@@ -691,38 +689,40 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
           .orElse(null);
       String relativePath = getRelativePath(path);
-      String eTag;
-      boolean isDirectory;
+      String resourceType, eTag;
       long contentLength;
-      if (fileStatus != null) {
-        if (fileStatus instanceof VersionedFileStatus) {
-          path = path.makeQualified(this.uri, path);
-          Preconditions.checkArgument(fileStatus.getPath().equals(path), String.format(
-              "Filestatus path [%s] does not match with given path [%s]",
-              fileStatus.getPath(), path));
-          contentLength = fileStatus.getLen();
-          eTag = ((VersionedFileStatus) fileStatus).getVersion();
-        } else {     // filestatus of other types
-          contentLength = fileStatus.getLen();
-          eTag = EMPTY_STRING; //replace with version when added as member of FileStatus
-        }
-        isDirectory = fileStatus.isDirectory();
+      if (fileStatus instanceof VersionedFileStatus) {
+        path = path.makeQualified(this.uri, path);
+        Preconditions.checkArgument(fileStatus.getPath().equals(path),
+            String.format(
+                "Filestatus path [%s] does not match with given path [%s]",
+                fileStatus.getPath(), path));
+        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+        contentLength = fileStatus.getLen();
+        eTag = ((VersionedFileStatus) fileStatus).getVersion();
       } else {
+        if (fileStatus != null) {
+          LOG.debug(
+              "Fallback to getPathStatus REST call as provided filestatus "
+                  + "is not of type VersionedFileStatus");
+        }
         AbfsHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext).getResult();
+        resourceType = op.getResponseHeader(
+            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
         contentLength = Long.parseLong(
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-        isDirectory = op.getResponseHeader(
-            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE).equals(DIRECTORY);
       }
 
-      if (isDirectory) {
-        throw new AbfsRestOperationException(AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+      if (parseIsDirectory(resourceType)) {
+        throw new AbfsRestOperationException(
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
             "openFileForRead must be used with files and not directories",
             null);
       }
+
       perfInfo.registerSuccess(true);
 
       // Add statistics for InputStream
