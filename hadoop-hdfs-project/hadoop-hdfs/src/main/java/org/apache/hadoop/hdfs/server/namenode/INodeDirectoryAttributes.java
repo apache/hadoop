@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.util.EnumCounters;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
-
 /**
  * The attributes of an inode.
  */
@@ -59,7 +58,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
 
     @Override
     public boolean metadataEquals(INodeDirectoryAttributes other) {
-      return other != null && getQuotaCounts().equals(other.getQuotaCounts())
+      return other != null
+          && getQuotaCounts().equals(other.getQuotaCounts())
           && getPermissionLong() == other.getPermissionLong()
           && getAclFeature() == other.getAclFeature()
           && getXAttrFeature() == other.getXAttrFeature();
