@@ -992,7 +992,7 @@ public class AbfsConfiguration{
 
   public int getWriteMaxConcurrentRequestCount() {
     if (this.writeMaxConcurrentRequestCount < 1) {
-      return 4 * Runtime.getRuntime().availableProcessors();
+      return 4 * getAvailableProcessorCount();
     }
     return this.writeMaxConcurrentRequestCount;
   }
@@ -1011,6 +1011,10 @@ public class AbfsConfiguration{
   public String getClientProvidedEncryptionKey() {
     String accSpecEncKey = accountConf(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY);
     return rawConfig.get(accSpecEncKey, null);
+  }
+
+  public static int getAvailableProcessorCount() {
+    return Runtime.getRuntime().availableProcessors();
   }
 
   @VisibleForTesting

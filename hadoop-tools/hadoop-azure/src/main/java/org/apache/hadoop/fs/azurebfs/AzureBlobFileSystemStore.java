@@ -53,6 +53,11 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -168,7 +173,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
-  private final ExecutorService contentSummaryExecutorService = Executors.newCachedThreadPool();
+  private final ThreadPoolExecutor contentSummaryExecutorService;
 
   /**
    * The set of directories where we should store files as append blobs.
@@ -239,6 +244,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       this.appendBlobDirSet = new HashSet<>(Arrays.asList(
           abfsConfiguration.getAppendBlobDirs().split(AbfsHttpConstants.COMMA)));
     }
+    contentSummaryExecutorService = new ThreadPoolExecutor(0,
+        4 * AbfsConfiguration.getAvailableProcessorCount(), 60,
+        TimeUnit.SECONDS, new SynchronousQueue<>());
+    contentSummaryExecutorService.setRejectedExecutionHandler(
+        (runnable, threadPoolExecutor) -> {
+          try {
+            contentSummaryExecutorService.getQueue().put(runnable);
+          } catch (InterruptedException e) {
+            LOG.debug("Could not submit GetContentSummary task to thread pool");
+          }
+        });
   }
 
   /**

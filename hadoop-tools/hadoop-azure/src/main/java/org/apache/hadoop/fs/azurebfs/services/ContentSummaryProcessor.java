@@ -95,24 +95,25 @@ public class ContentSummaryProcessor {
   }
 
   /**
-   * Calls listStatus on given path and populated fileStatus queue with
+   * Calls listStatus on given fileStatus and populated fileStatus queue with
    * subdirectories. Is called by new tasks to process the complete subtree
-   * under a given path
-   * @param path: Path to a file or directory
+   * under a given fileStatus
+   * @param fileStatus : Path to a file or directory
    * @throws IOException: listStatus error
    * @throws InterruptedException: error while inserting into queue
    */
-  private void processDirectoryTree(Path path, TracingContext tracingContext)
-      throws IOException, InterruptedException {
-    FileStatus[] fileStatuses = abfsStore.listStatus(path, tracingContext);
-
-    for (FileStatus fileStatus : fileStatuses) {
-      if (fileStatus.isDirectory()) {
-        queue.put(fileStatus);
+  private void processDirectoryTree(Path fileStatus,
+      TracingContext tracingContext) throws IOException, InterruptedException {
+    AbfsListStatusRemoteIterator iterator = new AbfsListStatusRemoteIterator(
+        fileStatus, abfsStore, tracingContext);
+    while (iterator.hasNext()) {
+      FileStatus status = iterator.next();
+      if (status.isDirectory()) {
+        queue.put(status);
         processDirectory();
         conditionalSubmitTaskToExecutor(tracingContext);
       } else {
-        processFile(fileStatus);
+        processFile(status);
       }
     }
   }
@@ -141,7 +142,8 @@ public class ContentSummaryProcessor {
         FileStatus fileStatus1;
         while ((fileStatus1 = queue.poll(POLL_TIMEOUT, TimeUnit.MILLISECONDS))
                 != null) {
-          processDirectoryTree(fileStatus1.getPath(), new TracingContext(tracingContext));
+          processDirectoryTree(fileStatus1.getPath(),
+              new TracingContext(tracingContext));
         }
         return null;
       });

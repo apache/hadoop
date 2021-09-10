@@ -51,9 +51,9 @@ public class ITestGetContentSummary extends AbstractAbfsIntegrationTest {
   private static final int TEST_BUFFER_SIZE = 20;
   private static final int FILES_PER_DIRECTORY = 2;
   private static final int MAX_THREADS = 16;
-  private static final int NUM_FILES_FOR_LIST_MAX_TEST =10;
-//      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
-private static final int NUM_CONCURRENT_CALLS = 8;
+  private static final int NUM_FILES_FOR_LIST_MAX_TEST =
+      DEFAULT_AZURE_LIST_MAX_RESULTS + 10;
+  private static final int NUM_CONCURRENT_CALLS = 8;
 
   private final String[] directories = {"/testFolder",
       "/testFolderII",

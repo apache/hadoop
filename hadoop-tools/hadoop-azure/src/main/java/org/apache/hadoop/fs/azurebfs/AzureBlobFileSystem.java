@@ -1169,9 +1169,8 @@ public class AzureBlobFileSystem extends FileSystem
     if (abfsStore.getAbfsConfiguration().enableAbfsListIterator()) {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.LISTSTATUS, true, tracingHeaderFormat, listener);
-      AbfsListStatusRemoteIterator abfsLsItr =
-          new AbfsListStatusRemoteIterator(getFileStatus(path, tracingContext), abfsStore,
-              tracingContext);
+      AbfsListStatusRemoteIterator abfsLsItr = new AbfsListStatusRemoteIterator(
+          path, abfsStore, tracingContext);
       return RemoteIterators.typeCastingRemoteIterator(abfsLsItr);
     } else {
       return super.listStatusIterator(path);

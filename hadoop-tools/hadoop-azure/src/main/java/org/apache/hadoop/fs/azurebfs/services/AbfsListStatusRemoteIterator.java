@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -46,7 +47,7 @@ public class AbfsListStatusRemoteIterator
   private static final int MAX_QUEUE_SIZE = 10;
   private static final long POLL_WAIT_TIME_IN_MS = 250;
 
-  private final FileStatus fileStatus;
+  private final Path path;
   private final ListingSupport listingSupport;
   private final ArrayBlockingQueue<Object> iteratorsQueue;
   private final TracingContext tracingContext;
@@ -56,9 +57,9 @@ public class AbfsListStatusRemoteIterator
   private String continuation;
   private Iterator<FileStatus> currIterator;
 
-  public AbfsListStatusRemoteIterator(final FileStatus fileStatus,
+  public AbfsListStatusRemoteIterator(final Path path,
       final ListingSupport listingSupport, TracingContext tracingContext) {
-    this.fileStatus = fileStatus;
+    this.path = path;
     this.listingSupport = listingSupport;
     this.tracingContext = tracingContext;
     iteratorsQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
@@ -147,7 +148,7 @@ public class AbfsListStatusRemoteIterator
       throws IOException, InterruptedException {
     List<FileStatus> fileStatuses = new ArrayList<>();
     continuation = listingSupport
-        .listStatus(fileStatus.getPath(), null, fileStatuses, FETCH_ALL_FALSE,
+        .listStatus(path, null, fileStatuses, FETCH_ALL_FALSE,
             continuation, tracingContext);
     if (!fileStatuses.isEmpty()) {
       iteratorsQueue.put(fileStatuses.iterator());
