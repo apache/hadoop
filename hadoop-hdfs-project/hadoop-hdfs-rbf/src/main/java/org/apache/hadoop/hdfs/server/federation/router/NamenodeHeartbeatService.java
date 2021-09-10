@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.security.SecurityUtil;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -170,7 +172,20 @@ public class NamenodeHeartbeatService extends PeriodicService {
 
   @Override
   public void periodicInvoke() {
-    updateState();
+    try {
+      SecurityUtil.doAsCurrentUser(
+          new PrivilegedExceptionAction<Object>() {
+            @Override
+            public Object run() {
+              updateState();
+              return null;
+            }
+          });
+    } catch (IOException e) {
+      // Generic error that we don't know about
+      LOG.error("Unexpected exception while communicating with {}: {}",
+          getNamenodeDesc(), e.getMessage(), e);
+    }
   }
 
   /**
