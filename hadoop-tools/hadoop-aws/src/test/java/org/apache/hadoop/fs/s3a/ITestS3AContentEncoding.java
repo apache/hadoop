@@ -20,8 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.util.Map;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
