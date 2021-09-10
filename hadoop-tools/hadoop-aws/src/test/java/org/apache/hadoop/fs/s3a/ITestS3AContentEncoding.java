@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.Map;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
@@ -28,7 +30,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
@@ -66,12 +69,12 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
    * Assert that a given object has gzip encoding specified.
    * @param path path
    */
-  private void assertObjectHasEncoding(Path path) {
+  private void assertObjectHasEncoding(Path path) throws Throwable {
     S3AFileSystem fs = getFileSystem();
 
     StoreContext storeContext = fs.createStoreContext();
-    String key = storeContext.pathToKey(path);
-    String encoding = fs.getXAttrs(XA_CONTENT_ENCODING);
+    Map<String, byte[]> xAttrs = fs.getXAttrs(path);
+    String encoding = decodeBytes(xAttrs.get(XA_CONTENT_ENCODING));
     Assertions.assertThat(encoding)
         .describedAs("Encoding of object %s is gzip", path)
         .isEqualTo("gzip");
