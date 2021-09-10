@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.util.ArrayList;
@@ -50,7 +49,7 @@ public class AutoCreatedQueueTemplate {
   private final Map<String, String> leafOnlyProperties = new HashMap<>();
   private final Map<String, String> parentOnlyProperties = new HashMap<>();
 
-  public AutoCreatedQueueTemplate(Configuration configuration,
+  public AutoCreatedQueueTemplate(CapacitySchedulerConfiguration configuration,
                                   String queuePath) {
     setTemplateConfigEntries(configuration, queuePath);
   }
@@ -91,7 +90,7 @@ public class AutoCreatedQueueTemplate {
  * @param conf configuration to set
    * @param childQueuePath child queue path used for prefixing the properties
    */
-  public void setTemplateEntriesForChild(Configuration conf,
+  public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
                                          String childQueuePath) {
     setTemplateEntriesForChild(conf, childQueuePath, false);
   }
@@ -105,16 +104,20 @@ public class AutoCreatedQueueTemplate {
    *               parent specific template properties
    * @param childQueuePath child queue path used for prefixing the properties
    */
-  public void setTemplateEntriesForChild(Configuration conf,
+  public void setTemplateEntriesForChild(CapacitySchedulerConfiguration conf,
                                          String childQueuePath,
                                          boolean isLeaf) {
     if (childQueuePath.equals(ROOT)) {
       return;
     }
 
+    ConfigurationProperties configurationProperties =
+        conf.getConfigurationProperties();
+
     // Get all properties that are explicitly set
-    Set<String> alreadySetProps = conf.getPropsWithPrefix(
-        CapacitySchedulerConfiguration.getQueuePrefix(childQueuePath)).keySet();
+    Set<String> alreadySetProps = configurationProperties
+        .getPropertiesWithPrefix(CapacitySchedulerConfiguration
+            .getQueuePrefix(childQueuePath)).keySet();
 
     // Check template properties only set for leaf or parent queues
     Map<String, String> queueTypeSpecificTemplates = parentOnlyProperties;
@@ -151,8 +154,11 @@ public class AutoCreatedQueueTemplate {
    * yarn.scheduler.capacity.root.a.auto-queue-creation-v2.template.capacity
    * yarn.scheduler.capacity.root.*.auto-queue-creation-v2.template.capacity
    */
-  private void setTemplateConfigEntries(Configuration configuration,
+  private void setTemplateConfigEntries(CapacitySchedulerConfiguration configuration,
                                         String queuePath) {
+    ConfigurationProperties configurationProperties =
+        configuration.getConfigurationProperties();
+
     List<String> queuePathParts = new ArrayList<>(Arrays.asList(
         queuePath.split("\\.")));
 
@@ -178,8 +184,8 @@ public class AutoCreatedQueueTemplate {
       String templateQueuePath = String.join(".", queuePathParts);
       // Get all configuration entries with
       // yarn.scheduler.capacity.<queuePath> prefix
-      Map<String, String> queueProps = configuration.getPropsWithPrefix(
-          getQueuePrefix(templateQueuePath));
+      Map<String, String> queueProps = configurationProperties
+          .getPropertiesWithPrefix(getQueuePrefix(templateQueuePath));
 
       // Store template, parent-template and leaf-template properties
       for (Map.Entry<String, String> entry : queueProps.entrySet()) {

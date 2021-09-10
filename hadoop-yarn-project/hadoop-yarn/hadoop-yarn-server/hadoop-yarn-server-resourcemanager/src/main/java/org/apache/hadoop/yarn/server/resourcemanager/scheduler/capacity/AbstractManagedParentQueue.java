@@ -28,11 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 /**
  * A container class for automatically created child leaf queues.
@@ -173,44 +170,22 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     return queueManagementPolicy;
   }
 
-  protected SortedMap<String, String> getConfigurationsWithPrefix
-      (SortedMap<String, String> sortedConfigs, String prefix) {
-    return sortedConfigs.subMap( prefix, prefix + Character.MAX_VALUE );
-  }
-
-  protected SortedMap<String, String> sortCSConfigurations() {
-    SortedMap<String, String> sortedConfigs = new TreeMap(
-        new Comparator<String>() {
-          public int compare(String s1, String s2) {
-            return s1.compareToIgnoreCase(s2);
-          }
-
-        });
-
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         csContext.getConfiguration().iterator(); iterator.hasNext(); ) {
-      final Map.Entry<String, String> confKeyValuePair = iterator.next();
-      sortedConfigs.put(confKeyValuePair.getKey(), confKeyValuePair.getValue());
-    }
-    return sortedConfigs;
-  }
-
   protected CapacitySchedulerConfiguration initializeLeafQueueConfigs(String
       configPrefix) {
 
     CapacitySchedulerConfiguration leafQueueConfigs = new
         CapacitySchedulerConfiguration(new Configuration(false), false);
 
-    String prefix = YarnConfiguration.RESOURCE_TYPES + ".";
     Map<String, String> rtProps = csContext
-        .getConfiguration().getPropsWithPrefix(prefix);
+        .getConfiguration().getConfigurationProperties()
+        .getPropertiesWithPrefix(YarnConfiguration.RESOURCE_TYPES + ".", true);
     for (Map.Entry<String, String> entry : rtProps.entrySet()) {
-      leafQueueConfigs.set(prefix + entry.getKey(), entry.getValue());
+      leafQueueConfigs.set(entry.getKey(), entry.getValue());
     }
 
-    SortedMap<String, String> sortedConfigs = sortCSConfigurations();
-    SortedMap<String, String> templateConfigs = getConfigurationsWithPrefix
-        (sortedConfigs, configPrefix);
+    Map<String, String> templateConfigs = csContext
+        .getConfiguration().getConfigurationProperties()
+        .getPropertiesWithPrefix(configPrefix, true);
 
     for (final Iterator<Map.Entry<String, String>> iterator =
          templateConfigs.entrySet().iterator(); iterator.hasNext(); ) {
