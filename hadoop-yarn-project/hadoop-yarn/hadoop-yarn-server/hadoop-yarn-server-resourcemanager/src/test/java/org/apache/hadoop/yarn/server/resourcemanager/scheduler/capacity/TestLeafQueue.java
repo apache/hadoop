@@ -1902,7 +1902,7 @@ public class TestLeafQueue {
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.user_0." + CapacitySchedulerConfiguration.USER_WEIGHT,
         1.5f);
-    // Set weight for "firstname.lastname" to be 0.7f for the a queue
+    // Set weight for "firstname.lastname" to be 0.7f for the "a" queue
     // in the configs. Notice the user contains a dot. This is to test
     // that weights are accepted for a username that contains dots.
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
@@ -1914,10 +1914,10 @@ public class TestLeafQueue {
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));
     // Verify that configs were updated and parsed correctly.
-    Assert.assertNull(a.getUserWeights().get("user_0"));
+    Assert.assertEquals(UserWeights.DEFAULT_WEIGHT, a.getUserWeights().getByUser("user_0"), 0.0f);
     a.reinitialize(a, csContext.getClusterResource());
-    assertEquals(1.5f, a.getUserWeights().get("user_0"), 0.0f);
-    assertEquals(0.7f, a.getUserWeights().get("firstname.lastname"), 0.0f);
+    assertEquals(1.5f, a.getUserWeights().getByUser("user_0"), 0.0f);
+    assertEquals(0.7f, a.getUserWeights().getByUser("firstname.lastname"), 0.0f);
 
     // set maxCapacity
     a.setMaxCapacity(1.0f);

@@ -150,7 +150,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected ReentrantReadWriteLock.WriteLock writeLock;
 
   volatile Priority priority = Priority.newInstance(0);
-  private Map<String, Float> userWeights = new HashMap<String, Float>();
+  private UserWeights userWeights = UserWeights.createEmpty();
   private int maxParallelApps;
 
   // is it a dynamic queue?
@@ -568,18 +568,17 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-  private Map<String, Float> getUserWeightsFromHierarchy
-      (CapacitySchedulerConfiguration configuration) throws
-      IOException {
-    Map<String, Float> unionInheritedWeights = new HashMap<String, Float>();
+  private UserWeights getUserWeightsFromHierarchy
+      (CapacitySchedulerConfiguration configuration) {
+    UserWeights unionInheritedWeights = UserWeights.createEmpty();
     CSQueue parentQ = getParent();
     if (parentQ != null) {
-      // Inherit all of parent's user's weights
-      unionInheritedWeights.putAll(parentQ.getUserWeights());
+      // Inherit all of parent's userWeights
+      unionInheritedWeights.addFrom(parentQ.getUserWeights());
     }
-    // Insert this queue's user's weights, overriding parent's user's weights if
-    // there is overlap.
-    unionInheritedWeights.putAll(
+    // Insert this queue's userWeights, overriding parent's userWeights if
+    // there is an overlap.
+    unionInheritedWeights.addFrom(
         configuration.getAllUserWeightsForQueue(getQueuePath()));
     return unionInheritedWeights;
   }
@@ -1455,7 +1454,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public Map<String, Float> getUserWeights() {
+  public UserWeights getUserWeights() {
     return userWeights;
   }
 

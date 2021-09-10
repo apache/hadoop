@@ -259,17 +259,8 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
       // Validate leaf queue's user's weights.
-      float queueUL = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
-      for (Entry<String, Float> e : getUserWeights().entrySet()) {
-        float val = e.getValue().floatValue();
-        if (val < 0.0f || val > (100.0f / queueUL)) {
-          throw new IOException("Weight (" + val + ") for user \"" + e.getKey()
-              + "\" must be between 0 and" + " 100 / " + queueUL + " (= " +
-              100.0f/queueUL + ", the number of concurrent active users in "
-              + getQueuePath() + ")");
-        }
-      }
-
+      float queueUserLimit = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
+      getUserWeights().validateForLeafQueue(queueUserLimit, getQueuePath());
       usersManager.updateUserWeights();
 
       LOG.info(
