@@ -1502,7 +1502,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   private Resource createNormalizedMinResource(Resource minResource,
-                                               Map<String, Float> effectiveMinRatio) {
+      Map<String, Float> effectiveMinRatio) {
     Resource ret = Resource.newInstance(minResource);
     int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
@@ -1589,7 +1589,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   void deriveCapacityFromAbsoluteConfigurations(String label,
-    Resource clusterResource) {
+      Resource clusterResource) {
     // Update capacity with a float calculated from the parent's minResources
     // and the recently changed queue minResources.
     // capacity = effectiveMinResource / {parent's effectiveMinResource}
