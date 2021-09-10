@@ -27,25 +27,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 
 public final class CapacitySchedulerConfigValidator {
   private static final Logger LOG = LoggerFactory.getLogger(
           CapacitySchedulerConfigValidator.class);
-
-  private interface QueueChangeValidator {
-    void validate(CSQueue oldQueue, CSQueue newQueue) throws IOException;
-  }
-
-  private static final List<QueueChangeValidator> QUEUE_CHANGE_VALIDATORS = Arrays.asList(
-      new SamePathValidator(),
-      new ParentQueueConversionValidator(),
-      new LeafQueueConversionValidator()
-  );
 
   private CapacitySchedulerConfigValidator() {
     throw new IllegalStateException("Utility class");
@@ -140,12 +128,13 @@ public final class CapacitySchedulerConfigValidator {
       final String queuePath = oldQueue.getQueuePath();
       final String configPrefix = CapacitySchedulerConfiguration.getQueuePrefix(
           oldQueue.getQueuePath());
-      final QueueState newQueueState = getQueueState(oldQueue, newConf.get(configPrefix + "state"));
+      final QueueState newQueueState = createQueueState(newConf.get(configPrefix + "state"),
+          queuePath);
       final CSQueue newQueue = newQueues.get(queuePath);
 
       if (null == newQueue) {
         // old queue doesn't exist in the new XML
-        if (oldQueue.getState() == QueueState.STOPPED || newQueueState == QueueState.STOPPED) {
+        if (isEitherQueueStopped(oldQueue.getState(), newQueueState)) {
           LOG.info("Deleting Queue {}, as it is not present in the modified capacity " +
               "configuration xml", queuePath);
         } else {
@@ -157,19 +146,69 @@ public final class CapacitySchedulerConfigValidator {
           }
         }
       } else {
-        for (QueueChangeValidator validator : QUEUE_CHANGE_VALIDATORS) {
-          validator.validate(oldQueue, newQueue);
-        }
+        validateSameQueuePath(oldQueue, newQueue);
+        validateParentQueueConversion(oldQueue, newQueue);
+        validateLeafQueueConversion(oldQueue, newQueue);
       }
     }
   }
 
-  private static QueueState getQueueState(CSQueue queue, String state) {
+  private static void validateSameQueuePath(CSQueue oldQueue, CSQueue newQueue) throws IOException {
+    if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
+      // Queues cannot be moved from one hierarchy to another
+      throw new IOException(
+          oldQueue.getQueuePath() + " is moved from:" + oldQueue.getQueuePath() + " to:"
+              + newQueue.getQueuePath()
+              + " after refresh, which is not allowed.");
+    }
+  }
+
+  private static void validateParentQueueConversion(CSQueue oldQueue, CSQueue newQueue) throws IOException {
+    if (oldQueue instanceof ParentQueue) {
+      if (!(oldQueue instanceof ManagedParentQueue) && newQueue instanceof ManagedParentQueue) {
+        throw new IOException(
+            "Can not convert parent queue: " + oldQueue.getQueuePath()
+                + " to auto create enabled parent queue since "
+                + "it could have other pre-configured queues which is not "
+                + "supported");
+      }
+
+      if (oldQueue instanceof ManagedParentQueue
+          && !(newQueue instanceof ManagedParentQueue)) {
+        throw new IOException(
+            "Cannot convert auto create enabled parent queue: "
+                + oldQueue.getQueuePath() + " to leaf queue. Please check "
+                + " parent queue's configuration "
+                + CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED
+                + " is set to true");
+      }
+
+      if (newQueue instanceof LeafQueue) {
+        LOG.info("Converting the parent queue: {} to leaf queue.", oldQueue.getQueuePath());
+      }
+    }
+  }
+
+  private static void validateLeafQueueConversion(CSQueue oldQueue, CSQueue newQueue) throws IOException {
+    if (oldQueue instanceof LeafQueue && newQueue instanceof ParentQueue) {
+      if (isEitherQueueStopped(oldQueue.getState(), newQueue.getState())) {
+        LOG.info("Converting the leaf queue: {} to parent queue.", oldQueue.getQueuePath());
+      } else {
+        throw new IOException(
+            "Can not convert the leaf queue: " + oldQueue.getQueuePath()
+                + " to parent queue since "
+                + "it is not yet in stopped state. Current State : "
+                + oldQueue.getState());
+      }
+    }
+  }
+
+  private static QueueState createQueueState(String state, String queuePath) {
     if (state != null) {
       try {
         return QueueState.valueOf(state);
       } catch (Exception ex) {
-        LOG.warn("Not a valid queue state for queue: {}, state: {}", queue.getQueuePath(), state);
+        LOG.warn("Not a valid queue state for queue: {}, state: {}", queuePath, state);
       }
     }
     return null;
@@ -179,63 +218,7 @@ public final class CapacitySchedulerConfigValidator {
     return ((AbstractCSQueue)csQueue).isDynamicQueue();
   }
 
-  private static class SamePathValidator implements QueueChangeValidator {
-    @Override
-    public void validate(CSQueue oldQueue, CSQueue newQueue) throws IOException {
-      if (!oldQueue.getQueuePath().equals(newQueue.getQueuePath())) {
-        // Queue's cannot be moved from one hierarchy to other
-        throw new IOException(
-            oldQueue.getQueuePath() + " is moved from:" + oldQueue.getQueuePath() + " to:"
-                + newQueue.getQueuePath()
-                + " after refresh, which is not allowed.");
-      }
-    }
-  }
-
-  private static class ParentQueueConversionValidator implements QueueChangeValidator {
-    @Override
-    public void validate(CSQueue oldQueue, CSQueue newQueue) throws IOException {
-      if (oldQueue instanceof ParentQueue) {
-        if (!(oldQueue instanceof ManagedParentQueue) && newQueue instanceof ManagedParentQueue) {
-          throw new IOException(
-              "Can not convert parent queue: " + oldQueue.getQueuePath()
-                  + " to auto create enabled parent queue since "
-                  + "it could have other pre-configured queues which is not "
-                  + "supported");
-        }
-
-        if (oldQueue instanceof ManagedParentQueue
-            && !(newQueue instanceof ManagedParentQueue)) {
-          throw new IOException(
-              "Cannot convert auto create enabled parent queue: "
-                  + oldQueue.getQueuePath() + " to leaf queue. Please check "
-                  + " parent queue's configuration "
-                  + CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED
-                  + " is set to true");
-        }
-
-        if (newQueue instanceof LeafQueue) {
-          LOG.info("Converting the parent queue: {} to leaf queue.", oldQueue.getQueuePath());
-        }
-      }
-    }
-  }
-
-  private static class LeafQueueConversionValidator implements QueueChangeValidator {
-    @Override
-    public void validate(CSQueue oldQueue, CSQueue newQueue) throws IOException {
-      if (oldQueue instanceof LeafQueue && newQueue instanceof ParentQueue) {
-        if (oldQueue.getState() == QueueState.STOPPED ||
-            newQueue.getState() == QueueState.STOPPED) {
-          LOG.info("Converting the leaf queue: {} to parent queue.", oldQueue.getQueuePath());
-        } else {
-          throw new IOException(
-              "Can not convert the leaf queue: " + oldQueue.getQueuePath()
-                  + " to parent queue since "
-                  + "it is not yet in stopped state. Current State : "
-                  + oldQueue.getState());
-        }
-      }
-    }
+  private static boolean isEitherQueueStopped(QueueState a, QueueState b) {
+    return a == QueueState.STOPPED || b == QueueState.STOPPED;
   }
 }
