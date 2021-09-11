@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools.federation;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -34,6 +35,10 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.Constants;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -103,6 +108,9 @@ public class RouterAdmin extends Configured implements Tool {
   /** Pre-compiled regular expressions to detect duplicated slashes. */
   private static final Pattern SLASHES = Pattern.compile("/+");
 
+  // Parameter matching when initializing ViewFs mount point.
+  private static final String ALL_CLUSTERS = "allClusters";
+
   public static void main(String[] argv) throws Exception {
     Configuration conf = new HdfsConfiguration();
     RouterAdmin admin = new RouterAdmin(conf);
@@ -133,8 +141,8 @@ public class RouterAdmin extends Configured implements Tool {
       String[] commands =
           {"-add", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
-              "-safemode", "-nameservice", "-getDisabledNameservices",
-              "-refresh", "-refreshRouterArgs",
+              "-initViewFsToMountTable", "-safemode", "-nameservice",
+              "-getDisabledNameservices", "-refresh", "-refreshRouterArgs",
               "-refreshSuperUserGroupsConfiguration"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
@@ -173,7 +181,9 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-clrQuota <path>]";
     } else if (cmd.equals("-clrStorageTypeQuota")) {
       return "\t[-clrStorageTypeQuota <path>]";
-    } else if (cmd.equals("-safemode")) {
+    }  else if (cmd.equals("-initViewFsToMountTable")) {
+      return "\t[-initViewFsToMountTable <clusterName> | allClusters]";
+    }else if (cmd.equals("-safemode")) {
       return "\t[-safemode enter | leave | get]";
     } else if (cmd.equals("-nameservice")) {
       return "\t[-nameservice enable | disable <nameservice>]";
@@ -241,6 +251,10 @@ public class RouterAdmin extends Configured implements Tool {
         return false;
       }
     } else if ("-rm".equals(cmd)) {
+      if (argv.length < 2) {
+        return false;
+      }
+    } else if ("-initViewFsToMountTable".equals(cmd)) {
       if (argv.length < 2) {
         return false;
       }
@@ -386,6 +400,15 @@ public class RouterAdmin extends Configured implements Tool {
         getDisabledNameservices();
       } else if ("-refresh".equals(cmd)) {
         refresh(address);
+      } else if ("-initViewFsToMountTable".equals(cmd)) {
+        if (initViewFsToMountTable(argv[i])) {
+          System.out.println("Successfully init ViewFs mapping to router " +
+              argv[i]);
+        } else {
+          System.err.println(
+              "Failed when execute command initViewFsToMountTable");
+          exitCode = -1;
+        }
       } else if ("-refreshRouterArgs".equals(cmd)) {
         exitCode = genericRefresh(argv, i);
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
@@ -1038,6 +1061,83 @@ public class RouterAdmin extends Configured implements Tool {
     UpdateMountTableEntryResponse updateResponse = mountTable
         .updateMountTableEntry(updateRequest);
     return updateResponse.getStatus();
+  }
+
+  /**
+   * Initialize the ViewFS mount point to the Router,
+   * either to specify a cluster or to initialize it all.
+   * @param clusterName The specified cluster to initialize,
+   * AllCluster was then all clusters.
+   * @return If the quota was updated.
+   * @throws IOException Error adding the mount point.
+   */
+  public boolean initViewFsToMountTable(String clusterName)
+      throws IOException {
+    // fs.viewfs.mounttable.ClusterX.link./data
+    final String mountTablePrefix;
+    if (clusterName.equals(ALL_CLUSTERS)) {
+      mountTablePrefix =
+          Constants.CONFIG_VIEWFS_PREFIX + ".*" +
+              Constants.CONFIG_VIEWFS_LINK + ".";
+    } else {
+      mountTablePrefix =
+          Constants.CONFIG_VIEWFS_PREFIX + "." + clusterName + "." +
+              Constants.CONFIG_VIEWFS_LINK + ".";
+    }
+    final String rootPath = "/";
+    Map<String, String> viewFsMap = getConf().getValByRegex(
+        mountTablePrefix  + rootPath);
+    if (viewFsMap.isEmpty()) {
+      System.out.println("There is no ViewFs mapping to initialize.");
+      return true;
+    }
+    for (Entry<String, String> entry : viewFsMap.entrySet()) {
+      Path path = new Path(entry.getValue());
+      URI destUri = path.toUri();
+      String mountKey = entry.getKey();
+      DestinationOrder order = DestinationOrder.HASH;
+      String mount = mountKey.replaceAll(mountTablePrefix, "");
+      if (!destUri.getScheme().equals(HdfsConstants.HDFS_URI_SCHEME)) {
+        System.out.println("Only supports HDFS, " +
+            "added Mount Point failed , " + mountKey);
+      }
+      if (!mount.startsWith(rootPath) ||
+          !destUri.getPath().startsWith(rootPath)) {
+        System.out.println("Added Mount Point failed " + mountKey);
+        continue;
+      }
+      String[] nss = new String[]{destUri.getAuthority()};
+      boolean added = addMount(
+          mount, nss, destUri.getPath(), false,
+          false, order, getACLEntityFormHdfsPath(path, getConf()));
+      if (added) {
+        System.out.println("Added mount point " + mount);
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns ACLEntity according to a HDFS pat.
+   * @param path A path of HDFS.
+   */
+  static private ACLEntity getACLEntityFormHdfsPath(
+      Path path, Configuration conf) {
+    String owner = null;
+    String group = null;
+    FsPermission mode = null;
+    try {
+      FileSystem fs = path.getFileSystem(conf);
+      if (fs.exists(path)) {
+        FileStatus fileStatus = fs.getFileStatus(path);
+        owner = fileStatus.getOwner();
+        group = fileStatus.getGroup();
+        mode = fileStatus.getPermission();
+      }
+    } catch (IOException e) {
+      System.err.println("Exception encountered " + e);
+    }
+    return new ACLEntity(owner, group, mode);
   }
 
   /**
