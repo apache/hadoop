@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -32,22 +33,29 @@ import org.apache.hadoop.util.AutoCloseableLock;
  */
 class ReplicaMap {
   // Lock object to synchronize this instance.
-  private final AutoCloseableLock lock;
+  private final AutoCloseableLock readLock;
+  private final AutoCloseableLock writeLock;
   
   // Map of block pool Id to another map of block Id to ReplicaInfo.
   private final Map<String, LightWeightResizableGSet<Block, ReplicaInfo>> map =
       new HashMap<>();
 
-  ReplicaMap(AutoCloseableLock lock) {
-    if (lock == null) {
+  ReplicaMap(AutoCloseableLock rLock, AutoCloseableLock wLock) {
+    if (rLock == null || wLock == null) {
       throw new HadoopIllegalArgumentException(
           "Lock to synchronize on cannot be null");
     }
-    this.lock = lock;
+    this.readLock = rLock;
+    this.writeLock = wLock;
+  }
+
+  ReplicaMap(ReadWriteLock lock) {
+    this(new AutoCloseableLock(lock.readLock()),
+        new AutoCloseableLock(lock.writeLock()));
   }
   
   String[] getBlockPoolList() {
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       return map.keySet().toArray(new String[map.keySet().size()]);   
     }
   }
@@ -92,7 +100,7 @@ class ReplicaMap {
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       return m != null ? m.get(new Block(blockId)) : null;
     }
@@ -109,7 +117,7 @@ class ReplicaMap {
   ReplicaInfo add(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = writeLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
@@ -127,7 +135,7 @@ class ReplicaMap {
   ReplicaInfo addAndGet(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = writeLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
@@ -176,7 +184,7 @@ class ReplicaMap {
   ReplicaInfo remove(String bpid, Block block) {
     checkBlockPool(bpid);
     checkBlock(block);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = writeLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m != null) {
         ReplicaInfo replicaInfo = m.get(block);
@@ -198,7 +206,7 @@ class ReplicaMap {
    */
   ReplicaInfo remove(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = writeLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m != null) {
         return m.remove(new Block(blockId));
@@ -213,7 +221,7 @@ class ReplicaMap {
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       return m != null ? m.size() : 0;
     }
@@ -237,7 +245,7 @@ class ReplicaMap {
 
   void initBlockPool(String bpid) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = writeLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       if (m == null) {
         // Add an entry for block pool if it does not exist already
@@ -249,7 +257,7 @@ class ReplicaMap {
   
   void cleanUpBlockPool(String bpid) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = lock.acquire()) {
+    try (AutoCloseableLock l = writeLock.acquire()) {
       map.remove(bpid);
     }
   }
@@ -259,6 +267,16 @@ class ReplicaMap {
    * @return lock object
    */
   AutoCloseableLock getLock() {
-    return lock;
+    return writeLock;
   }
+
+  /**
+   * Get the lock object used for synchronizing the ReplicasMap for read only
+   * operations.
+   * @return The read lock object
+   */
+  AutoCloseableLock getReadLock() {
+    return readLock;
+  }
+
 }
