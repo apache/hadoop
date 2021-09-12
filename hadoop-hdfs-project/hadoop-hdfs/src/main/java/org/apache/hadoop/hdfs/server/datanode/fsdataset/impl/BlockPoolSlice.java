@@ -102,7 +102,12 @@ class BlockPoolSlice {
   private final Runnable shutdownHook;
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  private final boolean deleteDuplicateReplicas;
+
+  /**
+   * Only tests are allowed to modify the value. For source code,
+   * this should be treated as final only.
+   */
+  private boolean deleteDuplicateReplicas;
   private static final String REPLICA_CACHE_FILE = "replicas";
   private final long replicaCacheExpiry;
   private final File replicaCacheDir;
@@ -125,31 +130,6 @@ class BlockPoolSlice {
 
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private final GetSpaceUsed dfsUsage;
-
-  /**
-   * Important only for tests. For source code, the value must always be false.
-   * Only tests can use true value to bypass processing RBW and Finalized
-   * replicas.
-   */
-  private static boolean isReplicaProcessingDisabledForTest = false;
-
-  /**
-   * Only to be used by "tests" and not by "source code". The intention of this
-   * is to enable/disable adding AddReplicaProcessor to the addReplicaThreadPool
-   * fork-join pool when reading replicas from cache is not successful
-   * (typically when Datanode is just started).
-   * By disabling flag 'isReplicaProcessingDisabledForTest' (i.e. true value),
-   * we will never let AddReplicaProcessor take care of deleting duplicate
-   * Finalized or RBW replica if one exists, and this is often useful for
-   * some tests.
-   *
-   * @param newVal true if test needs to disable processing duplicate Finalized
-   *     or RBW replicas.
-   */
-  @VisibleForTesting
-  public static void disableReplicaProcessingForTest(boolean newVal) {
-    isReplicaProcessingDisabledForTest = newVal;
-  }
 
   /**
    * Create a blook pool slice
@@ -466,7 +446,7 @@ class BlockPoolSlice {
     }
 
     boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
-    if (!success && !isReplicaProcessingDisabledForTest) {
+    if (!success) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
       Queue<RecursiveAction> subTaskQueue =
@@ -1106,4 +1086,11 @@ class BlockPoolSlice {
     addReplicaThreadPool.shutdown();
     addReplicaThreadPool = null;
   }
+
+  @VisibleForTesting
+  public void setDeleteDuplicateReplicasForTests(
+      boolean deleteDuplicateReplicasForTests) {
+    this.deleteDuplicateReplicas = deleteDuplicateReplicasForTests;
+  }
+
 }

@@ -1317,6 +1317,8 @@ public class TestFsDatasetImpl {
           .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
       conf.setDouble(DFSConfigKeys
           .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+          false);
       cluster = new MiniDFSCluster.Builder(conf)
           .numDataNodes(1)
           .storageTypes(
@@ -1345,25 +1347,6 @@ public class TestFsDatasetImpl {
       assertEquals(StorageType.DISK, oldStorageType);
       assertEquals(StorageType.ARCHIVE, newStorageType);
 
-      // Why do we need to do this?
-      // When Datanode comes up, BPServiceActors handshakes to Namenode and
-      // tries to initialize Block pool and in the process, it tries to get
-      // VolumeMap using BlockPoolSlice instance. While doing so, reading
-      // replicas from cache fails and hence, the thread tries to add
-      // Finalized and RBW replicas to addReplicaThreadPool fork-join pool
-      // in order to build the map. This process also tries to identify if
-      // there exists any duplicate replica. For this particular test, sometimes
-      // this process can detect duplicate replica on /data2 while processing
-      // finalized replica of /data1. Hence, before we can confirm
-      // newReplicaInfo.getBlockURI() exists, finalized replica on /data2
-      // might get deleted (rare and flaky case). Although the probability for
-      // the thread processing the identification and deletion of duplicate
-      // finalized replica to be faster than main thread is less, it cannot be
-      // avoided. Hence, we disable adding Finalized and RBW replicas to
-      // addReplicaThreadPool in BlockPoolSlice here and re-enable it only after
-      // we confirm the existence of newReplicaInfo on "/data2" ARCHIVE storage.
-      BlockPoolSlice.disableReplicaProcessingForTest(true);
-
       cluster.restartDataNode(0);
       cluster.waitDatanodeFullyStarted(cluster.getDataNodes().get(0), 60000);
       cluster.triggerBlockReports();
@@ -1371,10 +1354,13 @@ public class TestFsDatasetImpl {
       assertTrue(Files.exists(Paths.get(newReplicaInfo.getBlockURI())));
       assertTrue(Files.exists(Paths.get(oldReplicaInfo.getBlockURI())));
 
-      BlockPoolSlice.disableReplicaProcessingForTest(false);
-
-      DirectoryScanner scanner = new DirectoryScanner(
-          cluster.getDataNodes().get(0).getFSDataset(), conf);
+      // Before starting Dir Scanner, we should enable deleteDuplicateReplicas.
+      FsDatasetSpi<?> fsDataset = cluster.getDataNodes().get(0).getFSDataset();
+      DirectoryScanner scanner = new DirectoryScanner(fsDataset, conf);
+      FsVolumeImpl fsVolume =
+          (FsVolumeImpl) fsDataset.getFsVolumeReferences().get(0);
+      fsVolume.getBlockPoolSlice(fsVolume.getBlockPoolList()[0])
+          .setDeleteDuplicateReplicasForTests(true);
       scanner.start();
       scanner.run();
 
@@ -1393,6 +1379,7 @@ public class TestFsDatasetImpl {
           () -> !Files.exists(Paths.get(newReplicaInfo.getBlockURI())),
           100, 10000);
     } finally {
+      conf.unset(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION);
       if (cluster != null && cluster.isClusterUp()) {
         cluster.shutdown(true, true);
       }
