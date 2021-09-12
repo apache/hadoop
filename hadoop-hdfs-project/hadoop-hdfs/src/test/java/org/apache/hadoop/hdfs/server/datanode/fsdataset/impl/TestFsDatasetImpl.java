@@ -1317,6 +1317,11 @@ public class TestFsDatasetImpl {
           .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
       conf.setDouble(DFSConfigKeys
           .DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT_PERCENTAGE, 0.5);
+      // Since Datanode restart in the middle of block movement may leave
+      // uncleaned hardlink, disabling this config (i.e. deletion of duplicate
+      // replica) will prevent this edge-case from happening.
+      // We also re-enable deletion of duplicate replica just before starting
+      // Dir Scanner using setDeleteDuplicateReplicasForTests (HDFS-16213).
       conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
           false);
       cluster = new MiniDFSCluster.Builder(conf)
