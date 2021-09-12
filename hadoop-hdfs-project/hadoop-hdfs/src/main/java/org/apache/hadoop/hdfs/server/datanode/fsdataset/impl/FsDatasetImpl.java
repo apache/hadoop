@@ -1070,7 +1070,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + srcReplica + " metadata to "
           + dstMeta, e);
     }
-    LOG.info("Linked {} to {} . Dest meta file: {}",
+    LOG.debug("Linked {} to {} . Dest meta file: {}",
         srcReplica.getBlockURI(), dstFile, dstMeta);
     return new File[]{dstMeta, dstFile};
   }
