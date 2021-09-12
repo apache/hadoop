@@ -458,6 +458,7 @@ Usage:
           [-refresh]
           [-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]
           [-refreshSuperUserGroupsConfiguration]
+          [-refreshCallQueue]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -476,6 +477,7 @@ Usage:
 | `-refresh` | Update mount table cache of the connected router. |
 | `refreshRouterArgs` \<host:ipc\_port\> \<key\> [arg1..argn] | To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. For example, to enable white list checking, we just need to send a refresh command other than restart the router server. |
 | `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings on Router. |
+| `-refreshCallQueue` | Reload the call queue from config for Router. |
 
 The commands for managing Router-based federation. See [Mount table management](../hadoop-hdfs-rbf/HDFSRouterFederation.html#Mount_table_management) for more info.
 
