@@ -135,7 +135,7 @@ public class RouterAdmin extends Configured implements Tool {
               "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices",
               "-refresh", "-refreshRouterArgs",
-              "-refreshSuperUserGroupsConfiguration"};
+              "-refreshSuperUserGroupsConfiguration", "-refreshCallQueue"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
@@ -185,6 +185,8 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
       return "\t[-refreshSuperUserGroupsConfiguration]";
+    } else if (cmd.equals("-refreshCallQueue")) {
+      return "\t[-refreshCallQueue]";
     }
     return getUsage(null);
   }
@@ -219,6 +221,10 @@ public class RouterAdmin extends Configured implements Tool {
         throw new IllegalArgumentException("No arguments allowed");
       }
     } else if (arg[0].equals("-refreshSuperUserGroupsConfiguration")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
+    } else if (arg[0].equals("-refreshCallQueue")) {
       if (arg.length > 1) {
         throw new IllegalArgumentException("No arguments allowed");
       }
