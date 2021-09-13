@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DSQuotaExceededException extends QuotaExceededException {
   protected static final long serialVersionUID = 1L;
