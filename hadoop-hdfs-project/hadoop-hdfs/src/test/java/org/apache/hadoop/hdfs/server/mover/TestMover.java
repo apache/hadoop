@@ -872,7 +872,6 @@ public class TestMover {
   public void testMoverWithStripedFile() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     initConfWithStripe(conf);
-
     // start 10 datanodes
     int numOfDatanodes =10;
     int storagesPerDatanode=2;
@@ -1000,7 +999,6 @@ public class TestMover {
               { StorageType.SSD, StorageType.DISK } },
           true, null, null, null, capacities, null, false, false, false, null);
       cluster.triggerHeartbeats();
-
       // move file blocks to ONE_SSD policy
       client.setStoragePolicy(barDir, "ONE_SSD");
 
