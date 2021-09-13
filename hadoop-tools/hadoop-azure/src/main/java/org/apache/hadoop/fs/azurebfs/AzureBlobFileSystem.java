@@ -250,9 +250,8 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   @Override
-  public FSDataOutputStream create(final Path f, final FsPermission permission,
-      final boolean overwrite, final int bufferSize, final short replication,
-      final long blockSize, final Progressable progress) throws IOException {
+  public FSDataOutputStream create(final Path f, final FsPermission permission, final boolean overwrite, final int bufferSize,
+      final short replication, final long blockSize, final Progressable progress) throws IOException {
     LOG.debug("AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
         f,
         permission,
@@ -404,13 +403,14 @@ public class AzureBlobFileSystem extends FileSystem
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
       checkException(
-          src,
-          ex,
-          AzureServiceErrorCode.PATH_ALREADY_EXISTS,
-          AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
-          AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND, AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
-          AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
-          AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
+              src,
+              ex,
+              AzureServiceErrorCode.PATH_ALREADY_EXISTS,
+              AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
+              AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND,
+              AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
+              AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
+              AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
     }
 
