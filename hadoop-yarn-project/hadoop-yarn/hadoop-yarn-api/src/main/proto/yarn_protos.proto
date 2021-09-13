@@ -617,6 +617,7 @@ message QueueInfoProto {
   optional bool intraQueuePreemptionDisabled = 13;
   optional float weight = 14;
   optional string queuePath = 15;
+  optional int32 maxParallelApps = 16;
 }
 
 message QueueConfigurationsProto {

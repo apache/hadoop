@@ -1815,10 +1815,9 @@ public class DataNode extends ReconfigurableBase
   }
 
   /**
-   * @return name useful for logging
+   * @return name useful for logging or display
    */
   public String getDisplayName() {
-    // NB: our DatanodeID may not be set yet
     return hostName + ":" + getXferPort();
   }
 

@@ -670,7 +670,7 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes {
     public QueueInfo createFakeQueueInfo() {
       return QueueInfo.newInstance("root", "root", 100f, 100f, 50f, null,
           createFakeAppReports(), QueueState.RUNNING, null,
-          null, null, false, -1.0f,
+          null, null, false, -1.0f, 10,
            null, false);
     }
 

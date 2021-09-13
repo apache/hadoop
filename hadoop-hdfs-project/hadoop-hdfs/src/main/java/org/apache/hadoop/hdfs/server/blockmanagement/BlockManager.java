@@ -5189,6 +5189,8 @@ public class BlockManager implements BlockStatsMXBean {
       try {
         processQueue();
       } catch (Throwable t) {
+        LOG.error("Error while processing the block report, terminating the "
+            + "process", t);
         ExitUtil.terminate(1,
             getName() + " encountered fatal exception: " + t);
       }
