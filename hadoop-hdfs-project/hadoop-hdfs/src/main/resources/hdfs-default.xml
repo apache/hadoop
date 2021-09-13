@@ -503,6 +503,25 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edits.qjournals.resolution-enabled</name>
+  <value>false</value>
+  <description>
+    Determines if the given qjournals address is a domain name which needs to
+    be resolved.
+    This is used by namenode to resolve qjournals.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.qjournals.resolver.impl</name>
+  <value></value>
+  <description>
+    Qjournals resolver implementation used by namenode.
+    Effective with dfs.namenode.edits.qjournals.resolution-enabled on.
+  </description>
+</property>
+
+<property>
   <name>dfs.permissions.enabled</name>
   <value>true</value>
   <description>
@@ -2849,6 +2868,10 @@
     maintain a mapping of cached blocks to DataNodes via processing DataNode
     cache reports.  Based on these reports and addition and removal of caching
     directives, the NameNode will schedule caching and uncaching work.
+    In the current implementation, centralized caching introduces additional
+    write lock overhead (see CacheReplicationMonitor#rescan) even if no path
+    to cache is specified, so we recommend disabling this feature when not in
+    use. We will disable centralized caching by default in later versions.
   </description>
 </property>
 

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_KEYTAB_FILE_KEY;
@@ -36,6 +38,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.TokenVerifier;
@@ -48,9 +51,12 @@ import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -534,10 +540,34 @@ public class Router extends CompositeService implements
         LOG.error("Wrong Namenode to monitor: {}", namenode);
       }
       if (nsId != null) {
-        NamenodeHeartbeatService heartbeatService =
-            createNamenodeHeartbeatService(nsId, nnId);
-        if (heartbeatService != null) {
-          ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
+        String configKeyWithHost =
+            RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED + "." + nsId;
+        boolean resolveNeeded = conf.getBoolean(configKeyWithHost,
+            RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE_RESOLUTION_ENABLED_DEFAULT);
+
+        if (nnId != null && resolveNeeded) {
+          DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
+              conf, nsId, RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE_RESOLVER_IMPL);
+
+          Map<String, InetSocketAddress> hosts = Maps.newLinkedHashMap();
+          Map<String, InetSocketAddress> resolvedHosts =
+              DFSUtilClient.getResolvedAddressesForNnId(conf, nsId, nnId, dnr,
+                  null, DFS_NAMENODE_RPC_ADDRESS_KEY,
+                  DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+          hosts.putAll(resolvedHosts);
+          for (InetSocketAddress isa : hosts.values()) {
+            NamenodeHeartbeatService heartbeatService =
+                createNamenodeHeartbeatService(nsId, nnId, isa.getHostName());
+            if (heartbeatService != null) {
+              ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
+            }
+          }
+        } else {
+          NamenodeHeartbeatService heartbeatService =
+              createNamenodeHeartbeatService(nsId, nnId);
+          if (heartbeatService != null) {
+            ret.put(heartbeatService.getNamenodeDesc(), heartbeatService);
+          }
         }
       }
     }
@@ -583,6 +613,16 @@ public class Router extends CompositeService implements
     LOG.info("Creating heartbeat service for Namenode {} in {}", nnId, nsId);
     NamenodeHeartbeatService ret = new NamenodeHeartbeatService(
         namenodeResolver, nsId, nnId);
+    return ret;
+  }
+
+  protected NamenodeHeartbeatService createNamenodeHeartbeatService(
+      String nsId, String nnId, String resolvedHost) {
+
+    LOG.info("Creating heartbeat service for" +
+        " Namenode {}, resolved host {}, in {}", nnId, resolvedHost, nsId);
+    NamenodeHeartbeatService ret = new NamenodeHeartbeatService(
+        namenodeResolver, nsId, nnId, resolvedHost);
     return ret;
   }
 
@@ -639,6 +679,18 @@ public class Router extends CompositeService implements
   public RouterMetrics getRouterMetrics() {
     if (this.metrics != null) {
       return this.metrics.getRouterMetrics();
+    }
+    return null;
+  }
+
+  /**
+   * Get the metrics system for the Router Client.
+   *
+   * @return Router Client metrics.
+   */
+  public RouterClientMetrics getRouterClientMetrics() {
+    if (this.metrics != null) {
+      return this.metrics.getRouterClientMetrics();
     }
     return null;
   }

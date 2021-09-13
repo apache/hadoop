@@ -4639,6 +4639,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return getFSImage().getEditLog();
   }
 
+  private NNStorage getNNStorage() {
+    return getFSImage().getStorage();
+  }
+
   @Metric({"MissingBlocks", "Number of missing blocks"})
   public long getMissingBlocksCount() {
     // not locking
@@ -4662,7 +4666,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
     return getFSImage().getLastAppliedOrWrittenTxId() -
-        getFSImage().getStorage().getMostRecentCheckpointTxId();
+        getNNStorage().getMostRecentCheckpointTxId();
   }
   
   @Metric({"TransactionsSinceLastLogRoll",
@@ -4697,7 +4701,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"LastCheckpointTime",
       "Time in milliseconds since the epoch of the last checkpoint"})
   public long getLastCheckpointTime() {
-    return getFSImage().getStorage().getMostRecentCheckpointTime();
+    return getNNStorage().getMostRecentCheckpointTime();
   }
 
   /** @see ClientProtocol#getStats() */
@@ -4967,10 +4971,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       
       // if it is disabled - enable it and vice versa.
       if(arg.equals("check")) {
-        val = getFSImage().getStorage().getRestoreFailedStorage();
+        val = getNNStorage().getRestoreFailedStorage();
       } else {
         val = arg.equals("true");  // false if not
-        getFSImage().getStorage().setRestoreFailedStorage(val);
+        getNNStorage().setRestoreFailedStorage(val);
       }
     } finally {
       writeUnlock(operationName, getLockReportInfoSupplier(null));
@@ -5969,11 +5973,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NamenodeRegistration nnReg) throws IOException {
     writeLock();
     try {
-      if(getFSImage().getStorage().getNamespaceID() 
+      if(getNNStorage().getNamespaceID()
          != bnReg.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
+            + getNNStorage().getNamespaceID() + "; "
             + bnReg.getRole() +
             " node namespaceID = " + bnReg.getNamespaceID());
       if (bnReg.getRole() == NamenodeRole.BACKUP) {
@@ -5997,11 +6001,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      if(getFSImage().getStorage().getNamespaceID()
+      if(getNNStorage().getNamespaceID()
          != registration.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
+            + getNNStorage().getNamespaceID() + "; "
             + registration.getRole() +
             " node namespaceID = " + registration.getNamespaceID());
       getEditLog().releaseBackupStream(registration);
@@ -6537,7 +6541,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (node.getUpgradeDomain() != null) {
         innerinfo.put("upgradeDomain", node.getUpgradeDomain());
       }
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo.build());
+      info.put(node.getXferAddrWithHostname(), innerinfo.build());
     }
     return JSON.toString(info);
   }
@@ -6560,7 +6564,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
           .build();
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
+      info.put(node.getXferAddrWithHostname(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -6588,7 +6592,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
           node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
+      info.put(node.getXferAddrWithHostname(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -6616,7 +6620,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
               node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
-      nodesMap.put(node.getHostName() + ":" + node.getXferPort(), attrMap);
+      nodesMap.put(node.getXferAddrWithHostname(), attrMap);
     }
     return JSON.toString(nodesMap);
   }
@@ -6635,7 +6639,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override  // NameNodeMXBean
   public String getClusterId() {
-    return getFSImage().getStorage().getClusterID();
+    return getNNStorage().getClusterID();
   }
   
   @Override  // NameNodeMXBean
@@ -6650,14 +6654,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
     Map<File, StorageDirType> activeDirs = new HashMap<File, StorageDirType>();
     for (Iterator<StorageDirectory> it
-        = getFSImage().getStorage().dirIterator(); it.hasNext();) {
+        = getNNStorage().dirIterator(); it.hasNext();) {
       StorageDirectory st = it.next();
       activeDirs.put(st.getRoot(), st.getStorageDirType());
     }
     statusMap.put("active", activeDirs);
     
     List<Storage.StorageDirectory> removedStorageDirs
-        = getFSImage().getStorage().getRemovedStorageDirs();
+        = getNNStorage().getRemovedStorageDirs();
     Map<File, StorageDirType> failedDirs = new HashMap<File, StorageDirType>();
     for (StorageDirectory st : removedStorageDirs) {
       failedDirs.put(st.getRoot(), st.getStorageDirType());
@@ -6908,7 +6912,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override // NameNodeStatusMXBean
   public String getNameDirSize() {
-    return getFSImage().getStorage().getNNDirectorySize();
+    return getNNStorage().getNNDirectorySize();
   }
 
   /**

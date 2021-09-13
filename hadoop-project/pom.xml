@@ -211,6 +211,7 @@
     <woodstox.version>5.3.0</woodstox.version>
     <json-smart.version>2.4.7</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
+    <apache-ant.version>1.10.11</apache-ant.version>
   </properties>
 
   <dependencyManagement>
@@ -1238,7 +1239,7 @@
       <dependency>
         <groupId>org.apache.ant</groupId>
         <artifactId>ant</artifactId>
-        <version>1.10.9</version>
+        <version>${apache-ant.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.re2j</groupId>

@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -184,8 +185,11 @@ public abstract class Server {
    * e.g., terse exception group for concise logging messages
    */
   static class ExceptionsHandler {
-    private volatile Set<String> terseExceptions = new HashSet<>();
-    private volatile Set<String> suppressedExceptions = new HashSet<>();
+
+    private final Set<String> terseExceptions =
+        ConcurrentHashMap.newKeySet();
+    private final Set<String> suppressedExceptions =
+        ConcurrentHashMap.newKeySet();
 
     /**
      * Add exception classes for which server won't log stack traces.
@@ -193,8 +197,10 @@ public abstract class Server {
      * @param exceptionClass exception classes 
      */
     void addTerseLoggingExceptions(Class<?>... exceptionClass) {
-      // Thread-safe replacement of terseExceptions.
-      terseExceptions = addExceptions(terseExceptions, exceptionClass);
+      terseExceptions.addAll(Arrays
+          .stream(exceptionClass)
+          .map(Class::toString)
+          .collect(Collectors.toSet()));
     }
 
     /**
@@ -203,9 +209,10 @@ public abstract class Server {
      * @param exceptionClass exception classes
      */
     void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {
-      // Thread-safe replacement of suppressedExceptions.
-      suppressedExceptions = addExceptions(
-          suppressedExceptions, exceptionClass);
+      suppressedExceptions.addAll(Arrays
+          .stream(exceptionClass)
+          .map(Class::toString)
+          .collect(Collectors.toSet()));
     }
 
     boolean isTerseLog(Class<?> t) {
@@ -216,23 +223,6 @@ public abstract class Server {
       return suppressedExceptions.contains(t.toString());
     }
 
-    /**
-     * Return a new set containing all the exceptions in exceptionsSet
-     * and exceptionClass.
-     * @return
-     */
-    private static Set<String> addExceptions(
-        final Set<String> exceptionsSet, Class<?>[] exceptionClass) {
-      // Make a copy of the exceptionSet for performing modification
-      final HashSet<String> newSet = new HashSet<>(exceptionsSet);
-
-      // Add all class names into the HashSet
-      for (Class<?> name : exceptionClass) {
-        newSet.add(name.toString());
-      }
-
-      return Collections.unmodifiableSet(newSet);
-    }
   }
 
   
@@ -488,6 +478,8 @@ public abstract class Server {
   volatile private boolean running = true;         // true while server runs
   private CallQueueManager<Call> callQueue;
 
+  private long purgeIntervalNanos;
+
   // maintains the set of client connections and handles idle timeouts
   private ConnectionManager connectionManager;
   private Listener listener = null;
@@ -517,6 +509,20 @@ public abstract class Server {
     this.logSlowRPC = logSlowRPCFlag;
   }
 
+  private void setPurgeIntervalNanos(int purgeInterval) {
+    int tmpPurgeInterval = CommonConfigurationKeysPublic.
+        IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT;
+    if (purgeInterval > 0) {
+      tmpPurgeInterval = purgeInterval;
+    }
+    this.purgeIntervalNanos = TimeUnit.NANOSECONDS.convert(
+            tmpPurgeInterval, TimeUnit.MINUTES);
+  }
+
+  @VisibleForTesting
+  public long getPurgeIntervalNanos() {
+    return this.purgeIntervalNanos;
+  }
 
   /**
    * Logs a Slow RPC Request.
@@ -1591,9 +1597,6 @@ public abstract class Server {
     }
   }
 
-  private final static long PURGE_INTERVAL_NANOS = TimeUnit.NANOSECONDS.convert(
-      15, TimeUnit.MINUTES);
-
   // Sends responses of RPC back to clients.
   private class Responder extends Thread {
     private final Selector writeSelector;
@@ -1629,7 +1632,7 @@ public abstract class Server {
         try {
           waitPending();     // If a channel is being registered, wait.
           writeSelector.select(
-              TimeUnit.NANOSECONDS.toMillis(PURGE_INTERVAL_NANOS));
+              TimeUnit.NANOSECONDS.toMillis(purgeIntervalNanos));
           Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();
           while (iter.hasNext()) {
             SelectionKey key = iter.next();
@@ -1652,7 +1655,7 @@ public abstract class Server {
             }
           }
           long nowNanos = Time.monotonicNowNanos();
-          if (nowNanos < lastPurgeTimeNanos + PURGE_INTERVAL_NANOS) {
+          if (nowNanos < lastPurgeTimeNanos + purgeIntervalNanos) {
             continue;
           }
           lastPurgeTimeNanos = nowNanos;
@@ -1730,7 +1733,7 @@ public abstract class Server {
         Iterator<RpcCall> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (now > call.responseTimestampNanos + PURGE_INTERVAL_NANOS) {
+          if (now > call.responseTimestampNanos + purgeIntervalNanos) {
             closeConnection(call.connection);
             break;
           }
@@ -3238,6 +3241,10 @@ public abstract class Server {
     this.setLogSlowRPC(conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+
+    this.setPurgeIntervalNanos(conf.getInt(
+        CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT));
 
     // Create the responder here
     responder = new Responder();

@@ -26,6 +26,7 @@ import org.apache.hadoop.metrics2.MetricsTag;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -42,7 +43,10 @@ public class PrometheusMetricsSink implements MetricsSink {
   /**
    * Cached output lines for each metrics.
    */
-  private final Map<String, String> metricLines = new ConcurrentHashMap<>();
+  private Map<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetrics =
+      new ConcurrentHashMap<>();
+  private Map<String, Map<Collection<MetricsTag>, AbstractMetric>> nextPromMetrics =
+      new ConcurrentHashMap<>();
 
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
@@ -53,42 +57,16 @@ public class PrometheusMetricsSink implements MetricsSink {
 
   @Override
   public void putMetrics(MetricsRecord metricsRecord) {
-    for (AbstractMetric metrics : metricsRecord.metrics()) {
-      if (metrics.type() == MetricType.COUNTER
-          || metrics.type() == MetricType.GAUGE) {
+    for (AbstractMetric metric : metricsRecord.metrics()) {
+      if (metric.type() == MetricType.COUNTER
+          || metric.type() == MetricType.GAUGE) {
 
         String key = prometheusName(
-            metricsRecord.name(), metrics.name());
+            metricsRecord.name(), metric.name());
 
-        StringBuilder builder = new StringBuilder();
-        builder.append("# TYPE ")
-            .append(key)
-            .append(" ")
-            .append(metrics.type().toString().toLowerCase())
-            .append("\n")
-            .append(key)
-            .append("{");
-        String sep = "";
-
-        //add tags
-        for (MetricsTag tag : metricsRecord.tags()) {
-          String tagName = tag.name().toLowerCase();
-
-          //ignore specific tag which includes sub-hierarchy
-          if (!tagName.equals("numopenconnectionsperuser")) {
-            builder.append(sep)
-                .append(tagName)
-                .append("=\"")
-                .append(tag.value())
-                .append("\"");
-            sep = ",";
-          }
-        }
-        builder.append("} ");
-        builder.append(metrics.value());
-        builder.append("\n");
-        metricLines.put(key, builder.toString());
-
+        nextPromMetrics.computeIfAbsent(key,
+            any -> new ConcurrentHashMap<>())
+            .put(metricsRecord.tags(), metric);
       }
     }
   }
@@ -108,17 +86,55 @@ public class PrometheusMetricsSink implements MetricsSink {
 
   @Override
   public void flush() {
-
+    promMetrics = nextPromMetrics;
+    nextPromMetrics = new ConcurrentHashMap<>();
   }
 
   @Override
-  public void init(SubsetConfiguration subsetConfiguration) {
-
+  public void init(SubsetConfiguration conf) {
   }
 
   public void writeMetrics(Writer writer) throws IOException {
-    for (String line : metricLines.values()) {
-      writer.write(line);
+    for (Map.Entry<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetric :
+        promMetrics.entrySet()) {
+      AbstractMetric firstMetric = promMetric.getValue().values().iterator().next();
+
+      StringBuilder builder = new StringBuilder();
+      builder.append("# HELP ")
+          .append(promMetric.getKey())
+          .append(" ")
+          .append(firstMetric.description())
+          .append("\n")
+          .append("# TYPE ")
+          .append(promMetric.getKey())
+          .append(" ")
+          .append(firstMetric.type().toString().toLowerCase())
+          .append("\n");
+
+      for (Map.Entry<Collection<MetricsTag>, AbstractMetric> metric :
+          promMetric.getValue().entrySet()) {
+        builder.append(promMetric.getKey())
+            .append("{");
+
+        String sep = "";
+        for (MetricsTag tag : metric.getKey()) {
+          String tagName = tag.name().toLowerCase();
+
+          if (!tagName.equals("numopenconnectionsperuser")) {
+            builder.append(sep)
+                .append(tagName)
+                .append("=\"")
+                .append(tag.value())
+                .append("\"");
+            sep = ",";
+          }
+        }
+        builder.append("} ");
+        builder.append(metric.getValue().value());
+        builder.append("\n");
+      }
+
+      writer.write(builder.toString());
     }
   }
 }

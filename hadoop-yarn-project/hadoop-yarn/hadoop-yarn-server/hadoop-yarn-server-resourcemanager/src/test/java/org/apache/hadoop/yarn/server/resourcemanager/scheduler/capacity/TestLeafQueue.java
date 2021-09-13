@@ -800,6 +800,62 @@ public class TestLeafQueue {
     assertEquals((int)(a.getCapacity() * node_0.getTotalResource().getMemorySize()),
         a.getMetrics().getAvailableMB());
   }
+
+  @Test
+  public void testHeadroomCheckWithDRF() throws Exception {
+    CSAssignment assignment;
+    setUpWithDominantResourceCalculator();
+    // Mock the queue
+    LeafQueue b = stubLeafQueue((LeafQueue) queues.get(B));
+    // Users
+    final String user0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app0 =
+        new FiCaSchedulerApp(appAttemptId0, user0, b,
+            b.getAbstractUsersManager(), spyRMContext);
+    b.submitApplicationAttempt(app0, user0);
+    // Setup some nodes
+    String host0 = "127.0.0.1";
+    FiCaSchedulerNode node0 =
+        TestUtils.getMockNode(host0, DEFAULT_RACK, 0, 100 * GB, 100);
+
+    int numNodes = 1;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (100 * GB), numNodes * 100);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+
+    // Increase the user-limit-factor to make user_0 fully use max resources of the queue.
+    // The max resources can be used are 0.99 * [100 * GB, 100]
+    b.setUserLimitFactor(10.0f);
+
+    Map<ApplicationAttemptId, FiCaSchedulerApp> apps =
+        ImmutableMap.of(app0.getApplicationAttemptId(), app0);
+    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node0.getNodeID(), node0);
+
+    Priority priority = TestUtils.createMockPriority(1);
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 90 * GB, 10, 1, true,
+            priority, recordFactory, NO_LABEL)));
+    assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
+        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    applyCSAssignment(clusterResource, assignment, b, nodes, apps);
+    verifyContainerAllocated(assignment, NodeType.OFF_SWITCH);
+
+    app0.updateResourceRequests(Collections.singletonList(TestUtils
+        .createResourceRequest(ResourceRequest.ANY, 10 * GB, 10, 1, true,
+            priority, recordFactory, NO_LABEL)));
+    assignment = b.assignContainers(clusterResource, node0, new ResourceLimits(
+        clusterResource), SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+    // This assignment should have no containers assigned,
+    // because the used memory (90 + 10)GB will exceed the max 99GB
+    verifyNoContainerAllocated(assignment);
+  }
+
   @Test
   public void testDRFUsageRatioRounding() throws Exception {
     CSAssignment assign;
@@ -1853,6 +1909,7 @@ public class TestLeafQueue {
         + ".user-settings.firstname.lastname."
         + CapacitySchedulerConfiguration.USER_WEIGHT,
         0.7f);
+    csConf.reinitializeConfigurationProperties();
 
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));
@@ -5101,7 +5158,7 @@ public class TestLeafQueue {
     CSQueueMetrics metrics = CSQueueMetrics.forQueue(name, parent, false, cs.getConf());
     QueueInfo queueInfo = QueueInfo.
         newInstance(name, path, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, -1.0f, null, false);
+        null, QueueState.RUNNING, null, "", null, false, -1.0f, 10, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     AbstractCSQueue queue = mock(AbstractCSQueue.class);
     when(queue.getMetrics()).thenReturn(metrics);
