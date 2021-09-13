@@ -80,9 +80,9 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
     Preconditions.checkArgument(clusterMap instanceof DFSNetworkTopology);
     DFSNetworkTopology dfsClusterMap = (DFSNetworkTopology) clusterMap;
     DatanodeDescriptor a = (DatanodeDescriptor) dfsClusterMap
-        .chooseRandomWithStorageType(scope, excludedNode, type);
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
-        .chooseRandomWithStorageType(scope, excludedNode, type);
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     return select(a, b);
   }
 
