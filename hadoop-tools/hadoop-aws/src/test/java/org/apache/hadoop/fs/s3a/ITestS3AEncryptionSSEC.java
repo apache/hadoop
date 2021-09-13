@@ -44,6 +44,8 @@ import static org.apache.hadoop.fs.s3a.Constants.ETAG_CHECKSUM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -122,7 +124,9 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
         DIRECTORY_MARKER_POLICY,
         ETAG_CHECKSUM_ENABLED,
         S3_ENCRYPTION_ALGORITHM,
-        S3_ENCRYPTION_KEY);
+        S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP

@@ -20,18 +20,15 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.EncryptionTestUtils;
-import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
 
 /**
  * Class to test SSE_KMS encryption settings for huge files.
@@ -44,13 +41,7 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
   @Override
   public void setup() throws Exception {
     Configuration c = new Configuration();
-    String kmsKey = c.get(S3_ENCRYPTION_KEY);
-    if (StringUtils.isBlank(kmsKey) || !c.get(S3_ENCRYPTION_ALGORITHM)
-        .equals(S3AEncryptionMethods.CSE_KMS.name())) {
-      skip(S3_ENCRYPTION_KEY + " is not set for " +
-          SSE_KMS.getMethod() + " or CSE-KMS algorithm is used instead of "
-          + "SSE-KMS");
-    }
+    skipIfEncryptionNotSet(c, SSE_KMS);
     super.setup();
   }
 

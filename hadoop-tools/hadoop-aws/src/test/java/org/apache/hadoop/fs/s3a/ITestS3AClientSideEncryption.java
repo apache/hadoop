@@ -257,11 +257,6 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     }
   }
 
-  @Test
-  public void testsomething() {
-    S3AFileSystem fs = getFileSystem();
-  }
-
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();

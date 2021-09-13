@@ -83,7 +83,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -1534,14 +1533,14 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if encryption algo or encryption key is not set.
+   * Skip a test if encryption algorithm or encryption key is not set.
    *
    * @param configuration configuration to probe.
    */
   public static void skipIfEncryptionNotSet(Configuration configuration,
       S3AEncryptionMethods s3AEncryptionMethod) {
-    // if S3 encryption algo is not set to desired method or AWS encryption key
-    // is not set, then skip.
+    // if S3 encryption algorithm is not set to desired method or AWS encryption
+    // key is not set, then skip.
     if (!configuration.getTrimmed(S3_ENCRYPTION_ALGORITHM, "")
         .equals(s3AEncryptionMethod.getMethod())
         || configuration.get(Constants.S3_ENCRYPTION_KEY) == null) {

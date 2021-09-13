@@ -461,7 +461,7 @@ public final class Constants {
    * value: {@value}
    */
   public static final String S3_ENCRYPTION_ALGORITHM =
-      "fs.s3a.encryption-algorithm";
+      "fs.s3a.encryption.algorithm";
 
   /**
    * Set S3-SSE or S3-CSE encryption Key if required.

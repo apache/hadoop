@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
@@ -52,7 +54,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   /**
    * This removes the encryption settings from the
    * configuration and then sets the
-   * fs.s3a.encryption-algorithm value to
+   * fs.s3a.encryption.algorithm value to
    * be that of {@code getSSEAlgorithm()}.
    * Called in {@code createConfiguration()}.
    * @param conf configuration to patch.
@@ -61,7 +63,9 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
       final Configuration conf) {
     removeBaseAndBucketOverrides(conf,
         S3_ENCRYPTION_ALGORITHM,
-        S3_ENCRYPTION_KEY);
+        S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(S3_ENCRYPTION_ALGORITHM,
             getSSEAlgorithm().getMethod());
   }

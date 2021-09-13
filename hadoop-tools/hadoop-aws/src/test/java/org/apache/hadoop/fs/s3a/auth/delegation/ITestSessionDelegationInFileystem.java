@@ -149,7 +149,9 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
         Constants.S3_ENCRYPTION_ALGORITHM,
-        Constants.S3_ENCRYPTION_KEY);
+        Constants.S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
@@ -351,6 +353,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
         Constants.S3_ENCRYPTION_ALGORITHM,
         Constants.S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY,
         DELEGATION_TOKEN_ROLE_ARN,
         DELEGATION_TOKEN_ENDPOINT);
     // this is done to make sure you cannot create an STS session no

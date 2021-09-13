@@ -165,7 +165,7 @@ Example:
 ```
 
 You can also force all the tests to run with a specific SSE encryption method
-by configuring the property `fs.s3a.encryption-algorithm` in the s3a
+by configuring the property `fs.s3a.encryption.algorithm` in the s3a
 contract file.
 
 ### <a name="default_encyption"></a> Default Encryption
@@ -1483,8 +1483,8 @@ as it may take a couple of SDK updates before it is ready.
   artifacts have unintentionally been declared as dependencies
   of the shaded `aws-java-sdk-bundle` artifact.
 1. Run a full AWS-test suite with S3 client-side encryption enabled by
- setting `fs.s3a.encryption-algorithm` to 'CSE-KMS' and setting up AWS-KMS
-  Key ID in `fs.s3a.encryption.key`. 
+ setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
+  Key ID in `fs.s3a.encryption.key`.
 
 ### Basic command line regression testing
 

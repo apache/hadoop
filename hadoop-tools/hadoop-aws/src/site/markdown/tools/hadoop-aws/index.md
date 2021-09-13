@@ -664,7 +664,7 @@ fs.s3a.access.key
 fs.s3a.secret.key
 fs.s3a.session.token
 fs.s3a.encryption.key
-fs.s3a.encryption-algorithm
+fs.s3a.encryption.algorithm
 ```
 
 The first three are for authentication; the final two for
@@ -969,7 +969,7 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.encryption-algorithm</name>
+  <name>fs.s3a.encryption.algorithm</name>
   <description>Specify a server-side encryption or client-side
      encryption algorithm for s3a: file system. Unset by default. It supports the
      following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
@@ -978,7 +978,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
     <name>fs.s3a.encryption.key</name>
-    <description>Specific encryption key to use if fs.s3a.encryption-algorithm
+    <description>Specific encryption key to use if fs.s3a.encryption.algorithm
         has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
     , the value of this property should be the Base64 encoded key. If you are
      using SSE-KMS and leave this property empty, you'll be using your default's
@@ -1439,7 +1439,7 @@ Consider a JCEKS file with six keys:
 ```
 fs.s3a.access.key
 fs.s3a.secret.key
-fs.s3a.encryption-algorithm
+fs.s3a.encryption.algorithm
 fs.s3a.encryption.key
 fs.s3a.bucket.nightly.access.key
 fs.s3a.bucket.nightly.secret.key

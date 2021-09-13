@@ -44,21 +44,21 @@ public class ITestS3AEncryptionAlgorithmValidation
     assumeEnabled();
     intercept(IOException.class, "Unknown Server Side algorithm DES", () -> {
 
-        Configuration conf = super.createConfiguration();
-        //DES is an invalid encryption algorithm
-        conf.set(Constants.S3_ENCRYPTION_ALGORITHM, "DES");
-        S3AContract contract = (S3AContract) createContract(conf);
-        contract.init();
-        //extract the test FS
-        FileSystem fileSystem = contract.getTestFileSystem();
-        assertNotNull("null filesystem", fileSystem);
-        URI fsURI = fileSystem.getUri();
-        LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-        assertEquals("wrong filesystem of " + fsURI,
-            contract.getScheme(), fsURI.getScheme());
-        fileSystem.initialize(fsURI, conf);
-        throw new Exception("Do not reach here");
-      });
+      Configuration conf = super.createConfiguration();
+      //DES is an invalid encryption algorithm
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM, "DES");
+      S3AContract contract = (S3AContract) createContract(conf);
+      contract.init();
+      //extract the test FS
+      FileSystem fileSystem = contract.getTestFileSystem();
+      assertNotNull("null filesystem", fileSystem);
+      URI fsURI = fileSystem.getUri();
+      LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+      assertEquals("wrong filesystem of " + fsURI,
+          contract.getScheme(), fsURI.getScheme());
+      fileSystem.initialize(fsURI, conf);
+      throw new Exception("Do not reach here");
+    });
   }
 
   @Test
@@ -69,23 +69,23 @@ public class ITestS3AEncryptionAlgorithmValidation
     intercept(IllegalArgumentException.class, "The value of property " +
         Constants.S3_ENCRYPTION_KEY + " must not be null", () -> {
 
-        Configuration conf = super.createConfiguration();
-        //SSE-C must be configured with an encryption key
-        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
-            S3AEncryptionMethods.SSE_C.getMethod());
-        conf.set(Constants.S3_ENCRYPTION_KEY, null);
-        S3AContract contract = (S3AContract) createContract(conf);
-        contract.init();
-        //extract the test FS
-        FileSystem fileSystem = contract.getTestFileSystem();
-        assertNotNull("null filesystem", fileSystem);
-        URI fsURI = fileSystem.getUri();
-        LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-        assertEquals("wrong filesystem of " + fsURI,
-            contract.getScheme(), fsURI.getScheme());
-        fileSystem.initialize(fsURI, conf);
-        throw new Exception("Do not reach here");
-      });
+      Configuration conf = super.createConfiguration();
+      //SSE-C must be configured with an encryption key
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
+          S3AEncryptionMethods.SSE_C.getMethod());
+      conf.set(Constants.S3_ENCRYPTION_KEY, null);
+      S3AContract contract = (S3AContract) createContract(conf);
+      contract.init();
+      //extract the test FS
+      FileSystem fileSystem = contract.getTestFileSystem();
+      assertNotNull("null filesystem", fileSystem);
+      URI fsURI = fileSystem.getUri();
+      LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+      assertEquals("wrong filesystem of " + fsURI,
+          contract.getScheme(), fsURI.getScheme());
+      fileSystem.initialize(fsURI, conf);
+      throw new Exception("Do not reach here");
+    });
   }
 
   @Test
@@ -93,23 +93,23 @@ public class ITestS3AEncryptionAlgorithmValidation
     Throwable {
     intercept(IOException.class, S3AUtils.SSE_C_NO_KEY_ERROR, () -> {
 
-        Configuration conf = super.createConfiguration();
-        //SSE-C must be configured with an encryption key
-        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
-            S3AEncryptionMethods.SSE_C.getMethod());
-        conf.set(Constants.S3_ENCRYPTION_KEY, "");
-        S3AContract contract = (S3AContract) createContract(conf);
-        contract.init();
-        //extract the test FS
-        FileSystem fileSystem = contract.getTestFileSystem();
-        assertNotNull("null filesystem", fileSystem);
-        URI fsURI = fileSystem.getUri();
-        LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-        assertEquals("wrong filesystem of " + fsURI,
-            contract.getScheme(), fsURI.getScheme());
-        fileSystem.initialize(fsURI, conf);
-        throw new Exception("Do not reach here");
-      });
+      Configuration conf = super.createConfiguration();
+      //SSE-C must be configured with an encryption key
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
+          S3AEncryptionMethods.SSE_C.getMethod());
+      conf.set(Constants.S3_ENCRYPTION_KEY, "");
+      S3AContract contract = (S3AContract) createContract(conf);
+      contract.init();
+      //extract the test FS
+      FileSystem fileSystem = contract.getTestFileSystem();
+      assertNotNull("null filesystem", fileSystem);
+      URI fsURI = fileSystem.getUri();
+      LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+      assertEquals("wrong filesystem of " + fsURI,
+          contract.getScheme(), fsURI.getScheme());
+      fileSystem.initialize(fsURI, conf);
+      throw new Exception("Do not reach here");
+    });
   }
 
   @Test
@@ -119,24 +119,24 @@ public class ITestS3AEncryptionAlgorithmValidation
     assumeEnabled();
     intercept(IOException.class, S3AUtils.SSE_S3_WITH_KEY_ERROR, () -> {
 
-        Configuration conf = super.createConfiguration();
-        //SSE-S3 cannot be configured with an encryption key
-        conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
-            S3AEncryptionMethods.SSE_S3.getMethod());
-        conf.set(Constants.S3_ENCRYPTION_KEY,
-            "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
-        S3AContract contract = (S3AContract) createContract(conf);
-        contract.init();
-        //extract the test FS
-        FileSystem fileSystem = contract.getTestFileSystem();
-        assertNotNull("null filesystem", fileSystem);
-        URI fsURI = fileSystem.getUri();
-        LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
-        assertEquals("wrong filesystem of " + fsURI,
-            contract.getScheme(), fsURI.getScheme());
-        fileSystem.initialize(fsURI, conf);
-        throw new Exception("Do not reach here");
-      });
+      Configuration conf = super.createConfiguration();
+      //SSE-S3 cannot be configured with an encryption key
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
+          S3AEncryptionMethods.SSE_S3.getMethod());
+      conf.set(Constants.S3_ENCRYPTION_KEY,
+          "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=");
+      S3AContract contract = (S3AContract) createContract(conf);
+      contract.init();
+      //extract the test FS
+      FileSystem fileSystem = contract.getTestFileSystem();
+      assertNotNull("null filesystem", fileSystem);
+      URI fsURI = fileSystem.getUri();
+      LOG.info("Test filesystem = {} implemented by {}", fsURI, fileSystem);
+      assertEquals("wrong filesystem of " + fsURI,
+          contract.getScheme(), fsURI.getScheme());
+      fileSystem.initialize(fsURI, conf);
+      throw new Exception("Do not reach here");
+    });
   }
 
   /**

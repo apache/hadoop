@@ -183,11 +183,13 @@ public class TestSSEConfiguration extends Assert {
     if (algorithm != null) {
       conf.set(Constants.S3_ENCRYPTION_ALGORITHM, algorithm);
     } else {
+      conf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
       conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     }
     if (key != null) {
       conf.set(Constants.S3_ENCRYPTION_KEY, key);
     } else {
+      conf.unset(SERVER_SIDE_ENCRYPTION_KEY);
       conf.unset(Constants.S3_ENCRYPTION_KEY);
     }
     return conf;

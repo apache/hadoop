@@ -376,12 +376,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS),
         new Configuration.DeprecationDelta(
             SERVER_SIDE_ENCRYPTION_ALGORITHM,
-            S3_ENCRYPTION_ALGORITHM
-        ),
+            S3_ENCRYPTION_ALGORITHM),
         new Configuration.DeprecationDelta(
             SERVER_SIDE_ENCRYPTION_KEY,
-            S3_ENCRYPTION_KEY
-        )
+            S3_ENCRYPTION_KEY)
     };
 
     if (deltas.length > 0) {
@@ -444,7 +442,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       initializeStatisticsBinding();
       // If CSE-KMS method is set then CSE is enabled.
       isCSEEnabled = S3AUtils.lookupPassword(conf,
-          Constants.S3_ENCRYPTION_ALGORITHM, null) != null;
+          Constants.S3_ENCRYPTION_ALGORITHM, "")
+          .equals(S3AEncryptionMethods.CSE_KMS.getMethod());
       LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
       setCSEGauge();
       // Username is the current user at the time the FS was instantiated.
