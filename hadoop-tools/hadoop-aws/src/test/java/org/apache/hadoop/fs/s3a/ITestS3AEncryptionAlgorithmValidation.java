@@ -42,7 +42,7 @@ public class ITestS3AEncryptionAlgorithmValidation
   public void testEncryptionAlgorithmSetToDES() throws Throwable {
     //skip tests if they aren't enabled
     assumeEnabled();
-    intercept(IOException.class, "Unknown Server Side algorithm DES", () -> {
+    intercept(IOException.class, "Unknown encryption algorithm DES", () -> {
 
       Configuration conf = super.createConfiguration();
       //DES is an invalid encryption algorithm
@@ -57,7 +57,7 @@ public class ITestS3AEncryptionAlgorithmValidation
       assertEquals("wrong filesystem of " + fsURI,
           contract.getScheme(), fsURI.getScheme());
       fileSystem.initialize(fsURI, conf);
-      throw new Exception("Do not reach here");
+      return fileSystem;
     });
   }
 
@@ -84,7 +84,7 @@ public class ITestS3AEncryptionAlgorithmValidation
       assertEquals("wrong filesystem of " + fsURI,
           contract.getScheme(), fsURI.getScheme());
       fileSystem.initialize(fsURI, conf);
-      throw new Exception("Do not reach here");
+      return fileSystem;
     });
   }
 
@@ -108,7 +108,7 @@ public class ITestS3AEncryptionAlgorithmValidation
       assertEquals("wrong filesystem of " + fsURI,
           contract.getScheme(), fsURI.getScheme());
       fileSystem.initialize(fsURI, conf);
-      throw new Exception("Do not reach here");
+      return fileSystem;
     });
   }
 
@@ -135,7 +135,7 @@ public class ITestS3AEncryptionAlgorithmValidation
       assertEquals("wrong filesystem of " + fsURI,
           contract.getScheme(), fsURI.getScheme());
       fileSystem.initialize(fsURI, conf);
-      throw new Exception("Do not reach here");
+      return fileSystem;
     });
   }
 
