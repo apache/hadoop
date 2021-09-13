@@ -78,7 +78,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long bytesReceived;
 
   /**
-   * Number of bytes read from the TCP socket but not passed over to caller
+   * Number of bytes read from the TCP socket but not passed over to caller.
    */
   private long bytesDiscarded = 0;
 
@@ -399,10 +399,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * Parses the response and returns the number of bytes read from the
    * response.
    *
-   * @param buffer a buffer to hold the response entity body
+   * @param buffer a buffer to hold the response entity body.
    * @param offset an offset in the buffer where the data will being.
    * @param length the number of bytes to be written to the buffer.
-   *
+   * @return number of bytes read from response InputStream.
    * @throws IOException if an error occurs.
    */
   public long parseResponse(final byte[] buffer,
@@ -437,11 +437,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * Reads data from TCP socket over inputStream. If caller has provided
    * buffer, data is filled into the buffer directly during socket read.
    *
-   * @param stream Http connection input stream
-   * @param buffer a buffer to hold the response entity body
+   * @param stream Http connection input stream.
+   * @param buffer a buffer to hold the response entity body.
    * @param offset an offset in the buffer where the data will being.
    * @param length the number of bytes to be written to the buffer.
-   *
+   * @return number of bytes read from response InputStream.
    * @throws IOException if an error occurs.
    */
   public long readDataFromStream(final InputStream stream,
