@@ -138,29 +138,24 @@ public class TestStorageBlockPoolUsageStdDev {
     // the results may be inconsistent, so we only take two decimal
     // points to assert.
     Assert.assertEquals(
-        String.format("%.2f", Util
-            .getBlockPoolUsedPercentStdDev(storageReportsDn0)),
-        String.format("%.2f", info.get(dn0.getDisplayName())
-            .get("blockPoolUsedPercentStdDev")));
+        Util.getBlockPoolUsedPercentStdDev(storageReportsDn0),
+        (double) info.get(dn0.getDisplayName()).get("blockPoolUsedPercentStdDev"),
+        0.01d);
     Assert.assertEquals(
-        String.format("%.2f", Util
-            .getBlockPoolUsedPercentStdDev(storageReportsDn1)),
-        String.format("%.2f", info.get(dn1.getDisplayName())
-            .get("blockPoolUsedPercentStdDev")));
+        Util.getBlockPoolUsedPercentStdDev(storageReportsDn1),
+        (double) info.get(dn1.getDisplayName()).get("blockPoolUsedPercentStdDev"),
+        0.01d);
     Assert.assertEquals(
-        String.format("%.2f", Util
-            .getBlockPoolUsedPercentStdDev(storageReportsDn2)),
-        String.format("%.2f", info.get(dn2.getDisplayName())
-            .get("blockPoolUsedPercentStdDev")));
+        Util.getBlockPoolUsedPercentStdDev(storageReportsDn2),
+        (double) info.get(dn2.getDisplayName()).get("blockPoolUsedPercentStdDev"),
+        0.01d);
     Assert.assertEquals(
-        String.format("%.2f", Util
-            .getBlockPoolUsedPercentStdDev(storageReportsDn3)),
-        String.format("%.2f", info.get(dn3.getDisplayName())
-            .get("blockPoolUsedPercentStdDev")));
+        Util.getBlockPoolUsedPercentStdDev(storageReportsDn3),
+        (double) info.get(dn3.getDisplayName()).get("blockPoolUsedPercentStdDev"),
+        0.01d);
     Assert.assertEquals(
-        String.format("%.2f", Util
-            .getBlockPoolUsedPercentStdDev(storageReportsDn4)),
-        String.format("%.2f", info.get(dn4.getDisplayName())
-            .get("blockPoolUsedPercentStdDev")));
+        Util.getBlockPoolUsedPercentStdDev(storageReportsDn4),
+        (double) info.get(dn4.getDisplayName()).get("blockPoolUsedPercentStdDev"),
+        0.01d);
   }
 }

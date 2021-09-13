@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.RouterClientProtocol;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -464,9 +465,10 @@ public class NamenodeBeanMetrics
   private String getNodesImpl(final DatanodeReportType type) {
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
-      RouterRpcServer rpcServer = this.router.getRpcServer();
+      RouterClientProtocol clientProtocol =
+          this.router.getRpcServer().getClientProtocolModule();
       DatanodeStorageReport[] datanodeStorageReports =
-          rpcServer.getDatanodeStorageReport(type);
+          clientProtocol.getDatanodeStorageReport(type, false, dnReportTimeOut);
       for (DatanodeStorageReport datanodeStorageReport : datanodeStorageReports) {
         DatanodeInfo node = datanodeStorageReport.getDatanodeInfo();
         StorageReport[] storageReports = datanodeStorageReport.getStorageReports();

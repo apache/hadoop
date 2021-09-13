@@ -1153,6 +1153,38 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return ret;
   }
 
+  /**
+   * Get the list of datanodes per subcluster.
+   *
+   * @param type Type of the datanodes to get.
+   * @param requireResponse If true an exception will be thrown if all calls do
+   *          not complete. If false exceptions are ignored and all data results
+   *          successfully received are returned.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return nsId to datanode list.
+   * @throws IOException If the method cannot be invoked remotely.
+   */
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
+
+    Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
+    RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
+        new Class<?>[] {DatanodeReportType.class}, type);
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
+        rpcClient.invokeConcurrent(
+            nss, method, requireResponse, false, timeOutMs, DatanodeStorageReport[].class);
+    for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
+        results.entrySet()) {
+      FederationNamespaceInfo ns = entry.getKey();
+      String nsId = ns.getNameserviceId();
+      DatanodeStorageReport[] result = entry.getValue();
+      ret.put(nsId, result);
+    }
+    return ret;
+  }
+
   @Override // ClientProtocol
   public boolean setSafeMode(SafeModeAction action, boolean isChecked)
       throws IOException {
