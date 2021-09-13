@@ -27,7 +27,7 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
  * Metrics for individual Balancer.
  */
 @Metrics(about="Balancer metrics", context="dfs")
-class BalancerMetrics {
+final class BalancerMetrics {
 
   private final Balancer balancer;
 
