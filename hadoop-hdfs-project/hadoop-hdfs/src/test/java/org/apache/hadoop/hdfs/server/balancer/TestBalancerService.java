@@ -28,11 +28,15 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Tool;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -129,8 +133,39 @@ public class TestBalancerService {
           newBalancerService(conf, new String[] {"-asService"});
       balancerThread.start();
 
+      // Check metrics
+      final String balancerMetricsName = "Balancer-"
+          + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          // Validate metrics after metrics system initiated.
+          if (DefaultMetricsSystem.instance().getSource(balancerMetricsName) == null) {
+            return false;
+          }
+          MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
+          if (rb != null && MetricsAsserts.getLongGauge("BytesLeftToMove", rb) == 500) {
+            if (MetricsAsserts.getIntGauge("NumOfUnderUtilizedNodes", rb) != 1) {
+              return false;
+            }
+            if (MetricsAsserts.getIntGauge("NumOfOverUtilizedNodes", rb) != 0) {
+              return false;
+            }
+            if (MetricsAsserts.getIntGauge("IterateRunning", rb) != 1) {
+              return false;
+            }
+            return true;
+          }
+          return false;
+        }
+      }, 100, 2000);
+
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
           cluster, BalancerParameters.DEFAULT);
+
+      MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
+      assertTrue(MetricsAsserts.getLongGauge("BytesMovedInCurrentRun", rb) >= 500);
+
       cluster.triggerHeartbeats();
       cluster.triggerBlockReports();
 
