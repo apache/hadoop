@@ -958,13 +958,29 @@ public class TestMover {
           new String[] { "-p", barDir });
       Assert.assertEquals("Movement to ARCHIVE should be successful", 0, rc);
 
-      // verify storage types and locations
-      locatedBlocks = client.getBlockLocations(fooFile, 0, fileLen);
-      for(LocatedBlock lb : locatedBlocks.getLocatedBlocks()){
-        for( StorageType type : lb.getStorageTypes()){
-          Assert.assertEquals(StorageType.ARCHIVE, type);
+      // Verify storage types and locations.
+      // Wait until Namenode confirms ARCHIVE storage type for all blocks of
+      // fooFile.
+      GenericTestUtils.waitFor(() -> {
+        LocatedBlocks blocks;
+        try {
+          blocks = client.getBlockLocations(fooFile, 0, fileLen);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
-      }
+        for (LocatedBlock lb : blocks.getLocatedBlocks()) {
+          for (StorageType type : lb.getStorageTypes()) {
+            if (!StorageType.ARCHIVE.equals(type)) {
+              LOG.info("Block {} has unexpected StorageType: {}",
+                  lb.getBlock().toString(), type);
+              return false;
+            }
+          }
+        }
+        return true;
+      }, 500, 5000, "Blocks storage type must be ARCHIVE");
+
+      locatedBlocks = client.getBlockLocations(fooFile, 0, fileLen);
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks,
           dataBlocks + parityBlocks);
 
