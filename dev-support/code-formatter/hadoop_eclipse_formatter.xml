@@ -93,7 +93,7 @@
         <setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_angle_bracket_in_type_parameters" value="do not insert"/>
         <setting id="org.eclipse.jdt.core.formatter.comment.clear_blank_lines_in_block_comment" value="false"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_new_line_in_empty_type_declaration" value="insert"/>
-        <setting id="org.eclipse.jdt.core.formatter.lineSplit" value="80"/>
+        <setting id="org.eclipse.jdt.core.formatter.lineSplit" value="100"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_if" value="insert"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_between_brackets_in_array_type_reference" value="do not insert"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_parenthesized_expression" value="do not insert"/>
@@ -224,7 +224,7 @@
         <setting id="org.eclipse.jdt.core.formatter.insert_new_line_before_while_in_do_statement" value="do not insert"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_enum_constant" value="16"/>
         <setting id="org.eclipse.jdt.core.formatter.comment.format_javadoc_comments" value="true"/>
-        <setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="80"/>
+        <setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="100"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_package" value="insert"/>
         <setting id="org.eclipse.jdt.core.formatter.blank_lines_between_import_groups" value="1"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_before_comma_in_enum_constant_arguments" value="do not insert"/>
@@ -268,7 +268,7 @@
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_parameters_in_method_declaration" value="16"/>
         <setting id="org.eclipse.jdt.core.formatter.insert_space_before_closing_brace_in_array_initializer" value="insert"/>
         <setting id="org.eclipse.jdt.core.compiler.codegen.targetPlatform" value="1.7"/>
-        <setting id="org.eclipse.jdt.core.formatter.alignment_for_resources_in_try" value="80"/>
+        <setting id="org.eclipse.jdt.core.formatter.alignment_for_resources_in_try" value="100"/>
         <setting id="org.eclipse.jdt.core.formatter.use_tabs_only_for_leading_indentations" value="false"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_annotation" value="0"/>
         <setting id="org.eclipse.jdt.core.formatter.comment.format_header" value="false"/>
