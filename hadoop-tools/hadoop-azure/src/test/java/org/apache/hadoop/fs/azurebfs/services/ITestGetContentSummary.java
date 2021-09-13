@@ -178,9 +178,6 @@ public class ITestGetContentSummary extends AbstractAbfsIntegrationTest {
 
   private void verifyContentSummary(ContentSummary contentSummary,
       long expectedDirectoryCount, long expectedFileCount, long expectedByteCount) {
-    System.out.println(contentSummary);
-    System.out.println(expectedDirectoryCount + " : " + expectedFileCount +
-        " : " + expectedByteCount);
     Assertions.assertThat(contentSummary.getDirectoryCount())
         .describedAs("Incorrect directory count").isEqualTo(expectedDirectoryCount);
     Assertions.assertThat(contentSummary.getFileCount())
