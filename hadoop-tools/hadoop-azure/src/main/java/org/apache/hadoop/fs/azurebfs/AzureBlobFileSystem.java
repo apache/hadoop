@@ -232,13 +232,13 @@ public class AzureBlobFileSystem extends FileSystem
    * {@link org.apache.hadoop.fs.impl.OpenFileParameters}. Ensure that
    * FileStatus entered is up-to-date, as it will be used to create the
    * InputStream (with info such as contentLength, eTag)
-   * @param path       The location of file to be opened
+   * @param path The location of file to be opened
    * @param parameters OpenFileParameters instance; can hold FileStatus,
    *                   Configuration, bufferSize and mandatoryKeys
    */
   @Override
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
-      final Path path, final OpenFileParameters parameters) {
+      final Path path, final OpenFileParameters parameters) throws IOException {
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
         parameters.getMandatoryKeys(),
@@ -253,8 +253,7 @@ public class AzureBlobFileSystem extends FileSystem
   public FSDataOutputStream create(final Path f, final FsPermission permission,
       final boolean overwrite, final int bufferSize, final short replication,
       final long blockSize, final Progressable progress) throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
+    LOG.debug("AzureBlobFileSystem.create path: {} permission: {} overwrite: {} bufferSize: {}",
         f,
         permission,
         overwrite,
@@ -273,7 +272,7 @@ public class AzureBlobFileSystem extends FileSystem
           FsPermission.getUMask(getConf()), tracingContext);
       statIncrement(FILES_CREATED);
       return new FSDataOutputStream(outputStream, statistics);
-    } catch (AzureBlobFileSystemException ex) {
+    } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
     }
@@ -328,7 +327,8 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public FSDataOutputStream append(final Path f, final int bufferSize, final Progressable progress) throws IOException {
-    LOG.debug("AzureBlobFileSystem.append path: {} bufferSize: {}",
+    LOG.debug(
+        "AzureBlobFileSystem.append path: {} bufferSize: {}",
         f.toString(),
         bufferSize);
     statIncrement(CALL_APPEND);
@@ -364,7 +364,7 @@ public class AzureBlobFileSystem extends FileSystem
         fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
         listener);
     // rename under same folder;
-    if (makeQualified(parentFolder).equals(qualifiedDstPath)) {
+    if(makeQualified(parentFolder).equals(qualifiedDstPath)) {
       return tryGetFileStatus(qualifiedSrcPath, tracingContext) != null;
     }
 
@@ -403,7 +403,10 @@ public class AzureBlobFileSystem extends FileSystem
       return true;
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
-      checkException(src, ex, AzureServiceErrorCode.PATH_ALREADY_EXISTS,
+      checkException(
+          src,
+          ex,
+          AzureServiceErrorCode.PATH_ALREADY_EXISTS,
           AzureServiceErrorCode.INVALID_RENAME_SOURCE_PATH,
           AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND, AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
           AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
