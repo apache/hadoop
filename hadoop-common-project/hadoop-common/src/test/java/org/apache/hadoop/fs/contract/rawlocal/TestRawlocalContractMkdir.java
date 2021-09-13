@@ -38,7 +38,7 @@ public class TestRawlocalContractMkdir extends AbstractContractMkdirTest {
   @Test
   public void testMkDirRmDirUnicode() throws Throwable {
     FileSystem fs = getFileSystem();
-    Path dir = path("testMkDirRmDirUnicode/dir-\\U0001f63b");
+    Path dir = path("/tmp/TestRawlocalContractMkdir-\uD83D\uDE3B");
     fs.mkdirs(dir); // this should not fail.
   }
 }
