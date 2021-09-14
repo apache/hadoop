@@ -47,22 +47,15 @@ public class UserWeights {
     String queuePathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
     Map<String, String> props = configurationProperties.getPropertiesWithPrefix(queuePathPlusPrefix);
 
-    Map<String, String> keyValueMap = new HashMap<>();
+    UserWeights userWeights = new UserWeights();
     for (Map.Entry<String, String> item: props.entrySet()) {
       Matcher m = USER_WEIGHT_PATTERN.matcher(item.getKey());
       if (m.find()) {
-        keyValueMap.put(item.getKey(), conf.substituteVars(item.getValue()));
-      }
-    }
-    return UserWeights.createByConfigKeyValueMap(keyValueMap);
-  }
-
-  private static UserWeights createByConfigKeyValueMap(Map<String, String> keyValueMap) {
-    UserWeights userWeights = new UserWeights();
-    for (Map.Entry<String, String> e : keyValueMap.entrySet()) {
-      String userName = e.getKey().replaceFirst("\\." + USER_WEIGHT, "");
-      if (!userName.isEmpty()) {
-        userWeights.data.put(userName, new Float(e.getValue()));
+        String userName = item.getKey().replaceFirst("\\." + USER_WEIGHT, "");
+        if (!userName.isEmpty()) {
+          String value = conf.substituteVars(item.getValue());
+          userWeights.data.put(userName, new Float(value));
+        }
       }
     }
     return userWeights;
