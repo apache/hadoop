@@ -35,7 +35,7 @@ public class AbstractCSQueueUsageTracker {
    * Tracks resource usage by label like used-resource / pending-resource.
    */
   private volatile ResourceUsage queueUsage;
-  
+
   private final QueueResourceQuotas queueResourceQuotas;
 
   public AbstractCSQueueUsageTracker(CSQueueMetrics metrics) {

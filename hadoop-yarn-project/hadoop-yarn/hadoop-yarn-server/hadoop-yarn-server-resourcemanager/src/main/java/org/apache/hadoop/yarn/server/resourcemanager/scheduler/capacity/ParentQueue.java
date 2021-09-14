@@ -475,9 +475,9 @@ public class ParentQueue extends AbstractCSQueue {
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
-        "usedResources=" + usageTracker.getQueueUsage().getUsed() + 
-        "usedCapacity=" + getUsedCapacity() + ", " + 
-        "numApps=" + getNumApplications() + ", " + 
+        "usedResources=" + usageTracker.getQueueUsage().getUsed() +
+        "usedCapacity=" + getUsedCapacity() + ", " +
+        "numApps=" + getNumApplications() + ", " +
         "numContainers=" + getNumContainers();
   }
 

@@ -121,7 +121,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 <<<<<<< HEAD
   private CSQueuePreemption preemptionSettings;
 =======
-  
+
   AbstractCSQueueUsageTracker usageTracker;
 >>>>>>> initial commit of YARN-10942
 
