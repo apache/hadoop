@@ -133,11 +133,11 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
           URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
       conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
           defaultUri.toString());
-      Path source_target = new Path(defaultUri.toString(), "/src");
+      Path target = new Path(defaultUri.toString(), "/src");
       ConfigUtil.addLink(conf, defaultUri.getHost(), "/source",
-          source_target.toUri());
+          target.toUri());
       FileSystem defaultFs = FileSystem.get(defaultUri, conf);
-      defaultFs.mkdirs(source_target);
+      defaultFs.mkdirs(target);
       try (ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem
           .get(conf)) {
         final Path testDir = new Path("/source");
@@ -170,12 +170,12 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
           URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
       conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
           defaultUri.toString());
-      Path source_target = new Path(defaultUri.toString(), "/src");
+      Path target = new Path(defaultUri.toString(), "/src");
       // /source -> /src
       ConfigUtil.addLink(conf, defaultUri.getHost(), "/source",
-          source_target.toUri());
+          target.toUri());
       FileSystem defaultFs = FileSystem.get(defaultUri, conf);
-      defaultFs.mkdirs(source_target);
+      defaultFs.mkdirs(target);
       try (ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem
           .get(conf)) {
         final Path testDir = new Path("/source");
@@ -183,7 +183,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         fileSystem.setQuota(testDir, 10L, 10L);
         // Check quota through actual DFS
         assertEquals(10,
-            defaultFs.getQuotaUsage(source_target).getSpaceQuota());
+            defaultFs.getQuotaUsage(target).getSpaceQuota());
       }
     } finally {
       if (cluster != null) {
