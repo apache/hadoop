@@ -49,7 +49,7 @@ public class StorageReport {
     this.nonDfsUsed = nonDfsUsed;
     this.remaining = remaining;
     this.blockPoolUsed = bpUsed;
-    this.blockPoolUsagePercent = capacity == 0 ? 0.0f :
+    this.blockPoolUsagePercent = capacity <= 0 ? 0.0f :
         (bpUsed * 100.0f) / capacity;
     this.mount = mount;
   }
