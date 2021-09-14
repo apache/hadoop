@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.service.CompositeService.CompositeServiceShutdownHook;
+import org.apache.hadoop.tools.fedbalance.FedBalance;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -66,6 +67,8 @@ public final class DFSRouter {
           new CompositeServiceShutdownHook(router), SHUTDOWN_HOOK_PRIORITY);
 
       Configuration conf = new HdfsConfiguration();
+      conf.addResource(FedBalance.FED_BALANCE_DEFAULT_XML);
+      conf.addResource(FedBalance.FED_BALANCE_SITE_XML);
       router.init(conf);
       router.start();
     } catch (Throwable e) {
