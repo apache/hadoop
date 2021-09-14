@@ -59,6 +59,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * Called in {@code createConfiguration()}.
    * @param conf configuration to patch.
    */
+  @SuppressWarnings("deprecation")
   protected void patchConfigurationEncryptionSettings(
       final Configuration conf) {
     removeBaseAndBucketOverrides(conf,

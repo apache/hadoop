@@ -107,6 +107,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     this.keepMarkers = keepMarkers;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();

@@ -47,6 +47,7 @@ public class ITestS3AHugeFilesSSECDiskBlocks
     skipIfEncryptionTestsDisabled(getConfiguration());
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();

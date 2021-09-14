@@ -136,6 +136,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     return SESSION_TOKEN_KIND;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -313,6 +314,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    * Create a FS with a delegated token, verify it works as a filesystem,
    * and that you can pick up the same DT from that FS too.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testDelegatedFileSystem() throws Throwable {
     describe("Delegation tokens can be passed to a new filesystem;"

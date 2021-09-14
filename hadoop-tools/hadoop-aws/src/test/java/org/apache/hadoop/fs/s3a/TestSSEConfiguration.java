@@ -178,6 +178,7 @@ public class TestSSEConfiguration extends Assert {
    * @param key key, may be null
    * @return the new config.
    */
+  @SuppressWarnings("deprecation")
   private Configuration buildConf(String algorithm, String key) {
     Configuration conf = emptyConf();
     if (algorithm != null) {

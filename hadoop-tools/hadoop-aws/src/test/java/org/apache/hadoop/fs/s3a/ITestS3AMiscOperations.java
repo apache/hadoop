@@ -70,6 +70,7 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     enableChecksums(true);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
