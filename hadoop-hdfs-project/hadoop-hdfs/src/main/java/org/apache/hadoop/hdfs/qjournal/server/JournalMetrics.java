@@ -51,7 +51,6 @@ class JournalMetrics {
   @Metric("Number of bytes served via RPC")
   MutableCounterLong bytesServedViaRpc;
 
-  @Metric
   MutableStat rpcRequestCacheMissAmount;
 
   @Metric("Number of RPC requests with zero edits returned")
