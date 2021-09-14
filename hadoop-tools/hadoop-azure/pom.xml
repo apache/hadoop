@@ -506,9 +506,6 @@
                     <include>**/azurebfs/Test*.java</include>
                     <include>**/azurebfs/**/Test*.java</include>
                   </includes>
-                  <excludes>
-                    <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
-                  </excludes>
                 </configuration>
               </execution>
             </executions>
@@ -601,9 +598,7 @@
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
-                    <excludes>
-                      <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
-                    </excludes>
+                    <include>**/azurebfs/ITestAbfsStreamStatistics*.java</include>
                   </includes>
                 </configuration>
               </execution>
