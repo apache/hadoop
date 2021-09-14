@@ -20,6 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMaxAllocMb;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMaxAllocVcores;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMaxAllocation;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMinAllocMb;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.setMinAllocVcores;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.unsetMaxAllocation;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.findQueue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ExpectedCapacities;
@@ -48,9 +54,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.toSet;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_VCORES;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerOvercommit.assertContainerKilled;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerOvercommit.assertMemory;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerOvercommit.assertNoPreemption;
@@ -291,8 +294,9 @@ public class TestCapacityScheduler {
     CapacityScheduler scheduler = new CapacityScheduler();
     scheduler.setRMContext(resourceManager.getRMContext());
     Configuration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 2048);
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 1024);
+
+    setMinAllocMb(conf, 2048);
+    setMaxAllocMb(conf, 1024);
     try {
       scheduler.init(conf);
       fail("Exception is expected because the min memory allocation is" +
@@ -305,8 +309,8 @@ public class TestCapacityScheduler {
     }
 
     conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 2);
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 1);
+    setMinAllocVcores(conf, 2);
+    setMaxAllocVcores(conf, 1);
     try {
       scheduler.reinitialize(conf, mockContext);
       fail("Exception is expected because the min vcores allocation is" +
@@ -695,10 +699,8 @@ public class TestCapacityScheduler {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     setupQueueConfiguration(conf);
-    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(A1)
-        + MAXIMUM_ALLOCATION_MB, "1024");
-    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(A1)
-        + MAXIMUM_ALLOCATION_VCORES, "1");
+    setMaxAllocMb(conf, A1, 1024);
+    setMaxAllocVcores(conf, A1, 1);
 
     scheduler.init(conf);
     scheduler.start();
@@ -4214,44 +4216,6 @@ public class TestCapacityScheduler {
     Assert.assertEquals("User Active applications should be 1", 1, queueA
         .getUser(userName).getActiveApplications());
     rm.stop();
-  }
-
-  private void setMaxAllocMb(Configuration conf, int maxAllocMb) {
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-        maxAllocMb);
-  }
-
-  private void setMaxAllocMb(CapacitySchedulerConfiguration conf,
-      String queueName, int maxAllocMb) {
-    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
-        + MAXIMUM_ALLOCATION_MB;
-    conf.setInt(propName, maxAllocMb);
-  }
-
-  private void setMaxAllocVcores(Configuration conf, int maxAllocVcores) {
-    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-        maxAllocVcores);
-  }
-
-  private void setMaxAllocVcores(CapacitySchedulerConfiguration conf,
-      String queueName, int maxAllocVcores) {
-    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
-        + CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_VCORES;
-    conf.setInt(propName, maxAllocVcores);
-  }
-
-  private void setMaxAllocation(CapacitySchedulerConfiguration conf,
-                                String queueName, String maxAllocation) {
-    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
-            + MAXIMUM_ALLOCATION;
-    conf.set(propName, maxAllocation);
-  }
-
-  private void unsetMaxAllocation(CapacitySchedulerConfiguration conf,
-                                  String queueName) {
-    String propName = CapacitySchedulerConfiguration.getQueuePrefix(queueName)
-            + MAXIMUM_ALLOCATION;
-    conf.unset(propName);
   }
 
   private void sentRMContainerLaunched(MockRM rm, ContainerId containerId) {
