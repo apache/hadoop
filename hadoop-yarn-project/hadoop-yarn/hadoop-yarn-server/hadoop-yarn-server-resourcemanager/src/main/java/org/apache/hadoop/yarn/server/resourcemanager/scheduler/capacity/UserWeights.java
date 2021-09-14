@@ -30,10 +30,10 @@ public class UserWeights {
   public static final float DEFAULT_WEIGHT = 1.0F;
   /**
    * Key: Username,
-   * Value: Weight as float
+   * Value: Weight as float.
    */
   protected Map<String, Float> data = new HashMap<>();
-  
+
   private UserWeights() {}
 
   public static UserWeights createEmpty() {
@@ -41,11 +41,12 @@ public class UserWeights {
   }
 
   public static UserWeights createByConfig(
-      CapacitySchedulerConfiguration conf, 
+      CapacitySchedulerConfiguration conf,
       ConfigurationProperties configurationProperties,
       String queuePath) {
     String queuePathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
-    Map<String, String> props = configurationProperties.getPropertiesWithPrefix(queuePathPlusPrefix);
+    Map<String, String> props = configurationProperties
+        .getPropertiesWithPrefix(queuePathPlusPrefix);
 
     UserWeights userWeights = new UserWeights();
     for (Map.Entry<String, String> item: props.entrySet()) {
@@ -68,7 +69,7 @@ public class UserWeights {
     }
     return weight;
   }
-  
+
   public void validateForLeafQueue(float queueUserLimit, String queuePath) throws IOException {
     for (Map.Entry<String, Float> e : data.entrySet()) {
       String userName = e.getKey();
