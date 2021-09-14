@@ -27,12 +27,13 @@
     </option>
     <option name="IMPORT_LAYOUT_TABLE">
       <value>
-        <package name="org.apache.hadoop.thirdparty" withSubpackages="true" static="false" />
+        <package name="java" withSubpackages="true" static="false" />
+        <package name="javax" withSubpackages="true" static="false" />
         <emptyLine />
+        <package name="org.apache.hadoop.thirdparty" withSubpackages="true" static="false" />
         <package name="" withSubpackages="true" static="false" />
         <emptyLine />
-        <package name="javax" withSubpackages="true" static="false" />
-        <package name="java" withSubpackages="true" static="false" />
+        <package name="org.apache" withSubpackages="true" static="false" />
         <emptyLine />
         <package name="" withSubpackages="true" static="true" />
       </value>
