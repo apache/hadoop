@@ -1630,15 +1630,14 @@ public abstract class AbstractCSQueue implements CSQueue {
     for (String label : configuredNodeLabels) {
       Resource resourceByLabel = labelManager.getResourceByLabel(label,
           clusterResource);
-      Resource minResource = queueResourceQuotas.getConfiguredMinResource(
-          label);
       Resource newEffectiveMinResource;
       Resource newEffectiveMaxResource;
 
       // Absolute and relative/weight mode needs different handling.
       if (getCapacityConfigType().equals(
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
-        newEffectiveMinResource = createNormalizedMinResource(minResource,
+        newEffectiveMinResource = createNormalizedMinResource(
+            queueResourceQuotas.getConfiguredMinResource(label),
             ((ParentQueue) parent).getEffectiveMinRatioPerResource());
 
         // Max resource of a queue should be the minimum of {parent's maxResources,
