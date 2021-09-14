@@ -36,7 +36,6 @@ import org.apache.hadoop.util.Tool;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -136,7 +135,7 @@ public class TestBalancerService {
       // Check metrics
       final String balancerMetricsName = "Balancer-"
           + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
-      GenericTestUtils.waitFor( () -> {
+      GenericTestUtils.waitFor(() -> {
         // Validate metrics after metrics system initiated.
         if (DefaultMetricsSystem.instance().getSource(balancerMetricsName) == null) {
           return false;
