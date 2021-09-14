@@ -40,6 +40,12 @@
       <artifactId>hadoop-client-api</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client-runtime</artifactId>
@@ -682,6 +688,8 @@
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -883,6 +891,9 @@
                         <exclude>org/xml/sax/**/*</exclude>
                         <exclude>org/bouncycastle/*</exclude>
                         <exclude>org/bouncycastle/**/*</exclude>
+                        <!-- Exclude snappy-java -->
+                        <exclude>org/xerial/snappy/*</exclude>
+                        <exclude>org/xerial/snappy/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -1001,6 +1012,9 @@
                         <!-- Exclude config keys for Hadoop that look like package names -->
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
+                        <!-- Exclude lz4-java -->
+                        <exclude>net/jpountz/*</exclude>
+                        <exclude>net/jpountz/**/*</exclude>
                       </excludes>
                     </relocation>
                     <!-- okio declares a top level package instead of nested -->
