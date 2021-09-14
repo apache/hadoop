@@ -142,16 +142,7 @@ public class TestBalancerService {
           return false;
         }
         MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
-        if (rb != null && MetricsAsserts.getLongGauge("BytesLeftToMove", rb) > 0) {
-          if (MetricsAsserts.getIntGauge("NumOfUnderUtilizedNodes", rb) != 1) {
-            return false;
-          }
-          if (MetricsAsserts.getIntGauge("NumOfOverUtilizedNodes", rb) != 0) {
-            return false;
-          }
-          return true;
-        }
-        return false;
+        return rb != null && MetricsAsserts.getLongGauge("BytesLeftToMove", rb) > 0;
       }, 100, 2000);
 
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
