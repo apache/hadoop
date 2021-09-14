@@ -1012,6 +1012,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.safemode.recheck.interval</name>
+  <value>1000</value>
+  <description>
+    Interval in msec for checking safe mode.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.safemode.extension</name>
   <value>30000</value>
   <description>

@@ -207,6 +207,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.replqueue.threshold-pct";
   public static final String  DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY = "dfs.namenode.safemode.min.datanodes";
   public static final int     DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT = 0;
+  public static final String  DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY =
+      "dfs.namenode.safemode.recheck.interval";
+  public static final long    DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_DEFAULT =
+      1000;
   public static final String  DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
   public static final String  DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT =

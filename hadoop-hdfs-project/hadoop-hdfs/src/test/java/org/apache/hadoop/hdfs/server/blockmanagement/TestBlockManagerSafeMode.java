@@ -230,6 +230,18 @@ public class TestBlockManagerSafeMode {
     assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
   }
 
+  @Test(timeout = 20000)
+  public void testCheckSafeMode9() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY, 3000);
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(BlockManagerSafeMode.LOG);
+    BlockManagerSafeMode blockManagerSafeMode = new BlockManagerSafeMode(bm,
+        fsn, true, conf);
+    String content = logs.getOutput();
+    assertTrue(content.contains("Using 3000 as SafeModeMonitor Interval"));
+  }
+
   /**
    * Test that the block safe increases up to block threshold.
    *
