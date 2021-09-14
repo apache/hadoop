@@ -136,35 +136,29 @@ public class TestBalancerService {
       // Check metrics
       final String balancerMetricsName = "Balancer-"
           + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          // Validate metrics after metrics system initiated.
-          if (DefaultMetricsSystem.instance().getSource(balancerMetricsName) == null) {
-            return false;
-          }
-          MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
-          if (rb != null && MetricsAsserts.getLongGauge("BytesLeftToMove", rb) == 500) {
-            if (MetricsAsserts.getIntGauge("NumOfUnderUtilizedNodes", rb) != 1) {
-              return false;
-            }
-            if (MetricsAsserts.getIntGauge("NumOfOverUtilizedNodes", rb) != 0) {
-              return false;
-            }
-            if (MetricsAsserts.getIntGauge("IterateRunning", rb) != 1) {
-              return false;
-            }
-            return true;
-          }
+      GenericTestUtils.waitFor( () -> {
+        // Validate metrics after metrics system initiated.
+        if (DefaultMetricsSystem.instance().getSource(balancerMetricsName) == null) {
           return false;
         }
+        MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
+        if (rb != null && MetricsAsserts.getLongGauge("BytesLeftToMove", rb) > 0) {
+          if (MetricsAsserts.getIntGauge("NumOfUnderUtilizedNodes", rb) != 1) {
+            return false;
+          }
+          if (MetricsAsserts.getIntGauge("NumOfOverUtilizedNodes", rb) != 0) {
+            return false;
+          }
+          return true;
+        }
+        return false;
       }, 100, 2000);
 
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
           cluster, BalancerParameters.DEFAULT);
 
       MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
-      assertTrue(MetricsAsserts.getLongGauge("BytesMovedInCurrentRun", rb) >= 500);
+      assertTrue(MetricsAsserts.getLongGauge("BytesMovedInCurrentRun", rb) > 0);
 
       cluster.triggerHeartbeats();
       cluster.triggerBlockReports();
