@@ -657,19 +657,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
       FsVolumeSpi destination) throws IOException;
 
   /**
-   * Acquire the lock of the data set. This prevents other threads from
-   * modifying the volume map structure inside the datanode, but other changes
-   * are still possible. For example modifying the genStamp of a block instance.
+   * Acquire the lock of the data set.
    */
   AutoCloseableLock acquireDatasetLock();
-
-  /***
-   * Acquire the read lock of the data set. This prevents other threads from
-   * modifying the volume map structure inside the datanode, but other changes
-   * are still possible. For example modifying the genStamp of a block instance.
-   * @return The AutoClosable read lock instance.
-   */
-  AutoCloseableLock acquireDatasetReadLock();
 
   Set<? extends Replica> deepCopyReplica(String bpid) throws IOException;
 }

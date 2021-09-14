@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -78,6 +77,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -399,7 +399,7 @@ public class TestProvidedImpl {
   public void testBlockLoad() throws IOException {
     for (int i = 0; i < providedVolumes.size(); i++) {
       FsVolumeImpl vol = providedVolumes.get(i);
-      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
       vol.getVolumeMap(volumeMap, null);
 
       assertEquals(vol.getBlockPoolList().length, BLOCK_POOL_IDS.length);
@@ -475,7 +475,7 @@ public class TestProvidedImpl {
       vol.setFileRegionProvider(BLOCK_POOL_IDS[CHOSEN_BP_ID],
           new TestFileRegionBlockAliasMap(fileRegionIterator, minBlockId,
               numBlocks));
-      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
       vol.getVolumeMap(BLOCK_POOL_IDS[CHOSEN_BP_ID], volumeMap, null);
       totalBlocks += volumeMap.size(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
     }
@@ -585,7 +585,7 @@ public class TestProvidedImpl {
   public void testProvidedReplicaPrefix() throws Exception {
     for (int i = 0; i < providedVolumes.size(); i++) {
       FsVolumeImpl vol = providedVolumes.get(i);
-      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
+      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
       vol.getVolumeMap(volumeMap, null);
 
       Path expectedPrefix = new Path(
