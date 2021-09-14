@@ -74,7 +74,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSetUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
-import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -1326,14 +1325,13 @@ public class ParentQueue extends AbstractCSQueue {
     // resources, effective_min_resources will be same as configured
     // min_resources.
     Resource numeratorForMinRatio = null;
-    ResourceCalculator rc = this.csContext.getResourceCalculator();
     if (getQueuePath().equals("root")) {
-      if (!resourceByLabel.equals(Resources.none()) && Resources.lessThan(rc,
+      if (!resourceByLabel.equals(Resources.none()) && Resources.lessThan(resourceCalculator,
           clusterResource, resourceByLabel, configuredMinResources)) {
         numeratorForMinRatio = resourceByLabel;
       }
     } else {
-      if (Resources.lessThan(rc, clusterResource,
+      if (Resources.lessThan(resourceCalculator, clusterResource,
           queueResourceQuotas.getEffectiveMinResource(label),
           configuredMinResources)) {
         numeratorForMinRatio = queueResourceQuotas
