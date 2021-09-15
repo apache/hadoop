@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
+import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
@@ -904,6 +905,32 @@ public class AbfsConfiguration{
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
     }
+  }
+
+  public EncryptionContextProvider initializeEncryptionContextProvider() {
+    try {
+      String configKey = FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+      Class<? extends EncryptionContextProvider> encryptionContextClass =
+          getAccountSpecificClass(configKey, null, EncryptionContextProvider.class);
+      if (encryptionContextClass == null) {
+        encryptionContextClass = getAccountAgnosticClass(configKey, null,
+            EncryptionContextProvider.class);
+      }
+      Preconditions.checkArgument(encryptionContextClass != null,
+          String.format("The configuration value for %s is invalid.", configKey));
+
+      EncryptionContextProvider encryptionContextProvider =
+          ReflectionUtils.newInstance(encryptionContextClass, rawConfig);
+      Preconditions.checkArgument(encryptionContextProvider != null,
+          String.format("Failed to initialize %s", encryptionContextClass));
+
+      LOG.trace("Initializing {}", encryptionContextClass.getName());
+      LOG.trace("{} init complete", encryptionContextClass.getName());
+      return encryptionContextProvider;
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Unable to load encryption context provider class: ", e);
+    }
+
   }
 
   public int getReadAheadRange() {

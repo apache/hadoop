@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -278,6 +279,12 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testSetGetXAttr() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
+    System.out.println(StringUtils.substringBefore(fs.getUri().getAuthority(),
+        "@") +" \n "+
+        fs.getUri().getAuthority()+" \n  "+
+        fs.getUri().getAuthority()+"\n  "+
+        fs.getUri().getHost() + " \n " + fs.getUri().getPort() +
+        fs.getUri().getFragment() + " \n " + fs.getUri().parseServerAuthority());
     final String fileName = path(methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
@@ -411,7 +418,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testListPath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final Path testPath = path("/" + methodName.getMethodName());
+    final Path testPath = new Path("/" + methodName.getMethodName());
     String testDirName = testPath.toString();
     fs.mkdirs(testPath);
     createFileAndGetContent(fs, testDirName + "/aaa", FILE_SIZE);
@@ -429,6 +436,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         "different-1234567890123456789012");
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
     AbfsClient abfsClient2 = fs2.getAbfsClient();
+    abfsClient2.setClientProvidedEncryptionKey(null);
     TracingContext tracingContext = getTestTracingContext(fs, false);
     abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50,
         null, tracingContext);
@@ -471,8 +479,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testCreatePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
-        .toString();
+    final String testFileName = new Path("/" + methodName.getMethodName()).toString();
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();
@@ -515,7 +522,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testRenamePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
@@ -551,7 +558,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testFlush(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     fs.create(new Path(testFileName)).close();
     AbfsClient abfsClient = fs.getAbfsClient();
@@ -612,7 +619,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testSetPathProperties(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
@@ -643,7 +650,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testGetPathStatusFile(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
@@ -659,7 +666,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, false,
         X_MS_REQUEST_SERVER_ENCRYPTED, "");
 
-    abfsRestOperation = abfsClient.getPathStatus(testFileName, true, tracingContext);
+    abfsClient.setClientProvidedEncryptionKey(null);
+    abfsRestOperation = abfsClient.getPathStatus(testFileName, false,
+        tracingContext);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
@@ -681,7 +690,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testDeletePath(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
 
@@ -712,7 +721,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testSetPermission(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     Assume.assumeTrue(fs.getIsNamespaceEnabled(getTestTracingContext(fs, false)));
     createFileAndGetContent(fs, testFileName, FILE_SIZE);
@@ -738,7 +747,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testSetAcl(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     TracingContext tracingContext = getTestTracingContext(fs, false);
     Assume.assumeTrue(fs.getIsNamespaceEnabled(tracingContext));
@@ -768,7 +777,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
   private void testGetAcl(final boolean isWithCPK) throws Exception {
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     TracingContext tracingContext = getTestTracingContext(fs, false);
     Assume.assumeTrue(fs.getIsNamespaceEnabled(tracingContext));
@@ -799,7 +808,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         getAuthType() == AuthType.OAuth);
 
     final AzureBlobFileSystem fs = getAbfs(isWithCPK);
-    final String testFileName = path("/" + methodName.getMethodName())
+    final String testFileName = new Path("/" + methodName.getMethodName())
         .toString();
     fs.create(new Path(testFileName)).close();
     AbfsClient abfsClient = fs.getAbfsClient();

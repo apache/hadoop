@@ -65,6 +65,7 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_ENCRYPTION_ALGORITHM = "x-ms-encryption-algorithm";
   public static final String X_MS_REQUEST_SERVER_ENCRYPTED = "x-ms-request-server-encrypted";
   public static final String X_MS_SERVER_ENCRYPTED = "x-ms-server-encrypted";
+  public static final String X_MS_ENCRYPTION_CONTEXT = "x-ms-encryption-context";
   public static final String X_MS_LEASE_ACTION = "x-ms-lease-action";
   public static final String X_MS_LEASE_DURATION = "x-ms-lease-duration";
   public static final String X_MS_LEASE_ID = "x-ms-lease-id";

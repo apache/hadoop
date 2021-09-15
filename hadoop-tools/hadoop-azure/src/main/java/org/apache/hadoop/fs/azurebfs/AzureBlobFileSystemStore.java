@@ -52,6 +52,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -453,7 +455,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   public void setPathProperties(final Path path,
       final Hashtable<String, String> properties, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+      throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("setPathProperties", "setPathProperties")){
       LOG.debug("setFilesystemProperties for filesystem: {} path: {} with properties: {}",
               client.getFileSystem(),
@@ -813,8 +815,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     client.breakLease(getRelativePath(path), tracingContext);
   }
 
-  public void rename(final Path source, final Path destination, TracingContext tracingContext) throws
-          AzureBlobFileSystemException {
+  public void rename(final Path source, final Path destination, TracingContext tracingContext)
+      throws IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue;
@@ -1526,16 +1528,23 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             abfsConfiguration.getRawConfiguration());
     }
 
+    // Initialize encryption context
+    EncryptionContextProvider encryptionContextProvider =
+        abfsConfiguration.initializeEncryptionContextProvider();
+    encryptionContextProvider.initialize(
+        abfsConfiguration.getRawConfiguration(), accountName, fileSystemName);
+
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
     if (tokenProvider != null) {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
-          tokenProvider,
+          tokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
     } else {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
-          sasTokenProvider,
+          sasTokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
     }
+
     LOG.trace("AbfsClient init complete");
   }
 

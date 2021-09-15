@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -170,6 +171,11 @@ public class AzureBlobFileSystem extends FileSystem
         LOG.debug("Created DelegationTokenManager {}", delegationTokenManager);
       }
     }
+//    // Initialize encryption context.
+//    // For fileSystemName, extract containerName from uri.
+//    abfsConfiguration.initializeEncryptionContextProvider()
+//        .initialize(configuration, abfsConfiguration.getAccountName(),
+//            StringUtils.substringBefore(uri.getAuthority(), "@"));
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
 
