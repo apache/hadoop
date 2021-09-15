@@ -33,6 +33,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecut
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
@@ -215,10 +216,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @Override
   public synchronized void write(final byte[] data, final int off, final int length)
       throws IOException {
+    // validate if data is not null and index out of bounds.
     DataBlocks.validateWriteArgs(data, off, length);
     maybeThrowLastError();
-
-    Preconditions.checkArgument(data != null, "null data");
 
     if (off < 0 || length < 0 || length > data.length - off) {
       throw new IndexOutOfBoundsException();
@@ -234,7 +234,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     if (written < length) {
       // Number of bytes to write is more than the data block capacity,
       // trigger an upload and then write on the next block.
-      LOG.debug("writing more data than block has capacity -triggering upload");
+      LOG.debug("writing more data than block capacity -triggering upload");
       uploadCurrentBlock();
       // tail recursion is mildly expensive, but given buffer sizes must be MB.
       // it's unlikely to recurse very deeply.
@@ -285,9 +285,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    * Upload a block of data.
    * This will take the block.
    *
-   * @param blockToUpload block to upload
+   * @param blockToUpload    block to upload.
    * @throws IOException     upload failure
-   * @throws PathIOException if too many blocks were written
    */
   private void uploadBlockAsync(DataBlocks.DataBlock blockToUpload,
       boolean isFlush, boolean isClose)
@@ -320,6 +319,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             } else if (isFlush) {
               mode = FLUSH_MODE;
             }
+            /*
+             * Parameters Required for an APPEND call.
+             * offset(here) - refers to the position in the file.
+             * bytesLength - Data to be uploaded from the block.
+             * mode - If it's append, flush or flush_close.
+             * leaseId - The AbfsLeaseId for this request.
+             */
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId);
             AbfsRestOperation op =
@@ -331,7 +337,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             outputStreamStatistics.uploadSuccessful(bytesLength);
             return null;
           } finally {
-            blockUploadData.close();
+            IOUtils.close(blockUploadData);
           }
         });
     writeOperations.add(new WriteOperation(job, offset, bytesLength));
@@ -376,6 +382,15 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    */
   private synchronized boolean hasActiveBlock() {
     return activeBlock != null;
+  }
+
+  /**
+   * Is there an active block and is there any data in it to upload?
+   *
+   * @return true if there is some data to upload in an active block else false.
+   */
+  private boolean hasActiveBlockDataToUpload() {
+    return hasActiveBlock() && getActiveBlock().hasData();
   }
 
   /**
@@ -503,13 +518,13 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         && enableSmallWriteOptimization
         && (numOfAppendsToServerSinceLastFlush == 0) // there are no ongoing store writes
         && (writeOperations.size() == 0) // double checking no appends in progress
-        && (hasActiveBlock() && getActiveBlock().dataSize() > 0)) { // there is
+        && hasActiveBlockDataToUpload()) { // there is
       // some data that is pending to be written
       smallWriteOptimizedflushInternal(isClose);
       return;
     }
 
-    if (hasActiveBlock() && getActiveBlock().hasData()) {
+    if (hasActiveBlockDataToUpload()) {
       uploadCurrentBlock();
     }
     flushWrittenBytesToService(isClose);
@@ -527,17 +542,23 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
   private synchronized void flushInternalAsync() throws IOException {
     maybeThrowLastError();
-    if (getActiveBlock() != null && getActiveBlock().hasData()) {
+    if (hasActiveBlockDataToUpload()) {
       uploadCurrentBlock();
     }
     waitForAppendsToComplete();
     flushWrittenBytesToServiceAsync();
   }
 
+  /**
+   * Appending the current active data block to service. Clearing the active
+   * data block and releasing all buffered data.
+   * @throws IOException if there is any failure while starting an upload for
+   *                     the dataBlock or while closing the BlockUploadData.
+   */
   private void writeAppendBlobCurrentBufferToService() throws IOException {
     DataBlocks.DataBlock activeBlock = getActiveBlock();
     // No data, return.
-    if (activeBlock == null || !activeBlock.hasData()) {
+    if (!hasActiveBlockDataToUpload()) {
       return;
     }
 
@@ -565,7 +586,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       outputStreamStatistics.uploadFailed(bytesLength);
       failureWhileSubmit(ex);
     } finally {
-      uploadData.close();
+      IOUtils.close(uploadData);
     }
   }
 
@@ -636,10 +657,12 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
    */
   private synchronized void shrinkWriteOperationQueue() throws IOException {
     try {
-      while (writeOperations.peek() != null && writeOperations.peek().task.isDone()) {
-        writeOperations.peek().task.get();
-        lastTotalAppendOffset += writeOperations.peek().length;
+      WriteOperation peek = writeOperations.peek();
+      while (peek != null && peek.task.isDone()) {
+        peek.task.get();
+        lastTotalAppendOffset += peek.length;
         writeOperations.remove();
+        peek = writeOperations.peek();
         // Incrementing statistics to indicate queue has been shrunk.
         outputStreamStatistics.queueShrunk();
       }

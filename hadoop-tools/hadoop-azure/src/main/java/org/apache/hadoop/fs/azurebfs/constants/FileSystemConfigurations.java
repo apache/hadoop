@@ -121,5 +121,17 @@ public final class FileSystemConfigurations {
    */
   public static final int BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT = 20;
 
+  /**
+   * Buffer blocks to disk.
+   * Capacity is limited to available disk space.
+   */
+  public static final String DATA_BLOCKS_BUFFER_DISK = "disk";
+
+  /**
+   * Default buffer option: {@value}.
+   */
+  public static final String DATA_BLOCKS_BUFFER_DEFAULT =
+      DATA_BLOCKS_BUFFER_DISK;
+
   private FileSystemConfigurations() {}
 }

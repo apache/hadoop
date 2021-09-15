@@ -52,10 +52,48 @@ import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Upload;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Writing;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
-public class DataBlocks {
+/**
+ * A class to provide disk, byteBuffer and byteArray option for Filesystem
+ * OutputStreams.
+ * <ul>
+ *   <li>
+ *     Disk: Uses Disk space to write the blocks. Is suited best to avoid
+ *     OutOfMemory Errors in Java heap space.
+ *   </li>
+ *   <li>
+ *     byteBuffer: Uses DirectByteBuffer to allocate memory off-heap to
+ *     provide faster writing of DataBlocks with some risk of running
+ *     OutOfMemory.
+ *   </li>
+ *   <li>
+ *     byteArray: Uses byte[] to write a block of data. On heap and does have
+ *     risk of running OutOfMemory fairly easily.
+ *   </li>
+ * </ul>
+ * <p>
+ * Implementation of DataBlocks taken from HADOOP-13560 to support huge file
+ * uploads in S3A with different options rather than one.
+ */
+public final class DataBlocks {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DataBlocks.class);
+
+  /**
+   * Buffer blocks to disk.
+   * Capacity is limited to available disk space.
+   */
+  public static final String DATA_BLOCKS_BUFFER_DISK = "disk";
+
+  /**
+   * Use a byte buffer.
+   */
+  public static final String DATA_BLOCKS_BYTEBUFFER = "bytebuffer";
+
+  /**
+   * Use an in-memory array. Fast but will run of heap rapidly.
+   */
+  public static final String DATA_BLOCKS_BUFFER_ARRAY = "array";
 
   private DataBlocks() {
   }
@@ -83,23 +121,23 @@ public class DataBlocks {
   /**
    * Create a factory.
    *
-   * @param KeyToBufferDir Key to buffer directory config for a FS.
+   * @param keyToBufferDir Key to buffer directory config for a FS.
    * @param configuration  factory configurations.
    * @param name           factory name -the option from {@link CommonConfigurationKeys}.
    * @return the factory, ready to be initialized.
    * @throws IllegalArgumentException if the name is unknown.
    */
-  public static BlockFactory createFactory(String KeyToBufferDir,
+  public static BlockFactory createFactory(String keyToBufferDir,
       Configuration configuration,
       String name) {
     LOG.debug("Creating DataFactory of type : {}", name);
     switch (name) {
-    case CommonConfigurationKeys.DATA_BLOCKS_BUFFER_ARRAY:
-      return new ArrayBlockFactory(KeyToBufferDir, configuration);
-    case CommonConfigurationKeys.DATA_BLOCKS_BUFFER_DISK:
-      return new DiskBlockFactory(KeyToBufferDir, configuration);
-    case CommonConfigurationKeys.DATA_BLOCKS_BYTEBUFFER:
-      return new ByteBufferBlockFactory(KeyToBufferDir, configuration);
+    case DATA_BLOCKS_BUFFER_ARRAY:
+      return new ArrayBlockFactory(keyToBufferDir, configuration);
+    case DATA_BLOCKS_BUFFER_DISK:
+      return new DiskBlockFactory(keyToBufferDir, configuration);
+    case DATA_BLOCKS_BYTEBUFFER:
+      return new ByteBufferBlockFactory(keyToBufferDir, configuration);
     default:
       throw new IllegalArgumentException("Unsupported block buffer" +
           " \"" + name + '"');
@@ -108,7 +146,9 @@ public class DataBlocks {
 
   /**
    * The output information for an upload.
-   * It can be one of a file or an input stream.
+   * It can be one of a file, an input stream or a byteArray.
+   * {@link #toByteArray()} method to be used to convert the data into byte
+   * array to be doen in this class as well.
    * When closed, any stream is closed. Any source file is untouched.
    */
   public static final class BlockUploadData implements Closeable {
@@ -117,6 +157,12 @@ public class DataBlocks {
     private byte[] byteArray;
     private boolean isClosed;
 
+    /**
+     * Constructor for byteArray upload data block. File and uploadStream
+     * would be null.
+     *
+     * @param byteArray byteArray used to construct BlockUploadData.
+     */
     public BlockUploadData(byte[] byteArray) {
       this.file = null;
       this.uploadStream = null;
@@ -125,19 +171,19 @@ public class DataBlocks {
     }
 
     /**
-     * File constructor; input stream will be null.
+     * File constructor; input stream and byteArray will be null.
      *
      * @param file file to upload
      */
     BlockUploadData(File file) {
-      Preconditions.checkArgument(file.exists(), "No file: " + file);
+      Preconditions.checkArgument(file.exists(), "No file: %s", file);
       this.file = file;
       this.uploadStream = null;
       this.byteArray = null;
     }
 
     /**
-     * Stream constructor, file field will be null.
+     * Stream constructor, file and byteArray field will be null.
      *
      * @param uploadStream stream to upload.
      */
@@ -177,7 +223,11 @@ public class DataBlocks {
     }
 
     /**
-     * A Method to return the uploadBlock into byteArray.
+     * Convert to a byte array.
+     * If the data is stored in a file, it will be read and returned.
+     * If the data was passed in via an input stream (which happens if the
+     * data is stored in a bytebuffer) then it will be converted to a byte
+     * array -which will then be cached for any subsequent use.
      *
      * @return byte[] after converting the uploadBlock.
      * @throws IOException throw if an exception is caught while reading
@@ -189,10 +239,13 @@ public class DataBlocks {
         return byteArray;
       }
       if (file != null) {
-        return FileUtils.readFileToByteArray(file);
+        // Need to save byteArray here so that we don't read File if
+        // byteArray() is called more than once on the same file.
+        byteArray = FileUtils.readFileToByteArray(file);
+        return byteArray;
       }
       byteArray = IOUtils.toByteArray(uploadStream);
-      uploadStream.close();
+      IOUtils.close(uploadStream);
       uploadStream = null;
       return byteArray;
     }
@@ -252,6 +305,7 @@ public class DataBlocks {
 
     /**
      * Configuration.
+     *
      * @return config passed to create the factory.
      */
     protected Configuration getConf() {
@@ -260,6 +314,7 @@ public class DataBlocks {
 
     /**
      * Key to Buffer Directory config for a FS instance.
+     *
      * @return String containing key to Buffer dir.
      */
     public String getKeyToBufferDir() {
@@ -475,9 +530,9 @@ public class DataBlocks {
 
   }
 
-  static class byteArrayOutputStream extends ByteArrayOutputStream {
+  static class DataBlockByteArrayOutputStream extends ByteArrayOutputStream {
 
-    byteArrayOutputStream(int size) {
+    DataBlockByteArrayOutputStream(int size) {
       super(size);
     }
 
@@ -505,7 +560,7 @@ public class DataBlocks {
    */
 
   static class ByteArrayBlock extends DataBlock {
-    private byteArrayOutputStream buffer;
+    private DataBlockByteArrayOutputStream buffer;
     private final int limit;
     // cache data size so that it is consistent after the buffer is reset.
     private Integer dataSize;
@@ -515,7 +570,7 @@ public class DataBlocks {
         BlockUploadStatistics statistics) {
       super(index, statistics);
       this.limit = limit;
-      this.buffer = new byteArrayOutputStream(limit);
+      this.buffer = new DataBlockByteArrayOutputStream(limit);
       blockAllocated();
     }
 
@@ -875,7 +930,7 @@ public class DataBlocks {
    */
   static class DiskBlockFactory extends BlockFactory {
 
-    private static LocalDirAllocator directoryAllocator;
+    private LocalDirAllocator directoryAllocator;
 
     DiskBlockFactory(String keyToBufferDir, Configuration conf) {
       super(keyToBufferDir, conf);
@@ -916,7 +971,7 @@ public class DataBlocks {
      * @return a unique temporary file.
      * @throws IOException IO problems
      */
-    static File createTmpFileForWrite(String pathStr, long size,
+    File createTmpFileForWrite(String pathStr, long size,
         Configuration conf) throws IOException {
       Path path = directoryAllocator.getLocalPathForWrite(pathStr,
           size, conf);

@@ -39,10 +39,10 @@ import org.apache.hadoop.fs.store.DataBlocks;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DATA_BLOCKS_BUFFER;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.refEq;
@@ -73,7 +73,9 @@ public final class TestAbfsOutputStream {
       boolean isFlushEnabled,
       boolean disableOutputStreamFlush,
       boolean isAppendBlob,
-      AbfsClient client, FileSystem.Statistics statistics, String path,
+      AbfsClient client,
+      FileSystem.Statistics statistics,
+      String path,
       TracingContext tracingContext,
       ExecutorService executorService) throws IOException,
       IllegalAccessException {
@@ -125,11 +127,18 @@ public final class TestAbfsOutputStream {
         isNull(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false,
-            client, null, PATH,
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            null,
+            PATH,
             new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
                 FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
-                null), createExecutorService(abfsConf)));
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
     out.write(b);
@@ -180,9 +189,16 @@ public final class TestAbfsOutputStream {
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), any(), isNull(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false, client,
-            null, PATH,
-            tracingContext, createExecutorService(abfsConf)));
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            null,
+            PATH,
+            tracingContext,
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
 
@@ -248,9 +264,16 @@ public final class TestAbfsOutputStream {
     when(op.getResult()).thenReturn(httpOp);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false, client,
-            null, PATH,
-            tracingContext, createExecutorService(abfsConf)));
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            null,
+            PATH,
+            tracingContext,
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -313,11 +336,18 @@ public final class TestAbfsOutputStream {
     when(op.getResult()).thenReturn(httpOp);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false, client,
-            null, PATH,
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            null,
+            PATH,
             new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
                 FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
-                null), createExecutorService(abfsConf)));
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -362,11 +392,18 @@ public final class TestAbfsOutputStream {
         isNull(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, true, client,
-            null, PATH,
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            true,
+            client,
+            null,
+            PATH,
             new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
                 FSOperationType.OPEN, abfsConf.getTracingHeaderFormat(),
-                null), createExecutorService(abfsConf)));
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -415,11 +452,18 @@ public final class TestAbfsOutputStream {
         isNull(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false, client,
-            null, PATH,
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            null,
+            PATH,
             new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
                 FSOperationType.OPEN, abfsConf.getTracingHeaderFormat(),
-                null), createExecutorService(abfsConf)));
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -478,11 +522,18 @@ public final class TestAbfsOutputStream {
         isNull(), any(TracingContext.class))).thenReturn(op);
 
     AbfsOutputStream out = new AbfsOutputStream(
-        populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false, client,
-            null, PATH,
+        populateAbfsOutputStreamContext(
+            BUFFER_SIZE,
+            true,
+            false,
+            false,
+            client,
+            null,
+            PATH,
             new TracingContext(abfsConf.getClientCorrelationId(), "test-fs-id",
                 FSOperationType.WRITE, abfsConf.getTracingHeaderFormat(),
-                null), createExecutorService(abfsConf)));
+                null),
+            createExecutorService(abfsConf)));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 

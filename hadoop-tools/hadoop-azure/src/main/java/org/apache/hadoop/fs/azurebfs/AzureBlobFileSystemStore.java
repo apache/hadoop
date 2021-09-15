@@ -182,9 +182,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   /** Bounded ThreadPool for this instance. */
   private ExecutorService boundedThreadPool;
 
+  /**
+   * FileSystem Store for {@link AzureBlobFileSystem} for Abfs operations.
+   * Built using the {@link AzureBlobFileSystemStoreBuilder} with parameters
+   * required.
+   * @param abfsStoreBuilder Builder for AzureBlobFileSystemStore.
+   * @throws IOException Throw IOE in case of failure during constructing.
+   */
   public AzureBlobFileSystemStore(
-      AzureBlobFileSystemStoreBuilder systemStoreBuilder) throws IOException {
-    this.uri = systemStoreBuilder.uri;
+      AzureBlobFileSystemStoreBuilder abfsStoreBuilder) throws IOException {
+    this.uri = abfsStoreBuilder.uri;
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
     final String accountName = authorityParts[1];
@@ -192,7 +199,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     leaseRefs = Collections.synchronizedMap(new WeakHashMap<>());
 
     try {
-      this.abfsConfiguration = new AbfsConfiguration(systemStoreBuilder.configuration, accountName);
+      this.abfsConfiguration = new AbfsConfiguration(abfsStoreBuilder.configuration, accountName);
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }
@@ -222,16 +229,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     updateInfiniteLeaseDirs();
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
-    boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : systemStoreBuilder.isSecureScheme;
+    boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
-    this.abfsCounters = systemStoreBuilder.abfsCounters;
+    this.abfsCounters = abfsStoreBuilder.abfsCounters;
     initializeClient(uri, fileSystemName, accountName, useHttps);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
-        systemStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
+        abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
     try {
       this.identityTransformer =
-          identityTransformerClass.getConstructor(Configuration.class).newInstance(systemStoreBuilder.configuration);
+          identityTransformerClass.getConstructor(Configuration.class).newInstance(abfsStoreBuilder.configuration);
     } catch (IllegalAccessException | InstantiationException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException e) {
       throw new IOException(e);
     }
@@ -245,8 +252,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       this.appendBlobDirSet = new HashSet<>(Arrays.asList(
           abfsConfiguration.getAppendBlobDirs().split(AbfsHttpConstants.COMMA)));
     }
-    this.blockFactory = systemStoreBuilder.blockFactory;
-    this.blockOutputActiveBlocks = systemStoreBuilder.blockOutputActiveBlocks;
+    this.blockFactory = abfsStoreBuilder.blockFactory;
+    this.blockOutputActiveBlocks = abfsStoreBuilder.blockOutputActiveBlocks;
     this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
         abfsConfiguration.getWriteMaxConcurrentRequestCount(),
         abfsConfiguration.getMaxWriteRequestsToQueue(),
@@ -569,8 +576,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
 
       return new AbfsOutputStream(
-          populateAbfsOutputStreamContext(isAppendBlob, lease, client,
-              statistics, relativePath, 0, tracingContext));
+          populateAbfsOutputStreamContext(
+              isAppendBlob,
+              lease,
+              client,
+              statistics,
+              relativePath,
+              0,
+              tracingContext));
     }
   }
 
@@ -644,10 +657,28 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return op;
   }
 
+  /**
+   * Method to populate AbfsOutputStreamContext with different parameters to
+   * be used to construct {@link AbfsOutputStream}.
+   *
+   * @param isAppendBlob   is Append blob support enabled?
+   * @param lease          instance of AbfsLease for this AbfsOutputStream.
+   * @param client         AbfsClient.
+   * @param statistics     FileSystem statistics.
+   * @param path           Path for AbfsOutputStream.
+   * @param position       Position or offset of the file being opened, set to 0
+   *                       when creating a new file, but needs to be set for APPEND
+   *                       calls on the same file.
+   * @param tracingContext instance of TracingContext for this AbfsOutputStream.
+   * @return AbfsOutputStreamContext instance with the desired parameters.
+   */
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(
       boolean isAppendBlob,
-      AbfsLease lease, AbfsClient client,
-      FileSystem.Statistics statistics, String path, long position,
+      AbfsLease lease,
+      AbfsClient client,
+      FileSystem.Statistics statistics,
+      String path,
+      long position,
       TracingContext tracingContext) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
@@ -799,8 +830,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
 
       return new AbfsOutputStream(
-          populateAbfsOutputStreamContext(isAppendBlob, lease, client,
-              statistics, relativePath, offset, tracingContext));
+          populateAbfsOutputStreamContext(
+              isAppendBlob,
+              lease,
+              client,
+              statistics,
+              relativePath,
+              offset,
+              tracingContext));
     }
   }
 

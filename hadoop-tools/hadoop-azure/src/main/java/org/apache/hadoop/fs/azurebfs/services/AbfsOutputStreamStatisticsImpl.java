@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -43,7 +42,9 @@ public class AbfsOutputStreamStatisticsImpl
           StreamStatisticNames.BYTES_UPLOAD_SUCCESSFUL,
           StreamStatisticNames.BYTES_UPLOAD_FAILED,
           StreamStatisticNames.QUEUE_SHRUNK_OPS,
-          StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS
+          StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS,
+          StreamStatisticNames.BLOCKS_ALLOCATED,
+          StreamStatisticNames.BLOCKS_RELEASED
       )
       .withDurationTracking(
           StreamStatisticNames.TIME_SPENT_ON_PUT_REQUEST,
@@ -61,8 +62,10 @@ public class AbfsOutputStreamStatisticsImpl
   private final AtomicLong writeCurrentBufferOps =
       ioStatisticsStore.getCounterReference(StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS);
 
-  private final AtomicInteger blocksAllocated = new AtomicInteger(0);
-  private final AtomicInteger blocksReleased = new AtomicInteger(0);
+  private final AtomicLong blocksAllocated =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.BLOCKS_ALLOCATED);
+  private final AtomicLong blocksReleased =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.BLOCKS_RELEASED);
 
   /**
    * Records the need to upload bytes and increments the total bytes that
