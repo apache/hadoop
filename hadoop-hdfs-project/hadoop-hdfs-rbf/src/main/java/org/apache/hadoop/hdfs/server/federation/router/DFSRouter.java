@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.conf.Configuration;
@@ -66,9 +68,7 @@ public final class DFSRouter {
       ShutdownHookManager.get().addShutdownHook(
           new CompositeServiceShutdownHook(router), SHUTDOWN_HOOK_PRIORITY);
 
-      Configuration conf = new HdfsConfiguration();
-      conf.addResource(FedBalance.FED_BALANCE_DEFAULT_XML);
-      conf.addResource(FedBalance.FED_BALANCE_SITE_XML);
+      Configuration conf = getConfiguration();
       router.init(conf);
       router.start();
     } catch (Throwable e) {
@@ -76,4 +76,13 @@ public final class DFSRouter {
       terminate(1, e);
     }
   }
+
+  @VisibleForTesting
+  static Configuration getConfiguration() {
+    Configuration conf = new HdfsConfiguration();
+    conf.addResource(FedBalance.FED_BALANCE_DEFAULT_XML);
+    conf.addResource(FedBalance.FED_BALANCE_SITE_XML);
+    return conf;
+  }
+
 }
