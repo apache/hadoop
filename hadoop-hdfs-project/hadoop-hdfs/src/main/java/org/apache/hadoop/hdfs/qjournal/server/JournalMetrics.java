@@ -51,7 +51,7 @@ class JournalMetrics {
   @Metric("Number of bytes served via RPC")
   MutableCounterLong bytesServedViaRpc;
 
-  MutableStat rpcRequestCacheMissAmount;
+  private MutableStat rpcRequestCacheMissAmount;
 
   @Metric("Number of RPC requests with zero edits returned")
   MutableCounterLong rpcEmptyResponses;
@@ -148,5 +148,9 @@ class JournalMetrics {
 
   public void incrNumEditLogsSynced() {
     numEditLogsSynced.incr();
+  }
+
+  public void addRpcRequestCacheMissAmount(long cacheMissAmount) {
+    rpcRequestCacheMissAmount.add(cacheMissAmount);
   }
 }
