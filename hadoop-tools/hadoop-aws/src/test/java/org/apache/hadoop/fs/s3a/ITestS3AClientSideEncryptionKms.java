@@ -28,8 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfKmsKeyIdIsNotSet;
 
 /**
  * Testing the S3 CSE - KMS method.
@@ -55,7 +55,8 @@ public class ITestS3AClientSideEncryptionKms
   @Override
   protected void maybeSkipTest() {
     skipIfEncryptionTestsDisabled(getConfiguration());
-    skipIfKmsKeyIdIsNotSet(getConfiguration());
+    // skip the test if CSE-KMS or KMS key is not set.
+    skipIfEncryptionNotSet(getConfiguration(), S3AEncryptionMethods.CSE_KMS);
   }
 
   @Override
@@ -71,7 +72,7 @@ public class ITestS3AClientSideEncryptionKms
     // Assert content encryption algo for KMS, is present in the
     // materials description and KMS key ID isn't.
     String keyId =
-        getConfiguration().get(Constants.SERVER_SIDE_ENCRYPTION_KEY);
+        getConfiguration().get(Constants.S3_ENCRYPTION_KEY);
     Assertions.assertThat(processHeader(fsXAttrs,
         xAttrPrefix + Headers.MATERIALS_DESCRIPTION))
         .describedAs("Materials Description should contain the content "

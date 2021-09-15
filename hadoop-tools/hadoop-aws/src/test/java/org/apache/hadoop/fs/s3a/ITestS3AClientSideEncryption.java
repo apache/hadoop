@@ -43,8 +43,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -203,8 +203,8 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     Path encryptedFilePath = path(getMethodName() + "cse");
 
     // Initialize a CSE disabled FS.
-    cseDisabledConf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
-    cseDisabledConf.unset(SERVER_SIDE_ENCRYPTION_KEY);
+    cseDisabledConf.unset(S3_ENCRYPTION_ALGORITHM);
+    cseDisabledConf.unset(S3_ENCRYPTION_KEY);
     cseDisabledFS.initialize(getFileSystem().getUri(),
         cseDisabledConf);
 

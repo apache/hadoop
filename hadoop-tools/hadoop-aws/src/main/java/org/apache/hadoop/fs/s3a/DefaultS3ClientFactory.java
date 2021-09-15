@@ -58,8 +58,8 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
@@ -93,6 +93,9 @@ public class DefaultS3ClientFactory extends Configured
       "S3A filesystem client is using"
           + " the SDK region resolution chain.";
 
+  /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
+  private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
+
   /**
    * Create the client by preparing the AwsConf configuration
    * and then invoking {@code buildAmazonS3Client()}.
@@ -125,7 +128,7 @@ public class DefaultS3ClientFactory extends Configured
 
     try {
       if (S3AEncryptionMethods.getMethod(S3AUtils.
-          lookupPassword(conf, SERVER_SIDE_ENCRYPTION_ALGORITHM, null))
+          lookupPassword(conf, S3_ENCRYPTION_ALGORITHM, null))
           .equals(S3AEncryptionMethods.CSE_KMS)) {
         return buildAmazonS3EncryptionClient(
             awsConf,
@@ -162,10 +165,10 @@ public class DefaultS3ClientFactory extends Configured
 
     //CSE-KMS Method
     String kmsKeyId = S3AUtils.lookupPassword(conf,
-        SERVER_SIDE_ENCRYPTION_KEY, null);
+        S3_ENCRYPTION_KEY, null);
     // Check if kmsKeyID is not null
     Preconditions.checkArgument(kmsKeyId != null, "CSE-KMS method "
-        + "requires KMS key ID. Use " + SERVER_SIDE_ENCRYPTION_KEY
+        + "requires KMS key ID. Use " + S3_ENCRYPTION_KEY
         + " property to set it. ");
 
     EncryptionMaterialsProvider materialsProvider =
@@ -191,6 +194,8 @@ public class DefaultS3ClientFactory extends Configured
     }
     builder.withCryptoConfiguration(cryptoConfigurationV2);
     client = builder.build();
+    IGNORE_CSE_WARN.info("S3 client-side encryption enabled: Ignore S3-CSE "
+        + "Warnings.");
 
     return client;
   }

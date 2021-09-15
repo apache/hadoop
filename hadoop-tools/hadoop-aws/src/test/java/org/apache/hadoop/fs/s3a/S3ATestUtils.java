@@ -248,7 +248,7 @@ public final class S3ATestUtils {
    */
   private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf) {
     String encryptionMethod =
-        conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM, "");
+        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM, "");
     String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
     if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
         !metaStore.equals(S3GUARD_METASTORE_NULL)) {
@@ -1533,14 +1533,20 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Skip a test if CSE KMS key id is not set.
+   * Skip a test if encryption algorithm or encryption key is not set.
    *
    * @param configuration configuration to probe.
    */
-  public static void skipIfKmsKeyIdIsNotSet(Configuration configuration) {
-    if (configuration.get(
-        SERVER_SIDE_ENCRYPTION_KEY) == null) {
-      skip("AWS KMS key id is not set");
+  public static void skipIfEncryptionNotSet(Configuration configuration,
+      S3AEncryptionMethods s3AEncryptionMethod) {
+    // if S3 encryption algorithm is not set to desired method or AWS encryption
+    // key is not set, then skip.
+    if (!configuration.getTrimmed(S3_ENCRYPTION_ALGORITHM, "")
+        .equals(s3AEncryptionMethod.getMethod())
+        || configuration.get(Constants.S3_ENCRYPTION_KEY) == null) {
+      skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
+          .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
+          + s3AEncryptionMethod.getMethod());
     }
   }
 

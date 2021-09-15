@@ -42,6 +42,8 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 import static org.apache.hadoop.fs.s3a.Constants.ETAG_CHECKSUM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -105,6 +107,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     this.keepMarkers = keepMarkers;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -121,15 +124,17 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
         ETAG_CHECKSUM_ENABLED,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
-    conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
+    conf.set(S3_ENCRYPTION_ALGORITHM,
         getSSEAlgorithm().getMethod());
-    conf.set(SERVER_SIDE_ENCRYPTION_KEY, KEY_1);
+    conf.set(S3_ENCRYPTION_KEY, KEY_1);
     conf.setBoolean(ETAG_CHECKSUM_ENABLED, true);
     return conf;
   }
@@ -251,8 +256,8 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     fsKeyB.listFiles(pathABC, false);
 
     Configuration conf = this.createConfiguration();
-    conf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
-    conf.unset(SERVER_SIDE_ENCRYPTION_KEY);
+    conf.unset(S3_ENCRYPTION_ALGORITHM);
+    conf.unset(S3_ENCRYPTION_KEY);
 
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
@@ -286,8 +291,8 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
 
     //Now try it with an unencrypted filesystem.
     Configuration conf = createConfiguration();
-    conf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
-    conf.unset(SERVER_SIDE_ENCRYPTION_KEY);
+    conf.unset(S3_ENCRYPTION_ALGORITHM);
+    conf.unset(S3_ENCRYPTION_KEY);
 
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
@@ -385,7 +390,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   private S3AFileSystem createNewFileSystemWithSSECKey(String sseCKey) throws
       IOException {
     Configuration conf = this.createConfiguration();
-    conf.set(SERVER_SIDE_ENCRYPTION_KEY, sseCKey);
+    conf.set(S3_ENCRYPTION_KEY, sseCKey);
 
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
