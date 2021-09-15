@@ -125,14 +125,14 @@ public final class S3AUtils {
   public static final String SSE_C_NO_KEY_ERROR =
       S3AEncryptionMethods.SSE_C.getMethod()
           + " is enabled but no encryption key was declared in "
-          + SERVER_SIDE_ENCRYPTION_KEY;
+          + Constants.S3_ENCRYPTION_KEY;
   /**
    * Encryption SSE-S3 is used but the caller also set an encryption key.
    */
   public static final String SSE_S3_WITH_KEY_ERROR =
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
-          + SERVER_SIDE_ENCRYPTION_KEY;
+          + Constants.S3_ENCRYPTION_KEY;
   public static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
 
@@ -1581,9 +1581,9 @@ public final class S3AUtils {
   public static String getS3EncryptionKey(String bucket,
       Configuration conf) {
     try {
-      return lookupPassword(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
+      return lookupPassword(bucket, conf, Constants.S3_ENCRYPTION_KEY);
     } catch (IOException e) {
-      LOG.error("Cannot retrieve " + SERVER_SIDE_ENCRYPTION_KEY, e);
+      LOG.error("Cannot retrieve " + Constants.S3_ENCRYPTION_KEY, e);
       return "";
     }
   }
@@ -1603,7 +1603,7 @@ public final class S3AUtils {
       Configuration conf) throws IOException {
     S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(
         lookupPassword(bucket, conf,
-            SERVER_SIDE_ENCRYPTION_ALGORITHM));
+            Constants.S3_ENCRYPTION_ALGORITHM));
     String encryptionKey = getS3EncryptionKey(bucket, conf);
     int encryptionKeyLen =
         StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();

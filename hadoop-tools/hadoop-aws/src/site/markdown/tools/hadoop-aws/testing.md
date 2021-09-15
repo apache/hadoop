@@ -150,7 +150,7 @@ Example:
 ### <a name="encryption"></a> Configuring S3a Encryption
 
 For S3a encryption tests to run correctly, the
-`fs.s3a.server-side-encryption.key` must be configured in the s3a contract xml
+`fs.s3a.encryption.key` must be configured in the s3a contract xml
 file or `auth-keys.xml` file with a AWS KMS encryption key arn as this value is
 different for each AWS KMS. Please note this KMS key should be created in the
 same region as your S3 bucket. Otherwise, you may get `KMS.NotFoundException`.
@@ -159,13 +159,13 @@ Example:
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption.key</name>
+  <name>fs.s3a.encryption.key</name>
   <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
 </property>
 ```
 
 You can also force all the tests to run with a specific SSE encryption method
-by configuring the property `fs.s3a.server-side-encryption-algorithm` in the s3a
+by configuring the property `fs.s3a.encryption.algorithm` in the s3a
 contract file.
 
 ### <a name="default_encyption"></a> Default Encryption
@@ -1466,7 +1466,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamo` options.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
-  and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
+  and `fs.s3a.encryption.key` for encryption, for full coverage.
   If you can, scale up the scale tests.
 1. Run the `ILoadTest*` load tests from your IDE or via maven through
       `mvn verify -Dtest=skip -Dit.test=ILoadTest\*`  ; look for regressions in performance
@@ -1482,6 +1482,9 @@ as it may take a couple of SDK updates before it is ready.
   Examine the `target/dependencies.txt` file to verify that no new
   artifacts have unintentionally been declared as dependencies
   of the shaded `aws-java-sdk-bundle` artifact.
+1. Run a full AWS-test suite with S3 client-side encryption enabled by
+ setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
+  Key ID in `fs.s3a.encryption.key`.
 
 ### Basic command line regression testing
 
