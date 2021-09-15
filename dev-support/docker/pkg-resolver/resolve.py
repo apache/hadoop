@@ -25,21 +25,37 @@ import sys
 from check_platform import is_supported_platform
 
 
-def get_packages(platform):
+def get_packages(platform, release=None):
     """
     Resolve and get the list of packages to install for the given platform.
 
     :param platform: The platform for which the packages needs to be resolved.
+    :param release: An optional parameter that filters the packages of the given platform for the
+    specified release.
     :return: A list of resolved packages to install.
     """
     with open('pkg-resolver/packages.json', encoding='utf-8', mode='r') as pkg_file:
         pkgs = json.loads(pkg_file.read())
     packages = []
-    for platforms in filter(lambda x: x.get(platform) is not None, pkgs.values()):
-        if isinstance(platforms.get(platform), list):
-            packages.extend(platforms.get(platform))
+
+    def process_package(package, in_release=False):
+        if isinstance(package, list):
+            for entry in package:
+                process_package(entry, in_release)
+        elif isinstance(package, dict):
+            if release is None:
+                return
+            for entry in package.get(release):
+                process_package(entry, in_release=True)
+        elif isinstance(package, str):
+            if release is not None and not in_release:
+                return
+            packages.append(package)
         else:
-            packages.append(platforms.get(platform))
+            raise Exception('Unknown package of type: {}'.format(type(package)))
+
+    for platforms in filter(lambda x: x.get(platform) is not None, pkgs.values()):
+        process_package(platforms.get(platform))
     return packages
 
 
