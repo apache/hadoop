@@ -22,14 +22,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.store.BlockUploadStatistics;
 
 /**
  * Interface for {@link AbfsOutputStream} statistics.
  */
 @InterfaceStability.Unstable
-public interface AbfsOutputStreamStatistics extends IOStatisticsSource,
-    BlockUploadStatistics {
+public interface AbfsOutputStreamStatistics extends IOStatisticsSource {
 
   /**
    * Number of bytes to be uploaded.

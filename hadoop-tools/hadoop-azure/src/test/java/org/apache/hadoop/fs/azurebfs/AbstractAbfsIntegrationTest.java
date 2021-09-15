@@ -488,7 +488,7 @@ public abstract class AbstractAbfsIntegrationTest extends
    */
   protected AbfsOutputStream createAbfsOutputStreamWithFlushEnabled(
       AzureBlobFileSystem fs,
-      Path path) throws IOException {
+      Path path) throws AzureBlobFileSystemException {
     AzureBlobFileSystemStore abfss = fs.getAbfsStore();
     abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
 

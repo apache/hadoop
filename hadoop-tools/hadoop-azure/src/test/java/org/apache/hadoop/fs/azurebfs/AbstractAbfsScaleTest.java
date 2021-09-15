@@ -24,10 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 
-import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.AZURE_SCALE_HUGE_FILE_UPLOAD;
-import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
-import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.getTestPropertyInt;
 
 /**
  * Integration tests at bigger scale; configurable as to
@@ -37,7 +34,6 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsScaleTest.class);
-  private static Configuration rawConfiguration;
 
   public AbstractAbfsScaleTest() throws Exception {
     super();
@@ -52,23 +48,12 @@ public class AbstractAbfsScaleTest extends AbstractAbfsIntegrationTest  {
   public void setup() throws Exception {
     super.setup();
     LOG.debug("Scale test operation count = {}", getOperationCount());
-    rawConfiguration = getRawConfiguration();
+    Configuration rawConfiguration = getRawConfiguration();
     assumeScaleTestsEnabled(rawConfiguration);
   }
 
   protected long getOperationCount() {
     return getConfiguration().getLong(AzureTestConstants.KEY_OPERATION_COUNT,
         AzureTestConstants.DEFAULT_OPERATION_COUNT);
-  }
-
-
-  /**
-   * Method to get the Huge file for upload value for scale test.
-   * @return the huge value set.
-   */
-  public static int getHugeFileUploadValue() {
-    return getTestPropertyInt(rawConfiguration,
-        AZURE_SCALE_HUGE_FILE_UPLOAD,
-        AZURE_SCALE_HUGE_FILE_UPLOAD_DEFAULT);
   }
 }

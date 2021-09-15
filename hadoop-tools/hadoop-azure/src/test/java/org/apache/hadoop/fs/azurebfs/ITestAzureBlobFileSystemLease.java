@@ -48,6 +48,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_ACQUIRING_LEASE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_EXPIRED;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_LEASE_NOT_PRESENT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_ID_SPECIFIED;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_NO_LEASE_THREADS;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_PARALLEL_ACCESS_DETECTED;
@@ -294,9 +295,14 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     FSDataOutputStream out = fs.create(testFilePath);
     out.write(0);
     Assert.assertFalse("Store leases should exist", fs.getAbfsStore().areLeasesFreed());
-    out.close();
     fs.close();
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
+
+    LambdaTestUtils.intercept(IOException.class, isHNSEnabled ? ERR_LEASE_NOT_PRESENT
+        : ERR_LEASE_EXPIRED, () -> {
+      out.close();
+      return "Expected exception on close after closed FS but got " + out;
+    });
 
     LambdaTestUtils.intercept(RejectedExecutionException.class, () -> {
       try (FSDataOutputStream out2 = fs.append(testFilePath)) {
