@@ -81,9 +81,9 @@ if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(
         description='Platform package dependency resolver for building Apache Hadoop')
     arg_parser.add_argument('-r', '--release', nargs=1, type=str,
-                            help='The release label to filter the packages for the given platform.')
+                            help='The release label to filter the packages for the given platform')
     arg_parser.add_argument('platform', nargs=1, type=str,
-                            help='The name of the platform to resolve the dependencies for.')
+                            help='The name of the platform to resolve the dependencies for')
     args = arg_parser.parse_args()
 
     if not is_supported_platform(args.platform[0]):
