@@ -34,7 +34,6 @@ import java.text.StringCharacterIterator;
 import java.util.Arrays;
 
 import org.apache.avro.reflect.Stringable;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -73,7 +72,7 @@ public class Text extends BinaryComparable
     }
   };
 
-  // max size of the byte array, seems to be a safe choice for multiple VMs
+  // max size of the byte array, seems to be a safe choice for multiple JVMs
   // (see ArrayList.MAX_ARRAY_SIZE)
   private static final int ARRAY_MAX_SIZE = Integer.MAX_VALUE - 8;
 
@@ -305,17 +304,15 @@ public class Text extends BinaryComparable
    */
   private boolean ensureCapacity(final int capacity) {
     if (bytes.length < capacity) {
-      // use long to allow overflow
-      long tmpLength = bytes.length;
-      long tmpCapacity = capacity;
-
       // Try to expand the backing array by the factor of 1.5x
       // (by taking the current size + diving it by half).
       //
       // If the calculated value is beyond the size
       // limit, we cap it to ARRAY_MAX_SIZE
+
       int targetSize = (int)Math.min(ARRAY_MAX_SIZE,
-          Math.max(tmpCapacity, tmpLength + (tmpLength >> 1)));
+          Math.max((long)capacity,
+              (long) bytes.length + (bytes.length >> 1)));
 
       bytes = new byte[targetSize];
       return true;
