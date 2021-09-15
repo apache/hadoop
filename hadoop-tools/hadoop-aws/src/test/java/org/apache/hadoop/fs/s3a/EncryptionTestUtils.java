@@ -27,7 +27,7 @@ import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -51,7 +51,7 @@ public final class EncryptionTestUtils {
    */
   public static String convertKeyToMd5(FileSystem fs) {
     String base64Key = fs.getConf().getTrimmed(
-        SERVER_SIDE_ENCRYPTION_KEY
+        S3_ENCRYPTION_KEY
     );
     byte[] key = Base64.decodeBase64(base64Key);
     byte[] md5 =  DigestUtils.md5(key);

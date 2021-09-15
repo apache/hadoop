@@ -1209,12 +1209,12 @@ KMS key ID is required for CSE-KMS to encrypt data, not providing one leads
 ```
 2021-07-07 11:33:04,550 WARN fs.FileSystem: Failed to initialize fileystem
 s3a://ap-south-cse/: java.lang.IllegalArgumentException: CSE-KMS
-method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to set it.
--ls: CSE-KMS method requires KMS key ID. Use fs.s3a.server-side-encryption.key property to
+method requires KMS key ID. Use fs.s3a.encryption.key property to set it.
+-ls: CSE-KMS method requires KMS key ID. Use fs.s3a.encryption.key property to
  set it.
 ```
 
-set `fs.s3a.server-side-encryption.key=<KMS_KEY_ID>` generated through AWS console.
+set `fs.s3a.encryption.key=<KMS_KEY_ID>` generated through AWS console.
 
 ### `com.amazonaws.services.kms.model.IncorrectKeyException` The key ID in the request does not identify a CMK that can perform this operation.
 
@@ -1354,7 +1354,7 @@ work.
 
 ### com.amazonaws.services.kms.model.NotFoundException: Invalid keyId
 
-If the value in `fs.s3a.server-side-encryption.key` property, does not exist
+If the value in `fs.s3a.encryption.key` property, does not exist
 /valid in AWS KMS CMK(Customer managed keys), then this error would be seen.
 
 ```
@@ -1390,7 +1390,7 @@ Caused by: com.amazonaws.services.kms.model.NotFoundException: Invalid keyId abc
     ... 49 more
 ```
 
-Check if `fs.s3a.server-side-encryption.key` is set correctly and matches the
+Check if `fs.s3a.encryption.key` is set correctly and matches the
 same on AWS console.
 
 ### com.amazonaws.services.kms.model.AWSKMSException: User: <User_ARN> is not authorized to perform : kms :GenerateDataKey on resource: <KEY_ID>
@@ -1431,7 +1431,7 @@ User: arn:aws:iam::152813717728:user/<user> is not authorized to perform: kms:Ge
 ```
 
 The user trying to use the KMS Key ID should have the right permissions to access
-(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.server-side-encryption.key`.
+(encrypt/decrypt) using the AWS KMS Key used via `fs.s3a.encryption.key`.
 If not, then add permission(or IAM role) in "Key users" section by selecting the
 AWS-KMS CMK Key on AWS console.
 

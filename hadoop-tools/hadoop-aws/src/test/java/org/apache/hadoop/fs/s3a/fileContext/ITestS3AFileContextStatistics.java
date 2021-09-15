@@ -32,8 +32,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 
@@ -86,9 +86,9 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
   protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
     long expectedBlockSize = blockSize;
-    if (conf.get(SERVER_SIDE_ENCRYPTION_ALGORITHM, "")
+    if (conf.get(S3_ENCRYPTION_ALGORITHM, "")
         .equals(S3AEncryptionMethods.CSE_KMS.getMethod())) {
-      String keyId = conf.get(SERVER_SIDE_ENCRYPTION_KEY, "");
+      String keyId = conf.get(S3_ENCRYPTION_KEY, "");
       // Adding padding length and KMS key generation bytes written.
       expectedBlockSize += CSE_PADDING_LENGTH + keyId.getBytes().length +
           KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
