@@ -70,10 +70,22 @@ public abstract class HdfsAuditLogger implements AuditLogger {
    * Same as
    * {@link #logAuditEvent(boolean, String, InetAddress, String, String,
    * String, FileStatus, CallerContext, UserGroupInformation,
+   * DelegationTokenSecretManager, String)} add {@link String} information.
+   */
+  public abstract void logAuditEvent(boolean succeeded, String userName,
+      InetAddress addr, String cmd, String src, String dst,
+      FileStatus stat, CallerContext callerContext, UserGroupInformation ugi,
+      DelegationTokenSecretManager dtSecretManager, String extra);
+
+  /**
+   * Same as
+   * {@link #logAuditEvent(boolean, String, InetAddress, String, String,
+   * String, FileStatus, CallerContext, UserGroupInformation,
    * DelegationTokenSecretManager)} without {@link CallerContext} information.
    */
   public abstract void logAuditEvent(boolean succeeded, String userName,
       InetAddress addr, String cmd, String src, String dst,
       FileStatus stat, UserGroupInformation ugi,
       DelegationTokenSecretManager dtSecretManager);
+
 }

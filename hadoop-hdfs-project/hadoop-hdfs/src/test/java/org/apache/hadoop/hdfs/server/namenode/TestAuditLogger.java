@@ -519,6 +519,26 @@ public class TestAuditLogger {
     }
   }
 
+  @Test
+  public void testAuditLogWithExtra() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitClusterUp();
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/debug.log");
+      fs.create(p, true);
+      String content = auditlog.getOutput();
+      assertTrue(content.contains("extra="));
+      auditlog.clearOutput();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 
   /**
    * Tests that a broken audit logger causes requests to fail.

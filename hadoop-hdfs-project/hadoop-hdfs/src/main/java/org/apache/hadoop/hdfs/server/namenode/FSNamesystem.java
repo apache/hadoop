@@ -415,35 +415,40 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
   }
 
-  private void logAuditEvent(boolean succeeded, String cmd, String src,
-      HdfsFileStatus stat) throws IOException {
-    if (!isAuditEnabled() || !isExternalInvocation()) {
-      return;
-    }
-    FileStatus status = null;
+  private FileStatus converHdfsFileStatus(String src, HdfsFileStatus stat) {
     if (stat != null) {
       Path symlink = stat.isSymlink()
           ? new Path(DFSUtilClient.bytes2String(stat.getSymlinkInBytes()))
           : null;
       Path path = new Path(src);
-      status = new FileStatus(stat.getLen(), stat.isDirectory(),
+      return new FileStatus(stat.getLen(), stat.isDirectory(),
           stat.getReplication(), stat.getBlockSize(),
           stat.getModificationTime(),
           stat.getAccessTime(), stat.getPermission(), stat.getOwner(),
           stat.getGroup(), symlink, path);
     }
-    logAuditEvent(succeeded, cmd, src, null, status);
+
+    return null;
   }
 
   private void logAuditEvent(boolean succeeded,
       UserGroupInformation ugi, InetAddress addr, String cmd, String src,
       String dst, FileStatus status) {
-    final String ugiStr = ugi.toString();
+    logAuditEvent(succeeded, ugi, addr, cmd, src, dst, status, null);
+  }
+
+  private void logAuditEvent(boolean succeeded,
+      UserGroupInformation ugi, InetAddress addr, String cmd, String src,
+      String dst, FileStatus status, String extra) {
+    String ugiStr = null;
+    if (ugi != null) {
+      ugiStr = ugi.toString();
+    }
     for (AuditLogger logger : auditLoggers) {
       if (logger instanceof HdfsAuditLogger) {
         HdfsAuditLogger hdfsLogger = (HdfsAuditLogger) logger;
         hdfsLogger.logAuditEvent(succeeded, ugiStr, addr, cmd, src, dst,
-            status, CallerContext.getCurrent(), ugi, dtSecretManager);
+            status, CallerContext.getCurrent(), ugi, dtSecretManager, extra);
       } else {
         logger.logAuditEvent(succeeded, ugiStr, addr, cmd, src, dst, status);
       }
@@ -2660,10 +2665,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           createParent, replication, blockSize, supportedVersions, ecPolicyName,
           storagePolicy, logRetryCache);
     } catch (AccessControlException e) {
-      logAuditEvent(false, "create", src);
+      logAuditEvent(false, Server.getRemoteUser(), Server.getRemoteIp(),
+          "create", src, null, null, flag.toString());
       throw e;
     }
-    logAuditEvent(true, "create", src, status);
+    logAuditEvent(true, Server.getRemoteUser(), Server.getRemoteIp(),
+        "create", src, null, converHdfsFileStatus(src, status), flag.toString());
     return status;
   }
 
@@ -8713,10 +8720,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     @Override
     public void logAuditEvent(boolean succeeded, String userName,
-        InetAddress addr, String cmd, String src, String dst,
-        FileStatus status, CallerContext callerContext, UserGroupInformation ugi,
-        DelegationTokenSecretManager dtSecretManager) {
-
+        InetAddress addr, String cmd, String src, String dst, FileStatus status,
+        CallerContext callerContext, UserGroupInformation ugi,
+        DelegationTokenSecretManager dtSecretManager, String extra) {
       if (auditLog.isDebugEnabled() ||
           (auditLog.isInfoEnabled() && !debugCmdSet.contains(cmd))) {
         final StringBuilder sb = STRING_BUILDER.get();
@@ -8773,8 +8779,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                 CallerContext.SIGNATURE_ENCODING));
           }
         }
+        if (extra != null) {
+          sb.append("\t").append("extra=").append(extra);
+        }
         logAuditMessage(sb.toString());
       }
+    }
+
+    @Override
+    public void logAuditEvent(boolean succeeded, String userName,
+        InetAddress addr, String cmd, String src, String dst,
+        FileStatus status, CallerContext callerContext, UserGroupInformation ugi,
+        DelegationTokenSecretManager dtSecretManager) {
+      logAuditEvent(succeeded, userName, addr, cmd, src, dst, status,
+          callerContext, ugi, dtSecretManager, null/*extra*/);
     }
 
     @Override
