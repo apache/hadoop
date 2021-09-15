@@ -40,6 +40,16 @@ def get_packages(platform, release=None):
     packages = []
 
     def process_package(package, in_release=False):
+        """
+        Processes the given package object that belongs to a platform and adds it to the packages
+        list variable in the parent scope.
+        In essence, this method recursively traverses the JSON structure defined in packages.json
+        and performs the core filtering.
+
+        :param package: The package object to process.
+        :param in_release: A boolean that indicates whether the current travels belongs to a package
+        that needs to be filtered for the given release label.
+        """
         if isinstance(package, list):
             for entry in package:
                 process_package(entry, in_release)
@@ -49,6 +59,8 @@ def get_packages(platform, release=None):
             for entry in package.get(release):
                 process_package(entry, in_release=True)
         elif isinstance(package, str):
+            # Filter out the package that doesn't belong to this release,
+            # if a release label has been specified.
             if release is not None and not in_release:
                 return
             packages.append(package)
