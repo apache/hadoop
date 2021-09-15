@@ -1135,22 +1135,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
       DatanodeReportType type) throws IOException {
-
-    Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
-    RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
-        new Class<?>[] {DatanodeReportType.class}, type);
-    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
-        rpcClient.invokeConcurrent(
-            nss, method, true, false, DatanodeStorageReport[].class);
-    for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
-        results.entrySet()) {
-      FederationNamespaceInfo ns = entry.getKey();
-      String nsId = ns.getNameserviceId();
-      DatanodeStorageReport[] result = entry.getValue();
-      ret.put(nsId, result);
-    }
-    return ret;
+    return getDatanodeStorageReportMap(type, true, -1);
   }
 
   /**
