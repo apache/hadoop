@@ -56,7 +56,7 @@ def get_packages(platform, release=None):
         elif isinstance(package, dict):
             if release is None:
                 return
-            for entry in package.get(release):
+            for entry in package.get(release, []):
                 process_package(entry, in_release=True)
         elif isinstance(package, str):
             # Filter out the package that doesn't belong to this release,
