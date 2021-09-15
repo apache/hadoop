@@ -20,6 +20,7 @@
 Platform package dependency resolver for building Apache Hadoop.
 """
 
+import argparse
 import json
 import sys
 from check_platform import is_supported_platform
@@ -65,13 +66,21 @@ if __name__ == '__main__':
               file=sys.stderr)
         sys.exit(1)
 
-    platform_arg = sys.argv[1]
-    if not is_supported_platform(platform_arg):
+    arg_parser = argparse.ArgumentParser(
+        description='Platform package dependency resolver for building Apache Hadoop')
+    arg_parser.add_argument('-r', '--release', nargs=1, type=str,
+                            help='The release label to filter the packages for the given platform.')
+    arg_parser.add_argument('platform', nargs=1, type=str,
+                            help='The name of the platform to resolve the dependencies for.')
+    args = arg_parser.parse_args()
+
+    if not is_supported_platform(args.platform[0]):
         print(
             'ERROR: The given platform {} is not supported. '
             'Please refer to platforms.json for a list of supported platforms'.format(
-                platform_arg), file=sys.stderr)
+                args.platform), file=sys.stderr)
         sys.exit(1)
 
-    packages_to_install = get_packages(platform_arg)
+    packages_to_install = get_packages(args.platform[0],
+                                       args.release[0] if args.release is not None else None)
     print(' '.join(packages_to_install))
