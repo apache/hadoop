@@ -773,7 +773,7 @@ public class Journal implements Closeable {
           .setEditLog(output.toByteString())
           .build();
     } catch (JournaledEditsCache.CacheMissException cme) {
-      metrics.rpcRequestCacheMissAmount.add(cme.getCacheMissAmount());
+      metrics.addRpcRequestCacheMissAmount(cme.getCacheMissAmount());
       throw cme;
     }
   }
