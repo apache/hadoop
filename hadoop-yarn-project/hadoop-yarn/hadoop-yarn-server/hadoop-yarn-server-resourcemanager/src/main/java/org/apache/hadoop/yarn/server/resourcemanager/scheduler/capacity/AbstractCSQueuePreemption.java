@@ -25,8 +25,8 @@ public class AbstractCSQueuePreemption {
   private final boolean intraQueuePreemptionDisabledInHierarchy;
 
   public AbstractCSQueuePreemption(
-      CSQueue queue, 
-      CapacitySchedulerContext csContext, 
+      CSQueue queue,
+      CapacitySchedulerContext csContext,
       CapacitySchedulerConfiguration configuration) {
     this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(queue, csContext, configuration);
     this.intraQueuePreemptionDisabledInHierarchy =
