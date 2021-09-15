@@ -68,6 +68,12 @@ public class ClassicDelegationTokenManager
    */
   public static final URI UNSET_URI = newURI(UNSET);
 
+  /**
+   * Service name derived from the URI.
+   */
+  public static final String UNSET_URI_SERVICE_NAME =
+      ExtensionHelper.buildCanonicalServiceName(UNSET_URI);
+
   private URI fsURI;
 
   private boolean initialized;
@@ -84,7 +90,7 @@ public class ClassicDelegationTokenManager
 
   private UserGroupInformation owner;
 
-  private String canonicalServiceName;
+  private String canonicalServiceName = UNSET_URI_SERVICE_NAME;
 
   /**
    * Instantiate.
@@ -116,20 +122,30 @@ public class ClassicDelegationTokenManager
     if (kind != null) {
       t.setKind(kind);
     }
-    t.setService(createServiceText());
+    final Text serviceText = createServiceText();
+    if (serviceText != null) {
+      t.setService(serviceText);
+    }
     LOG.info("Created token {}", t);
     return t;
   }
 
+  /**
+   * Return the service name as text, or null if none is known
+   * (i.e we are unbound).
+   * @return a text or null.
+   */
   public Text createServiceText() {
-    return new Text(fsURI != null ? fsURI.toString() : UNSET);
+    return canonicalServiceName != null
+        ? new Text(canonicalServiceName)
+        : null;
   }
 
   /**
    * Create a token.
    *
    * @param sequenceNumber sequence number.
-   * @param uri FS URI
+   * @param uri FS URI; will be canonicalized.
    * @param owner FS owner
    * @param renewer renewer
    * @return a token.
@@ -140,7 +156,10 @@ public class ClassicDelegationTokenManager
       final Text owner,
       final Text renewer) {
     StubAbfsTokenIdentifier id
-        = new StubAbfsTokenIdentifier(uri, owner, renewer);
+        = new StubAbfsTokenIdentifier(
+            ExtensionHelper.buildCanonicalServiceURI(uri),
+            owner,
+            renewer);
     id.setSequenceNumber(sequenceNumber);
     Token<DelegationTokenIdentifier> token = new Token(
         id,
@@ -167,8 +186,8 @@ public class ClassicDelegationTokenManager
     Preconditions.checkState(initialized, "Not initialized");
     Preconditions.checkState(fsURI == null, "already bound");
     fsURI = uri;
-    canonicalServiceName = uri.toString();
-    LOG.info("Bound to {}", fsURI);
+    canonicalServiceName = ExtensionHelper.buildCanonicalServiceName(uri);
+    LOG.info("Bound to {}; canonicalServiceName={}", fsURI, canonicalServiceName);
   }
 
   public String getCanonicalServiceName() {
@@ -220,6 +239,7 @@ public class ClassicDelegationTokenManager
     final StringBuilder sb = new StringBuilder(
         "StubDelegationTokenManager{");
     sb.append("fsURI=").append(fsURI);
+    sb.append(", canonicalServiceName=").append(canonicalServiceName);
     sb.append(", initialized=").append(initialized);
     sb.append(", closed=").append(closed);
     sb.append(", renewals=").append(renewals);

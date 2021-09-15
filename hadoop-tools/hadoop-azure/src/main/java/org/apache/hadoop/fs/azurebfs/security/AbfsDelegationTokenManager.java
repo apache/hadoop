@@ -34,9 +34,12 @@ import org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Class for delegation token Manager.
@@ -50,6 +53,7 @@ public class AbfsDelegationTokenManager implements BoundDTExtension {
   private CustomDelegationTokenManager tokenManager;
   private static final Logger LOG =
           LoggerFactory.getLogger(AbfsDelegationTokenManager.class);
+  private URI fsURI;
 
   /**
    * Create the custom delegation token manager and call its
@@ -92,18 +96,24 @@ public class AbfsDelegationTokenManager implements BoundDTExtension {
   @Override
   public void bind(final URI fsURI, final Configuration conf)
       throws IOException {
-    Preconditions.checkNotNull(fsURI, "Np Filesystem URI");
+    this.fsURI = requireNonNull(fsURI, "Null Filesystem URI");
     ExtensionHelper.bind(tokenManager, fsURI, conf);
   }
 
   /**
    * Query the token manager for the service name; if it does not implement
-   * the extension interface, null is returned.
+   * the extension interface, one is generated from the FS URI.
    * @return the canonical service name.
    */
   @Override
   public String getCanonicalServiceName() {
-    return ExtensionHelper.getCanonicalServiceName(tokenManager, null);
+    String name = ExtensionHelper.getCanonicalServiceName(tokenManager, null);
+    if (name == null) {
+      // no name from DT plugin. Generate one from the fs
+      name = ExtensionHelper.buildCanonicalServiceName(fsURI);
+      LOG.debug("No canonical service name from DT implementation; using {}", name);
+    }
+    return name;
   }
 
   /**
@@ -138,7 +148,15 @@ public class AbfsDelegationTokenManager implements BoundDTExtension {
     if (token.getKind() == null) {
       // if a token type is not set, use the default.
       // note: this also sets the renewer to null.
+
+      LOG.warn("Setting token kind of {} -renewer {} may be lost", token, renewer);
       token.setKind(AbfsDelegationTokenIdentifier.TOKEN_KIND);
+    }
+    if (token.getService() == null || token.getService().getLength() == 0) {
+      // set the service name
+      final Text service = new Text(getCanonicalServiceName());
+      LOG.debug("Setting service name to {}", service);
+      token.setService(service);
     }
     return token;
   }

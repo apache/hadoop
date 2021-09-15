@@ -50,6 +50,12 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
 
   public static final URI FSURI = newURI(ABFS);
 
+  public static final String CANONICAL_SERVICE_NAME =
+      ExtensionHelper.buildCanonicalServiceName(FSURI);
+
+  public static final URI CANONICAL_SERVICE_URI =
+      ExtensionHelper.buildCanonicalServiceURI(FSURI);
+
   public static final Text OWNER = new Text("owner");
 
   public static final Text KIND2 = new Text("kind2");
@@ -78,8 +84,8 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
    * Test the classic lifecycle, that is: don't call bind() on the manager,
    * so that it does not attempt to bind the custom DT manager it has created.
    *
-   * There'll be no canonical service name from the token manager, which
-   * will trigger falling back to the default value.
+   * The manager will fall back to creating a canonicalServiceName from
+   * the URI.
    */
   @Test
   public void testClassicLifecycle() throws Throwable {
@@ -92,7 +98,8 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     Token<DelegationTokenIdentifier> dt = stub.getDelegationToken(RENEWER);
     assertTokenKind(StubAbfsTokenIdentifier.TOKEN_KIND, dt);
 
-    assertNull("canonicalServiceName in " + stub,
+    // HADOOP-17815; always have a canonical service name.
+    assertNotNull("canonicalServiceName from manager " + manager,
         manager.getCanonicalServiceName());
     assertEquals("Issued count number in " + stub, 1, stub.getIssued());
     StubAbfsTokenIdentifier id = decodeIdentifier(dt);
@@ -130,14 +137,16 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     AbfsDelegationTokenManager manager = new AbfsDelegationTokenManager(conf);
     manager.bind(FSURI, conf);
     StubDelegationTokenManager stub = getTokenManager(manager);
+    final String canonicalServiceName = ExtensionHelper.buildCanonicalServiceName(FSURI);
     assertEquals("Service in " + manager,
-        ABFS, stub.createServiceText().toString());
+        canonicalServiceName,
+        stub.createServiceText().toString());
     assertEquals("Binding URI of " + stub, FSURI, stub.getFsURI());
 
     Token<DelegationTokenIdentifier> token = manager.getDelegationToken(
         RENEWER);
     assertEquals("Service in " + token,
-        ABFS, token.getService().toString());
+        canonicalServiceName, token.getService().toString());
     decodeIdentifier(token);
     assertTokenKind(StubAbfsTokenIdentifier.TOKEN_KIND, token);
 
@@ -175,7 +184,8 @@ public class TestDTManagerLifecycle extends AbstractAbfsTestWithTimeout {
     StubAbfsTokenIdentifier dtId =
         (StubAbfsTokenIdentifier) dt.decodeIdentifier();
     String idStr = dtId.toString();
-    assertEquals("URI in " + idStr, FSURI, dtId.getUri());
+    assertEquals("URI in " + idStr,
+        CANONICAL_SERVICE_URI, dtId.getUri());
     assertEquals("renewer in " + idStr,
         RENEWER, dtId.getRenewer().toString());
     manager.renewDelegationToken(dt);
