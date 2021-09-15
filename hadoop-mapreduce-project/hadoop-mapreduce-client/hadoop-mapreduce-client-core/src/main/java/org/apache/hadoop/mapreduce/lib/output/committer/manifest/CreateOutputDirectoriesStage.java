@@ -38,6 +38,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MKDIRS_RETURNED_FALSE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
 
 /**
@@ -140,42 +141,51 @@ public class CreateOutputDirectoriesStage extends
    * Set up the destination directories while trying to minimize the amount
    * of duplicate IO.
    * @param path path to create
+   * @return true if dir created/found
    * @throws IOException IO Failure.
    */
   private boolean maybeCreateOneDirectory(Path path) throws IOException {
     // if a directory is in the map: return.
-    boolean create;
-    if (dirMap.get(path) == null) {
-      // there's no entry in the map.
 
-      // TODO: maybe only do getFileStatusOrNull checks if mkdirs() fails.
-
-      // See if it exists
-      final FileStatus st = getFileStatusOrNull(path);
-      if (st != null) {
-        if (st.isDirectory()) {
-          // is good.
-          dirMap.put(path, path);
-          create = false;
-        } else {
-          // is bad: delete a file
-          LOG.info("Deleting file where a directory should go: {}", st);
-          delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
-          create = true;
-        }
-      } else {
-        // nothing found
-        create = true;
-      }
-    } else {
-      // it is in the map because either it has been created in another thread
-      // or because a child of it has been created in another thread and the
-      // map was updated.
-      create = false;
+    if (dirMap.get(path) != null) {
+      // already exists in this job
+      return false;
     }
-    if (create) {
+
+    // create the dir
+    if (mkdirs(path, false)) {
       // add the dir to the map, along with all parents.
       addDirectoryAndParentsToDirectoryMap(path);
+      return true;
+    }
+    LOG.debug("Failed to create a directory {}", path);
+    getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
+
+    // no mkdirs. Assume here that there's a problem.
+    // See if it exists
+    boolean create;
+    final FileStatus st = getFileStatusOrNull(path);
+    if (st != null) {
+      if (!st.isDirectory()) {
+        // is bad: delete a file
+        LOG.info("Deleting file where a directory should go: {}", st);
+        delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
+        create = true;
+      } else {
+        // is good.
+        LOG.warn("Even though mkdirs({}) failed, there is a directory there", path);
+        dirMap.put(path, path);
+        create = false;
+      }
+    } else {
+      // nothing found. This should never happen as the first mkdirs should have created it.
+      // so the getFileStatus call never reached.
+      LOG.warn("Although mkdirs({}) returned false, there's nothing at that path to prevent it",
+          path);
+      create = true;
+    }
+
+    if (create) {
       // create the directory
       if (!mkdirs(path, false)) {
         // two possible outcomes. Something went very wrong
@@ -183,6 +193,7 @@ public class CreateOutputDirectoriesStage extends
 
         // mkdirs() could also fail if there is a parent path which
         // is a file
+        getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
         directoryMustExist("Creating directory ", path);
       }
     }

@@ -119,6 +119,8 @@ public final class ManifestCommitterConstants {
       OP_LOAD_MANIFEST,
       OP_LOAD_ALL_MANIFESTS,
       OP_MKDIRS,
+      OP_MKDIRS_RETURNED_FALSE,
+      OP_MSYNC,
       OP_RENAME_FILE,
       OP_SAVE_TASK_MANIFEST,
 
