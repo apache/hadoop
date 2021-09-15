@@ -31,7 +31,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_R
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRename.RouterRenameOption;
-import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.DEFAULT_SCHEDULER_JOURNAL_URI;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
@@ -436,8 +435,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       Configuration sConf = new Configuration(conf);
       URI journalUri;
       try {
-        journalUri = new URI(
-            sConf.get(SCHEDULER_JOURNAL_URI, DEFAULT_SCHEDULER_JOURNAL_URI));
+        journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
       } catch (URISyntaxException e) {
         throw new IOException("Bad journal uri. Please check configuration for "
             + SCHEDULER_JOURNAL_URI);

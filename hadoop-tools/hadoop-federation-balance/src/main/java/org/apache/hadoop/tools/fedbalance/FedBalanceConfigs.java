@@ -42,9 +42,6 @@ public final class FedBalanceConfigs {
    persistence and recover. */
   public static final String SCHEDULER_JOURNAL_URI =
       "hdfs.fedbalance.procedure.scheduler.journal.uri";
-  public static final String DEFAULT_SCHEDULER_JOURNAL_URI =
-      "hdfs://localhost:8020/tmp/procedure";
-
   public static final String JOB_PREFIX = "JOB-";
   public static final String TMP_TAIL = ".tmp";
 
