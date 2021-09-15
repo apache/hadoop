@@ -1088,7 +1088,7 @@ class BlockPoolSlice {
   }
 
   @VisibleForTesting
-  public void setDeleteDuplicateReplicasForTests(
+  void setDeleteDuplicateReplicasForTests(
       boolean deleteDuplicateReplicasForTests) {
     this.deleteDuplicateReplicas = deleteDuplicateReplicasForTests;
   }
