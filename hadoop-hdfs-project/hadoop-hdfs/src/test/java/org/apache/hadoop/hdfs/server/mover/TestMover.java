@@ -970,7 +970,8 @@ public class TestMover {
         for (LocatedBlock lb : blocks.getLocatedBlocks()) {
           for (StorageType type : lb.getStorageTypes()) {
             if (!StorageType.ARCHIVE.equals(type)) {
-              LOG.info("Block {} has unexpected StorageType: {}",
+              LOG.info("Block {} has StorageType: {}. It might not have been "
+                      + "updated yet, awaiting the latest update.",
                   lb.getBlock().toString(), type);
               return false;
             }
