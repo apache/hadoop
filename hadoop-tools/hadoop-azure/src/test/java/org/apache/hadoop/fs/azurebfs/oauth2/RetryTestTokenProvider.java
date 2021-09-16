@@ -45,7 +45,7 @@ public class RetryTestTokenProvider implements CustomTokenProviderAdaptee {
 
   /**
    * Clear earlier retry details and reset RetryTestTokenProvider instance to
-   * state of first access token fetch call
+   * state of first access token fetch call.
    */
   public void resetStatusToFirstTokenFetch() {
     isThisFirstTokenFetch = true;
