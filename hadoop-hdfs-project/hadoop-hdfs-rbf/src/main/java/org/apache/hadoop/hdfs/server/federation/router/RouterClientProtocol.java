@@ -999,7 +999,21 @@ public class RouterClientProtocol implements ClientProtocol {
 
     Map<String, DatanodeStorageReport[]> dnSubcluster =
         rpcServer.getDatanodeStorageReportMap(type);
+    return mergeDtanodeStorageReport(dnSubcluster);
+  }
 
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      HdfsConstants.DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+
+    Map<String, DatanodeStorageReport[]> dnSubcluster =
+        rpcServer.getDatanodeStorageReportMap(type, requireResponse, timeOutMs);
+    return mergeDtanodeStorageReport(dnSubcluster);
+  }
+
+  private DatanodeStorageReport[] mergeDtanodeStorageReport(
+      Map<String, DatanodeStorageReport[]> dnSubcluster) {
     // Avoid repeating machines in multiple subclusters
     Map<String, DatanodeStorageReport> datanodesMap = new LinkedHashMap<>();
     for (DatanodeStorageReport[] dns : dnSubcluster.values()) {
@@ -1818,7 +1832,7 @@ public class RouterClientProtocol implements ClientProtocol {
    *          path may be located. On return this list is trimmed to include
    *          only the paths that have corresponding destinations in the same
    *          namespace.
-   * @param dst The destination path
+   * @param dstLocations The destination path
    * @return A map of all eligible source namespaces and their corresponding
    *         replacement value.
    * @throws IOException If the dst paths could not be determined.
