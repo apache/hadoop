@@ -24,9 +24,12 @@ import java.util.stream.Collectors;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CreateOutputDirectoriesStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.LoadManifestsStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
 
 /**
  * Test loading manifests from a store.
@@ -92,10 +95,10 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     LoadManifestsStage stage = new LoadManifestsStage(
         getJobStageConfig());
 
-    Pair<LoadManifestsStage.SummaryInfo, List<TaskManifest>> result
+    LoadManifestsStage.Result result
         = stage.apply(true);
-    LoadManifestsStage.SummaryInfo summary = result.getLeft();
-    List<TaskManifest> loadedManifests = result.getRight();
+    LoadManifestsStage.SummaryInfo summary = result.getSummary();
+    List<TaskManifest> loadedManifests = result.getManifests();
 
     Assertions.assertThat(summary.getManifestCount())
         .describedAs("Manifest count of  %s", summary)

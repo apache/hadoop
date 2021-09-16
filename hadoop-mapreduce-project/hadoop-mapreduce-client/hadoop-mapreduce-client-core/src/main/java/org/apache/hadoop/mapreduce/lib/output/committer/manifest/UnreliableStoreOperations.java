@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.util.JsonSerialization;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPERATION_TIMED_OUT;
@@ -279,9 +280,10 @@ public class UnreliableStoreOperations implements StoreOperations {
   }
 
   @Override
-  public TaskManifest loadTaskManifest(final FileStatus st) throws IOException {
+  public TaskManifest loadTaskManifest(JsonSerialization<TaskManifest> serializer,
+      final FileStatus st) throws IOException {
     verifyExists(st.getPath());
-    return wrappedOperations.loadTaskManifest(st);
+    return wrappedOperations.loadTaskManifest(serializer, st);
   }
 
   @Override

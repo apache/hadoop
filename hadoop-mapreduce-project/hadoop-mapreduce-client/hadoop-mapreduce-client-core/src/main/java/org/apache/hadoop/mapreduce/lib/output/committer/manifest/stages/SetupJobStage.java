@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 
@@ -29,7 +29,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 
 /**
  * Stage to set up a job by creating the job attempt directory.
- * This directory must not exist.
+ * The job attempt directory must not exist before the call.
  */
 public class SetupJobStage extends
     AbstractJobCommitStage<Boolean, Path> {

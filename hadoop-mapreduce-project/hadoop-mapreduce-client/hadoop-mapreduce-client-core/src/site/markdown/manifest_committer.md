@@ -78,14 +78,78 @@ A factory for the abfs schema would be defined in
 `mapreduce.outputcommitter.factory.scheme.abfs` ; and a similar one for `gcs`.
 
 Some matching spark configuration changes, especially for parquet binding, will be required.
-These can be done in
-`core-site.xml` or `spark-default`
+These can be done in `core-site.xml`, if it is not defined in the `mapred-default.xml` JAR.
+
 
 ```
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <description>
+    The default committer factory for ABFS is for the manifest committer.
+  </description>
+</property>
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.gs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+  <description>
+    The default committer factory for GCS is for the manifest committer.
+  </description>
+</property>
+
+```
+
+
+### 
+
+In `spark-default`
+
+```
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
+spark.hadoop.mapreduce.outputcommitter.factory.scheme.gs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
 
 ```
+
+The hadoop committer settings can be validated in a recent build of [cloudstore](https://github.com/steveloughran/cloudstore)
+and its `committerinfo` command.
+This command instantiates a committer for that path through the same factory mechanism as MR and spark jobs use,
+then prints its toString value.
+
+```
+hadoop jar cloudstore-1.0.jar committerinfo abfs://testing@ukwest.dfs.core.windows.net/
+
+2021-09-16 19:42:59,731 [main] INFO  commands.CommitterInfo (StoreDurationInfo.java:<init>(53)) - Starting: Create committer
+Committer factory for path abfs://testing@ukwest.dfs.core.windows.net/ is
+ org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory@3315d2d7
+  (classname org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory)
+2021-09-16 19:43:00,897 [main] INFO  manifest.ManifestCommitter (ManifestCommitter.java:<init>(144)) - Created ManifestCommitter with
+   JobID job__0000, Task Attempt attempt__0000_r_000000_1 and destination abfs://testing@ukwest.dfs.core.windows.net/
+Created committer of class org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitter:
+ ManifestCommitter{ManifestCommitterConfig{destinationDir=abfs://testing@ukwest.dfs.core.windows.net/,
+   role='task committer',
+   taskAttemptDir=abfs://testing@ukwest.dfs.core.windows.net/_temporary/manifest_job__0000/0/_temporary/attempt__0000_r_000000_1,
+   createJobMarker=true,
+   jobUniqueId='job__0000',
+   jobUniqueIdSource='JobID',
+   jobAttemptNumber=0,
+   jobAttemptId='job__0000_0',
+   taskId='task__0000_r_000000',
+   taskAttemptId='attempt__0000_r_000000_1'},
+   iostatistics=counters=();
+
+gauges=();
+
+minimums=();
+
+maximums=();
+
+means=();
+}
+
+```
+
 
 ## Verifying that the committer was used
 
@@ -124,13 +188,26 @@ This allows for the statistics of jobs to be collected irrespective of their out
 Whether or not saving the `_SUCCESS` marker is enabled, and without problems
 caused by a chain of queries overwriting the markers.
 
-## Validating output
+# Viewing Success/Summary files.
+
+The summary files are JSON, and can be viewed in any text editor.
+
+For a more succinct summary, including better display of statistics, use the `ManifestPrinter` tool.
+
+```
+hadoop org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestPrinter <path>
+```
+
+
+## Testing only: Validating output
 
 The option `mapreduce.manifest.committer.validate.output` triggers a check
 of every renamed file to verify it has the expected length.
 
-This adds the overhead of a HEAD request per file, and so is
+This adds the overhead of a `HEAD` request per file, and so is
 recommended for testing only.
+
+There is no verification of the actual contents.
 
 ## Cleanup
 
@@ -146,9 +223,9 @@ may surface in cloud storage.
 | Option | Meaning | Default Value |
 |--------|---------|---------------|
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
+| `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
-| `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 
 The algorithm is:
 
@@ -161,7 +238,7 @@ The algorithm is:
 5. Delete failed in step #4 or was skipped, and if trash is enabled for the filesystem
    attempt to rename  `_temporary` directory under trash dir.
 
-If the dir could not be deleted/renamed
+If the dir could not be deleted/renamed:
 1. if `mapreduce.fileoutputcommitter.cleanup-failures.ignored`
    is true then the stage warns and continues.
 2. Else the last raised exception is rethown.

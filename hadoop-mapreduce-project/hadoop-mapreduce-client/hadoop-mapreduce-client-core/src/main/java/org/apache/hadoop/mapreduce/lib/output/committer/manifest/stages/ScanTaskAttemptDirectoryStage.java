@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -173,6 +173,7 @@ public final class ScanTaskAttemptDirectoryStage
     // now scan the subdirectories
     LOG.debug("Number of subdirectories under {} found: {}",
         srcDir, subdirs.size());
+    LOG.debug("File count {}", files);
     for (FileStatus st : subdirs) {
       Path destSubDir = new Path(destDir, st.getPath().getName());
       final int d = scanDirectoryTree(manifest, st.getPath(), destSubDir,

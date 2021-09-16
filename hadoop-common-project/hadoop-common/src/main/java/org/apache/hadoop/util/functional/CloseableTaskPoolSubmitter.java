@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.util.functional;
 
 import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.util.functional.TaskPool;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import static java.util.Objects.requireNonNull;
 
@@ -31,21 +32,27 @@ import static java.util.Objects.requireNonNull;
  * shuts down the pool. This can help manage
  * thread pool lifecycles.
  */
-final class CloseableTaskSubmitter implements TaskPool.Submitter,
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public final class CloseableTaskPoolSubmitter implements TaskPool.Submitter,
     Closeable {
 
   /** Executors. */
-  private final ExecutorService pool;
+  private ExecutorService pool;
 
   /**
    * Constructor.
    * @param pool non-null executor.
    */
-  CloseableTaskSubmitter(final ExecutorService pool) {
+  public CloseableTaskPoolSubmitter(final ExecutorService pool) {
     this.pool = requireNonNull(pool);
   }
 
-  ExecutorService getPool() {
+  /**
+   * Get the pool.
+   * @return the pool.
+   */
+  public ExecutorService getPool() {
     return pool;
   }
 
@@ -54,7 +61,10 @@ final class CloseableTaskSubmitter implements TaskPool.Submitter,
    */
   @Override
   public void close() {
-    pool.shutdown();
+    if (pool != null) {
+      pool.shutdown();
+      pool = null;
+    }
   }
 
   @Override

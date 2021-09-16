@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -37,7 +36,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  */
 
 public class CommitTaskStage extends
-    AbstractJobCommitStage<Void, Pair<Path, TaskManifest>> {
+    AbstractJobCommitStage<Void, CommitTaskStage.Result> {
 
   public CommitTaskStage(final StageConfig stageConfig) {
     super(true, stageConfig, OP_STAGE_TASK_COMMIT, false);
@@ -52,7 +51,7 @@ public class CommitTaskStage extends
    * @throws IOException IO failure.
    */
   @Override
-  protected Pair<Path, TaskManifest> executeStage(final Void arguments)
+  protected CommitTaskStage.Result executeStage(final Void arguments)
       throws IOException {
 
     // execute the scan
@@ -72,7 +71,39 @@ public class CommitTaskStage extends
     // Now save with rename
     Path manifestPath = new SaveTaskManifestStage(getStageConfig())
         .apply(manifest);
-    return Pair.of(manifestPath, manifest);
+    return new CommitTaskStage.Result(manifestPath, manifest);
   }
 
+  /**
+   * Result of the stage.
+   */
+  public static final class Result {
+    /** The path the manifest was saved to. */
+    private final Path path;
+    /** The manifest. */
+    private final TaskManifest taskManifest;
+
+    public Result(Path path,
+        TaskManifest taskManifest) {
+      this.path = path;
+      this.taskManifest = taskManifest;
+    }
+
+    /**
+     * Get the manifest path.
+     * @return The path the manifest was saved to.
+     */
+    public Path getPath() {
+      return path;
+    }
+
+    /**
+     * Get the manifest.
+     * @return The manifest.
+     */
+    public TaskManifest getTaskManifest() {
+      return taskManifest;
+    }
+
+  }
 }

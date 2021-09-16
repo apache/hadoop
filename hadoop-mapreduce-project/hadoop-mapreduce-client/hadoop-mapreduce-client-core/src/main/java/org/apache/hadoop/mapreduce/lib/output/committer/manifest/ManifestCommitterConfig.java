@@ -30,10 +30,13 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageEventCallbacks;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.SUCCESSFUL_JOB_OUTPUT_DIR_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER;
@@ -243,51 +246,51 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
     return stageConfig;
   }
 
-  Path getDestinationDir() {
+  public Path getDestinationDir() {
     return destinationDir;
   }
 
-  String getRole() {
+  public String getRole() {
     return role;
   }
 
-  Path getTaskAttemptDir() {
+  public Path getTaskAttemptDir() {
     return taskAttemptDir;
   }
 
-  Path getJobAttemptDir() {
+  public Path getJobAttemptDir() {
     return dirs.getJobAttemptDir();
   }
 
-  Configuration getConf() {
+  public Configuration getConf() {
     return conf;
   }
 
-  JobContext getJobContext() {
+  public JobContext getJobContext() {
     return jobContext;
   }
 
-  boolean getCreateJobMarker() {
+  public boolean getCreateJobMarker() {
     return createJobMarker;
   }
 
-  String getJobAttemptId() {
+  public String getJobAttemptId() {
     return jobAttemptId;
   }
 
-  String getTaskAttemptId() {
+  public String getTaskAttemptId() {
     return taskAttemptId;
   }
 
-  String getTaskId() {
+  public String getTaskId() {
     return taskId;
   }
 
-  String getJobUniqueId() {
+  public String getJobUniqueId() {
     return jobUniqueId;
   }
 
-  boolean getValidateOutput() {
+  public boolean getValidateOutput() {
     return validateOutput;
   }
 
@@ -302,7 +305,7 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
    * settings.
    * @return a new thread pool.
    */
-  CloseableTaskSubmitter createSubmitter() {
+  public CloseableTaskPoolSubmitter createSubmitter() {
     return createSubmitter(
         OPT_IO_PROCESSORS, OPT_IO_PROCESSORS_DEFAULT);
   }
@@ -314,7 +317,7 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
    * @param defVal default value.
    * @return a new thread pool.
    */
-  CloseableTaskSubmitter createSubmitter(String key, int defVal) {
+  public CloseableTaskPoolSubmitter createSubmitter(String key, int defVal) {
     int numThreads = conf.getInt(key, defVal);
     if (numThreads <= 0) {
       // ignore the setting if it is too invalid.
@@ -324,10 +327,10 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
   }
 
   @VisibleForTesting
-  static CloseableTaskSubmitter createCloseableTaskSubmitter(
+  public static CloseableTaskPoolSubmitter createCloseableTaskSubmitter(
       final int numThreads,
       final String jobAttemptId) {
-    return new CloseableTaskSubmitter(
+    return new CloseableTaskPoolSubmitter(
         HadoopExecutors.newFixedThreadPool(numThreads,
             new ThreadFactoryBuilder()
                 .setDaemon(true)

@@ -36,12 +36,21 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageEventCallbacks;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.ValidateRenamedFilesStage;
+import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AuditingIntegration.updateCommonContextOnCommitterEntry;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.CleanupJobStage.cleanupStageOptionsFromConfig;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.cleanupStageOptionsFromConfig;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_COMPLETED_COUNT;
@@ -275,8 +284,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
         .build();
     try {
       taskAttemptCommittedManifest = new CommitTaskStage(stageConfig)
-          .apply(null)
-          .getRight();
+          .apply(null).getTaskManifest();
       iostatistics.incrementCounter(COMMITTER_TASKS_COMPLETED_COUNT, 1);
     } catch (IOException e) {
       iostatistics.incrementCounter(COMMITTER_TASKS_FAILED_COUNT, 1);
@@ -334,7 +342,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
     // will be saved to the report directory.
     ManifestSuccessData marker = getOrCreateSuccessData(committerConfig);
     IOException failure = null;
-    try (CloseableTaskSubmitter ioProcs =
+    try (CloseableTaskPoolSubmitter ioProcs =
              committerConfig.createSubmitter();
          StoreOperations storeOperations = createStoreOperations()) {
       // the stage config will be shared across all stages.
@@ -451,7 +459,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
       final String statisticName,
       final JobContext jobContext,
       final ManifestCommitterConfig committerConfig) throws IOException {
-    try (CloseableTaskSubmitter ioProcs =
+    try (CloseableTaskPoolSubmitter ioProcs =
              committerConfig.createSubmitter()) {
 
       return new CleanupJobStage(committerConfig
@@ -628,7 +636,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
     final StringBuilder sb = new StringBuilder(
         "ManifestCommitter{");
     sb.append(baseConfig);
-    sb.append(", iostatistics=").append(ioStatisticsToString(iostatistics));
+    sb.append(", iostatistics=").append(ioStatisticsToPrettyString(iostatistics));
     sb.append('}');
     return sb.toString();
   }

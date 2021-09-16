@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 
@@ -93,8 +94,10 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
   }
 
   @Override
-  public TaskManifest loadTaskManifest(FileStatus st) throws IOException {
-    return TaskManifest.load(fileSystem, st.getPath(), st);
+  public TaskManifest loadTaskManifest(
+      JsonSerialization<TaskManifest> serializer,
+      FileStatus st) throws IOException {
+    return TaskManifest.load(serializer, fileSystem, st.getPath(), st);
   }
 
   @Override

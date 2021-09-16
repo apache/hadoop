@@ -163,11 +163,12 @@ public class ManifestSuccessData
   private String stage;
 
   @Override
-  public void validate() throws IOException {
+  public ManifestSuccessData validate() throws IOException {
     verify(name != null,
         "Incompatible file format: no 'name' field");
     verify(NAME.equals(name),
         "Incompatible file format: " + name);
+    return this;
   }
 
   @Override

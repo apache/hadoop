@@ -27,8 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractJobCommitStage.E_TRASH_DISABLED;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.E_TRASH_DISABLED;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.UnreliableStoreOperations.E_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -131,7 +134,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   public void testRenameToTrash() throws Throwable {
     describe("cleanup by rename to trash");
 
-    CleanupJobStage.CleanupResult result = cleanup(
+    cleanup(
         true, true, false, true,
         CleanupJobStage.Outcome.RENAMED_TO_TRASH, 0);
     verifyJobDirsCleanedUp();
@@ -199,7 +202,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     TaskManifest manifest = manifests.get(4);
     Path taPath = new Path(manifest.getTaskAttemptDir());
     failures.addDeletePathToFail(taPath);
-    CleanupJobStage.CleanupResult result = cleanup(true, true, false, false,
+    cleanup(true, true, false, false,
         CleanupJobStage.Outcome.DELETED, PARALLEL_DELETE_COUNT);
   }
 
@@ -214,7 +217,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     StageConfig stageConfig = getJobStageConfig();
     // TA dir doesn't exist, so listing will fail.
     failures.addPathNotFound(stageConfig.getJobAttemptTaskSubDir());
-    CleanupJobStage.CleanupResult result = cleanup(true, true, false, false,
+    cleanup(true, true, false, false,
         CleanupJobStage.Outcome.DELETED, ROOT_DELETE_COUNT);
   }
 

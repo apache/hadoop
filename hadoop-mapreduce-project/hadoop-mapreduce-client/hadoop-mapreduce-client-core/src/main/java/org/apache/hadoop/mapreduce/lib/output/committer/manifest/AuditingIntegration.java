@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
-/*
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_STAGE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_TASK_ATTEMPT_ID;
-*/
 
 /**
  * Helper class to support integration with Hadoop 3.3.2+ Auditing.
@@ -43,7 +41,6 @@ public final class AuditingIntegration {
    */
   public static void updateCommonContextOnCommitterEntry(
       ManifestCommitterConfig committerConfig) {
-/*
     CommonAuditContext context = currentAuditContext();
     context.put(AuditConstants.PARAM_JOB_ID,
         committerConfig.getJobUniqueId());
@@ -51,30 +48,24 @@ public final class AuditingIntegration {
     if (!committerConfig.getTaskAttemptId().isEmpty()) {
       context.put(CONTEXT_ATTR_TASK_ATTEMPT_ID,
           committerConfig.getTaskAttemptId());
-
     }
-*/
   }
 
   /**
    * Callback on stage entry.
-   * Sets {@link #activeStage} and updates the
+   * Sets the sactiveStage and updates the
    * common context.
    * @param stage new stage
    */
   public static void enterStage(String stage) {
-/*
     currentAuditContext().put(CONTEXT_ATTR_STAGE, stage);
-*/
   }
 
   /**
    * Remove stage from common audit context.
    */
   public static void exitStage() {
-/*
     currentAuditContext().remove(CONTEXT_ATTR_STAGE);
-*/
   }
 
   /**
@@ -86,10 +77,8 @@ public final class AuditingIntegration {
    * @param stage stage name.
    */
   public static void enterStageWorker(String jobId, String stage) {
-/*
       CommonAuditContext context = currentAuditContext();
       context.put(AuditConstants.PARAM_JOB_ID, jobId);
       context.put(CONTEXT_ATTR_STAGE, stage);
-*/
   }
 }

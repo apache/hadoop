@@ -49,8 +49,13 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -146,7 +151,7 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Submitter for tasks; may be null.
    */
-  private CloseableTaskSubmitter submitter;
+  private CloseableTaskPoolSubmitter submitter;
 
   /**
    * Stage statistics. Created in test setup, and in
@@ -318,7 +323,7 @@ public abstract class AbstractManifestCommitterTest
    * Get the task submitter.
    * @return submitter or null
    */
-  protected CloseableTaskSubmitter getSubmitter() {
+  protected CloseableTaskPoolSubmitter getSubmitter() {
     return submitter;
   }
 
@@ -326,7 +331,7 @@ public abstract class AbstractManifestCommitterTest
    * Set the task submitter.
    * @param submitter new value.
    */
-  protected void setSubmitter(CloseableTaskSubmitter submitter) {
+  protected void setSubmitter(CloseableTaskPoolSubmitter submitter) {
     this.submitter = submitter;
   }
 

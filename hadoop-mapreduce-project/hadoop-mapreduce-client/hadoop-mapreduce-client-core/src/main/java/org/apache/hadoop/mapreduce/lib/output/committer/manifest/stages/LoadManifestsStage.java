@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -52,8 +51,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * This keeps the memory footprint of each manifest down.
  */
 public class LoadManifestsStage extends
-    AbstractJobCommitStage<Boolean,
-        Pair<LoadManifestsStage.SummaryInfo, List<TaskManifest>>> {
+    AbstractJobCommitStage<Boolean, LoadManifestsStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       LoadManifestsStage.class);
@@ -73,7 +71,7 @@ public class LoadManifestsStage extends
    */
   private final List<TaskManifest> manifests = new ArrayList<>();
 
-  LoadManifestsStage(final StageConfig stageConfig) {
+  public LoadManifestsStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_LOAD_MANIFESTS, true);
   }
 
@@ -84,7 +82,7 @@ public class LoadManifestsStage extends
    * @throws IOException IO failure.
    */
   @Override
-  protected Pair<SummaryInfo, List<TaskManifest>> executeStage(
+  protected LoadManifestsStage.Result executeStage(
       final Boolean prune) throws IOException {
 
     LOG.info("Executing Manifest Job Commit with manifests in {}",
@@ -106,7 +104,7 @@ public class LoadManifestsStage extends
         getJobAttemptDir(),
         summaryInfo);
 
-    return Pair.of(summaryInfo, manifestList);
+    return new LoadManifestsStage.Result(summaryInfo, manifestList);
   }
 
   /**
@@ -178,6 +176,30 @@ public class LoadManifestsStage extends
   }
 
   /**
+   * Result of the stage.
+   */
+  public static final class Result {
+    private final SummaryInfo summary;
+
+    private final List<TaskManifest> manifests;
+
+    public Result(SummaryInfo summary,
+        List<TaskManifest> manifests) {
+      this.summary = summary;
+      this.manifests = manifests;
+    }
+
+    public SummaryInfo getSummary() {
+      return summary;
+    }
+
+    public List<TaskManifest> getManifests() {
+      return manifests;
+    }
+
+  }
+
+  /**
    * Summary information.
    */
   public static final class SummaryInfo implements IOStatisticsSource {
@@ -219,19 +241,19 @@ public class LoadManifestsStage extends
       return iostatistics;
     }
 
-    long getFileCount() {
+    public long getFileCount() {
       return fileCount;
     }
 
-    long getDirectoryCount() {
+    public long getDirectoryCount() {
       return directoryCount;
     }
 
-    long getTotalFileSize() {
+    public long getTotalFileSize() {
       return totalFileSize;
     }
 
-    long getManifestCount() {
+    public long getManifestCount() {
       return manifestCount;
     }
 
@@ -239,7 +261,7 @@ public class LoadManifestsStage extends
      * Add all statistics.
      * @param manifest manifest to add.
      */
-    void add(TaskManifest manifest) {
+    public void add(TaskManifest manifest) {
       manifestCount++;
       iostatistics.aggregate(manifest.getIOStatistics());
       fileCount += manifest.getFilesToCommit().size();

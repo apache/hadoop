@@ -288,8 +288,9 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
   /**
    * Validate the data: those fields which must be non empty, must be set.
    * @throws IOException if the data is invalid
+   * @return
    */
-  public void validate() throws IOException {
+  public TaskManifest validate() throws IOException {
     verify(TYPE.equals(type), "Wrong type: %s", type);
     verify(version == VERSION, "Wrong version: %s", version);
     validateCollectionClass(extraData.keySet(), String.class);
@@ -303,6 +304,7 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
           c.getDest());
       destinations.add(c.getDest());
     }
+    return this;
   }
 
   /**
@@ -332,28 +334,29 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
   public static TaskManifest load(FileSystem fs, Path path)
       throws IOException {
     LOG.debug("Reading Manifest in file {}", path);
-    TaskManifest instance = serializer().load(fs, path);
-    instance.validate();
-    return instance;
+    return serializer().load(fs, path).validate();
   }
 
   /**
    * Load an instance from a file, then validate it.
    * If loading through a listing; use this API so that filestatus
    * hints can be used.
+   * @param serializer serializer.
    * @param fs filesystem
    * @param path path to load from
    * @param status status of file to load
    * @return the loaded instance
-   * @throws IOException IO failure
    * @throws IOException IO failure/the data is invalid
    */
-  public static TaskManifest load(FileSystem fs, Path path, FileStatus status)
+  public static TaskManifest load(
+      JsonSerialization<TaskManifest> serializer,
+      FileSystem fs,
+      Path path,
+      FileStatus status)
       throws IOException {
     LOG.debug("Reading Manifest in file {}", path);
-    TaskManifest instance = serializer().load(fs, path, status);
-    instance.validate();
-    return instance;
+    return serializer.load(fs, path, status)
+        .validate();
   }
 
 }

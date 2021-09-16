@@ -71,9 +71,10 @@ public abstract class AbstractManifestData<T extends AbstractManifestData>
 
   /**
    * Validate the data: those fields which must be non empty, must be set.
+   * @return the validated instance.
    * @throws IOException if the data is invalid
    */
-  public abstract void validate() throws IOException;
+  public abstract T validate() throws IOException;
 
   /**
    * Serialize to JSON and then to a byte array, after performing a

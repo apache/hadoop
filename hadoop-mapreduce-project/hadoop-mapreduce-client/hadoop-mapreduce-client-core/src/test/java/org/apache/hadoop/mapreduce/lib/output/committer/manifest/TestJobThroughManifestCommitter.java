@@ -29,13 +29,21 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.LoadManifestsStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJobStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.ValidateRenamedFilesStage;
 import org.apache.hadoop.net.NetUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
@@ -325,12 +333,12 @@ public class TestJobThroughManifestCommitter
         "part-00", getSubmitter().getPool(),
         DEPTH, WIDTH, FILES_PER_DIRECTORY);
     // saves the task manifest to the job dir
-    Pair<Path, TaskManifest> pair = new CommitTaskStage(ta00Config)
+    CommitTaskStage.Result result = new CommitTaskStage(ta00Config)
         .apply(null);
     verifyPathExists(getFileSystem(), "manifest",
-        pair.getLeft());
+        result.getPath());
 
-    TaskManifest manifest = pair.getRight();
+    TaskManifest manifest = result.getTaskManifest();
     manifest.validate();
     // clear the IOStats to reduce the size of the printed JSON.
     manifest.setIOStatistics(null);
@@ -355,10 +363,10 @@ public class TestJobThroughManifestCommitter
         "part-00", getSubmitter().getPool(),
         DEPTH, WIDTH, FILES_PER_DIRECTORY);
     // saves the task manifest to the job dir
-    Pair<Path, TaskManifest> pair = new CommitTaskStage(ta01Config)
+    CommitTaskStage.Result result = new CommitTaskStage(ta01Config)
         .apply(null);
     Path manifestPath = verifyPathExists(getFileSystem(), "manifest",
-        pair.getLeft()).getPath();
+        result.getPath()).getPath();
 
     // load the manifest from the FS, not the return value,
     // so we can verify that last task to commit wins.
@@ -386,9 +394,9 @@ public class TestJobThroughManifestCommitter
         "part-01", getSubmitter().getPool(),
         DEPTH, WIDTH + 1, FILES_PER_DIRECTORY - 1);
     // saves the task manifest to the job dir
-    Pair<Path, TaskManifest> pair = new CommitTaskStage(ta10Config)
+    CommitTaskStage.Result result = new CommitTaskStage(ta10Config)
         .apply(null);
-    TaskManifest manifest = pair.getRight();
+    TaskManifest manifest = result.getTaskManifest();
     verifyManifestTaskAttemptID(manifest, taskAttempt10);
     // validate the manifest
     verifyManifestFilesMatch(manifest, files);
@@ -425,11 +433,11 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0400_loadManifests() throws Throwable {
     describe("Load all manifests; committed must be TA01 and TA10");
-    Pair<LoadManifestsStage.SummaryInfo, List<TaskManifest>> pair
+    LoadManifestsStage.Result result
         = new LoadManifestsStage(jobStageConfig).apply(true);
-    String summary = pair.getLeft().toString();
+    String summary = result.getSummary().toString();
     LOG.info("Manifest summary {}", summary);
-    List<TaskManifest> manifests = pair.getRight();
+    List<TaskManifest> manifests = result.getManifests();
     Assertions.assertThat(manifests)
         .describedAs("Loaded manifests in %s", summary)
         .hasSize(2);
@@ -466,8 +474,7 @@ public class TestJobThroughManifestCommitter
 
     // load manifests stage will load all the task manifests again
     List<TaskManifest> manifests = new LoadManifestsStage(jobStageConfig)
-        .apply(true)
-        .getRight();
+        .apply(true).getManifests();
     // Now verify their files exist, returning the list of renamed files.
     List<String> committedFiles = new ValidateRenamedFilesStage(jobStageConfig)
         .apply(manifests)

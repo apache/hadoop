@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -60,12 +60,20 @@ public class CreateOutputDirectoriesStage extends
       CreateOutputDirectoriesStage.class);
 
   /**
-   * Directories as a map of (path, created).
+   * Directories as a map of (path, path).
+   * Using a map rather than any set for efficient concurrency; the
+   * concurrent sets don't do lookups so fast.
    */
   private final Map<Path, Path> dirMap = new ConcurrentHashMap<>();
 
+  /**
+   * A list of created paths for the results.
+   */
+  private final List<Path> createdDirectories = new ArrayList<>();
+
   public CreateOutputDirectoriesStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_CREATE_TARGET_DIRS, true);
+    // add the dest dir to the dir map as we expect the job setup to create it.
     dirMap.put(getDestinationDir(), getDestinationDir());
   }
 
@@ -113,7 +121,6 @@ public class CreateOutputDirectoriesStage extends
 
     // there are no duplicates: creating the set is sufficient
     // to filter all these out.
-    final List<Path> createdPaths = new ArrayList<>(directoriesToCreate.size());
 
     // TODO: somehow create all parent dirs (or at least delete files
     // at those locations) be for
@@ -128,13 +135,11 @@ public class CreateOutputDirectoriesStage extends
           .run(dir -> {
             updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
             if (maybeCreateOneDirectory(dir)) {
-              synchronized (createdPaths) {
-                createdPaths.add(dir);
-              }
+              addCreatedDirectory(dir);
             }
           });
     });
-    return createdPaths;
+    return createdDirectories;
   }
 
   /**
@@ -195,20 +200,41 @@ public class CreateOutputDirectoriesStage extends
         // is a file
         getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
         directoryMustExist("Creating directory ", path);
+      } else {
+        // all good, dir was created
+        addCreatedDirectory(path);
       }
     }
     return create;
 
   }
 
-  private void addDirectoryAndParentsToDirectoryMap(Path path) {
-    dirMap.put(path, path);
-    addParentsToDirectoryMap(path);
+  /**
+   * Add a created dir to the list of created dirs.
+   * @param dir new dir.
+   */
+  private void addCreatedDirectory(Path dir) {
+    synchronized (createdDirectories) {
+      createdDirectories.add(dir);
+    }
   }
 
-  private void addParentsToDirectoryMap(final Path path) {
-    Path parent = path.getParent();
-    while (!parent.isRoot() && !getDestinationDir().equals(parent)) {
+  /**
+   * Add a dir and all parents to the directory map.
+   * @param dir directory.
+   */
+  private void addDirectoryAndParentsToDirectoryMap(Path dir) {
+    dirMap.put(dir, dir);
+    addParentsToDirectoryMap(dir);
+  }
+
+  /**
+   * Add parents of a dir to the directory map.
+   * @param dir directory.
+   */
+  private void addParentsToDirectoryMap(final Path dir) {
+    Path parent = dir.getParent();
+    while (parent != null && !parent.isRoot() && !getDestinationDir().equals(parent)) {
       dirMap.put(parent, parent);
       parent = parent.getParent();
     }

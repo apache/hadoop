@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.util.JsonSerialization;
 
 import static java.util.Objects.requireNonNull;
 
@@ -88,13 +89,16 @@ public interface StoreOperations extends Closeable {
   /**
    * Load a task manifest from the store.
    * with a real FS, this is done with
-   * {@link TaskManifest#load(FileSystem, FileStatus)}
+   * {@link TaskManifest#load(JsonSerialization, FileSystem, Path, FileStatus)}
    *
+   * @param serializer serializer.
    * @param st status with the path and other data.
    * @return the manifest
    * @throws IOException failure to load/parse
    */
-  TaskManifest loadTaskManifest(FileStatus st) throws IOException;
+  TaskManifest loadTaskManifest(
+      JsonSerialization<TaskManifest> serializer,
+      FileStatus st) throws IOException;
 
   /**
    * Save a task manifest by create(); there's no attempt at

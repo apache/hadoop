@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 
@@ -31,9 +31,20 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.manifestTempPathForTaskAttempt;
 
 /**
- * Save A task manifest via a temp file.
- * Uses the task ID and task attempt ID to determine the filename;
- * returns the final path.
+ * Save a task manifest to the job attempt dir, using the task
+ * ID for the name of the final file.
+ * For atomic writes, the manifest is saved
+ * by writing to a temp file and then renaming it.
+ * Uses both the task ID and task attempt ID to determine the temp filename;
+ * Before the rename of (temp, final-path), any file at the final path
+ * is deleted.
+ * This is so that when this stage is invoked in a task commit, its output
+ * overwrites any of the first commit.
+ * When it succeeds, therefore, unless there is any subsequent commit of
+ * another task, the task manifest at the final path is from this
+ * operation.
+ *
+ * Returns the path where the manifest was saved.
  */
 public class SaveTaskManifestStage extends
     AbstractJobCommitStage<TaskManifest, Path> {

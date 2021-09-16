@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,7 +24,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
@@ -60,10 +59,10 @@ public class CommitJobStage extends
     boolean saveMarker = arguments;
 
     // load the manifests
-    Pair<LoadManifestsStage.SummaryInfo, List<TaskManifest>> pair
+    LoadManifestsStage.Result result
         = new LoadManifestsStage(getStageConfig()).apply(true);
-    List<TaskManifest> manifests = pair.getRight();
-    LoadManifestsStage.SummaryInfo summary = pair.getLeft();
+    List<TaskManifest> manifests = result.getManifests();
+    LoadManifestsStage.SummaryInfo summary = result.getSummary();
 
     LOG.debug("Job Summary {}", summary);
     LOG.info("Committing job with file count: {}; total size {} bytes",

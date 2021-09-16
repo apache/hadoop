@@ -31,6 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Utility class for parallel execution, takes closures for the various
  * actions.
@@ -40,6 +43,8 @@ import org.slf4j.LoggerFactory;
  * Apoche Iceberg has its own version of this, with a common ancestor
  * at some point in its history.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class TaskPool {
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskPool.class);

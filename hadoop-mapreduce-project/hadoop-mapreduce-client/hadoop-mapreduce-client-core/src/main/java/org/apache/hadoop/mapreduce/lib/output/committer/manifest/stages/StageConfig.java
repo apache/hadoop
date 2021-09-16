@@ -16,11 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -120,6 +124,13 @@ public class StageConfig {
    */
   private StageEventCallbacks enterStageEventHandler;
 
+  /**
+   * Thread local serializer; created on demand
+   * and shareable across a sequence of stages.
+   */
+  private final ThreadLocal<JsonSerialization<TaskManifest>> threadLocalSerializer =
+      ThreadLocal.withInitial(TaskManifest::serializer);
+
   public StageConfig() {
   }
 
@@ -142,30 +153,30 @@ public class StageConfig {
   }
 
   /**
-   * Set builder value.
-   * @param value new value
-   * @return the builder
+   * Set job destination dir.
+   * @param dir new dir
+   * @return this
    */
-  public StageConfig withDestinationDir(final Path value) {
-    destinationDir = value;
+  public StageConfig withDestinationDir(final Path dir) {
+    destinationDir = dir;
     return this;
   }
 
   /**
-   * Set builder value.
-   * @param value new value
-   * @return the builder
+   * Set IOStatistics store.
+   * @param store new store
+   * @return this
    */
-  public StageConfig withIOStatistics(final IOStatisticsStore value) {
+  public StageConfig withIOStatistics(final IOStatisticsStore store) {
     checkOpen();
-    iostatistics = value;
+    iostatistics = store;
     return this;
   }
 
   /**
    * Set builder value.
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withIOProcessors(final TaskPool.Submitter value) {
     checkOpen();
@@ -174,18 +185,18 @@ public class StageConfig {
   }
 
   /**
-   * Set builder value.
-   * @param value new value
-   * @return the builder
+   * Set Job attempt directory.
+   * @param dir new dir
+   * @return this
    */
-  public StageConfig withJobAttemptDir(final Path value) {
+  public StageConfig withJobAttemptDir(final Path dir) {
     checkOpen();
-    jobAttemptDir = value;
+    jobAttemptDir = dir;
     return this;
   }
 
   /**
-   * Set the job directoris from the attempt directories
+   * Set the job directories from the attempt directories
    * information. Does not set task attempt fields.
    * @param dirs source of directories.
    * @return this
@@ -204,7 +215,7 @@ public class StageConfig {
   /**
    * Set job ID with no attempt included.
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withJobId(final String value) {
     checkOpen();
@@ -219,7 +230,7 @@ public class StageConfig {
   /**
    * Set builder value.
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withOutputTempSubDir(final Path value) {
     checkOpen();
@@ -230,7 +241,7 @@ public class StageConfig {
   /**
    * Set builder value.
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withOperations(final StoreOperations value) {
     checkOpen();
@@ -241,7 +252,7 @@ public class StageConfig {
   /**
    * Set builder value.
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withTaskAttemptId(final String value) {
     checkOpen();
@@ -252,7 +263,7 @@ public class StageConfig {
   /**
    * Set builder value.
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withTaskId(final String value) {
     checkOpen();
@@ -263,11 +274,55 @@ public class StageConfig {
   /**
    * Set handler for stage entry events..
    * @param value new value
-   * @return the builder
+   * @return this
    */
   public StageConfig withStageEventCallbacks(StageEventCallbacks value) {
     checkOpen();
     enterStageEventHandler = value;
+    return this;
+  }
+
+  /**
+   * Optional progress callback.
+   * @param value new value
+   * @return this
+   */
+  public StageConfig withProgressable(final Progressable value) {
+    checkOpen();
+    progressable = value;
+    return this;
+  }
+
+  /**
+   * Set the Task attempt directory.
+   * @param value new value
+   * @return this
+   */
+  public StageConfig withTaskAttemptDir(final Path value) {
+    checkOpen();
+    taskAttemptDir = value;
+    return this;
+  }
+
+  /**
+   * Set the job attempt number.
+   * @param value new value
+   * @return this
+   */
+  public StageConfig withJobAttemptNumber(final int value) {
+    checkOpen();
+    jobAttemptNumber = value;
+    return this;
+  }
+
+  /**
+   * Set the Job ID source.
+   * @param value new value
+   * @return this
+   */
+  public StageConfig withJobIdSource(final String value) {
+    checkOpen();
+    jobIdSource = value;
     return this;
   }
 
@@ -356,44 +411,11 @@ public class StageConfig {
   }
 
   /**
-   * Optional progress callback.
-   * @param value new value
-   * @return the builder
-   */
-  StageConfig withProgressable(final Progressable value) {
-    checkOpen();
-    progressable = value;
-    return this;
-  }
-
-  /**
    * Task attempt directory.
    * @return the task attempt dir.
    */
   public Path getTaskAttemptDir() {
     return taskAttemptDir;
-  }
-
-  /**
-   * Set the Task attempt directory.
-   * @param value new value
-   * @return the builder
-   */
-  StageConfig withTaskAttemptDir(final Path value) {
-    checkOpen();
-    taskAttemptDir = value;
-    return this;
-  }
-
-  /**
-   * Set the job attempt number.
-   * @param value new value
-   * @return the builder
-   */
-  StageConfig withJobAttemptNumber(final int value) {
-    checkOpen();
-    jobAttemptNumber = value;
-    return this;
   }
 
   /**
@@ -409,23 +431,20 @@ public class StageConfig {
   }
 
   /**
-   * Set the Job ID source.
-   * @param value new value
-   * @return the builder
-   */
-  public StageConfig withJobIdSource(final String value) {
-    checkOpen();
-    jobIdSource = value;
-    return this;
-  }
-
-  /**
    * Get the path to the subdirectory under $jobID where task
    * attempts are. List this dir to find all task attempt dirs.
    * @return a path under the job attempt dir.
    */
   public Path getJobAttemptTaskSubDir() {
     return new Path(jobAttemptDir, PENDING_DIR_NAME);
+  }
+
+  /**
+   * Get a thread local task manifest serializer.
+   * @return a serializer.
+   */
+  public JsonSerialization<TaskManifest> currentManifestSerializer() {
+    return threadLocalSerializer.get();
   }
 
   /**

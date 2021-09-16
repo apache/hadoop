@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.util.JsonSerialization;
 
 /**
  * Stub Store operations.
@@ -62,7 +63,8 @@ public class StubStoreOperations implements StoreOperations {
   }
 
   @Override
-  public TaskManifest loadTaskManifest(final FileStatus st) throws IOException {
+  public TaskManifest loadTaskManifest(JsonSerialization<TaskManifest> serializer,
+      final FileStatus st) throws IOException {
     return new TaskManifest();
   }
 

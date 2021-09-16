@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.OperationDuration;
@@ -450,7 +451,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       throws IOException {
     LOG.trace("loadManifest('{}')", status);
     return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () ->
-        operations.loadTaskManifest(status));
+        operations.loadTaskManifest(
+            stageConfig.currentManifestSerializer(),
+            status));
   }
 
   /**
