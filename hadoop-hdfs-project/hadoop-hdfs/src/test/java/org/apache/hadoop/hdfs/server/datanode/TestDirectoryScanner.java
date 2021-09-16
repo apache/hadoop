@@ -685,7 +685,7 @@ public class TestDirectoryScanner {
     runCalculateSleepTimeTest(100, 1001, 1000);
   }
 
-  public void runCalculateSleepTimeTest(int throttleLimitMsPerSec, int runintTime, long expected) {
+  public void runCalculateSleepTimeTest(int throttleLimitMsPerSec, int runningTime, long expected) {
     FsDatasetSpi<?> fds = mock(FsDatasetSpi.class);
     FsVolumeSpi volumeSpi = mock(FsVolumeImpl.class);
     Configuration conf = new Configuration(getConfiguration());
@@ -694,7 +694,7 @@ public class TestDirectoryScanner {
             throttleLimitMsPerSec);
     scanner = new DirectoryScanner(fds, conf);
     ReportCompiler compiler = scanner.new ReportCompiler(volumeSpi);
-    assertTrue(compiler.calculateSleepTime(runintTime) == expected);
+    assertTrue(compiler.calculateSleepTime(runningTime) == expected);
   }
 
   /**
