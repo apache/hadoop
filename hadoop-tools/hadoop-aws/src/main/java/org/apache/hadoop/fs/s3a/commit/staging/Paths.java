@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -27,7 +28,6 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.UncheckedExecutionException;
 
 import org.apache.commons.lang3.StringUtils;
@@ -290,7 +290,7 @@ public final class Paths {
       List<? extends FileStatus> taskOutput)
       throws IOException {
     // get a list of partition directories
-    Set<String> partitions = Sets.newLinkedHashSet();
+    Set<String> partitions = new LinkedHashSet<>();
     for (FileStatus fileStatus : taskOutput) {
       // sanity check the output paths
       Path outputFile = fileStatus.getPath();

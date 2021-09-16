@@ -463,6 +463,26 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolution-enabled</name>
+    <value>false</value>
+    <description>
+      Determines if the given monitored namenode address is a domain name which needs to
+      be resolved.
+      This is used by router to resolve namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolver.impl</name>
+    <value></value>
+    <description>
+      Nameservice resolver implementation used by router.
+      Effective with
+      dfs.federation.router.monitor.namenode.nameservices.resolution-enabled on.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.monitor.localnamenode.enable</name>
     <value>true</value>
     <description>

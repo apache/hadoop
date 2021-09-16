@@ -655,6 +655,16 @@ public class Client implements AutoCloseable {
       short timeoutFailures = 0;
       while (true) {
         try {
+          if (server.isUnresolved()) {
+            // Jump into the catch block. updateAddress() will re-resolve
+            // the address if this is just a temporary DNS failure. If not,
+            // it will timeout after max ipc client retries
+            throw NetUtils.wrapException(server.getHostName(),
+                server.getPort(),
+                NetUtils.getHostname(),
+                0,
+                new UnknownHostException());
+          }
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.setKeepAlive(true);
@@ -1051,7 +1061,10 @@ public class Client implements AutoCloseable {
         if (timeout>0) {
           try {
             wait(timeout);
-          } catch (InterruptedException e) {}
+          } catch (InterruptedException e) {
+            LOG.trace("Interrupted while waiting to retrieve RPC response.");
+            Thread.currentThread().interrupt();
+          }
         }
       }
       
@@ -1383,6 +1396,9 @@ public class Client implements AutoCloseable {
         try {
           emptyCondition.wait();
         } catch (InterruptedException e) {
+          LOG.trace(
+              "Interrupted while waiting on all connections to be closed.");
+          Thread.currentThread().interrupt();
         }
       }
     }
@@ -1598,15 +1614,6 @@ public class Client implements AutoCloseable {
   private Connection getConnection(ConnectionId remoteId,
       Call call, int serviceClass, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
-    final InetSocketAddress address = remoteId.getAddress();
-    if (address.isUnresolved()) {
-      throw NetUtils.wrapException(address.getHostName(),
-          address.getPort(),
-          null,
-          0,
-          new UnknownHostException());
-    }
-
     final Consumer<Connection> removeMethod = c -> {
       final boolean removed = connections.remove(remoteId, c);
       if (removed && connections.isEmpty()) {

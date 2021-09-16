@@ -181,8 +181,12 @@ public class TestS3AExceptionTranslation {
 
   private static <E extends Throwable> E verifyTranslated(Class<E> clazz,
       AmazonClientException exception) throws Exception {
-    return verifyExceptionClass(clazz,
-        translateException("test", "/", exception));
+    // Verifying that the translated exception have the correct error message.
+    IOException ioe = translateException("test", "/", exception);
+    assertExceptionContains(exception.getMessage(), ioe,
+        "Translated Exception should contain the error message of the "
+            + "actual exception");
+    return verifyExceptionClass(clazz, ioe);
   }
 
   private void assertContainsInterrupted(boolean expected, Throwable thrown)

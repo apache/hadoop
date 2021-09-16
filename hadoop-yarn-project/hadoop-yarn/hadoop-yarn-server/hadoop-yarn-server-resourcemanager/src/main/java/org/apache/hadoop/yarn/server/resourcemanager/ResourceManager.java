@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
@@ -152,6 +153,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -715,6 +718,7 @@ public class ResourceManager extends CompositeService
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
     private RMNMInfo rmnmInfo;
+    private ScheduledThreadPoolExecutor eventQueueMetricExecutor;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -937,6 +941,23 @@ public class ResourceManager extends CompositeService
         addIfService(volumeManager);
       }
 
+      eventQueueMetricExecutor = new ScheduledThreadPoolExecutor(1,
+              new ThreadFactoryBuilder().
+              setDaemon(true).setNameFormat("EventQueueSizeMetricThread").
+              build());
+      eventQueueMetricExecutor.scheduleAtFixedRate(new Runnable() {
+        @Override
+        public void run() {
+          int rmEventQueueSize = ((AsyncDispatcher)getRMContext().
+              getDispatcher()).getEventQueueSize();
+          ClusterMetrics.getMetrics().setRmEventQueueSize(rmEventQueueSize);
+          int schedulerEventQueueSize = ((EventDispatcher)schedulerDispatcher).
+              getEventQueueSize();
+          ClusterMetrics.getMetrics().
+              setSchedulerEventQueueSize(schedulerEventQueueSize);
+        }
+      }, 1, 1, TimeUnit.SECONDS);
+
       super.serviceInit(conf);
     }
 
@@ -1011,6 +1032,9 @@ public class ResourceManager extends CompositeService
         } catch (Exception e) {
           LOG.error("Error closing store.", e);
         }
+      }
+      if (eventQueueMetricExecutor != null) {
+        eventQueueMetricExecutor.shutdownNow();
       }
 
     }

@@ -85,3 +85,33 @@ TEST(XPlatformSyscall, StringCompareIgnoreCaseNegative) {
   EXPECT_FALSE(XPlatform::Syscall::StringCompareIgnoreCase("abcd", "abcde"));
   EXPECT_FALSE(XPlatform::Syscall::StringCompareIgnoreCase("12345", "abcde"));
 }
+
+TEST(XPlatformSyscall, CreateAndOpenTempFileBasic) {
+  std::string pattern("tmp-XXXXXX");
+  std::vector<char> pattern_vec(pattern.begin(), pattern.end());
+
+  const auto fd = XPlatform::Syscall::CreateAndOpenTempFile(pattern_vec);
+  EXPECT_GT(fd, -1);
+  EXPECT_TRUE(XPlatform::Syscall::CloseFile(fd));
+}
+
+TEST(XPlatformSyscall, CreateAndOpenTempFileNegative) {
+  std::string pattern("does-not-adhere-to-pattern");
+  std::vector<char> pattern_vec(pattern.begin(), pattern.end());
+
+  const auto fd = XPlatform::Syscall::CreateAndOpenTempFile(pattern_vec);
+  EXPECT_EQ(fd, -1);
+  EXPECT_FALSE(XPlatform::Syscall::CloseFile(fd));
+}
+
+TEST(XPlatformSyscall, CreateTempDirBasic) {
+  std::string pattern("/tmp/tmp-XXXXXX");
+  std::vector<char> pattern_vec(pattern.begin(), pattern.end());
+  EXPECT_TRUE(XPlatform::Syscall::CreateTempDir(pattern_vec));
+}
+
+TEST(XPlatformSyscall, CreateTempDirNegative) {
+  std::string pattern("does-not-adhere-to-pattern");
+  std::vector<char> pattern_vec(pattern.begin(), pattern.end());
+  EXPECT_FALSE(XPlatform::Syscall::CreateTempDir(pattern_vec));
+}

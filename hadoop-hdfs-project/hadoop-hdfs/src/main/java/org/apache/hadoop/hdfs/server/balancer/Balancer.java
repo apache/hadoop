@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -211,8 +212,10 @@ public class Balancer {
   @VisibleForTesting
   private static volatile boolean serviceRunning = false;
 
-  private static volatile int exceptionsSinceLastBalance = 0;
-  private static volatile int failedTimesSinceLastSuccessfulBalance = 0;
+  private static final AtomicInteger EXCEPTIONS_SINCE_LAST_BALANCE =
+      new AtomicInteger(0);
+  private static final AtomicInteger
+      FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE = new AtomicInteger(0);
 
   private final Dispatcher dispatcher;
   private final NameNodeConnector nnc;
@@ -274,11 +277,11 @@ public class Balancer {
   }
 
   static int getExceptionsSinceLastBalance() {
-    return exceptionsSinceLastBalance;
+    return EXCEPTIONS_SINCE_LAST_BALANCE.get();
   }
 
   static int getFailedTimesSinceLastSuccessfulBalance() {
-    return failedTimesSinceLastSuccessfulBalance;
+    return FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.get();
   }
 
   /**
@@ -321,10 +324,12 @@ public class Balancer {
      * Balancer prefer to get blocks which are belong to the cold files
      * created before this time period.
      */
-    final long hotBlockTimeInterval = conf.getTimeDuration(
-        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
-        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
+    final long hotBlockTimeInterval =
+        p.getHotBlockTimeInterval() != 0L ? p.getHotBlockTimeInterval() :
+            conf.getTimeDuration(
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
 
     // DataNode configuration parameters for balancing
     final int maxConcurrentMovesPerNode = getInt(conf,
@@ -866,20 +871,21 @@ public class Balancer {
         int retCode = doBalance(namenodes, nsIds, p, conf);
         if (retCode < 0) {
           LOG.info("Balance failed, error code: " + retCode);
-          failedTimesSinceLastSuccessfulBalance++;
+          FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.incrementAndGet();
         } else {
           LOG.info("Balance succeed!");
-          failedTimesSinceLastSuccessfulBalance = 0;
+          FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.set(0);
         }
-        exceptionsSinceLastBalance = 0;
+        EXCEPTIONS_SINCE_LAST_BALANCE.set(0);
       } catch (Exception e) {
-        if (++exceptionsSinceLastBalance > retryOnException) {
+        if (EXCEPTIONS_SINCE_LAST_BALANCE.incrementAndGet()
+            > retryOnException) {
           // The caller will process and log the exception
           throw e;
         }
         LOG.warn(
             "Encounter exception while do balance work. Already tried {} times",
-            exceptionsSinceLastBalance, e);
+            EXCEPTIONS_SINCE_LAST_BALANCE, e);
       }
 
       // sleep for next round, will retry for next round when it's interrupted

@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 
@@ -45,13 +45,11 @@ import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
  * <p>Important</p>: must not directly or indirectly import a class which
  * uses any datatype in hadoop-mapreduce.
  */
-public class MagicCommitIntegration {
+public class MagicCommitIntegration extends AbstractStoreOperation {
   private static final Logger LOG =
       LoggerFactory.getLogger(MagicCommitIntegration.class);
   private final S3AFileSystem owner;
   private final boolean magicCommitEnabled;
-
-  private final StoreContext storeContext;
 
   /**
    * Instantiate.
@@ -60,9 +58,9 @@ public class MagicCommitIntegration {
    */
   public MagicCommitIntegration(S3AFileSystem owner,
       boolean magicCommitEnabled) {
+    super(owner.createStoreContext());
     this.owner = owner;
     this.magicCommitEnabled = magicCommitEnabled;
-    this.storeContext = owner.createStoreContext();
   }
 
   /**
@@ -85,6 +83,9 @@ public class MagicCommitIntegration {
    * Given a path and a key to that same path, create a tracker for it.
    * This specific tracker will be chosen based on whether or not
    * the path is a magic one.
+   * Auditing: the span used to invoke
+   * this method will be the one used to create the write operation helper
+   * for the commit tracker.
    * @param path path of nominal write
    * @param key key of path of nominal write
    * @return the tracker for this operation.
@@ -98,10 +99,10 @@ public class MagicCommitIntegration {
       if (isMagicCommitPath(elements)) {
         final String destKey = keyOfFinalDestination(elements, key);
         String pendingsetPath = key + CommitConstants.PENDING_SUFFIX;
-        storeContext.incrementStatistic(
+        getStoreContext().incrementStatistic(
             Statistic.COMMITTER_MAGIC_FILES_CREATED);
         tracker = new MagicCommitTracker(path,
-            storeContext.getBucket(),
+            getStoreContext().getBucket(),
             key,
             destKey,
             pendingsetPath,

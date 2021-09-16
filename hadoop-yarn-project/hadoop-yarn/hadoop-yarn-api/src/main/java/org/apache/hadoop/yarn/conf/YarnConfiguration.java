@@ -1169,6 +1169,15 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC = 60000;
 
   /**
+   * Whether to enable RM to mark inactive nodes as untracked and removed from
+   * nodes list for the YARN cluster without configured include path.
+   */
+  public static final String RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH =
+      RM_PREFIX + "enable-node-untracked-without-include-path";
+  public static final boolean
+      DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH = false;
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
@@ -1954,7 +1963,10 @@ public class YarnConfiguration extends Configuration {
           false;
   public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
           APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
-
+  public static final String APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION =
+      APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".force-lowercase";
+  public static final boolean DEFAULT_APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION =
+          true;
   /** Enable switch for container log monitoring. */
   public static final String NM_CONTAINER_LOG_MONITOR_ENABLED =
       NM_PREFIX + "container-log-monitor.enable";
@@ -3987,6 +3999,15 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_CLIENTRM_SUBMIT_RETRY =
       ROUTER_PREFIX + "submit.retry";
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
+
+  /**
+   * The interceptor class used in FederationClientInterceptor should return
+   * partial ApplicationReports.
+   */
+  public static final String ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED =
+          ROUTER_PREFIX + "partial-result.enabled";
+  public static final boolean DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED =
+          false;
 
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 

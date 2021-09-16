@@ -30,13 +30,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-
-import org.junit.Assert;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,9 +40,14 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
+
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestDatanodeRegister { 
   public static final Logger LOG =

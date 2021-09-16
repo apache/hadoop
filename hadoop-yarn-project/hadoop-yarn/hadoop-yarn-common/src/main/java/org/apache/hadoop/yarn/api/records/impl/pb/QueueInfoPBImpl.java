@@ -143,6 +143,18 @@ public class QueueInfoPBImpl extends QueueInfo {
   }
 
   @Override
+  public int getMaxParallelApps() {
+    QueueInfoProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasMaxParallelApps()) ? p.getMaxParallelApps() : -1;
+  }
+
+  @Override
+  public void setMaxParallelApps(int weight) {
+    maybeInitBuilder();
+    builder.setMaxParallelApps(weight);
+  }
+
+  @Override
   public void setChildQueues(List<QueueInfo> childQueues) {
     if (childQueues == null) {
       builder.clearChildQueues();

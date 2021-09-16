@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import junit.framework.TestCase;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 import org.junit.Test;
 

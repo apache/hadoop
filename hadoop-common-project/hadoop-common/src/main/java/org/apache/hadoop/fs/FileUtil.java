@@ -58,6 +58,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -182,7 +183,7 @@ public class FileUtil {
       return true;
     }
     // handle nonempty directory deletion
-    if (!fullyDeleteContents(dir, tryGrantPermissions)) {
+    if (!FileUtils.isSymlink(dir) && !fullyDeleteContents(dir, tryGrantPermissions)) {
       return false;
     }
     return deleteImpl(dir, true);
@@ -524,6 +525,9 @@ public class FileUtil {
     if (null != sdst) {
       if (sdst.isDirectory()) {
         if (null == srcName) {
+          if (overwrite) {
+            return dst;
+          }
           throw new PathIsDirectoryException(dst.toString());
         }
         return checkDest(null, dstFS, new Path(dst, srcName), overwrite);
@@ -1868,5 +1872,21 @@ public class FileUtil {
   public static FileContext write(final FileContext fileContext,
       final Path path, final CharSequence charseq) throws IOException {
     return write(fileContext, path, charseq, StandardCharsets.UTF_8);
+  }
+
+  @InterfaceAudience.LimitedPrivate({"ViewDistributedFileSystem"})
+  @InterfaceStability.Unstable
+  /**
+   * Used in ViewDistributedFileSystem rename API to get access to the protected
+   * API of FileSystem interface. Even though Rename with options API
+   * deprecated, we are still using as part of trash. If any filesystem provided
+   * implementation to this protected FileSystem API, we can't invoke it with
+   * out casting to the specific filesystem. This util method is proposed to get
+   * the access to FileSystem#rename with options.
+   */
+  @SuppressWarnings("deprecation")
+  public static void rename(FileSystem srcFs, Path src, Path dst,
+      final Options.Rename... options) throws IOException {
+    srcFs.rename(src, dst, options);
   }
 }

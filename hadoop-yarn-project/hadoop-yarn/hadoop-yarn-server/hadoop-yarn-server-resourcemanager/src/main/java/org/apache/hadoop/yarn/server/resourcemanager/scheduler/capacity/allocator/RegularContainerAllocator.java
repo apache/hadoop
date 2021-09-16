@@ -73,10 +73,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       ActivitiesManager activitiesManager) {
     super(application, rc, rmContext, activitiesManager);
   }
-  
-  private boolean checkHeadroom(Resource clusterResource,
-      ResourceLimits currentResourceLimits, Resource required,
-      String nodePartition) {
+
+  private boolean checkHeadroom(ResourceLimits currentResourceLimits,
+                                Resource required, String nodePartition) {
     // If headroom + currentReservation < required, we cannot allocate this
     // require
     Resource resourceCouldBeUnReserved =
@@ -86,9 +85,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
     }
-    return Resources.greaterThanOrEqual(rc, clusterResource, Resources.add(
-        currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved),
-        required);
+    return Resources.fitsIn(rc, required,
+        Resources.add(currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved));
   }
 
   /*
@@ -97,8 +95,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
    * We will consider stuffs like exclusivity, pending resource, node partition,
    * headroom, etc.
    */
-  private ContainerAllocation preCheckForNodeCandidateSet(
-      Resource clusterResource, FiCaSchedulerNode node,
+  private ContainerAllocation preCheckForNodeCandidateSet(FiCaSchedulerNode node,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey) {
     PendingAsk offswitchPendingAsk = application.getPendingAsk(schedulerKey,
@@ -168,8 +165,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       }
     }
 
-    if (!checkHeadroom(clusterResource, resourceLimits, required,
-        node.getPartition())) {
+    if (!checkHeadroom(resourceLimits, required, node.getPartition())) {
       LOG.debug("cannot allocate required resource={} because of headroom",
           required);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
@@ -857,7 +853,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       FiCaSchedulerNode node = iter.next();
 
       if (reservedContainer == null) {
-        result = preCheckForNodeCandidateSet(clusterResource, node,
+        result = preCheckForNodeCandidateSet(node,
             schedulingMode, resourceLimits, schedulerKey);
         if (null != result) {
           continue;

@@ -99,11 +99,11 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
+       </plugin>
 
     </plugins>
 
-    
+
     <!--
        The following is to suppress a m2e warning in eclipse
        (m2e doesn't know how to handle maven-enforcer:enforce, so we have to tell m2e to ignore it)
@@ -555,6 +555,7 @@
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
                     <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
                     <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
+                    <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
                   </excludes>
 
                 </configuration>
@@ -595,6 +596,7 @@
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
+                    <include>**/azurebfs/services/ITestReadBufferManager.java</include>
                   </includes>
                 </configuration>
               </execution>

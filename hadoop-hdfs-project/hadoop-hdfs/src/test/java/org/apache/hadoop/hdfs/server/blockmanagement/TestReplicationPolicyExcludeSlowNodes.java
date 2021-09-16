@@ -22,7 +22,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.net.Node;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -100,12 +99,12 @@ public class TestReplicationPolicyExcludeSlowNodes
       Thread.sleep(3000);
 
       // fetch slow nodes
-      Set<Node> slowPeers = dnManager.getSlowPeers();
+      Set<String> slowPeers = dnManager.getSlowPeersUuidSet();
 
       // assert slow nodes
       assertEquals(3, slowPeers.size());
       for (int i = 0; i < slowPeers.size(); i++) {
-        assertTrue(slowPeers.contains(dataNodes[i]));
+        assertTrue(slowPeers.contains(dataNodes[i].getDatanodeUuid()));
       }
 
       // mock writer
@@ -120,7 +119,8 @@ public class TestReplicationPolicyExcludeSlowNodes
       // assert targets
       assertEquals(3, targets.length);
       for (int i = 0; i < targets.length; i++) {
-        assertTrue(!slowPeers.contains(targets[i].getDatanodeDescriptor()));
+        assertTrue(!slowPeers.contains(targets[i].getDatanodeDescriptor()
+            .getDatanodeUuid()));
       }
     } finally {
       namenode.getNamesystem().writeUnlock();

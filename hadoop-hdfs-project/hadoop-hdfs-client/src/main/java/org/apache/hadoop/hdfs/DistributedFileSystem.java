@@ -23,7 +23,6 @@ import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -118,6 +117,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2395,7 +2395,8 @@ public class DistributedFileSystem extends FileSystem
       } catch (RpcNoSuchMethodException e) {
         // In case the server doesn't support getSnapshotDiffReportListing,
         // fallback to getSnapshotDiffReport.
-        LOG.warn("Falling back to getSnapshotDiffReport {}", e.getMessage());
+        DFSClient.LOG.warn(
+            "Falling back to getSnapshotDiffReport {}", e.getMessage());
         return dfs.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
       }
       startPath = report.getLastPath();

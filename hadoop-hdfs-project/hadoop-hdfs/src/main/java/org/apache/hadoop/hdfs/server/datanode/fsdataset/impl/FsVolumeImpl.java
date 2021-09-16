@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -865,7 +866,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
               }
 
               File blkFile = getBlockFile(bpid, block);
-              File metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              File metaFile ;
+              try {
+                 metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              } catch (FileNotFoundException e){
+                LOG.warn("nextBlock({}, {}): {}", storageID, bpid,
+                    e.getMessage());
+                continue;
+              }
+
               block.setGenerationStamp(
                   Block.getGenerationStamp(metaFile.getName()));
               block.setNumBytes(blkFile.length());

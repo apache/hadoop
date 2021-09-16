@@ -149,7 +149,7 @@ public class DatanodeAdminManager {
       throw new RuntimeException("Unable to create the Decommission monitor " +
           "from "+cls, e);
     }
-    executor.scheduleAtFixedRate(monitor, intervalSecs, intervalSecs,
+    executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
     LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
@@ -377,6 +377,8 @@ public class DatanodeAdminManager {
         + ", maintenance replicas: " + num.maintenanceReplicas()
         + ", live entering maintenance replicas: "
         + num.liveEnteringMaintenanceReplicas()
+        + ", replicas on stale nodes: " + num.replicasOnStaleNodes()
+        + ", readonly replicas: " + num.readOnlyReplicas()
         + ", excess replicas: " + num.excessReplicas()
         + ", Is Open File: " + bc.isUnderConstruction()
         + ", Datanodes having this block: " + nodeList + ", Current Datanode: "

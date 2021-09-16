@@ -23,75 +23,44 @@ WORKDIR /root
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+######
+# Platform package dependency resolver
+######
+COPY pkg-resolver pkg-resolver
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
+
+######
+# Install packages from yum
+######
+# hadolint ignore=DL3008,SC2046
 RUN yum update -y \
-    && yum install -y centos-release-scl \
-    && yum install -y devtoolset-9 \
+    && yum groupinstall -y "Development Tools" \
     && yum install -y \
-    ant \
-    build-essential \
-    bzip2 \
-    bzip2-devel \
-    clang \
-    curl \
-    cyrus-sasl-devel \
-    doxygen \
-    fuse \
-    fuse-libs \
-    fuse-devel \
-    git \
-    libcurl-devel \
-    libtirpc-devel \
-    libpmem-devel \
-    libtool \
-    lz4-devel \
-    make \
-    openssl-devel \
-    pinentry-curses \
-    python3 \
-    python3-pip \
-    python3-setuptools \
-    python3-wheel \
-    rsync \
-    snappy-devel \
-    sudo \
-    valgrind \
-    zlib-devel
+        centos-release-scl \
+        python3 \
+    && yum install -y $(pkg-resolver/resolve.py centos:7)
 
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
-####
-# Install Maven 3.6.3
-####
-RUN mkdir -p /opt/maven /tmp/maven \
-    && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
-        -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz \
-    && tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
+######
+# Set the environment variables needed for CMake
+# to find and use GCC 9 for compilation
+######
+ENV GCC_HOME "/opt/rh/devtoolset-9"
+ENV CC "${GCC_HOME}/root/usr/bin/gcc"
+ENV CXX "${GCC_HOME}/root/usr/bin/g++"
+ENV SHLVL 1
+ENV LD_LIBRARY_PATH "${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
+ENV PCP_DIR "${GCC_HOME}/root"
+ENV MANPATH "${GCC_HOME}/root/usr/share/man:"
+ENV PATH "${GCC_HOME}/root/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV PKG_CONFIG_PATH "${GCC_HOME}/root/usr/lib64/pkgconfig"
+ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 
-####
-# Install CMake 3.19
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /tmp/cmake /opt/cmake \
-    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o /tmp/cmake/cmake-3.19.0.tar.gz \
-    && tar xzf /tmp/cmake/cmake-3.19.0.tar.gz --strip-components 1 -C /opt/cmake \
-    && cd /opt/cmake || exit && ./bootstrap \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-####
-# Install zstandard
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/zstd /tmp/zstd \
-    && curl -L -s -S https://github.com/facebook/zstd/archive/refs/tags/v1.4.9.tar.gz -o /tmp/zstd/v1.4.9.tar.gz \
-    && tar xzf /tmp/zstd/v1.4.9.tar.gz --strip-components 1 -C /opt/zstd \
-    && cd /opt/zstd || exit \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
+# TODO: Set locale
 
 ######
 # Set env vars required to build Hadoop
@@ -102,68 +71,26 @@ ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
 
 #######
-# Install SpotBugs 4.2.2
+# Set env vars for SpotBugs
 #######
-RUN mkdir -p /opt/spotbugs \
-    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
-      -o /opt/spotbugs.tgz \
-    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
-    && chmod +x /opt/spotbugs/bin/*
 ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
-# Install Boost 1.72 (1.71 ships with Focal)
+# Set env vars for Google Protobuf
 #######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/boost-library \
-    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
-    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
-    && cd /opt/boost-library \
-    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
-    && cd /opt/boost-library/boost_1_72_0 \
-    && ./bootstrap.sh --prefix=/usr/ \
-    && ./b2 --without-python install \
-    && cd /root \
-    && rm -rf /opt/boost-library
-
-######
-# Install Google Protobuf 3.7.1 (3.6.1 ships with Focal)
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/protobuf-src \
-    && curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-      -o /opt/protobuf.tar.gz \
-    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
-    && cd /opt/protobuf-src \
-    && ./configure --prefix=/opt/protobuf \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-src
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
-####
-# Install Node.js
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /tmp/node \
-    && curl -L -s -S https://nodejs.org/dist/v14.16.1/node-v14.16.1.tar.gz -o /tmp/node-v14.16.1.tar.gz \
-    && tar xzf /tmp/node-v14.16.1.tar.gz --strip-components 1 -C /tmp/node \
-    && cd /tmp/node || exit \
-    && ./configure \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-####
-# Install pylint and python-dateutil
-####
-RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
-
-####
-# Install bower
-####
-# hadolint ignore=DL3008
-RUN npm install -g bower@1.8.8
+######
+# Install packages
+######
+RUN pkg-resolver/install-maven.sh centos:7
+RUN pkg-resolver/install-cmake.sh centos:7
+RUN pkg-resolver/install-zstandard.sh centos:7
+RUN pkg-resolver/install-yasm.sh centos:7
+RUN pkg-resolver/install-protobuf.sh centos:7
+RUN pkg-resolver/install-boost.sh centos:7
+RUN pkg-resolver/install-spotbugs.sh centos:7
+RUN pkg-resolver/install-nodejs.sh centos:7
+RUN pkg-resolver/install-git.sh centos:7
+RUN pkg-resolver/install-common-pkgs.sh

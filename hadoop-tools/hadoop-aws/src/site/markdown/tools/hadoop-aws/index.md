@@ -44,6 +44,8 @@ full details.
 * [Working with IAM Assumed Roles](./assumed_roles.html)
 * [S3A Delegation Token Support](./delegation_tokens.html)
 * [S3A Delegation Token Architecture](delegation_token_architecture.html).
+* [Auditing](./auditing.html).
+* [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
 
 ## <a name="overview"></a> Overview
@@ -436,6 +438,12 @@ you'll need to remove the `profile` prefix from the AWS configuration section he
     aws_session_token = ...
     aws_security_token = ...
     ```
+Note:
+
+1. The `region` setting is only used if `fs.s3a.endpoint.region` is set to the empty string.
+1. For the credentials to be available to applications running in a Hadoop cluster, the
+   configuration files MUST be in the `~/.aws/` directory on the local filesystem in
+   all hosts in the cluster.
 
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 
@@ -639,7 +647,7 @@ files in local or Hadoop filesystems, and including them in requests.
 
 The S3A configuration options with sensitive data
 (`fs.s3a.secret.key`, `fs.s3a.access.key`,  `fs.s3a.session.token`
-and `fs.s3a.server-side-encryption.key`) can
+and `fs.s3a.encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
 credential provider then declared in the Hadoop configuration.
@@ -655,8 +663,8 @@ stores.
 fs.s3a.access.key
 fs.s3a.secret.key
 fs.s3a.session.token
-fs.s3a.server-side-encryption.key
-fs.s3a.server-side-encryption-algorithm
+fs.s3a.encryption.key
+fs.s3a.encryption.algorithm
 ```
 
 The first three are for authentication; the final two for
@@ -798,6 +806,16 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
+  <name>fs.s3a.endpoint.region</name>
+  <description>AWS S3 region for a bucket, which bypasses the parsing of
+    fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+    while using privateLink URL and explicitly set the bucket region.
+    If set to a blank string (or 1+ space), falls back to the
+    (potentially brittle) SDK region resolution process.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.path.style.access</name>
   <value>false</value>
   <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
@@ -926,7 +944,9 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.acl.default</name>
   <description>Set a canned ACL for newly created and copied objects. Value may be Private,
     PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
-    or BucketOwnerFullControl.</description>
+    or BucketOwnerFullControl.
+    If set, caller IAM role must have "s3:PutObjectAcl" permission on the bucket.
+    </description>
 </property>
 
 <property>
@@ -949,20 +969,23 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
-  <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default. It supports the following values: 'AES256' (for SSE-S3), 'SSE-KMS'
-     and 'SSE-C'
+  <name>fs.s3a.encryption.algorithm</name>
+  <description>Specify a server-side encryption or client-side
+     encryption algorithm for s3a: file system. Unset by default. It supports the
+     following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
   </description>
 </property>
 
 <property>
-    <name>fs.s3a.server-side-encryption.key</name>
-    <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
-    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
-    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
-    you'll be using your default's S3 KMS key, otherwise you should set this property to
-    the specific KMS key id.</description>
+    <name>fs.s3a.encryption.key</name>
+    <description>Specific encryption key to use if fs.s3a.encryption.algorithm
+        has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
+    , the value of this property should be the Base64 encoded key. If you are
+     using SSE-KMS and leave this property empty, you'll be using your default's
+     S3 KMS key, otherwise you should set this property to the specific KMS key
+     id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
+     generated from AWS console.
+    </description>
 </property>
 
 <property>
@@ -1416,7 +1439,8 @@ Consider a JCEKS file with six keys:
 ```
 fs.s3a.access.key
 fs.s3a.secret.key
-fs.s3a.server-side-encryption-algorithm
+fs.s3a.encryption.algorithm
+fs.s3a.encryption.key
 fs.s3a.bucket.nightly.access.key
 fs.s3a.bucket.nightly.secret.key
 fs.s3a.bucket.nightly.session.token

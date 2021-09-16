@@ -33,8 +33,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static java.lang.System.currentTimeMillis;
@@ -50,8 +54,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Unit tests of header processing logic in {@link HeaderProcessing}.
  * Builds up a context accessor where the path
- * defined in {@link #MAGIC_PATH} exists and returns object metadata.
- *
+ * defined in {@link #MAGIC_PATH} exists and returns object metadata
+ * through the HeaderProcessingCallbacks.
  */
 public class TestHeaderProcessing extends HadoopTestBase {
 
@@ -95,7 +99,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
         Long.toString(MAGIC_LEN));
     context = S3ATestUtils.createMockStoreContext(true,
         new OperationTrackingStore(), CONTEXT_ACCESSORS);
-    headerProcessing = new HeaderProcessing(context);
+    headerProcessing = new HeaderProcessing(context, CONTEXT_ACCESSORS);
   }
 
   @Test
@@ -203,7 +207,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
     final String owner = "x-header-owner";
     final String root = "root";
     CONTEXT_ACCESSORS.userHeaders.put(owner, root);
-    final ObjectMetadata source = context.getContextAccessors()
+    final ObjectMetadata source = CONTEXT_ACCESSORS
         .getObjectMetadata(MAGIC_KEY);
     final Map<String, String> sourceUserMD = source.getUserMetadata();
     Assertions.assertThat(sourceUserMD.get(owner))
@@ -254,9 +258,11 @@ public class TestHeaderProcessing extends HadoopTestBase {
   /**
    * Context accessor with XAttrs returned for the {@link #MAGIC_PATH}
    * path.
+   * It also implements the Header Processing Callbacks,
+   * so those calls are mapped to the same data.
    */
   private static final class XAttrContextAccessor
-      implements ContextAccessors {
+      implements ContextAccessors, HeaderProcessing.HeaderProcessingCallbacks {
 
     private final Map<String, String> userHeaders = new HashMap<>();
 
@@ -292,6 +298,16 @@ public class TestHeaderProcessing extends HadoopTestBase {
     }
 
     @Override
+    public AuditSpan getActiveAuditSpan() {
+      return AuditTestSupport.NOOP_SPAN;
+    }
+
+    @Override
+    public RequestFactory getRequestFactory() {
+      return MockS3AFileSystem.REQUEST_FACTORY;
+    }
+
+    @Override
     public ObjectMetadata getObjectMetadata(final String key)
         throws IOException {
       if (MAGIC_KEY.equals(key)) {
@@ -303,6 +319,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
       } else {
         throw new FileNotFoundException(key);
       }
+
     }
 
     public void setHeader(String key, String val) {

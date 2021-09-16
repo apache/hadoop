@@ -25,7 +25,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -73,9 +73,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -95,6 +97,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   final ResourceCalculator resourceCalculator;
   Set<String> accessibleLabels;
+  protected Set<String> configuredNodeLabels;
   Set<String> resourceTypes;
   final RMNodeLabelsManager labelManager;
   String defaultLabelExpression;
@@ -110,8 +113,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   // Track resource usage-by-label like used-resource/pending-resource, etc.
   volatile ResourceUsage queueUsage;
-
-  private final boolean fullPathQueueNamingPolicy = false;
 
   // Track capacities like
   // used-capacity/abs-used-capacity/capacity/abs-capacity,
@@ -208,7 +209,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected void setupConfigurableCapacities(
       CapacitySchedulerConfiguration configuration) {
     CSQueueUtils.loadCapacitiesByLabelsFromConf(getQueuePath(), queueCapacities,
-        configuration);
+        configuration, configuredNodeLabels);
   }
 
   @Override
@@ -272,9 +273,6 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public String getQueueName() {
-    if (fullPathQueueNamingPolicy) {
-      return queuePath;
-    }
     return queueName;
   }
 
@@ -360,98 +358,53 @@ public abstract class AbstractCSQueue implements CSQueue {
 
     writeLock.lock();
     try {
-      if (isDynamicQueue() && getParent() instanceof ParentQueue) {
-        ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
-            .setTemplateEntriesForChild(configuration, getQueuePath());
-      }
-      // get labels
-      this.accessibleLabels =
-          configuration.getAccessibleNodeLabels(getQueuePath());
-      this.defaultLabelExpression =
-          configuration.getDefaultNodeLabelExpression(
-              getQueuePath());
-      this.resourceTypes = new HashSet<String>();
-      for (AbsoluteResourceType type : AbsoluteResourceType.values()) {
-        resourceTypes.add(type.toString().toLowerCase());
+      if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
+        setDynamicQueueProperties(configuration);
       }
 
-      // inherit from parent if labels not set
-      if (this.accessibleLabels == null && parent != null) {
-        this.accessibleLabels = parent.getAccessibleNodeLabels();
-      }
+      // Collect and set the Node label configuration
+      initializeNodeLabels(configuration);
 
-      // inherit from parent if labels not set
-      if (this.defaultLabelExpression == null && parent != null
-          && this.accessibleLabels.containsAll(
-          parent.getAccessibleNodeLabels())) {
-        this.defaultLabelExpression = parent.getDefaultNodeLabelExpression();
-      }
-
-      // After we setup labels, we can setup capacities
+      // Initialize the queue capacities
       setupConfigurableCapacities(configuration);
       updateAbsoluteCapacities();
 
-      // Also fetch minimum/maximum resource constraint for this queue if
-      // configured.
-      capacityConfigType = CapacityConfigType.NONE;
-      updateConfigurableResourceRequirement(getQueuePath(), clusterResource);
+      updateCapacityConfigType();
 
-      // Setup queue's maximumAllocation respecting the global setting
-      // and queue setting
+      // Fetch minimum/maximum resource limits for this queue if
+      // configured
+      this.resourceTypes = new HashSet<>();
+      for (AbsoluteResourceType type : AbsoluteResourceType.values()) {
+        resourceTypes.add(type.toString().toLowerCase());
+      }
+      updateConfigurableResourceLimits(clusterResource);
+
+      // Setup queue's maximumAllocation respecting the global
+      // and the queue settings
       setupMaximumAllocation(configuration);
 
-      // Max parallel apps
-      int queueMaxParallelApps =
-          configuration.getMaxParallelAppsForQueue(getQueuePath());
-      setMaxParallelApps(queueMaxParallelApps);
-
-      // initialized the queue state based on previous state, configured state
-      // and its parent state.
-      QueueState previous = getState();
-      QueueState configuredState = configuration
-          .getConfiguredState(getQueuePath());
-      QueueState parentState = (parent == null) ? null : parent.getState();
-      initializeQueueState(previous, configuredState, parentState);
+      // Initialize the queue state based on previous state, configured state
+      // and its parent state
+      initializeQueueState(configuration);
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
       this.acls = configuration.getAcls(getQueuePath());
 
-      // Update metrics
-      CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          this, labelManager, null);
-
-      // Check if labels of this queue is a subset of parent queue, only do this
-      // when we not root
-      if (parent != null && parent.getParent() != null) {
-        if (parent.getAccessibleNodeLabels() != null && !parent
-            .getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
-          // if parent isn't "*", child shouldn't be "*" too
-          if (this.getAccessibleNodeLabels().contains(
-              RMNodeLabelsManager.ANY)) {
-            throw new IOException("Parent's accessible queue is not ANY(*), "
-                + "but child's accessible queue is *");
-          } else{
-            Set<String> diff = Sets.difference(this.getAccessibleNodeLabels(),
-                parent.getAccessibleNodeLabels());
-            if (!diff.isEmpty()) {
-              throw new IOException(
-                  "Some labels of child queue is not a subset "
-                      + "of parent queue, these labels=[" + StringUtils
-                      .join(diff, ",") + "]");
-            }
-          }
-        }
-      }
+      this.userWeights = getUserWeightsFromHierarchy(configuration);
 
       this.reservationsContinueLooking =
           configuration.getReservationContinueLook();
 
+      // Update metrics
+      CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+          this, labelManager, null);
+
+      // Store preemption settings
       this.preemptionDisabled = isQueueHierarchyPreemptionDisabled(this,
           configuration);
       this.intraQueuePreemptionDisabledInHierarchy =
           isIntraQueueHierarchyPreemptionDisabled(this, configuration);
-
       this.priority = configuration.getQueuePriority(
           getQueuePath());
 
@@ -459,29 +412,121 @@ public abstract class AbstractCSQueue implements CSQueue {
       setMultiNodeSortingPolicyName(
           configuration.getMultiNodesSortingAlgorithmPolicy(getQueuePath()));
 
-      this.userWeights = getUserWeightsFromHierarchy(configuration);
-
-      maxApplicationLifetime = getInheritedMaxAppLifetime(this, configuration);
-      defaultApplicationLifetime =
-          getInheritedDefaultAppLifetime(this, configuration,
-              maxApplicationLifetime);
-      if (maxApplicationLifetime > 0 &&
-          defaultApplicationLifetime > maxApplicationLifetime) {
-        throw new YarnRuntimeException(
-            "Default lifetime " + defaultApplicationLifetime
-                + " can't exceed maximum lifetime " + maxApplicationLifetime);
-      }
-      defaultApplicationLifetime = defaultApplicationLifetime > 0
-          ? defaultApplicationLifetime : maxApplicationLifetime;
+      // Setup application related limits
+      setupApplicationLimits(configuration);
     } finally {
       writeLock.unlock();
     }
   }
 
+  /**
+   * Set properties specific to dynamic queues.
+   * @param configuration configuration on which the properties are set
+   */
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    // Set properties from parent template
+    if (getParent() instanceof ParentQueue) {
+      ((ParentQueue) getParent()).getAutoCreatedQueueTemplate()
+          .setTemplateEntriesForChild(configuration, getQueuePath());
+
+      String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
+          AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
+      parentTemplate = parentTemplate.substring(0, parentTemplate.lastIndexOf(
+          DOT));
+      Set<String> parentNodeLabels = csContext
+          .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+          .getLabelsByQueue(parentTemplate);
+
+      if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
+        csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+            .setLabelsByQueue(queuePath, new HashSet<>(parentNodeLabels));
+      }
+    }
+  }
+
+  private void initializeNodeLabels(
+      CapacitySchedulerConfiguration configuration) throws IOException {
+    // Collect and store labels
+    this.accessibleLabels =
+        configuration.getAccessibleNodeLabels(getQueuePath());
+    this.defaultLabelExpression =
+        configuration.getDefaultNodeLabelExpression(
+            getQueuePath());
+
+    // Inherit labels from parent if not set
+    if (this.accessibleLabels == null && parent != null) {
+      this.accessibleLabels = parent.getAccessibleNodeLabels();
+    }
+
+    // If the accessible labels is not null and the queue has a parent with a
+    // similar set of labels copy the defaultNodeLabelExpression from the parent
+    if (this.accessibleLabels != null && parent != null
+        && this.defaultLabelExpression == null &&
+        this.accessibleLabels.containsAll(parent.getAccessibleNodeLabels())) {
+      this.defaultLabelExpression = parent.getDefaultNodeLabelExpression();
+    }
+
+    if (csContext.getCapacitySchedulerQueueManager() != null
+        && csContext.getCapacitySchedulerQueueManager()
+        .getConfiguredNodeLabels() != null) {
+      this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
+          .getConfiguredNodeLabels().getLabelsByQueue(getQueuePath());
+    } else {
+      // Fallback to suboptimal but correct logic
+      this.configuredNodeLabels = csContext.getConfiguration()
+          .getConfiguredNodeLabels(queuePath);
+    }
+
+    // Validate the initialized settings
+    validateNodeLabels();
+  }
+
+  private void validateNodeLabels() throws IOException {
+    // Check if labels of this queue is a subset of parent queue, only do this
+    // when the queue in question is not root
+    if (parent != null && parent.getParent() != null) {
+      if (parent.getAccessibleNodeLabels() != null && !parent
+          .getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY)) {
+        // if parent isn't "*", child shouldn't be "*" too
+        if (this.getAccessibleNodeLabels().contains(
+            RMNodeLabelsManager.ANY)) {
+          throw new IOException("Parent's accessible queue is not ANY(*), "
+              + "but child's accessible queue is *");
+        } else{
+          Set<String> diff = Sets.difference(this.getAccessibleNodeLabels(),
+              parent.getAccessibleNodeLabels());
+          if (!diff.isEmpty()) {
+            throw new IOException(
+                "Some labels of child queue is not a subset "
+                    + "of parent queue, these labels=[" + StringUtils
+                    .join(diff, ",") + "]");
+          }
+        }
+      }
+    }
+  }
+
+  private void setupApplicationLimits(CapacitySchedulerConfiguration configuration) {
+    // Store max parallel apps property
+    this.maxParallelApps = configuration.getMaxParallelAppsForQueue(getQueuePath());
+
+    maxApplicationLifetime = getInheritedMaxAppLifetime(this, configuration);
+    defaultApplicationLifetime =
+        getInheritedDefaultAppLifetime(this, configuration,
+            maxApplicationLifetime);
+  }
+
   private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
     String myQueuePath = getQueuePath();
+    /* YARN-10869: When using AutoCreatedLeafQueues, the passed configuration
+    * object is a cloned one containing only the template configs
+    * (see ManagedParentQueue#getLeafQueueConfigs). To ensure that the actual
+    * cluster maximum allocation is fetched the original config object should
+    * be used.
+    */
     Resource clusterMax = ResourceUtils
-        .fetchMaximumAllocationFromConfig(csConf);
+        .fetchMaximumAllocationFromConfig(this.csContext.getConfiguration());
     Resource queueMax = csConf.getQueueMaximumAllocation(myQueuePath);
 
     maximumAllocation = Resources.clone(
@@ -557,15 +602,9 @@ public abstract class AbstractCSQueue implements CSQueue {
         queuePath, resourceTypes);
   }
 
-  protected void updateConfigurableResourceRequirement(String queuePath,
-      Resource clusterResource) {
-    CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-    Set<String> configuredNodelabels = conf.getConfiguredNodeLabels(queuePath);
-
-    for (String label : configuredNodelabels) {
-      Resource minResource = getMinimumAbsoluteResource(queuePath, label);
-      Resource maxResource = getMaximumAbsoluteResource(queuePath, label);
-
+  protected void updateCapacityConfigType() {
+    this.capacityConfigType = CapacityConfigType.NONE;
+    for (String label : configuredNodeLabels) {
       LOG.debug("capacityConfigType is '{}' for queue {}",
           capacityConfigType, getQueuePath());
 
@@ -580,38 +619,34 @@ public abstract class AbstractCSQueue implements CSQueue {
       } else {
         validateAbsoluteVsPercentageCapacityConfig(localType);
       }
+    }
+  }
 
-      // If min resource for a resource type is greater than its max resource,
-      // throw exception to handle such error configs.
-      if (!maxResource.equals(Resources.none()) && Resources.greaterThan(
-          resourceCalculator, clusterResource, minResource, maxResource)) {
-        throw new IllegalArgumentException("Min resource configuration "
-            + minResource + " is greater than its max value:" + maxResource
-            + " in queue:" + getQueuePath());
-      }
+  protected void updateConfigurableResourceLimits(Resource clusterResource) {
+    for (String label : configuredNodeLabels) {
+      final Resource minResource = getMinimumAbsoluteResource(queuePath, label);
+      Resource maxResource = getMaximumAbsoluteResource(queuePath, label);
 
-      // If parent's max resource is lesser to a specific child's max
-      // resource, throw exception to handle such error configs.
       if (parent != null) {
-        Resource parentMaxRes = parent.getQueueResourceQuotas()
-            .getConfiguredMaxResource(label);
-        if (Resources.greaterThan(resourceCalculator, clusterResource,
-            parentMaxRes, Resources.none())) {
-          if (Resources.greaterThan(resourceCalculator, clusterResource,
-              maxResource, parentMaxRes)) {
-            throw new IllegalArgumentException("Max resource configuration "
+        final Resource parentMax = parent.getQueueResourceQuotas().getConfiguredMaxResource(label);
+        validateMinResourceIsNotGreaterThanMaxResource(maxResource, parentMax, clusterResource,
+            "Max resource configuration "
                 + maxResource + " is greater than parents max value:"
-                + parentMaxRes + " in queue:" + getQueuePath());
-          }
+                + parentMax + " in queue:" + getQueuePath());
 
-          // If child's max resource is not set, but its parent max resource is
-          // set, we must set child max resource to its parent's.
-          if (maxResource.equals(Resources.none())
-              && !minResource.equals(Resources.none())) {
-            maxResource = Resources.clone(parentMaxRes);
-          }
+        // If child's max resource is not set, but its parent max resource is
+        // set, we must set child max resource to its parent's.
+        if (maxResource.equals(Resources.none()) &&
+            !minResource.equals(Resources.none()) &&
+            !parentMax.equals(Resources.none())) {
+          maxResource = Resources.clone(parentMax);
         }
       }
+
+      validateMinResourceIsNotGreaterThanMaxResource(minResource, maxResource, clusterResource,
+          "Min resource configuration "
+              + minResource + " is greater than its max value:" + maxResource
+              + " in queue:" + getQueuePath());
 
       LOG.debug("Updating absolute resource configuration for queue:{} as"
               + " minResource={} and maxResource={}", getQueuePath(), minResource,
@@ -619,6 +654,16 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       queueResourceQuotas.setConfiguredMinResource(label, minResource);
       queueResourceQuotas.setConfiguredMaxResource(label, maxResource);
+    }
+  }
+
+  private void validateMinResourceIsNotGreaterThanMaxResource(Resource minResource,
+                                                              Resource maxResource,
+                                                              Resource clusterResource,
+                                                              String validationError) {
+    if (!maxResource.equals(Resources.none()) && Resources.greaterThan(
+        resourceCalculator, clusterResource, minResource, maxResource)) {
+      throw new IllegalArgumentException(validationError);
     }
   }
 
@@ -663,8 +708,12 @@ public abstract class AbstractCSQueue implements CSQueue {
         minimumAllocation);
   }
 
-  private void initializeQueueState(QueueState previousState,
-      QueueState configuredState, QueueState parentState) {
+  private void initializeQueueState(CapacitySchedulerConfiguration configuration) {
+    QueueState previousState = getState();
+    QueueState configuredState = configuration
+        .getConfiguredState(getQueuePath());
+    QueueState parentState = (parent == null) ? null : parent.getState();
+
     // verify that we can not any value for State other than RUNNING/STOPPED
     if (configuredState != null && configuredState != QueueState.RUNNING
         && configuredState != QueueState.STOPPED) {
@@ -733,6 +782,7 @@ public abstract class AbstractCSQueue implements CSQueue {
         getIntraQueuePreemptionDisabled());
     queueInfo.setQueueConfigurations(getQueueConfigurations());
     queueInfo.setWeight(queueCapacities.getWeight());
+    queueInfo.setMaxParallelApps(maxParallelApps);
     return queueInfo;
   }
 
@@ -970,17 +1020,25 @@ public abstract class AbstractCSQueue implements CSQueue {
       // lifetime. Otherwise, use current queue's max lifetime value for its
       // default lifetime.
       if (defaultAppLifetimeWasSpecifiedInConfig) {
-        if (parentsDefaultAppLifetime <= myMaxAppLifetime) {
-          defaultAppLifetime = parentsDefaultAppLifetime;
-        } else {
-          defaultAppLifetime = myMaxAppLifetime;
-        }
+        defaultAppLifetime =
+            Math.min(parentsDefaultAppLifetime, myMaxAppLifetime);
       } else {
         // Default app lifetime value was not set anywhere in this queue's
         // hierarchy. Use current queue's max lifetime as its default.
         defaultAppLifetime = myMaxAppLifetime;
       }
     } // else if >= 0, default lifetime was set at this level. Just use it.
+
+    if (myMaxAppLifetime > 0 &&
+        defaultAppLifetime > myMaxAppLifetime) {
+      throw new YarnRuntimeException(
+          "Default lifetime " + defaultAppLifetime
+              + " can't exceed maximum lifetime " + myMaxAppLifetime);
+    }
+    
+    if (defaultAppLifetime <= 0) {
+      defaultAppLifetime = myMaxAppLifetime;
+    }
     return defaultAppLifetime;
   }
 
@@ -1147,84 +1205,72 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   }
 
+  private static String ensurePartition(String partition) {
+    return Optional.ofNullable(partition).orElse(RMNodeLabelsManager.NO_LABEL);
+  }
+
+  @FunctionalInterface
+  interface Counter {
+    void count(String partition, Resource resource);
+  }
+
+  @FunctionalInterface
+  interface CounterWithApp {
+    void count(String partition, Resource reservedRes, SchedulerApplicationAttempt application);
+  }
+
+  private void count(String partition, Resource resource, Counter counter, Counter parentCounter) {
+    final String checkedPartition = ensurePartition(partition);
+    counter.count(checkedPartition, resource);
+    Optional.ofNullable(parentCounter).ifPresent(c -> c.count(checkedPartition, resource));
+  }
+
+  private void countAndUpdate(String partition, Resource resource,
+                              Counter counter, CounterWithApp parentCounter) {
+    final String checkedPartition = ensurePartition(partition);
+    counter.count(checkedPartition, resource);
+    CSQueueUtils.updateUsedCapacity(resourceCalculator,
+        labelManager.getResourceByLabel(checkedPartition, Resources.none()),
+        checkedPartition, this);
+    Optional.ofNullable(parentCounter).ifPresent(c -> c.count(checkedPartition, resource, null));
+  }
+
   @Override
   public void incReservedResource(String partition, Resource reservedRes) {
-    if (partition == null) {
-      partition = RMNodeLabelsManager.NO_LABEL;
-    }
-
-    queueUsage.incReserved(partition, reservedRes);
-    if(null != parent){
-      parent.incReservedResource(partition, reservedRes);
-    }
+    count(partition, reservedRes, queueUsage::incReserved,
+        parent == null ? null : parent::incReservedResource);
   }
 
   @Override
   public void decReservedResource(String partition, Resource reservedRes) {
-    if (partition == null) {
-      partition = RMNodeLabelsManager.NO_LABEL;
-    }
-
-    queueUsage.decReserved(partition, reservedRes);
-    if(null != parent){
-      parent.decReservedResource(partition, reservedRes);
-    }
+    count(partition, reservedRes, queueUsage::decReserved,
+        parent == null ? null : parent::decReservedResource);
   }
 
   @Override
   public void incPendingResource(String nodeLabel, Resource resourceToInc) {
-    if (nodeLabel == null) {
-      nodeLabel = RMNodeLabelsManager.NO_LABEL;
-    }
-    // ResourceUsage has its own lock, no addition lock needs here.
-    queueUsage.incPending(nodeLabel, resourceToInc);
-    if (null != parent) {
-      parent.incPendingResource(nodeLabel, resourceToInc);
-    }
+    count(nodeLabel, resourceToInc, queueUsage::incPending,
+        parent == null ? null : parent::incPendingResource);
   }
 
   @Override
   public void decPendingResource(String nodeLabel, Resource resourceToDec) {
-    if (nodeLabel == null) {
-      nodeLabel = RMNodeLabelsManager.NO_LABEL;
-    }
-    // ResourceUsage has its own lock, no addition lock needs here.
-    queueUsage.decPending(nodeLabel, resourceToDec);
-    if (null != parent) {
-      parent.decPendingResource(nodeLabel, resourceToDec);
-    }
+    count(nodeLabel, resourceToDec, queueUsage::decPending,
+        parent == null ? null : parent::decPendingResource);
   }
 
   @Override
   public void incUsedResource(String nodeLabel, Resource resourceToInc,
       SchedulerApplicationAttempt application) {
-    if (nodeLabel == null) {
-      nodeLabel = RMNodeLabelsManager.NO_LABEL;
-    }
-    // ResourceUsage has its own lock, no addition lock needs here.
-    queueUsage.incUsed(nodeLabel, resourceToInc);
-    CSQueueUtils.updateUsedCapacity(resourceCalculator,
-        labelManager.getResourceByLabel(nodeLabel, Resources.none()),
-        nodeLabel, this);
-    if (null != parent) {
-      parent.incUsedResource(nodeLabel, resourceToInc, null);
-    }
+    countAndUpdate(nodeLabel, resourceToInc, queueUsage::incUsed,
+        parent == null ? null : parent::incUsedResource);
   }
 
   @Override
   public void decUsedResource(String nodeLabel, Resource resourceToDec,
       SchedulerApplicationAttempt application) {
-    if (nodeLabel == null) {
-      nodeLabel = RMNodeLabelsManager.NO_LABEL;
-    }
-    // ResourceUsage has its own lock, no addition lock needs here.
-    queueUsage.decUsed(nodeLabel, resourceToDec);
-    CSQueueUtils.updateUsedCapacity(resourceCalculator,
-        labelManager.getResourceByLabel(nodeLabel, Resources.none()),
-        nodeLabel, this);
-    if (null != parent) {
-      parent.decUsedResource(nodeLabel, resourceToDec, null);
-    }
+    countAndUpdate(nodeLabel, resourceToDec, queueUsage::decUsed,
+        parent == null ? null : parent::decUsedResource);
   }
 
   /**
@@ -1453,6 +1499,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.maxParallelApps = maxParallelApps;
   }
 
+  @Override
   public int getMaxParallelApps() {
     return maxParallelApps;
   }
@@ -1469,8 +1516,8 @@ public abstract class AbstractCSQueue implements CSQueue {
         parentQueueCapacities, queueCapacities.getExistingNodeLabels());
   }
 
-  private Resource getMinResourceNormalized(String name,
-      Map<String, Float> effectiveMinRatio, Resource minResource) {
+  private Resource createNormalizedMinResource(Resource minResource,
+      Map<String, Float> effectiveMinRatio) {
     Resource ret = Resource.newInstance(minResource);
     int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
@@ -1480,34 +1527,60 @@ public abstract class AbstractCSQueue implements CSQueue {
       Float ratio = effectiveMinRatio.get(nResourceInformation.getName());
       if (ratio != null) {
         ret.setResourceValue(i,
-            (long) (nResourceInformation.getValue() * ratio.floatValue()));
+            (long) (nResourceInformation.getValue() * ratio));
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Updating min resource for Queue: " + name + " as " + ret
+          LOG.debug("Updating min resource for Queue: " + queuePath + " as " + ret
               .getResourceInformation(i) + ", Actual resource: "
-              + nResourceInformation.getValue() + ", ratio: " + ratio
-              .floatValue());
+              + nResourceInformation.getValue() + ", ratio: " + ratio);
         }
       }
     }
     return ret;
   }
 
+  private Resource getOrInheritMaxResource(Resource resourceByLabel, String label) {
+    Resource parentMaxResource =
+        parent.getQueueResourceQuotas().getConfiguredMaxResource(label);
+    if (parentMaxResource.equals(Resources.none())) {
+      parentMaxResource =
+          parent.getQueueResourceQuotas().getEffectiveMaxResource(label);
+    }
+
+    Resource configuredMaxResource =
+        getQueueResourceQuotas().getConfiguredMaxResource(label);
+    if (configuredMaxResource.equals(Resources.none())) {
+      return Resources.clone(parentMaxResource);
+    }
+
+    return Resources.clone(Resources.min(resourceCalculator, resourceByLabel,
+        configuredMaxResource, parentMaxResource));
+  }
+
   void updateMaxAppRelatedField(CapacitySchedulerConfiguration conf,
-      LeafQueue leafQueue, String label) {
+      LeafQueue leafQueue) {
     int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
+    int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
+    String maxLabel = RMNodeLabelsManager.NO_LABEL;
+
     if (maxApplications < 0) {
-      int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-      if (maxGlobalPerQueueApps > 0) {
-        // In absolute mode, should
-        // shrink when change to corresponding label capacity.
-        maxApplications = this.capacityConfigType
-            != CapacityConfigType.ABSOLUTE_RESOURCE ?
-          maxGlobalPerQueueApps :
-            (int) (maxGlobalPerQueueApps * queueCapacities
-                .getAbsoluteCapacity(label));
-      } else{
-        maxApplications = (int) (conf.getMaximumSystemApplications()
-            * queueCapacities.getAbsoluteCapacity(label));
+      for (String label : configuredNodeLabels) {
+        int maxApplicationsByLabel = 0;
+        if (maxGlobalPerQueueApps > 0) {
+          // In absolute mode, should
+          // shrink when change to corresponding label capacity.
+          maxApplicationsByLabel = this.capacityConfigType
+              != CapacityConfigType.ABSOLUTE_RESOURCE ?
+              maxGlobalPerQueueApps :
+              (int) (maxGlobalPerQueueApps * queueCapacities
+                  .getAbsoluteCapacity(label));
+        } else {
+          maxApplicationsByLabel = (int) (conf.getMaximumSystemApplications()
+              * queueCapacities.getAbsoluteCapacity(label));
+        }
+        if (maxApplicationsByLabel > maxApplications) {
+          maxApplications = maxApplicationsByLabel;
+          maxLabel = label;
+        }
       }
     }
     leafQueue.setMaxApplications(maxApplications);
@@ -1525,111 +1598,102 @@ public abstract class AbstractCSQueue implements CSQueue {
         "update max app related, maxApplications="
         + maxApplications + ", maxApplicationsPerUser="
         + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
-        .getAbsoluteCapacity(label) + ", Cap: " + queueCapacities
-        .getCapacity(label) + ", MaxCap : " + queueCapacities
-        .getMaximumCapacity(label));
+        .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
+        .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(maxLabel));
   }
 
-  private void deriveCapacityFromAbsoluteConfigurations(String label,
-      Resource clusterResource, ResourceCalculator rc) {
-
-    /*
-     * In case when queues are configured with absolute resources, it is better
-     * to update capacity/max-capacity etc w.r.t absolute resource as well. In
-     * case of computation, these values wont be used any more. However for
-     * metrics and UI, its better these values are pre-computed here itself.
-     */
-
-    // 1. Update capacity as a float based on parent's minResource
-    float f = rc.divide(clusterResource,
+  void deriveCapacityFromAbsoluteConfigurations(String label,
+      Resource clusterResource) {
+    // Update capacity with a float calculated from the parent's minResources
+    // and the recently changed queue minResources.
+    // capacity = effectiveMinResource / {parent's effectiveMinResource}
+    float result = resourceCalculator.divide(clusterResource,
         queueResourceQuotas.getEffectiveMinResource(label),
         parent.getQueueResourceQuotas().getEffectiveMinResource(label));
-    queueCapacities.setCapacity(label, Float.isInfinite(f) ? 0 : f);
+    queueCapacities.setCapacity(label,
+        Float.isInfinite(result) ? 0 : result);
 
-    // 2. Update max-capacity as a float based on parent's maxResource
-    f = rc.divide(clusterResource,
+    // Update maxCapacity with a float calculated from the parent's maxResources
+    // and the recently changed queue maxResources.
+    // maxCapacity = effectiveMaxResource / parent's effectiveMaxResource
+    result = resourceCalculator.divide(clusterResource,
         queueResourceQuotas.getEffectiveMaxResource(label),
         parent.getQueueResourceQuotas().getEffectiveMaxResource(label));
-    queueCapacities.setMaximumCapacity(label, Float.isInfinite(f) ? 0 : f);
+    queueCapacities.setMaximumCapacity(label,
+        Float.isInfinite(result) ? 0 : result);
 
-    // 3. Update absolute capacity as a float based on parent's minResource and
-    // cluster resource.
+    // Update absolute capacity (as in fraction of the
+    // whole cluster's resources) with a float calculated from the queue's
+    // capacity and the parent's absoluteCapacity.
+    // absoluteCapacity = capacity * parent's absoluteCapacity
     queueCapacities.setAbsoluteCapacity(label,
         queueCapacities.getCapacity(label) * parent.getQueueCapacities()
             .getAbsoluteCapacity(label));
 
-    // 4. Update absolute max-capacity as a float based on parent's maxResource
-    // and cluster resource.
+    // Update absolute maxCapacity (as in fraction of the
+    // whole cluster's resources) with a float calculated from the queue's
+    // maxCapacity and the parent's absoluteMaxCapacity.
+    // absoluteMaxCapacity = maxCapacity * parent's absoluteMaxCapacity
     queueCapacities.setAbsoluteMaximumCapacity(label,
-        queueCapacities.getMaximumCapacity(label) * parent.getQueueCapacities()
-            .getAbsoluteMaximumCapacity(label));
+        queueCapacities.getMaximumCapacity(label) *
+            parent.getQueueCapacities()
+                .getAbsoluteMaximumCapacity(label));
   }
 
   void updateEffectiveResources(Resource clusterResource) {
-    Set<String> configuredNodelabels =
-        csContext.getConfiguration().getConfiguredNodeLabels(getQueuePath());
-    for (String label : configuredNodelabels) {
+    for (String label : configuredNodeLabels) {
       Resource resourceByLabel = labelManager.getResourceByLabel(label,
           clusterResource);
+      Resource newEffectiveMinResource;
+      Resource newEffectiveMaxResource;
 
-      Resource minResource = queueResourceQuotas.getConfiguredMinResource(
-          label);
-
-      // Update effective resource (min/max) to each child queue.
+      // Absolute and relative/weight mode needs different handling.
       if (getCapacityConfigType().equals(
           CapacityConfigType.ABSOLUTE_RESOURCE)) {
-        queueResourceQuotas.setEffectiveMinResource(label,
-            getMinResourceNormalized(queuePath,
-                ((ParentQueue) parent).getEffectiveMinRatioPerResource(),
-                minResource));
+        newEffectiveMinResource = createNormalizedMinResource(
+            queueResourceQuotas.getConfiguredMinResource(label),
+            ((ParentQueue) parent).getEffectiveMinRatioPerResource());
 
-        // Max resource of a queue should be a minimum of {configuredMaxRes,
-        // parentMaxRes}. parentMaxRes could be configured value. But if not
-        // present could also be taken from effective max resource of parent.
-        Resource parentMaxRes =
-            parent.getQueueResourceQuotas().getConfiguredMaxResource(label);
-        if (parent != null && parentMaxRes.equals(Resources.none())) {
-          parentMaxRes =
-              parent.getQueueResourceQuotas().getEffectiveMaxResource(label);
-        }
-
-        // Minimum of {childMaxResource, parentMaxRes}. However if
-        // childMaxResource is empty, consider parent's max resource alone.
-        Resource childMaxResource =
-            getQueueResourceQuotas().getConfiguredMaxResource(label);
-        Resource effMaxResource = Resources.min(resourceCalculator,
-            resourceByLabel, childMaxResource.equals(Resources.none()) ?
-                parentMaxRes :
-                childMaxResource, parentMaxRes);
-        queueResourceQuotas.setEffectiveMaxResource(label,
-            Resources.clone(effMaxResource));
-
-        // In cases where we still need to update some units based on
-        // percentage, we have to calculate percentage and update.
-        ResourceCalculator rc = this.csContext.getResourceCalculator();
-        deriveCapacityFromAbsoluteConfigurations(label, clusterResource, rc);
-        // Re-visit max applications for a queue based on absolute capacity if
-        // needed.
-        if (this instanceof LeafQueue) {
-          LeafQueue leafQueue = (LeafQueue) this;
-          CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-          updateMaxAppRelatedField(conf, leafQueue, label);
-        }
-      } else{
-        queueResourceQuotas.setEffectiveMinResource(label, Resources
+        // Max resource of a queue should be the minimum of {parent's maxResources,
+        // this queue's maxResources}. Both parent's maxResources and this queue's
+        // maxResources can be configured. If this queue's maxResources is not
+        // configured, inherit the value from the parent. If parent's
+        // maxResources is not configured its inherited value must be collected.
+        newEffectiveMaxResource =
+            getOrInheritMaxResource(resourceByLabel, label);
+      } else {
+        newEffectiveMinResource = Resources
             .multiply(resourceByLabel,
-                queueCapacities.getAbsoluteCapacity(label)));
-        queueResourceQuotas.setEffectiveMaxResource(label, Resources
+                queueCapacities.getAbsoluteCapacity(label));
+        newEffectiveMaxResource = Resources
             .multiply(resourceByLabel,
-                queueCapacities.getAbsoluteMaximumCapacity(label)));
+                queueCapacities.getAbsoluteMaximumCapacity(label));
       }
 
+      // Update the effective min
+      queueResourceQuotas.setEffectiveMinResource(label,
+          newEffectiveMinResource);
+      queueResourceQuotas.setEffectiveMaxResource(label,
+          newEffectiveMaxResource);
+
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Updating effective min resource for queue:" + queuePath
-            + " as effMinResource=" + queueResourceQuotas
-            .getEffectiveMinResource(label)
-            + "and Updating effective max resource as effMaxResource="
-            + queueResourceQuotas.getEffectiveMaxResource(label));
+        LOG.debug("Updating queue:" + queuePath
+            + " with effective minimum resource=" + newEffectiveMinResource
+            + "and effective maximum resource="
+            + newEffectiveMaxResource);
+      }
+
+      if (getCapacityConfigType().equals(
+          CapacityConfigType.ABSOLUTE_RESOURCE)) {
+        /*
+         * If the queues are configured with absolute resources, it is advised
+         * to update capacity/max-capacity/etc. based on the newly calculated
+         * resource values. These values won't be used for actual resource
+         * distribution, however, for accurate metrics and the UI
+         * they should be re-calculated.
+         */
+        deriveCapacityFromAbsoluteConfigurations(label, clusterResource);
       }
     }
   }
@@ -1703,5 +1767,4 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
-
 }

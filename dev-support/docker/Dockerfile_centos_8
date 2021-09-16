@@ -23,151 +23,89 @@ WORKDIR /root
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+######
+# Platform package dependency resolver
+######
+COPY pkg-resolver pkg-resolver
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
+
+######
+# Install packages from yum
+######
+# hadolint ignore=DL3008,SC2046
 RUN yum update -y \
-    && yum install -y \
-        ant \
-        bzip2 \
-        bzip2-devel \
-        clang \
-        curl \
-        cyrus-sasl-devel \
-        dnf \
-        fuse \
-        git \
-        libcurl-devel \
-        fuse \
-        fuse-libs \
-        fuse-devel \
-        libtool \
-        libtirpc-devel \
-        lz4-devel \
-        make \
-        openssl-devel \
-        pinentry-curses \
-        pkg-config \
-        python3 \
-        python3-pip \
-        python3-setuptools \
-        python3-wheel \
-        rsync \
-        sudo \
-        valgrind \
-        zlib-devel
+    && yum install -y python3 \
+    && yum install -y $(pkg-resolver/resolve.py centos:8)
 
 ####
 # Install EPEL
 ####
-RUN mkdir -p /tmp/epel \
-    && curl -L -s -S https://download-ib01.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
-        -o /tmp/epel/epel-release-latest-8.noarch.rpm \
-    && rpm -Uvh /tmp/epel/epel-release-latest-8.noarch.rpm
+RUN pkg-resolver/install-epel.sh centos:8
 
 RUN dnf --enablerepo=powertools install -y \
     doxygen \
-    snappy-devel
+    snappy-devel \
+    yasm
 
 RUN dnf install -y \
     bouncycastle \
     gcc-toolset-9-gcc \
     gcc-toolset-9-gcc-c++ \
-    nodejs \
-    npm \
     libpmem-devel
 
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/gcc-toolset-9/enable" >> /etc/bashrc
 SHELL ["/bin/bash", "--login", "-c"]
 
-####
-# Install Maven 3.6.3
-####
-RUN mkdir -p /opt/maven /tmp/maven \
-    && curl -L -s -S https://mirrors.estointernet.in/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz \
-        -o /tmp/maven/apache-maven-3.6.3-bin.tar.gz \
-    && tar xzf /tmp/maven/apache-maven-3.6.3-bin.tar.gz --strip-components 1 -C /opt/maven
+######
+# Set the environment variables needed for CMake
+# to find and use GCC 9 for compilation
+######
+ENV GCC_HOME "/opt/rh/gcc-toolset-9"
+ENV CC "${GCC_HOME}/root/usr/bin/gcc"
+ENV CXX "${GCC_HOME}/root/usr/bin/g++"
+ENV MODULES_RUN_QUARANTINE "LD_LIBRARY_PATH LD_PRELOAD"
+ENV MODULES_CMD "/usr/share/Modules/libexec/modulecmd.tcl"
+ENV SHLVL 1
+ENV MODULEPATH "/etc/scl/modulefiles:/usr/share/Modules/modulefiles:/etc/modulefiles:/usr/share/modulefiles"
+ENV MODULEPATH_modshare "/usr/share/modulefiles:1:/usr/share/Modules/modulefiles:1:/etc/modulefiles:1"
+ENV MODULESHOME "/usr/share/Modules"
+ENV LD_LIBRARY_PATH "${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:${GCC_HOME}/root/usr/lib64/dyninst:${GCC_HOME}/root/usr/lib/dyninst:${GCC_HOME}/root/usr/lib64:${GCC_HOME}/root/usr/lib:/usr/lib:/usr/lib64"
+ENV PCP_DIR "${GCC_HOME}/root"
+ENV MANPATH "${GCC_HOME}/root/usr/share/man::"
+ENV PATH "${GCC_HOME}/root/usr/bin:/usr/share/Modules/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV PKG_CONFIG_PATH "${GCC_HOME}/root/usr/lib64/pkgconfig"
+ENV INFOPATH "${GCC_HOME}/root/usr/share/info"
 
-####
-# Install CMake 3.19
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /tmp/cmake /opt/cmake \
-    && curl -L -s -S https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz -o /tmp/cmake/cmake-3.19.0.tar.gz \
-    && tar xzf /tmp/cmake/cmake-3.19.0.tar.gz --strip-components 1 -C /opt/cmake \
-    && cd /opt/cmake || exit && ./bootstrap \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
-
-####
-# Install zstandard
-####
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/zstd /tmp/zstd \
-    && curl -L -s -S https://github.com/facebook/zstd/archive/refs/tags/v1.4.9.tar.gz -o /tmp/zstd/v1.4.9.tar.gz \
-    && tar xzf /tmp/zstd/v1.4.9.tar.gz --strip-components 1 -C /opt/zstd \
-    && cd /opt/zstd || exit \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root || exit
+# TODO: Set locale
 
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME /opt/maven/apache-maven-3.6.3
+ENV MAVEN_HOME /opt/maven
 ENV PATH "${PATH}:${MAVEN_HOME}/bin"
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-1.8.0
 
 #######
-# Install SpotBugs 4.2.2
+# Set env vars for SpotBugs
 #######
-RUN mkdir -p /opt/spotbugs \
-    && curl -L -s -S https://github.com/spotbugs/spotbugs/releases/download/4.2.2/spotbugs-4.2.2.tgz \
-      -o /opt/spotbugs.tgz \
-    && tar xzf /opt/spotbugs.tgz --strip-components 1 -C /opt/spotbugs \
-    && chmod +x /opt/spotbugs/bin/*
 ENV SPOTBUGS_HOME /opt/spotbugs
 
 #######
-# Install Boost 1.72
+# Set env vars for Google Protobuf
 #######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/boost-library \
-    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
-    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
-    && cd /opt/boost-library \
-    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
-    && cd /opt/boost-library/boost_1_72_0 \
-    && ./bootstrap.sh --prefix=/usr/ \
-    && ./b2 --without-python install \
-    && cd /root \
-    && rm -rf /opt/boost-library
-
-######
-# Install Google Protobuf 3.7.1
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/protobuf-src \
-    && curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-      -o /opt/protobuf.tar.gz \
-    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
-    && cd /opt/protobuf-src \
-    && ./configure --prefix=/opt/protobuf \
-    && make "-j$(nproc)" \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-src
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
-####
-# Install pylint and python-dateutil
-####
-RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
-
-####
-# Install bower
-####
-# hadolint ignore=DL3008
-RUN npm install -g bower@1.8.8
+######
+# Install packages
+######
+RUN pkg-resolver/install-maven.sh centos:8
+RUN pkg-resolver/install-cmake.sh centos:8
+RUN pkg-resolver/install-boost.sh centos:8
+RUN pkg-resolver/install-spotbugs.sh centos:8
+RUN pkg-resolver/install-protobuf.sh centos:8
+RUN pkg-resolver/install-zstandard.sh centos:8
+RUN pkg-resolver/install-common-pkgs.sh

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -135,27 +136,38 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     return SESSION_TOKEN_KIND;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
+    String s3EncryptionMethod =
+        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM,
+            S3AEncryptionMethods.SSE_KMS.getMethod());
+    String s3EncryptionKey = conf.getTrimmed(Constants.S3_ENCRYPTION_KEY, "");
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
+        Constants.S3_ENCRYPTION_ALGORITHM,
+        Constants.S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
-    // switch to SSE_S3.
+    // switch to CSE-KMS(if specified) else SSE-KMS.
     if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
-      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
-          S3AEncryptionMethods.SSE_S3.getMethod());
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
+      // KMS key ID a must if CSE-KMS is being tested.
+      conf.set(Constants.S3_ENCRYPTION_KEY, s3EncryptionKey);
     }
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
+    // turn on ACLs so as to verify role DT permissions include
+    // write access.
+    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     return conf;
   }
 
@@ -302,6 +314,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    * Create a FS with a delegated token, verify it works as a filesystem,
    * and that you can pick up the same DT from that FS too.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testDelegatedFileSystem() throws Throwable {
     describe("Delegation tokens can be passed to a new filesystem;"
@@ -340,6 +353,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // this is to simulate better a remote deployment.
     removeBaseAndBucketOverrides(bucket, conf,
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
+        Constants.S3_ENCRYPTION_ALGORITHM,
+        Constants.S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY,
         DELEGATION_TOKEN_ROLE_ARN,
@@ -358,10 +373,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       assertBoundToDT(delegatedFS, tokenKind);
       if (encryptionTestEnabled()) {
         assertNotNull("Encryption propagation failed",
-            delegatedFS.getServerSideEncryptionAlgorithm());
+            delegatedFS.getS3EncryptionAlgorithm());
         assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            delegatedFS.getServerSideEncryptionAlgorithm());
+            fs.getS3EncryptionAlgorithm(),
+            delegatedFS.getS3EncryptionAlgorithm());
       }
       verifyRestrictedPermissions(delegatedFS);
 
@@ -393,10 +408,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       assertBoundToDT(secondDelegate, tokenKind);
       if (encryptionTestEnabled()) {
         assertNotNull("Encryption propagation failed",
-            secondDelegate.getServerSideEncryptionAlgorithm());
+            secondDelegate.getS3EncryptionAlgorithm());
         assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            secondDelegate.getServerSideEncryptionAlgorithm());
+            fs.getS3EncryptionAlgorithm(),
+            secondDelegate.getS3EncryptionAlgorithm());
       }
       ContractTestUtils.assertDeleted(secondDelegate, testPath, true);
       assertNotNull("unbounded DT",

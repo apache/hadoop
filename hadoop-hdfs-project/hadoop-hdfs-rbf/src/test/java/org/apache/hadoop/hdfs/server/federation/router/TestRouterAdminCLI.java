@@ -1740,6 +1740,25 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
   }
 
+  @Test
+  public void testRefreshCallQueue() throws Exception {
+
+    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
+
+    String[] argv = new String[]{"-refreshCallQueue"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("Refresh call queue successfully"));
+
+    argv = new String[]{};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("-refreshCallQueue"));
+
+    argv = new String[]{"-refreshCallQueue", "redundant"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains("No arguments allowed"));
+  }
+
   private void addMountTable(String src, String nsId, String dst)
       throws Exception {
     String[] argv = new String[] {"-add", src, nsId, dst};

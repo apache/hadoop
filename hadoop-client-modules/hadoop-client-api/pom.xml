@@ -67,6 +67,13 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- snappy-java is native library and cannot be relocated. So we explicitly exclude it
+         from shaded jar to prevent possible conflict. Make it as transitive dependency to
+         make the downstream pull it. -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
@@ -109,6 +116,10 @@
                     <includes>
                       <include>org.apache.hadoop:*</include>
                     </includes>
+                    <excludes>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
+                    </excludes>
                   </artifactSet>
                   <filters>
                     <!-- We get these package level classes from various yarn api jars -->
@@ -147,6 +158,9 @@
                         <exclude>org/xml/sax/**/*</exclude>
                         <exclude>org/bouncycastle/*</exclude>
                         <exclude>org/bouncycastle/**/*</exclude>
+                        <!-- Exclude snappy-java -->
+                        <exclude>org/xerial/snappy/*</exclude>
+                        <exclude>org/xerial/snappy/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -223,6 +237,9 @@
                         <!-- Exclude config keys for Hadoop that look like package names -->
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
+                        <!-- Exclude lz4-java -->
+                        <exclude>net/jpountz/*</exclude>
+                        <exclude>net/jpountz/**/*</exclude>
                       </excludes>
                     </relocation>
                     <!-- okio declares a top level package instead of nested -->

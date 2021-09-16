@@ -135,9 +135,16 @@ class StripedBlockReconstructor extends StripedReconstructor
       resetBuffers(inputs);
 
       DataNodeFaultInjector.get().badDecoding(outputs);
+      long start = Time.monotonicNow();
       try {
         getValidator().validate(inputs, erasedIndices, outputs);
+        long validateEnd = Time.monotonicNow();
+        getDatanode().getMetrics().incrECReconstructionValidateTime(
+            validateEnd - start);
       } catch (InvalidDecodingException e) {
+        long validateFailedEnd = Time.monotonicNow();
+        getDatanode().getMetrics().incrECReconstructionValidateTime(
+            validateFailedEnd - start);
         getDatanode().getMetrics().incrECInvalidReconstructionTasks();
         throw e;
       }

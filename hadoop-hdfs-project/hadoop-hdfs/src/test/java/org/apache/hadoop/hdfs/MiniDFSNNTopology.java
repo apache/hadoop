@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 
 /**
  * This class is used to specify the setup of namenodes when instantiating

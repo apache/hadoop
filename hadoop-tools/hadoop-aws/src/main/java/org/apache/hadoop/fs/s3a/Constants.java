@@ -147,7 +147,7 @@ public final class Constants {
 
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 48;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -420,7 +420,13 @@ public final class Constants {
       "fs.s3a.multipart.purge.age";
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
-  // s3 server-side encryption, see S3AEncryptionMethods for valid options
+  /**
+   * s3 server-side encryption, see
+   * {@link S3AEncryptionMethods} for valid options.
+   *
+   * {@value}
+   */
+  @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
@@ -444,8 +450,31 @@ public final class Constants {
    * May be set within a JCEKS file.
    * Value: "{@value}".
    */
+  @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
+
+  /**
+   * Set S3-server side encryption(SSE) or S3-Client side encryption(CSE)
+   * algorithm. Check {@link S3AEncryptionMethods} for valid options.
+   * <br>
+   * value: {@value}
+   */
+  public static final String S3_ENCRYPTION_ALGORITHM =
+      "fs.s3a.encryption.algorithm";
+
+  /**
+   * Set S3-SSE or S3-CSE encryption Key if required.
+   * <br>
+   * <i>Note:</i>
+   *   <ul>
+   *     <li>In case of S3-CSE this value needs to be set for CSE to work.</li>
+   *     <li>In case of S3-SSE follow {@link #SERVER_SIDE_ENCRYPTION_KEY}</li>
+   *   </ul>
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_KEY =
+      "fs.s3a.encryption.key";
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
@@ -1080,5 +1109,17 @@ public final class Constants {
    * through the getXAttr APIs have the prefix: {@value}.
    */
   public static final String XA_HEADER_PREFIX = "header.";
+
+  /**
+   * AWS S3 region for the bucket. When set bypasses the construction of
+   * region through endpoint url.
+   */
+  public static final String AWS_REGION = "fs.s3a.endpoint.region";
+
+  /**
+   * The special S3 region which can be used to talk to any bucket.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
 }

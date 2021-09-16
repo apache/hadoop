@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 
@@ -28,6 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Leaf queues which are auto created by an underlying implementation of
@@ -119,6 +120,23 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
         throw new SchedulerDynamicEditException(
             "Capacity demand is not in the [0,1] range: " + capacity);
       }
+    }
+  }
+
+  @Override
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
+        CapacitySchedulerConfiguration
+            .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
+    Set<String> parentNodeLabels = csContext
+        .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+        .getLabelsByQueue(parentTemplate);
+
+    if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
+      csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+          .setLabelsByQueue(getQueuePath(),
+              new HashSet<>(parentNodeLabels));
     }
   }
 

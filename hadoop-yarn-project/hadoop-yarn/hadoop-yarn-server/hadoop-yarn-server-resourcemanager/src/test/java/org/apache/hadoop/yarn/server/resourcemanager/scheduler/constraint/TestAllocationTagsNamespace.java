@@ -16,7 +16,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint; /**
  * limitations under the License.
  */
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.Assert;

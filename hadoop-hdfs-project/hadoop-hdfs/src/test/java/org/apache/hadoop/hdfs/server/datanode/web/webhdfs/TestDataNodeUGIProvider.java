@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,12 +51,11 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestDataNodeUGIProvider {
   private final URI uri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://"

@@ -676,6 +676,8 @@
       ssl.keystore.pass$
       fs.s3a.server-side-encryption.key
       fs.s3a.*.server-side-encryption.key
+      fs.s3a.encryption.algorithm
+      fs.s3a.encryption.key
       fs.s3a.secret.key
       fs.s3a.*.secret.key
       fs.s3a.session.key
@@ -685,6 +687,9 @@
       fs.azure.account.key.*
       fs.azure.oauth2.*
       fs.adl.oauth2.*
+      fs.gs.encryption.*
+      fs.gs.proxy.*
+      fs.gs.auth.*
       credential$
       oauth.*secret
       oauth.*password
@@ -697,6 +702,27 @@
       private credentials should not be logged.
   </description>
 </property>
+
+  <property>
+    <name>hadoop.security.token.service.use_ip</name>
+    <value>true</value>
+    <description>
+      Controls whether tokens always use IP addresses.
+      DNS changes will not be detected if this option is enabled.
+      Existing client connections that break will always reconnect
+      to the IP of the original host. New clients will connect
+      to the host's new IP but fail to locate a token.
+      Disabling this option will allow existing and new clients
+      to detect an IP change and continue to locate the new host's token.
+
+      In secure multi-homed environments, this parameter will need to
+      be set to false on both cluster servers and clients (see HADOOP-7733).
+      If it is not set correctly, the symptom will be inability to
+      submit an application to YARN from an external client
+      (with error "client host not a member of the Hadoop cluster"),
+      or even from an in-cluster client if server failover occurs.
+    </description>
+  </property>
 
 <property>
   <name>hadoop.workaround.non.threadsafe.getpwuid</name>
@@ -1072,6 +1098,15 @@
 </property>
 
 <property>
+  <name>fs.viewfs.overload.scheme.target.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The GoogleHadoopFS/Google Cloud Storage file system for view
+   file system overload scheme when child file system and ViewFSOverloadScheme's
+   schemes are gs.
+  </description>
+</property>
+
+<property>
   <name>fs.viewfs.overload.scheme.target.https.impl</name>
   <value>org.apache.hadoop.fs.http.HttpsFileSystem</value>
   <description>The HttpsFileSystem for view file system overload scheme
@@ -1348,7 +1383,7 @@
 
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>48</value>
+  <value>96</value>
   <description>Controls the maximum number of simultaneous connections to S3.
     This must be bigger than the value of fs.s3a.threads.max so as to stop
     threads being blocked waiting for new HTTPS connections.
@@ -1517,7 +1552,9 @@
   <name>fs.s3a.acl.default</name>
   <description>Set a canned ACL for newly created and copied objects. Value may be Private,
       PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
-      or BucketOwnerFullControl.</description>
+      or BucketOwnerFullControl.
+    If set, caller IAM role must have "s3:PutObjectAcl" permission on the bucket.
+  </description>
 </property>
 
 <property>
@@ -1543,20 +1580,22 @@
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
-  <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default.  It supports the following values: 'AES256' (for SSE-S3),
-    'SSE-KMS' and 'SSE-C'.
+  <name>fs.s3a.encryption.algorithm</name>
+  <description>Specify a server-side encryption or client-side
+    encryption algorithm for s3a: file system. Unset by default. It supports the
+    following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
   </description>
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption.key</name>
-  <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
-    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
-    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
-    you'll be using your default's S3 KMS key, otherwise you should set this property to
-    the specific KMS key id.
+  <name>fs.s3a.encryption.key</name>
+  <description>Specific encryption key to use if fs.s3a.encryption.algorithm
+    has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
+    , the value of this property should be the Base64 encoded key. If you are
+    using SSE-KMS and leave this property empty, you'll be using your default's
+    S3 KMS key, otherwise you should set this property to the specific KMS key
+    id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
+    generated from AWS console.
   </description>
 </property>
 
@@ -2264,6 +2303,13 @@
     This setting provides better performance compared to blob-specific saskeys.
   </description>
 </property>
+
+<property>
+  <name>fs.AbstractFileSystem.gs.impl</name>
+  <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
+  <description>The AbstractFileSystem for gs: uris.</description>
+</property>
+
 <property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
@@ -2419,6 +2465,14 @@
 </property>
 
 <property>
+  <name>ipc.server.purge.interval</name>
+  <value>15</value>
+  <description>Define how often calls are cleaned up in the server.
+    The default is 15 minutes. The unit is minutes.
+  </description>
+</property>
+
+<property>
   <name>ipc.maximum.data.length</name>
   <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
@@ -2465,12 +2519,38 @@
 </property>
 
 <property>
+  <name>ipc.backoff.enable</name>
+  <value>false</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].backoff.enable" is not defined.
+    It determines whether or not to enable client backoff when
+    a queue is full.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].callqueue.impl</name>
   <value>java.util.concurrent.LinkedBlockingQueue</value>
   <description>The fully qualified name of a class to use as the implementation
     of a call queue. The default implementation is
     java.util.concurrent.LinkedBlockingQueue (FIFO queue).
     Use org.apache.hadoop.ipc.FairCallQueue for the Fair Call Queue.
+  </description>
+</property>
+
+<property>
+  <name>ipc.callqueue.impl</name>
+  <value>java.util.concurrent.LinkedBlockingQueue</value>
+  <description>
+    The fully qualified name of a class to use as the implementation
+    of a call queue. The default implementation is
+    java.util.concurrent.LinkedBlockingQueue (FIFO queue).
+    Use org.apache.hadoop.ipc.FairCallQueue for the Fair Call Queue.
+    This config is fallback config for ipc.[port_number].callqueue.impl.
+    If call queue is not defined at port level, this default
+    config is used and hence, this is fallback config to
+    config with port.
   </description>
 </property>
 
@@ -2484,6 +2564,24 @@
     org.apache.hadoop.ipc.DecayRpcScheduler. Use
     org.apache.hadoop.ipc.DecayRpcScheduler in conjunction with the Fair Call
     Queue.
+  </description>
+</property>
+
+<property>
+  <name>ipc.scheduler.impl</name>
+  <value>org.apache.hadoop.ipc.DefaultRpcScheduler</value>
+  <description>
+    The fully qualified name of a class to use as the
+    implementation of the scheduler. The default implementation is
+    org.apache.hadoop.ipc.DefaultRpcScheduler (no-op scheduler) when
+    not using FairCallQueue. If using FairCallQueue, defaults to
+    org.apache.hadoop.ipc.DecayRpcScheduler. Use
+    org.apache.hadoop.ipc.DecayRpcScheduler in conjunction
+    with the Fair Call Queue.
+    This config is fallback config for ipc.[port_number].scheduler.impl.
+    If scheduler queue is not defined at port level, this default
+    config is used and hence, this is fallback config to
+    config with port.
   </description>
 </property>
 
@@ -2514,9 +2612,33 @@
 </property>
 
 <property>
+  <name>ipc.identity-provider.impl</name>
+  <value>org.apache.hadoop.ipc.UserIdentityProvider</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].identity-provider.impl" is not defined.
+    The identity provider mapping user requests to their identity.
+    This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].cost-provider.impl</name>
   <value>org.apache.hadoop.ipc.DefaultCostProvider</value>
   <description>The cost provider mapping user requests to their cost. To
+    enable determination of cost based on processing time, use
+    org.apache.hadoop.ipc.WeightedTimeCostProvider.
+    This property applies to DecayRpcScheduler.
+  </description>
+</property>
+
+<property>
+  <name>ipc.cost-provider.impl</name>
+  <value>org.apache.hadoop.ipc.DefaultCostProvider</value>
+  <description>
+    This property is used as fallback property in case
+    "ipc.[port_number].cost-provider.impl" is not defined.
+    The cost provider mapping user requests to their cost. To
     enable determination of cost based on processing time, use
     org.apache.hadoop.ipc.WeightedTimeCostProvider.
     This property applies to DecayRpcScheduler.
@@ -3097,14 +3219,6 @@
 </property>
 
 <property>
-  <name>hadoop.ssl.enabled</name>
-  <value>false</value>
-  <description>
-    Deprecated. Use dfs.http.policy and yarn.http.policy instead.
-  </description>
-</property>
-
-<property>
   <name>hadoop.ssl.enabled.protocols</name>
   <value>TLSv1.2</value>
   <description>
@@ -3277,6 +3391,21 @@
     to a comma-separated list of the granularity in seconds, the
     50/75/90/95/99th percentile latency for rpc queue/processing time in
     milliseconds are added to rpc metrics.
+  </description>
+</property>
+
+<property>
+  <name>rpc.metrics.timeunit</name>
+  <value>MILLISECONDS</value>
+  <description>
+    This property is used to configure timeunit for various RPC Metrics
+    e.g rpcQueueTime, rpcLockWaitTime, rpcProcessingTime,
+    deferredRpcProcessingTime. In the absence of this property,
+    default timeunit used is milliseconds.
+    The value of this property should match to any one value of enum:
+    java.util.concurrent.TimeUnit.
+    Some of the valid values: NANOSECONDS, MICROSECONDS, MILLISECONDS,
+    SECONDS etc.
   </description>
 </property>
 

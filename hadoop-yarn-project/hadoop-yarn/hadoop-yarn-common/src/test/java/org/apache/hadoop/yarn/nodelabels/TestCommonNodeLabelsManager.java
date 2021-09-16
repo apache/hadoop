@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -39,7 +40,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   DummyCommonNodeLabelsManager mgr = null;

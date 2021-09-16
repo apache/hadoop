@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MIN_BACKOFF_INTERVAL;
+
 import java.util.Random;
 
 import org.junit.Assert;
@@ -32,7 +37,6 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
  * Unit test TestExponentialRetryPolicy.
  */
 public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
-
   private final int maxRetryCount = 30;
   private final int noRetryCount = 0;
   private final int retryCount = new Random().nextInt(maxRetryCount);
@@ -57,10 +61,36 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   @Test
   public void testDefaultMaxIORetryCount() throws Exception {
     AbfsConfiguration abfsConfig = getAbfsConfig();
-    Assert.assertTrue(
+    Assert.assertEquals(
         String.format("default maxIORetry count is %s.", maxRetryCount),
-        abfsConfig.getMaxIoRetries() == maxRetryCount);
+        maxRetryCount, abfsConfig.getMaxIoRetries());
     testMaxIOConfig(abfsConfig);
+  }
+
+  @Test
+  public void testAbfsConfigConstructor() throws Exception {
+    // Ensure we choose expected values that are not defaults
+    ExponentialRetryPolicy template = new ExponentialRetryPolicy(
+        getAbfsConfig().getMaxIoRetries());
+    int testModifier = 1;
+    int expectedMaxRetries = template.getRetryCount() + testModifier;
+    int expectedMinBackoff = template.getMinBackoff() + testModifier;
+    int expectedMaxBackoff = template.getMaxBackoff() + testModifier;
+    int expectedDeltaBackoff = template.getDeltaBackoff() + testModifier;
+
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.setInt(AZURE_MAX_IO_RETRIES, expectedMaxRetries);
+    config.setInt(AZURE_MIN_BACKOFF_INTERVAL, expectedMinBackoff);
+    config.setInt(AZURE_MAX_BACKOFF_INTERVAL, expectedMaxBackoff);
+    config.setInt(AZURE_BACKOFF_INTERVAL, expectedDeltaBackoff);
+
+    ExponentialRetryPolicy policy = new ExponentialRetryPolicy(
+        new AbfsConfiguration(config, "dummyAccountName"));
+
+    Assert.assertEquals("Max retry count was not set as expected.", expectedMaxRetries, policy.getRetryCount());
+    Assert.assertEquals("Min backoff interval was not set as expected.", expectedMinBackoff, policy.getMinBackoff());
+    Assert.assertEquals("Max backoff interval was not set as expected.", expectedMaxBackoff, policy.getMaxBackoff());
+    Assert.assertEquals("Delta backoff interval was not set as expected.", expectedDeltaBackoff, policy.getDeltaBackoff());
   }
 
   private AbfsConfiguration getAbfsConfig() throws Exception {
@@ -81,8 +111,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
       localRetryCount++;
     }
 
-    Assert.assertTrue(
+    Assert.assertEquals(
         "When all retries are exhausted, the retryCount will be same as max configured",
-        localRetryCount == abfsConfig.getMaxIoRetries());
+        abfsConfig.getMaxIoRetries(), localRetryCount);
   }
 }

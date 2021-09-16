@@ -883,7 +883,7 @@ public class TestDFSClientRetries {
     DatanodeID fakeDnId = DFSTestUtil.getLocalDatanodeID(addr.getPort());
     
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
-    LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);
+    LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
 
     ClientDatanodeProtocol proxy = null;
 

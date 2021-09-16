@@ -335,6 +335,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Lists;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -344,8 +345,8 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.slf4j.LoggerFactory;
 
 /**
@@ -1996,7 +1997,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     LightWeightHashSet<Long> openFileIds = new LightWeightHashSet<>();
     for (DatanodeDescriptor dataNode :
         blockManager.getDatanodeManager().getDatanodes()) {
-      for (long ucFileId : dataNode.getLeavingServiceStatus().getOpenFiles()) {
+      // Sort open files
+      LightWeightHashSet<Long> dnOpenFiles =
+          dataNode.getLeavingServiceStatus().getOpenFiles();
+      Long[] dnOpenFileIds = new Long[dnOpenFiles.size()];
+      Arrays.sort(dnOpenFiles.toArray(dnOpenFileIds));
+      for (Long ucFileId : dnOpenFileIds) {
         INode ucFile = getFSDirectory().getInode(ucFileId);
         if (ucFile == null || ucFileId <= prevId ||
             openFileIds.contains(ucFileId)) {
@@ -2006,8 +2012,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           continue;
         }
         Preconditions.checkState(ucFile instanceof INodeFile);
-        openFileIds.add(ucFileId);
+
         INodeFile inodeFile = ucFile.asFile();
+        if (!inodeFile.isUnderConstruction()) {
+          LOG.warn("The file {} is not under construction but has lease.",
+              inodeFile.getFullPathName());
+          continue;
+        }
+        openFileIds.add(ucFileId);
 
         String fullPathName = inodeFile.getFullPathName();
         if (org.apache.commons.lang3.StringUtils.isEmpty(path)
@@ -4404,9 +4416,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       long cacheCapacity, long cacheUsed, int xceiverCount, int xmitsInProgress,
       int failedVolumes, VolumeFailureSummary volumeFailureSummary)
       throws IOException {
-    int maxTransfer = blockManager.getMaxReplicationStreams() - xmitsInProgress;
     blockManager.getDatanodeManager().handleLifeline(nodeReg, reports,
-        getBlockPoolId(), cacheCapacity, cacheUsed, xceiverCount, maxTransfer,
+        cacheCapacity, cacheUsed, xceiverCount,
         failedVolumes, volumeFailureSummary);
   }
 
@@ -4628,6 +4639,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return getFSImage().getEditLog();
   }
 
+  private NNStorage getNNStorage() {
+    return getFSImage().getStorage();
+  }
+
   @Metric({"MissingBlocks", "Number of missing blocks"})
   public long getMissingBlocksCount() {
     // not locking
@@ -4651,7 +4666,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "Number of transactions since last checkpoint"})
   public long getTransactionsSinceLastCheckpoint() {
     return getFSImage().getLastAppliedOrWrittenTxId() -
-        getFSImage().getStorage().getMostRecentCheckpointTxId();
+        getNNStorage().getMostRecentCheckpointTxId();
   }
   
   @Metric({"TransactionsSinceLastLogRoll",
@@ -4686,7 +4701,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   @Metric({"LastCheckpointTime",
       "Time in milliseconds since the epoch of the last checkpoint"})
   public long getLastCheckpointTime() {
-    return getFSImage().getStorage().getMostRecentCheckpointTime();
+    return getNNStorage().getMostRecentCheckpointTime();
   }
 
   /** @see ClientProtocol#getStats() */
@@ -4956,10 +4971,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       
       // if it is disabled - enable it and vice versa.
       if(arg.equals("check")) {
-        val = getFSImage().getStorage().getRestoreFailedStorage();
+        val = getNNStorage().getRestoreFailedStorage();
       } else {
         val = arg.equals("true");  // false if not
-        getFSImage().getStorage().setRestoreFailedStorage(val);
+        getNNStorage().setRestoreFailedStorage(val);
       }
     } finally {
       writeUnlock(operationName, getLockReportInfoSupplier(null));
@@ -5699,7 +5714,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Increments, logs and then returns the stamp
+   * Increments, logs and then returns the stamp.
    */
   long nextGenerationStamp(boolean legacyBlock)
       throws IOException {
@@ -5831,7 +5846,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Get a new generation stamp together with an access token for 
-   * a block under construction
+   * a block under construction.
    * 
    * This method is called for recovering a failed write or setting up
    * a block for appended.
@@ -5869,7 +5884,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Update a pipeline for a block under construction
+   * Update a pipeline for a block under construction.
    * 
    * @param clientName the name of the client
    * @param oldBlock and old block
@@ -5958,11 +5973,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NamenodeRegistration nnReg) throws IOException {
     writeLock();
     try {
-      if(getFSImage().getStorage().getNamespaceID() 
+      if(getNNStorage().getNamespaceID()
          != bnReg.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
+            + getNNStorage().getNamespaceID() + "; "
             + bnReg.getRole() +
             " node namespaceID = " + bnReg.getNamespaceID());
       if (bnReg.getRole() == NamenodeRole.BACKUP) {
@@ -5986,11 +6001,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      if(getFSImage().getStorage().getNamespaceID()
+      if(getNNStorage().getNamespaceID()
          != registration.getNamespaceID())
         throw new IOException("Incompatible namespaceIDs: "
             + " Namenode namespaceID = "
-            + getFSImage().getStorage().getNamespaceID() + "; "
+            + getNNStorage().getNamespaceID() + "; "
             + registration.getRole() +
             " node namespaceID = " + registration.getNamespaceID());
       getEditLog().releaseBackupStream(registration);
@@ -6279,7 +6294,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Log the updateMasterKey operation to edit logs
+   * Log the updateMasterKey operation to edit logs.
    * 
    * @param key new delegation key.
    */
@@ -6296,7 +6311,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Log the cancellation of expired tokens to edit logs
+   * Log the cancellation of expired tokens to edit logs.
    * 
    * @param id token identifier to cancel
    */
@@ -6333,7 +6348,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
   
   /**
-   * Returns authentication method used to establish the connection
+   * Returns authentication method used to establish the connection.
    * @return AuthenticationMethod used to establish connection
    * @throws IOException
    */
@@ -6386,7 +6401,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Class representing Namenode information for JMX interfaces
+   * Class representing Namenode information for JMX interfaces.
    */
   @Override // NameNodeMXBean
   public String getVersion() {
@@ -6482,7 +6497,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * Returned information is a JSON representation of map with host name as the
-   * key and value is a map of live node attribute keys to its values
+   * key and value is a map of live node attribute keys to its values.
    */
   @Override // NameNodeMXBean
   public String getLiveNodes() {
@@ -6526,14 +6541,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (node.getUpgradeDomain() != null) {
         innerinfo.put("upgradeDomain", node.getUpgradeDomain());
       }
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo.build());
+      StorageReport[] storageReports = node.getStorageReports();
+      innerinfo.put("blockPoolUsedPercentStdDev",
+          Util.getBlockPoolUsedPercentStdDev(storageReports));
+      info.put(node.getXferAddrWithHostname(), innerinfo.build());
     }
     return JSON.toString(info);
   }
 
   /**
    * Returned information is a JSON representation of map with host name as the
-   * key and value is a map of dead node attribute keys to its values
+   * key and value is a map of dead node attribute keys to its values.
    */
   @Override // NameNodeMXBean
   public String getDeadNodes() {
@@ -6549,7 +6567,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
           .build();
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
+      info.put(node.getXferAddrWithHostname(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -6557,7 +6575,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Returned information is a JSON representation of map with host name as the
    * key and value is a map of decommissioning node attribute keys to its
-   * values
+   * values.
    */
   @Override // NameNodeMXBean
   public String getDecomNodes() {
@@ -6577,7 +6595,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
           node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo);
+      info.put(node.getXferAddrWithHostname(), innerinfo);
     }
     return JSON.toString(info);
   }
@@ -6605,7 +6623,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("underReplicateInOpenFiles",
               node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
           .build();
-      nodesMap.put(node.getHostName() + ":" + node.getXferPort(), attrMap);
+      nodesMap.put(node.getXferAddrWithHostname(), attrMap);
     }
     return JSON.toString(nodesMap);
   }
@@ -6624,7 +6642,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override  // NameNodeMXBean
   public String getClusterId() {
-    return getFSImage().getStorage().getClusterID();
+    return getNNStorage().getClusterID();
   }
   
   @Override  // NameNodeMXBean
@@ -6639,14 +6657,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     
     Map<File, StorageDirType> activeDirs = new HashMap<File, StorageDirType>();
     for (Iterator<StorageDirectory> it
-        = getFSImage().getStorage().dirIterator(); it.hasNext();) {
+        = getNNStorage().dirIterator(); it.hasNext();) {
       StorageDirectory st = it.next();
       activeDirs.put(st.getRoot(), st.getStorageDirType());
     }
     statusMap.put("active", activeDirs);
     
     List<Storage.StorageDirectory> removedStorageDirs
-        = getFSImage().getStorage().getRemovedStorageDirs();
+        = getNNStorage().getRemovedStorageDirs();
     Map<File, StorageDirType> failedDirs = new HashMap<File, StorageDirType>();
     for (StorageDirectory st : removedStorageDirs) {
       failedDirs.put(st.getRoot(), st.getStorageDirType());
@@ -6897,7 +6915,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override // NameNodeStatusMXBean
   public String getNameDirSize() {
-    return getFSImage().getStorage().getNNDirectorySize();
+    return getNNStorage().getNNDirectorySize();
   }
 
   /**

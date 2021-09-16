@@ -51,11 +51,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.function.Supplier;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import java.util.function.Supplier;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -67,6 +66,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.StringUtils;
@@ -2199,145 +2199,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertTrue("when reordering "+env+" into "+ordered+
         ", cyclic_C should be after cyclic_A if no cyclic_B", icA>=0 ||
         icC<0 || icA<0 || icA<icC);
-  }
-
-  @Test(timeout = 1000)
-  public void testGetEnvDependencies() {
-    final Set<String> expected = new HashSet<>();
-    final ContainerLaunch.ShellScriptBuilder bash =
-        ContainerLaunch.ShellScriptBuilder.create(Shell.OSType.OS_TYPE_LINUX);
-    String s;
-
-    s = null;
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "A";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "\\$A";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "$$";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "$1";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "handle \"'$A'\" simple quotes";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "$ crash test for StringArrayOutOfBoundException";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "${ crash test for StringArrayOutOfBoundException";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "${# crash test for StringArrayOutOfBoundException";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "crash test for StringArrayOutOfBoundException $";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "crash test for StringArrayOutOfBoundException ${";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "crash test for StringArrayOutOfBoundException ${#";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-
-    expected.add("A");
-    s = "$A";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "${A}";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "${#A[*]}";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "in the $A midlle";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-
-    expected.add("B");
-    s = "${A:-$B} var in var";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "${A}$B var outside var";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-
-    expected.add("C");
-    s = "$A:$B:$C:pathlist var";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-    s = "${A}/foo/bar:$B:${C}:pathlist var";
-    Assert.assertEquals("failed to parse " + s, expected,
-        bash.getEnvDependencies(s));
-
-    ContainerLaunch.ShellScriptBuilder win =
-        ContainerLaunch.ShellScriptBuilder.create(Shell.OSType.OS_TYPE_WIN);
-    expected.clear();
-    s = null;
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "A";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%%%%%%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%%A%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A:";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-
-    expected.add("A");
-    s = "%A%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%%%A%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%%C%A%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A:~-1%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A%B%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A%%%%%B%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-
-    expected.add("B");
-    s = "%A%%B%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A%%%%B%";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-
-    expected.add("C");
-    s = "%A%:%B%:%C%:pathlist var";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
-    s = "%A%\\foo\\bar:%B%:%C%:pathlist var";
-    Assert.assertEquals("failed to parse " + s, expected,
-        win.getEnvDependencies(s));
   }
 
   private Set<String> asSet(String...str) {

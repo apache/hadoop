@@ -52,8 +52,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
         + "Abfs");
 
     final AzureBlobFileSystem fs = getFileSystem();
-    Path smallOperationsFile = new Path("testOneReadWriteOps");
-    Path largeOperationsFile = new Path("testLargeReadWriteOps");
+    Path smallOperationsFile = path("testOneReadWriteOps");
+    Path largeOperationsFile = path("testLargeReadWriteOps");
     FileSystem.Statistics statistics = fs.getFsStatistics();
     String testReadWriteOps = "test this";
     statistics.reset();

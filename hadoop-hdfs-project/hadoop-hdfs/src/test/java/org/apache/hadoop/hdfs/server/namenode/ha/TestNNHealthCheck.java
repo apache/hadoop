@@ -21,6 +21,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEF
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -77,6 +79,19 @@ public class TestNNHealthCheck {
           .nnTopology(MiniDFSNNTopology.simpleHATopology())
           .build();
     doNNHealthCheckTest();
+  }
+
+  @Test
+  public void testNNHAServiceTargetWithProvidedAddr() {
+    conf.set(DFS_NAMENODE_LIFELINE_RPC_ADDRESS_KEY, "0.0.0.1:1");
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "0.0.0.1:2");
+
+    // Test constructor with provided address.
+    NNHAServiceTarget target = new NNHAServiceTarget(conf, "ns", "nn1",
+        "0.0.0.0:1", "0.0.0.0:2");
+
+    assertEquals("/0.0.0.0:1", target.getAddress().toString());
+    assertEquals("/0.0.0.0:2", target.getHealthMonitorAddress().toString());
   }
 
   @Test

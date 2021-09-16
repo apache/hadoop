@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred.uploader;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -477,7 +477,7 @@ public class TestFrameworkUploader {
       }
       Assert.assertFalse(uploader.checkSymlink(symlinkOutside));
     } finally {
-      FileUtils.deleteDirectory(parent);
+      FileUtils.forceDelete(parent);
     }
 
   }
