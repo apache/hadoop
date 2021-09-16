@@ -24,6 +24,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
@@ -356,7 +357,7 @@ public class RouterFedBalance extends Configured implements Tool {
    */
   @VisibleForTesting
   static Configuration getDefaultConf() {
-    Configuration config = new Configuration();
+    Configuration config = new HdfsConfiguration();
     config.addResource(FED_BALANCE_DEFAULT_XML);
     config.addResource(FED_BALANCE_SITE_XML);
     return config;
