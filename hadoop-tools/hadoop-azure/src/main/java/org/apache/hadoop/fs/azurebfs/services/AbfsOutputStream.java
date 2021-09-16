@@ -94,7 +94,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
   private final ThreadPoolExecutor threadExecutor;
   private final ExecutorCompletionService<Void> completionService;
-  private HashMap<String, String> encryptionHeaders;
+  private final HashMap<String, String> encryptionHeaders;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;

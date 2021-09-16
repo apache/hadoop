@@ -226,6 +226,9 @@ public class AbfsClient implements Closeable {
   public void setEncryptionType(EncryptionType encryptionType) {
     this.encryptionType = encryptionType;
   }
+  public EncryptionType getEncryptionType() {
+    return encryptionType;
+  }
 
   List<AbfsHttpHeader> createDefaultHeaders() {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
@@ -242,36 +245,49 @@ public class AbfsClient implements Closeable {
   private void addEncryptionKeyRequestHeaders(
       List<AbfsHttpHeader> requestHeaders, String path,
       boolean isCreateFileRequest, HashMap<String, String> encryptionHeaders,
-      TracingContext tracingContext) throws IOException {
-    String key, encodedKey, encodedKeySHA256, encryptionContext;
+      TracingContext tracingContext)
+      throws IOException {
+    String encodedKey, encodedKeySHA256, encryptionContext;
     switch (encryptionType) {
-    case GLOBAL_KEY:  // common key applicable to all files in the account
+    case GLOBAL_KEY:
       encodedKey = clientProvidedEncryptionKey;
       encodedKeySHA256 = clientProvidedEncryptionKeySHA;
       break;
-    case ENCRYPTION_CONTEXT:  // keys retrieved from EncryptionContextProvider
-      if (encryptionHeaders != null) {
-        // use cached encryption keys from input/output streams
-        encodedKey = encryptionHeaders.get(X_MS_ENCRYPTION_KEY);
-        encodedKeySHA256 = encryptionHeaders.get(X_MS_ENCRYPTION_KEY_SHA256);
-      } else {
-        // get new context if create file request, else fetch via GetPathStatus
-        encryptionContext = isCreateFileRequest
-            ? encryptionContextProvider.getEncryptionContext(path).toString()
-            : getPathStatus(path, false, tracingContext).getResult()
-                .getResponseHeader(X_MS_SERVER_ENCRYPTION_CONTEXT);
-        key = encryptionContextProvider.getEncryptionKey(path,
-            encryptionContext).toString();
-        encodedKey = getBase64EncodedString(key);
-        encodedKeySHA256 = getBase64EncodedString(getSHA256Hash(key));
+    case ENCRYPTION_CONTEXT:
+      if (isCreateFileRequest) {
+        encryptionContext = encryptionContextProvider.getEncryptionContext(path)
+            .toString();  // get new context for create file request
+        requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
+            encryptionContext));
+        encryptionHeaders = getEncryptionHeaders(path, encryptionContext);
+
+      } else if (encryptionHeaders == null) {
+        encryptionContext = getPathStatus(path, false,
+            tracingContext).getResult().getResponseHeader(X_MS_PROPERTIES);
+        encryptionHeaders = getEncryptionHeaders(path, encryptionContext);
       }
+      // use cached encryption keys from input/output streams
+      encodedKey = encryptionHeaders.get(X_MS_ENCRYPTION_KEY);
+      encodedKeySHA256 = encryptionHeaders.get(X_MS_ENCRYPTION_KEY_SHA256);
       break;
+
     default: return; // no client-provided encryption keys
     }
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256, encodedKeySHA256));
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_ALGORITHM));
+  }
+
+  public HashMap<String, String> getEncryptionHeaders(String path,
+      String encryptionContext) throws IOException {
+    String key = encryptionContextProvider.getEncryptionKey(path,
+        encryptionContext).toString();
+    HashMap<String, String> encryptionHeaders = new HashMap<>();
+    encryptionHeaders.put(X_MS_ENCRYPTION_KEY, getBase64EncodedString(key));
+    encryptionHeaders.put(X_MS_ENCRYPTION_KEY_SHA256,
+        getBase64EncodedString(getSHA256Hash(key)));
+    return encryptionHeaders;
   }
 
   AbfsUriQueryBuilder createDefaultUriQueryBuilder() {
@@ -380,14 +396,15 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
-                                      final String permission, final String umask,
-                                      final boolean isAppendBlob, final String eTag,
-                                      TracingContext tracingContext)
+  public AbfsRestOperation createPath(final String path, final boolean isFile,
+      final boolean overwrite, final String permission, final String umask,
+      final boolean isAppendBlob, final String eTag,
+      HashMap<String, String> encryptionHeaders, TracingContext tracingContext)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
-      addEncryptionKeyRequestHeaders(requestHeaders, path, true, null, null);
+      addEncryptionKeyRequestHeaders(requestHeaders, path, true, encryptionHeaders,
+          tracingContext);
     }
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));

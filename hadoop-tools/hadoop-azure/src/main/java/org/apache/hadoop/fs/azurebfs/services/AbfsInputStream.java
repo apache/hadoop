@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.HashMap;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -97,6 +98,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
   private TracingContext tracingContext;
+  private final HashMap<String, String> encryptionHeaders;
 
   //  Optimisations modify the pointer fields.
   //  For better resilience the following fields are used to save the
@@ -151,6 +153,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
+    encryptionHeaders = abfsInputStreamContext.getEncryptionHeaders();
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
@@ -542,7 +545,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length,
-          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(), tracingContext);
+          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
+         encryptionHeaders, tracingContext);
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);

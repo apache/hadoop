@@ -52,7 +52,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -528,12 +527,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsRestOperation op;
+      HashMap<String, String> encryptionHeaders = new HashMap<>();
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
             statistics,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null,
             isAppendBlob,
+            encryptionHeaders,
             tracingContext
         );
 
@@ -544,6 +545,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             isNamespaceEnabled ? getOctalNotation(umask) : null,
             isAppendBlob,
             null,
+            encryptionHeaders,
             tracingContext);
 
       }
@@ -556,8 +558,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           0,
-          populateAbfsOutputStreamContext(isAppendBlob, lease,
-              op.getResult().getEncryptionKeyHeaders()),
+          populateAbfsOutputStreamContext(isAppendBlob, lease, encryptionHeaders),
           tracingContext);
     }
   }
@@ -578,6 +579,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final String permission,
       final String umask,
       final boolean isAppendBlob,
+      HashMap<String, String> encryptionHeaders,
       TracingContext tracingContext) throws IOException {
     AbfsRestOperation op;
 
@@ -586,7 +588,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
       op = client.createPath(relativePath, true, false, permission, umask,
-          isAppendBlob, null, tracingContext);
+          isAppendBlob, null, encryptionHeaders, tracingContext);
 
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
@@ -611,7 +613,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
           op = client.createPath(relativePath, true, true, permission, umask,
-              isAppendBlob, eTag, tracingContext);
+              isAppendBlob, eTag, encryptionHeaders, tracingContext);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
@@ -669,8 +671,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client.createPath(getRelativePath(path),
           false, overwrite,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null,
-              tracingContext);
+              isNamespaceEnabled ? getOctalNotation(umask) : null, false,
+          null, null, tracingContext);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -695,8 +697,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           .orElse(null);
       String relativePath = getRelativePath(path);
       String resourceType, eTag;
+      String encryptionContext = null;
       long contentLength;
-      if (fileStatus instanceof VersionedFileStatus) {
+      if (fileStatus instanceof VersionedFileStatus
+          && client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
         path = path.makeQualified(this.uri, path);
         Preconditions.checkArgument(fileStatus.getPath().equals(path),
             String.format(
@@ -707,9 +711,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
       } else {
         if (fileStatus != null) {
-          LOG.warn(
-              "Fallback to getPathStatus REST call as provided filestatus "
-                  + "is not of type VersionedFileStatus");
+          LOG.debug("Fallback to getPathStatus REST call as provided fileStatus "
+              + "is not of type VersionedFileStatus, or file is encrypted");
         }
         AbfsHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext).getResult();
@@ -718,6 +721,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = Long.parseLong(
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+        encryptionContext = op.getResponseHeader(
+            HttpHeaderConfigurations.X_MS_PROPERTIES);
       }
 
       if (parseIsDirectory(resourceType)) {
@@ -733,13 +738,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
-          parameters.map(OpenFileParameters::getOptions)),
+          parameters.map(OpenFileParameters::getOptions),
+          client.getEncryptionHeaders(path.toString(), encryptionContext)),
           eTag, tracingContext);
     }
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
-      Optional<Configuration> options) {
+      Optional<Configuration> options, HashMap<String, String> encryptionHeaders) {
     boolean bufferedPreadDisabled = options
         .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
         .orElse(false);
@@ -755,6 +761,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
+            .withEncryptionHeaders(encryptionHeaders)
             .build();
   }
 
@@ -794,6 +801,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
+      String encryptionContext = op.getResult()
+          .getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
       return new AbfsOutputStream(
           client,
@@ -801,7 +810,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           relativePath,
           offset,
           populateAbfsOutputStreamContext(isAppendBlob, lease,
-              op.getResult().getEncryptionKeyHeaders()),
+              client.getEncryptionHeaders(path.toString(), encryptionContext)),
           tracingContext);
     }
   }
@@ -1532,22 +1541,25 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             abfsConfiguration.getRawConfiguration());
     }
 
-    // Initialize encryption context
-    EncryptionContextProvider encryptionContextProvider =
-        abfsConfiguration.initializeEncryptionContextProvider();
-    if (encryptionContextProvider != null) {
-      if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
-        throw new IOException(
-            "Both global key and encryption context are set, only one allowed");
+    // Encryption setup
+    EncryptionType encryptionType = EncryptionType.NONE;
+    EncryptionContextProvider encryptionContextProvider = null;
+    if (isSecure) {
+      encryptionContextProvider =
+          abfsConfiguration.initializeEncryptionContextProvider();
+      if (encryptionContextProvider != null) {
+        if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
+          throw new IOException(
+              "Both global key and encryption context are set, only one allowed");
+        }
+        encryptionContextProvider.initialize(
+            abfsConfiguration.getRawConfiguration(), accountName,
+            fileSystemName);
+        encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
+      } else if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
+        encryptionType = EncryptionType.GLOBAL_KEY;
       }
-      client.setEncryptionType(EncryptionType.ENCRYPTION_CONTEXT);
-    } else if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
-      client.setEncryptionType(EncryptionType.GLOBAL_KEY);
-    } else {
-      client.setEncryptionType(EncryptionType.NONE);
     }
-    encryptionContextProvider.initialize(
-        abfsConfiguration.getRawConfiguration(), accountName, fileSystemName);
 
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
     if (tokenProvider != null) {
@@ -1559,6 +1571,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           sasTokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
     }
+    client.setEncryptionType(encryptionType);
 
     LOG.trace("AbfsClient init complete");
   }

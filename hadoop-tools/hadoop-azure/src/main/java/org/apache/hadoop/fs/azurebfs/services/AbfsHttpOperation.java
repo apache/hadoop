@@ -143,15 +143,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
 
-  public HashMap<String, String> getEncryptionKeyHeaders() {
-    HashMap<String, String> encryptionHeaders = new HashMap<>();
-    encryptionHeaders.put(X_MS_ENCRYPTION_KEY,
-        this.connection.getRequestProperty(X_MS_ENCRYPTION_KEY));
-    encryptionHeaders.put(X_MS_ENCRYPTION_KEY_SHA256,
-        this.connection.getRequestProperty(X_MS_ENCRYPTION_KEY_SHA256));
-    return encryptionHeaders;
-  }
-
   public String getExpectedAppendPos() {
     return expectedAppendPos;
   }

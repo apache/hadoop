@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
+import java.util.HashMap;
+
 /**
  * Class to hold extra input stream configs.
  */
@@ -48,6 +50,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private boolean optimizeFooterRead;
 
   private boolean bufferedPreadDisabled;
+
+  private HashMap<String, String> encryptionHeaders;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -114,6 +118,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withEncryptionHeaders(
+      HashMap<String, String> encryptionHeaders) {
+    this.encryptionHeaders = encryptionHeaders;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -167,5 +177,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isBufferedPreadDisabled() {
     return bufferedPreadDisabled;
+  }
+
+  public HashMap<String, String> getEncryptionHeaders() {
+    return encryptionHeaders;
   }
 }
