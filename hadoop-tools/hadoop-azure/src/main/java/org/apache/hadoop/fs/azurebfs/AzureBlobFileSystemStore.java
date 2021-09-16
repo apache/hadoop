@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -432,7 +433,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   public Hashtable<String, String> getPathStatus(final Path path,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("getPathStatus", "getPathStatus")){
       LOG.debug("getPathStatus for filesystem: {} path: {}",
               client.getFileSystem(),
@@ -500,7 +501,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public OutputStream createFile(final Path path,
       final FileSystem.Statistics statistics, final boolean overwrite,
       final FsPermission permission, final FsPermission umask,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
@@ -555,7 +556,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           0,
-          populateAbfsOutputStreamContext(isAppendBlob, lease),
+          populateAbfsOutputStreamContext(isAppendBlob, lease,
+              op.getResult().getEncryptionKeyHeaders()),
           tracingContext);
     }
   }
@@ -576,7 +578,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final String permission,
       final String umask,
       final boolean isAppendBlob,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws IOException {
     AbfsRestOperation op;
 
     try {
@@ -631,7 +633,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob,
-      AbfsLease lease) {
+      AbfsLease lease, HashMap<String, String> encryptionHeaders) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
     if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
@@ -646,12 +648,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
             .withLease(lease)
+            .withEncryptionHeaders(encryptionHeaders)
             .build();
   }
 
   public void createDirectory(final Path path, final FsPermission permission,
       final FsPermission umask, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+      throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
       boolean isNamespaceEnabled = getIsNamespaceEnabled(tracingContext);
       LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
@@ -757,7 +760,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   public OutputStream openFileForWrite(final Path path,
       final FileSystem.Statistics statistics, final boolean overwrite,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
+      TracingContext tracingContext) throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("openFileForWrite", "getPathStatus")) {
       LOG.debug("openFileForWrite filesystem: {} path: {} overwrite: {}",
               client.getFileSystem(),
@@ -797,7 +800,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           statistics,
           relativePath,
           offset,
-          populateAbfsOutputStreamContext(isAppendBlob, lease),
+          populateAbfsOutputStreamContext(isAppendBlob, lease,
+              op.getResult().getEncryptionKeyHeaders()),
           tracingContext);
     }
   }
@@ -1531,6 +1535,17 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     // Initialize encryption context
     EncryptionContextProvider encryptionContextProvider =
         abfsConfiguration.initializeEncryptionContextProvider();
+    if (encryptionContextProvider != null) {
+      if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
+        throw new IOException(
+            "Both global key and encryption context are set, only one allowed");
+      }
+      client.setEncryptionType(EncryptionType.ENCRYPTION_CONTEXT);
+    } else if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
+      client.setEncryptionType(EncryptionType.GLOBAL_KEY);
+    } else {
+      client.setEncryptionType(EncryptionType.NONE);
+    }
     encryptionContextProvider.initialize(
         abfsConfiguration.getRawConfiguration(), accountName, fileSystemName);
 

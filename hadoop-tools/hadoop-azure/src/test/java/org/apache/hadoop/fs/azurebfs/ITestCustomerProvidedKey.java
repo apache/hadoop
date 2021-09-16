@@ -279,12 +279,6 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testSetGetXAttr() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
-    System.out.println(StringUtils.substringBefore(fs.getUri().getAuthority(),
-        "@") +" \n "+
-        fs.getUri().getAuthority()+" \n  "+
-        fs.getUri().getAuthority()+"\n  "+
-        fs.getUri().getHost() + " \n " + fs.getUri().getPort() +
-        fs.getUri().getFragment() + " \n " + fs.getUri().parseServerAuthority());
     final String fileName = path(methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
@@ -436,7 +430,6 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         "different-1234567890123456789012");
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
     AbfsClient abfsClient2 = fs2.getAbfsClient();
-    abfsClient2.setClientProvidedEncryptionKey(null);
     TracingContext tracingContext = getTestTracingContext(fs, false);
     abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50,
         null, tracingContext);
@@ -666,7 +659,6 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, false,
         X_MS_REQUEST_SERVER_ENCRYPTED, "");
 
-    abfsClient.setClientProvidedEncryptionKey(null);
     abfsRestOperation = abfsClient.getPathStatus(testFileName, false,
         tracingContext);
     assertCPKHeaders(abfsRestOperation, isWithCPK);

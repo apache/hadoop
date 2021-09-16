@@ -3,6 +3,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 import org.apache.avro.util.ByteBufferInputStream;
 import org.apache.hadoop.conf.Configuration;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 public interface EncryptionContextProvider extends AutoCloseable {
@@ -22,7 +23,7 @@ public interface EncryptionContextProvider extends AutoCloseable {
    * @return encryptionContext string
    * @throws IOException
    */
-  ByteBufferInputStream getEncryptionContext(String path) throws IOException;
+  ByteArrayInputStream getEncryptionContext(String path) throws IOException;
 
   /**
    * Fetch encryption key in-exchange for encryption context
@@ -32,7 +33,7 @@ public interface EncryptionContextProvider extends AutoCloseable {
    * @return Encryption key
    * @throws IOException
    */
-  ByteBufferInputStream getEncryptionKey(String path, String encryptionContext) throws IOException;
+  ByteArrayInputStream getEncryptionKey(String path, String encryptionContext) throws IOException;
 
   @Override
   void close() throws IOException;

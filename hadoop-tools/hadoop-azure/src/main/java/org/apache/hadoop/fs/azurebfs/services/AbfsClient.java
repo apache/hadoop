@@ -31,6 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -39,6 +40,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
@@ -99,6 +101,7 @@ public class AbfsClient implements Closeable {
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
   private final EncryptionContextProvider encryptionContextProvider;
+  private EncryptionType encryptionType;
 
   private final ListeningScheduledExecutorService executorService;
 
@@ -220,6 +223,10 @@ public class AbfsClient implements Closeable {
     return sharedKeyCredentials;
   }
 
+  public void setEncryptionType(EncryptionType encryptionType) {
+    this.encryptionType = encryptionType;
+  }
+
   List<AbfsHttpHeader> createDefaultHeaders() {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion));
@@ -232,32 +239,39 @@ public class AbfsClient implements Closeable {
     return requestHeaders;
   }
 
-  private void addCustomerProvidedKeyHeaders(
-      final List<AbfsHttpHeader> requestHeaders, String path, TracingContext tracingContext)
-      throws IOException {
-    String encryptionContext =
-        getPathStatus(path, false, tracingContext).getResult().getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
-    addCustomerProvidedKeyHeaders(requestHeaders, path, encryptionContext);
-  }
-
-  private void addCustomerProvidedKeyHeaders(
-      List<AbfsHttpHeader> requestHeaders, String path, String encryptionContext)
-      throws IOException {
-    if (clientProvidedEncryptionKey != null) {
-      requestHeaders.add(
-          new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, clientProvidedEncryptionKey));
-      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256,
-          clientProvidedEncryptionKeySHA));
-      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM,
-          SERVER_SIDE_ENCRYPTION_ALGORITHM));
-    } else if (encryptionContextProvider != null) {
-      requestHeaders.add(
-          new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT, encryptionContext));
-      requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY,
-          encryptionContextProvider.getEncryptionKey(path, encryptionContext)
-              .toString()));
-
+  private void addEncryptionKeyRequestHeaders(
+      List<AbfsHttpHeader> requestHeaders, String path,
+      boolean isCreateFileRequest, HashMap<String, String> encryptionHeaders,
+      TracingContext tracingContext) throws IOException {
+    String key, encodedKey, encodedKeySHA256, encryptionContext;
+    switch (encryptionType) {
+    case GLOBAL_KEY:  // common key applicable to all files in the account
+      encodedKey = clientProvidedEncryptionKey;
+      encodedKeySHA256 = clientProvidedEncryptionKeySHA;
+      break;
+    case ENCRYPTION_CONTEXT:  // keys retrieved from EncryptionContextProvider
+      if (encryptionHeaders != null) {
+        // use cached encryption keys from input/output streams
+        encodedKey = encryptionHeaders.get(X_MS_ENCRYPTION_KEY);
+        encodedKeySHA256 = encryptionHeaders.get(X_MS_ENCRYPTION_KEY_SHA256);
+      } else {
+        // get new context if create file request, else fetch via GetPathStatus
+        encryptionContext = isCreateFileRequest
+            ? encryptionContextProvider.getEncryptionContext(path).toString()
+            : getPathStatus(path, false, tracingContext).getResult()
+                .getResponseHeader(X_MS_SERVER_ENCRYPTION_CONTEXT);
+        key = encryptionContextProvider.getEncryptionKey(path,
+            encryptionContext).toString();
+        encodedKey = getBase64EncodedString(key);
+        encodedKeySHA256 = getBase64EncodedString(getSHA256Hash(key));
+      }
+      break;
+    default: return; // no client-provided encryption keys
     }
+    requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256, encodedKeySHA256));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM));
   }
 
   AbfsUriQueryBuilder createDefaultUriQueryBuilder() {
@@ -311,7 +325,6 @@ public class AbfsClient implements Closeable {
                                     final String continuation, TracingContext tracingContext)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addCustomerProvidedKeyHeaders(requestHeaders, relativePath, tracingContext);
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -374,9 +387,7 @@ public class AbfsClient implements Closeable {
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
-      String encryptionContext = encryptionContextProvider.getEncryptionContext(
-          path).toString();
-      addCustomerProvidedKeyHeaders(requestHeaders, path, encryptionContext);
+      addEncryptionKeyRequestHeaders(requestHeaders, path, true, null, null);
     }
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -602,10 +613,12 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final byte[] buffer,
-      AppendRequestParameters reqParams, final String cachedSasToken, TracingContext tracingContext)
+      AppendRequestParameters reqParams, final String cachedSasToken,
+      HashMap<String, String> encryptionHeaders, TracingContext tracingContext)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addCustomerProvidedKeyHeaders(requestHeaders, path, tracingContext);
+    addEncryptionKeyRequestHeaders(requestHeaders, path, false,
+        encryptionHeaders, tracingContext);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -691,10 +704,11 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation flush(final String path, final long position,
       boolean retainUncommittedData, boolean isClose,
-      final String cachedSasToken, final String leaseId,
-      TracingContext tracingContext) throws IOException {
+      final String cachedSasToken, final String leaseId, HashMap<String,
+      String> encryptionHeaders, TracingContext tracingContext) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addCustomerProvidedKeyHeaders(requestHeaders, path, tracingContext);
+    addEncryptionKeyRequestHeaders(requestHeaders, path, false,
+        encryptionHeaders, tracingContext);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -727,7 +741,8 @@ public class AbfsClient implements Closeable {
                                              TracingContext tracingContext)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addCustomerProvidedKeyHeaders(requestHeaders, path, tracingContext);
+    addEncryptionKeyRequestHeaders(requestHeaders, path, false,
+        null, tracingContext);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -764,7 +779,8 @@ public class AbfsClient implements Closeable {
       abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_STATUS);
       operation = SASTokenProvider.GET_STATUS_OPERATION;
     } else {
-      addCustomerProvidedKeyHeaders(requestHeaders, path, tracingContext);
+      addEncryptionKeyRequestHeaders(requestHeaders, path, false, null,
+          tracingContext);
     }
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
@@ -781,10 +797,12 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag, String cachedSasToken,
+                                final int bufferLength, final String eTag,
+      String cachedSasToken, HashMap<String, String> encryptionHeaders,
       TracingContext tracingContext) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addCustomerProvidedKeyHeaders(requestHeaders, path, tracingContext);
+    addEncryptionKeyRequestHeaders(requestHeaders, path, false,
+     encryptionHeaders, tracingContext);
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
     requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));

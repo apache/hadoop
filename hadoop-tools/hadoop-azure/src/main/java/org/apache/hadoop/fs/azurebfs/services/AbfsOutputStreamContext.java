@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.HashMap;
+
 /**
  * Class to hold extra output stream configs.
  */
@@ -40,6 +42,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private int maxWriteRequestsToQueue;
 
   private AbfsLease lease;
+
+  private HashMap<String, String> encryptionHeaders;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -101,6 +105,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withEncryptionHeaders(
+      final HashMap<String, String> encryptionHeaders) {
+    this.encryptionHeaders = encryptionHeaders;
+    return this;
+  }
+
   public int getWriteBufferSize() {
     return writeBufferSize;
   }
@@ -142,5 +152,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
       return null;
     }
     return this.lease.getLeaseID();
+  }
+
+  public HashMap<String, String> getEncryptionHeaders() {
+    return encryptionHeaders;
   }
 }
