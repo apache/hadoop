@@ -26,13 +26,13 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_WEIGHT_PATTERN;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
 
-public class UserWeights {
+public final class UserWeights {
   public static final float DEFAULT_WEIGHT = 1.0F;
   /**
    * Key: Username,
    * Value: Weight as float.
    */
-  protected Map<String, Float> data = new HashMap<>();
+  private final Map<String, Float> data = new HashMap<>();
 
   private UserWeights() {}
 

@@ -568,8 +568,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-  private UserWeights getUserWeightsFromHierarchy
-      (CapacitySchedulerConfiguration configuration) {
+  private UserWeights getUserWeightsFromHierarchy(
+      CapacitySchedulerConfiguration configuration) {
     UserWeights unionInheritedWeights = UserWeights.createEmpty();
     CSQueue parentQ = getParent();
     if (parentQ != null) {
