@@ -3356,7 +3356,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   /**
    * From the given list, incrementally remove the blocks from blockManager
-   * Writelock is dropped and reacquired every BLOCK_DELETION_INCREMENT to
+   * Writelock is dropped and reacquired every blockDeletionIncrement to
    * ensure that other waiters on the lock can get in. See HDFS-2938
    * 
    * @param blocks
