@@ -436,7 +436,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       URI journalUri;
       try {
         journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
-      } catch (URISyntaxException e) {
+      } catch (URISyntaxException | NullPointerException e) {
         throw new IOException("Bad journal uri. Please check configuration for "
             + SCHEDULER_JOURNAL_URI);
       }
