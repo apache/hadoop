@@ -53,8 +53,7 @@ import org.junit.Test;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
-public class TestCapacitySchedulerWorkflowPriorityMapping
-    extends CapacitySchedulerTestBase {
+public class TestCapacitySchedulerWorkflowPriorityMapping {
   private MockRM mockRM = null;
 
   private static void setWorkFlowPriorityMappings(
