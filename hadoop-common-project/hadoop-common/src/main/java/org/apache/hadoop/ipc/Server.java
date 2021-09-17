@@ -830,9 +830,13 @@ public abstract class Server {
   public synchronized void refreshCallQueue(Configuration conf) {
     // Create the next queue
     String prefix = getQueueClassPrefix();
-    this.maxQueueSize = handlerCount * conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+    this.maxQueueSize = conf.getInt(prefix + "." +
+        CommonConfigurationKeys.SERVER_HANDLER_QUEUE_SIZE_KEY, 0);
+    if (this.maxQueueSize < 1) {
+      this.maxQueueSize = handlerCount * conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+    }
     callQueue.swapQueue(
         getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
         getQueueClass(CommonConfigurationKeys.IPC_NAMESPACE, port, conf),
@@ -3192,23 +3196,41 @@ public abstract class Server {
     if (queueSizePerHandler != -1) {
       this.maxQueueSize = handlerCount * queueSizePerHandler;
     } else {
-      this.maxQueueSize = handlerCount * conf.getInt(
-          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);      
+      this.maxQueueSize = conf.getInt(getQueueClassPrefix() + "." +
+          CommonConfigurationKeys.SERVER_HANDLER_QUEUE_SIZE_KEY, 0);
+      if (this.maxQueueSize < 1) {
+        this.maxQueueSize = handlerCount * conf.getInt(
+            CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+            CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+      }
     }
-    this.maxRespSize = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
+    int tmpMaxRespSize = conf.getInt(getQueueClassPrefix() + "." +
+        CommonConfigurationKeys.SERVER_RPC_MAX_RESPONSE_SIZE_KEY, 0);
+    if (tmpMaxRespSize < 1) {
+      this.maxRespSize = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
+          CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
+    } else {
+      this.maxRespSize = tmpMaxRespSize;
+    }
     if (numReaders != -1) {
       this.readThreads = numReaders;
     } else {
-      this.readThreads = conf.getInt(
-          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
-          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+      this.readThreads = conf.getInt(getQueueClassPrefix() + "." +
+          CommonConfigurationKeys.SERVER_RPC_READ_THREADS_KEY, 0);
+      if (this.readThreads < 1) {
+        this.readThreads = conf.getInt(
+            CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
+            CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+      }
     }
-    this.readerPendingConnectionQueue = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT);
+    this.readerPendingConnectionQueue = conf.getInt(getQueueClassPrefix() + "." +
+        CommonConfigurationKeys.SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY, 0);
+    if (this.readerPendingConnectionQueue < 1) {
+      this.readerPendingConnectionQueue = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY,
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT);
+    }
 
     // Setup appropriate callqueue
     final String prefix = getQueueClassPrefix();
@@ -3689,6 +3711,16 @@ public abstract class Server {
    */
   public int getMaxQueueSize() {
     return maxQueueSize;
+  }
+
+  @VisibleForTesting
+  public int getMaxRespSize() {
+    return maxRespSize;
+  }
+
+  @VisibleForTesting
+  public int getReaderPendingConnectionQueue() {
+    return readerPendingConnectionQueue;
   }
 
   /**

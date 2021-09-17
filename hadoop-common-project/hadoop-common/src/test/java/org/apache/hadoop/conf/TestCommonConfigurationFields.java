@@ -184,6 +184,10 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.handler");
     xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockfree");
     xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.response");
+    xmlPropsToSkipCompare.add("ipc.[port_number].server.max.response.size");
+    xmlPropsToSkipCompare.add("ipc.[port_number].server.read.threadpool.size");
+    xmlPropsToSkipCompare.add("ipc.[port_number].server.read.connection-queue.size");
+    xmlPropsToSkipCompare.add("ipc.[port_number].server.handler.queue.size");
 
     // Deprecated properties.  These should eventually be removed from the
     // class.

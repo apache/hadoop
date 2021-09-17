@@ -372,6 +372,31 @@ public class TestRPC extends TestRpcBase {
   }
 
   @Test
+  public void testConfRpc2() throws IOException {
+    Configuration tmpConf = new Configuration();
+    tmpConf.setInt(CommonConfigurationKeys.IPC_NAMESPACE + "." + PORT + "." +
+        CommonConfigurationKeys.SERVER_RPC_MAX_RESPONSE_SIZE_KEY, 3);
+    tmpConf.setInt(CommonConfigurationKeys.IPC_NAMESPACE + "." + PORT + "." +
+        CommonConfigurationKeys.SERVER_RPC_READ_THREADS_KEY, 3);
+    tmpConf.setInt(CommonConfigurationKeys.IPC_NAMESPACE + "." + PORT + "." +
+        CommonConfigurationKeys.SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY, 3);
+    tmpConf.setInt(CommonConfigurationKeys.IPC_NAMESPACE + "." + PORT + "." +
+        CommonConfigurationKeys.SERVER_HANDLER_QUEUE_SIZE_KEY, 3);
+    Server server = newServerBuilder(tmpConf)
+        .setNumHandlers(1).setVerbose(false).setPort(PORT).build();
+    assertEquals(3, server.getMaxRespSize());
+    assertEquals(3, server.getNumReaders());
+    assertEquals(3, server.getReaderPendingConnectionQueue());
+    assertEquals(3, server.getMaxQueueSize());
+
+    tmpConf.setInt(CommonConfigurationKeys.IPC_NAMESPACE + "." +
+        server.getPort() + "." +
+        CommonConfigurationKeys.SERVER_HANDLER_QUEUE_SIZE_KEY, 5);
+    server.refreshCallQueue(tmpConf);
+    assertEquals(5, server.getMaxQueueSize());
+  }
+
+  @Test
   public void testProxyAddress() throws Exception {
     Server server = null;
     TestRpcService proxy = null;

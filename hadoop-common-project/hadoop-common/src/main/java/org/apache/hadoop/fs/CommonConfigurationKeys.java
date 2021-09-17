@@ -62,18 +62,24 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
     "ipc.server.max.response.size";
+  public static final String SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
+      "server.max.response.size";
   /** Default value for IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY */
   public static final int     IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT =
     1024*1024;
   /** Number of threads in RPC server reading from the socket */
   public static final String  IPC_SERVER_RPC_READ_THREADS_KEY =
     "ipc.server.read.threadpool.size";
+  public static final String SERVER_RPC_READ_THREADS_KEY =
+      "server.read.threadpool.size";
   /** Default value for IPC_SERVER_RPC_READ_THREADS_KEY */
   public static final int     IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
   
   /** Number of pending connections that may be queued per socket reader */
   public static final String IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY =
       "ipc.server.read.connection-queue.size";
+  public static final String SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_KEY =
+      "server.read.connection-queue.size";
   /** Default value for IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE */
   public static final int IPC_SERVER_RPC_READ_CONNECTION_QUEUE_SIZE_DEFAULT =
       100;
@@ -94,6 +100,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** How many calls per handler are allowed in the queue. */
   public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY =
     "ipc.server.handler.queue.size";
+  public static final String SERVER_HANDLER_QUEUE_SIZE_KEY =
+      "server.handler.queue.size";
   /** Default value for IPC_SERVER_HANDLER_QUEUE_SIZE_KEY */
   public static final int     IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT = 100;
 

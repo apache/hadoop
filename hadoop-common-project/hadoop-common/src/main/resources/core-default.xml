@@ -2501,6 +2501,47 @@
   </description>
 </property>
 
+<property>
+  <name>ipc.[port_number].server.max.response.size</name>
+  <value></value>
+  <description>The maximum response size of the server.
+    [port_number] is the port used by the IPC server to be configured.
+    For example, ipc.8020.server.max.response.size will adjust the maximum
+    response size implementation for the IPC server running at port 8020.
+  </description>
+</property>
+
+<property>
+  <name>ipc.[port_number].server.read.threadpool.size</name>
+  <value></value>
+  <description>The maximum thread pool size for the server to read request data.
+    [port_number] is the port used by the IPC server to be configured.
+    For example, ipc.8020.server.read.threadpool.size will adjust the maximum
+    thread pool size implementation for the IPC server running at port 8020.
+  </description>
+</property>
+
+<property>
+  <name>ipc.[port_number].server.read.connection-queue.size</name>
+  <value></value>
+  <description>The size of the queue for the server to read request
+    connection data. [port_number] is the port used by the IPC server
+    to be configured. For example, ipc.8020.server.read.connection-queue.size
+    will adjust the connection queue size implementation for the IPC server
+    running at port 8020.
+  </description>
+</property>
+
+<property>
+  <name>ipc.[port_number].server.handler.queue.size</name>
+  <value></value>
+  <description>The queue size of server handler.[port_number] is the port
+    used by the IPC server to be configured. For example,
+    ipc.8020.server.handler.queue.size will adjust the handler queue size
+    implementation for the IPC server running at port 8020.
+  </description>
+</property>
+
 <!-- FairCallQueue properties -->
 <!-- See FairCallQueue documentation for a table of all properties -->
 
