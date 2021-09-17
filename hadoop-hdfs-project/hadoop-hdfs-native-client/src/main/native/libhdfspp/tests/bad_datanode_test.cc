@@ -45,7 +45,6 @@ using ::testing::Return;
 
 using namespace hdfs;
 
-
 class MockReader : public BlockReader {
 public:
   MOCK_METHOD2(
