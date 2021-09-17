@@ -124,7 +124,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   // Indicates if this queue's default lifetime was set by a config property,
   // either at this level or anywhere in the queue's hierarchy.
   private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
-  private AbstractCSQueuePreemption preemptionSettings;
+  private CSQueuePreemption preemptionSettings;
 
   public enum CapacityConfigType {
     // FIXME, from what I can see, Percentage mode can almost apply to weighted
@@ -397,7 +397,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           this, labelManager, null);
 
       // Store preemption settings
-      this.preemptionSettings = new AbstractCSQueuePreemption(this, csContext, configuration);
+      this.preemptionSettings = new CSQueuePreemption(this, csContext, configuration);
       this.priority = configuration.getQueuePriority(
           getQueuePath());
 
@@ -1343,11 +1343,11 @@ public abstract class AbstractCSQueue implements CSQueue {
         LOG.info("The specified queue:" + getQueuePath()
             + " is already in the RUNNING state.");
       } else {
-        CSQueue parent = getParent();
-        if (parent == null || parent.getState() == QueueState.RUNNING) {
+        CSQueue parentQueue = getParent();
+        if (parentQueue == null || parentQueue.getState() == QueueState.RUNNING) {
           updateQueueState(QueueState.RUNNING);
         } else {
-          throw new YarnException("The parent Queue:" + parent.getQueuePath()
+          throw new YarnException("The parent Queue:" + parentQueue.getQueuePath()
               + " is not running. Please activate the parent queue first");
         }
       }

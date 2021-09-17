@@ -18,13 +18,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-public class AbstractCSQueuePreemption {
+public class CSQueuePreemption {
   private final boolean preemptionDisabled;
   // Indicates if the in-queue preemption setting is ever disabled within the
   // hierarchy of this queue.
   private final boolean intraQueuePreemptionDisabledInHierarchy;
 
-  public AbstractCSQueuePreemption(
+  public CSQueuePreemption(
       CSQueue queue,
       CapacitySchedulerContext csContext,
       CapacitySchedulerConfiguration configuration) {
