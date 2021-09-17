@@ -440,7 +440,7 @@ public abstract class LogAggregationFileController {
             + " it does not support this", remoteFS.getScheme());
         fsSupportsChmod = false;
       } catch (IOException e) {
-        LOG.warn("Failed to check if FileSystem suppports permissions on "
+        LOG.warn("Failed to check if FileSystem supports permissions on "
             + "remoteLogDir [" + remoteRootLogDir + "]", e);
       } finally {
         try {
