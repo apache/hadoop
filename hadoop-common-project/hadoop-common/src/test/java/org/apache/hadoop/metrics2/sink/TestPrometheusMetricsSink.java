@@ -262,14 +262,11 @@ public class TestPrometheusMetricsSink {
 
     assertThat(writtenMetrics)
         .contains(
-            "nn_top_user_op_counts_window_ms_60000_total_count{context=\"dfs\"");
-    assertThat(writtenMetrics)
+            "nn_top_user_op_counts_window_ms_60000_total_count{context=\"dfs\"")
         .contains(
-            "nn_top_user_op_counts_window_ms_60000_count{");
-    assertThat(writtenMetrics)
+            "nn_top_user_op_counts_window_ms_60000_count{")
         .contains(
-            "nn_top_user_op_counts_window_ms_1500000_count{");
-    assertThat(writtenMetrics)
+            "nn_top_user_op_counts_window_ms_1500000_count{")
         .contains(
             "op=\"rename\",user=\"hadoop/TEST_HOSTNAME.com@HOSTNAME.COM\"");
 
