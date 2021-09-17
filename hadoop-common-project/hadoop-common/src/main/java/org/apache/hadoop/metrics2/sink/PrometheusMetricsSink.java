@@ -105,12 +105,12 @@ public class PrometheusMetricsSink implements MetricsSink {
   }
 
   public void writeMetrics(Writer writer) throws IOException {
+    List<String> extendMetricsTags = new ArrayList<>();
     for (Map.Entry<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetric :
         promMetrics.entrySet()) {
       AbstractMetric firstMetric = promMetric.getValue().values().iterator().next();
-      List<String> customTags = new ArrayList<>();
       String metricKey = getMetricKey(promMetric.getKey(), firstMetric,
-          customTags);
+          extendMetricsTags);
 
       StringBuilder builder = new StringBuilder();
       builder.append("# HELP ")
@@ -142,11 +142,12 @@ public class PrometheusMetricsSink implements MetricsSink {
             sep = ",";
           }
         }
-        if (customTags.size() > 0) {
-          //add custom tags
-          for (String tagStr : customTags) {
+        if (!extendMetricsTags.isEmpty()) {
+          //add extend tags
+          for (String tagStr : extendMetricsTags) {
             builder.append(sep).append(tagStr);
           }
+          extendMetricsTags.clear();
         }
         builder.append("} ");
         builder.append(metric.getValue().value());
@@ -158,10 +159,10 @@ public class PrometheusMetricsSink implements MetricsSink {
   }
 
   private String getMetricKey(String promMetricKey, AbstractMetric metric,
-      List<String> customTags) {
+      List<String> extendTags) {
     Matcher matcher = NN_TOPMETRICS_PATTERN.matcher(promMetricKey);
     if (matcher.find() && matcher.groupCount() == 2) {
-      customTags.addAll(parseTopMetricsTags(metric.name()));
+      extendTags.addAll(parseTopMetricsTags(metric.name()));
       return String.format("%s_%s",
           matcher.group(1), matcher.group(2));
     }

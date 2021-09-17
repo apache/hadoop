@@ -39,6 +39,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test prometheus Sink.
@@ -258,25 +259,19 @@ public class TestPrometheusMetricsSink {
     //THEN
     String writtenMetrics = stream.toString(UTF_8.name());
     System.out.println(writtenMetrics);
-    Assert.assertTrue(
-        "The expected metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "nn_top_user_op_counts_window_ms_60000_total_count{context=\"dfs\"")
-    );
-    Assert.assertTrue(
-        "The expected metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "nn_top_user_op_counts_window_ms_60000_count{"));
 
-    Assert.assertTrue(
-        "The expected metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "nn_top_user_op_counts_window_ms_1500000_count{"));
-
-    Assert.assertTrue(
-        "The expected metric line is missing from prometheus metrics output",
-        writtenMetrics.contains(
-            "op=\"rename\",user=\"hadoop/TEST_HOSTNAME.com@HOSTNAME.COM\""));
+    assertThat(writtenMetrics)
+        .contains(
+            "nn_top_user_op_counts_window_ms_60000_total_count{context=\"dfs\"");
+    assertThat(writtenMetrics)
+        .contains(
+            "nn_top_user_op_counts_window_ms_60000_count{");
+    assertThat(writtenMetrics)
+        .contains(
+            "nn_top_user_op_counts_window_ms_1500000_count{");
+    assertThat(writtenMetrics)
+        .contains(
+            "op=\"rename\",user=\"hadoop/TEST_HOSTNAME.com@HOSTNAME.COM\"");
 
     metrics.stop();
     metrics.shutdown();
