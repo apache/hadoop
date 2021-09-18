@@ -185,7 +185,7 @@ public class PrometheusMetricsSink implements MetricsSink {
       topMetricsTags.add(String
           .format("op=\"%s\"", op));
       if (StringUtils.isNoneEmpty(user)) {
-        // add tag op = "$op"
+        // add tag user = "$user"
         topMetricsTags.add(String
             .format("user=\"%s\"", user));
       }
