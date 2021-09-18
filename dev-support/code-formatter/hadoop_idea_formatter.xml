@@ -65,9 +65,10 @@
     <option name="TERNARY_OPERATION_WRAP" value="5" />
     <option name="ARRAY_INITIALIZER_WRAP" value="1" />
     <option name="ASSIGNMENT_WRAP" value="1" />
-    <option name="METHOD_ANNOTATION_WRAP" value="1" />
-    <option name="CLASS_ANNOTATION_WRAP" value="1" />
-    <option name="FIELD_ANNOTATION_WRAP" value="1" />
+    <option name="METHOD_ANNOTATION_WRAP" value="2" />
+    <option name="CLASS_ANNOTATION_WRAP" value="2" />
+    <option name="FIELD_ANNOTATION_WRAP" value="2" />
+    <option name="VARIABLE_ANNOTATION_WRAP" value="2" />
     <indentOptions>
       <option name="INDENT_SIZE" value="2" />
       <option name="CONTINUATION_INDENT_SIZE" value="4" />
