@@ -20,10 +20,13 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.util.GSet;
@@ -36,12 +39,12 @@ import org.apache.hadoop.util.PartitionedGSet;
  * and INode.  
  */
 public class INodeMap {
-  static final int NAMESPACE_KEY_DEPTH = 2;
-  static final int NUM_RANGES_STATIC = 256;  // power of 2
+  private static int numSpaceKeyDepth;
+  private static long numRanges;
 
   public static class INodeKeyComparator implements Comparator<INode> {
     INodeKeyComparator() {
-      FSDirectory.LOG.info("Namespace key depth = {}", NAMESPACE_KEY_DEPTH);
+      FSDirectory.LOG.info("Namespace key depth = {}", numSpaceKeyDepth);
     }
 
     @Override
@@ -49,9 +52,9 @@ public class INodeMap {
       if (i1 == null || i2 == null) {
         throw new NullPointerException("Cannot compare null INodes");
       }
-      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEPTH);
-      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEPTH);
-      for(int l = 0; l < NAMESPACE_KEY_DEPTH; l++) {
+      long[] key1 = i1.getNamespaceKey(numSpaceKeyDepth);
+      long[] key2 = i2.getNamespaceKey(numSpaceKeyDepth);
+      for(int l = 0; l < numSpaceKeyDepth; l++) {
         if(key1[l] == key2[l]) continue;
         return (key1[l] < key2[l] ? -1 : 1);
       }
@@ -65,7 +68,7 @@ public class INodeMap {
    */
   public static class HPINodeKeyComparator implements Comparator<INode> {
     HPINodeKeyComparator() {
-      FSDirectory.LOG.info("Namespace key depth = {}", NAMESPACE_KEY_DEPTH);
+      FSDirectory.LOG.info("Namespace key depth = {}", numSpaceKeyDepth);
     }
 
     @Override
@@ -73,13 +76,13 @@ public class INodeMap {
       if (i1 == null || i2 == null) {
         throw new NullPointerException("Cannot compare null INodes");
       }
-      long[] key1 = i1.getNamespaceKey(NAMESPACE_KEY_DEPTH);
-      long[] key2 = i2.getNamespaceKey(NAMESPACE_KEY_DEPTH);
+      long[] key1 = i1.getNamespaceKey(numSpaceKeyDepth);
+      long[] key2 = i2.getNamespaceKey(numSpaceKeyDepth);
       long key1_0 = INode.indexOf(key1);
       long key2_0 = INode.indexOf(key2);
       if(key1_0 != key2_0)
         return (key1_0 < key2_0 ? -1 : 1);
-      for(int l = 1; l < NAMESPACE_KEY_DEPTH; l++) {
+      for(int l = 1; l < numSpaceKeyDepth; l++) {
         if(key1[l] == key2[l]) continue;
         return (key1[l] < key2[l] ? -1 : 1);
       }
@@ -97,6 +100,14 @@ public class INodeMap {
       long id2 = i2.getId();
       return id1 < id2 ? -1 : id1 == id2 ? 0 : 1;
     }
+  }
+
+  public static long getNumRanges() {
+    return numRanges;
+  }
+
+  public static int getNumSpaceKeyDepth() {
+    return numSpaceKeyDepth;
   }
 
   public class INodeMapLock extends LatchLock<ReentrantReadWriteLock> {
@@ -179,8 +190,8 @@ public class INodeMap {
   }
 
   static INodeMap newInstance(INodeDirectory rootDir,
-      FSNamesystem ns) {
-    return new INodeMap(rootDir, ns);
+      FSNamesystem ns, Configuration conf) {
+    return new INodeMap(rootDir, ns, conf);
   }
 
   /** Synchronized by external lock. */
@@ -191,8 +202,45 @@ public class INodeMap {
     return map.iterator();
   }
 
-  private INodeMap(INodeDirectory rootDir, FSNamesystem ns) {
+  public Set<INode> rangeKeys() {
+    return ((PartitionedGSet)map).entryKeySet();
+  }
+
+  /**
+   * Check if a number is a power of two.
+   * @param n The number to be checked.
+   * @return true if it is a power of two, else false.
+   */
+  private static boolean checkPowerOfTwo(long n) {
+    if (n < 1) {
+      return false;
+    }
+    return (n&(n - 1)) == 0;
+  }
+
+  private static void setStaticField(Configuration conf) {
+    numSpaceKeyDepth = conf.getInt(DFSConfigKeys.DFS_NAMENODE_INOD_NAMESPACE_KEY_DEPTH,
+        DFSConfigKeys.DFS_NAMENODE_INOD_NAMESPACE_KEY_DEPTH_DEFAULT);
+    if (numSpaceKeyDepth < 1) {
+      numSpaceKeyDepth = DFSConfigKeys.DFS_NAMENODE_INOD_NAMESPACE_KEY_DEPTH_DEFAULT;
+    }
+
+    numRanges = conf.getLong(DFSConfigKeys.DFS_NAMENODE_INOD_NUM_RANGES,
+        DFSConfigKeys.DFS_NAMENODE_INOD_NUM_RANGES_DEFAULT);
+    boolean isPowerOfTwo = checkPowerOfTwo(numRanges);
+    if (!isPowerOfTwo) {
+      FSDirectory.LOG.warn("Num of ranges = {}. It should be a power of two.",
+          numRanges);
+    }
+    if ((numRanges < 1) || !isPowerOfTwo) {
+      numRanges = DFSConfigKeys.DFS_NAMENODE_INOD_NUM_RANGES_DEFAULT;
+    }
+  }
+
+  private INodeMap(INodeDirectory rootDir, FSNamesystem ns, Configuration conf) {
     this.namesystem = ns;
+    setStaticField(conf);
+
     // Compute the map capacity by allocating 1% of total memory
     int capacity = LightWeightGSet.computeCapacity(1, "INodeMap");
     this.map = new PartitionedGSet<>(capacity, new INodeKeyComparator(),
@@ -203,10 +251,18 @@ public class INodeMap {
         (PartitionedGSet<INode, INodeWithAdditionalFields>) map;
     PermissionStatus perm = new PermissionStatus(
         "", "", new FsPermission((short) 0));
-    for(int p = 0; p < NUM_RANGES_STATIC; p++) {
+    for(int p = 0; p < numRanges; p++) {
       INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
           "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
-      key.setParent(new INodeDirectory((long)p, null, perm, 0));
+      INodeDirectory ppKey = key;
+      if (numSpaceKeyDepth > 2) {
+        for (int pp = 0; pp < (numSpaceKeyDepth - 2); pp++) {
+          INodeDirectory tmpKey = new INodeDirectory((long)0, null, perm, 0);
+          ppKey.setParent(tmpKey);
+          ppKey = tmpKey;
+        }
+      }
+      ppKey.setParent(new INodeDirectory((long)p, null, perm, 0));
       pgs.addNewPartition(key);
     }
 
@@ -262,10 +318,18 @@ public class INodeMap {
     PermissionStatus perm =
         new PermissionStatus("", "", new FsPermission((short) 0));
     // TODO: create a static array, to avoid creation of keys each time.
-    for (int p = 0; p < NUM_RANGES_STATIC; p++) {
+    for (int p = 0; p < numRanges; p++) {
       INodeDirectory key = new INodeDirectory(INodeId.ROOT_INODE_ID,
           "range key".getBytes(StandardCharsets.UTF_8), perm, 0);
-      key.setParent(new INodeDirectory((long)p, null, perm, 0));
+      INodeDirectory ppKey = key;
+      if (numSpaceKeyDepth > 2) {
+        for (int pp = 0; pp < (numSpaceKeyDepth - 2); pp++) {
+          INodeDirectory tmpKey = new INodeDirectory((long)0, null, perm, 0);
+          ppKey.setParent(tmpKey);
+          ppKey = tmpKey;
+        }
+      }
+      ppKey.setParent(new INodeDirectory((long)p, null, perm, 0));
       PartitionedGSet.PartitionEntry e = pgs.getPartition(key);
       
       if (e.contains(inode)) {
@@ -279,10 +343,10 @@ public class INodeMap {
   public INode get(INode inode) {
 
     /*
-     * Check whether the Inode has (NAMESPACE_KEY_DEPTH - 1) levels of parent
+     * Check whether the Inode has (numSpaceKeyDepth - 1) levels of parent
      * dirs
      */
-    int i = NAMESPACE_KEY_DEPTH - 1;
+    int i = numSpaceKeyDepth - 1;
     INode tmpInode = inode;
     while (i > 0 && tmpInode.getParent() != null) {
       tmpInode = tmpInode.getParent();
@@ -290,7 +354,7 @@ public class INodeMap {
     }
 
     /*
-     * If the Inode has (NAMESPACE_KEY_DEPTH - 1) levels of parent dirs,
+     * If the Inode has (numSpaceKeyDepth - 1) levels of parent dirs,
      * use map.get(); else, fall back to get INode based on Inode ID.
      */
     if (i == 0) {

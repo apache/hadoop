@@ -5153,6 +5153,25 @@
 </property>
 
 <property>
+  <name>dfs.namenode.inode.namespace.key.depth</name>
+  <value>2</value>
+  <description>
+    Defines a finite number of parent keys for INodeIdKey.
+    For example, if the value is 2, INodeIdKey can be represented as :
+    '{RootINodeId, parentINodeId, selfINodeId}'.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.inode.num.ranges</name>
+  <value>256</value>
+  <description>
+    Defines the initial number of PartitionedEntries that a PartitionedGSet
+    contains, usually a power of 2.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max-num-blocks-to-log</name>
   <value>1000</value>
   <description>
