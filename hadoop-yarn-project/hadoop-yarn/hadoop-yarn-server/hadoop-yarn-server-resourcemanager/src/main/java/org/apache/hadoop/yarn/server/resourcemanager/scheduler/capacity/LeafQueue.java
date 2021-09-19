@@ -2347,18 +2347,19 @@ public class LeafQueue extends AbstractCSQueue {
   private void updateQueuePreemptionMetrics(RMContainer rmc) {
     final long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
     final long usedSeconds = usedMillis / DateUtils.MILLIS_PER_SECOND;
+    CSQueueMetrics metrics = usageTracker.getMetrics();
     Resource containerResource = rmc.getAllocatedResource();
-    usageTracker.getMetrics().preemptContainer();
+    metrics.preemptContainer();
     long mbSeconds = (containerResource.getMemorySize() * usedMillis)
         / DateUtils.MILLIS_PER_SECOND;
     long vcSeconds = (containerResource.getVirtualCores() * usedMillis)
         / DateUtils.MILLIS_PER_SECOND;
-    usageTracker.getMetrics().updatePreemptedMemoryMBSeconds(mbSeconds);
-    usageTracker.getMetrics().updatePreemptedVcoreSeconds(vcSeconds);
-    usageTracker.getMetrics().updatePreemptedResources(containerResource);
-    usageTracker.getMetrics().updatePreemptedSecondsForCustomResources(containerResource,
+    metrics.updatePreemptedMemoryMBSeconds(mbSeconds);
+    metrics.updatePreemptedVcoreSeconds(vcSeconds);
+    metrics.updatePreemptedResources(containerResource);
+    metrics.updatePreemptedSecondsForCustomResources(containerResource,
         usedSeconds);
-    usageTracker.getMetrics().updatePreemptedForCustomResources(containerResource);
+    metrics.updatePreemptedForCustomResources(containerResource);
   }
 
   @Override

@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 
-public class AbstractCSQueueUsageTracker {
+public class CSQueueUsageTracker {
   private final CSQueueMetrics metrics;
   private volatile int numContainers;
 
@@ -34,11 +34,11 @@ public class AbstractCSQueueUsageTracker {
   /**
    * Tracks resource usage by label like used-resource / pending-resource.
    */
-  private volatile ResourceUsage queueUsage;
+  private final ResourceUsage queueUsage;
 
   private final QueueResourceQuotas queueResourceQuotas;
 
-  public AbstractCSQueueUsageTracker(CSQueueMetrics metrics) {
+  public CSQueueUsageTracker(CSQueueMetrics metrics) {
     this.metrics = metrics;
     this.queueUsage = new ResourceUsage();
     this.queueResourceQuotas = new QueueResourceQuotas();
@@ -48,11 +48,11 @@ public class AbstractCSQueueUsageTracker {
     return numContainers;
   }
 
-  public synchronized void increaseNumContainers() {
+  public void increaseNumContainers() {
     numContainers++;
   }
 
-  public synchronized void decreaseNumContainers() {
+  public void decreaseNumContainers() {
     numContainers--;
   }
 

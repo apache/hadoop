@@ -122,7 +122,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   private CSQueuePreemption preemptionSettings;
 =======
 
-  AbstractCSQueueUsageTracker usageTracker;
+  CSQueueUsageTracker usageTracker;
 >>>>>>> initial commit of YARN-10942
 
   public enum CapacityConfigType {
@@ -173,7 +173,7 @@ public abstract class AbstractCSQueue implements CSQueue {
         (CSQueueMetrics) old.getMetrics() :
         CSQueueMetrics.forQueue(getQueuePath(), parent,
             cs.getConfiguration().getEnableUserMetrics(), configuration);
-    usageTracker = new AbstractCSQueueUsageTracker(metrics);
+    usageTracker = new CSQueueUsageTracker(metrics);
     this.csContext = cs;
     this.minimumAllocation = csContext.getMinimumResourceCapability();
     queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
