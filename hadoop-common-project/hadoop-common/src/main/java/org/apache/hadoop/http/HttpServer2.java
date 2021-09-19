@@ -116,6 +116,10 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.PRINCIPAL;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.KEYTAB;
+
+
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
  * to serve up status information for the server. There are three contexts:
@@ -165,6 +169,13 @@ public final class HttpServer2 implements FilterContainer {
   public static final String HTTP_SNI_HOST_CHECK_ENABLED_KEY
       = "hadoop.http.sni.host.check.enabled";
   public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
+
+  public static final String HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT
+      = "hadoop.http.authentication.";
+  public static final String HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT
+      = HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT + PRINCIPAL;
+  public static final String HTTP_KERBEROS_KEYTAB_KEY_DEFAULT
+      = HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT + KEYTAB;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -243,7 +254,8 @@ public final class HttpServer2 implements FilterContainer {
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
-    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
+    private String authFilterConfigurationPrefix
+        = HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT;
     private String excludeCiphers;
 
     private boolean xFrameEnabled;
@@ -1280,12 +1292,12 @@ public final class HttpServer2 implements FilterContainer {
     Map<String, String> params = new HashMap<>();
     String principalInConf = conf.get(usernameConfKey);
     if (principalInConf != null && !principalInConf.isEmpty()) {
-      params.put("kerberos.principal", SecurityUtil.getServerPrincipal(
+      params.put(PRINCIPAL, SecurityUtil.getServerPrincipal(
           principalInConf, hostName));
     }
     String httpKeytab = conf.get(keytabConfKey);
     if (httpKeytab != null && !httpKeytab.isEmpty()) {
-      params.put("kerberos.keytab", httpKeytab);
+      params.put(KEYTAB, httpKeytab);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
     defineFilter(webAppContext, SPNEGO_FILTER,

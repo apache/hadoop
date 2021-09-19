@@ -34,8 +34,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
+import static org.apache.hadoop.http.HttpServer2.HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -154,8 +154,7 @@ public class TestWebHdfsTokens {
     secureConf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
     secureConf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, principal);
     secureConf.set(DFS_DATANODE_KEYTAB_FILE_KEY, keytab);
-    secureConf.set(DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        spnegoPrincipal);
+    secureConf.set(HTTP_KERBEROS_PRINCIPAL_KEY_DEFAULT, spnegoPrincipal);
     secureConf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     secureConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication");
     secureConf.set(DFS_HTTP_POLICY_KEY,

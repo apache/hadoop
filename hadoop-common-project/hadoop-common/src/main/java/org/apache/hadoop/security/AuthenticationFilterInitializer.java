@@ -43,7 +43,8 @@ import java.util.Map;
  */
 public class AuthenticationFilterInitializer extends FilterInitializer {
 
-  static final String PREFIX = "hadoop.http.authentication.";
+  static final String PREFIX =
+      HttpServer2.HTTP_FILTER_CONFIGURATION_PREFIX_DEFAULT;
 
   /**
    * Initializes hadoop-auth AuthenticationFilter.
