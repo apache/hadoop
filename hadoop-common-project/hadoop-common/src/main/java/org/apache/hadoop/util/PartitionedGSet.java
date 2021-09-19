@@ -275,6 +275,10 @@ public class PartitionedGSet<K, E extends K> implements GSet<K, E> {
     return new EntryIterator();
   }
 
+  public Set<K> entryKeySet() {
+    return partitions.keySet();
+  }
+
   /**
    * Iterator over the elements in the set.
    * Iterates first by keys, then inside the partition

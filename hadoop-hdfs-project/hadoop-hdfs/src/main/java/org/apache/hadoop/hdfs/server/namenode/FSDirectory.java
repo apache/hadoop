@@ -324,7 +324,7 @@ public class FSDirectory implements Closeable {
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
-    inodeMap = INodeMap.newInstance(rootDir, ns);
+    inodeMap = INodeMap.newInstance(rootDir, ns, conf);
     tempInodeMap = new HashMap<>(1000);
 
     // add rootDir to inodeMapTemp.

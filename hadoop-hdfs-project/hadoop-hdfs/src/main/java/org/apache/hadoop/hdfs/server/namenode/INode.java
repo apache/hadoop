@@ -608,7 +608,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
       return key[0];
     }
     long idx = LARGE_PRIME * key[0];
-    idx = (idx ^ (idx >> 32)) & (INodeMap.NUM_RANGES_STATIC -1);
+    idx = (idx ^ (idx >> 32)) & (INodeMap.getNumRanges() -1);
     return idx;
   }
 

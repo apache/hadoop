@@ -979,6 +979,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_KEY = "dfs.namenode.inode.attributes.provider.bypass.users";
   public static final String  DFS_NAMENODE_INODE_ATTRIBUTES_PROVIDER_BYPASS_USERS_DEFAULT = "";
 
+  public static final String  DFS_NAMENODE_INOD_NAMESPACE_KEY_DEPTH =
+      "dfs.namenode.inode.namespace.key.depth";
+  public static final int     DFS_NAMENODE_INOD_NAMESPACE_KEY_DEPTH_DEFAULT = 2;
+  public static final String  DFS_NAMENODE_INOD_NUM_RANGES =
+      "dfs.namenode.inode.num.ranges";
+  public static final long    DFS_NAMENODE_INOD_NUM_RANGES_DEFAULT = 256;
+
   public static final String  DFS_DATANODE_BP_READY_TIMEOUT_KEY = "dfs.datanode.bp-ready.timeout";
   public static final long    DFS_DATANODE_BP_READY_TIMEOUT_DEFAULT = 20;
 
