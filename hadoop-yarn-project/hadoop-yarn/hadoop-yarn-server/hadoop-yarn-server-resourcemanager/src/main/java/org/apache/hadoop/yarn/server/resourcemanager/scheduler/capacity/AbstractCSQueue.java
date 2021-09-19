@@ -118,12 +118,9 @@ public abstract class AbstractCSQueue implements CSQueue {
   // Indicates if this queue's default lifetime was set by a config property,
   // either at this level or anywhere in the queue's hierarchy.
   private volatile boolean defaultAppLifetimeWasSpecifiedInConfig = false;
-<<<<<<< HEAD
   private CSQueuePreemption preemptionSettings;
-=======
 
   CSQueueUsageTracker usageTracker;
->>>>>>> initial commit of YARN-10942
 
   public enum CapacityConfigType {
     // FIXME, from what I can see, Percentage mode can almost apply to weighted
