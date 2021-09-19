@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -48,8 +50,9 @@ import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -62,6 +65,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
@@ -136,6 +140,8 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
@@ -147,6 +153,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -449,11 +457,62 @@ public class ResourceManager extends CompositeService
   }
 
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
-    return new EventDispatcher(this.scheduler, "SchedulerEventDispatcher");
+    String dispatcherName = "SchedulerEventDispatcher";
+    EventDispatcher dispatcher;
+    int threadMonitorRate = conf.getInt(
+        YarnConfiguration.YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN,
+        YarnConfiguration.DEFAULT_YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN);
+
+    if (threadMonitorRate > 0) {
+      dispatcher = new SchedulerEventDispatcher(dispatcherName,
+          threadMonitorRate);
+      ClusterMetrics.getMetrics().setRmEventProcMonitorEnable(true);
+    } else {
+      dispatcher = new EventDispatcher(this.scheduler, dispatcherName);
+    }
+    dispatcher.
+        setMetrics(GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), SchedulerEventType.class));
+    return dispatcher;
   }
 
   protected Dispatcher createDispatcher() {
-    return new AsyncDispatcher("RM Event dispatcher");
+    AsyncDispatcher dispatcher = new AsyncDispatcher("RM Event dispatcher");
+
+    // Add 4 busy event types.
+    GenericEventTypeMetrics
+        nodesListManagerEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), NodesListManagerEventType.class);
+    dispatcher.addMetrics(nodesListManagerEventTypeMetrics,
+        nodesListManagerEventTypeMetrics
+            .getEnumClass());
+
+    GenericEventTypeMetrics
+        rmNodeEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), RMNodeEventType.class);
+    dispatcher.addMetrics(rmNodeEventTypeMetrics,
+        rmNodeEventTypeMetrics
+            .getEnumClass());
+
+    GenericEventTypeMetrics
+        rmAppEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), RMAppEventType.class);
+    dispatcher.addMetrics(rmAppEventTypeMetrics,
+        rmAppEventTypeMetrics
+            .getEnumClass());
+
+    GenericEventTypeMetrics
+        rmAppAttemptEventTypeMetrics =
+        GenericEventTypeMetricsManager.
+            create(dispatcher.getName(), RMAppAttemptEventType.class);
+    dispatcher.addMetrics(rmAppAttemptEventTypeMetrics,
+        rmAppAttemptEventTypeMetrics
+            .getEnumClass());
+
+    return dispatcher;
   }
 
   protected ResourceScheduler createScheduler() {
@@ -659,6 +718,7 @@ public class ResourceManager extends CompositeService
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
     private RMNMInfo rmnmInfo;
+    private ScheduledThreadPoolExecutor eventQueueMetricExecutor;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -881,6 +941,23 @@ public class ResourceManager extends CompositeService
         addIfService(volumeManager);
       }
 
+      eventQueueMetricExecutor = new ScheduledThreadPoolExecutor(1,
+              new ThreadFactoryBuilder().
+              setDaemon(true).setNameFormat("EventQueueSizeMetricThread").
+              build());
+      eventQueueMetricExecutor.scheduleAtFixedRate(new Runnable() {
+        @Override
+        public void run() {
+          int rmEventQueueSize = ((AsyncDispatcher)getRMContext().
+              getDispatcher()).getEventQueueSize();
+          ClusterMetrics.getMetrics().setRmEventQueueSize(rmEventQueueSize);
+          int schedulerEventQueueSize = ((EventDispatcher)schedulerDispatcher).
+              getEventQueueSize();
+          ClusterMetrics.getMetrics().
+              setSchedulerEventQueueSize(schedulerEventQueueSize);
+        }
+      }, 1, 1, TimeUnit.SECONDS);
+
       super.serviceInit(conf);
     }
 
@@ -956,6 +1033,9 @@ public class ResourceManager extends CompositeService
           LOG.error("Error closing store.", e);
         }
       }
+      if (eventQueueMetricExecutor != null) {
+        eventQueueMetricExecutor.shutdownNow();
+      }
 
     }
   }
@@ -1004,7 +1084,95 @@ public class ResourceManager extends CompositeService
     }
   }
 
-  /**
+  @Private
+  private class SchedulerEventDispatcher extends
+      EventDispatcher<SchedulerEvent> {
+
+    private final Thread eventProcessorMonitor;
+
+    SchedulerEventDispatcher(String name, int samplesPerMin) {
+      super(scheduler, name);
+      this.eventProcessorMonitor =
+          new Thread(new EventProcessorMonitor(getEventProcessorId(),
+              samplesPerMin));
+      this.eventProcessorMonitor
+          .setName("ResourceManager Event Processor Monitor");
+    }
+    // EventProcessorMonitor keeps track of how much CPU the EventProcessor
+    // thread is using. It takes a configurable number of samples per minute,
+    // and then reports the Avg and Max of previous 60 seconds as cluster
+    // metrics. Units are usecs per second of CPU used.
+    // Avg is not accurate until one minute of samples have been received.
+    private final class EventProcessorMonitor implements Runnable {
+      private final long tid;
+      private final boolean run;
+      private final ThreadMXBean tmxb;
+      private final ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
+      private final int samples;
+      EventProcessorMonitor(long id, int samplesPerMin) {
+        assert samplesPerMin > 0;
+        this.tid = id;
+        this.samples = samplesPerMin;
+        this.tmxb = ManagementFactory.getThreadMXBean();
+        if (clusterMetrics != null &&
+            tmxb != null && tmxb.isThreadCpuTimeSupported()) {
+          this.run = true;
+          clusterMetrics.setRmEventProcMonitorEnable(true);
+        } else {
+          this.run = false;
+        }
+      }
+      public void run() {
+        int index = 0;
+        long[] values = new long[samples];
+        int sleepMs = (60 * 1000) / samples;
+
+        while (run && !isStopped() && !Thread.currentThread().isInterrupted()) {
+          try {
+            long cpuBefore = tmxb.getThreadCpuTime(tid);
+            long wallClockBefore = Time.monotonicNow();
+            Thread.sleep(sleepMs);
+            long wallClockDelta = Time.monotonicNow() - wallClockBefore;
+            long cpuDelta = tmxb.getThreadCpuTime(tid) - cpuBefore;
+
+            // Nanoseconds / Milliseconds = usec per second
+            values[index] = cpuDelta / wallClockDelta;
+
+            index = (index + 1) % samples;
+            long max = 0;
+            long sum = 0;
+            for (int i = 0; i < samples; i++) {
+              sum += values[i];
+              max = Math.max(max, values[i]);
+            }
+            clusterMetrics.setRmEventProcCPUAvg(sum / samples);
+            clusterMetrics.setRmEventProcCPUMax(max);
+          } catch (InterruptedException e) {
+            LOG.error("Returning, interrupted : " + e);
+            return;
+          }
+        }
+      }
+    }
+    @Override
+    protected void serviceStart() throws Exception {
+      super.serviceStart();
+      this.eventProcessorMonitor.start();
+    }
+
+    @Override
+    protected void serviceStop() throws Exception {
+      super.serviceStop();
+      this.eventProcessorMonitor.interrupt();
+      try {
+        this.eventProcessorMonitor.join();
+      } catch (InterruptedException e) {
+        throw new YarnRuntimeException(e);
+      }
+    }
+  }
+
+    /**
    * Transition to standby state in a new thread. The transition operation is
    * asynchronous to avoid deadlock caused by cyclic dependency.
    */

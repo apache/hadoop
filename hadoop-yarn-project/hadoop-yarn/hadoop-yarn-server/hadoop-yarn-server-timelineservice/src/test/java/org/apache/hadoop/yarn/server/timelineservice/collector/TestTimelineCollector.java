@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.mockito.internal.stubbing.answers.AnswersWithDelay;
 import org.mockito.internal.stubbing.answers.Returns;
 

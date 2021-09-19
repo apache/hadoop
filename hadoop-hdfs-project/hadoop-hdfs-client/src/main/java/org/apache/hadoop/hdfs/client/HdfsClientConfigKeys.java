@@ -83,6 +83,9 @@ public interface HdfsClientConfigKeys {
       "dfs.namenode.kerberos.principal";
   String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";
   int     DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  String  DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES =
+      "dfs.client.pipeline.recovery.max-retries";
+  int     DFS_CLIENT_PIPELINE_RECOVERY_MAX_RETRIES_DEFAULT = 5;
   String  DFS_CLIENT_SOCKET_TIMEOUT_KEY = "dfs.client.socket-timeout";
   String  DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY =
       "dfs.client.socket.send.buffer.size";
@@ -130,6 +133,8 @@ public interface HdfsClientConfigKeys {
   int     DFS_BYTES_PER_CHECKSUM_DEFAULT = 512;
   String  DFS_CHECKSUM_COMBINE_MODE_KEY = "dfs.checksum.combine.mode";
   String  DFS_CHECKSUM_COMBINE_MODE_DEFAULT = "MD5MD5CRC";
+  String  DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY = "dfs.checksum.ec.socket-timeout";
+  int     DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT = 3000;
   String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY =
       "dfs.datanode.socket.write.timeout";
   String  DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC =
@@ -161,13 +166,9 @@ public interface HdfsClientConfigKeys {
           "dfs.client.deadnode.detection.enabled";
   boolean DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_DEFAULT = false;
 
-  String DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_KEY =
-      "dfs.client.deadnode.detection.deadnode.queue.max";
-  int DFS_CLIENT_DEAD_NODE_DETECTION_DEAD_NODE_QUEUE_MAX_DEFAULT = 100;
-
-  String DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_KEY =
-      "dfs.client.deadnode.detection.suspectnode.queue.max";
-  int DFS_CLIENT_DEAD_NODE_DETECTION_SUSPECT_NODE_QUEUE_MAX_DEFAULT = 1000;
+  String DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_KEY =
+      "dfs.client.deadnode.detection.idle.sleep.ms";
+  long DFS_CLIENT_DEAD_NODE_DETECTION_IDLE_SLEEP_MS_DEFAULT = 10000;
 
   String DFS_CLIENT_DEAD_NODE_DETECTION_PROBE_CONNECTION_TIMEOUT_MS_KEY =
       "dfs.client.deadnode.detection.probe.connection.timeout.ms";

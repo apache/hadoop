@@ -37,8 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.security.AccessControlException;
-
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -83,14 +82,25 @@ public class FSDirAttrOp {
     try {
       iip = fsd.resolvePath(pc, src, DirOp.WRITE);
       fsd.checkOwner(pc, iip);
-      if (!pc.isSuperUser()) {
-        if (username != null && !pc.getUser().equals(username)) {
-          throw new AccessControlException("User " + pc.getUser()
-              + " is not a super user (non-super user cannot change owner).");
-        }
-        if (group != null && !pc.isMemberOfGroup(group)) {
-          throw new AccessControlException(
-              "User " + pc.getUser() + " does not belong to " + group);
+      // At this point, the user must be either owner or super user.
+      // superuser: can change owner to a different user,
+      // change owner group to any group
+      // owner: can't change owner to a different user but can change owner
+      // group to different group that the user belongs to.
+      if ((username != null && !pc.getUser().equals(username)) ||
+          (group != null && !pc.isMemberOfGroup(group))) {
+        try {
+          // check if the user is superuser
+          pc.checkSuperuserPrivilege(iip.getPath());
+        } catch (AccessControlException e) {
+          if (username != null && !pc.getUser().equals(username)) {
+            throw new AccessControlException("User " + pc.getUser()
+                + " is not a super user (non-super user cannot change owner).");
+          }
+          if (group != null && !pc.isMemberOfGroup(group)) {
+            throw new AccessControlException(
+                "User " + pc.getUser() + " does not belong to " + group);
+          }
         }
       }
       changed = unprotectedSetOwner(fsd, iip, username, group);
@@ -113,11 +123,6 @@ public class FSDirAttrOp {
       // Write access is required to set access and modification times
       if (fsd.isPermissionEnabled()) {
         fsd.checkPathAccess(pc, iip, FsAction.WRITE);
-      }
-      final INode inode = iip.getLastINode();
-      if (inode == null) {
-        throw new FileNotFoundException("File/Directory " + iip.getPath() +
-                                            " does not exist.");
       }
       boolean changed = unprotectedSetTimes(fsd, iip, mtime, atime, true);
       if (changed) {
@@ -238,10 +243,12 @@ public class FSDirAttrOp {
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
+      // Here, the assumption is that the caller of this method has
+      // already checked for super user privilege
       if (fsd.isPermissionEnabled() && !pc.isSuperUser() && allowOwner) {
-        INodeDirectory parentDir= iip.getLastINode().getParent();
-        if (parentDir == null ||
-            !parentDir.getUserName().equals(pc.getUser())) {
+        try {
+          fsd.checkOwner(pc, iip.getParentINodesInPath());
+        } catch(AccessControlException ace) {
           throw new AccessControlException(
               "Access denied for user " + pc.getUser() +
               ". Superuser or owner of parent folder privilege is required");
@@ -293,7 +300,7 @@ public class FSDirAttrOp {
 
   static boolean setTimes(
       FSDirectory fsd, INodesInPath iip, long mtime, long atime, boolean force)
-          throws QuotaExceededException {
+      throws FileNotFoundException {
     fsd.writeLock();
     try {
       return unprotectedSetTimes(fsd, iip, mtime, atime, force);
@@ -434,6 +441,8 @@ public class FSDirAttrOp {
     }
     final int snapshotId = iip.getLatestSnapshotId();
     if (inode.isFile()) {
+      FSDirectory.LOG.debug("DIR* FSDirAAr.unprotectedSetStoragePolicy for " +
+              "File.");
       if (policyId != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED) {
         BlockStoragePolicy newPolicy = bm.getStoragePolicy(policyId);
         if (newPolicy.isCopyOnCreateFile()) {
@@ -452,6 +461,8 @@ public class FSDirAttrOp {
       }
       inode.asFile().setStoragePolicyID(policyId, snapshotId);
     } else if (inode.isDirectory()) {
+      FSDirectory.LOG.debug("DIR* FSDirAAr.unprotectedSetStoragePolicy for " +
+              "Directory.");
       setDirStoragePolicy(fsd, iip, policyId);
     } else {
       throw new FileNotFoundException(iip.getPath()
@@ -481,10 +492,14 @@ public class FSDirAttrOp {
 
   static boolean unprotectedSetTimes(
       FSDirectory fsd, INodesInPath iip, long mtime, long atime, boolean force)
-          throws QuotaExceededException {
+      throws FileNotFoundException {
     assert fsd.hasWriteLock();
     boolean status = false;
     INode inode = iip.getLastINode();
+    if (inode == null) {
+      throw new FileNotFoundException("File/Directory " + iip.getPath() +
+          " does not exist.");
+    }
     int latest = iip.getLatestSnapshotId();
     if (mtime >= 0) {
       inode = inode.setModificationTime(mtime, latest);

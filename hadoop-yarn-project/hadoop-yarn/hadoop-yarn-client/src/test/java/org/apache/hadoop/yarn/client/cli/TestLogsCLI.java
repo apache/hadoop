@@ -36,6 +36,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -59,7 +60,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -396,7 +396,9 @@ public class TestLogsCLI {
     ContainerId containerId1 = ContainerId.newContainerId(appAttemptId1, 1);
     ContainerId containerId2 = ContainerId.newContainerId(appAttemptId1, 2);
     ContainerId containerId3 = ContainerId.newContainerId(appAttemptId2, 3);
+    ContainerId containerId4 = ContainerId.newContainerId(appAttemptId2, 4);
     final NodeId nodeId = NodeId.newInstance("localhost", 1234);
+    final NodeId badNodeId = NodeId.newInstance("badhost", 5678);
 
     // create local logs
     String rootLogDir = "target/LocalLogs";
@@ -449,6 +451,8 @@ public class TestLogsCLI {
       containerId2, path, fs);
     uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirs, nodeId,
       containerId3, path, fs);
+    uploadTruncatedTFileIntoRemoteDir(ugi, conf, badNodeId,
+        containerId4, fs);
 
     YarnClient mockYarnClient =
         createMockYarnClient(
@@ -801,6 +805,17 @@ public class TestLogsCLI {
         "Invalid ContainerId specified"));
     sysErrStream.reset();
 
+    // Uploaded the empty log for container4. We should see a message
+    // showing the log for container4 is not present.
+    exitCode =
+        cli.run(new String[] {"-applicationId", appId.toString(),
+            "-nodeAddress", badNodeId.toString(), "-containerId",
+            containerId4.toString()});
+    assertTrue(exitCode == -1);
+    assertTrue(sysErrStream.toString().contains(
+        "Can not find any log file matching the pattern"));
+    sysErrStream.reset();
+
     fs.delete(new Path(remoteLogRootDir), true);
     fs.delete(new Path(rootLogDir), true);
   }
@@ -939,7 +954,7 @@ public class TestLogsCLI {
           logMessage(containerId1, "syslog")));
       sysOutStream.reset();
     } finally {
-      IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       fs.delete(new Path(rootLogDir), true);
     }
   }
@@ -1477,19 +1492,13 @@ public class TestLogsCLI {
       FileSystem fs) throws IOException {
     assertTrue(fs.exists(containerPath));
     StringBuffer inputLine = new StringBuffer();
-    BufferedReader reader = null;
-    try {
-      reader = new BufferedReader(new InputStreamReader(
-          fs.open(containerPath)));
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+        fs.open(containerPath)))) {
       String tmp;
       while ((tmp = reader.readLine()) != null) {
         inputLine.append(tmp);
       }
       return inputLine.toString();
-    } finally {
-      if (reader != null) {
-        IOUtils.closeQuietly(reader);
-      }
     }
   }
 
@@ -1824,6 +1833,21 @@ public class TestLogsCLI {
     } finally {
       fileFormat.closeWriter();
     }
+  }
+
+  private static void uploadTruncatedTFileIntoRemoteDir(
+      UserGroupInformation ugi, Configuration configuration,
+      NodeId nodeId, ContainerId containerId,
+      FileSystem fs) throws Exception {
+    LogAggregationFileControllerFactory factory
+        = new LogAggregationFileControllerFactory(configuration);
+    LogAggregationFileController fileFormat = factory
+        .getFileControllerForWrite();
+    ApplicationId appId = containerId.getApplicationAttemptId()
+        .getApplicationId();
+    Path path = fileFormat.getRemoteNodeLogFileForApp(
+        appId, ugi.getCurrentUser().getShortUserName(), nodeId);
+    fs.create(path, true).close();
   }
 
   private LogsCLI createCli() throws IOException, YarnException {

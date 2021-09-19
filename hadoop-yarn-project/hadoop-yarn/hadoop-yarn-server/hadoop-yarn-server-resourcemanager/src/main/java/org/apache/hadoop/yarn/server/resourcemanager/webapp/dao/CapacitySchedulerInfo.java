@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -45,7 +46,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float capacity;
   protected float usedCapacity;
   protected float maxCapacity;
+  protected float weight;
+  protected float normalizedWeight;
   protected String queueName;
+  private String queuePath;
   protected CapacitySchedulerQueueInfoList queues;
   protected QueueCapacitiesInfo capacities;
   protected CapacitySchedulerHealthInfo health;
@@ -53,6 +57,14 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected QueueAclsInfo queueAcls;
   protected int queuePriority;
   protected String orderingPolicyInfo;
+  protected String mode;
+  protected String queueType;
+  protected String creationMethod;
+  protected String autoCreationEligibility;
+  protected String defaultNodeLabelExpression;
+  protected AutoQueueTemplatePropertiesInfo autoQueueTemplateProperties;
+  protected AutoQueueTemplatePropertiesInfo autoQueueParentTemplateProperties;
+  protected AutoQueueTemplatePropertiesInfo autoQueueLeafTemplateProperties;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -62,12 +74,15 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
   public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
     this.queueName = parent.getQueueName();
+    this.queuePath = parent.getQueuePath();
     this.usedCapacity = parent.getUsedCapacity() * 100;
     this.capacity = parent.getCapacity() * 100;
     float max = parent.getMaximumCapacity();
     if (max < EPSILON || max > 1f)
       max = 1f;
     this.maxCapacity = max * 100;
+    this.weight = parent.getQueueCapacities().getWeight();
+    this.normalizedWeight = parent.getQueueCapacities().getNormalizedWeight();
 
     capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
         parent.getQueueResourceQuotas(), false);
@@ -95,9 +110,26 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     queuePriority = parent.getPriority().getPriority();
     if (parent instanceof ParentQueue) {
-      orderingPolicyInfo = ((ParentQueue) parent).getQueueOrderingPolicy()
+      ParentQueue queue = (ParentQueue) parent;
+      orderingPolicyInfo = queue.getQueueOrderingPolicy()
           .getConfigName();
+      autoQueueTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getTemplateProperties());
+      autoQueueParentTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getParentOnlyProperties());
+      autoQueueLeafTemplateProperties = CapacitySchedulerInfoHelper
+          .getAutoCreatedTemplate(queue.getAutoCreatedQueueTemplate()
+              .getLeafOnlyProperties());
     }
+    mode = CapacitySchedulerInfoHelper.getMode(parent);
+    queueType = CapacitySchedulerInfoHelper.getQueueType(parent);
+    creationMethod = CapacitySchedulerInfoHelper.getCreationMethod(parent);
+    autoCreationEligibility = CapacitySchedulerInfoHelper
+        .getAutoCreationEligibility(parent);
+
+    defaultNodeLabelExpression = parent.getDefaultNodeLabelExpression();
   }
 
   public float getCapacity() {
@@ -118,6 +150,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
   public String getQueueName() {
     return this.queueName;
+  }
+
+  public String getQueuePath() {
+    return this.queuePath;
   }
 
   public ResourceInfo getMaximumAllocation() {
@@ -144,7 +180,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
       CapacityScheduler cs, CSQueue parent) {
     CapacitySchedulerQueueInfoList queuesInfo =
         new CapacitySchedulerQueueInfoList();
-    // JAXB marashalling leads to situation where the "type" field injected
+    // JAXB marshalling leads to situation where the "type" field injected
     // for JSON changes from string to array depending on order of printing
     // Issue gets fixed if all the leaf queues are marshalled before the
     // non-leaf queues. See YARN-4785 for more details.
@@ -172,5 +208,13 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
       queuesInfo.addToQueueInfoList(info);
     }
     return queuesInfo;
+  }
+
+  public String getMode() {
+    return mode;
+  }
+
+  public String getQueueType() {
+    return queueType;
   }
 }

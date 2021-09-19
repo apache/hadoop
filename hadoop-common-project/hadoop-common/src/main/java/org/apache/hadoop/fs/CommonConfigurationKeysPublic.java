@@ -494,6 +494,10 @@ public class CommonConfigurationKeysPublic {
                                                 "ipc.server.log.slow.rpc";
   public static final boolean IPC_SERVER_LOG_SLOW_RPC_DEFAULT = false;
 
+  public static final String IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY =
+    "ipc.server.purge.interval";
+  public static final int IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT = 15;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -954,6 +958,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String HADOOP_HTTP_METRICS_ENABLED =
+      "hadoop.http.metrics.enabled";
+  public static final boolean HADOOP_HTTP_METRICS_ENABLED_DEFAULT = true;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH =
       "hadoop.security.credential.provider.path";
 
@@ -989,6 +1002,8 @@ public class CommonConfigurationKeysPublic {
           "ssl.keystore.pass$",
           "fs.s3.*[Ss]ecret.?[Kk]ey",
           "fs.s3a.*.server-side-encryption.key",
+          "fs.s3a.encryption.algorithm",
+          "fs.s3a.encryption.key",
           "fs.azure\\.account.key.*",
           "credential$",
           "oauth.*secret",

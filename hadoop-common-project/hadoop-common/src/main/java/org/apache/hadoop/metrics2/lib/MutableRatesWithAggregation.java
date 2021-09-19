@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Iterator;
@@ -163,6 +163,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
     MutableRate metric = globalMetrics.get(name);
     if (metric == null) {
       metric = new MutableRate(name + typePrefix, name + typePrefix, false);
+      metric.setUpdateTimeStamp(true);
       globalMetrics.put(name, metric);
     }
     return metric;

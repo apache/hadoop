@@ -525,7 +525,7 @@ Returns 0 on success and -1 on error.
 put
 ---
 
-Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [-t <thread count>] [ - | <localsrc1>  .. ]. <dst>`
+Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [-t <thread count>] [-q <threadPool queue size>] [ - | <localsrc1>  .. ]. <dst>`
 
 Copy single src, or multiple srcs from local file system to the destination file system.
 Also reads input from stdin and writes to destination file system if the source is set to "-"
@@ -542,6 +542,7 @@ Options:
 * `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
  factor of 1. This flag will result in reduced durability. Use with care.
 * `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
+* `-q <threadPool queue size>` : ThreadPool queue size to be used, default is 1024.
 
 
 Examples:
@@ -550,6 +551,7 @@ Examples:
 * `hadoop fs -put -f localfile1 localfile2 /user/hadoop/hadoopdir`
 * `hadoop fs -put -d localfile hdfs://nn.example.com/hadoop/hadoopfile`
 * `hadoop fs -put - hdfs://nn.example.com/hadoop/hadoopfile` Reads the input from stdin.
+* `hadoop fs -put -q 500 localfile3 hdfs://nn.example.com/hadoop/hadoopfile3`
 
 Exit Code:
 
@@ -760,7 +762,7 @@ timestamp of that URI.
 
 * Use -a option to change only the access time
 * Use -m option to change only the modification time
-* Use -t option to specify timestamp (in format yyyyMMddHHmmss) instead of current time
+* Use -t option to specify timestamp (in format yyyyMMdd:HHmmss) instead of current time
 * Use -c option to not create file if it does not exist
 
 The timestamp format is as follows
@@ -770,13 +772,13 @@ The timestamp format is as follows
 * HH Two digit hour of the day using 24 hour notation (e.g. 23 stands for 11 pm, 11 stands for 11 am)
 * mm Two digit minutes of the hour
 * ss Two digit seconds of the minute
-e.g. 20180809230000 represents August 9th 2018, 11pm
+e.g. 20180809:230000 represents August 9th 2018, 11pm
 
 Example:
 
 * `hadoop fs -touch pathname`
-* `hadoop fs -touch -m -t 20180809230000 pathname`
-* `hadoop fs -touch -t 20180809230000 pathname`
+* `hadoop fs -touch -m -t 20180809:230000 pathname`
+* `hadoop fs -touch -t 20180809:230000 pathname`
 * `hadoop fs -touch -a pathname`
 
 Exit Code: Returns 0 on success and -1 on error.

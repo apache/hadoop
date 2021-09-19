@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,8 +36,12 @@ import org.junit.Test;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
@@ -226,7 +230,8 @@ public class TestPartialDeleteFailures {
   }
 
 
-  private static class MinimalContextAccessor implements ContextAccessors {
+  private static final class MinimalContextAccessor
+      implements ContextAccessors {
 
     @Override
     public Path keyToPath(final String key) {
@@ -253,6 +258,17 @@ public class TestPartialDeleteFailures {
     public Path makeQualified(final Path path) {
       return path;
     }
+
+    @Override
+    public AuditSpan getActiveAuditSpan() {
+      return AuditTestSupport.NOOP_SPAN;
+    }
+
+    @Override
+    public RequestFactory getRequestFactory() {
+      return MockS3AFileSystem.REQUEST_FACTORY;
+    }
+
   }
 
 }

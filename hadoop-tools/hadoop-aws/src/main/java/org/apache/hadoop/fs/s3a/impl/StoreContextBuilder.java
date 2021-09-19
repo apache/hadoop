@@ -19,16 +19,17 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.net.URI;
-
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -46,7 +47,7 @@ public class StoreContextBuilder {
 
   private UserGroupInformation owner;
 
-  private ListeningExecutorService executor;
+  private ExecutorService executor;
 
   private int executorCapacity;
 
@@ -69,6 +70,10 @@ public class StoreContextBuilder {
   private ContextAccessors contextAccessors;
 
   private ITtlTimeProvider timeProvider;
+
+  private AuditSpanSource<AuditSpanS3A> auditor;
+
+  private boolean isCSEEnabled;
 
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
@@ -96,7 +101,7 @@ public class StoreContextBuilder {
   }
 
   public StoreContextBuilder setExecutor(
-      final ListeningExecutorService ex) {
+      final ExecutorService ex) {
     this.executor = ex;
     return this;
   }
@@ -166,6 +171,28 @@ public class StoreContextBuilder {
     return this;
   }
 
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public StoreContextBuilder setAuditor(
+      final AuditSpanSource<AuditSpanS3A> value) {
+    auditor = value;
+    return this;
+  }
+
+  /**
+   * set is client side encryption boolean value.
+   * @param value value indicating if client side encryption is enabled or not.
+   * @return builder instance.
+   */
+  public StoreContextBuilder setEnableCSE(
+      boolean value) {
+    isCSEEnabled = value;
+    return this;
+  }
+
   @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
@@ -184,6 +211,8 @@ public class StoreContextBuilder {
         metadataStore,
         useListV1,
         contextAccessors,
-        timeProvider);
+        timeProvider,
+        auditor,
+        isCSEEnabled);
   }
 }

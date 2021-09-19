@@ -74,4 +74,26 @@
         <Class name="org.apache.hadoop.fs.azure.FileMetadata" />
         <Bug pattern="EQ_DOESNT_OVERRIDE_EQUALS" />
     </Match>
+
+  <!-- continuation is returned from an external http call. Keeping this
+  outside synchronized block since the same is costly. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.azurebfs.services.AbfsListStatusRemoteIterator" />
+    <Field name="continuation" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+
+  <!-- This field is instance of BlockBlobInputStream and read(long, byte[], int, int)
+  calls it's Super class method when 'fs.azure.block.blob.buffered.pread.disable'
+  is configured false. Super class FSInputStream's implementation is having
+  proper synchronization.
+  When 'fs.azure.block.blob.buffered.pread.disable' is true, we want a lock free
+  implementation of blob read. Here we don't use any of the InputStream's
+  shared resource (buffer) and also don't change any cursor position etc.
+  So its safe to go with unsynchronized way of read. -->
+  <Match>
+    <Class name="org.apache.hadoop.fs.azure.NativeAzureFileSystem$NativeAzureFsInputStream" />
+    <Field name="in" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
  </FindBugsFilter>

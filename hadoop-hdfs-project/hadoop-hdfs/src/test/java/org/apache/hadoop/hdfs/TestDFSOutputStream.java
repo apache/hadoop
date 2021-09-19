@@ -57,7 +57,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.htrace.core.SpanId;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -296,7 +295,6 @@ public class TestDFSOutputStream {
         Whitebox.getInternalState(stream, "congestedNodes");
     congestedNodes.add(mock(DatanodeInfo.class));
     DFSPacket packet = mock(DFSPacket.class);
-    when(packet.getTraceParents()).thenReturn(new SpanId[] {});
     dataQueue.add(packet);
     stream.run();
     Assert.assertTrue(congestedNodes.isEmpty());

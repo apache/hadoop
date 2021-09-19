@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer.workloadgenerator.audit;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import java.util.Optional;
 import java.util.function.Function;
 

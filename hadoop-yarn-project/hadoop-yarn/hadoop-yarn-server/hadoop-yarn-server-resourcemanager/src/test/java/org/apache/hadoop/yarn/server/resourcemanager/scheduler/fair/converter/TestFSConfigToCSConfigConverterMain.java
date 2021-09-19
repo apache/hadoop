@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -59,22 +60,48 @@ public class TestFSConfigToCSConfigConverterMain {
 
   /*
    * Example command:
-   *   opt/hadoop/bin/yarn fs2cs
+   *   /opt/hadoop/bin/yarn fs2cs
    *   -o /tmp/output
    *   -y /opt/hadoop/etc/hadoop/yarn-site.xml
    *   -f /opt/hadoop/etc/hadoop/fair-scheduler.xml
    *   -r /home/systest/sample-rules-config.properties
    */
   @Test
-  public void testConvertFSConfigurationDefaults()
+  public void testConvertFSConfigurationDefaultsWeightMode()
       throws Exception {
+    testConvertFSConfigurationDefaults(false);
+  }
+
+  /*
+   * Example command:
+   *   /opt/hadoop/bin/yarn fs2cs
+   *   -pc
+   *   -o /tmp/output
+   *   -y /opt/hadoop/etc/hadoop/yarn-site.xml
+   *   -f /opt/hadoop/etc/hadoop/fair-scheduler.xml
+   *   -r /home/systest/sample-rules-config.properties
+   */
+  @Test
+  public void testConvertFSConfigurationDefaultsPercentageMode()
+      throws IOException {
+    testConvertFSConfigurationDefaults(true);
+  }
+
+  private void testConvertFSConfigurationDefaults(boolean percentage)
+      throws IOException {
     setupFSConfigConversionFiles();
 
-    FSConfigToCSConfigConverterMain.main(new String[] {
+    String[] args = new String[] {
         "-o", OUTPUT_DIR,
         "-y", YARN_SITE_XML,
         "-f", FS_ALLOC_FILE,
-        "-r", CONVERSION_RULES_FILE});
+        "-r", CONVERSION_RULES_FILE};
+    if (percentage) {
+      args = Arrays.copyOf(args, args.length + 1);
+      args[args.length - 1] = "-pc";
+    }
+
+    FSConfigToCSConfigConverterMain.main(args);
 
     boolean csConfigExists =
         new File(OUTPUT_DIR, "capacity-scheduler.xml").exists();
@@ -93,7 +120,6 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "-p",
-        "-m",
         "-e",
         "-y", YARN_SITE_XML,
         "-f", FS_ALLOC_FILE,
@@ -140,8 +166,8 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "--print",
-        "--convert-placement-rules",
         "--rules-to-file",
+        "--percentage",
         "--yarnsiteconfig", YARN_SITE_XML,
         "--fsconfig", FS_ALLOC_FILE,
         "--rulesconfig", CONVERSION_RULES_FILE});

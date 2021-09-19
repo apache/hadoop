@@ -38,13 +38,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
@@ -72,7 +73,6 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOExceptio
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.hamcrest.Matchers.containsString;
@@ -136,27 +136,38 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     return SESSION_TOKEN_KIND;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
+    String s3EncryptionMethod =
+        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM,
+            S3AEncryptionMethods.SSE_KMS.getMethod());
+    String s3EncryptionKey = conf.getTrimmed(Constants.S3_ENCRYPTION_KEY, "");
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
+        Constants.S3_ENCRYPTION_ALGORITHM,
+        Constants.S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
-    // switch to SSE_S3.
+    // switch to CSE-KMS(if specified) else SSE-KMS.
     if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
-      conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
-          S3AEncryptionMethods.SSE_S3.getMethod());
+      conf.set(Constants.S3_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
+      // KMS key ID a must if CSE-KMS is being tested.
+      conf.set(Constants.S3_ENCRYPTION_KEY, s3EncryptionKey);
     }
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
+    // turn on ACLs so as to verify role DT permissions include
+    // write access.
+    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     return conf;
   }
 
@@ -214,7 +225,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     S3ATestUtils.MetricDiff invocationDiff = new S3ATestUtils.MetricDiff(fs,
         Statistic.INVOCATION_GET_DELEGATION_TOKEN);
     S3ATestUtils.MetricDiff issueDiff = new S3ATestUtils.MetricDiff(fs,
-        Statistic.DELEGATION_TOKEN_ISSUED);
+        Statistic.DELEGATION_TOKENS_ISSUED);
     Token<AbstractS3ATokenIdentifier> token =
         requireNonNull(fs.getDelegationToken(""),
             "no token from filesystem " + fs);
@@ -303,6 +314,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    * Create a FS with a delegated token, verify it works as a filesystem,
    * and that you can pick up the same DT from that FS too.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testDelegatedFileSystem() throws Throwable {
     describe("Delegation tokens can be passed to a new filesystem;"
@@ -341,6 +353,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // this is to simulate better a remote deployment.
     removeBaseAndBucketOverrides(bucket, conf,
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
+        Constants.S3_ENCRYPTION_ALGORITHM,
+        Constants.S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_KEY,
         DELEGATION_TOKEN_ROLE_ARN,
@@ -359,10 +373,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       assertBoundToDT(delegatedFS, tokenKind);
       if (encryptionTestEnabled()) {
         assertNotNull("Encryption propagation failed",
-            delegatedFS.getServerSideEncryptionAlgorithm());
+            delegatedFS.getS3EncryptionAlgorithm());
         assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            delegatedFS.getServerSideEncryptionAlgorithm());
+            fs.getS3EncryptionAlgorithm(),
+            delegatedFS.getS3EncryptionAlgorithm());
       }
       verifyRestrictedPermissions(delegatedFS);
 
@@ -371,7 +385,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
 
       S3ATestUtils.MetricDiff issueDiff = new S3ATestUtils.MetricDiff(
           delegatedFS,
-          Statistic.DELEGATION_TOKEN_ISSUED);
+          Statistic.DELEGATION_TOKENS_ISSUED);
 
       // verify that the FS returns the existing token when asked
       // so that chained deployments will work
@@ -394,10 +408,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       assertBoundToDT(secondDelegate, tokenKind);
       if (encryptionTestEnabled()) {
         assertNotNull("Encryption propagation failed",
-            secondDelegate.getServerSideEncryptionAlgorithm());
+            secondDelegate.getS3EncryptionAlgorithm());
         assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            secondDelegate.getServerSideEncryptionAlgorithm());
+            fs.getS3EncryptionAlgorithm(),
+            secondDelegate.getS3EncryptionAlgorithm());
       }
       ContractTestUtils.assertDeleted(secondDelegate, testPath, true);
       assertNotNull("unbounded DT",
@@ -557,23 +571,22 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    */
   protected ObjectMetadata readLandsatMetadata(final S3AFileSystem delegatedFS)
       throws Exception {
-    AWSCredentialProviderList testing
+    AWSCredentialProviderList testingCreds
         = delegatedFS.shareCredentials("testing");
 
     URI landsat = new URI(DEFAULT_CSVTEST_FILE);
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
-    Configuration conf = new Configuration(delegatedFS.getConf());
-    conf.set(ENDPOINT, "");
-    factory.setConf(conf);
+    factory.setConf(new Configuration(delegatedFS.getConf()));
     String host = landsat.getHost();
-    StatisticsFromAwsSdk awsStats = null;
-    if (AWS_SDK_METRICS_ENABLED) {
-      awsStats = new EmptyS3AStatisticsContext()
-          .newStatisticsFromAwsSdk();
-    }
-    AmazonS3 s3 = factory.createS3Client(landsat, host, testing,
-        "ITestSessionDelegationInFileystem", awsStats);
+    S3ClientFactory.S3ClientCreationParameters parameters = null;
+    parameters = new S3ClientFactory.S3ClientCreationParameters()
+        .withCredentialSet(testingCreds)
+        .withEndpoint(DEFAULT_ENDPOINT)
+        .withMetrics(new EmptyS3AStatisticsContext()
+            .newStatisticsFromAwsSdk())
+        .withUserAgentSuffix("ITestSessionDelegationInFileystem");
+    AmazonS3 s3 = factory.createS3Client(landsat, parameters);
 
     return Invoker.once("HEAD", host,
         () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));

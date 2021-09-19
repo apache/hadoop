@@ -510,3 +510,21 @@ Metrics
 
 The Router and State Store statistics are exposed in metrics/JMX. These info will be very useful for monitoring.
 More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RBFMetrics), [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).
+
+Router Federation Rename
+-------
+
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
+2. It doesn't support snapshot path.
+3. It doesn't support to rename path with multiple destinations.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.federation.rename.option | NONE | Specify the action when rename across namespaces. The option can be NONE(reject rename across namespaces) and DISTCP(rename across namespaces with distcp). |
+| dfs.federation.router.federation.rename.force.close.open.file | true | Force close all open files when there is no diff in the DIFF_DISTCP stage.|
+| dfs.federation.router.federation.rename.map |  | Max number of concurrent maps to use for copy.|
+| dfs.federation.router.federation.rename.bandwidth |  | Specify bandwidth per map in MB.|
+| dfs.federation.router.federation.rename.delay | 1000 | Specify the delayed duration(millie seconds) when the job needs to retry.|
+| dfs.federation.router.federation.rename.diff | 0 | Specify the threshold of the diff entries that used in incremental copy stage.|
+| dfs.federation.router.federation.rename.trash | trash | This options has 3 values: trash (move the source path to trash), delete (delete the source path directly) and skip (skip both trash and deletion).|

@@ -23,12 +23,12 @@ import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.SignableRequest;
+import com.amazonaws.auth.AWS4Signer;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.internal.AWSS3V4Signer;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -40,14 +40,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
+import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ITestCustomSigner.CustomSignerInitializer.StoreValue;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
-import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 
 /**
  * Tests for custom Signers and SignerInitializers.
@@ -62,23 +63,32 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private String regionName;
 
+  private String endpoint;
+
   @Override
   public void setup() throws Exception {
     super.setup();
-    regionName = determineRegion(getFileSystem().getBucket());
+    final S3AFileSystem fs = getFileSystem();
+    regionName = determineRegion(fs.getBucket());
     LOG.info("Determined region name to be [{}] for bucket [{}]", regionName,
-        getFileSystem().getBucket());
+        fs.getBucket());
+    endpoint = fs.getConf()
+        .get(Constants.ENDPOINT, Constants.CENTRAL_ENDPOINT);
+    LOG.info("Test endpoint is {}", endpoint);
   }
 
   @Test
   public void testCustomSignerAndInitializer()
       throws IOException, InterruptedException {
 
+    final Path basePath = path(getMethodName());
     UserGroupInformation ugi1 = UserGroupInformation.createRemoteUser("user1");
-    FileSystem fs1 = runMkDirAndVerify(ugi1, "/customsignerpath1", "id1");
+    FileSystem fs1 = runMkDirAndVerify(ugi1,
+        new Path(basePath, "customsignerpath1"), "id1");
 
     UserGroupInformation ugi2 = UserGroupInformation.createRemoteUser("user2");
-    FileSystem fs2 = runMkDirAndVerify(ugi2, "/customsignerpath2", "id2");
+    FileSystem fs2 = runMkDirAndVerify(ugi2,
+        new Path(basePath, "customsignerpath2"), "id2");
 
     Assertions.assertThat(CustomSignerInitializer.knownStores.size())
         .as("Num registered stores mismatch").isEqualTo(2);
@@ -91,20 +101,19 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   private FileSystem runMkDirAndVerify(UserGroupInformation ugi,
-      String pathString, String identifier)
+      Path finalPath, String identifier)
       throws IOException, InterruptedException {
     Configuration conf = createTestConfig(identifier);
-    Path path = new Path(pathString);
-    path = path.makeQualified(getFileSystem().getUri(),
-        getFileSystem().getWorkingDirectory());
-
-    Path finalPath = path;
     return ugi.doAs((PrivilegedExceptionAction<FileSystem>) () -> {
-      int invocationCount = CustomSigner.invocationCount;
+      int instantiationCount = CustomSigner.getInstantiationCount();
+      int invocationCount = CustomSigner.getInvocationCount();
       FileSystem fs = finalPath.getFileSystem(conf);
       fs.mkdirs(finalPath);
-      Assertions.assertThat(CustomSigner.invocationCount)
-          .as("Invocation count lower than expected")
+      Assertions.assertThat(CustomSigner.getInstantiationCount())
+          .as("CustomSigner Instantiation count lower than expected")
+          .isGreaterThan(instantiationCount);
+      Assertions.assertThat(CustomSigner.getInvocationCount())
+          .as("CustomSigner Invocation count lower than expected")
           .isGreaterThan(invocationCount);
 
       Assertions.assertThat(CustomSigner.lastStoreValue)
@@ -118,6 +127,12 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     });
   }
 
+  /**
+   * Create a test conf with the custom signer; fixes up
+   * endpoint to be that of the test FS.
+   * @param identifier test key.
+   * @return a configuration for a filesystem.
+   */
   private Configuration createTestConfig(String identifier) {
     Configuration conf = createConfiguration();
 
@@ -128,24 +143,52 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
+    conf.set(Constants.ENDPOINT, endpoint);
+    // make absolutely sure there is no caching.
+    disableFilesystemCaching(conf);
 
     return conf;
   }
 
   private String determineRegion(String bucketName) throws IOException {
-    String region = getFileSystem().getBucketLocation(bucketName);
-    return fixBucketRegion(region);
+    return getFileSystem().getBucketLocation(bucketName);
   }
 
   @Private
   public static final class CustomSigner implements Signer {
 
-    private static int invocationCount = 0;
+
+    private static final AtomicInteger INSTANTIATION_COUNT =
+        new AtomicInteger(0);
+    private static final AtomicInteger INVOCATION_COUNT =
+        new AtomicInteger(0);
+
     private static StoreValue lastStoreValue;
 
+    public CustomSigner() {
+      int c = INSTANTIATION_COUNT.incrementAndGet();
+      LOG.info("Creating Signer #{}", c);
+    }
+
+    /**
+     * Method to sign the incoming request with credentials.
+     *
+     * NOTE: In case of Client-side encryption, we do a "Generate Key" POST
+     * request to AWSKMS service rather than S3, this was causing the test to
+     * break. When this request happens, we have the endpoint in form of
+     * "kms.[REGION].amazonaws.com", and bucket-name becomes "kms". We can't
+     * use AWSS3V4Signer for AWSKMS service as it contains a header
+     * "x-amz-content-sha256:UNSIGNED-PAYLOAD", which returns a 400 bad
+     * request because the signature calculated by the service doesn't match
+     * what we sent.
+     * @param request the request to sign.
+     * @param credentials credentials used to sign the request.
+     */
     @Override
     public void sign(SignableRequest<?> request, AWSCredentials credentials) {
-      invocationCount++;
+      int c = INVOCATION_COUNT.incrementAndGet();
+      LOG.info("Signing request #{}", c);
+
       String host = request.getEndpoint().getHost();
       String bucketName = host.split("\\.")[0];
       try {
@@ -154,10 +197,29 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi", e);
       }
-      AWSS3V4Signer realSigner = new AWSS3V4Signer();
-      realSigner.setServiceName("s3");
-      realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-      realSigner.sign(request, credentials);
+      if (bucketName.equals("kms")) {
+        AWS4Signer realKMSSigner = new AWS4Signer();
+        realKMSSigner.setServiceName("kms");
+        if (lastStoreValue != null) {
+          realKMSSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+        }
+        realKMSSigner.sign(request, credentials);
+      } else {
+        AWSS3V4Signer realSigner = new AWSS3V4Signer();
+        realSigner.setServiceName("s3");
+        if (lastStoreValue != null) {
+          realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+        }
+        realSigner.sign(request, credentials);
+      }
+    }
+
+    public static int getInstantiationCount() {
+      return INSTANTIATION_COUNT.get();
+    }
+
+    public static int getInvocationCount() {
+      return INVOCATION_COUNT.get();
     }
   }
 

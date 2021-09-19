@@ -58,7 +58,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String IPC_CLIENT_RPC_TIMEOUT_KEY =
       "ipc.client.rpc-timeout.ms";
   /** Default value for IPC_CLIENT_RPC_TIMEOUT_KEY. */
-  public static final int IPC_CLIENT_RPC_TIMEOUT_DEFAULT = 0;
+  public static final int IPC_CLIENT_RPC_TIMEOUT_DEFAULT = 120000;
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
     "ipc.server.max.response.size";
@@ -381,7 +381,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean RPC_METRICS_QUANTILE_ENABLE_DEFAULT = false;
   public static final String  RPC_METRICS_PERCENTILES_INTERVALS_KEY =
       "rpc.metrics.percentiles.intervals";
-  
+
+  public static final String RPC_METRICS_TIME_UNIT = "rpc.metrics.timeunit";
+
   /** Allowed hosts for nfs exports */
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
@@ -438,4 +440,28 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "hadoop.metrics.jvm.use-thread-mxbean";
   public static final boolean HADOOP_METRICS_JVM_USE_THREAD_MXBEAN_DEFAULT =
       false;
+
+  /** logging level for IOStatistics (debug or info). */
+  public static final String IOSTATISTICS_LOGGING_LEVEL
+      = "fs.iostatistics.logging.level";
+
+  /** DEBUG logging level for IOStatistics logging. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_DEBUG
+      = "debug";
+
+  /** WARN logging level for IOStatistics logging. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_WARN
+      = "warn";
+
+  /** ERROR logging level for IOStatistics logging. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_ERROR
+      = "error";
+
+  /** INFO logging level for IOStatistics logging. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_INFO
+      = "info";
+
+  /** Default value for IOStatistics logging level. */
+  public static final String IOSTATISTICS_LOGGING_LEVEL_DEFAULT
+      = IOSTATISTICS_LOGGING_LEVEL_DEBUG;
 }

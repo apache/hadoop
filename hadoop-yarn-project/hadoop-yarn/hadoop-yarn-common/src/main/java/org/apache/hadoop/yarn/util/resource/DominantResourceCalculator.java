@@ -380,14 +380,16 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public boolean isInvalidDivisor(Resource r) {
-    for (ResourceInformation res : r.getResources()) {
-      if (res.getValue() == 0L) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      if (r.getResourceInformation(i).getValue() == 0L) {
         return true;
       }
     }
     return false;
   }
 
+  @Override
   public boolean isAllInvalidDivisor(Resource r) {
     boolean flag = true;
     for (ResourceInformation res : r.getResources()) {

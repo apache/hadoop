@@ -158,6 +158,8 @@ public final class DistCpOptions {
   /** Whether data should be written directly to the target paths. */
   private final boolean directWrite;
 
+  private final boolean useIterator;
+
   /**
    * File attributes for preserve.
    *
@@ -222,6 +224,8 @@ public final class DistCpOptions {
     this.trackPath = builder.trackPath;
 
     this.directWrite = builder.directWrite;
+
+    this.useIterator = builder.useIterator;
   }
 
   public Path getSourceFileListing() {
@@ -353,6 +357,10 @@ public final class DistCpOptions {
     return directWrite;
   }
 
+  public boolean shouldUseIterator() {
+    return useIterator;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -403,6 +411,9 @@ public final class DistCpOptions {
     }
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DIRECT_WRITE,
             String.valueOf(directWrite));
+
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.USE_ITERATOR,
+        String.valueOf(useIterator));
   }
 
   /**
@@ -440,6 +451,7 @@ public final class DistCpOptions {
         ", copyBufferSize=" + copyBufferSize +
         ", verboseLog=" + verboseLog +
         ", directWrite=" + directWrite +
+        ", useiterator=" + useIterator +
         '}';
   }
 
@@ -490,6 +502,8 @@ public final class DistCpOptions {
             DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
 
     private boolean directWrite = false;
+
+    private boolean useIterator = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -746,6 +760,11 @@ public final class DistCpOptions {
 
     public Builder withDirectWrite(boolean newDirectWrite) {
       this.directWrite = newDirectWrite;
+      return this;
+    }
+
+    public Builder withUseIterator(boolean useItr) {
+      this.useIterator = useItr;
       return this;
     }
   }

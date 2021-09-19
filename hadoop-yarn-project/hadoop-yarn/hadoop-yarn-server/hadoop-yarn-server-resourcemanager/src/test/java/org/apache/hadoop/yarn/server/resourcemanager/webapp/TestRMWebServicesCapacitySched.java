@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAX_PARALLEL_APPLICATIONS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertFalse;
@@ -83,10 +84,16 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     float absoluteMaxCapacity;
     float absoluteUsedCapacity;
     int numApplications;
+    int maxParallelApps;
     String queueName;
+    private String queuePath;
     String state;
     boolean isAbsoluteResource;
     boolean autoCreateChildQueueEnabled;
+
+    public String getQueuePath() {
+      return queuePath;
+    }
   }
 
   private class LeafQueueInfo extends QueueInfo {
@@ -95,7 +102,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int numContainers;
     int maxApplications;
     int maxApplicationsPerUser;
-    int userLimit;
+    float userLimit;
     float userLimitFactor;
     long defaultApplicationLifetime;
     long maxApplicationLifetime;
@@ -135,6 +142,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     config.setCapacity(A, 10.5f);
     config.setMaximumCapacity(A, 50);
+    config.setInt(CapacitySchedulerConfiguration.getQueuePrefix(A) + MAX_PARALLEL_APPLICATIONS, 42);
 
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     config.setCapacity(B, 89.5f);
@@ -261,7 +269,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           WebServicesTestUtils.getXmlFloat(element, "usedCapacity"),
           WebServicesTestUtils.getXmlFloat(element, "capacity"),
           WebServicesTestUtils.getXmlFloat(element, "maxCapacity"),
-          WebServicesTestUtils.getXmlString(element, "queueName"));
+          WebServicesTestUtils.getXmlString(element, "queueName"),
+          WebServicesTestUtils.getXmlString(element, "queuePath"));
 
       NodeList children = element.getChildNodes();
       for (int j = 0; j < children.getLength(); j++) {
@@ -305,7 +314,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       WebServicesTestUtils.getXmlFloat(qElem, "absoluteUsedCapacity");
     qi.numApplications =
         WebServicesTestUtils.getXmlInt(qElem, "numApplications");
+    qi.maxParallelApps =
+        WebServicesTestUtils.getXmlInt(qElem, "maxParallelApps");
     qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
+    qi.queuePath = WebServicesTestUtils.getXmlString(qElem, "queuePath");
     qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
     qi.autoCreateChildQueueEnabled = WebServicesTestUtils.getXmlBoolean(qElem,
         "autoCreateChildQueueEnabled");
@@ -345,7 +357,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           WebServicesTestUtils.getXmlInt(qElem, "maxApplications");
       lqi.maxApplicationsPerUser =
           WebServicesTestUtils.getXmlInt(qElem, "maxApplicationsPerUser");
-      lqi.userLimit = WebServicesTestUtils.getXmlInt(qElem, "userLimit");
+      lqi.userLimit = WebServicesTestUtils.getXmlFloat(qElem, "userLimit");
       lqi.userLimitFactor =
           WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor");
       lqi.defaultApplicationLifetime =
@@ -362,11 +374,13 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements in: " + info, 12, info.length());
+    assertEquals("incorrect number of elements in: " + info, 22, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
-        (float) info.getDouble("maxCapacity"), info.getString("queueName"));
+        (float) info.getDouble("maxCapacity"),
+        info.getString("queueName"),
+        info.getString("queuePath"));
     JSONObject health = info.getJSONObject("health");
     assertNotNull(health);
     assertEquals("incorrect number of elements in: " + health, 3,
@@ -401,22 +415,24 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   private void verifyClusterSchedulerGeneric(String type, float usedCapacity,
-      float capacity, float maxCapacity, String queueName) throws Exception {
+      float capacity, float maxCapacity, String queueName, String queuePath)
+      throws Exception {
 
     assertTrue("type doesn't match", "capacityScheduler".matches(type));
     assertEquals("usedCapacity doesn't match", 0, usedCapacity, 1e-3f);
     assertEquals("capacity doesn't match", 100, capacity, 1e-3f);
     assertEquals("maxCapacity doesn't match", 100, maxCapacity, 1e-3f);
     assertTrue("queueName doesn't match", "root".matches(queueName));
+    assertTrue("queuePath doesn't match", "root".matches(queuePath));
   }
 
   private void verifySubQueue(JSONObject info, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 27;
+    int numExpectedElements = 38;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 45;
+      numExpectedElements = 56;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -429,7 +445,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     qi.absoluteMaxCapacity = (float) info.getDouble("absoluteMaxCapacity");
     qi.absoluteUsedCapacity = (float) info.getDouble("absoluteUsedCapacity");
     qi.numApplications = info.getInt("numApplications");
+    qi.maxParallelApps = info.getInt("maxParallelApps");
     qi.queueName = info.getString("queueName");
+    qi.queuePath = info.getString("queuePath");
     qi.state = info.getString("state");
 
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
@@ -465,7 +483,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       lqi.numContainers = info.getInt("numContainers");
       lqi.maxApplications = info.getInt("maxApplications");
       lqi.maxApplicationsPerUser = info.getInt("maxApplicationsPerUser");
-      lqi.userLimit = info.getInt("userLimit");
+      lqi.userLimit = (float) info.getDouble("userLimit");
       lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
       lqi.defaultApplicationLifetime =
           info.getLong("defaultApplicationLifetime");
@@ -502,6 +520,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     assertEquals("numApplications doesn't match", 0, info.numApplications);
     assertTrue("queueName doesn't match, got: " + info.queueName
         + " expected: " + q, qshortName.matches(info.queueName));
+    assertTrue("queuePath doesn't match, got: " + info.getQueuePath()
+        + " expected: " + q, q.matches(info.getQueuePath()));
     assertTrue("state doesn't match",
         (csConf.getState(q).toString()).matches(info.state));
     if (q.equals("c")) {
@@ -512,7 +532,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           + " queue is not configured in Absolute resource",
           info.isAbsoluteResource);
     }
-
+    assertEquals("maxParallelApps doesn't match " + q,
+        (q.equals("root.a") ? 42 : Integer.MAX_VALUE),
+        info.maxParallelApps);
   }
 
   private void verifyLeafQueueGeneric(String q, LeafQueueInfo info)
@@ -539,7 +561,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         (float)info.maxApplicationsPerUser, info.userLimitFactor);
 
     assertEquals("userLimit doesn't match", csConf.getUserLimit(q),
-        info.userLimit);
+        info.userLimit, 1e-3f);
     assertEquals("userLimitFactor doesn't match",
         csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
 
@@ -641,6 +663,58 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
             .getTextContent());
         Integer.parseInt(getChildNodeByName(resourcesUsed, "vCores")
               .getTextContent());
+      }
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test
+  public void testNodeLabelDefaultAPI() throws Exception {
+    CapacitySchedulerConfiguration config =
+        ((CapacityScheduler)rm.getResourceScheduler()).getConfiguration();
+
+    config.setDefaultNodeLabelExpression("root", "ROOT-INHERITED");
+    config.setDefaultNodeLabelExpression("root.a", "root-a-default-label");
+    rm.getResourceScheduler().reinitialize(config, rm.getRMContext());
+
+    //Start RM so that it accepts app submissions
+    rm.start();
+    try {
+      //Get the XML from ws/v1/cluster/scheduler
+      WebResource r = resource();
+      ClientResponse response = r.path("ws/v1/cluster/scheduler")
+          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      String xml = response.getEntity(String.class);
+      DocumentBuilder db = DocumentBuilderFactory.newInstance()
+          .newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(xml));
+      //Parse the XML we got
+      Document dom = db.parse(is);
+
+      NodeList allQueues = dom.getElementsByTagName("queue");
+      for (int i = 0; i < allQueues.getLength(); ++i) {
+        Node queueNode = allQueues.item(i);
+        Node queuePathNode = getChildNodeByName(queueNode, "queuePath");
+        if (queuePathNode == null) {
+          continue;
+        }
+
+        String queuePath = queuePathNode.getTextContent();
+        if (queuePath != null) {
+          if (queuePath.startsWith("root.a")) {
+            assertEquals("root-a-default-label",
+                getChildNodeByName(queueNode, "defaultNodeLabelExpression")
+                    .getTextContent());
+          } else {
+            assertEquals("ROOT-INHERITED",
+                getChildNodeByName(queueNode, "defaultNodeLabelExpression")
+                    .getTextContent());
+          }
+        }
       }
     } finally {
       rm.stop();

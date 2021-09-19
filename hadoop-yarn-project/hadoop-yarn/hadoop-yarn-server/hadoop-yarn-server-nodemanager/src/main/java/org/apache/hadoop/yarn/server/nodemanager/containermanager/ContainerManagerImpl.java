@@ -174,8 +174,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -442,6 +442,7 @@ public class ContainerManagerImpl extends CompositeService implements
     ApplicationImpl app = new ApplicationImpl(dispatcher, p.getUser(), fc,
         appId, creds, context, p.getAppLogAggregationInitedTime());
     context.getApplications().put(appId, app);
+    metrics.runningApplication();
     app.handle(new ApplicationInitEvent(appId, acls, logAggregationContext));
   }
 
@@ -1082,8 +1083,10 @@ public class ContainerManagerImpl extends CompositeService implements
     ContainerId containerId = containerTokenIdentifier.getContainerID();
     String containerIdStr = containerId.toString();
     String user = containerTokenIdentifier.getApplicationSubmitter();
+    Resource containerResource = containerTokenIdentifier.getResource();
 
-    LOG.info("Start request for " + containerIdStr + " by user " + remoteUser);
+    LOG.info("Start request for " + containerIdStr + " by user " + remoteUser +
+        " with resource " + containerResource);
 
     ContainerLaunchContext launchContext = request.getContainerLaunchContext();
 
@@ -1135,6 +1138,7 @@ public class ContainerManagerImpl extends CompositeService implements
                   applicationID, credentials, context);
           if (context.getApplications().putIfAbsent(applicationID,
               application) == null) {
+            metrics.runningApplication();
             LOG.info("Creating a new application reference for app "
                 + applicationID);
             LogAggregationContext logAggregationContext =
@@ -1227,7 +1231,7 @@ public class ContainerManagerImpl extends CompositeService implements
             containerTokenIdentifier);
     byte[] tokenPass = token.getPassword().array();
     if (password == null || tokenPass == null
-        || !Arrays.equals(password, tokenPass)) {
+        || !MessageDigest.isEqual(password, tokenPass)) {
       throw new InvalidToken(
         "Invalid container token used for starting container on : "
             + context.getNodeId().toString());

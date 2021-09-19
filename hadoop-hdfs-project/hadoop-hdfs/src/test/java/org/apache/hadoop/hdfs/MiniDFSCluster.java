@@ -86,6 +86,8 @@ import org.apache.hadoop.hdfs.server.datanode.VolumeScanner;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -147,8 +149,6 @@ import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -533,6 +533,9 @@ public class MiniDFSCluster implements AutoCloseable {
           DEFAULT_DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD);
       this.storagesPerDatanode =
           FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
+      conf.setLong(DFSConfigKeys
+          .DFS_DATANODE_ROUND_ROBIN_VOLUME_CHOOSING_POLICY_ADDITIONAL_AVAILABLE_SPACE_KEY,
+          0);
     }
   }
   
@@ -599,7 +602,7 @@ public class MiniDFSCluster implements AutoCloseable {
                        builder.useConfiguredTopologyMappingClass);
   }
   
-  public class DataNodeProperties {
+  public static class DataNodeProperties {
     final DataNode datanode;
     final Configuration conf;
     String[] dnArgs;

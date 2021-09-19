@@ -29,8 +29,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
@@ -40,6 +44,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APPEND_BLOB_KEY;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasStreamCapabilities;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksStreamCapabilities;
 
 /**
  * Test flush operation.
@@ -299,6 +307,25 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
+  public void testTracingHeaderForAppendBlob() throws Exception {
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set(FS_AZURE_APPEND_BLOB_KEY, "abfss:/");
+    config.set(TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED, "true");
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(config);
+
+    byte[] buf = new byte[10];
+    new Random().nextBytes(buf);
+    try (FSDataOutputStream out = fs.create(new Path("/testFile"))) {
+      ((AbfsOutputStream) out.getWrappedStream()).registerListener(new TracingHeaderValidator(
+          fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationId(), fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+          ((AbfsOutputStream) out.getWrappedStream()).getStreamID()));
+      out.write(buf);
+      out.hsync();
+    }
+  }
+
+  @Test
   public void testStreamCapabilitiesWithFlushDisabled() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
@@ -306,11 +333,12 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     final Path testFilePath = path(methodName.getMethodName());
 
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, false)) {
-      assertFalse(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertFalse(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertLacksStreamCapabilities(stream,
+          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HSYNC,
+          StreamCapabilities.DROPBEHIND,
+          StreamCapabilities.READAHEAD,
+          StreamCapabilities.UNBUFFER);
     }
   }
 
@@ -320,11 +348,13 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     byte[] buffer = getRandomBytesArray();
     final Path testFilePath = path(methodName.getMethodName());
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, true)) {
-      assertTrue(stream.hasCapability(StreamCapabilities.HFLUSH));
-      assertTrue(stream.hasCapability(StreamCapabilities.HSYNC));
-      assertFalse(stream.hasCapability(StreamCapabilities.DROPBEHIND));
-      assertFalse(stream.hasCapability(StreamCapabilities.READAHEAD));
-      assertFalse(stream.hasCapability(StreamCapabilities.UNBUFFER));
+      assertHasStreamCapabilities(stream,
+          StreamCapabilities.HFLUSH,
+          StreamCapabilities.HSYNC);
+      assertLacksStreamCapabilities(stream,
+          StreamCapabilities.DROPBEHIND,
+          StreamCapabilities.READAHEAD,
+          StreamCapabilities.UNBUFFER);
     }
   }
 

@@ -36,11 +36,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFil
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 /**
  * The NNStorageRetentionManager is responsible for inspecting the storage
@@ -192,7 +191,7 @@ public class NNStorageRetentionManager {
       return 0L;
     }
 
-    TreeSet<Long> imageTxIds = Sets.newTreeSet(Collections.reverseOrder());
+    TreeSet<Long> imageTxIds = new TreeSet<>(Collections.reverseOrder());
     for (FSImageFile image : images) {
       imageTxIds.add(image.getCheckpointTxId());
     }

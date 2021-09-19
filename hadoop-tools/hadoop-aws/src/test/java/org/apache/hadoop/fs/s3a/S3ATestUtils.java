@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -67,7 +69,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -91,9 +92,7 @@ import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
-import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_ENABLED;
 import static org.junit.Assert.*;
 
 /**
@@ -189,6 +188,8 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     S3AFileSystem fs1 = new S3AFileSystem();
@@ -232,10 +233,43 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
+  }
+
+  /**
+   * Skip if S3Guard and S3CSE are enabled together.
+   *
+   * @param conf Test Configuration.
+   */
+  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf) {
+    String encryptionMethod =
+        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM, "");
+    String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
+    if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
+        !metaStore.equals(S3GUARD_METASTORE_NULL)) {
+      skip("Skipped if CSE is enabled with S3Guard.");
+    }
+  }
+
+  /**
+   * Either skip if PathIOE occurred due to S3CSE and S3Guard
+   * incompatibility or throw the PathIOE.
+   *
+   * @param ioe PathIOE being parsed.
+   * @throws PathIOException Throws PathIOE if it doesn't relate to S3CSE
+   *                         and S3Guard incompatibility.
+   */
+  public static void maybeSkipIfS3GuardAndS3CSEIOE(PathIOException ioe)
+      throws PathIOException {
+    if (ioe.toString().contains(InternalConstants.CSE_S3GUARD_INCOMPATIBLE)) {
+      skip("Skipping since CSE is enabled with S3Guard.");
+    }
+    throw ioe;
   }
 
   /**
@@ -628,9 +662,6 @@ public final class S3ATestUtils {
       conf.set(HADOOP_TMP_DIR, tmpDir);
     }
     conf.set(BUFFER_DIR, tmpDir);
-    // add this so that even on tests where the FS is shared,
-    // the FS is always "magic"
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
 
     // directory marker policy
     String directoryRetention = getTestProperty(
@@ -832,6 +863,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Disable S3Guard from the test bucket in a configuration.
+   * @param conf configuration.
+   */
+  public static void disableS3GuardInTestBucket(Configuration conf) {
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+        S3_METADATA_STORE_IMPL,
+        DIRECTORY_MARKER_POLICY);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+  }
+  /**
    * Call a function; any exception raised is logged at info.
    * This is for test teardowns.
    * @param log log to use.
@@ -842,21 +883,6 @@ public final class S3ATestUtils {
       final CallableRaisingIOE<T> operation) {
     try {
       operation.apply();
-    } catch (Exception e) {
-      log.info(e.toString(), e);
-    }
-  }
-
-  /**
-   * Call a void operation; any exception raised is logged at info.
-   * This is for test teardowns.
-   * @param log log to use.
-   * @param operation operation to invoke
-   */
-  public static void callQuietly(final Logger log,
-      final Invoker.VoidOperation operation) {
-    try {
-      operation.execute();
     } catch (Exception e) {
       log.info(e.toString(), e);
     }
@@ -1444,35 +1470,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Wait for a deleted file to no longer be visible.
-   * @param fs filesystem
-   * @param testFilePath path to query
-   * @throws Exception failure
-   */
-  public static void awaitDeletedFileDisappearance(final S3AFileSystem fs,
-      final Path testFilePath) throws Exception {
-    eventually(
-        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
-        () -> intercept(FileNotFoundException.class,
-            () -> fs.getFileStatus(testFilePath)));
-  }
-
-  /**
-   * Wait for a file to be visible.
-   * @param fs filesystem
-   * @param testFilePath path to query
-   * @return the file status.
-   * @throws Exception failure
-   */
-  public static S3AFileStatus awaitFileStatus(S3AFileSystem fs,
-      final Path testFilePath)
-      throws Exception {
-    return (S3AFileStatus) eventually(
-        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
-        () -> fs.getFileStatus(testFilePath));
-  }
-
-  /**
    * This creates a set containing all current threads and some well-known
    * thread names whose existence should not fail test runs.
    * They are generally static cleaner threads created by various classes
@@ -1533,6 +1530,24 @@ public final class S3ATestUtils {
         path,
         needEmptyDirectoryFlag,
         probes);
+  }
+
+  /**
+   * Skip a test if encryption algorithm or encryption key is not set.
+   *
+   * @param configuration configuration to probe.
+   */
+  public static void skipIfEncryptionNotSet(Configuration configuration,
+      S3AEncryptionMethods s3AEncryptionMethod) {
+    // if S3 encryption algorithm is not set to desired method or AWS encryption
+    // key is not set, then skip.
+    if (!configuration.getTrimmed(S3_ENCRYPTION_ALGORITHM, "")
+        .equals(s3AEncryptionMethod.getMethod())
+        || configuration.get(Constants.S3_ENCRYPTION_KEY) == null) {
+      skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
+          .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
+          + s3AEncryptionMethod.getMethod());
+    }
   }
 
 }

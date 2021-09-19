@@ -717,18 +717,18 @@ public class FSDirectory implements Closeable {
 
     byte[][] components = INode.getPathComponents(src);
     boolean isRaw = isReservedRawName(components);
-    if (isPermissionEnabled && pc != null && isRaw) {
-      switch(dirOp) {
-        case READ_LINK:
-        case READ:
-          break;
-        default:
-          pc.checkSuperuserPrivilege();
-          break;
-      }
-    }
     components = resolveComponents(components, this);
     INodesInPath iip = INodesInPath.resolve(rootDir, components, isRaw);
+    if (isPermissionEnabled && pc != null && isRaw) {
+      switch(dirOp) {
+      case READ_LINK:
+      case READ:
+        break;
+      default:
+        pc.checkSuperuserPrivilege(iip.getPath());
+        break;
+      }
+    }
     // verify all ancestors are dirs and traversable.  note that only
     // methods that create new namespace items have the signature to throw
     // PNDE
@@ -1942,7 +1942,10 @@ public class FSDirectory implements Closeable {
       boolean doCheckOwner, FsAction ancestorAccess, FsAction parentAccess,
       FsAction access, FsAction subAccess, boolean ignoreEmptyDir)
       throws AccessControlException {
-    if (!pc.isSuperUser()) {
+    if (pc.isSuperUser()) {
+      // call the external enforcer for audit
+      pc.checkSuperuserPrivilege(iip.getPath());
+    } else {
       readLock();
       try {
         pc.checkPermission(iip, doCheckOwner, ancestorAccess,
@@ -1958,9 +1961,12 @@ public class FSDirectory implements Closeable {
     if (pc.isSuperUser()) {
       if (FSDirXAttrOp.getXAttrByPrefixedName(this, iip,
           SECURITY_XATTR_UNREADABLE_BY_SUPERUSER) != null) {
-        throw new AccessControlException(
-            "Access is denied for " + pc.getUser() + " since the superuser "
-            + "is not allowed to perform this operation.");
+        String errorMessage = "Access is denied for " + pc.getUser()
+            + " since the superuser is not allowed to perform this operation.";
+        pc.denyUserAccess(iip.getPath(), errorMessage);
+      } else {
+        // call the external enforcer for audit.
+        pc.checkSuperuserPrivilege(iip.getPath());
       }
     }
   }
@@ -2061,23 +2067,7 @@ public class FSDirectory implements Closeable {
       // first empty component for the root.  however file status
       // related calls are expected to strip out the root component according
       // to TestINodeAttributeProvider.
-      // Due to HDFS-15372 the attribute provider should received the resolved
-      // snapshot path. Ie, rather than seeing /d/.snapshot/sn/data it should
-      // see /d/data. However, for the path /d/.snapshot/sn it should see this
-      // full path. If the current inode is the snapshot name, it always has the
-      // same ID as its parent inode, so we can use that to check if it is the
-      // path which needs handled specially.
-      byte[][] components;
-      INodeDirectory parent = node.getParent();
-      if (iip.isSnapshot()
-          && parent != null && parent.getId() != node.getId()) {
-        // For snapshot paths, we always user node.getPathComponents so the
-        // snapshot path is resolved to the real path, unless the last component
-        // is the snapshot name root directory.
-        components = node.getPathComponents();
-      } else {
-        components = iip.getPathComponents();
-      }
+      byte[][] components = iip.getPathComponents();
       components = Arrays.copyOfRange(components, 1, components.length);
       nodeAttrs = ap.getAttributes(components, nodeAttrs);
     }

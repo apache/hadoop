@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.maybeAwaitCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
@@ -207,7 +209,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         "page size out of range: %s", pageSize);
     this.pageSize = pageSize;
     metadataStore = context.getMetadataStore();
-    executor = context.createThrottledExecutor(1);
+    executor = MoreExecutors.listeningDecorator(
+        context.createThrottledExecutor(1));
   }
 
   public long getFilesDeleted() {
@@ -502,13 +505,15 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       return null;
     }
     filesDeleted += keyList.size();
-    return submit(executor, () -> {
-      asyncDeleteAction(operationState,
-          keyList,
-          pathList,
-          LOG.isDebugEnabled());
-      return null;
-    });
+    return submit(executor,
+        callableWithinAuditSpan(
+            getAuditSpan(), () -> {
+              asyncDeleteAction(operationState,
+                  keyList,
+                  pathList,
+                  LOG.isDebugEnabled());
+              return null;
+            }));
   }
 
   /**

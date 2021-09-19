@@ -623,6 +623,9 @@ public class ApplicationImpl implements Application {
     public void transition(ApplicationImpl app, ApplicationEvent event) {
       ApplicationId appId = event.getApplicationID();
       app.context.getApplications().remove(appId);
+      if (null != app.context.getNodeManagerMetrics()) {
+        app.context.getNodeManagerMetrics().endRunningApplication();
+      }
       app.aclsManager.removeApplication(appId);
       try {
         app.context.getNMStateStore().removeApplication(appId);

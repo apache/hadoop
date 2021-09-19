@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.Queu
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .ResourceScheduler;
 
@@ -205,6 +206,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   @Before
   public void setUp() throws Exception {
+    QueueMetrics.clearQueueMetrics();
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -406,6 +408,9 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setAutoCreatedLeafQueueConfigMaxCapacity(C, 100.0f);
     conf.setAutoCreatedLeafQueueConfigUserLimit(C, 100);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
+    conf.setAutoCreatedLeafQueueConfigUserLimitFactor(C, 3.0f);
+    conf.setAutoCreatedLeafQueueConfigMaximumAllocation(C,
+        "memory-mb=10240,vcores=6");
 
     conf.setAutoCreatedLeafQueueTemplateCapacityByLabel(C, NODEL_LABEL_GPU,
         NODE_LABEL_GPU_TEMPLATE_CAPACITY);
@@ -561,7 +566,29 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     schedConf.setInt(YarnConfiguration.RESOURCE_TYPES
         + ".memory-mb.maximum-allocation", 16384);
 
+
     return new CapacitySchedulerConfiguration(schedConf);
+  }
+
+  protected void setSchedulerMinMaxAllocation(CapacitySchedulerConfiguration conf) {
+    unsetMinMaxAllocation(conf);
+
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, 1);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, 8);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 1024);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, 18384);
+
+  }
+
+  private void unsetMinMaxAllocation(CapacitySchedulerConfiguration conf) {
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.minimum-allocation");
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".vcores.maximum-allocation");
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.minimum-allocation");
+    conf.unset(YarnConfiguration.RESOURCE_TYPES
+        + ".memory-mb.maximum-allocation");
   }
 
   protected MockRM setupSchedulerInstance() throws Exception {
@@ -661,10 +688,11 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   }
 
   protected void validateContainerLimits(
-      AutoCreatedLeafQueue autoCreatedLeafQueue) {
-    assertEquals(8,
+      AutoCreatedLeafQueue autoCreatedLeafQueue, int vCoreLimit,
+      long memorySize) {
+    assertEquals(vCoreLimit,
         autoCreatedLeafQueue.getMaximumAllocation().getVirtualCores());
-    assertEquals(16384,
+    assertEquals(memorySize,
         autoCreatedLeafQueue.getMaximumAllocation().getMemorySize());
   }
 

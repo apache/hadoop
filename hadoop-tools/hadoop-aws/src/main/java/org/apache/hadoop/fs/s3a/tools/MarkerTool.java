@@ -36,6 +36,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,6 @@ import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
@@ -363,7 +363,6 @@ public final class MarkerTool extends S3GuardTool {
 
     // extract the callbacks needed for the rest of the work
     storeContext = fs.createStoreContext();
-    operations = fs.createMarkerToolOperations();
     // filesystem policy.
     // if the -nonauth option is set, this is used to filter
     // out surplus markers from the results.
@@ -417,13 +416,15 @@ public final class MarkerTool extends S3GuardTool {
       minMarkerCount = maxMarkerCount;
       maxMarkerCount = m;
     }
-    ScanResult result = scan(target,
+    // extract the callbacks needed for the rest of the work
+    operations = fs.createMarkerToolOperations(
+        target.toString());
+    return scan(target,
         scanArgs.isDoPurge(),
         minMarkerCount,
         maxMarkerCount,
         scanArgs.getLimit(),
         filterPolicy);
-    return result;
   }
 
   /**

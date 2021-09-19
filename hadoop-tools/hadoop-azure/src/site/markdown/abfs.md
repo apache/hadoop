@@ -338,7 +338,7 @@ with the following configurations.
  retries. Default value is 5.
 * `fs.azure.oauth.token.fetch.retry.min.backoff.interval`: Minimum back-off
   interval. Added to the retry interval computed from delta backoff. By
-   default this si set as 0. Set the interval in milli seconds.
+   default this is set as 0. Set the interval in milli seconds.
 * `fs.azure.oauth.token.fetch.retry.max.backoff.interval`: Maximum back-off
 interval. Default value is 60000 (sixty seconds). Set the interval in milli
 seconds.
@@ -729,6 +729,28 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 `org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
 of configuration options and their default values.
 
+### <a name="clientcorrelationoptions"></a> Client Correlation Options
+
+#### <a name="clientcorrelationid"></a> 1. Client CorrelationId Option
+
+Config `fs.azure.client.correlationid` provides an option to correlate client
+requests using this client-provided identifier. This Id will be visible in Azure
+Storage Analytics logs in the `request-id-header` field.
+Reference: [Storage Analytics log format](https://docs.microsoft.com/en-us/rest/api/storageservices/storage-analytics-log-format)
+
+This config accepts a string which can be maximum of 72 characters and should
+contain alphanumeric characters and/or hyphens only. Defaults to empty string if
+input is invalid.
+
+#### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
+
+Config `fs.azure.tracingcontext.format` provides an option to select the format
+of IDs included in the `request-id-header`. This config accepts a String value
+corresponding to the following enum options.
+  `SINGLE_ID_FORMAT` : clientRequestId
+  `ALL_ID_FORMAT` : all IDs (default)
+  `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
+
 ### <a name="flushconfigoptions"></a> Flush Options
 
 #### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
@@ -778,8 +800,30 @@ The following configs are related to read and write operations.
 
 `fs.azure.io.retry.max.retries`: Sets the number of retries for IO operations.
 Currently this is used only for the server call retry logic. Used within
-AbfsClient class as part of the ExponentialRetryPolicy. The value should be
+`AbfsClient` class as part of the ExponentialRetryPolicy. The value should be
 greater than or equal to 0.
+
+`fs.azure.io.retry.min.backoff.interval`: Sets the minimum backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within `AbfsClient` class as part of the ExponentialRetryPolicy. This
+value indicates the smallest interval (in milliseconds) to wait before retrying
+an IO operation. The default value is 3000 (3 seconds).
+
+`fs.azure.io.retry.max.backoff.interval`: Sets the maximum backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within `AbfsClient` class as part of the ExponentialRetryPolicy. This
+value indicates the largest interval (in milliseconds) to wait before retrying
+an IO operation. The default value is 30000 (30 seconds).
+
+`fs.azure.io.retry.backoff.interval`: Sets the default backoff interval for
+retries of IO operations. Currently this is used only for the server call retry
+logic. Used within `AbfsClient` class as part of the ExponentialRetryPolicy. This
+value is used to compute a random delta between 80% and 120% of the specified
+value. This random delta is then multiplied by an exponent of the current IO
+retry number (i.e., the default is multiplied by `2^(retryNum - 1)`) and then
+contstrained within the range of [`fs.azure.io.retry.min.backoff.interval`,
+`fs.azure.io.retry.max.backoff.interval`] to determine the amount of time to
+wait before the next IO retry attempt. The default value is 3000 (3 seconds).
 
 `fs.azure.write.request.size`: To set the write buffer size. Specify the value
 in bytes. The value should be between 16384 to 104857600 both inclusive (16 KB
@@ -803,7 +847,7 @@ pattern is detected.
 `fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
 AbfsInputStream. In case the set value is negative the read ahead queue depth
 will be set as Runtime.getRuntime().availableProcessors(). By default the value
-will be -1. To disable readaheads, set this value to 0. If your workload is
+will be 2. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
 
@@ -811,6 +855,16 @@ will be -1. To disable readaheads, set this value to 0. If your workload is
 aheads. Specify the value in bytes. The value should be between 16384 to
 104857600 both inclusive (16 KB to 100 MB). The default value will be
 4194304 (4 MB).
+
+`fs.azure.buffered.pread.disable`: By default the positional read API will do a
+seek and read on input stream. This read will fill the buffer cache in
+AbfsInputStream and update the cursor positions. If this optimization is true
+it will skip usage of buffer and do a lock free REST call for reading from blob.
+This optimization is very much helpful for HBase kind of short random read over
+a shared AbfsInputStream instance.
+Note: This is not a config which can be set at cluster level. It can be used as
+an option on FutureDataInputStreamBuilder.
+See FileSystem#openFile(Path path)
 
 To run under limited memory situations configure the following. Especially
 when there are too many writes from the same process. 
@@ -827,7 +881,7 @@ when there are too many writes from the same process.
 
 ### <a name="securityconfigoptions"></a> Security Options
 `fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag
-is made true. Irrespective of the flag, AbfsClient will use HTTPS if the secure
+is made true. Irrespective of the flag, `AbfsClient` will use HTTPS if the secure
 scheme (ABFSS) is used or OAuth is used for authentication. By default this will
 be set to true.
 
@@ -876,6 +930,22 @@ directories. "The atomic rename feature is not supported by the ABFS scheme
 enabled for your Azure Storage account."
 The directories can be specified as comma separated values. By default the value
 is "/hbase"
+
+### <a name="infiniteleaseoptions"></a> Infinite Lease Options
+`fs.azure.infinite-lease.directories`: Directories for infinite lease support
+can be specified comma separated in this config. By default, multiple
+clients will be able to write to the same file simultaneously. When writing
+to files contained within the directories specified in this config, the
+client will obtain a lease on the file that will prevent any other clients
+from writing to the file. When the output stream is closed, the lease will be
+released. To revoke a client's write access for a file, the
+AzureBlobFilesystem breakLease method may be called. If the client dies
+before the file can be closed and the lease released, breakLease will need to
+be called before another client will be able to write to the file.
+
+`fs.azure.lease.threads`: This is the size of the thread pool that will be
+used for lease operations for infinite lease directories. By default the value
+is 0, so it must be set to at least 1 to support infinite lease directories.
 
 ### <a name="perfoptions"></a> Perf Options
 

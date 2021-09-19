@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -64,8 +63,10 @@ import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -456,7 +457,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       // requests.
       throw new SnapshotException(
           "Failed to create the snapshot. The FileSystem has run out of " +
-          "snapshot IDs and ID rollover is not supported.");
+          "snapshot IDs and ID rollover is not supported " +
+              "and the max snapshot limit is: " + maxSnapshotLimit);
     }
     int n = numSnapshots.get();
     checkFileSystemSnapshotLimit(n);
@@ -533,6 +535,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
             INodesInPath.append(iip, snapshot.getRoot(),
                 DFSUtil.string2Bytes(snapshotName)), xattrs,
             EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+        renameSnapshot(iip, srcRoot.getFullPathName(), snapshotName,
+            Snapshot.generateDeletedSnapshotName(snapshot), Time.now());
         return;
       }
 

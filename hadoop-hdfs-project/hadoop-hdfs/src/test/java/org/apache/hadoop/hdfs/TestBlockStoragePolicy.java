@@ -24,9 +24,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,6 +45,8 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.junit.Assert;
 import static org.junit.Assert.fail;
 import org.junit.Test;
@@ -1421,29 +1420,29 @@ public class TestBlockStoragePolicy {
     final EnumMap<StorageType, Integer> map = new EnumMap<>(StorageType.class);
 
     //put storage type is reversed order
+    map.put(StorageType.NVDIMM, 1);
     map.put(StorageType.ARCHIVE, 1);
     map.put(StorageType.DISK, 1);
     map.put(StorageType.SSD, 1);
     map.put(StorageType.RAM_DISK, 1);
-    map.put(StorageType.NVDIMM, 1);
 
     {
       final Iterator<StorageType> i = map.keySet().iterator();
       Assert.assertEquals(StorageType.RAM_DISK, i.next());
-      Assert.assertEquals(StorageType.NVDIMM, i.next());
       Assert.assertEquals(StorageType.SSD, i.next());
       Assert.assertEquals(StorageType.DISK, i.next());
       Assert.assertEquals(StorageType.ARCHIVE, i.next());
+      Assert.assertEquals(StorageType.NVDIMM, i.next());
     }
 
     {
       final Iterator<Map.Entry<StorageType, Integer>> i
           = map.entrySet().iterator();
       Assert.assertEquals(StorageType.RAM_DISK, i.next().getKey());
-      Assert.assertEquals(StorageType.NVDIMM, i.next().getKey());
       Assert.assertEquals(StorageType.SSD, i.next().getKey());
       Assert.assertEquals(StorageType.DISK, i.next().getKey());
       Assert.assertEquals(StorageType.ARCHIVE, i.next().getKey());
+      Assert.assertEquals(StorageType.NVDIMM, i.next().getKey());
     }
   }
 

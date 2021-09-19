@@ -296,7 +296,8 @@ class StripedWriter {
    */
   void clearBuffers() {
     for (StripedBlockWriter writer : writers) {
-      ByteBuffer targetBuffer = writer.getTargetBuffer();
+      ByteBuffer targetBuffer =
+          writer != null ? writer.getTargetBuffer() : null;
       if (targetBuffer != null) {
         targetBuffer.clear();
       }
@@ -305,7 +306,8 @@ class StripedWriter {
 
   void close() {
     for (StripedBlockWriter writer : writers) {
-      ByteBuffer targetBuffer = writer.getTargetBuffer();
+      ByteBuffer targetBuffer =
+          writer != null ? writer.getTargetBuffer() : null;
       if (targetBuffer != null) {
         reconstructor.freeBuffer(targetBuffer);
         writer.freeTargetBuffer();
@@ -313,7 +315,9 @@ class StripedWriter {
     }
 
     for (int i = 0; i < targets.length; i++) {
-      writers[i].close();
+      if (writers[i] != null) {
+        writers[i].close();
+      }
     }
   }
 }

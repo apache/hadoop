@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 
@@ -143,7 +143,7 @@ public class TestDatanodeReport {
       assertReports(1, DatanodeReportType.DEAD, client, datanodes, null);
 
       Thread.sleep(5000);
-      assertGauge("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
+      assertCounter("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
     } finally {
       cluster.shutdown();
     }
@@ -172,8 +172,19 @@ public class TestDatanodeReport {
         // all bad datanodes
       }
       cluster.triggerHeartbeats(); // IBR delete ack
-      lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
-      assertEquals(0, lb.getLocations().length);
+      int retries = 0;
+      while (true) {
+        lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+        if (0 != lb.getLocations().length) {
+          retries++;
+          if (retries > 7) {
+            Assert.fail("getLocatedBlocks failed after 7 retries");
+          }
+          Thread.sleep(2000);
+        } else {
+          break;
+        }
+      }
     } finally {
       cluster.shutdown();
     }

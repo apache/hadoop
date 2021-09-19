@@ -22,16 +22,20 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
-
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -40,11 +44,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -530,5 +535,110 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         invokeConcurrent(new ArrayList<>(), remoteMethod,
             GetClusterMetricsResponse.class);
     Assert.assertEquals(true, clusterMetrics.isEmpty());
+  }
+
+  /**
+   * This test validates the correctness of
+   * GetApplicationsResponse in case the
+   * application exists in the cluster.
+   */
+  @Test
+  public void testGetApplicationsResponse()
+      throws YarnException, IOException, InterruptedException {
+    LOG.info("Test FederationClientInterceptor: Get Applications Response");
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    Set<String> appTypes = Collections.singleton("MockApp");
+    GetApplicationsRequest requestGet =
+        GetApplicationsRequest.newInstance(appTypes);
+
+    GetApplicationsResponse responseGet =
+        interceptor.getApplications(requestGet);
+
+    Assert.assertNotNull(responseGet);
+  }
+
+  /**
+   * This test validates
+   * the correctness of GetApplicationsResponse in case of
+   * empty request.
+   */
+  @Test
+  public void testGetApplicationsNullRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor: Get Applications request");
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getApplications request.",
+        () -> interceptor.getApplications(null));
+  }
+
+  /**
+   * This test validates
+   * the correctness of GetApplicationsResponse in case applications
+   * with given type does not exist.
+   */
+  @Test
+  public void testGetApplicationsApplicationTypeNotExists() throws Exception{
+    LOG.info("Test FederationClientInterceptor: Application with type does "
+        + "not exist");
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    Set<String> appTypes = Collections.singleton("SPARK");
+
+    GetApplicationsRequest requestGet =
+        GetApplicationsRequest.newInstance(appTypes);
+
+    GetApplicationsResponse responseGet =
+        interceptor.getApplications(requestGet);
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertTrue(responseGet.getApplicationList().isEmpty());
+  }
+
+  /**
+   * This test validates
+   * the correctness of GetApplicationsResponse in case applications
+   * with given YarnApplicationState does not exist.
+   */
+  @Test
+  public void testGetApplicationsApplicationStateNotExists() throws Exception{
+    LOG.info("Test FederationClientInterceptor:" +
+        " Application with state does not exist");
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    EnumSet<YarnApplicationState> applicationStates = EnumSet.noneOf(
+        YarnApplicationState.class);
+    applicationStates.add(YarnApplicationState.KILLED);
+
+    GetApplicationsRequest requestGet =
+        GetApplicationsRequest.newInstance(applicationStates);
+
+    GetApplicationsResponse responseGet =
+        interceptor.getApplications(requestGet);
+
+    Assert.assertNotNull(responseGet);
+    Assert.assertTrue(responseGet.getApplicationList().isEmpty());
   }
 }

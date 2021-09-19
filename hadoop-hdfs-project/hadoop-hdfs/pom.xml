@@ -37,11 +37,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-annotations</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
       <scope>provided</scope>
     </dependency>
@@ -66,6 +61,16 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>zookeeper</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
@@ -179,10 +184,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core4</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

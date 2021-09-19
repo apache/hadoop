@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -109,6 +110,16 @@ class FSNamesystemLock {
   private final AtomicReference<LockHeldInfo> longestReadLockHeldInfo =
       new AtomicReference<>(new LockHeldInfo());
   private LockHeldInfo longestWriteLockHeldInfo = new LockHeldInfo();
+  /**
+   * The number of time the read lock
+   * has been held longer than the threshold.
+   */
+  private final LongAdder numReadLockLongHold = new LongAdder();
+  /**
+   * The number of time the write lock
+   * has been held for longer than the threshold.
+   */
+  private final LongAdder numWriteLockLongHold = new LongAdder();
 
   @VisibleForTesting
   static final String OP_NAME_OTHER = "OTHER";
@@ -182,6 +193,7 @@ class FSNamesystemLock {
     final long readLockIntervalMs =
         TimeUnit.NANOSECONDS.toMillis(readLockIntervalNanos);
     if (needReport && readLockIntervalMs >= this.readLockReportingThresholdMs) {
+      numReadLockLongHold.increment();
       String lockReportInfo = null;
       boolean done = false;
       while (!done) {
@@ -298,6 +310,7 @@ class FSNamesystemLock {
     LogAction logAction = LogThrottlingHelper.DO_NOT_LOG;
     if (needReport &&
         writeLockIntervalMs >= this.writeLockReportingThresholdMs) {
+      numWriteLockLongHold.increment();
       if (longestWriteLockHeldInfo.getIntervalMs() <= writeLockIntervalMs) {
         String lockReportInfo = lockReportInfoSupplier != null ? " (" +
             lockReportInfoSupplier.get() + ")" : "";
@@ -360,6 +373,28 @@ class FSNamesystemLock {
    */
   public int getQueueLength() {
     return coarseLock.getQueueLength();
+  }
+
+  /**
+   * Returns the number of time the read lock
+   * has been held longer than the threshold.
+   *
+   * @return long - Number of time the read lock
+   * has been held longer than the threshold
+   */
+  public long getNumOfReadLockLongHold() {
+    return numReadLockLongHold.longValue();
+  }
+
+  /**
+   * Returns the number of time the write lock
+   * has been held longer than the threshold.
+   *
+   * @return long - Number of time the write lock
+   * has been held longer than the threshold.
+   */
+  public long getNumOfWriteLockLongHold() {
+    return numWriteLockLongHold.longValue();
   }
 
   /**

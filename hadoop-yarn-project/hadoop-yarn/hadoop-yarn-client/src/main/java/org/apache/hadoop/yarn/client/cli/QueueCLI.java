@@ -125,6 +125,8 @@ public class QueueCLI extends YarnCLI {
   private void printQueueInfo(PrintWriter writer, QueueInfo queueInfo) {
     writer.print("Queue Name : ");
     writer.println(queueInfo.getQueueName());
+    writer.print("Queue Path : ");
+    writer.println(queueInfo.getQueuePath());
 
     writer.print("\tState : ");
     writer.println(queueInfo.getQueueState());
@@ -135,6 +137,10 @@ public class QueueCLI extends YarnCLI {
     writer.println(df.format(queueInfo.getCurrentCapacity() * 100) + "%");
     writer.print("\tMaximum Capacity : ");
     writer.println(df.format(queueInfo.getMaximumCapacity() * 100) + "%");
+    writer.print("\tWeight : ");
+    writer.println(df.format(queueInfo.getWeight()));
+    writer.print("\tMaximum Parallel Apps : ");
+    writer.println(queueInfo.getMaxParallelApps());
     writer.print("\tDefault Node Label expression : ");
     String nodeLabelExpression = queueInfo.getDefaultNodeLabelExpression();
     nodeLabelExpression =

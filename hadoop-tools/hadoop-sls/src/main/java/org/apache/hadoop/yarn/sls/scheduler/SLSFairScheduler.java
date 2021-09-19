@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -62,6 +64,10 @@ public class SLSFairScheduler extends FairScheduler
 
   private Map<ContainerId, Resource> preemptionContainerMap =
       new ConcurrentHashMap<>();
+
+  // logger
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SLSFairScheduler.class);
 
   public SchedulerMetrics getSchedulerMetrics() {
     return schedulerMetrics;
@@ -86,7 +92,7 @@ public class SLSFairScheduler extends FairScheduler
             FairScheduler.class);
         schedulerMetrics.init(this, conf);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error("Caught exception while initializing schedulerMetrics", e);
       }
     }
   }
@@ -106,6 +112,9 @@ public class SLSFairScheduler extends FairScheduler
             schedulingRequests, containerIds,
             blacklistAdditions, blacklistRemovals, updateRequests);
         return allocation;
+      } catch (Exception e) {
+        LOG.error("Caught exception from allocate", e);
+        throw e;
       } finally {
         context.stop();
         schedulerMetrics.increaseSchedulerAllocationCounter();
@@ -113,7 +122,7 @@ public class SLSFairScheduler extends FairScheduler
           updateQueueWithAllocateRequest(allocation, attemptId,
               resourceRequests, containerIds);
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error("Caught exception while executing finally block", e);
         }
       }
     } else {
@@ -182,6 +191,14 @@ public class SLSFairScheduler extends FairScheduler
       if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
           && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
         SLSRunner.decreaseRemainingApps();
+        if (SLSRunner.getRemainingApps() == 0) {
+          try {
+            getSchedulerMetrics().tearDown();
+            SLSRunner.exitSLSRunner();
+          } catch (Exception e) {
+            LOG.error("Scheduler Metrics failed to tear down.", e);
+          }
+        }
       }
     }
   }
@@ -315,7 +332,7 @@ public class SLSFairScheduler extends FairScheduler
         schedulerMetrics.tearDown();
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Caught exception while stopping service", e);
     }
     super.serviceStop();
   }

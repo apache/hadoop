@@ -28,6 +28,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.EnumSet;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
@@ -129,10 +134,6 @@ import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -141,6 +142,7 @@ import org.slf4j.LoggerFactory;
 /**
  * RPC program corresponding to nfs daemon. See {@link Nfs3}.
  */
+@ChannelHandler.Sharable
 public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   public static final int DEFAULT_UMASK = 0022;
   public static final FsPermission umask = new FsPermission(
@@ -2180,7 +2182,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
             RpcDeniedReply.RejectState.AUTH_ERROR, new VerifierNone());
         rdr.write(reply);
 
-        ChannelBuffer buf = ChannelBuffers.wrappedBuffer(reply.asReadOnlyWrap()
+        ByteBuf buf = Unpooled.wrappedBuffer(reply.asReadOnlyWrap()
             .buffer());
         RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());
         RpcUtil.sendRpcResponse(ctx, rsp);
@@ -2291,7 +2293,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
     // TODO: currently we just return VerifierNone
     out = response.serialize(out, xid, new VerifierNone());
-    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+    ByteBuf buf = Unpooled.wrappedBuffer(out.asReadOnlyWrap()
         .buffer());
     RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());
 

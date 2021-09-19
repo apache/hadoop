@@ -126,6 +126,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
   private final RouterRpcServer rpcServer;
   private final RouterRpcClient rpcClient;
+  private final RouterFederationRename rbfRename;
   private final FileSubclusterResolver subclusterResolver;
   private final ActiveNamenodeResolver namenodeResolver;
 
@@ -191,6 +192,7 @@ public class RouterClientProtocol implements ClientProtocol {
     this.snapshotProto = new RouterSnapshot(rpcServer);
     this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
+    this.rbfRename = new RouterFederationRename(rpcServer, conf);
   }
 
   @Override
@@ -594,13 +596,13 @@ public class RouterClientProtocol implements ClientProtocol {
 
     final List<RemoteLocation> srcLocations =
         rpcServer.getLocationsForPath(src, true, false);
+    final List<RemoteLocation> dstLocations =
+        rpcServer.getLocationsForPath(dst, false, false);
     // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
-    RemoteParam dstParam = getRenameDestinations(locs, dst);
+    RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
     if (locs.isEmpty()) {
-      throw new IOException(
-          "Rename of " + src + " to " + dst + " is not allowed," +
-              " no eligible destination in the same namespace was found.");
+      return rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
     }
     RemoteMethod method = new RemoteMethod("rename",
         new Class<?>[] {String.class, String.class},
@@ -620,13 +622,14 @@ public class RouterClientProtocol implements ClientProtocol {
 
     final List<RemoteLocation> srcLocations =
         rpcServer.getLocationsForPath(src, true, false);
+    final List<RemoteLocation> dstLocations =
+        rpcServer.getLocationsForPath(dst, false, false);
     // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
-    RemoteParam dstParam = getRenameDestinations(locs, dst);
+    RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
     if (locs.isEmpty()) {
-      throw new IOException(
-          "Rename of " + src + " to " + dst + " is not allowed," +
-              " no eligible destination in the same namespace was found.");
+      rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
+      return;
     }
     RemoteMethod method = new RemoteMethod("rename2",
         new Class<?>[] {String.class, String.class, options.getClass()},
@@ -996,7 +999,21 @@ public class RouterClientProtocol implements ClientProtocol {
 
     Map<String, DatanodeStorageReport[]> dnSubcluster =
         rpcServer.getDatanodeStorageReportMap(type);
+    return mergeDtanodeStorageReport(dnSubcluster);
+  }
 
+  public DatanodeStorageReport[] getDatanodeStorageReport(
+      HdfsConstants.DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+
+    Map<String, DatanodeStorageReport[]> dnSubcluster =
+        rpcServer.getDatanodeStorageReportMap(type, requireResponse, timeOutMs);
+    return mergeDtanodeStorageReport(dnSubcluster);
+  }
+
+  private DatanodeStorageReport[] mergeDtanodeStorageReport(
+      Map<String, DatanodeStorageReport[]> dnSubcluster) {
     // Avoid repeating machines in multiple subclusters
     Map<String, DatanodeStorageReport> datanodesMap = new LinkedHashMap<>();
     for (DatanodeStorageReport[] dns : dnSubcluster.values()) {
@@ -1180,7 +1197,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
 
     RemoteMethod method = new RemoteMethod("setBalancerBandwidth",
-        new Class<?>[] {Long.class}, bandwidth);
+        new Class<?>[] {long.class}, bandwidth);
     final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     rpcClient.invokeConcurrent(nss, method, true, false);
   }
@@ -1815,17 +1832,15 @@ public class RouterClientProtocol implements ClientProtocol {
    *          path may be located. On return this list is trimmed to include
    *          only the paths that have corresponding destinations in the same
    *          namespace.
-   * @param dst The destination path
+   * @param dstLocations The destination path
    * @return A map of all eligible source namespaces and their corresponding
    *         replacement value.
    * @throws IOException If the dst paths could not be determined.
    */
   private RemoteParam getRenameDestinations(
-      final List<RemoteLocation> srcLocations, final String dst)
-      throws IOException {
+      final List<RemoteLocation> srcLocations,
+      final List<RemoteLocation> dstLocations) throws IOException {
 
-    final List<RemoteLocation> dstLocations =
-        rpcServer.getLocationsForPath(dst, false, false);
     final Map<RemoteLocation, String> dstMap = new HashMap<>();
 
     Iterator<RemoteLocation> iterator = srcLocations.iterator();
@@ -2202,5 +2217,9 @@ public class RouterClientProtocol implements ClientProtocol {
       LOG.debug("The destination {} is a symlink.", src);
     }
     return false;
+  }
+
+  public int getRouterFederationRenameCount() {
+    return rbfRename.getRouterFederationRenameCount();
   }
 }

@@ -132,7 +132,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     JSONArray subQueueInfo = json.getJSONObject("scheduler")
         .getJSONObject("schedulerInfo").getJSONObject("rootQueue")
-        .getJSONObject("childQueues").getJSONArray("queue").getJSONObject(1)
+        .getJSONObject("childQueues").getJSONArray("queue").getJSONObject(0)
         .getJSONObject("childQueues").getJSONArray("queue");
     // subQueueInfo is consist of subqueue1 and subqueue2 info
     assertEquals(2, subQueueInfo.length());

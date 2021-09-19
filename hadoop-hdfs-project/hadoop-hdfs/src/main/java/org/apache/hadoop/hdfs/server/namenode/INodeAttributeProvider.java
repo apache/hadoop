@@ -362,7 +362,7 @@ public abstract class INodeAttributeProvider {
      * Checks permission on a file system object. Has to throw an Exception
      * if the filesystem object is not accessible by the calling Ugi.
      * @param fsOwner Filesystem owner (The Namenode user)
-     * @param supergroup super user geoup
+     * @param supergroup super user group
      * @param callerUgi UserGroupInformation of the caller
      * @param inodeAttrs Array of INode attributes for each path element in the
      *                   the path
@@ -393,7 +393,7 @@ public abstract class INodeAttributeProvider {
 
     /**
      * Checks permission on a file system object. Has to throw an Exception
-     * if the filesystem object is not accessessible by the calling Ugi.
+     * if the filesystem object is not accessible by the calling Ugi.
      * @param authzContext an {@link AuthorizationContext} object encapsulating
      *                     the various parameters required to authorize an
      *                     operation.
@@ -405,7 +405,48 @@ public abstract class INodeAttributeProvider {
           + "implement the checkPermissionWithContext(AuthorizationContext) "
           + "API.");
     }
+
+    /**
+     * Checks if the user is a superuser or belongs to superuser group.
+     * It throws an AccessControlException if user is not a superuser.
+     *
+     * @param authzContext an {@link AuthorizationContext} object encapsulating
+     *                     the various parameters required to authorize an
+     *                     operation.
+     * @throws AccessControlException - if user is not a super user or part
+     * of the super user group.
+     */
+    default void checkSuperUserPermissionWithContext(
+        AuthorizationContext authzContext)
+        throws AccessControlException {
+      UserGroupInformation callerUgi = authzContext.getCallerUgi();
+      boolean isSuperUser =
+          callerUgi.getShortUserName().equals(authzContext.getFsOwner()) ||
+          callerUgi.getGroupsSet().contains(authzContext.getSupergroup());
+      if (!isSuperUser) {
+        throw new AccessControlException("Access denied for user " +
+            callerUgi.getShortUserName() + ". Superuser privilege is " +
+            "required for operation " + authzContext.getOperationName());
+      }
+    }
+
+    /**
+     * This method must be called when denying access to users to
+     * notify the external enforcers.
+     * This will help the external enforcers to audit the requests
+     * by users that were denied access.
+     * @param authzContext an {@link AuthorizationContext} object encapsulating
+     *                     the various parameters required to authorize an
+     *                     operation.
+     * @throws AccessControlException
+     */
+    default void denyUserAccess(AuthorizationContext authzContext,
+                                String errorMessage)
+        throws AccessControlException {
+      throw new AccessControlException(errorMessage);
+    }
   }
+
   /**
    * Initialize the provider. This method is called at NameNode startup
    * time.

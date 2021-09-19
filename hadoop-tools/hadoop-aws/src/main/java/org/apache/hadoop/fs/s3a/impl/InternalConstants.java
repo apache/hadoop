@@ -37,6 +37,16 @@ import org.apache.hadoop.fs.s3a.Constants;
  */
 public final class InternalConstants {
 
+  /**
+   * This declared delete as idempotent.
+   * This is an "interesting" topic in past Hadoop FS work.
+   * Essentially: with a single caller, DELETE is idempotent
+   * but in a shared filesystem, it is is very much not so.
+   * Here, on the basis that isn't a filesystem with consistency guarantees,
+   * retryable results in files being deleted.
+  */
+  public static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
+
   private InternalConstants() {
   }
 
@@ -112,9 +122,21 @@ public final class InternalConstants {
   public static final int DEFAULT_UPLOAD_PART_COUNT_LIMIT = 10000;
 
   /**
-   * Flag to enable AWS Statistics binding. As this is triggering
-   * problems related to region/endpoint setup, it is currently
-   * disabled.
+   * The system property used by the AWS SDK to identify the region.
    */
-  public static final boolean AWS_SDK_METRICS_ENABLED = false;
+  public static final String AWS_REGION_SYSPROP = "aws.region";
+
+  /**
+   * S3 client side encryption adds padding to the content length of constant
+   * length of 16 bytes (at the moment, since we have only 1 content
+   * encryption algorithm). Use this to subtract while listing the content
+   * length when certain conditions are met.
+   */
+  public static final int CSE_PADDING_LENGTH = 16;
+
+  /**
+   * Error message to indicate S3-CSE is incompatible with S3Guard.
+   */
+  public static final String CSE_S3GUARD_INCOMPATIBLE = "S3-CSE cannot be "
+      + "used with S3Guard";
 }

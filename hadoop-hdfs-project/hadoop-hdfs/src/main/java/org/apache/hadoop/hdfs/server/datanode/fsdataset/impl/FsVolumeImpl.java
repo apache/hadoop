@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -319,7 +320,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @VisibleForTesting
-  int getReferenceCount() {
+  public int getReferenceCount() {
     return this.reference.getReferenceCount();
   }
 
@@ -484,9 +485,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // should share the same amount of reserved capacity.
     // When calculating actual non dfs used,
     // exclude DFS used capacity by another volume.
-    if (enableSameDiskTiering &&
-        (storageType == StorageType.DISK
-            || storageType == StorageType.ARCHIVE)) {
+    if (enableSameDiskTiering
+        && StorageType.allowSameDiskTiering(storageType)) {
       StorageType counterpartStorageType = storageType == StorageType.DISK
           ? StorageType.ARCHIVE : StorageType.DISK;
       FsVolumeReference counterpartRef = dataset
@@ -866,7 +866,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
               }
 
               File blkFile = getBlockFile(bpid, block);
-              File metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              File metaFile ;
+              try {
+                 metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              } catch (FileNotFoundException e){
+                LOG.warn("nextBlock({}, {}): {}", storageID, bpid,
+                    e.getMessage());
+                continue;
+              }
+
               block.setGenerationStamp(
                   Block.getGenerationStamp(metaFile.getName()));
               block.setNumBytes(blkFile.length());
@@ -1452,7 +1460,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
           long blockId = Block.getBlockId(file.getName());
           verifyFileLocation(file, bpFinalizedDir,
               blockId);
-          report.add(new ScanInfo(blockId, null, file, this));
+          report.add(new ScanInfo(blockId, dir, null, fileNames.get(i), this));
         }
         continue;
       }
@@ -1475,7 +1483,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
         }
       }
       verifyFileLocation(blockFile, bpFinalizedDir, blockId);
-      report.add(new ScanInfo(blockId, blockFile, metaFile, this));
+      report.add(new ScanInfo(blockId, dir, blockFile.getName(),
+          metaFile == null ? null : metaFile.getName(), this));
     }
   }
 
@@ -1517,6 +1526,24 @@ public class FsVolumeImpl implements FsVolumeSpi {
         block.getGenerationStamp(), replicaInfo,
         getTmpDir(block.getBlockPoolId()),
         replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
+
+    ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
+        .setBlockId(replicaInfo.getBlockId())
+        .setGenerationStamp(replicaInfo.getGenerationStamp())
+        .setFsVolume(this)
+        .setDirectoryToUse(blockFiles[0].getParentFile())
+        .setBytesToReserve(0)
+        .build();
+    newReplicaInfo.setNumBytes(blockFiles[1].length());
+    return newReplicaInfo;
+  }
+
+  public ReplicaInfo hardLinkBlockToTmpLocation(ExtendedBlock block,
+      ReplicaInfo replicaInfo) throws IOException {
+
+    File[] blockFiles = FsDatasetImpl.hardLinkBlockFiles(block.getBlockId(),
+        block.getGenerationStamp(), replicaInfo,
+        getTmpDir(block.getBlockPoolId()));
 
     ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
         .setBlockId(replicaInfo.getBlockId())

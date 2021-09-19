@@ -503,6 +503,25 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edits.qjournals.resolution-enabled</name>
+  <value>false</value>
+  <description>
+    Determines if the given qjournals address is a domain name which needs to
+    be resolved.
+    This is used by namenode to resolve qjournals.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edits.qjournals.resolver.impl</name>
+  <value></value>
+  <description>
+    Qjournals resolver implementation used by namenode.
+    Effective with dfs.namenode.edits.qjournals.resolution-enabled on.
+  </description>
+</property>
+
+<property>
   <name>dfs.permissions.enabled</name>
   <value>true</value>
   <description>
@@ -791,7 +810,7 @@
 
 <property>
   <name>dfs.blockreport.initialDelay</name>
-  <value>0s</value>
+  <value>0</value>
   <description>
     Delay for first block report in seconds. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.If
@@ -836,7 +855,7 @@
 
 <property>
   <name>dfs.datanode.directoryscan.interval</name>
-  <value>21600s</value>
+  <value>21600</value>
   <description>Interval in seconds for Datanode to scan data directories and
   reconcile the difference between blocks in memory and on the disk.
   Support multiple time unit suffix(case insensitive), as described
@@ -874,8 +893,20 @@
 </property>
 
 <property>
+  <name>dfs.datanode.reconcile.blocks.batch.size</name>
+  <value>1000</value>
+  <description>Setting this to define reconcile batch size.</description>
+</property>
+
+<property>
+  <name>dfs.datanode.reconcile.blocks.batch.interval</name>
+  <value>2000</value>
+  <description>Setting this to define interval between batches.</description>
+</property>
+
+<property>
   <name>dfs.heartbeat.interval</name>
-  <value>3s</value>
+  <value>3</value>
   <description>
     Determines datanode heartbeat interval in seconds.
     Can use the following suffix (case insensitive):
@@ -977,6 +1008,14 @@
     during startup.
     Values greater than the number of datanodes in the cluster
     will make safe mode permanent.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.safemode.recheck.interval</name>
+  <value>1000</value>
+  <description>
+    Interval in msec for checking safe mode.
   </description>
 </property>
 
@@ -1088,7 +1127,7 @@
 
 <property>
   <name>dfs.namenode.decommission.interval</name>
-  <value>30s</value>
+  <value>30</value>
   <description>Namenode periodicity in seconds to check if
     decommission or maintenance is complete. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.
@@ -1156,7 +1195,7 @@
 
 <property>
   <name>dfs.namenode.redundancy.interval.seconds</name>
-  <value>3s</value>
+  <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
   low redundancy work for datanodes. Support multiple time unit suffix(case insensitive),
   as described in dfs.heartbeat.interval.
@@ -1280,7 +1319,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.period</name>
-  <value>3600s</value>
+  <value>3600</value>
   <description>
     The number of seconds between two periodic checkpoints.
     Support multiple time unit suffix(case insensitive), as described
@@ -1300,7 +1339,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.check.period</name>
-  <value>60s</value>
+  <value>60</value>
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
   of uncheckpointed transactions. Support multiple time unit suffix(case insensitive),
@@ -1757,7 +1796,7 @@
 
 <property>
   <name>dfs.client.datanode-restart.timeout</name>
-  <value>30s</value>
+  <value>30</value>
   <description>
     Expert only. The time to wait, in seconds, from reception of an
     datanode shutdown notification for quick restart, until declaring
@@ -1827,7 +1866,7 @@
 
 <property>
   <name>dfs.ha.log-roll.period</name>
-  <value>120s</value>
+  <value>120</value>
   <description>
     How often, in seconds, the StandbyNode should ask the active to
     roll edit logs. Since the StandbyNode only reads from finalized
@@ -1842,7 +1881,7 @@
 
 <property>
   <name>dfs.ha.tail-edits.period</name>
-  <value>60s</value>
+  <value>60</value>
   <description>
     How often, the StandbyNode and ObserverNode should check if there are new
     edit log entries ready to be consumed. This is the minimum period between
@@ -2099,6 +2138,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.avoid.read.slow.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid reading from &quot;slow&quot; datanodes.
+    Slow datanodes will be moved to the end of the node list returned
+    for reading.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.avoid.write.stale.datanode</name>
   <value>false</value>
   <description>
@@ -2347,6 +2396,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.max.nodes.to.report</name>
+  <value>5</value>
+  <description>
+    Number of nodes to include in JSON report. We will return nodes with
+    the highest number of votes from peers.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.outliers.report.interval</name>
   <value>30m</value>
   <description>
@@ -2360,6 +2418,36 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled</name>
+  <value>false</value>
+  <description>
+    If this is set to true, we will filter out slow nodes
+    when choosing targets for blocks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.max.slowpeer.collect.nodes</name>
+  <value>5</value>
+  <description>
+    How many slow nodes we will collect for filtering out
+    when choosing targets for blocks.
+
+    It is ignored if dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled is false.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.slowpeer.collect.interval</name>
+  <value>30m</value>
+  <description>
+    Interval at which the slow peer trackers runs in the background to collect slow peers.
+
+    It is ignored if dfs.namenode.block-placement-policy.exclude-slow-nodes.enabled is false.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.fileio.profiling.sampling.percentage</name>
   <value>0</value>
   <description>
@@ -2367,6 +2455,31 @@
     profiled for DataNode disk statistics. The default value of 0 disables
     disk statistics. Set to an integer value between 1 and 100 to enable disk
     statistics.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.min.outlier.detection.disks</name>
+  <value>5</value>
+  <description>
+    Minimum number of disks to run outlier detection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.slowdisk.low.threshold.ms</name>
+  <value>20</value>
+  <description>
+    Threshold in milliseconds below which a disk is definitely not slow.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.max.disks.to.report</name>
+  <value>5</value>
+  <description>
+    Number of disks to include in JSON report per operation. We will return
+    disks with the highest latency.
   </description>
 </property>
 
@@ -2572,6 +2685,17 @@
 </property>
 
 <property>
+  <name>dfs.datanode.round-robin-volume-choosing-policy.additional-available-space</name>
+  <value>1073741824</value> <!-- 1 GB -->
+  <description>
+    Only used when the dfs.datanode.fsdataset.volume.choosing.policy is set to
+    org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosingPolicy.
+    This setting controls how much additional available space (unit is byte) is needed
+    when choosing a volume.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.edits.noeditlogchannelflush</name>
   <value>false</value>
   <description>
@@ -2752,6 +2876,10 @@
     maintain a mapping of cached blocks to DataNodes via processing DataNode
     cache reports.  Based on these reports and addition and removal of caching
     directives, the NameNode will schedule caching and uncaching work.
+    In the current implementation, centralized caching introduces additional
+    write lock overhead (see CacheReplicationMonitor#rescan) even if no path
+    to cache is specified, so we recommend disabling this feature when not in
+    use. We will disable centralized caching by default in later versions.
   </description>
 </property>
 
@@ -3157,26 +3285,18 @@
   </property>
 
   <property>
-    <name>dfs.client.deadnode.detection.deadnode.queue.max</name>
-    <value>100</value>
-    <description>
-      The max queue size of probing dead node.
-    </description>
-  </property>
-
-  <property>
-    <name>dfs.client.deadnode.detection.suspectnode.queue.max</name>
-    <value>1000</value>
-    <description>
-      The max queue size of probing suspect node.
-    </description>
-  </property>
-
-  <property>
     <name>dfs.client.deadnode.detection.probe.deadnode.threads</name>
     <value>10</value>
     <description>
       The maximum number of threads to use for probing dead node.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.deadnode.detection.idle.sleep.ms</name>
+    <value>10000</value>
+    <description>
+      The sleep time of DeadNodeDetector per iteration.
     </description>
   </property>
 
@@ -3668,12 +3788,22 @@
 </property>
 
 <property>
+  <name>dfs.datanode.ec.reconstruction.validation</name>
+  <value>false</value>
+  <description>
+    Decide if datanode validates that EC reconstruction tasks reconstruct
+    target blocks correctly. When validation fails, reconstruction tasks
+    will fail and be retried by namenode.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
-  <value>4</value>
+  <value>12</value>
   <description>
     The number of concurrent threads to be used in quota initialization. The
     speed of quota initialization also affects the namenode fail-over latency.
-    If the size of name space is big, try increasing this.
+    If the size of name space is big, try increasing this to 16 or higher.
   </description>
 </property>
 
@@ -3717,7 +3847,7 @@
 
 <property>
   <name>dfs.datanode.bp-ready.timeout</name>
-  <value>20s</value>
+  <value>20</value>
   <description>
     The maximum wait time for datanode to be ready before failing the
     received request. Setting this to 0 fails requests right away if the
@@ -4133,6 +4263,16 @@
 </property>
 
 <property>
+  <name>dfs.checksum.ec.socket-timeout</name>
+  <value>3000</value>
+  <description>
+    Default timeout value in milliseconds for computing the checksum of striped blocks.
+    Recommended to set the same value between client and DNs in a cluster because mismatching
+    may cause exhausting handler threads.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.block.write.locateFollowingBlock.retries</name>
   <value>5</value>
   <description>
@@ -4333,6 +4473,15 @@
     Base time window in ms for DFSClient retries.  For each retry attempt,
     this value is extended linearly (e.g. 3000 ms for first attempt and
     first retry, 6000 ms for second retry, 9000 ms for third retry, etc.).
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.pipeline.recovery.max-retries</name>
+  <value>5</value>
+  <description>
+    if the DFS client encounters errors in write pipeline,
+    retry up to the number defined by this property before giving up.
   </description>
 </property>
 
@@ -5105,32 +5254,6 @@
     in seconds.  If this value is greater than the property
     dfs.namenode.stale.datanode.interval, then the calculated value above
     is used.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.timeout.ms</name>
-  <value>4</value>
-  <description>
-    Timeout value in ms for the StorageInfo compaction run.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.interval.ms</name>
-  <value>600000</value>
-  <description>
-    The thread for checking the StorageInfo for defragmentation will
-    run periodically.  The time between runs is determined by this
-    property.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.ratio</name>
-  <value>0.75</value>
-  <description>
-    The defragmentation threshold for the StorageInfo.
   </description>
 </property>
 
@@ -6094,11 +6217,54 @@
   </property>
 
   <property>
+    <name>dfs.datanode.same-disk-tiering.capacity-ratio.percentage</name>
+    <value></value>
+    <description>
+      Disk capacity ratio of DISK or ARCHIVE volume
+      when dfs.datanode.same-disk-tiering is turned on
+      This will override the value of
+      dfs.datanode.reserve-for-archive.default.percentage .
+      Example value:
+      [0.3]/disk1/archive,[0.7]/disk1/disk,[0.4]/disk2/archive,[0.6]/disk2/disk
+      This is only effective for configured
+      DISK/ARCHIVE volumes in dfs.datanode.data.dir.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.balancer.getBlocks.hot-time-interval</name>
     <value>0</value>
     <description>
         Balancer prefer moving cold blocks i.e blocks associated with files
         accessed or modified before the specified time interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.directoryscan.max.notify.count</name>
+    <value>5</value>
+    <description>
+      Defines the maximum number of blocks that the DirectoryScanner may notify
+      namenode right way for received or deleted blocks after one round.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.nameservices.resolution-enabled</name>
+    <value>false</value>
+    <description>
+      Determines if the given nameservice address is a domain name which needs to
+      be resolved (using the resolver configured by dfs.nameservices.resolver.impl).
+      This is used by datanode to resolve namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.nameservices.resolver.impl</name>
+    <value></value>
+    <description>
+      Nameservice resolver implementation used by datanode.
+      Effective with dfs.nameservices.resolution-enabled on.
     </description>
   </property>
 </configuration>

@@ -102,6 +102,9 @@ public class FSConfigToCSConfigConverter {
   private boolean convertPlacementRules = true;
   private String outputDirectory;
   private boolean rulesToFile;
+  private boolean usePercentages;
+  private FSConfigToCSConfigConverterParams.
+      PreemptionMode preemptionMode;
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -119,6 +122,8 @@ public class FSConfigToCSConfigConverter {
     this.convertPlacementRules = params.isConvertPlacementRules();
     this.outputDirectory = params.getOutputDirectory();
     this.rulesToFile = params.isPlacementRulesToFile();
+    this.usePercentages = params.isUsePercentages();
+    this.preemptionMode = params.getPreemptionMode();
     prepareOutputFiles(params.isConsole());
     loadConversionRules(params.getConversionRulesConfig());
     Configuration inputYarnSiteConfig = getInputYarnSiteConfig(params);
@@ -275,7 +280,8 @@ public class FSConfigToCSConfigConverter {
         new FSYarnSiteConverter();
     siteConverter.convertSiteProperties(inputYarnSiteConfig,
         convertedYarnSiteConfig, drfUsed,
-        conversionOptions.isEnableAsyncScheduler());
+        conversionOptions.isEnableAsyncScheduler(),
+        usePercentages, preemptionMode);
 
     preemptionEnabled = siteConverter.isPreemptionEnabled();
     sizeBasedWeight = siteConverter.isSizeBasedWeight();
@@ -289,6 +295,7 @@ public class FSConfigToCSConfigConverter {
     emitDefaultUserMaxParallelApplications();
     emitUserMaxParallelApplications();
     emitDefaultMaxAMShare();
+    emitDisablePreemptionForObserveOnlyMode();
 
     FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
         .withRuleHandler(ruleHandler)
@@ -300,6 +307,7 @@ public class FSConfigToCSConfigConverter {
         .withQueueMaxAppsDefault(queueMaxAppsDefault)
         .withConversionOptions(conversionOptions)
         .withDrfUsed(drfUsed)
+        .withPercentages(usePercentages)
         .build();
 
     queueConverter.convertQueueHierarchy(rootQueue);
@@ -318,7 +326,7 @@ public class FSConfigToCSConfigConverter {
 
       MappingRulesDescription desc =
           placementConverter.convertPlacementPolicy(placementManager,
-              ruleHandler, capacitySchedulerConfig);
+              ruleHandler, capacitySchedulerConfig, usePercentages);
 
       ObjectMapper mapper = new ObjectMapper();
       // close output stream if we write to a file, leave it open otherwise
@@ -336,6 +344,7 @@ public class FSConfigToCSConfigConverter {
 
       capacitySchedulerConfig.set(MAPPING_RULE_FORMAT,
           MAPPING_RULE_FORMAT_JSON);
+      capacitySchedulerConfig.setOverrideWithQueueMappings(true);
       if (!rulesToFile) {
         String json =
             ((ByteArrayOutputStream)mappingRulesOutputStream)
@@ -401,6 +410,14 @@ public class FSConfigToCSConfigConverter {
           CapacitySchedulerConfiguration.
             MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
           queueMaxAMShareDefault);
+    }
+  }
+  private void emitDisablePreemptionForObserveOnlyMode() {
+    if (preemptionMode == FSConfigToCSConfigConverterParams
+            .PreemptionMode.OBSERVE_ONLY) {
+      capacitySchedulerConfig.
+          setBoolean(CapacitySchedulerConfiguration.
+              PREEMPTION_OBSERVE_ONLY, true);
     }
   }
 

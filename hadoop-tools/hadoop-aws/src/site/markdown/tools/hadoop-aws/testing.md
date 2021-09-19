@@ -150,7 +150,7 @@ Example:
 ### <a name="encryption"></a> Configuring S3a Encryption
 
 For S3a encryption tests to run correctly, the
-`fs.s3a.server-side-encryption.key` must be configured in the s3a contract xml
+`fs.s3a.encryption.key` must be configured in the s3a contract xml
 file or `auth-keys.xml` file with a AWS KMS encryption key arn as this value is
 different for each AWS KMS. Please note this KMS key should be created in the
 same region as your S3 bucket. Otherwise, you may get `KMS.NotFoundException`.
@@ -159,13 +159,13 @@ Example:
 
 ```xml
 <property>
-  <name>fs.s3a.server-side-encryption.key</name>
+  <name>fs.s3a.encryption.key</name>
   <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
 </property>
 ```
 
 You can also force all the tests to run with a specific SSE encryption method
-by configuring the property `fs.s3a.server-side-encryption-algorithm` in the s3a
+by configuring the property `fs.s3a.encryption.algorithm` in the s3a
 contract file.
 
 ### <a name="default_encyption"></a> Default Encryption
@@ -974,15 +974,17 @@ using an absolute XInclude reference to it.
 **Warning do not enable any type of failure injection in production.  The
 following settings are for testing only.**
 
-One of the challenges with S3A integration tests is the fact that S3 is an
-eventually-consistent storage system.  In practice, we rarely see delays in
-visibility of recently created objects both in listings (`listStatus()`) and
-when getting a single file's metadata (`getFileStatus()`). Since this behavior
-is rare and non-deterministic, thorough integration testing is challenging.
-
-To address this, S3A supports a shim layer on top of the `AmazonS3Client`
+One of the challenges with S3A integration tests is the fact that S3 was an
+eventually-consistent storage system. To simulate inconsistencies more
+frequently than they would normally surface, S3A supports a shim layer on top of the `AmazonS3Client`
 class which artificially delays certain paths from appearing in listings.
 This is implemented in the class `InconsistentAmazonS3Client`.
+
+Now that S3 is consistent, injecting failures during integration and
+functional testing is less important.
+There's no need to enable it to verify that S3Guard can recover
+from consistencies, given that in production such consistencies
+will never surface.
 
 ## Simulating List Inconsistencies
 
@@ -1062,9 +1064,6 @@ The default is 5000 milliseconds (five seconds).
 </property>
 ```
 
-Future versions of this client will introduce new failure modes,
-with simulation of S3 throttling exceptions the next feature under
-development.
 
 ### Limitations of Inconsistency Injection
 
@@ -1104,8 +1103,12 @@ inconsistent directory listings.
 
 ## <a name="s3guard"></a> Testing S3Guard
 
-[S3Guard](./s3guard.html) is an extension to S3A which adds consistent metadata
-listings to the S3A client. As it is part of S3A, it also needs to be tested.
+[S3Guard](./s3guard.html) is an extension to S3A which added consistent metadata
+listings to the S3A client. 
+
+It has not been needed for applications to work safely with AWS S3 since November
+2020. However, it is currently still part of the codebase, and so something which
+needs to be tested.
 
 The basic strategy for testing S3Guard correctness consists of:
 
@@ -1463,7 +1466,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamo` options.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
-  and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
+  and `fs.s3a.encryption.key` for encryption, for full coverage.
   If you can, scale up the scale tests.
 1. Run the `ILoadTest*` load tests from your IDE or via maven through
       `mvn verify -Dtest=skip -Dit.test=ILoadTest\*`  ; look for regressions in performance
@@ -1479,6 +1482,9 @@ as it may take a couple of SDK updates before it is ready.
   Examine the `target/dependencies.txt` file to verify that no new
   artifacts have unintentionally been declared as dependencies
   of the shaded `aws-java-sdk-bundle` artifact.
+1. Run a full AWS-test suite with S3 client-side encryption enabled by
+ setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
+  Key ID in `fs.s3a.encryption.key`.
 
 ### Basic command line regression testing
 

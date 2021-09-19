@@ -664,10 +664,14 @@ For instance, HDFS may raise an `InvalidPathException`.
 
     result = FSDataOutputStream
 
-The updated (valid) FileSystem must contains all the parent directories of the path, as created by `mkdirs(parent(p))`.
+A zero byte file MUST exist at the end of the specified path, visible to all.
+
+The updated (valid) FileSystem MUST contain all the parent directories of the path, as created by `mkdirs(parent(p))`.
 
 The result is `FSDataOutputStream`, which through its operations may generate new filesystem states with updated values of
 `FS.Files[p]`
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -677,10 +681,18 @@ The result is `FSDataOutputStream`, which through its operations may generate ne
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3A, Swift and potentially other Object Stores do not currently change the FS state
+* S3A, Swift and potentially other Object Stores do not currently change the `FS` state
 until the output stream `close()` operation is completed.
-This MAY be a bug, as it allows >1 client to create a file with `overwrite==false`,
- and potentially confuse file/directory logic
+This is a significant difference between the behavior of object stores
+and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
+and potentially confuse file/directory logic. In particular, using `create()` to acquire
+an exclusive lock on a file (whoever creates the file without an error is considered
+the holder of the lock) may not not a safe algorithm to use when working with object stores.
+
+* Object stores may create an empty file as a marker when a file is created.
+However, object stores with `overwrite=true` semantics may not implement this atomically,
+so creating files with `overwrite=false` cannot be used as an implicit exclusion
+mechanism between processes.
 
 * The Local FileSystem raises a `FileNotFoundException` when trying to create a file over
 a directory, hence it is listed as an exception that MAY be raised when
@@ -691,6 +703,8 @@ this precondition fails.
 ### `FSDataOutputStreamBuilder createFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to create a file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -717,16 +731,20 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
 #### Postconditions
 
-    FS
+    FS' = FS
     result = FSDataOutputStream
 
 Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
 by appending data to the existing list.
 
+The behavior of the returned stream is covered in [Output](outputstream.html).
+
 ### `FSDataOutputStreamBuilder appendFile(Path p)`
 
 Make a `FSDataOutputStreamBuilder` to specify the parameters to append to an
 existing file.
+
+The behavior of the returned stream is covered in [Output](outputstream.html).
 
 #### Implementation Notes
 
@@ -1146,7 +1164,7 @@ deletion, preventing the stores' use as drop-in replacements for HDFS.
 
 ### `boolean rename(Path src, Path d)`
 
-In terms of its specification, `rename()` is one of the most complex operations within a filesystem .
+In terms of its specification, `rename()` is one of the most complex operations within a filesystem.
 
 In terms of its implementation, it is the one with the most ambiguity regarding when to return false
 versus raising an exception.
@@ -1168,7 +1186,6 @@ has been calculated.
 Source `src` must exist:
 
     exists(FS, src) else raise FileNotFoundException
-
 
 `dest` cannot be a descendant of `src`:
 
@@ -1264,6 +1281,15 @@ The outcome is as a normal rename, with the additional (implicit) feature
 that the parent directories of the destination also exist.
 
     exists(FS', parent(dest))
+
+*S3A FileSystem*
+
+The outcome is as a normal rename, with the additional (implicit) feature that
+the parent directories of the destination then exist:
+`exists(FS', parent(dest))`
+
+There is a check for and rejection if the `parent(dest)` is a file, but
+no checks for any other ancestors.
 
 *Other Filesystems (including Swift) *
 
@@ -1391,6 +1417,112 @@ to complete before they can proceed with further file updates.
 If an input stream is open when truncate() occurs, the outcome of read
 operations related to the part of the file being truncated is undefined.
 
+
+
+### `boolean copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, Path dst)`
+
+The source file or directory at `src` is on the local disk and is copied into the file system at
+destination `dst`. If the source must be deleted after the move then `delSrc` flag must be
+set to TRUE. If destination already exists, and the destination contents must be overwritten
+then `overwrite` flag must be set to TRUE.
+
+#### Preconditions
+Source and destination must be different
+```python
+if src = dest : raise FileExistsException
+```
+
+Destination and source must not be descendants one another
+```python
+if isDescendant(src, dest) or isDescendant(dest, src) : raise IOException
+```
+
+The source file or directory must exist locally:
+```python
+if not exists(LocalFS, src) : raise FileNotFoundException
+```
+
+Directories cannot be copied into files regardless to what the overwrite flag is set to:
+
+```python
+if isDir(LocalFS, src) and isFile(FS, dst) : raise PathExistsException
+```
+
+For all cases, except the one for which the above precondition throws, the overwrite flag must be
+set to TRUE for the operation to succeed if destination exists. This will also overwrite any files
+ / directories at the destination:
+
+```python
+if exists(FS, dst) and not overwrite : raise PathExistsException
+```
+
+#### Determining the final name of the copy
+Given a base path on the source `base` and a child path `child` where `base` is in
+`ancestors(child) + child`:
+
+```python
+def final_name(base, child, dest):
+    is base = child:
+        return dest
+    else:
+        return dest + childElements(base, child)
+```
+
+#### Outcome where source is a file `isFile(LocalFS, src)`
+For a file, data at destination becomes that of the source. All ancestors are directories.
+```python
+if isFile(LocalFS, src) and (not exists(FS, dest) or (exists(FS, dest) and overwrite)):
+    FS' = FS where:
+        FS'.Files[dest] = LocalFS.Files[src]
+        FS'.Directories = FS.Directories + ancestors(FS, dest)
+    LocalFS' = LocalFS where
+        not delSrc or (delSrc = true and delete(LocalFS, src, false))
+else if isFile(LocalFS, src) and isDir(FS, dest):
+    FS' = FS where:
+        let d = final_name(src, dest)
+        FS'.Files[d] = LocalFS.Files[src]
+    LocalFS' = LocalFS where:
+        not delSrc or (delSrc = true and delete(LocalFS, src, false))
+```
+There are no expectations that the file changes are atomic for both local `LocalFS` and remote `FS`.
+
+#### Outcome where source is a directory `isDir(LocalFS, src)`
+```python
+if isDir(LocalFS, src) and (isFile(FS, dest) or isFile(FS, dest + childElements(src))):
+    raise FileAlreadyExistsException
+else if isDir(LocalFS, src):
+    if exists(FS, dest):
+        dest' = dest + childElements(src)
+        if exists(FS, dest') and not overwrite:
+            raise PathExistsException
+    else:
+        dest' = dest
+
+    FS' = FS where:
+        forall c in descendants(LocalFS, src):
+            not exists(FS', final_name(c)) or overwrite
+        and forall c in descendants(LocalFS, src) where isDir(LocalFS, c):
+            FS'.Directories = FS'.Directories + (dest' + childElements(src, c))
+        and forall c in descendants(LocalFS, src) where isFile(LocalFS, c):
+            FS'.Files[final_name(c, dest')] = LocalFS.Files[c]
+    LocalFS' = LocalFS where
+        not delSrc or (delSrc = true and delete(LocalFS, src, true))
+```
+There are no expectations of operation isolation / atomicity.
+This means files can change in source or destination while the operation is executing.
+No guarantees are made for the final state of the file or directory after a copy other than it is
+best effort. E.g.: when copying a directory, one file can be moved from source to destination but
+there's nothing stopping the new file at destination being updated while the copy operation is still
+in place.
+
+#### Implementation
+
+The default HDFS implementation, is to recurse through each file and folder, found at `src`, and
+copy them sequentially to their final destination (relative to `dst`).
+
+Object store based file systems should be mindful of what limitations arise from the above
+implementation and could take advantage of parallel uploads and possible re-ordering of files copied
+into the store to maximize throughput.
 
 
 ## <a name="RemoteIterator"></a> interface `RemoteIterator`

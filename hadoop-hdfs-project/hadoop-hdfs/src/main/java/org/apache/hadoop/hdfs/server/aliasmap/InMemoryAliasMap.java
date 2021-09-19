@@ -17,7 +17,6 @@
 package org.apache.hadoop.hdfs.server.aliasmap;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Lists;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -320,21 +320,15 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
   private static File getCompressedAliasMap(File aliasMapDir)
       throws IOException {
     File outCompressedFile = new File(aliasMapDir.getParent(), TAR_NAME);
-    BufferedOutputStream bOut = null;
-    GzipCompressorOutputStream gzOut = null;
-    TarArchiveOutputStream tOut = null;
-    try {
-      bOut = new BufferedOutputStream(
-          Files.newOutputStream(outCompressedFile.toPath()));
-      gzOut = new GzipCompressorOutputStream(bOut);
-      tOut = new TarArchiveOutputStream(gzOut);
+
+    try (BufferedOutputStream bOut = new BufferedOutputStream(
+            Files.newOutputStream(outCompressedFile.toPath()));
+         GzipCompressorOutputStream gzOut = new GzipCompressorOutputStream(bOut);
+         TarArchiveOutputStream tOut = new TarArchiveOutputStream(gzOut)){
+
       addFileToTarGzRecursively(tOut, aliasMapDir, "", new Configuration());
-    } finally {
-      if (tOut != null) {
-        tOut.finish();
-      }
-      IOUtils.cleanupWithLogger(null, tOut, gzOut, bOut);
     }
+
     return outCompressedFile;
   }
 

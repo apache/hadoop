@@ -272,7 +272,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Override
   public void teardown() throws Exception {
     // restore the s3 client so there's no mocking interfering with the teardown
-    originalS3Client.ifPresent(fs::setAmazonS3Client);
+    if (fs != null) {
+      originalS3Client.ifPresent(fs::setAmazonS3Client);
+    }
     super.teardown();
   }
 
@@ -1350,7 +1352,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       // enabled
       Assume.assumeTrue(
           "Target filesystem does not support versioning",
-          fs.getObjectMetadata(fs.pathToKey(testpath)).getVersionId() != null);
+          fs.getObjectMetadata(testpath).getVersionId() != null);
     }
   }
 

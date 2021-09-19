@@ -135,6 +135,17 @@
       <artifactId>dnsjava</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -163,10 +174,9 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${project.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
@@ -260,7 +270,6 @@
         </excludes>
       </configuration>
     </plugin>
-
 
     </plugins>
   </build>

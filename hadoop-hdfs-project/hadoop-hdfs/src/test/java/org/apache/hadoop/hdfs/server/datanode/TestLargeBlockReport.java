@@ -36,11 +36,11 @@ import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
-import org.apache.log4j.Level;
 
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 /**
  * Tests that very large block reports can pass through the RPC server and
@@ -58,7 +58,6 @@ public class TestLargeBlockReport {
   private DatanodeStorage dnStorage;
   private final long reportId = 1;
   private final long fullBrLeaseId = 0;
-  private final boolean sorted = true;
 
   @BeforeClass
   public static void init() {
@@ -84,7 +83,7 @@ public class TestLargeBlockReport {
     StorageBlockReport[] reports = createReports(6000000);
     try {
       nnProxy.blockReport(bpRegistration, bpId, reports,
-          new BlockReportContext(1, 0, reportId, fullBrLeaseId, sorted));
+          new BlockReportContext(1, 0, reportId, fullBrLeaseId));
       fail("Should have failed because of the too long RPC data length");
     } catch (Exception e) {
       // Expected.  We can't reliably assert anything about the exception type
@@ -99,7 +98,7 @@ public class TestLargeBlockReport {
     initCluster();
     StorageBlockReport[] reports = createReports(6000000);
     nnProxy.blockReport(bpRegistration, bpId, reports,
-        new BlockReportContext(1, 0, reportId, fullBrLeaseId, sorted));
+        new BlockReportContext(1, 0, reportId, fullBrLeaseId));
   }
 
   /**

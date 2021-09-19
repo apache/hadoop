@@ -120,6 +120,8 @@ public class YarnConfiguration extends Configuration {
             CommonConfigurationKeys.ZK_TIMEOUT_MS),
         new DeprecationDelta(RM_ZK_RETRY_INTERVAL_MS,
             CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS),
+        new DeprecationDelta(HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE,
+            YARN_HTTP_WEBAPP_SCHEDULER_PAGE)
     });
     Configuration.addDeprecations(new DeprecationDelta[] {
         new DeprecationDelta("yarn.resourcemanager.display.per-user-apps",
@@ -712,6 +714,14 @@ public class YarnConfiguration extends Configuration {
   public static final float
       DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR = 1.0f;
 
+  /**
+   * Number of consecutive missed heartbeats after which node will be
+   * skipped from scheduling.
+   */
+  public static final String SCHEDULER_SKIP_NODE_MULTIPLIER =
+      YARN_PREFIX + "scheduler.skip.node.multiplier";
+  public static final int DEFAULT_SCHEDULER_SKIP_NODE_MULTIPLIER = 2;
+
   /** Number of worker threads that write the history data. */
   public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
@@ -1159,6 +1169,15 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC = 60000;
 
   /**
+   * Whether to enable RM to mark inactive nodes as untracked and removed from
+   * nodes list for the YARN cluster without configured include path.
+   */
+  public static final String RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH =
+      RM_PREFIX + "enable-node-untracked-without-include-path";
+  public static final boolean
+      DEFAULT_RM_ENABLE_NODE_UNTRACKED_WITHOUT_INCLUDE_PATH = false;
+
+  /**
    * RM proxy users' prefix
    */
   public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
@@ -1236,6 +1255,15 @@ public class YarnConfiguration extends Configuration {
   /** Environment variables that will be sent to containers.*/
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
   public static final String DEFAULT_NM_ADMIN_USER_ENV = "MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX";
+
+  /**
+   * PATH components that will be prepended to the user's path.
+   * If this is defined and the user does not define PATH, NM will also
+   * append ":$PATH" to prevent this from eclipsing the PATH defined in
+   * the container. This feature is only available for Linux.
+   * */
+  public static final String NM_ADMIN_FORCE_PATH = NM_PREFIX + "force.path";
+  public static final String DEFAULT_NM_ADMIN_FORCE_PATH = "";
 
   /** Environment variables that containers may override rather than use NodeManager's default.*/
   public static final String NM_ENV_WHITELIST = NM_PREFIX + "env-whitelist";
@@ -1935,7 +1963,10 @@ public class YarnConfiguration extends Configuration {
           false;
   public static final String APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST =
           APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".username.whitelist";
-
+  public static final String APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION =
+      APPLICATION_TAG_BASED_PLACEMENT_PREFIX + ".force-lowercase";
+  public static final boolean DEFAULT_APPLICATION_TAG_FORCE_LOWERCASE_CONVERSION =
+          true;
   /** Enable switch for container log monitoring. */
   public static final String NM_CONTAINER_LOG_MONITOR_ENABLED =
       NM_PREFIX + "container-log-monitor.enable";
@@ -2010,6 +2041,8 @@ public class YarnConfiguration extends Configuration {
    * marked as offline. Values can range from 0.0 to 100.0. If the value is
    * greater than or equal to 100, NM will check for full disk. This applies to
    * nm-local-dirs and nm-log-dirs.
+   *
+   * This applies when disk-utilization-threshold.enabled is true.
    */
   public static final String NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       NM_DISK_HEALTH_CHECK_PREFIX + "max-disk-utilization-per-disk-percentage";
@@ -2018,6 +2051,17 @@ public class YarnConfiguration extends Configuration {
    */
   public static final float DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
       90.0F;
+
+  /**
+   * Enable/Disable the disk utilisation percentage
+   * threshold for disk health checker.
+   */
+  public static final String NM_DISK_UTILIZATION_THRESHOLD_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "disk-utilization-threshold.enabled";
+
+  public static final
+      boolean DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED = true;
 
   /**
    * The low threshold percentage of disk space used when an offline disk is
@@ -2034,9 +2078,23 @@ public class YarnConfiguration extends Configuration {
   /**
    * The minimum space that must be available on a local dir for it to be used.
    * This applies to nm-local-dirs and nm-log-dirs.
+   *
+   * This applies when disk-free-space-threshold.enabled is true.
    */
   public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
       NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
+
+  /**
+   * Enable/Disable the minimum disk free
+   * space threshold for disk health checker.
+   */
+  public static final String NM_DISK_FREE_SPACE_THRESHOLD_ENABLED =
+      NM_DISK_HEALTH_CHECK_PREFIX +
+          "disk-free-space-threshold.enabled";
+
+  public static final boolean
+      DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED = true;
+
   /**
    * The minimum space that must be available on an offline
    * disk for it to be marked as online.  The value should not be less
@@ -2443,6 +2501,14 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
       "yarn.http.rmwebapp.external.classes";
 
+  /**
+   * @deprecated This field is deprecated for
+   * {@link #YARN_HTTP_WEBAPP_SCHEDULER_PAGE}
+   */
+  @Deprecated
+  public static final String HADOOP_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "hadoop.http.rmwebapp.scheduler.page.class";
+
   public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
       "yarn.http.rmwebapp.scheduler.page.class";
 
@@ -2613,6 +2679,20 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "application-https.policy";
 
   public static final String DEFAULT_RM_APPLICATION_HTTPS_POLICY = "NONE";
+
+
+  // If the proxy connection time enabled.
+  public static final String RM_PROXY_TIMEOUT_ENABLED =
+      RM_PREFIX + "proxy.timeout.enabled";
+
+  public static final boolean DEFALUT_RM_PROXY_TIMEOUT_ENABLED =
+      true;
+
+  public static final String RM_PROXY_CONNECTION_TIMEOUT =
+      RM_PREFIX + "proxy.connection.timeout";
+
+  public static final int DEFAULT_RM_PROXY_CONNECTION_TIMEOUT =
+      60000;
 
   /**
    * Interval of time the linux container executor should try cleaning up
@@ -2858,6 +2938,18 @@ public class YarnConfiguration extends Configuration {
           YARN_PREFIX + "dispatcher.print-events-info.threshold";
   public static final int
           DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD = 5000;
+
+  /** Resource manager dispatcher thread monitor sampling rate.
+   * Units are samples per minute.  This controls how often to sample
+   * the cpu utilization of the resource manager dispatcher thread.
+   * The cpu utilization is displayed on the RM UI as scheduler busy %.
+   * Set to zero to disable the dispatcher thread monitor.
+   */
+  public static final String
+      YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN =
+      YARN_PREFIX + "dispatcher.cpu-monitor.samples-per-min";
+  public static final int
+      DEFAULT_YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN = 60;
 
   /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
@@ -3908,6 +4000,15 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "submit.retry";
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
 
+  /**
+   * The interceptor class used in FederationClientInterceptor should return
+   * partial ApplicationReports.
+   */
+  public static final String ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED =
+          ROUTER_PREFIX + "partial-result.enabled";
+  public static final boolean DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED =
+          false;
+
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 
   public static final String ROUTER_USER_CLIENT_THREADS_SIZE =
@@ -3955,6 +4056,18 @@ public class YarnConfiguration extends Configuration {
       ROUTER_WEBAPP_PREFIX + "partial-result.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED =
       false;
+
+  /**
+   * Connection and Read timeout from the Router to RM.
+   */
+  public static final String ROUTER_WEBAPP_CONNECT_TIMEOUT =
+      ROUTER_WEBAPP_PREFIX + "connect-timeout";
+  public static final long DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(30);
+  public static final String ROUTER_WEBAPP_READ_TIMEOUT =
+      ROUTER_WEBAPP_PREFIX + "read-timeout";
+  public static final long DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT =
+      TimeUnit.SECONDS.toMillis(30);
 
   ////////////////////////////////
   // CSI Volume configs
@@ -4737,6 +4850,20 @@ public class YarnConfiguration extends Configuration {
   public static boolean numaAwarenessEnabled(Configuration conf) {
     return conf.getBoolean(NM_NUMA_AWARENESS_ENABLED,
         DEFAULT_NM_NUMA_AWARENESS_ENABLED);
+  }
+
+  /**
+   * Returns Timeout to skip node from scheduling if not heartbeated.
+   * @param conf the configuration
+   * @return timeout in milliseconds.
+   */
+  public static long getSkipNodeInterval(Configuration conf) {
+    long heartbeatIntvl = conf.getLong(
+         YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
+         YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+    int multiplier = conf.getInt(SCHEDULER_SKIP_NODE_MULTIPLIER,
+        DEFAULT_SCHEDULER_SKIP_NODE_MULTIPLIER);
+    return multiplier * heartbeatIntvl;
   }
 
   /* For debugging. mp configurations to system output as XML format. */

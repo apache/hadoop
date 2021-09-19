@@ -264,9 +264,9 @@ public class Journal implements Closeable {
    */
   @Override // Closeable
   public void close() throws IOException {
-    storage.close();
     IOUtils.closeStream(committedTxnId);
     IOUtils.closeStream(curSegment);
+    storage.close();
   }
   
   JNStorage getStorage() {
@@ -773,7 +773,7 @@ public class Journal implements Closeable {
           .setEditLog(output.toByteString())
           .build();
     } catch (JournaledEditsCache.CacheMissException cme) {
-      metrics.rpcRequestCacheMissAmount.add(cme.getCacheMissAmount());
+      metrics.addRpcRequestCacheMissAmount(cme.getCacheMissAmount());
       throw cme;
     }
   }

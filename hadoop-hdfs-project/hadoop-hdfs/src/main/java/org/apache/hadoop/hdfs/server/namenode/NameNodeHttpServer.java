@@ -166,7 +166,7 @@ public class NameNodeHttpServer {
 
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    setupServlets(httpServer, conf);
+    setupServlets(httpServer);
     httpServer.start();
 
     int connIdx = 0;
@@ -243,7 +243,7 @@ public class NameNodeHttpServer {
     httpServer.setAttribute(ALIASMAP_ATTRIBUTE_KEY, aliasMap);
   }
 
-  private static void setupServlets(HttpServer2 httpServer, Configuration conf) {
+  private static void setupServlets(HttpServer2 httpServer) {
     httpServer.addInternalServlet("startupProgress",
         StartupProgressServlet.PATH_SPEC, StartupProgressServlet.class);
     httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
@@ -253,6 +253,8 @@ public class NameNodeHttpServer {
     httpServer.addInternalServlet(IsNameNodeActiveServlet.SERVLET_NAME,
         IsNameNodeActiveServlet.PATH_SPEC,
         IsNameNodeActiveServlet.class);
+    httpServer.addInternalServlet(NetworkTopologyServlet.SERVLET_NAME,
+        NetworkTopologyServlet.PATH_SPEC, NetworkTopologyServlet.class);
   }
 
   static FSImage getFsImageFromContext(ServletContext context) {

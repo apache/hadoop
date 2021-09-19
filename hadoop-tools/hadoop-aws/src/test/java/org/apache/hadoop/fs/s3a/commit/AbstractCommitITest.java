@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +39,7 @@ import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -117,7 +117,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         FAST_UPLOAD_BUFFER);
 
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+    conf.setBoolean(MAGIC_COMMITTER_ENABLED, DEFAULT_MAGIC_COMMITTER_ENABLED);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_ARRAY);
@@ -178,11 +178,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     if (useInconsistentClient()) {
       AmazonS3 client = getFileSystem()
           .getAmazonS3ClientForTesting("fault injection");
-      Assert.assertTrue(
-          "AWS client is not inconsistent, even though the test requirees it "
-          + client,
-          client instanceof InconsistentAmazonS3Client);
-      inconsistentClient = (InconsistentAmazonS3Client) client;
+      if (client instanceof InconsistentAmazonS3Client) {
+        inconsistentClient = (InconsistentAmazonS3Client) client;
+      }
     }
   }
 
@@ -289,10 +287,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps = fs.getWriteOperationHelper();
-      int count = writeOps.abortMultipartUploadsUnderPath(key);
-      if (count > 0) {
-        log().info("Multipart uploads deleted: {}", count);
+      int count = 0;
+      try (AuditSpan span = span()) {
+        WriteOperationHelper writeOps = fs.getWriteOperationHelper();
+        count = writeOps.abortMultipartUploadsUnderPath(key);
+        if (count > 0) {
+          log().info("Multipart uploads deleted: {}", count);
+        }
       }
       return count;
     } else {

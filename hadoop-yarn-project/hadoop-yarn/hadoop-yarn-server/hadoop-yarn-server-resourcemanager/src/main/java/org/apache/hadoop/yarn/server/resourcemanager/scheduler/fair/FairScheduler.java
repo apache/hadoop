@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -101,6 +96,13 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -552,11 +554,15 @@ public class FairScheduler extends
           return;
         }
       }
+      boolean unmanagedAM = rmApp != null &&
+          rmApp.getApplicationSubmissionContext() != null
+          && rmApp.getApplicationSubmissionContext().getUnmanagedAM();
 
       SchedulerApplication<FSAppAttempt> application =
-          new SchedulerApplication<>(queue, user);
+          new SchedulerApplication<>(queue, user, unmanagedAM);
       applications.put(applicationId, application);
-      queue.getMetrics().submitApp(user);
+
+      queue.getMetrics().submitApp(user, unmanagedAM);
 
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName
@@ -610,7 +616,7 @@ public class FairScheduler extends
         maxRunningEnforcer.trackNonRunnableApp(attempt);
       }
 
-      queue.getMetrics().submitAppAttempt(user);
+      queue.getMetrics().submitAppAttempt(user, application.isUnmanagedAM());
 
       LOG.info("Added Application Attempt " + applicationAttemptId
           + " to scheduler from user: " + user);
@@ -1440,6 +1446,13 @@ public class FairScheduler extends
             + " is invalid, so using default value "
             + FairSchedulerConfiguration.DEFAULT_UPDATE_INTERVAL_MS
             + " ms instead");
+      }
+
+      boolean globalAmPreemption = conf.getBoolean(
+          FairSchedulerConfiguration.AM_PREEMPTION,
+          FairSchedulerConfiguration.DEFAULT_AM_PREEMPTION);
+      if (!globalAmPreemption) {
+        LOG.info("AM preemption is DISABLED globally");
       }
 
       rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);

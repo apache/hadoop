@@ -76,7 +76,7 @@ public class TestDistCpProcedure {
 
   @BeforeClass
   public static void beforeClass() throws IOException {
-    DistCpProcedure.enabledForTest = true;
+    DistCpProcedure.enableForTest();
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -92,13 +92,13 @@ public class TestDistCpProcedure {
 
   @AfterClass
   public static void afterClass() {
-    DistCpProcedure.enabledForTest = false;
+    DistCpProcedure.disableForTest();
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Test(timeout = 30000)
+  @Test(timeout = 90000)
   public void testSuccessfulDistCpProcedure() throws Exception {
     String testRoot = nnUri + "/user/foo/testdir." + getMethodName();
     DistributedFileSystem fs =
@@ -389,7 +389,7 @@ public class TestDistCpProcedure {
         .setDiffThreshold(diffThreshold).build();
   }
 
-  interface Call {
+  protected interface Call {
     void execute() throws IOException, RetryException;
   }
 
@@ -400,8 +400,8 @@ public class TestDistCpProcedure {
    * @param target the target stage.
    * @param call the function executing the procedure.
    */
-  private static void executeProcedure(DistCpProcedure procedure, Stage target,
-      Call call) throws IOException {
+  protected static void executeProcedure(DistCpProcedure procedure,
+      Stage target, Call call) throws IOException {
     Stage stage = Stage.PRE_CHECK;
     procedure.updateStage(stage);
     while (stage != target) {

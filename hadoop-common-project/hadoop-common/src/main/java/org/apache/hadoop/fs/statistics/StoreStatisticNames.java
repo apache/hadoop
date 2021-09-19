@@ -38,6 +38,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StoreStatisticNames {
 
   /** {@value}. */
+  public static final String OP_ABORT = "op_abort";
+
+  /** access() API call {@value}. */
+  public static final String OP_ACCESS = "op_access";
+
+  /** {@value}. */
   public static final String OP_APPEND = "op_append";
 
   /** {@value}. */
@@ -80,6 +86,12 @@ public final class StoreStatisticNames {
 
   /** {@value}. */
   public static final String OP_IS_FILE = "op_is_file";
+
+  /** {@value}. */
+  public static final String OP_HFLUSH = "op_hflush";
+
+  /** {@value}. */
+  public static final String OP_HSYNC = "op_hsync";
 
   /** {@value}. */
   public static final String OP_IS_DIRECTORY = "op_is_directory";
@@ -130,9 +142,31 @@ public final class StoreStatisticNames {
   /** {@value}. */
   public static final String OP_TRUNCATE = "op_truncate";
 
+  /* The XAttr API */
+
+  /** Invoke {@code getXAttrs(Path path)}: {@value}. */
+  public static final String OP_XATTR_GET_MAP = "op_xattr_get_map";
+
+  /** Invoke {@code getXAttr(Path, String)}: {@value}. */
+  public static final String OP_XATTR_GET_NAMED = "op_xattr_get_named";
+
+  /**
+   * Invoke {@code getXAttrs(Path path, List<String> names)}: {@value}.
+   */
+  public static final String OP_XATTR_GET_NAMED_MAP =
+      "op_xattr_get_named_map";
+
+  /** Invoke {@code listXAttrs(Path path)}: {@value}. */
+  public static final String OP_XATTR_LIST = "op_xattr_list";
+
+
   /** {@value}. */
   public static final String DELEGATION_TOKENS_ISSUED
       = "delegation_tokens_issued";
+
+  /** Probe for store existing: {@value}. */
+  public static final String STORE_EXISTS_PROBE
+      = "store_exists_probe";
 
   /** Requests throttled and retried: {@value}. */
   public static final String STORE_IO_THROTTLED
@@ -296,6 +330,30 @@ public final class StoreStatisticNames {
       = "action_http_get_request";
 
   /**
+   * An HTTP DELETE request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_DELETE_REQUEST
+      = "action_http_delete_request";
+
+  /**
+   * An HTTP PUT request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_PUT_REQUEST
+      = "action_http_put_request";
+
+  /**
+   * An HTTP PATCH request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_PATCH_REQUEST
+      = "action_http_patch_request";
+
+  /**
+   * An HTTP POST request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_POST_REQUEST
+      = "action_http_post_request";
+
+  /**
    * An HTTP HEAD request was made: {@value}.
    */
   public static final String OBJECT_METADATA_REQUESTS
@@ -306,9 +364,6 @@ public final class StoreStatisticNames {
 
   public static final String STORE_IO_THROTTLE_RATE
       = "store_io_throttle_rate";
-
-  public static final String DELEGATION_TOKEN_ISSUED
-      = "delegation_token_issued";
 
   public static final String MULTIPART_UPLOAD_INSTANTIATED
       = "multipart_instantiated";
@@ -330,6 +385,9 @@ public final class StoreStatisticNames {
 
   public static final String MULTIPART_UPLOAD_STARTED
       = "multipart_upload_started";
+
+  public static final String MULTIPART_UPLOAD_LIST
+      = "multipart_upload_list";
 
   private StoreStatisticNames() {
   }

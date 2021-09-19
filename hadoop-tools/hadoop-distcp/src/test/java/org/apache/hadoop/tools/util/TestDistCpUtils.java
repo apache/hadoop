@@ -43,7 +43,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -1359,6 +1359,15 @@ public class TestDistCpUtils {
   private static String getBase(String base) {
     String location = String.valueOf(rand.nextLong());
     return base + "/" + location;
+  }
+
+  public static String createTestSetupWithOnlyFile(FileSystem fs,
+      FsPermission perm) throws IOException {
+    String location = String.valueOf(rand.nextLong());
+    fs.mkdirs(new Path("/tmp1/" + location));
+    fs.setPermission(new Path("/tmp1/" + location), perm);
+    createFile(fs, new Path("/tmp1/" + location + "/file"));
+    return "/tmp1/" + location + "/file";
   }
 
   public static void delete(FileSystem fs, String path) {

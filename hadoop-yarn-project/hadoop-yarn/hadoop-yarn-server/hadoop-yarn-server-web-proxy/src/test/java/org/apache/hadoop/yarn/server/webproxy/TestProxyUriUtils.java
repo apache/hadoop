@@ -24,12 +24,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
+
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestProxyUriUtils {
   @Test

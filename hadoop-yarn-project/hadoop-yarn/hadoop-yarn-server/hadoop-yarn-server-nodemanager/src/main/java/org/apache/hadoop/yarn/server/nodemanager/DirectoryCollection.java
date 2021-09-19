@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -59,6 +59,9 @@ public class DirectoryCollection {
 
   private final Configuration conf;
   private final DiskValidator diskValidator;
+
+  private boolean diskUtilizationThresholdEnabled;
+  private boolean diskFreeSpaceThresholdEnabled;
   /**
    * The enum defines disk failure type.
    */
@@ -239,9 +242,20 @@ public class DirectoryCollection {
       throw new YarnRuntimeException(e);
     }
 
-    localDirs = new CopyOnWriteArrayList<>(dirs);
-    errorDirs = new CopyOnWriteArrayList<>();
-    fullDirs = new CopyOnWriteArrayList<>();
+    diskUtilizationThresholdEnabled = conf.
+        getBoolean(YarnConfiguration.
+                NM_DISK_UTILIZATION_THRESHOLD_ENABLED,
+            YarnConfiguration.
+                DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED);
+    diskFreeSpaceThresholdEnabled = conf.
+        getBoolean(YarnConfiguration.
+                NM_DISK_FREE_SPACE_THRESHOLD_ENABLED,
+            YarnConfiguration.
+                DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED);
+
+    localDirs = new ArrayList<>(Arrays.asList(dirs));
+    errorDirs = new ArrayList<>();
+    fullDirs = new ArrayList<>();
     directoryErrorInfo = new ConcurrentHashMap<>();
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -287,7 +301,7 @@ public class DirectoryCollection {
   List<String> getFailedDirs() {
     this.readLock.lock();
     try {
-      return ImmutableList.copyOf(
+      return Collections.unmodifiableList(
           DirectoryCollection.concat(errorDirs, fullDirs));
     } finally {
       this.readLock.unlock();
@@ -315,7 +329,7 @@ public class DirectoryCollection {
   List<String> getErroredDirs() {
     this.readLock.lock();
     try {
-      return Collections.unmodifiableList(errorDirs);
+      return ImmutableList.copyOf(errorDirs);
     } finally {
       this.readLock.unlock();
     }
@@ -520,7 +534,9 @@ public class DirectoryCollection {
             diskUtilizationPercentageCutoffHigh : diskUtilizationPercentageCutoffLow;
         long diskFreeSpaceCutoff = goodDirs.contains(dir) ?
             diskFreeSpaceCutoffLow : diskFreeSpaceCutoffHigh;
-        if (isDiskUsageOverPercentageLimit(testDir,
+
+        if (diskUtilizationThresholdEnabled
+            && isDiskUsageOverPercentageLimit(testDir,
             diskUtilizationPercentageCutoff)) {
           msg =
               "used space above threshold of "
@@ -529,7 +545,8 @@ public class DirectoryCollection {
           ret.put(dir,
             new DiskErrorInformation(DiskErrorCause.DISK_FULL, msg));
           continue;
-        } else if (isDiskFreeSpaceUnderLimit(testDir, diskFreeSpaceCutoff)) {
+        } else if (diskFreeSpaceThresholdEnabled
+            && isDiskFreeSpaceUnderLimit(testDir, diskFreeSpaceCutoff)) {
           msg =
               "free space below limit of " + diskFreeSpaceCutoff
                   + "MB";
@@ -611,6 +628,28 @@ public class DirectoryCollection {
   @VisibleForTesting
   long getDiskUtilizationSpaceCutoffHigh() {
     return diskFreeSpaceCutoffHigh;
+  }
+
+  @VisibleForTesting
+  boolean getDiskUtilizationThresholdEnabled() {
+    return diskUtilizationThresholdEnabled;
+  }
+
+  @VisibleForTesting
+  boolean getDiskFreeSpaceThresholdEnabled() {
+    return diskFreeSpaceThresholdEnabled;
+  }
+
+  @VisibleForTesting
+  void setDiskUtilizationThresholdEnabled(boolean
+      utilizationEnabled) {
+    diskUtilizationThresholdEnabled = utilizationEnabled;
+  }
+
+  @VisibleForTesting
+  void setDiskFreeSpaceThresholdEnabled(boolean
+      freeSpaceEnabled) {
+    diskFreeSpaceThresholdEnabled = freeSpaceEnabled;
   }
 
   public void setDiskUtilizationSpaceCutoff(long freeSpaceCutoff) {

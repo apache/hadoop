@@ -37,7 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.slf4j.Logger;
@@ -210,8 +212,10 @@ public class Balancer {
   @VisibleForTesting
   private static volatile boolean serviceRunning = false;
 
-  private static volatile int exceptionsSinceLastBalance = 0;
-  private static volatile int failedTimesSinceLastSuccessfulBalance = 0;
+  private static final AtomicInteger EXCEPTIONS_SINCE_LAST_BALANCE =
+      new AtomicInteger(0);
+  private static final AtomicInteger
+      FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE = new AtomicInteger(0);
 
   private final Dispatcher dispatcher;
   private final NameNodeConnector nnc;
@@ -273,11 +277,11 @@ public class Balancer {
   }
 
   static int getExceptionsSinceLastBalance() {
-    return exceptionsSinceLastBalance;
+    return EXCEPTIONS_SINCE_LAST_BALANCE.get();
   }
 
   static int getFailedTimesSinceLastSuccessfulBalance() {
-    return failedTimesSinceLastSuccessfulBalance;
+    return FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.get();
   }
 
   /**
@@ -320,10 +324,12 @@ public class Balancer {
      * Balancer prefer to get blocks which are belong to the cold files
      * created before this time period.
      */
-    final long hotBlockTimeInterval = conf.getTimeDuration(
-        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
-        DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
-        TimeUnit.MILLISECONDS);
+    final long hotBlockTimeInterval =
+        p.getHotBlockTimeInterval() != 0L ? p.getHotBlockTimeInterval() :
+            conf.getTimeDuration(
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
 
     // DataNode configuration parameters for balancing
     final int maxConcurrentMovesPerNode = getInt(conf,
@@ -634,36 +640,71 @@ public class Balancer {
   }
 
   static class Result {
-    final ExitStatus exitStatus;
-    final long bytesLeftToMove;
-    final long bytesBeingMoved;
-    final long bytesAlreadyMoved;
+    private final ExitStatus exitStatus;
+    private final long bytesLeftToMove;
+    private final long bytesBeingMoved;
+    private final long bytesAlreadyMoved;
+    private final long blocksMoved;
 
     Result(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved,
-        long bytesAlreadyMoved) {
+           long bytesAlreadyMoved, long blocksMoved) {
       this.exitStatus = exitStatus;
       this.bytesLeftToMove = bytesLeftToMove;
       this.bytesBeingMoved = bytesBeingMoved;
       this.bytesAlreadyMoved = bytesAlreadyMoved;
+      this.blocksMoved = blocksMoved;
+    }
+
+    public ExitStatus getExitStatus() {
+      return exitStatus;
+    }
+
+    public long getBytesLeftToMove() {
+      return bytesLeftToMove;
+    }
+
+    public long getBytesBeingMoved() {
+      return bytesBeingMoved;
+    }
+
+    public long getBytesAlreadyMoved() {
+      return bytesAlreadyMoved;
+    }
+
+    public long getBlocksMoved() {
+      return blocksMoved;
     }
 
     void print(int iteration, NameNodeConnector nnc, PrintStream out) {
-      out.printf("%-24s %10d  %19s  %18s  %17s  %s%n",
+      out.printf("%-24s %10d  %19s  %18s  %17s  %17s  %s%n",
           DateFormat.getDateTimeInstance().format(new Date()), iteration,
           StringUtils.byteDesc(bytesAlreadyMoved),
           StringUtils.byteDesc(bytesLeftToMove),
           StringUtils.byteDesc(bytesBeingMoved),
+          blocksMoved,
           nnc.getNameNodeUri());
+    }
+
+    @Override
+    public String toString() {
+      return new ToStringBuilder(this)
+          .append("exitStatus", exitStatus)
+          .append("bytesLeftToMove", bytesLeftToMove)
+          .append("bytesBeingMoved", bytesBeingMoved)
+          .append("bytesAlreadyMoved", bytesAlreadyMoved)
+          .append("blocksMoved", blocksMoved)
+          .toString();
     }
   }
 
   Result newResult(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved) {
     return new Result(exitStatus, bytesLeftToMove, bytesBeingMoved,
-        dispatcher.getBytesMoved());
+        dispatcher.getBytesMoved(), dispatcher.getBblocksMoved());
   }
 
   Result newResult(ExitStatus exitStatus) {
-    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved());
+    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved(),
+        dispatcher.getBblocksMoved());
   }
 
   /** Run an iteration for all datanodes. */
@@ -830,20 +871,21 @@ public class Balancer {
         int retCode = doBalance(namenodes, nsIds, p, conf);
         if (retCode < 0) {
           LOG.info("Balance failed, error code: " + retCode);
-          failedTimesSinceLastSuccessfulBalance++;
+          FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.incrementAndGet();
         } else {
           LOG.info("Balance succeed!");
-          failedTimesSinceLastSuccessfulBalance = 0;
+          FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.set(0);
         }
-        exceptionsSinceLastBalance = 0;
+        EXCEPTIONS_SINCE_LAST_BALANCE.set(0);
       } catch (Exception e) {
-        if (++exceptionsSinceLastBalance > retryOnException) {
+        if (EXCEPTIONS_SINCE_LAST_BALANCE.incrementAndGet()
+            > retryOnException) {
           // The caller will process and log the exception
           throw e;
         }
         LOG.warn(
             "Encounter exception while do balance work. Already tried {} times",
-            exceptionsSinceLastBalance, e);
+            EXCEPTIONS_SINCE_LAST_BALANCE, e);
       }
 
       // sleep for next round, will retry for next round when it's interrupted

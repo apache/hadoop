@@ -498,7 +498,7 @@
           <type>RegexpComparator</type>
           <comparator>
             <type>RegexpComparator</type>
-            <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+            <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] \[-q &lt;threadPool queue size&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
           </comparator>
         </comparator>
         <comparator>
@@ -515,19 +515,23 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-p                 Preserves timestamps, ownership and the mode.( )*</expected-output>
+          <expected-output>^\s*-p                    Preserves timestamps, ownership and the mode.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-f                 Overwrites the destination if it already exists.( )*</expected-output>
+          <expected-output>^\s*-f                    Overwrites the destination if it already exists.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-t &lt;thread count&gt;  Number of threads to be used, default is 1.( )*</expected-output>
+          <expected-output>^\s*-t &lt;thread count&gt;     Number of threads to be used, default is 1.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-l                 Allow DataNode to lazily persist the file to disk. Forces( )*</expected-output>
+          <expected-output>^\s*-q &lt;threadPool size&gt;  ThreadPool queue size to be used, default is 1024.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*-l                    Allow DataNode to lazily persist the file to disk. Forces( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -539,7 +543,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-d                 Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
+          <expected-output>^\s*-d                    Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -554,7 +558,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] \[-q &lt;threadPool queue size&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -819,7 +823,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-touch \[-a\] \[-m\] \[-t TIMESTAMP \] \[-c\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-touch \[-a\] \[-m\] \[-t TIMESTAMP \(yyyyMMdd\:HHmmss\) \] \[-c\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -847,11 +851,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-t\s+TIMESTAMP\s+Use specified timestamp \(in format yyyyMMddHHmmss\) instead of</expected-output>
+          <expected-output>^\s*-t\s+TIMESTAMP\s+Use specified timestamp instead of current time( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*current time( )*</expected-output>
+          <expected-output>^\s*TIMESTAMP format yyyyMMdd\:HHmmss</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

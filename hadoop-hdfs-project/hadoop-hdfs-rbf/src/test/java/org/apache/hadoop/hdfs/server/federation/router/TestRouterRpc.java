@@ -26,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFi
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -99,6 +100,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -184,6 +186,7 @@ public class TestRouterRpc {
   private NamenodeProtocol routerNamenodeProtocol;
   /** NameNodeProtocol interface to the Namenode. */
   private NamenodeProtocol nnNamenodeProtocol;
+  private NamenodeProtocol nnNamenodeProtocol1;
 
   /** Filesystem interface to the Router. */
   private FileSystem routerFS;
@@ -365,6 +368,11 @@ public class TestRouterRpc {
     NamenodeContext nn0 = cluster.getNamenode(ns0, null);
     this.nnNamenodeProtocol = NameNodeProxies.createProxy(nn0.getConf(),
         nn0.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
+    // Namenode from the other namespace
+    String ns1 = cluster.getNameservices().get(1);
+    NamenodeContext nn1 = cluster.getNamenode(ns1, null);
+    this.nnNamenodeProtocol1 = NameNodeProxies.createProxy(nn1.getConf(),
+        nn1.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
   }
 
   protected String getNs() {
@@ -1233,7 +1241,7 @@ public class TestRouterRpc {
         newRouterFile, clientName, null, null,
         status.getFileId(), null, null);
 
-    DatanodeInfo[] exclusions = new DatanodeInfo[0];
+    DatanodeInfo[] exclusions = DatanodeInfo.EMPTY_ARRAY;
     LocatedBlock newBlock = routerProtocol.getAdditionalDatanode(
         newRouterFile, status.getFileId(), block.getBlock(),
         block.getLocations(), block.getStorageIDs(), exclusions, 1, clientName);
@@ -1301,11 +1309,14 @@ public class TestRouterRpc {
       // Check with default namespace specified.
       NamespaceInfo rVersion = routerNamenodeProtocol.versionRequest();
       NamespaceInfo nnVersion = nnNamenodeProtocol.versionRequest();
+      NamespaceInfo nnVersion1 = nnNamenodeProtocol1.versionRequest();
       compareVersion(rVersion, nnVersion);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
-      rVersion = routerNamenodeProtocol.versionRequest();
-      compareVersion(rVersion, nnVersion);
+      // Verify the NamespaceInfo is of nn0 or nn1
+      boolean isNN0 =
+          rVersion.getBlockPoolID().equals(nnVersion.getBlockPoolID());
+      compareVersion(rVersion, isNN0 ? nnVersion : nnVersion1);
     } finally {
       resolver.setDisableNamespace(false);
     }
@@ -1374,11 +1385,13 @@ public class TestRouterRpc {
       // Check with default namespace specified.
       long routerTransactionID = routerNamenodeProtocol.getTransactionID();
       long nnTransactionID = nnNamenodeProtocol.getTransactionID();
+      long nnTransactionID1 = nnNamenodeProtocol1.getTransactionID();
       assertEquals(nnTransactionID, routerTransactionID);
       // Check with default namespace unspecified.
       resolver.setDisableNamespace(true);
+      // Verify the transaction ID is of nn0 or nn1
       routerTransactionID = routerNamenodeProtocol.getTransactionID();
-      assertEquals(nnTransactionID, routerTransactionID);
+      assertThat(routerTransactionID).isIn(nnTransactionID, nnTransactionID1);
     } finally {
       resolver.setDisableNamespace(false);
     }
@@ -1748,6 +1761,14 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testNamenodeMetricsEnteringMaintenanceNodes() throws IOException {
+    final NamenodeBeanMetrics metrics =
+            router.getRouter().getNamenodeMetrics();
+
+    assertEquals("{}", metrics.getEnteringMaintenanceNodes());
+  }
+
+  @Test
   public void testCacheAdmin() throws Exception {
     DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
     // Verify cache directive commands.
@@ -1933,5 +1954,17 @@ public class TestRouterRpc {
     assertTrue(auditlog.getOutput()
         .contains("callerContext=clientContext,clientIp:"));
     assertTrue(verifyFileExists(routerFS, dirPath));
+  }
+
+  @Test
+  public void testSetBalancerBandwidth() throws Exception {
+    long defaultBandwidth =
+        DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT;
+    long newBandwidth = defaultBandwidth * 2;
+    routerProtocol.setBalancerBandwidth(newBandwidth);
+    ArrayList<DataNode> datanodes = cluster.getCluster().getDataNodes();
+    GenericTestUtils.waitFor(() ->  {
+      return datanodes.get(0).getBalancerBandwidth() == newBandwidth;
+    }, 100, 60 * 1000);
   }
 }

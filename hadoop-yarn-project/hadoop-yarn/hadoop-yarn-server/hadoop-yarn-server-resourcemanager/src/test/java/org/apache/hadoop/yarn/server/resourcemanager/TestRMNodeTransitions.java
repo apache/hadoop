@@ -68,6 +68,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStartedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -81,6 +83,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -125,7 +128,7 @@ public class TestRMNodeTransitions {
     rmContext =
         new RMContextImpl(rmDispatcher, mock(ContainerAllocationExpirer.class),
           null, null, mock(DelegationTokenRenewer.class), null, null, null,
-          null, null);
+          null, getMockResourceScheduler());
     NodesListManager nodesListManager = mock(NodesListManager.class);
     HostsFileReader reader = mock(HostsFileReader.class);
     when(nodesListManager.getHostsReader()).thenReturn(reader);
@@ -191,6 +194,16 @@ public class TestRMNodeTransitions {
     doReturn(RMNodeEventType.STATUS_UPDATE).when(event).getType();
     doReturn(getAppIdList()).when(event).getKeepAliveAppIds();
     return event;
+  }
+
+  private ResourceScheduler getMockResourceScheduler() {
+    ResourceScheduler resourceScheduler = mock(ResourceScheduler.class);
+    SchedulerNode schedulerNode = mock(SchedulerNode.class);
+    when(schedulerNode.getCopiedListOfRunningContainers())
+        .thenReturn(Collections.emptyList());
+    when(resourceScheduler.getSchedulerNode(ArgumentMatchers.any()))
+        .thenReturn(schedulerNode);
+    return resourceScheduler;
   }
 
   private List<ApplicationId> getAppIdList() {
@@ -1096,6 +1109,12 @@ public class TestRMNodeTransitions {
         node.getLaunchedContainers().contains(cid1));
     Assert.assertTrue("second container not running",
         node.getLaunchedContainers().contains(cid2));
+    assertEquals("unexpected number of running containers",
+        2, node.getUpdatedExistContainers().size());
+    Assert.assertTrue("first container not running",
+        node.getUpdatedExistContainers().containsKey(cid1));
+    Assert.assertTrue("second container not running",
+        node.getUpdatedExistContainers().containsKey(cid2));
     assertEquals("already completed containers",
         0, completedContainers.size());
     containerStats.remove(0);
@@ -1115,6 +1134,10 @@ public class TestRMNodeTransitions {
         1, node.getLaunchedContainers().size());
     Assert.assertTrue("second container not running",
         node.getLaunchedContainers().contains(cid2));
+    assertEquals("unexpected number of running containers",
+        1, node.getUpdatedExistContainers().size());
+    Assert.assertTrue("second container not running",
+        node.getUpdatedExistContainers().containsKey(cid2));
   }
 
   @Test

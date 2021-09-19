@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -52,7 +51,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
 import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
@@ -223,15 +225,15 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertFalse(fs.exists(destinationPath));
+    assertPathDoesNotExist(fs, "This path should not exist", destinationPath);
     fs.rename(sourcePath, destinationPath);
-    assertFalse(fs.exists(sourcePath));
-    assertTrue(fs.exists(destinationPath));
+    assertPathDoesNotExist(fs, "This path should not exist", sourcePath);
+    assertPathExists(fs, "This path should exist", destinationPath);
 
-    assertFalse(fs.exists(destinationDir));
+    assertPathDoesNotExist(fs, "This path should not exist", destinationDir);
     fs.rename(sourceDir, destinationDir);
-    assertFalse(fs.exists(sourceDir));
-    assertTrue(fs.exists(destinationDir));
+    assertPathDoesNotExist(fs, "This path should not exist", sourceDir);
+    assertPathExists(fs, "This path should exist", destinationDir);
   }
 
   @Test
@@ -246,13 +248,13 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertTrue(fs.exists(filePath));
+    assertPathExists(fs, "This path should exist", filePath);
     fs.delete(filePath, false);
-    assertFalse(fs.exists(filePath));
+    assertPathDoesNotExist(fs, "This path should not exist", filePath);
 
-    assertTrue(fs.exists(dirPath));
+    assertPathExists(fs, "This path should exist", dirPath);
     fs.delete(dirPath, false);
-    assertFalse(fs.exists(dirPath));
+    assertPathDoesNotExist(fs, "This path should not exist", dirPath);
   }
 
   @Test
@@ -267,11 +269,11 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       stream.writeBytes("hello");
     }
 
-    assertTrue(fs.exists(dirPath));
-    assertTrue(fs.exists(filePath));
+    assertPathExists(fs, "This path should exist", dirPath);
+    assertPathExists(fs, "This path should exist", filePath);
     fs.delete(dirPath, true);
-    assertFalse(fs.exists(filePath));
-    assertFalse(fs.exists(dirPath));
+    assertPathDoesNotExist(fs, "This path should not exist", filePath);
+    assertPathDoesNotExist(fs, "This path should not exist", dirPath);
   }
 
   @Test
@@ -395,26 +397,28 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   @Test
   public void testSignatureMask() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    String src = "/testABC/test.xt";
-    fs.create(new Path(src));
+    String src = String.format("/testABC/test%s.xt", UUID.randomUUID());
+    fs.create(new Path(src)).close();
     AbfsRestOperation abfsHttpRestOperation = fs.getAbfsClient()
-        .renamePath(src, "/testABC" + "/abc.txt", null);
+        .renamePath(src, "/testABC" + "/abc.txt", null,
+            getTestTracingContext(fs, false));
     AbfsHttpOperation result = abfsHttpRestOperation.getResult();
-    String url = result.getSignatureMaskedUrl();
-    String encodedUrl = result.getSignatureMaskedEncodedUrl();
+    String url = result.getMaskedUrl();
+    String encodedUrl = result.getMaskedEncodedUrl();
     Assertions.assertThat(url.substring(url.indexOf("sig=")))
         .describedAs("Signature query param should be masked")
-        .startsWith("sig=XXXX");
+        .startsWith("sig=XXXXX");
     Assertions.assertThat(encodedUrl.substring(encodedUrl.indexOf("sig%3D")))
         .describedAs("Signature query param should be masked")
-        .startsWith("sig%3DXXXX");
+        .startsWith("sig%3DXXXXX");
   }
 
   @Test
   public void testSignatureMaskOnExceptionMessage() throws Exception {
     intercept(IOException.class, "sig=XXXX",
         () -> getFileSystem().getAbfsClient()
-            .renamePath("testABC/test.xt", "testABC/abc.txt", null));
+            .renamePath("testABC/test.xt", "testABC/abc.txt", null,
+                getTestTracingContext(getFileSystem(), false)));
   }
 
   @Test
@@ -432,15 +436,12 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
         rootStatus.getOwner());
 
     // Attempt to set permission without being the owner.
-    try {
-      fs.setPermission(rootPath, new FsPermission(FsAction.ALL,
-          FsAction.READ_EXECUTE, FsAction.EXECUTE));
-      assertTrue("Set permission should fail because saoid is not the owner.", false);
-    } catch (AbfsRestOperationException ex) {
-      // Should fail with permission mismatch
-      assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH,
-          ex.getErrorCode());
-    }
+    intercept(AccessDeniedException.class,
+        AUTHORIZATION_PERMISSION_MISS_MATCH.getErrorCode(), () -> {
+          fs.setPermission(rootPath, new FsPermission(FsAction.ALL,
+              FsAction.READ_EXECUTE, FsAction.EXECUTE));
+          return "Set permission should fail because saoid is not the owner.";
+        });
 
     // Attempt to set permission as the owner.
     fs.setOwner(rootPath, MockDelegationSASTokenProvider.TEST_OWNER, null);

@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.server.timelineservice.documentstore.reader.cosmosdb;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import com.microsoft.azure.cosmosdb.FeedOptions;
 import com.microsoft.azure.cosmosdb.FeedResponse;
 import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.NoDocumentFoundException;

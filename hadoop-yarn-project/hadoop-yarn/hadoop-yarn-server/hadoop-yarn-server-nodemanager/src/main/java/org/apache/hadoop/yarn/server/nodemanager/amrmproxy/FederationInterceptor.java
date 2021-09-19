@@ -1413,8 +1413,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       if (otherRMAddress.equals(this.homeSubClusterId)) {
         homeResponse.setAMRMToken(otherResponse.getAMRMToken());
       } else {
-        throw new YarnRuntimeException(
-            "amrmToken from UAM " + otherRMAddress + " should be null here");
+        LOG.warn("amrmToken from UAM {} not null, it should be null here",
+            otherRMAddress);
       }
     }
 
@@ -1691,6 +1691,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     @Override
     public void callback(AllocateResponse response) {
+      org.apache.hadoop.yarn.api.records.Token amrmToken =
+          response.getAMRMToken();
       synchronized (asyncResponseSink) {
         List<AllocateResponse> responses = null;
         if (asyncResponseSink.containsKey(subClusterId)) {
@@ -1700,6 +1702,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           asyncResponseSink.put(subClusterId, responses);
         }
         responses.add(response);
+
+        if (this.isUAM) {
+          // Do not further propagate the new amrmToken for UAM
+          response.setAMRMToken(null);
+        }
         // Notify main thread about the response arrival
         asyncResponseSink.notifyAll();
       }
@@ -1716,9 +1723,9 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
       // Save the new AMRMToken for the UAM if present
       // Do this last because it can be slow...
-      if (this.isUAM && response.getAMRMToken() != null) {
+      if (this.isUAM && amrmToken != null) {
         Token<AMRMTokenIdentifier> newToken = ConverterUtils
-            .convertFromYarn(response.getAMRMToken(), (Text) null);
+            .convertFromYarn(amrmToken, (Text) null);
         // Do not further propagate the new amrmToken for UAM
         response.setAMRMToken(null);
 

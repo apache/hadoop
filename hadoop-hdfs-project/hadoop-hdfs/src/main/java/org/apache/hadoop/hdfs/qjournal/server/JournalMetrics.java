@@ -51,12 +51,7 @@ class JournalMetrics {
   @Metric("Number of bytes served via RPC")
   MutableCounterLong bytesServedViaRpc;
 
-  @Metric
-  MutableStat rpcRequestCacheMissAmount = new MutableStat(
-      "RpcRequestCacheMissAmount", "Number of RPC requests unable to be " +
-      "served due to lack of availability in cache, and how many " +
-      "transactions away the request was from being in the cache.",
-      "Misses", "Txns");
+  private MutableStat rpcRequestCacheMissAmount;
 
   @Metric("Number of RPC requests with zero edits returned")
   MutableCounterLong rpcEmptyResponses;
@@ -87,6 +82,11 @@ class JournalMetrics {
           "syncs" + interval + "s",
           "Journal sync time", "ops", "latencyMicros", interval);
     }
+    rpcRequestCacheMissAmount = registry
+        .newStat("RpcRequestCacheMissAmount", "Number of RPC requests unable to be " +
+                "served due to lack of availability in cache, and how many " +
+                "transactions away the request was from being in the cache.",
+            "Misses", "Txns");
   }
   
   public static JournalMetrics create(Journal j) {
@@ -148,5 +148,9 @@ class JournalMetrics {
 
   public void incrNumEditLogsSynced() {
     numEditLogsSynced.incr();
+  }
+
+  public void addRpcRequestCacheMissAmount(long cacheMissAmount) {
+    rpcRequestCacheMissAmount.add(cacheMissAmount);
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -30,6 +31,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
+
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -42,8 +44,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.audit.AuditConstants;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
@@ -60,11 +65,13 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 import static org.apache.hadoop.fs.s3a.Constants.THREAD_POOL_SHUTDOWN_DELAY_SECONDS;
 import static org.apache.hadoop.fs.s3a.Invoker.ignoreIOExceptions;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
+import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
@@ -129,6 +136,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    */
   private final JobUUIDSource uuidSource;
 
+  private final CommonAuditContext commonAuditContext;
+
   /**
    * Has this instance been used for job setup?
    * If so then it is safe for a locally generated
@@ -176,6 +185,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   private final CommitterStatistics committerStatistics;
 
   /**
+   * Source of Audit spans.
+   */
+  private final AuditSpanSource auditSpanSource;
+
+  /**
    * Create a committer.
    * This constructor binds the destination directory and configuration, but
    * does not update the work path: That must be calculated by the
@@ -203,6 +217,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
         role, jobName(context), jobIdString(context), outputPath);
     S3AFileSystem fs = getDestS3AFS();
+    // set this thread's context with the job ID.
+    // audit spans created in this thread will pick
+    // up this value.
+    this.commonAuditContext = currentAuditContext();
+    updateCommonContext();
+    // the filesystem is the span source, always.
+    auditSpanSource = fs.getAuditSpanSource();
     this.createJobMarker = context.getConfiguration().getBoolean(
         CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
         DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
@@ -535,6 +556,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
     TaskAttemptID attemptID = context.getTaskAttemptID();
+    updateCommonContext();
+
     try (DurationInfo d = new DurationInfo(LOG, "Setup Task %s",
         attemptID)) {
       // reject attempts to set up the task where the output won't be
@@ -809,8 +832,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       try {
         pending = ops.listPendingUploadsUnderPath(dest);
       } catch (IOException e) {
-        // raised if the listPendingUploads call failed.
-        maybeIgnore(suppressExceptions, "aborting pending uploads", e);
+        // Swallow any errors given this is best effort
+        LOG.debug("Failed to list pending uploads under {}", dest, e);
         return;
       }
       if (!pending.isEmpty()) {
@@ -947,11 +970,11 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
   protected void maybeIgnore(
       boolean suppress,
       String action,
-      Invoker.VoidOperation operation) throws IOException {
+      InvocationRaisingIOE operation) throws IOException {
     if (suppress) {
       ignoreIOExceptions(LOG, action, "", operation);
     } else {
-      operation.execute();
+      operation.apply();
     }
   }
 
@@ -1359,6 +1382,43 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       sb.append('}');
       return sb.toString();
     }
+  }
+
+  /**
+   * Add jobID to current context.
+   */
+  protected final void updateCommonContext() {
+    currentAuditContext().put(AuditConstants.PARAM_JOB_ID, uuid);
+  }
+
+  /**
+   * Remove JobID from the current thread's context.
+   */
+  protected final void resetCommonContext() {
+    currentAuditContext().remove(AuditConstants.PARAM_JOB_ID);
+  }
+
+  protected AuditSpanSource getAuditSpanSource() {
+    return auditSpanSource;
+  }
+
+  /**
+   * Start an operation; retrieve an audit span.
+   *
+   * All operation names <i>SHOULD</i> come from
+   * {@code StoreStatisticNames} or
+   * {@code StreamStatisticNames}.
+   * @param name operation name.
+   * @param path1 first path of operation
+   * @param path2 second path of operation
+   * @return a span for the audit
+   * @throws IOException failure
+   */
+  protected AuditSpan startOperation(String name,
+      @Nullable String path1,
+      @Nullable String path2)
+      throws IOException {
+    return getAuditSpanSource().createSpan(name, path1, path2);
   }
 
   /**

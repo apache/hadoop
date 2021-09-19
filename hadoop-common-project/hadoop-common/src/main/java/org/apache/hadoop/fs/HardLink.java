@@ -153,11 +153,11 @@ public class HardLink {
    */
 
   /**
-   * Creates a hardlink 
+   * Creates a hardlink.
    * @param file - existing source file
    * @param linkName - desired target link file
    */
-  public static void createHardLink(File file, File linkName) 
+  public static void createHardLink(File file, File linkName)
       throws IOException {
     if (file == null) {
       throw new IOException(

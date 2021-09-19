@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -46,10 +48,12 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.s3a.WriteOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
+import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -62,11 +66,13 @@ import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMIT_JOB;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MATERIALIZE_FILE;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_STAGE_FILE_UPLOAD;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
+import static org.apache.hadoop.util.functional.RemoteIterators.cleanupRemoteIterator;
 
 /**
  * The implementation of the various actions a committer needs.
@@ -78,7 +84,8 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
  * duplicate that work.
  *
  */
-public class CommitOperations implements IOStatisticsSource {
+public class CommitOperations extends AbstractStoreOperation
+    implements IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       CommitOperations.class);
 
@@ -93,7 +100,7 @@ public class CommitOperations implements IOStatisticsSource {
   /**
    * Write operations for the destination fs.
    */
-  private final WriteOperationHelper writeOperations;
+  private final WriteOperations writeOperations;
 
   /**
    * Filter to find all {code .pendingset} files.
@@ -110,21 +117,29 @@ public class CommitOperations implements IOStatisticsSource {
   /**
    * Instantiate.
    * @param fs FS to bind to
+   * @throws IOException failure to bind.
    */
-  public CommitOperations(S3AFileSystem fs) {
+  public CommitOperations(S3AFileSystem fs) throws IOException {
     this(requireNonNull(fs), fs.newCommitterStatistics());
   }
 
   /**
-   * Instantiate.
+   * Instantiate. This creates a new audit span for
+   * the commit operations.
    * @param fs FS to bind to
    * @param committerStatistics committer statistics
+   * @throws IOException failure to bind.
    */
   public CommitOperations(S3AFileSystem fs,
-      CommitterStatistics committerStatistics) {
-    this.fs = requireNonNull(fs);
+      CommitterStatistics committerStatistics) throws IOException {
+    super(requireNonNull(fs).createStoreContext());
+    this.fs = fs;
     statistics = requireNonNull(committerStatistics);
-    writeOperations = fs.getWriteOperationHelper();
+    // create a span
+    writeOperations = fs.createWriteOperationHelper(
+        fs.getAuditSpanSource().createSpan(
+            COMMITTER_COMMIT_JOB.getSymbol(),
+            "/", null));
   }
 
   /**
@@ -362,6 +377,7 @@ public class CommitOperations implements IOStatisticsSource {
         }
       }
     }
+    cleanupRemoteIterator(pendingFiles);
     return outcome;
   }
 
@@ -385,7 +401,7 @@ public class CommitOperations implements IOStatisticsSource {
    */
   public List<MultipartUpload> listPendingUploadsUnderPath(Path dest)
       throws IOException {
-    return fs.listMultipartUploads(fs.pathToKey(dest));
+    return writeOperations.listMultipartUploads(fs.pathToKey(dest));
   }
 
   /**
@@ -431,8 +447,6 @@ public class CommitOperations implements IOStatisticsSource {
         conf.getTrimmed(METADATASTORE_AUTHORITATIVE, "false"));
     successData.addDiagnostic(AUTHORITATIVE_PATH,
         conf.getTrimmed(AUTHORITATIVE_PATH, ""));
-    successData.addDiagnostic(MAGIC_COMMITTER_ENABLED,
-        conf.getTrimmed(MAGIC_COMMITTER_ENABLED, "false"));
 
     // now write
     Path markerPath = new Path(outputPath, _SUCCESS);
@@ -484,7 +498,7 @@ public class CommitOperations implements IOStatisticsSource {
     if (!localFile.isFile()) {
       throw new FileNotFoundException("Not a file: " + localFile);
     }
-    String destURI = destPath.toString();
+    String destURI = destPath.toUri().toString();
     String destKey = fs.pathToKey(destPath);
     String uploadId = null;
 
@@ -604,6 +618,29 @@ public class CommitOperations implements IOStatisticsSource {
    */
   public CommitContext initiateCommitOperation(Path path) throws IOException {
     return new CommitContext(writeOperations.initiateCommitOperation(path));
+  }
+
+  /**
+   * Get the magic file length of a file.
+   * If the FS doesn't support the API, the attribute is missing or
+   * the parse to long fails, then Optional.empty() is returned.
+   * Static for some easier testability.
+   * @param fs filesystem
+   * @param path path
+   * @return either a length or None.
+   * @throws IOException on error
+   * */
+  public static Optional<Long> extractMagicFileLength(FileSystem fs, Path path)
+      throws IOException {
+    byte[] bytes;
+    try {
+      bytes = fs.getXAttr(path, XA_MAGIC_MARKER);
+    } catch (UnsupportedOperationException e) {
+      // FS doesn't support xattr.
+      LOG.debug("Filesystem {} doesn't support XAttr API", fs);
+      return Optional.empty();
+    }
+    return HeaderProcessing.extractXAttrLongValue(bytes);
   }
 
   /**

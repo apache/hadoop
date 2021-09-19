@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.tracing.TraceUtils;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 
 /**
  * Holds the HTrace Tracer used for FileSystem operations.
@@ -45,18 +45,6 @@ public final class FsTracer {
           build();
     }
     return instance;
-  }
-
-  @VisibleForTesting
-  public static synchronized void clear() {
-    if (instance == null) {
-      return;
-    }
-    try {
-      instance.close();
-    } finally {
-      instance = null;
-    }
   }
 
   private FsTracer() {

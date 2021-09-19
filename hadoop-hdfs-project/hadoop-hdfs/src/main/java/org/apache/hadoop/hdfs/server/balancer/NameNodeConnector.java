@@ -163,6 +163,7 @@ public class NameNodeConnector implements Closeable {
   private final List<Path> targetPaths;
   private final AtomicLong bytesMoved = new AtomicLong();
   private final AtomicLong blocksMoved = new AtomicLong();
+  private final AtomicLong blocksFailed = new AtomicLong();
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
@@ -230,12 +231,16 @@ public class NameNodeConnector implements Closeable {
     return blockpoolID;
   }
 
-  AtomicLong getBytesMoved() {
+  public AtomicLong getBytesMoved() {
     return bytesMoved;
   }
 
-  AtomicLong getBlocksMoved() {
+  public AtomicLong getBlocksMoved() {
     return blocksMoved;
+  }
+
+  public AtomicLong getBlocksFailed() {
+    return blocksFailed;
   }
 
   public void addBytesMoved(long numBytes) {
@@ -254,37 +259,19 @@ public class NameNodeConnector implements Closeable {
       getBlocksRateLimiter.acquire();
     }
     boolean isRequestStandby = false;
-    NamenodeProtocol nnproxy = null;
+    NamenodeProtocol nnProxy = null;
     try {
-      if (requestToStandby && nsId != null
-          && HAUtil.isHAEnabled(config, nsId)) {
-        List<ClientProtocol> namenodes =
-            HAUtil.getProxiesForAllNameNodesInNameservice(config, nsId);
-        for (ClientProtocol proxy : namenodes) {
-          try {
-            if (proxy.getHAServiceState().equals(
-                HAServiceProtocol.HAServiceState.STANDBY)) {
-              NamenodeProtocol sbn = NameNodeProxies.createNonHAProxy(
-                  config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
-                  UserGroupInformation.getCurrentUser(), false).getProxy();
-              nnproxy = sbn;
-              isRequestStandby = true;
-              break;
-            }
-          } catch (Exception e) {
-            // Ignore the exception while connecting to a namenode.
-            LOG.debug("Error while connecting to namenode", e);
-          }
-        }
-        if (nnproxy == null) {
-          LOG.warn("Request #getBlocks to Standby NameNode but meet exception,"
-              + " will fallback to normal way.");
-          nnproxy = namenode;
-        }
+      ProxyPair proxyPair = getProxy();
+      isRequestStandby = proxyPair.isRequestStandby;
+      ClientProtocol proxy = proxyPair.clientProtocol;
+      if (isRequestStandby) {
+        nnProxy = NameNodeProxies.createNonHAProxy(
+            config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
+            UserGroupInformation.getCurrentUser(), false).getProxy();
       } else {
-        nnproxy = namenode;
+        nnProxy = namenode;
       }
-      return nnproxy.getBlocks(datanode, size, minBlockSize, timeInterval);
+      return nnProxy.getBlocks(datanode, size, minBlockSize, timeInterval);
     } finally {
       if (isRequestStandby) {
         LOG.info("Request #getBlocks to Standby NameNode success.");
@@ -309,7 +296,54 @@ public class NameNodeConnector implements Closeable {
   /** @return live datanode storage reports. */
   public DatanodeStorageReport[] getLiveDatanodeStorageReport()
       throws IOException {
-    return namenode.getDatanodeStorageReport(DatanodeReportType.LIVE);
+    boolean isRequestStandby = false;
+    try {
+      ProxyPair proxyPair = getProxy();
+      isRequestStandby = proxyPair.isRequestStandby;
+      ClientProtocol proxy = proxyPair.clientProtocol;
+      return proxy.getDatanodeStorageReport(DatanodeReportType.LIVE);
+    } finally {
+      if (isRequestStandby) {
+        LOG.info("Request #getLiveDatanodeStorageReport to Standby " +
+            "NameNode success.");
+      }
+    }
+  }
+
+  /**
+   * get the proxy.
+   * @return ProxyPair(clientProtocol and isRequestStandby)
+   * @throws IOException
+   */
+  private ProxyPair getProxy() throws IOException {
+    boolean isRequestStandby = false;
+    ClientProtocol clientProtocol = null;
+    if (requestToStandby && nsId != null
+        && HAUtil.isHAEnabled(config, nsId)) {
+      List<ClientProtocol> namenodes =
+          HAUtil.getProxiesForAllNameNodesInNameservice(config, nsId);
+      for (ClientProtocol proxy : namenodes) {
+        try {
+          if (proxy.getHAServiceState().equals(
+              HAServiceProtocol.HAServiceState.STANDBY)) {
+            clientProtocol = proxy;
+            isRequestStandby = true;
+            break;
+          }
+        } catch (Exception e) {
+          // Ignore the exception while connecting to a namenode.
+          LOG.debug("Error while connecting to namenode", e);
+        }
+      }
+      if (clientProtocol == null) {
+        LOG.warn("Request to Standby" +
+            " NameNode but meet exception, will fallback to normal way.");
+        clientProtocol = namenode;
+      }
+    } else {
+      clientProtocol = namenode;
+    }
+    return new ProxyPair(clientProtocol, isRequestStandby);
   }
 
   /** @return the key manager */
@@ -426,5 +460,15 @@ public class NameNodeConnector implements Closeable {
   public String toString() {
     return getClass().getSimpleName() + "[namenodeUri=" + nameNodeUri
         + ", bpid=" + blockpoolID + "]";
+  }
+
+  private static class ProxyPair {
+    private final ClientProtocol clientProtocol;
+    private final boolean isRequestStandby;
+
+    ProxyPair(ClientProtocol clientProtocol, boolean isRequestStandby) {
+      this.clientProtocol = clientProtocol;
+      this.isRequestStandby = isRequestStandby;
+    }
   }
 }

@@ -31,7 +31,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -68,9 +67,11 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.util.LimitInputStream;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.VersionInfo;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;

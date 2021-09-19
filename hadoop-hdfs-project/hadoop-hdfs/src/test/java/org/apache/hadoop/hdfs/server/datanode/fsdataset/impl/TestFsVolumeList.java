@@ -358,7 +358,7 @@ public class TestFsVolumeList {
     assertEquals(200, volume5.getAvailable());
   }
 
-  @Test(timeout = 60000)
+  @Test(timeout = 300000)
   public void testAddRplicaProcessorForAddingReplicaInMap() throws Exception {
     BlockPoolSlice.reInitializeAddReplicaThreadPool();
     Configuration cnf = new Configuration();

@@ -66,11 +66,11 @@ import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestReconstructStripedFile {
   public static final Logger LOG =
@@ -85,9 +85,9 @@ public class TestReconstructStripedFile {
   private int dnNum;
 
   static {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.TRACE);
   }
 
   enum ReconstructionType {
@@ -105,6 +105,23 @@ public class TestReconstructStripedFile {
 
   public ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
+  }
+
+  public boolean isValidationEnabled() {
+    return false;
+  }
+
+  public int getPendingTimeout() {
+    return DFSConfigKeys
+        .DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
+  }
+
+  public int getBlockSize() {
+    return blockSize;
+  }
+
+  public MiniDFSCluster getCluster() {
+    return cluster;
   }
 
   @Before
@@ -128,6 +145,11 @@ public class TestReconstructStripedFile {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+        getPendingTimeout());
+    conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
+        isValidationEnabled());
     File basedir = new File(GenericTestUtils.getRandomizedTempPath());
     cluster = new MiniDFSCluster.Builder(conf, basedir).numDataNodes(dnNum)
         .build();
@@ -303,7 +325,7 @@ public class TestReconstructStripedFile {
    *    and verify the block replica length, generationStamp and content.
    * 2. Read the file and verify content.
    */
-  private void assertFileBlocksReconstruction(String fileName, int fileLen,
+  void assertFileBlocksReconstruction(String fileName, int fileLen,
       ReconstructionType type, int toRecoverBlockNum) throws Exception {
     if (toRecoverBlockNum < 1 || toRecoverBlockNum > parityBlkNum) {
       Assert.fail("toRecoverBlockNum should be between 1 ~ " + parityBlkNum);
@@ -546,7 +568,7 @@ public class TestReconstructStripedFile {
     writeFile(fs, "/ec-xmits-weight", fileLen);
 
     DataNode dn = cluster.getDataNodes().get(0);
-    int corruptBlocks = dn.getFSDataset().getSortedFinalizedBlocks(
+    int corruptBlocks = dn.getFSDataset().getFinalizedBlocks(
         cluster.getNameNode().getNamesystem().getBlockPoolId()).size();
     int expectedXmits = corruptBlocks * expectedWeight;
 

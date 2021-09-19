@@ -22,7 +22,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -45,11 +45,16 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
 
 public class TestCapacitySchedulerWeightMode {
-  private final int GB = 1024;
+  private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String A1 = A + ".a1";
+  private static final String B1 = B + ".b1";
+  private static final String B2 = B + ".b2";
 
   private YarnConfiguration conf;
 
@@ -91,14 +96,12 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setLabeledQueueWeight(A, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setLabeledQueueWeight(A, "x", 100);
     conf.setLabeledQueueWeight(A, "y", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setLabeledQueueWeight(B, RMNodeLabelsManager.NO_LABEL, 9);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
@@ -106,7 +109,6 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(B, "z", 100);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] { "a1" });
     conf.setLabeledQueueWeight(A1, RMNodeLabelsManager.NO_LABEL, 100);
     conf.setMaximumCapacity(A1, 100);
@@ -116,12 +118,10 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(A1, "y", 100);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    final String B1 = B + ".b1";
     conf.setLabeledQueueWeight(B1, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    final String B2 = B + ".b2";
     conf.setLabeledQueueWeight(B2, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
@@ -155,14 +155,12 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
     conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setLabeledQueueWeight(A, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setLabeledQueueWeight(A, "x", 100);
     conf.setLabeledQueueWeight(A, "y", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setLabeledQueueWeight(B, RMNodeLabelsManager.NO_LABEL, 9);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
@@ -170,7 +168,6 @@ public class TestCapacitySchedulerWeightMode {
     conf.setLabeledQueueWeight(B, "z", 100);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] { "a1" });
     conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100);
     conf.setMaximumCapacity(A1, 100);
@@ -180,12 +177,10 @@ public class TestCapacitySchedulerWeightMode {
     conf.setCapacityByLabel(A1, "y", 100);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    final String B1 = B + ".b1";
     conf.setCapacityByLabel(B1, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    final String B2 = B + ".b2";
     conf.setCapacityByLabel(B2, RMNodeLabelsManager.NO_LABEL, 50);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
@@ -203,9 +198,9 @@ public class TestCapacitySchedulerWeightMode {
    *               a x(=100%), y(50%)   b y(=50%), z(=100%)
    *               ________________             ______________
    *              /                           /              \
-   *             a1 ([x,y]: w=100)    b1(no)          b2([y,z]: w=100)
+   *             a1 ([x,y]: w=1)    b1(no)          b2([y,z]: w=1)
    *
-   * Parent uses weight, child uses percentage
+   * Parent uses percentages, child uses weights
    */
   public static Configuration getCSConfWithLabelsParentUsePctChildUseWeight(
       Configuration config) {
@@ -215,18 +210,16 @@ public class TestCapacitySchedulerWeightMode {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] { "a", "b" });
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setLabeledQueueWeight(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
+    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 10);
     conf.setMaximumCapacity(A, 10);
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setCapacityByLabel(A, "x", 100);
     conf.setCapacityByLabel(A, "y", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacityByLabel(B, RMNodeLabelsManager.NO_LABEL, 90);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
@@ -234,27 +227,24 @@ public class TestCapacitySchedulerWeightMode {
     conf.setCapacityByLabel(B, "z", 100);
 
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] { "a1" });
-    conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100);
+    conf.setLabeledQueueWeight(A1, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(A1, 100);
     conf.setAccessibleNodeLabels(A1, toSet("x", "y"));
     conf.setDefaultNodeLabelExpression(A1, "x");
-    conf.setCapacityByLabel(A1, "x", 100);
-    conf.setCapacityByLabel(A1, "y", 100);
+    conf.setLabeledQueueWeight(A1, "x", 1);
+    conf.setLabeledQueueWeight(A1, "y", 1);
 
     conf.setQueues(B, new String[] { "b1", "b2" });
-    final String B1 = B + ".b1";
-    conf.setCapacityByLabel(B1, RMNodeLabelsManager.NO_LABEL, 50);
+    conf.setLabeledQueueWeight(B1, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(B1, 50);
     conf.setAccessibleNodeLabels(B1, RMNodeLabelsManager.EMPTY_STRING_SET);
 
-    final String B2 = B + ".b2";
-    conf.setCapacityByLabel(B2, RMNodeLabelsManager.NO_LABEL, 50);
+    conf.setLabeledQueueWeight(B2, RMNodeLabelsManager.NO_LABEL, 1);
     conf.setMaximumCapacity(B2, 50);
     conf.setAccessibleNodeLabels(B2, toSet("y", "z"));
-    conf.setCapacityByLabel(B2, "y", 100);
-    conf.setCapacityByLabel(B2, "z", 100);
+    conf.setLabeledQueueWeight(B2, "y", 1);
+    conf.setLabeledQueueWeight(B2, "z", 1);
 
     return conf;
   }
@@ -267,7 +257,7 @@ public class TestCapacitySchedulerWeightMode {
    */
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabelsWeightOnly() throws Exception {
-    internalTestContainerAlloationWithNodeLabel(
+    internalTestContainerAllocationWithNodeLabel(
         getCSConfWithQueueLabelsWeightOnly(conf));
   }
 
@@ -280,7 +270,7 @@ public class TestCapacitySchedulerWeightMode {
    */
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed1() throws Exception {
-    internalTestContainerAlloationWithNodeLabel(
+    internalTestContainerAllocationWithNodeLabel(
         getCSConfWithLabelsParentUseWeightChildUsePct(conf));
   }
 
@@ -293,12 +283,128 @@ public class TestCapacitySchedulerWeightMode {
    */
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed2() throws Exception {
-    internalTestContainerAlloationWithNodeLabel(
+    internalTestContainerAllocationWithNodeLabel(
         getCSConfWithLabelsParentUsePctChildUseWeight(conf));
   }
 
-  private void internalTestContainerAlloationWithNodeLabel(Configuration csConf)
-      throws Exception {
+  /**
+   * This checks whether the parent prints the correct log about the
+   * configured mode.
+   */
+  @Test(timeout = 300000)
+  public void testGetCapacityOrWeightStringUsingWeights() throws IOException {
+    try (MockRM rm = new MockRM(
+        getCSConfWithQueueLabelsWeightOnly(conf))) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getExtendedCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+    }
+  }
+
+  /**
+   * This checks whether the parent prints the correct log about the
+   * configured mode.
+   */
+  @Test(timeout = 300000)
+  public void testGetCapacityOrWeightStringParentPctLeafWeights()
+      throws IOException {
+    try (MockRM rm = new MockRM(
+        getCSConfWithLabelsParentUseWeightChildUsePct(conf))) {
+      rm.start();
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+      String capacityOrWeightString = ((ParentQueue) cs.getQueue(A))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, true);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, false);
+
+      capacityOrWeightString = ((LeafQueue) cs.getQueue(A1))
+          .getExtendedCapacityOrWeightString();
+      validateCapacityOrWeightString(capacityOrWeightString, false);
+    }
+  }
+
+  /**
+   * This test ensures that while iterating through a parent's Node Labels
+   * (when calculating the normalized weights) the parent's Node Labels won't
+   * be added to the children with weight -1. If the parent
+   * has a node label that a specific child doesn't the normalized calling the
+   * normalized weight setter will be skipped. The queue root.b has access to
+   * the labels "x" and "y", but root.b.b1 won't. For more information see
+   * YARN-10807.
+   * @throws Exception
+   */
+  @Test
+  public void testChildAccessibleNodeLabelsWeightMode() throws Exception {
+    MockRM rm = new MockRM(getCSConfWithQueueLabelsWeightOnly(conf));
+    rm.start();
+
+    CapacityScheduler cs =
+        (CapacityScheduler) rm.getRMContext().getScheduler();
+    LeafQueue b1 = (LeafQueue) cs.getQueue(B1);
+
+    Assert.assertNotNull(b1);
+    Assert.assertTrue(b1.getAccessibleNodeLabels().isEmpty());
+
+    Set<String> b1ExistingNodeLabels = ((CSQueue) b1).getQueueCapacities()
+        .getExistingNodeLabels();
+    Assert.assertEquals(1, b1ExistingNodeLabels.size());
+    Assert.assertEquals("", b1ExistingNodeLabels.iterator().next());
+
+    rm.close();
+  }
+
+  @Test
+  public void testQueueInfoWeight() throws Exception {
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
+        conf);
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"a", "b", "default"});
+    csConf.setNonLabeledQueueWeight("root.a", 1);
+    csConf.setNonLabeledQueueWeight("root.b", 2);
+    csConf.setNonLabeledQueueWeight("root.default", 3);
+
+    // Check queue info capacity
+    CapacityScheduler cs =
+        (CapacityScheduler)rm.getRMContext().getScheduler();
+    cs.reinitialize(csConf, rm.getRMContext());
+
+    LeafQueue a = (LeafQueue)
+        cs.getQueue("root.a");
+    Assert.assertNotNull(a);
+    Assert.assertEquals(a.getQueueCapacities().getWeight(),
+        a.getQueueInfo(false,
+        false).getWeight(), 1e-6);
+
+    LeafQueue b = (LeafQueue)
+        cs.getQueue("root.b");
+    Assert.assertNotNull(b);
+    Assert.assertEquals(b.getQueueCapacities().getWeight(),
+        b.getQueueInfo(false,
+        false).getWeight(), 1e-6);
+    rm.close();
+  }
+
+  private void internalTestContainerAllocationWithNodeLabel(
+      Configuration csConf) throws Exception {
     /*
      * Queue structure:
      *                      root (*)
@@ -448,5 +554,16 @@ public class TestCapacitySchedulerWeightMode {
         Assert.assertEquals(host, c.getAllocatedNode().getHost());
       }
     }
+  }
+
+  private void validateCapacityOrWeightString(String capacityOrWeightString,
+      boolean shouldContainWeight) {
+    Assert.assertEquals(shouldContainWeight,
+        capacityOrWeightString.contains("weight"));
+    Assert.assertEquals(shouldContainWeight,
+        capacityOrWeightString.contains("normalizedWeight"));
+    Assert.assertEquals(!shouldContainWeight,
+        capacityOrWeightString.contains("capacity"));
+
   }
 }
