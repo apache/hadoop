@@ -47,10 +47,15 @@ public class TraceUtils {
     return deserialize(byteString);
   }
 
-  public static ByteString spanContextToByteString(SpanContext context) {
-    Map<String, String> kvMap = context.getKVSpanContext();
-    ByteString byteString = serialize(kvMap);
-    return byteString;
+  public static SpanContext mapToSpanContext(Map<String, String> kvMap) {
+    return SpanContext.buildFromKVMap(kvMap);
+  }
+
+  public static Map<String, String> spanContextToMap(SpanContext context) {
+    if(context == null){
+      return null;
+    }
+    return context.getKVSpanContext();
   }
 
   //Added this for tracing will remove this after having

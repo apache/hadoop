@@ -63,6 +63,9 @@ public class Tracer {
   }
 
   public TraceScope newScope(String description, SpanContext spanCtx) {
+    if(spanCtx == null){
+      return new TraceScope(new Span(io.opentelemetry.api.trace.Span.getInvalid()));
+    }
     return new TraceScope(newSpan(description, spanCtx));
   }
 

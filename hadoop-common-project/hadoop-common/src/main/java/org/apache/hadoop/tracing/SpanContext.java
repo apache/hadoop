@@ -63,21 +63,27 @@ public class SpanContext implements Closeable  {
   }
 
   static SpanContext buildFromKVMap(Map<String, String> kvMap){
-    String traceId = kvMap.get(TRACE_ID);
-    kvMap.remove(TRACE_ID);
-    String spanId = kvMap.get(SPAN_ID);
-    kvMap.remove(SPAN_ID);
-    String traceFlagsHex = kvMap.get(TRACE_FLAGS);
-    kvMap.remove(TRACE_FLAGS);
-    TraceFlags traceFlags = TraceFlags.fromHex(traceFlagsHex, 0);
-    TraceStateBuilder traceStateBuilder = TraceState.builder();
-    for(Map.Entry<String, String> keyValue: kvMap.entrySet()){
-      traceStateBuilder.put(keyValue.getKey(), keyValue.getValue());
+    try{
+      String traceId = kvMap.get(TRACE_ID);
+      String spanId = kvMap.get(SPAN_ID);
+      String traceFlagsHex = kvMap.get(TRACE_FLAGS);
+      TraceFlags traceFlags = TraceFlags.fromHex(traceFlagsHex, 0);
+      TraceStateBuilder traceStateBuilder = TraceState.builder();
+      for(Map.Entry<String, String> keyValue: kvMap.entrySet()){
+        if(keyValue.getKey().equals(TRACE_ID) || keyValue.getKey().equals(SPAN_ID) || keyValue.getKey().equals(TRACE_FLAGS)){
+          continue;
+        }
+        traceStateBuilder.put(keyValue.getKey(), keyValue.getValue());
+      }
+      TraceState traceState = traceStateBuilder.build();
+      io.opentelemetry.api.trace.SpanContext spanContext = io.opentelemetry.api.trace.SpanContext.createFromRemoteParent(traceId, spanId, traceFlags, traceState );
+      return new SpanContext(spanContext);
+    } catch (Exception e){
+      LOG.error("Error in processing remote context " + kvMap != null? kvMap.toString() : "", e);
+      return null;
     }
-    TraceState traceState = traceStateBuilder.build();
-    io.opentelemetry.api.trace.SpanContext spanContext = io.opentelemetry.api.trace.SpanContext.createFromRemoteParent(traceId, spanId, traceFlags, traceState );
 
-    return new SpanContext(spanContext);
+
   }
 
   public io.opentelemetry.api.trace.SpanContext getSpanContext() {
