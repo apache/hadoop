@@ -20,16 +20,21 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.store.DataBlocks;
 
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assume;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
 
 /**
@@ -39,17 +44,44 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
   private static final int ONE_MB = 1024 * 1024;
   private static final int EIGHT_MB = 8 * ONE_MB;
-  private final int size;
+  // Configurable huge file upload: "fs.azure.scale.test.huge.upload",
+  // default is 2 * DEFAULT_WRITE_BUFFER_SIZE(8M).
+  private static final int HUGE_FILE;
 
-  @Parameterized.Parameters(name = "Size={0}")
-  public static Iterable<Object[]> sizes() {
-    return Arrays.asList(new Object[][] {
-        { DEFAULT_WRITE_BUFFER_SIZE },
-        { getHugeFileUploadValue() } });
+  static {
+    HUGE_FILE = getHugeFileUploadValue();
   }
 
-  public ITestAbfsHugeFiles(int size) throws Exception {
+  // Writing block size to be used in this test.
+  private int size;
+  // Block Factory to be used in this test.
+  private String blockFactoryName;
+
+  @Parameterized.Parameters(name = "size [{0}] ; blockFactoryName "
+      + "[{1}]")
+  public static Collection<Object[]> sizes() {
+    return Arrays.asList(new Object[][] {
+        { DEFAULT_WRITE_BUFFER_SIZE, DataBlocks.DATA_BLOCKS_BUFFER_DISK },
+        { HUGE_FILE, DataBlocks.DATA_BLOCKS_BUFFER_DISK },
+        { DEFAULT_WRITE_BUFFER_SIZE, DataBlocks.DATA_BLOCKS_BUFFER_ARRAY },
+        { HUGE_FILE, DataBlocks.DATA_BLOCKS_BUFFER_ARRAY },
+        { DEFAULT_WRITE_BUFFER_SIZE, DataBlocks.DATA_BLOCKS_BYTEBUFFER },
+        { HUGE_FILE, DataBlocks.DATA_BLOCKS_BYTEBUFFER },
+    });
+  }
+
+  public ITestAbfsHugeFiles(int size, String blockFactoryName)
+      throws Exception {
     this.size = size;
+    this.blockFactoryName = blockFactoryName;
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    configuration.unset(DATA_BLOCKS_BUFFER);
+    configuration.set(DATA_BLOCKS_BUFFER, blockFactoryName);
+    super.setup();
   }
 
   /**
@@ -88,7 +120,6 @@ public class ITestAbfsHugeFiles extends AbstractAbfsScaleTest {
         offset += EIGHT_MB;
       }
     }
-    LOG.info(String.valueOf(size % EIGHT_MB));
     // Verify correct length was uploaded. Don't want to verify contents
     // here, as this would increase the test time significantly.
     assertEquals("Mismatch in content length of file uploaded", size,

@@ -63,10 +63,10 @@ public class TestDataBlocks {
    */
   public void testCreateFactory(String nameOfFactory) throws Exception {
     LOG.info("Testing: {}", nameOfFactory);
-    DataBlocks.BlockFactory diskFactory =
+    DataBlocks.BlockFactory blockFactory =
         DataBlocks.createFactory("Dir", configuration, nameOfFactory);
 
-    DataBlocks.DataBlock dataBlock = diskFactory.create(0, ONE_KB, null);
+    DataBlocks.DataBlock dataBlock = blockFactory.create(0, ONE_KB, null);
     assertWriteBlock(dataBlock);
     assertToByteArray(dataBlock);
     assertCloseBlock(dataBlock);

@@ -148,7 +148,7 @@ public final class DataBlocks {
    * The output information for an upload.
    * It can be one of a file, an input stream or a byteArray.
    * {@link #toByteArray()} method to be used to convert the data into byte
-   * array to be doen in this class as well.
+   * array to be done in this class as well.
    * When closed, any stream is closed. Any source file is untouched.
    */
   public static final class BlockUploadData implements Closeable {
