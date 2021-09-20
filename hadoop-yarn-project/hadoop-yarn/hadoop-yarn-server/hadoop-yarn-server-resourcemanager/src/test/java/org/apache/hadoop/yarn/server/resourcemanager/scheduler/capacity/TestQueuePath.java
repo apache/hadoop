@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class QueuePathTest {
+public class TestQueuePath {
   private static final String TEST_QUEUE = "root.level_1.level_2.level_3";
 
   @Test
@@ -84,23 +84,23 @@ public class QueuePathTest {
     QueuePath queuePathWithEmptyPart = new QueuePath("root..level_2");
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
 
-    List<QueuePath> queuePathCollection = ImmutableList.copyOf(queuePath.reversePathIterator());
-    List<QueuePath> queuePathWithEmptyPartCollection = ImmutableList.copyOf(
-        queuePathWithEmptyPart.reversePathIterator());
-    List<QueuePath> rootPathCollection = ImmutableList.copyOf(rootPath.reversePathIterator());
+    List<String> queuePathCollection = ImmutableList.copyOf(queuePath.reverseIterator());
+    List<String> queuePathWithEmptyPartCollection = ImmutableList.copyOf(
+        queuePathWithEmptyPart.reverseIterator());
+    List<String> rootPathCollection = ImmutableList.copyOf(rootPath.reverseIterator());
 
     Assert.assertEquals(4, queuePathCollection.size());
     Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
-        queuePathCollection.get(3).getFullPath());
-    Assert.assertEquals(TEST_QUEUE, queuePathCollection.get(0).getFullPath());
+        queuePathCollection.get(3));
+    Assert.assertEquals(TEST_QUEUE, queuePathCollection.get(0));
 
     Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
     Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
-        queuePathWithEmptyPartCollection.get(2).getFullPath());
-    Assert.assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0).getFullPath());
+        queuePathWithEmptyPartCollection.get(2));
+    Assert.assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0));
 
     Assert.assertEquals(1, rootPathCollection.size());
     Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
-        rootPathCollection.get(0).getFullPath());
+        rootPathCollection.get(0));
   }
 }

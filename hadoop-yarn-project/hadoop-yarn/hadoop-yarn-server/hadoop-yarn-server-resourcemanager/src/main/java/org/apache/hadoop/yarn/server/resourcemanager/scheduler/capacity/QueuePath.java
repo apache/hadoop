@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
@@ -145,27 +146,28 @@ public class QueuePath implements Iterable<String> {
    * current queue through its parents.
    * @return queue path iterator
    */
-  public Iterator<QueuePath> reversePathIterator() {
-    QueuePath initial = this;
+  public Iterator<String> reverseIterator() {
 
-    return new Iterator<QueuePath>() {
-      private boolean stop = false;
-      private QueuePath current = initial;
+    return new Iterator<String>() {
+      private String current = getFullPath();
 
       @Override
       public boolean hasNext() {
-        return !stop;
+        return current != null;
       }
 
       @Override
-      public QueuePath next() {
-        QueuePath old = current;
-        if (current.hasParent()) {
-          current = new QueuePath(current.getParent());
+      public String next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
         }
 
-        if (!old.hasParent()) {
-          stop = true;
+        int parentQueueNameEndIndex = current.lastIndexOf(".");
+        String old = current;
+        if (parentQueueNameEndIndex > -1) {
+          current = current.substring(0, parentQueueNameEndIndex).trim();
+        } else {
+          current = null;
         }
 
         return old;
@@ -186,9 +188,9 @@ public class QueuePath implements Iterable<String> {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    QueuePath strings = (QueuePath) o;
-    return Objects.equals(parent, strings.parent) &&
-        Objects.equals(leaf, strings.leaf);
+    QueuePath other = (QueuePath) o;
+    return Objects.equals(parent, other.parent) &&
+        Objects.equals(leaf, other.leaf);
   }
 
   @Override
