@@ -291,10 +291,11 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
     fs.mkdirs(testFilePath.getParent());
 
-    FSDataOutputStream out = fs.create(testFilePath);
-    out.write(0);
-    Assert.assertFalse("Store leases should exist", fs.getAbfsStore().areLeasesFreed());
-    out.close();
+    try (FSDataOutputStream out = fs.create(testFilePath)) {
+      out.write(0);
+      Assert.assertFalse("Store leases should exist",
+          fs.getAbfsStore().areLeasesFreed());
+    }
     fs.close();
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
 

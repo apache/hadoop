@@ -56,7 +56,7 @@ public class TestDataBlocks {
   }
 
   /**
-   * Verify creation of a data block factory and it's operations.
+   * Verify creation of a data block factory and its operations.
    *
    * @param nameOfFactory Name of the DataBlock factory to be created.
    * @throws IOException Throw IOE in case of failure while creating a block.
@@ -88,8 +88,8 @@ public class TestDataBlocks {
     // Verify that the DataBlock has data written.
     assertTrue("Expected Data block to have data", dataBlock.hasData());
     // Verify the size of data.
-    assertEquals("Mismatch in data size in block", dataBlock.dataSize(),
-        ONE_KB);
+    assertEquals("Mismatch in data size in block", ONE_KB,
+        dataBlock.dataSize());
     // Verify that no capacity is left in the data block to write more.
     assertFalse("Expected the data block to have no capacity to write 1 byte "
         + "of data", dataBlock.hasCapacity(1));
