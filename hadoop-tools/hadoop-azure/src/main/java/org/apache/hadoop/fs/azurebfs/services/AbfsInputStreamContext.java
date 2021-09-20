@@ -51,7 +51,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean bufferedPreadDisabled;
 
-  private HashMap<String, String> encryptionHeaders;
+  private HashMap<String, String> encryptionHeaders = null;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);

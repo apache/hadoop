@@ -261,7 +261,7 @@ public class AbfsClient implements Closeable {
             encryptionContext));
         encryptionHeaders = getEncryptionHeaders(path, encryptionContext);
 
-      } else if (encryptionHeaders == null) {
+      } else if (encryptionHeaders == null || encryptionHeaders.isEmpty()) {
         encryptionContext = getPathStatus(path, false,
             tracingContext).getResult().getResponseHeader(X_MS_PROPERTIES);
         encryptionHeaders = getEncryptionHeaders(path, encryptionContext);

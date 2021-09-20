@@ -696,9 +696,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
           .orElse(null);
       String relativePath = getRelativePath(path);
-      String resourceType, eTag;
-      String encryptionContext = null;
+      String resourceType, eTag, encryptionContext;
       long contentLength;
+      HashMap<String, String> encryptionHeaders = null;
       if (fileStatus instanceof VersionedFileStatus
           && client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
         path = path.makeQualified(this.uri, path);
@@ -721,8 +721,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = Long.parseLong(
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-        encryptionContext = op.getResponseHeader(
-            HttpHeaderConfigurations.X_MS_PROPERTIES);
+        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+          encryptionContext = op.getResponseHeader(
+              HttpHeaderConfigurations.X_MS_PROPERTIES);
+          if (encryptionContext == null) {
+            throw new IOException(
+                "Encryption context missing from server response");
+          }
+          encryptionHeaders = client.getEncryptionHeaders(path.toString(),
+              encryptionContext);
+        }
       }
 
       if (parseIsDirectory(resourceType)) {
@@ -738,8 +746,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
-          parameters.map(OpenFileParameters::getOptions),
-          client.getEncryptionHeaders(path.toString(), encryptionContext)),
+          parameters.map(OpenFileParameters::getOptions), encryptionHeaders),
           eTag, tracingContext);
     }
   }
