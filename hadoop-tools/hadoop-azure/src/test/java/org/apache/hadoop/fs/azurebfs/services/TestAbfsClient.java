@@ -105,7 +105,7 @@ public final class TestAbfsClient {
       boolean includeSSLProvider) throws IOException {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, (AccessTokenProvider) null, abfsClientContext);
+        config, (AccessTokenProvider) null, null, abfsClientContext);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -276,6 +276,7 @@ public final class TestAbfsClient {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
+        null,
         abfsClientContext);
 
     return testClient;

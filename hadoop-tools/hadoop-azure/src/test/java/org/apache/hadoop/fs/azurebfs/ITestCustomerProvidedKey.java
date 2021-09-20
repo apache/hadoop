@@ -121,7 +121,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read(fileName, 0, buffer, 0, length, eTag, null, tracingContext);
+        .read(fileName, 0, buffer, 0, length, eTag, null, null, tracingContext);
     assertCPKHeaders(abfsRestOperation, true);
     assertResponseHeader(abfsRestOperation, true, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
@@ -171,7 +171,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     final String eTag = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.ETAG);
     AbfsRestOperation abfsRestOperation = abfsClient
-        .read(fileName, 0, buffer, 0, length, eTag, null, tracingContext);
+        .read(fileName, 0, buffer, 0, length, eTag, null, null, tracingContext);
     assertCPKHeaders(abfsRestOperation, false);
     assertResponseHeader(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
@@ -190,7 +190,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.read(fileName, 0, buffer, 0, length, eTag, null,
-            getTestTracingContext(fs, false));
+            null, getTestTracingContext(fs, false));
       });
     }
   }
@@ -208,7 +208,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .append(fileName, buffer, appendRequestParameters, null, getTestTracingContext(fs, false));
+        .append(fileName, buffer, appendRequestParameters, null, null, getTestTracingContext(fs, false));
     assertCPKHeaders(abfsRestOperation, true);
     assertResponseHeader(abfsRestOperation, true, X_MS_ENCRYPTION_KEY_SHA256,
         getCPKSha(fs));
@@ -225,7 +225,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.append(fileName, buffer, appendRequestParameters, null,
-            getTestTracingContext(fs, false));
+            null, getTestTracingContext(fs, false));
       });
     }
 
@@ -235,7 +235,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient3.append(fileName, buffer, appendRequestParameters, null,
-            getTestTracingContext(fs, false));
+            null, getTestTracingContext(fs, false));
       });
     }
   }
@@ -253,7 +253,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     byte[] buffer = getRandomBytesArray(5);
     AbfsClient abfsClient = fs.getAbfsClient();
     AbfsRestOperation abfsRestOperation = abfsClient
-        .append(fileName, buffer, appendRequestParameters, null,
+        .append(fileName, buffer, appendRequestParameters, null, null,
             getTestTracingContext(fs, false));
     assertCPKHeaders(abfsRestOperation, false);
     assertResponseHeader(abfsRestOperation, false, X_MS_ENCRYPTION_KEY_SHA256,
@@ -271,7 +271,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.append(fileName, buffer, appendRequestParameters, null,
-            getTestTracingContext(fs, false));
+            null, getTestTracingContext(fs, false));
       });
     }
   }
@@ -432,7 +432,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient2 = fs2.getAbfsClient();
     TracingContext tracingContext = getTestTracingContext(fs, false);
     abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50,
-        null, tracingContext);
+        null, null);
     assertListstatus(fs, abfsRestOperation, testPath);
 
     if (isWithCPK) {
@@ -486,7 +486,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .createPath(testFileName, true, true,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null, false, null,
-            tracingContext);
+            null, tracingContext);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
@@ -572,7 +572,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         abfsClient2.flush(testFileName, 0, false, false, null, null,
-            getTestTracingContext(fs, false));
+            null, getTestTracingContext(fs, false));
       });
     }
 
@@ -583,7 +583,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
           .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
         LambdaTestUtils.intercept(IOException.class, () -> {
           abfsClient3.flush(testFileName, 0, false, false, null, null,
-              getTestTracingContext(fs, false));
+              null, getTestTracingContext(fs, false));
         });
       }
     }
@@ -591,7 +591,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  With correct CPK
     AbfsRestOperation abfsRestOperation = abfsClient
         .flush(testFileName, 0, false, false, null, null,
-            getTestTracingContext(fs, false));
+            null, getTestTracingContext(fs, false));
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, expectedCPKSha);
