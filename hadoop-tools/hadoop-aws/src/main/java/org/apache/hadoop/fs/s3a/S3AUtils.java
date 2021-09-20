@@ -1578,10 +1578,13 @@ public final class S3AUtils {
    * @return the encryption key or ""
    * @throws IllegalArgumentException bad arguments.
    */
+  @SuppressWarnings("deprecation")
   public static String getS3EncryptionKey(String bucket,
       Configuration conf) {
     try {
-      return lookupPassword(bucket, conf, Constants.S3_ENCRYPTION_KEY);
+      String oldKey = lookupPassword(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
+      // return the newKey with oldKey as fallback/default value.
+      return lookupPassword(bucket, conf, S3_ENCRYPTION_KEY, null, oldKey);
     } catch (IOException e) {
       LOG.error("Cannot retrieve " + Constants.S3_ENCRYPTION_KEY, e);
       return "";
@@ -1599,11 +1602,17 @@ public final class S3AUtils {
    * one is set.
    * @throws IOException on any validation problem.
    */
+  @SuppressWarnings("deprecation")
   public static S3AEncryptionMethods getEncryptionAlgorithm(String bucket,
       Configuration conf) throws IOException {
+    // lookup old property and use that as default/fallback for new lookup.
+    S3AEncryptionMethods oldEncryptionMethod = S3AEncryptionMethods.getMethod(
+        lookupPassword(bucket, conf,
+            SERVER_SIDE_ENCRYPTION_ALGORITHM));
+    // new lookup.
     S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(
         lookupPassword(bucket, conf,
-            Constants.S3_ENCRYPTION_ALGORITHM));
+            Constants.S3_ENCRYPTION_ALGORITHM, oldEncryptionMethod.getMethod()));
     String encryptionKey = getS3EncryptionKey(bucket, conf);
     int encryptionKeyLen =
         StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();
