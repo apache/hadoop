@@ -2048,30 +2048,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * Get the weights of all users at this queue level from the configuration.
    * Used in computing user-specific user limit, relative to other users.
    * @param queuePath full queue path
-   * @return map of user weights, if they exists. Otherwise, return empty map.
+   * @return map of user weights, if they exist. Otherwise, return empty map.
    */
-  public Map<String, Float> getAllUserWeightsForQueue(String queuePath) {
-    Map <String, Float> userWeights = new HashMap <>();
-    String qPathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
-    Map<String, String> props = getConfigurationProperties()
-        .getPropertiesWithPrefix(qPathPlusPrefix);
-
-    Map<String, String> result = new HashMap<>();
-    for(Map.Entry<String, String> item: props.entrySet()) {
-      Matcher m = USER_WEIGHT_PATTERN.matcher(item.getKey());
-      if(m.find()) {
-        result.put(item.getKey(), substituteVars(item.getValue()));
-      }
-    }
-
-    for (Entry<String, String> e : result.entrySet()) {
-      String userName =
-          e.getKey().replaceFirst("\\." + USER_WEIGHT, "");
-      if (!userName.isEmpty()) {
-        userWeights.put(userName, new Float(e.getValue()));
-      }
-    }
-    return userWeights;
+  public UserWeights getAllUserWeightsForQueue(String queuePath) {
+    return UserWeights.createByConfig(this, getConfigurationProperties(), queuePath);
   }
 
   public boolean getAssignMultipleEnabled() {
