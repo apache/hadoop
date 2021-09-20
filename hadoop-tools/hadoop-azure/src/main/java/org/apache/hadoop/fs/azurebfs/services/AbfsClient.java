@@ -195,10 +195,6 @@ public class AbfsClient implements Closeable {
     return Base64.getEncoder().encodeToString(bytes);
   }
 
-  public void setClientProvidedEncryptionKey(String key) {
-    clientProvidedEncryptionKey = key;
-  }
-
   @Override
   public void close() throws IOException {
     if (tokenProvider instanceof Closeable) {
@@ -255,10 +251,13 @@ public class AbfsClient implements Closeable {
       break;
     case ENCRYPTION_CONTEXT:
       if (isCreateFileRequest) {
-        encryptionContext = encryptionContextProvider.getEncryptionContext(path)
-            .toString();  // get new context for create file request
-        requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-            encryptionContext));
+//        encryptionContext = new String((encryptionContextProvider.getEncryptionContext(path)).readAllBytes(), StandardCharsets.UTF_8);  // get new context for create file
+        encryptionContext =
+            org.apache.commons.io.IOUtils.toString(encryptionContextProvider.getEncryptionContext(path),
+                StandardCharsets.UTF_8.name());
+        // request
+//        requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
+//            encryptionContext));
         encryptionHeaders = getEncryptionHeaders(path, encryptionContext);
 
       } else if (encryptionHeaders == null || encryptionHeaders.isEmpty()) {
@@ -281,8 +280,8 @@ public class AbfsClient implements Closeable {
 
   public HashMap<String, String> getEncryptionHeaders(String path,
       String encryptionContext) throws IOException {
-    String key = encryptionContextProvider.getEncryptionKey(path,
-        encryptionContext).toString();
+    String key = org.apache.commons.io.IOUtils.toString(encryptionContextProvider.getEncryptionKey(path,
+        encryptionContext), StandardCharsets.UTF_8.name());
     HashMap<String, String> encryptionHeaders = new HashMap<>();
     encryptionHeaders.put(X_MS_ENCRYPTION_KEY, getBase64EncodedString(key));
     encryptionHeaders.put(X_MS_ENCRYPTION_KEY_SHA256,

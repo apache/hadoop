@@ -1,6 +1,5 @@
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import org.apache.avro.util.ByteBufferInputStream;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.ByteArrayInputStream;
@@ -33,7 +32,7 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   @Override
   public ByteArrayInputStream getEncryptionKey(String path,
       String encryptionContext) throws IOException {
-    if (encryptionContext.equals(pathToContextMap.get(path))) {
+    if (!encryptionContext.equals(pathToContextMap.get(path))) {
       throw new IOException("encryption context does not match path");
     }
     return new ByteArrayInputStream(contextToKeyMap.get(encryptionContext)

@@ -911,6 +911,9 @@ public class AbfsConfiguration{
 
     try {
       String configKey = FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+      if (get(configKey) == null) {
+        return null;
+      }
       Class<? extends EncryptionContextProvider> encryptionContextClass =
           getAccountSpecificClass(configKey, null, EncryptionContextProvider.class);
       if (encryptionContextClass == null) {

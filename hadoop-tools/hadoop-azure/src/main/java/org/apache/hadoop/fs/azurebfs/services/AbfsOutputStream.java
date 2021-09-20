@@ -680,6 +680,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   }
 
   @VisibleForTesting
+  public boolean isEncryptionHeadersCached() {
+    return encryptionHeaders != null;
+  }
+
+  @VisibleForTesting
   public boolean isLeaseFreed() {
     if (lease == null) {
       return true;
