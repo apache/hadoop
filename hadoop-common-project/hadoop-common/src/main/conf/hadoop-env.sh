@@ -435,6 +435,7 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 ###
 # export OPENTELEMETRY_JAVAAGENT_PATH="$(find $HADOOP_HOME/share/hadoop/common/lib/ -name opentelemetry-javaagent*)"
 # export HADOOP_TRACE_OPTS="-javaagent:$OPENTELEMETRY_JAVAAGENT_PATH -Dotel.traces.exporter=jaeger -Dotel.metrics.exporter=none"
-# export HDFS_NAMENODE_OPTS="$HDFS_NAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=HDFS_NAMENODE"
-# export HDFS_DATANODE_OPTS="$HDFS_DATANODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=HDFS_DATANODE"
-# export HDFS_SECONDARYNAMENODE_OPTS="$HDFS_SECONDARYNAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=HDFS_SECONDARYNAMENODE"
+# export HDFS_NAMENODE_OPTS="$HDFS_NAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-namenode"
+# export HDFS_DATANODE_OPTS="$HDFS_DATANODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-datanode"
+# export HDFS_SECONDARYNAMENODE_OPTS="$HDFS_SECONDARYNAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-secondarynamenode"
+# export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hadoop-client"
