@@ -50,7 +50,7 @@ import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -197,6 +197,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
    * Testing how unencrypted and encrypted data behaves when read through
    * CSE enabled and disabled FS respectively.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testEncryptionEnabledAndDisabledFS() throws Exception {
     maybeSkipTest();
@@ -207,7 +208,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     Path encryptedFilePath = path(getMethodName() + "cse");
 
     // Initialize a CSE disabled FS.
-    removeBucketOverrides(getTestBucketName(cseDisabledConf),
+    removeBaseAndBucketOverrides(getTestBucketName(cseDisabledConf),
         cseDisabledConf,
         S3_ENCRYPTION_ALGORITHM,
         S3_ENCRYPTION_KEY,

@@ -1612,7 +1612,9 @@ public final class S3AUtils {
     // new lookup.
     S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(
         lookupPassword(bucket, conf,
-            Constants.S3_ENCRYPTION_ALGORITHM, oldEncryptionMethod.getMethod()));
+            Constants.S3_ENCRYPTION_ALGORITHM,
+            null,
+            oldEncryptionMethod.getMethod()));
     String encryptionKey = getS3EncryptionKey(bucket, conf);
     int encryptionKeyLen =
         StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();
