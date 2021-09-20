@@ -730,8 +730,8 @@ public class TestCodec {
   public void testGzipCompatibilityWithCompressor() throws IOException {
     // don't use native libs
     ZlibFactory.setNativeZlibLoaded(false);
-    Configuration conf = new Configuration();
-    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    Configuration hadoopConf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, hadoopConf);
     Random r = new Random();
 
     for (int i = 0; i < 100; i++){
@@ -739,9 +739,9 @@ public class TestCodec {
       assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
         .isInstanceOf(BuiltInGzipCompressor.class);
 
-      long seed = r.nextLong();
-      r.setSeed(seed);
-      LOG.info("seed: {}", seed);
+      long randonSeed = r.nextLong();
+      r.setSeed(randonSeed);
+      LOG.info("seed: {}", randonSeed);
 
       int inputSize = r.nextInt(256 * 1024 + 1);
       byte[] b = new byte[inputSize];
@@ -781,8 +781,8 @@ public class TestCodec {
   public void testGzipCompatibilityWithCompressorAndGZIPOutputStream() throws IOException {
     // don't use native libs
     ZlibFactory.setNativeZlibLoaded(false);
-    Configuration conf = new Configuration();
-    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    Configuration hadoopConf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, hadoopConf);
     Random r = new Random();
 
     for (int i = 0; i < 100; i++){
@@ -790,9 +790,9 @@ public class TestCodec {
       assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
         .isInstanceOf(BuiltInGzipCompressor.class);
 
-      long seed = r.nextLong();
-      r.setSeed(seed);
-      LOG.info("seed: {}", seed);
+      long randonSeed = r.nextLong();
+      r.setSeed(randonSeed);
+      LOG.info("seed: {}", randonSeed);
 
       int inputSize = r.nextInt(256 * 1024 + 1);
       byte[] b = new byte[inputSize];
@@ -832,8 +832,8 @@ public class TestCodec {
   public void testGzipCompatibilityWithCompressorStreamAndGZIPOutputStream() throws IOException {
     // don't use native libs
     ZlibFactory.setNativeZlibLoaded(false);
-    Configuration conf = new Configuration();
-    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, conf);
+    Configuration hadoopConf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(GzipCodec.class, hadoopConf);
     Random r = new Random();
 
     for (int i = 0; i < 100; i++){
@@ -843,9 +843,9 @@ public class TestCodec {
           .isInstanceOf(BuiltInGzipCompressor.class);
         CompressionOutputStream compressionOutputStream = codec.createOutputStream(dflbuf, compressor);
 
-        long seed = r.nextLong();
-        r.setSeed(seed);
-        LOG.info("seed: {}", seed);
+        long randonSeed = r.nextLong();
+        r.setSeed(randonSeed);
+        LOG.info("seed: {}", randonSeed);
 
         int inputSize = r.nextInt(256 * 1024 + 1);
         byte[] b = new byte[inputSize];
