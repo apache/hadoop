@@ -79,9 +79,8 @@ public class QueuePath implements Iterable<String> {
    * @return true if there is at least one empty part of the path
    */
   public boolean hasEmptyPart() {
-    String[] parts = getFullPath().split("\\.");
-    for (int i = 0; i < parts.length; i++) {
-      if (parts[i].equals("")) {
+    for (String part : this) {
+      if (part.isEmpty()) {
         return true;
       }
     }

@@ -61,7 +61,8 @@ public class QueuePathTest {
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
 
     List<String> queuePathCollection = ImmutableList.copyOf(queuePath.iterator());
-    List<String> queuePathWithEmptyPartCollection = ImmutableList.copyOf(queuePathWithEmptyPart.iterator());
+    List<String> queuePathWithEmptyPartCollection = ImmutableList.copyOf(
+        queuePathWithEmptyPart.iterator());
     List<String> rootPathCollection = ImmutableList.copyOf(rootPath.iterator());
 
     Assert.assertEquals(4, queuePathCollection.size());
@@ -69,7 +70,8 @@ public class QueuePathTest {
     Assert.assertEquals("level_3", queuePathCollection.get(3));
 
     Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathWithEmptyPartCollection.get(0));
+    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+        queuePathWithEmptyPartCollection.get(0));
     Assert.assertEquals("level_2", queuePathWithEmptyPartCollection.get(2));
 
     Assert.assertEquals(1, rootPathCollection.size());
@@ -83,18 +85,22 @@ public class QueuePathTest {
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
 
     List<QueuePath> queuePathCollection = ImmutableList.copyOf(queuePath.reversePathIterator());
-    List<QueuePath> queuePathWithEmptyPartCollection = ImmutableList.copyOf(queuePathWithEmptyPart.reversePathIterator());
+    List<QueuePath> queuePathWithEmptyPartCollection = ImmutableList.copyOf(
+        queuePathWithEmptyPart.reversePathIterator());
     List<QueuePath> rootPathCollection = ImmutableList.copyOf(rootPath.reversePathIterator());
 
     Assert.assertEquals(4, queuePathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathCollection.get(3).getFullPath());
+    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+        queuePathCollection.get(3).getFullPath());
     Assert.assertEquals(TEST_QUEUE, queuePathCollection.get(0).getFullPath());
 
     Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathWithEmptyPartCollection.get(2).getFullPath());
+    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+        queuePathWithEmptyPartCollection.get(2).getFullPath());
     Assert.assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0).getFullPath());
 
     Assert.assertEquals(1, rootPathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, rootPathCollection.get(0).getFullPath());
+    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+        rootPathCollection.get(0).getFullPath());
   }
 }
