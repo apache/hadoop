@@ -141,6 +141,7 @@
     <netty4.version>4.1.68.Final</netty4.version>
     <snappy-java.version>1.1.8.2</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
+    <aircompressor.version>0.16</aircompressor.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
@@ -1762,6 +1763,11 @@
         <artifactId>lz4-java</artifactId>
         <version>${lz4-java.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.airlift</groupId>
+        <artifactId>aircompressor</artifactId>
+        <version>${aircompressor.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -2459,5 +2465,9 @@
   </profiles>
 
   <repositories>
+    <repository>
+      <id>twitter</id>
+      <url>https://maven.twttr.com/</url>
+    </repository>
   </repositories>
 </project>

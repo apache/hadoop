@@ -49,6 +49,7 @@ import java.util.Random;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.hadoop.compression.lzo.LzoCodec;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -79,6 +80,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,6 +168,18 @@ public class TestCodec {
   public void testDeflateCodec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.DeflateCodec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.DeflateCodec");
+  }
+
+  @Test
+  public void testLzoCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzoCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzoCodec");
+  }
+
+  @Test
+  public void testLzopCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzopCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
   }
 
   @Test
@@ -1258,6 +1272,186 @@ public class TestCodec {
       IOUtils.copyBytes(gzin, dflbuf, 4096);
       final byte[] dflchk = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
       assertThat(b).as("check decompressed output").isEqualTo(dflchk);
+    }
+  }
+
+  @Test
+  public void testLzoCompatibilityWithCompressor() throws IOException {
+    Configuration hadoopConf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(com.hadoop.compression.lzo.LzoCodec.class, hadoopConf);
+    Random r = new Random();
+
+    for (int i = 0; i < 100; i++) {
+      DataOutputBuffer outputBuffer = new DataOutputBuffer();
+      assertTrue(outputBuffer.getLength() == 0);
+      Compressor compressor = codec.createCompressor();
+      LOG.info("compressor: {}", compressor.getClass().toString());
+      assertThat(compressor).as("compressor should not be null").isNotNull();
+
+      CompressionOutputStream compressStream = codec.createOutputStream(outputBuffer, compressor);
+
+      long randonSeed = r.nextLong();
+      r.setSeed(randonSeed);
+
+      int inputSize = r.nextInt(256 * 1024 + 1) + 1;
+      byte[] b = new byte[inputSize];
+      r.nextBytes(b);
+      compressStream.write(b);
+      compressStream.flush();
+      compressStream.finish();
+
+      assertTrue(outputBuffer.getLength() > 0);
+      int compressedSize = outputBuffer.getLength();
+
+      DataInputBuffer lzobuf = new DataInputBuffer();
+      assertTrue(lzobuf.getLength() == 0);
+
+      lzobuf.reset(outputBuffer.getData(), 0, outputBuffer.getLength());
+      assertTrue(lzobuf.getLength() == compressedSize);
+      assertTrue(lzobuf.getPosition() == 0);
+
+      Decompressor decom = codec.createDecompressor();
+      LOG.info("decompressor: {}", decom.getClass().toString());
+      assertThat(decom).as("decompressor should not be null").isNotNull();
+
+      InputStream gzin = codec.createInputStream(lzobuf, decom);
+      DataOutputBuffer dflbuf = new DataOutputBuffer();
+      IOUtils.copyBytes(gzin, dflbuf, inputSize);
+      final byte[] dataRead = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+      assertArrayEquals(b, dataRead);
+
+      gzin.close();
+    }
+  }
+
+  @Test
+  public void testLzoCompatibilityWithNewCompressor() throws IOException {
+    Configuration hadoopConf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(com.hadoop.compression.lzo.LzoCodec.class, hadoopConf);
+    CompressionCodec codec2 = ReflectionUtils.newInstance(LzoCodec2.class, hadoopConf);
+    Random r = new Random();
+
+    for (int i = 0; i < 100; i++) {
+      DataOutputBuffer outputBuffer = new DataOutputBuffer();
+      assertTrue(outputBuffer.getLength() == 0);
+      Compressor compressor = codec2.createCompressor();
+      LOG.info("compressor: {}", compressor.getClass().toString());
+      assertThat(compressor).as("compressor should not be null").isNotNull();
+
+      CompressionOutputStream compressStream = codec.createOutputStream(outputBuffer, compressor);
+
+      long randonSeed = r.nextLong();
+      r.setSeed(randonSeed);
+
+      int inputSize = r.nextInt(256) + 1;
+      byte[] b = new byte[inputSize];
+      r.nextBytes(b);
+      compressStream.write(b);
+      compressStream.flush();
+      compressStream.finish();
+
+      assertTrue(outputBuffer.getLength() > 0);
+      int compressedSize = outputBuffer.getLength();
+
+      DataInputBuffer lzobuf = new DataInputBuffer();
+      assertTrue(lzobuf.getLength() == 0);
+
+      lzobuf.reset(outputBuffer.getData(), 0, outputBuffer.getLength());
+      assertTrue(lzobuf.getLength() == compressedSize);
+      assertTrue(lzobuf.getPosition() == 0);
+
+      Decompressor decom = codec.createDecompressor();
+      LOG.info("decompressor: {}", decom.getClass().toString());
+      assertThat(decom).as("decompressor should not be null").isNotNull();
+
+      InputStream gzin = codec.createInputStream(lzobuf, decom);
+      DataOutputBuffer dflbuf = new DataOutputBuffer();
+      IOUtils.copyBytes(gzin, dflbuf, inputSize);
+      final byte[] dataRead = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+      assertArrayEquals(b, dataRead);
+
+      gzin.close();
+    }
+  }
+
+  private void checkCompressedOutput(DataOutputBuffer outputBuffer, int compressedSize, byte[] b, int inputSize, CompressionCodec codec) throws IOException {
+    DataInputBuffer lzobuf = new DataInputBuffer();
+    assertTrue(lzobuf.getLength() == 0);
+
+    lzobuf.reset(outputBuffer.getData(), 0, outputBuffer.getLength());
+    assertTrue(lzobuf.getLength() == compressedSize);
+    assertTrue(lzobuf.getPosition() == 0);
+
+    Decompressor decom = codec.createDecompressor();
+    LOG.info("decompressor: {}", decom.getClass().toString());
+    assertThat(decom).as("decompressor should not be null").isNotNull();
+
+    InputStream gzin = codec.createInputStream(lzobuf, decom);
+    DataOutputBuffer dflbuf = new DataOutputBuffer();
+    IOUtils.copyBytes(gzin, dflbuf, inputSize);
+    final byte[] dataRead = Arrays.copyOf(dflbuf.getData(), dflbuf.getLength());
+    assertArrayEquals(b, dataRead);
+
+    gzin.close();
+  }
+
+  @Test
+  public void testLzoNewCompressor() throws IOException {
+    Configuration hadoopConf = new Configuration();
+    CompressionCodec codec = ReflectionUtils.newInstance(com.hadoop.compression.lzo.LzoCodec.class, hadoopConf);
+    CompressionCodec codec2 = ReflectionUtils.newInstance(LzoCodec2.class, hadoopConf);
+    Random r = new Random();
+
+    for (int i = 0; i < 100; i++) {
+      DataOutputBuffer outputBuffer = new DataOutputBuffer();
+      DataOutputBuffer outputBuffer2 = new DataOutputBuffer();
+
+      assertTrue(outputBuffer.getLength() == 0);
+      assertTrue(outputBuffer2.getLength() == 0);
+
+      Compressor compressor = codec.createCompressor();
+      Compressor compressor2 = codec2.createCompressor();
+      LOG.info("compressor: {}", compressor.getClass().toString());
+      LOG.info("compressor2: {}", compressor2.getClass().toString());
+
+      assertThat(compressor).as("compressor should not be null").isNotNull();
+      assertThat(compressor2).as("compressor should not be null").isNotNull();
+
+      CompressionOutputStream compressStream = codec.createOutputStream(outputBuffer, compressor);
+      CompressionOutputStream compressStream2 = codec2.createOutputStream(outputBuffer2, compressor2);
+
+      long randonSeed = r.nextLong();
+      r.setSeed(randonSeed);
+
+      int inputSize = r.nextInt(256) + 1;
+      byte[] b = new byte[inputSize];
+      LOG.info("inputSize: " + inputSize);
+      r.nextBytes(b);
+      compressStream.write(b);
+      compressStream.flush();
+      compressStream.finish();
+
+      compressStream2.write(b);
+      compressStream2.flush();
+      compressStream2.finish();
+
+      assertTrue(outputBuffer.getLength() >= 0);
+      int compressedSize = outputBuffer.getLength();
+      LOG.info("compressor compressed size: " + compressedSize);
+
+      assertTrue(outputBuffer2.getLength() >= 0);
+      int compressedSize2 = outputBuffer2.getLength();
+      LOG.info("compressor2 compressed size: " + compressedSize2);
+
+      assertThat(compressedSize).isEqualTo(compressedSize2);
+
+      checkCompressedOutput(outputBuffer, compressedSize, b, inputSize, codec);
+      checkCompressedOutput(outputBuffer2, compressedSize2, b, inputSize, codec);
+
+      final byte[] dataRead = Arrays.copyOf(outputBuffer.getData(), outputBuffer.getLength());
+      final byte[] dataRead2 = Arrays.copyOf(outputBuffer2.getData(), outputBuffer2.getLength());
+
+      assertArrayEquals(dataRead, dataRead2);
     }
   }
 }
