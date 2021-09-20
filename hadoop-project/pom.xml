@@ -920,6 +920,12 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>io.opentelemetry.javaagent</groupId>
+        <artifactId>opentelemetry-javaagent</artifactId>
+        <version>${opentelemetry-instrumentation.version}</version>
+        <classifier>all</classifier>
+      </dependency>
+      <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
         <version>${netty3.version}</version>

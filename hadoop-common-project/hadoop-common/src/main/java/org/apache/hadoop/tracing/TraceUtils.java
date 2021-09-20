@@ -34,8 +34,7 @@ public class TraceUtils {
   public static final Logger LOG = LoggerFactory.getLogger(TraceUtils.class.getName());
   static final String DEFAULT_HADOOP_TRACE_PREFIX = "hadoop.htrace.";
 
-  public static TraceConfiguration wrapHadoopConf(final String prefix,
-      final Configuration conf) {
+  public static TraceConfiguration wrapHadoopConf(final String prefix, final Configuration conf) {
     return null;
   }
 
@@ -43,46 +42,14 @@ public class TraceUtils {
     return null;
   }
 
-  public static SpanContext byteStringToSpanContext(ByteString byteString) {
-    return deserialize(byteString);
-  }
-
   public static SpanContext mapToSpanContext(Map<String, String> kvMap) {
     return SpanContext.buildFromKVMap(kvMap);
   }
 
   public static Map<String, String> spanContextToMap(SpanContext context) {
-    if(context == null){
+    if (context == null) {
       return null;
     }
     return context.getKVSpanContext();
-  }
-
-  //Added this for tracing will remove this after having
-  // a discussion
-  static ByteString serialize(Object obj){
-    try{
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      ObjectOutputStream os = new ObjectOutputStream(out);
-      os.writeObject(obj);
-      os.flush();
-      byte[] byteArray = out.toByteArray();
-      return ByteString.copyFrom(byteArray);
-    } catch (Exception e){
-      LOG.error("Error in searializing the object:", e);
-      return null;
-    }
-  }
-
-  static SpanContext deserialize(ByteString spanContextByteString) {
-    try {
-      ByteArrayInputStream in = new ByteArrayInputStream(spanContextByteString.toByteArray());
-      ObjectInputStream is = new ObjectInputStream(in);
-      Map<String, String> kvMap = (Map<String, String>) is.readObject();
-      return SpanContext.buildFromKVMap(kvMap);
-    } catch (Exception e) {
-      LOG.error("Error in deserializing the object:", e);
-      return null;
-    }
   }
 }
