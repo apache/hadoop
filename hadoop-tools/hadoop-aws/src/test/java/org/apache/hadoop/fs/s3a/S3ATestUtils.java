@@ -248,9 +248,10 @@ public final class S3ATestUtils {
    *
    * @param conf Test Configuration.
    */
-  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf) {
-    String encryptionMethod =
-        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM, "");
+  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf)
+      throws IOException {
+    String encryptionMethod = getEncryptionAlgorithm(getTestBucketName(conf),
+        conf).getMethod();
     String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
     if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
         !metaStore.equals(S3GUARD_METASTORE_NULL)) {
@@ -1545,7 +1546,8 @@ public final class S3ATestUtils {
     // key is not set, then skip.
     String bucket = getTestBucketName(configuration);
     if (!s3AEncryptionMethod.getMethod().equals(getEncryptionAlgorithm(bucket,
-        configuration).getMethod()) || getS3EncryptionKey(bucket, configuration) == null
+        configuration).getMethod()) || StringUtils.isBlank(getS3EncryptionKey(bucket,
+        configuration))
     ) {
       skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
           .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
