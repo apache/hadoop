@@ -1312,6 +1312,9 @@ public class TestFsDatasetImpl {
   @Test(timeout = 30000)
   public void testDnRestartWithHardLink() throws Exception {
     MiniDFSCluster cluster = null;
+    boolean isReplicaDeletionEnabled =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+            DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION_DEFAULT);
     try {
       conf.setBoolean(DFSConfigKeys
           .DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
@@ -1384,7 +1387,8 @@ public class TestFsDatasetImpl {
           () -> !Files.exists(Paths.get(newReplicaInfo.getBlockURI())),
           100, 10000);
     } finally {
-      conf.unset(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION);
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_DUPLICATE_REPLICA_DELETION,
+          isReplicaDeletionEnabled);
       if (cluster != null && cluster.isClusterUp()) {
         cluster.shutdown(true, true);
       }
