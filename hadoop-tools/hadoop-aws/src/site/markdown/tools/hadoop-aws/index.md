@@ -1426,6 +1426,55 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 </property>
 ```
 
+#### per-bucket configuration and deprecated configuration options
+
+Excluding secrets held in JCEKS files, a per-bucket declaration of a
+deprecated property will take priority over a global option.
+
+
+This means that when setting encryption options in XML files,
+the option, `fs.bucket.BUCKET.fs.s3a.server-side-encryption-algorithm`
+will take priority over the global value of `fs.bucket.s3a.encryption.algorithm`.
+The same holds for the encryption key option `fs.s3a.encryption.key`
+and its predecessor `fs.s3a.server-side-encryption.key`.
+
+
+For a site configuration of:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption-algorithm</name>
+  <value>SSE-KMS</value>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption.key</name>
+  <value>arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.algorithm</name>
+  <value>AES256</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.key</name>
+  <value>unset</value>
+</property>
+
+
+```
+
+The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
+`arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
+
+This *does not hold* when encryption settings are held in JCEKS stores.
+In that situation, *a global declaration using the newer key takes priority
+over a per-bucket declaration with the older key name.
+
+
+
+
 ### Customizing S3A secrets held in credential files
 
 
@@ -1444,13 +1493,24 @@ fs.s3a.encryption.key
 fs.s3a.bucket.nightly.access.key
 fs.s3a.bucket.nightly.secret.key
 fs.s3a.bucket.nightly.session.token
-fs.s3a.bucket.nightly.server-side-encryption.key
-fs.s3a.bucket.nightly.server-side-encryption-algorithm
+fs.s3a.bucket.nightly.encryption.key
+fs.s3a.bucket.nightly.encryption.algorithm
 ```
 
 When accessing the bucket `s3a://nightly/`, the per-bucket configuration
 options for that bucket will be used, here the access keys and token,
 and including the encryption algorithm and key.
+
+If the configuration mixes old and new key names, then the new names take
+priority over the older values, even if they are not scoped to the bucket
+
+```
+fs.s3a.encryption.algorithm
+fs.s3a.encryption.key
+fs.s3a.bucket.nightly.server-side-encryption-algorithm
+fs.s3a.bucket.nightly.server-side-encryption.key
+```
+
 
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
