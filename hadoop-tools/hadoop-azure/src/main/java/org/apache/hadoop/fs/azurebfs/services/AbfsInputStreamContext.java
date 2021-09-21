@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
-import java.util.HashMap;
 
 /**
  * Class to hold extra input stream configs.
@@ -51,7 +50,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean bufferedPreadDisabled;
 
-  private HashMap<String, String> encryptionHeaders = null;
+  private EncryptionAdapter encryptionAdapter = null;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -119,8 +118,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   }
 
   public AbfsInputStreamContext withEncryptionHeaders(
-      HashMap<String, String> encryptionHeaders) {
-    this.encryptionHeaders = encryptionHeaders;
+      EncryptionAdapter encryptionAdapter) {
+    this.encryptionAdapter = encryptionAdapter;
     return this;
   }
 
@@ -179,7 +178,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return bufferedPreadDisabled;
   }
 
-  public HashMap<String, String> getEncryptionHeaders() {
-    return encryptionHeaders;
+  public EncryptionAdapter getEncryptionAdapter() {
+    return encryptionAdapter;
   }
 }

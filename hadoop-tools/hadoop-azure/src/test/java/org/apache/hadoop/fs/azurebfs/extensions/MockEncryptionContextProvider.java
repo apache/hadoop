@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.ByteArrayInputStream;
+import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -19,28 +19,52 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   }
 
   @Override
-  public ByteArrayInputStream getEncryptionContext(String path)
+  public String getEncryptionContext(String path)
       throws IOException {
     String newContext = UUID.randomUUID().toString();
     pathToContextMap.put(path, newContext);
     //    String key = UUID.randomUUID().toString();
     String key = dummyKey; // replace with above once server supports
     contextToKeyMap.put(newContext, key);
-    return new ByteArrayInputStream(newContext.getBytes((StandardCharsets.UTF_8)));
+    return newContext;
   }
 
   @Override
-  public ByteArrayInputStream getEncryptionKey(String path,
+  public SecretKey getEncryptionKey(String path,
       String encryptionContext) throws IOException {
     if (!encryptionContext.equals(pathToContextMap.get(path))) {
       throw new IOException("encryption context does not match path");
     }
-    return new ByteArrayInputStream(contextToKeyMap.get(encryptionContext)
-        .getBytes(StandardCharsets.UTF_8));
+    return new Key(encryptionContext);
   }
 
   @Override
-  public void close() throws IOException {
+  public void destroy() {
 
   }
+
+  class Key implements SecretKey {
+
+    private final byte[] key;
+    Key(String encryptionContext) {
+      key =
+          contextToKeyMap.get(encryptionContext).getBytes(StandardCharsets.UTF_8);
+    }
+    @Override
+    public String getAlgorithm() {
+      return null;
+    }
+
+    @Override
+    public String getFormat() {
+      return null;
+    }
+
+    @Override
+    public byte[] getEncoded() {
+      return key;
+    }
+  }
 }
+
+

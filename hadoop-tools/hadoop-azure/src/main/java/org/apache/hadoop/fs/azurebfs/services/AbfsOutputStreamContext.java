@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.util.HashMap;
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 
 /**
  * Class to hold extra output stream configs.
@@ -43,7 +43,7 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private AbfsLease lease;
 
-  private HashMap<String, String> encryptionHeaders;
+  private EncryptionAdapter encryptionAdapter;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -105,9 +105,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsOutputStreamContext withEncryptionHeaders(
-      final HashMap<String, String> encryptionHeaders) {
-    this.encryptionHeaders = encryptionHeaders;
+  public AbfsOutputStreamContext withEncryptionAdapter(
+      final EncryptionAdapter encryptionAdapter) {
+    this.encryptionAdapter = encryptionAdapter;
     return this;
   }
 
@@ -154,7 +154,7 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this.lease.getLeaseID();
   }
 
-  public HashMap<String, String> getEncryptionHeaders() {
-    return encryptionHeaders;
+  public EncryptionAdapter getEncryptionAdapter() {
+    return encryptionAdapter;
   }
 }

@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
@@ -94,7 +95,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
   private final ThreadPoolExecutor threadExecutor;
   private final ExecutorCompletionService<Void> completionService;
-  private final HashMap<String, String> encryptionHeaders;
+  private final EncryptionAdapter encryptionAdapter;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -147,7 +148,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.numOfAppendsToServerSinceLastFlush = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
-    this.encryptionHeaders = abfsOutputStreamContext.getEncryptionHeaders();
+    this.encryptionAdapter = abfsOutputStreamContext.getEncryptionAdapter();
 
     if (this.isAppendBlob) {
       this.maxConcurrentRequestCount = 1;
@@ -416,7 +417,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
           bytesLength, APPEND_MODE, true, leaseId);
       AbfsRestOperation op = client.append(path, bytes, reqParams,
-          cachedSasToken.get(), encryptionHeaders,
+          cachedSasToken.get(), encryptionAdapter,
           new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
       if (outputStreamStatistics != null) {
@@ -490,7 +491,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId);
             AbfsRestOperation op = client.append(path, bytes, reqParams,
-                cachedSasToken.get(), encryptionHeaders,
+                cachedSasToken.get(), encryptionAdapter,
                 new TracingContext(tracingContext));
             cachedSasToken.update(op.getSasToken());
             perfInfo.registerResult(op.getResult());
@@ -558,7 +559,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
       AbfsRestOperation op = client.flush(path, offset, retainUncommitedData,
-          isClose, cachedSasToken.get(), leaseId, encryptionHeaders,
+          isClose, cachedSasToken.get(), leaseId, encryptionAdapter,
           new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -681,7 +682,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
 
   @VisibleForTesting
   public boolean isEncryptionHeadersCached() {
-    return encryptionHeaders != null;
+    return encryptionAdapter != null;
   }
 
   @VisibleForTesting

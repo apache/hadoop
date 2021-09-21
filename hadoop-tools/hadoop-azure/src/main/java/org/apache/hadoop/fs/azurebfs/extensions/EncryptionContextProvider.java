@@ -20,10 +20,11 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.ByteArrayInputStream;
+import javax.crypto.SecretKey;
+import javax.security.auth.Destroyable;
 import java.io.IOException;
 
-public interface EncryptionContextProvider extends AutoCloseable {
+public interface EncryptionContextProvider extends Destroyable {
   /**
    * Initialize instance
    *
@@ -40,7 +41,7 @@ public interface EncryptionContextProvider extends AutoCloseable {
    * @return encryptionContext string
    * @throws IOException
    */
-  ByteArrayInputStream getEncryptionContext(String path) throws IOException;
+  String getEncryptionContext(String path) throws IOException;
 
   /**
    * Fetch encryption key in-exchange for encryption context
@@ -50,8 +51,7 @@ public interface EncryptionContextProvider extends AutoCloseable {
    * @return Encryption key
    * @throws IOException
    */
-  ByteArrayInputStream getEncryptionKey(String path, String encryptionContext) throws IOException;
+  SecretKey getEncryptionKey(String path, String encryptionContext) throws IOException;
 
-  @Override
-  void close() throws IOException;
+  void destroy();
 }
