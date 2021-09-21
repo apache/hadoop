@@ -798,7 +798,7 @@ public class TestCodec {
       byte[] b = new byte[inputSize];
       r.nextBytes(b);
 
-      compressor.setInput(b,0,  b.length);
+      compressor.setInput(b, 0,  b.length);
       compressor.finish();
 
       byte[] output = new byte[inputSize + 1024];
@@ -841,7 +841,8 @@ public class TestCodec {
       try (DataOutputBuffer dflbuf = new DataOutputBuffer();) {
         assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
           .isInstanceOf(BuiltInGzipCompressor.class);
-        CompressionOutputStream compressionOutputStream = codec.createOutputStream(dflbuf, compressor);
+        CompressionOutputStream compressionOutputStream =
+          codec.createOutputStream(dflbuf, compressor);
 
         long randonSeed = r.nextLong();
         r.setSeed(randonSeed);
