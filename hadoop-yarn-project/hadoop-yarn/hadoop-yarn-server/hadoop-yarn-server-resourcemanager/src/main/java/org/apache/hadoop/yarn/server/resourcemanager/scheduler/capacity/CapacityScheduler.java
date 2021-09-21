@@ -225,6 +225,7 @@ public class CapacityScheduler extends
   private ResourceCalculator calculator;
   private boolean usePortForNodeName;
 
+  private AsyncSchedulingConfiguration asyncSchedulingConf;
   private boolean scheduleAsynchronously;
   @VisibleForTesting
   protected List<AsyncScheduleThread> asyncSchedulerThreads;
@@ -234,16 +235,6 @@ public class CapacityScheduler extends
   private boolean multiNodePlacementEnabled;
 
   private boolean printedVerboseLoggingForAsyncScheduling;
-
-  /**
-   * EXPERT
-   */
-  private long asyncScheduleInterval;
-  private static final String ASYNC_SCHEDULER_INTERVAL =
-      CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
-          + ".scheduling-interval-ms";
-  private static final long DEFAULT_ASYNC_SCHEDULER_INTERVAL = 5;
-  private long asyncMaxPendingBacklogs;
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
 
@@ -348,30 +339,17 @@ public class CapacityScheduler extends
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
 
-      scheduleAsynchronously = this.conf.getScheduleAynschronously();
-      asyncScheduleInterval = this.conf.getLong(ASYNC_SCHEDULER_INTERVAL,
-          DEFAULT_ASYNC_SCHEDULER_INTERVAL);
-
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
       this.maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
 
-      // number of threads for async scheduling
-      int maxAsyncSchedulingThreads = this.conf.getInt(
-          CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
-          1);
-      maxAsyncSchedulingThreads = Math.max(maxAsyncSchedulingThreads, 1);
-
+      this.asyncSchedulingConf = new AsyncSchedulingConfiguration(conf);
+      this.scheduleAsynchronously = this.asyncSchedulingConf.isScheduleAsynchronously();
       if (scheduleAsynchronously) {
         asyncSchedulerThreads = new ArrayList<>();
-        for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
+        for (int i = 0; i < asyncSchedulingConf.getMaxAsyncSchedulingThreads(); i++) {
           asyncSchedulerThreads.add(new AsyncScheduleThread(this));
         }
         resourceCommitterService = new ResourceCommitterService(this);
-        asyncMaxPendingBacklogs = this.conf.getInt(
-            CapacitySchedulerConfiguration.
-                SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS,
-            CapacitySchedulerConfiguration.
-                DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS);
       }
 
       // Setup how many containers we can allocate for each round
@@ -391,8 +369,8 @@ public class CapacityScheduler extends
           + getResourceCalculator().getClass() + ", " + "minimumAllocation="
           + getMinimumResourceCapability() + ", " + "maximumAllocation="
           + getMaximumResourceCapability() + ", " + "asynchronousScheduling="
-          + scheduleAsynchronously + ", " + "asyncScheduleInterval="
-          + asyncScheduleInterval + "ms" + ",multiNodePlacementEnabled="
+          + asyncSchedulingConf.isScheduleAsynchronously() + ", " + "asyncScheduleInterval="
+          + asyncSchedulingConf.getAsyncScheduleInterval() + "ms" + ",multiNodePlacementEnabled="
           + multiNodePlacementEnabled + ", " + "assignMultipleEnabled="
           + assignMultipleEnabled + ", " + "maxAssignPerHeartbeat="
           + maxAssignPerHeartbeat + ", " + "offswitchPerHeartbeatLimit="
@@ -509,10 +487,6 @@ public class CapacityScheduler extends
   public void reinitialize(Configuration newConf, RMContext rmContext)
       throws IOException {
     reinitialize(newConf, rmContext, false);
-  }
-
-  long getAsyncScheduleInterval() {
-    return asyncScheduleInterval;
   }
 
   private final static Random random = new Random(System.currentTimeMillis());
@@ -641,7 +615,7 @@ public class CapacityScheduler extends
       }
 
     }
-    Thread.sleep(cs.getAsyncScheduleInterval());
+    Thread.sleep(cs.asyncSchedulingConf.getAsyncScheduleInterval());
   }
 
   static class AsyncScheduleThread extends Thread {
@@ -665,7 +639,7 @@ public class CapacityScheduler extends
           } else {
             // Don't run schedule if we have some pending backlogs already
             if (cs.getAsyncSchedulingPendingBacklogs()
-                > cs.asyncMaxPendingBacklogs) {
+                > cs.asyncSchedulingConf.getAsyncMaxPendingBacklogs()) {
               Thread.sleep(1);
             } else{
               schedule(cs);
@@ -3446,5 +3420,49 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setQueueManager(CapacitySchedulerQueueManager qm) {
     this.queueManager = qm;
+  }
+
+  private static class AsyncSchedulingConfiguration {
+    private final boolean scheduleAsynchronously;
+    private long asyncScheduleInterval;
+    private long asyncMaxPendingBacklogs;
+    private int maxAsyncSchedulingThreads;
+
+    AsyncSchedulingConfiguration(CapacitySchedulerConfiguration conf) {
+      this.scheduleAsynchronously = conf.getScheduleAynschronously();
+      if (this.scheduleAsynchronously) {
+        this.asyncScheduleInterval = conf.getLong(
+            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_INTERVAL,
+            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_INTERVAL);
+
+        // number of threads for async scheduling
+        this.maxAsyncSchedulingThreads = conf.getInt(
+            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
+            1);
+        this.maxAsyncSchedulingThreads = Math.max(this.maxAsyncSchedulingThreads, 1);
+
+        this.asyncMaxPendingBacklogs = conf.getInt(
+            CapacitySchedulerConfiguration.
+                SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS,
+            CapacitySchedulerConfiguration.
+                DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS);
+      }
+    }
+
+    public boolean isScheduleAsynchronously() {
+      return scheduleAsynchronously;
+    }
+
+    public long getAsyncScheduleInterval() {
+      return asyncScheduleInterval;
+    }
+
+    public long getAsyncMaxPendingBacklogs() {
+      return asyncMaxPendingBacklogs;
+    }
+
+    public int getMaxAsyncSchedulingThreads() {
+      return maxAsyncSchedulingThreads;
+    }
   }
 }

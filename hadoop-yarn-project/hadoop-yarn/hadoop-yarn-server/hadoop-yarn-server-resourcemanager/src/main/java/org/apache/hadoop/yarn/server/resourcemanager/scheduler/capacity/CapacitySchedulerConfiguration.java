@@ -273,6 +273,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".maximum-pending-backlogs";
 
   @Private
+  public static final String SCHEDULE_ASYNCHRONOUSLY_INTERVAL =
+      SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".scheduling-interval-ms";
+
+  @Private
+  public static final long DEFAULT_SCHEDULE_ASYNCHRONOUSLY_INTERVAL = 5;
+
+  @Private
   public static final String APP_FAIL_FAST = PREFIX + "application.fail-fast";
 
   @Private
