@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 
 import java.util.HashMap;
@@ -32,80 +31,121 @@ import java.util.Set;
  * resource.
  */
 public class QueueCapacityVector implements
-    Iterable<QueueCapacityVector.QueueResourceVectorEntry> {
+    Iterable<QueueCapacityVector.QueueCapacityVectorEntry> {
   private final ResourceVector resource;
-  private final Map<String, QueueVectorResourceType> resourceTypes
+  private final Map<String, QueueCapacityType> capacityTypes
       = new HashMap<>();
-  private final Set<QueueVectorResourceType>
-      definedResourceTypes = new HashSet<>();
+  private final Map<QueueCapacityType, Set<String>> capacityTypePerResource
+      = new HashMap<>();
 
   public QueueCapacityVector(ResourceVector resource) {
     this.resource = resource;
   }
 
-  public static QueueCapacityVector empty() {
-    return new QueueCapacityVector(ResourceVector.empty());
+  /**
+   * Creates a new empty {@code QueueCapacityVector}.
+   * @return empty capacity vector
+   */
+  public static QueueCapacityVector newInstance() {
+    return new QueueCapacityVector(new ResourceVector());
   }
 
-  public QueueResourceVectorEntry getResource(String resourceName) {
-    return new QueueResourceVectorEntry(resourceTypes.get(resourceName),
+  public QueueCapacityVectorEntry getResource(String resourceName) {
+    return new QueueCapacityVectorEntry(capacityTypes.get(resourceName),
         resourceName, resource.getValue(resourceName));
   }
 
-  public void setResource(String resourceName, float value,
-                          QueueVectorResourceType resourceType) {
-    resource.setValue(resourceName, value);
-    storeResourceType(resourceName, resourceType);
+  /**
+   * Returns the number of resources defined for this vector.
+   * @return number of resources
+   */
+  public int getResourceCount() {
+    return capacityTypes.size();
   }
 
+  /**
+   * Set the value and capacity type of a resource.
+   * @param resourceName name of the resource
+   * @param value value of the resource
+   * @param capacityType type of the resource
+   */
+  public void setResource(String resourceName, float value,
+                          QueueCapacityType capacityType) {
+    // Necessary due to backward compatibility (memory = memory-mb)
+    String convertedResourceName = resourceName;
+    if (resourceName.equals("memory")) {
+      convertedResourceName = ResourceInformation.MEMORY_URI;
+    }
+    resource.setValue(convertedResourceName, value);
+    storeResourceType(convertedResourceName, capacityType);
+  }
+
+  /**
+   * A shorthand to retrieve the value stored for the memory resource.
+   * @return value of memory resource
+   */
   public float getMemory() {
     return resource.getValue(ResourceInformation.MEMORY_URI);
   }
 
-  public Set<QueueVectorResourceType> getDefinedResourceTypes() {
-    return definedResourceTypes;
+  /**
+   * Returns the name of all resources of
+   * @param resourceType
+   * @return
+   */
+  public Set<String> getResourceNamesByCapacityType(
+      QueueCapacityType resourceType) {
+    return capacityTypePerResource.get(resourceType);
   }
 
   @Override
-  public Iterator<QueueResourceVectorEntry> iterator() {
-    return new Iterator<QueueResourceVectorEntry>() {
+  public Iterator<QueueCapacityVectorEntry> iterator() {
+    return new Iterator<QueueCapacityVectorEntry>() {
       private final Iterator<Map.Entry<String, Float>> resources =
           resource.iterator();
       private int i = 0;
 
       @Override
       public boolean hasNext() {
-        return resources.hasNext() && resourceTypes.size() > i;
+        return resources.hasNext() && capacityTypes.size() > i;
       }
 
       @Override
-      public QueueResourceVectorEntry next() {
+      public QueueCapacityVectorEntry next() {
         Map.Entry<String, Float> resourceInformation = resources.next();
         i++;
-        return new QueueResourceVectorEntry(
-            resourceTypes.get(resourceInformation.getKey()),
+        return new QueueCapacityVectorEntry(
+            capacityTypes.get(resourceInformation.getKey()),
             resourceInformation.getKey(), resourceInformation.getValue());
       }
     };
   }
 
-  private void storeResourceType(String resourceName, QueueVectorResourceType resourceType) {
-    definedResourceTypes.add(resourceType);
-    resourceTypes.put(resourceName, resourceType);
+  /**
+   * Returns a set of all capacity type defined for this vector.
+   * @return capacity types
+   */
+  public Set<QueueCapacityType> getDefinedCapacityTypes() {
+    return capacityTypePerResource.keySet();
+  }
+
+  private void storeResourceType(
+      String resourceName, QueueCapacityType resourceType) {
+    if (!capacityTypePerResource.containsKey(resourceType)) {
+      capacityTypePerResource.put(resourceType, new HashSet<>());
+    }
+    capacityTypePerResource.get(resourceType).add(resourceName);
+    capacityTypes.put(resourceName, resourceType);
   }
 
   /**
-   * Represents a calculation type of a resource.
+   * Represents a capacity type associated with its syntax postfix.
    */
-  public enum QueueVectorResourceType {
+  public enum QueueCapacityType {
     PERCENTAGE("%"), ABSOLUTE(""), WEIGHT("w");
-
-    private static final Set<QueueVectorResourceType> FLOAT_TYPES =
-        ImmutableSet.of(QueueVectorResourceType.PERCENTAGE,
-            QueueVectorResourceType.WEIGHT);
     private final String postfix;
 
-    QueueVectorResourceType(String postfix) {
+    QueueCapacityType(String postfix) {
       this.postfix = postfix;
     }
 
@@ -114,19 +154,19 @@ public class QueueCapacityVector implements
     }
   }
 
-  public static class QueueResourceVectorEntry {
-    private final QueueVectorResourceType vectorResourceType;
+  public static class QueueCapacityVectorEntry {
+    private final QueueCapacityType vectorResourceType;
     private final float resourceValue;
     private final String resourceName;
 
-    public QueueResourceVectorEntry(QueueVectorResourceType vectorResourceType,
+    public QueueCapacityVectorEntry(QueueCapacityType vectorResourceType,
                                     String resourceName, float resourceValue) {
       this.vectorResourceType = vectorResourceType;
       this.resourceValue = resourceValue;
       this.resourceName = resourceName;
     }
 
-    public QueueVectorResourceType getVectorResourceType() {
+    public QueueCapacityType getVectorResourceType() {
       return vectorResourceType;
     }
 
