@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -57,6 +58,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelin
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
@@ -67,6 +70,8 @@ import com.google.common.base.Preconditions;
 class ApplicationEntityReader extends GenericEntityReader {
   private static final ApplicationTableRW APPLICATION_TABLE =
       new ApplicationTableRW();
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ApplicationEntityReader.class);
 
   ApplicationEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
@@ -290,7 +295,7 @@ class ApplicationEntityReader extends GenericEntityReader {
   @Override
   protected FilterList constructFilterListBasedOnFields(Set<String> cfsInFields)
       throws IOException {
-    if (!needCreateFilterListBasedOnFields()) {
+     if (!needCreateFilterListBasedOnFields()) {
       // Fetch all the columns. No need of a filter.
       return null;
     }
@@ -422,7 +427,12 @@ class ApplicationEntityReader extends GenericEntityReader {
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(getFilters().getLimit()));
     if (filterList != null && !filterList.getFilters().isEmpty()) {
-      newList.addFilter(filterList);
+      FilterList removedFilterList = new FilterList();
+      for (Filter f: filterList.getFilters()){
+        // Added this to remove Family filter from filterList and add as "addFamiliy"
+        TimelineFilterUtils.extractFamilyFilters(filterList,removedFilterList,scan);
+      }
+      newList.addFilter(removedFilterList);
     }
     scan.setFilter(newList);
 

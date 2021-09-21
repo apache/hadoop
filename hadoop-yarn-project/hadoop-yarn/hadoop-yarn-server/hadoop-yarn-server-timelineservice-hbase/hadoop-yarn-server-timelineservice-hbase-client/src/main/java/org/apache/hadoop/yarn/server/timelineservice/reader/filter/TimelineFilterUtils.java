@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Column;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnFamily;
@@ -117,8 +119,9 @@ public final class TimelineFilterUtils {
    */
   public static <T extends BaseTable<T>> Filter createHBaseQualifierFilter(
       CompareOp compareOp, ColumnPrefix<T> columnPrefix) {
+    // Changed from BinaryPrefixComparator to BinaryComparator
     return new QualifierFilter(compareOp,
-        new BinaryPrefixComparator(
+        new BinaryComparator(
             columnPrefix.getColumnPrefixBytes("")));
   }
 
@@ -254,6 +257,23 @@ public final class TimelineFilterUtils {
       }
     }
     return strSet;
+  }
+
+  public static void extractFamilyFilters(
+      Filter filterList, FilterList removedFilterList, Scan scan) {
+    if (filterList instanceof FamilyFilter) {
+      FamilyFilter ff = (FamilyFilter) filterList;
+      scan.addFamily(ff.getComparator().getValue());
+
+    } else if (filterList instanceof FilterList) {
+      FilterList filterListBase = (FilterList) filterList;
+      for (Filter fs: filterListBase.getFilters()) {
+        extractFamilyFilters(fs,removedFilterList,scan);
+      }
+    }
+    else{
+      removedFilterList.addFilter(filterList);
+    }
   }
 
   /**

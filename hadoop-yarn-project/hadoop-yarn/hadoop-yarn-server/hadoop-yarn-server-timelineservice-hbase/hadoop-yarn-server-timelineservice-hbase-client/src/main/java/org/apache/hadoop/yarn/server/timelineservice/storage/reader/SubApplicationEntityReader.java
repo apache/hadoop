@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -387,7 +388,13 @@ class SubApplicationEntityReader extends GenericEntityReader {
     setMetricsTimeRange(scan);
     scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
-      scan.setFilter(filterList);
+      FilterList removedFilterList = new FilterList();
+      for (Filter f: filterList.getFilters()){
+        // Added this to remove Family filter from filterList and add as "addFamiliy"
+        TimelineFilterUtils.extractFamilyFilters(filterList,removedFilterList,scan);
+      }
+      scan.setFilter(removedFilterList);
+      // scan.setFilter(filterList);
     }
     return getTable().getResultScanner(hbaseConf, conn, scan);
   }
