@@ -842,7 +842,7 @@ public class TestCodec {
         assertThat(compressor).withFailMessage("should be BuiltInGzipCompressor")
           .isInstanceOf(BuiltInGzipCompressor.class);
         CompressionOutputStream compressionOutputStream =
-          codec.createOutputStream(dflbuf, compressor);
+            codec.createOutputStream(dflbuf, compressor);
 
         long randonSeed = r.nextLong();
         r.setSeed(randonSeed);
