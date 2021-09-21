@@ -326,7 +326,7 @@ to update SNAPSHOTs from external repos.
 ----------------------------------------------------------------------------------
 Importing projects to eclipse
 
-At first, install program files at the top of the source tree.
+At first, install artifacts including hadoop-maven-plugins at the top of the source tree.
 
   $ mvn clean install -DskipTests -DskipShade
 
