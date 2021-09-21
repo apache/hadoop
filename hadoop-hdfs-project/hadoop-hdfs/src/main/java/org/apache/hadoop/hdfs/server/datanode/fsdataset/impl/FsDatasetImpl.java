@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
@@ -1049,12 +1050,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static File[] hardLinkBlockFiles(ReplicaInfo srcReplica, File dstMeta,
       File dstFile)
       throws IOException {
+    FsVolumeSpi srcReplicaVolume = srcReplica.getVolume();
+    File destParentFile = dstFile.getParentFile();
     // Create parent folder if not exists.
-    srcReplica.getFileIoProvider()
-        .mkdirs(srcReplica.getVolume(), dstFile.getParentFile());
+    boolean isDirCreated = srcReplica.getFileIoProvider()
+        .mkdirs(srcReplicaVolume, destParentFile);
+    LOG.trace("Dir creation of {} on volume {} {}", destParentFile,
+        srcReplicaVolume, isDirCreated ? "succeeded" : "failed");
+    URI srcReplicaUri = srcReplica.getBlockURI();
     try {
       HardLink.createHardLink(
-          new File(srcReplica.getBlockURI()), dstFile);
+          new File(srcReplicaUri), dstFile);
     } catch (IOException e) {
       throw new IOException("Failed to hardLink "
           + srcReplica + " block file to "
@@ -1068,9 +1074,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + srcReplica + " metadata to "
           + dstMeta, e);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Linked " + srcReplica.getBlockURI() + " to " + dstFile);
-    }
+    LOG.debug("Linked {} to {} . Dest meta file: {}", srcReplicaUri, dstFile,
+        dstMeta);
     return new File[]{dstMeta, dstFile};
   }
 
