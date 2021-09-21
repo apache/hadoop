@@ -117,7 +117,7 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-  public AbfsInputStreamContext withEncryptionHeaders(
+  public AbfsInputStreamContext withEncryptionAdapter(
       EncryptionAdapter encryptionAdapter) {
     this.encryptionAdapter = encryptionAdapter;
     return this;

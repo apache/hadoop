@@ -38,6 +38,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
@@ -67,7 +68,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
@@ -200,7 +200,8 @@ public class AbfsClient implements Closeable {
   @Override
   public void close() throws IOException {
     if (tokenProvider instanceof Closeable) {
-      IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);
+      org.apache.hadoop.io.IOUtils.cleanupWithLogger(LOG,
+          (Closeable) tokenProvider);
     }
     HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
   }
@@ -254,7 +255,8 @@ public class AbfsClient implements Closeable {
     case ENCRYPTION_CONTEXT:
       if (isCreateFileRequest) {
         // get new context for create file request
-        encryptionContext = encryptionAdapter.getEncryptionContext(path);
+        encryptionContext = encryptionAdapter.fetchEncryptionContext();
+        computeKeys(encryptionAdapter);
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
             encryptionContext));
 
@@ -263,12 +265,13 @@ public class AbfsClient implements Closeable {
             tracingContext).getResult().getResponseHeader(X_MS_PROPERTIES);
         encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
             path, encryptionContext);
+        computeKeys(encryptionAdapter);
       }
       // use cached encryption keys from input/output streams
-      encodedKey = org.apache.commons.io.IOUtils.toString(
-          encryptionAdapter.getEncodedKey(), StandardCharsets.UTF_8.name());
-      encodedKeySHA256 = org.apache.commons.io.IOUtils.toString(
-          encryptionAdapter.getEncodedKeySHA(), StandardCharsets.UTF_8.name());
+      encodedKey = IOUtils.toString(encryptionAdapter.getEncodedKey(),
+          StandardCharsets.UTF_8.name());
+      encodedKeySHA256 = IOUtils.toString(encryptionAdapter.getEncodedKeySHA(),
+          StandardCharsets.UTF_8.name());
       break;
 
     default: return; // no client-provided encryption keys
@@ -279,17 +282,14 @@ public class AbfsClient implements Closeable {
         SERVER_SIDE_ENCRYPTION_ALGORITHM));
   }
 
-  public EncryptionAdapter getEncryptionAdapter(String path,
-      String encryptionContext) throws IOException {
-    EncryptionAdapter encryptionAdapter =
-        new EncryptionAdapter(encryptionContextProvider, path, encryptionContext);
+  public void computeKeys(EncryptionAdapter encryptionAdapter) throws IOException {
     SecretKey key = encryptionAdapter.getEncryptionKey();
-    encryptionAdapter.setEncodedKey(getBase64EncodedString(key.getEncoded())
-        .getBytes(StandardCharsets.UTF_8));
+    encryptionAdapter.setEncodedKey(
+        getBase64EncodedString(key.getEncoded()).getBytes(
+            StandardCharsets.UTF_8));
     encryptionAdapter.setEncodedKeySHA(getBase64EncodedString(getSHA256Hash(
-        org.apache.commons.io.IOUtils.toString(key.getEncoded(),
+        IOUtils.toString(key.getEncoded(),
             StandardCharsets.UTF_8.name()))).getBytes(StandardCharsets.UTF_8));
-    return encryptionAdapter;
   }
 
   AbfsUriQueryBuilder createDefaultUriQueryBuilder() {

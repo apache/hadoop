@@ -730,7 +730,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             throw new IOException(
                 "Encryption context missing from server response");
           }
-          encryptionAdapter = client.getEncryptionAdapter(path.toString(),
+          encryptionAdapter = new EncryptionAdapter(
+              client.getEncryptionContextProvider(), path.toString(),
               encryptionContext);
         }
       }
@@ -770,7 +771,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
-            .withEncryptionHeaders(encryptionAdapter)
+            .withEncryptionAdapter(encryptionAdapter)
             .build();
   }
 
@@ -812,14 +813,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
       String encryptionContext = op.getResult()
           .getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+      EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
+          client.getEncryptionContextProvider(), path.toString(),
+          encryptionContext);
 
       return new AbfsOutputStream(
           client,
           statistics,
           relativePath,
           offset,
-          populateAbfsOutputStreamContext(isAppendBlob, lease,
-              client.getEncryptionAdapter(path.toString(), encryptionContext)),
+          populateAbfsOutputStreamContext(isAppendBlob, lease, encryptionAdapter),
           tracingContext);
     }
   }

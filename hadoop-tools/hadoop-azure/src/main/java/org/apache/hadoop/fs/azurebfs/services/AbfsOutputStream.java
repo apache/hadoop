@@ -681,7 +681,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   }
 
   @VisibleForTesting
-  public boolean isEncryptionHeadersCached() {
+  public boolean isEncryptionAdapterCached() {
     return encryptionAdapter != null;
   }
 

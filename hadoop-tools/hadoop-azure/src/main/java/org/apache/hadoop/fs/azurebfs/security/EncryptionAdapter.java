@@ -22,28 +22,28 @@ public class EncryptionAdapter implements Destroyable {
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
       String encryptionContext) throws IOException {
-    this.provider = provider;
-    this.path = path;
+    this(provider, path);
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
     this.encryptionContext = encryptionContext;
-    this.encryptionKey = provider.getEncryptionKey(path, encryptionContext);
   }
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
       throws IOException {
-    this(provider, path, provider.getEncryptionContext(path));
+    this.provider = provider;
+    this.path = path;
   }
 
   public SecretKey getEncryptionKey() throws IOException {
-    return encryptionKey;
+    if (encryptionKey != null) {
+      return encryptionKey;
+    }
+    return provider.getEncryptionKey(path, encryptionContext);
   }
 
-  public String getEncryptionContext(String path) throws IOException {
-    if (encryptionContext != null) {
-      return encryptionContext;
-    }
-    return provider.getEncryptionContext(path);
+  public String fetchEncryptionContext() throws IOException {
+    encryptionContext = provider.getEncryptionContext(path);
+    return encryptionContext;
   }
 
   public byte[] getEncodedKey() {

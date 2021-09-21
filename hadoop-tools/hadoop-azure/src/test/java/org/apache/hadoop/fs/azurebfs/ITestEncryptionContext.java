@@ -6,12 +6,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+import static org.assertj.core.api.ErrorCollector.intercept;
 
 public class ITestEncryptionContext extends AbstractAbfsIntegrationTest {
   public ITestEncryptionContext() throws Exception {
@@ -34,6 +37,17 @@ public class ITestEncryptionContext extends AbstractAbfsIntegrationTest {
     Path testPath = path("createTest");
     FSDataOutputStream out = fs.create(testPath);
     Assertions.assertThat(((AbfsOutputStream) out.getWrappedStream())
-            .isEncryptionHeadersCached()).isTrue();
+            .isEncryptionAdapterCached()).isTrue();
+
+    Configuration conf = getRawConfiguration();
+    conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
+    fs = getFileSystem(conf);
+    AzureBlobFileSystem finalFs = fs;
+    LambdaTestUtils.intercept(IOException.class, () -> finalFs.append(testPath));
+    LambdaTestUtils.intercept(IOException.class, () -> finalFs.open(testPath));
+    LambdaTestUtils.intercept(IOException.class, () -> finalFs.append(testPath));
+    LambdaTestUtils.intercept(IOException.class,
+        () -> finalFs.setXAttr(testPath, "newAttr", new byte[]{1}));
+
   }
 }
