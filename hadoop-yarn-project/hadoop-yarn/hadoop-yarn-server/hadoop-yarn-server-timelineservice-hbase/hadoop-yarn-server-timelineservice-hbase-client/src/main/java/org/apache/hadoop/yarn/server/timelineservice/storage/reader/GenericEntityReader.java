@@ -66,8 +66,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
@@ -76,8 +74,6 @@ import com.google.common.base.Preconditions;
  * table.
  */
 class GenericEntityReader extends TimelineEntityReader {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(GenericEntityReader.class);
 
   private static final EntityTableRW ENTITY_TABLE = new EntityTableRW();
 

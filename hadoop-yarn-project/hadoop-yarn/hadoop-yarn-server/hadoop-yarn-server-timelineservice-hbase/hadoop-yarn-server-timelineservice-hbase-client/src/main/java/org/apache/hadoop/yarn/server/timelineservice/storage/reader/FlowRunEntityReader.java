@@ -57,8 +57,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.google.common.base.Preconditions;
 
 /**
@@ -67,8 +65,6 @@ import com.google.common.base.Preconditions;
  */
 class FlowRunEntityReader extends TimelineEntityReader {
   private static final FlowRunTableRW FLOW_RUN_TABLE = new FlowRunTableRW();
-  private static final Logger LOG =
-      LoggerFactory.getLogger(FlowRunEntityReader.class);
   FlowRunEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
     super(ctxt, entityFilters, toRetrieve);

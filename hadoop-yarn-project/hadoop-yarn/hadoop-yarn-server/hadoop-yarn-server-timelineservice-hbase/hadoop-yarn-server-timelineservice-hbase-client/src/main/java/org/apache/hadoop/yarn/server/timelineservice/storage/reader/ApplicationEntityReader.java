@@ -58,8 +58,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelin
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Preconditions;
 
@@ -70,8 +68,6 @@ import com.google.common.base.Preconditions;
 class ApplicationEntityReader extends GenericEntityReader {
   private static final ApplicationTableRW APPLICATION_TABLE =
       new ApplicationTableRW();
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ApplicationEntityReader.class);
 
   ApplicationEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
