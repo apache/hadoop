@@ -61,6 +61,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -1241,7 +1242,13 @@ public final class S3ATestUtils {
   public static void assertOptionEquals(Configuration conf,
       String key,
       String expected) {
-    assertEquals("Value of " + key, expected, conf.get(key));
+    String actual = conf.get(key);
+    String origin = actual == null
+        ? "(none)"
+        : "[" + StringUtils.join(conf.getPropertySources(key), ", ") + "]";
+    Assertions.assertThat(actual)
+        .describedAs("Value of %s with origin %s", key, origin)
+        .isEqualTo(expected);
   }
 
   /**
