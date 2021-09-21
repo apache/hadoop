@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.slf4j.Logger;
@@ -226,6 +228,7 @@ public class Balancer {
   private final long maxSizeToMove;
   private final long defaultBlockSize;
   private final boolean sortTopNodes;
+  private final BalancerMetrics metrics;
 
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
@@ -357,6 +360,7 @@ public class Balancer {
     this.defaultBlockSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+    this.metrics = BalancerMetrics.create(this);
   }
   
   private static long getCapacity(DatanodeStorageReport report, StorageType t) {
@@ -454,6 +458,8 @@ public class Balancer {
     }
 
     logUtilizationCollections();
+    metrics.setNumOfOverUtilizedNodes(overUtilized.size());
+    metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
     
     Preconditions.checkState(dispatcher.getStorageGroupMap().size()
         == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
@@ -636,7 +642,11 @@ public class Balancer {
     this.belowAvgUtilized.clear();
     this.underUtilized.clear();
     this.policy.reset();
-    dispatcher.reset(conf);;
+    dispatcher.reset(conf);
+  }
+
+  NameNodeConnector getNnc() {
+    return nnc;
   }
 
   static class Result {
@@ -710,8 +720,10 @@ public class Balancer {
   /** Run an iteration for all datanodes. */
   Result runOneIteration() {
     try {
+      metrics.setIterateRunning(true);
       final List<DatanodeStorageReport> reports = dispatcher.init();
       final long bytesLeftToMove = init(reports);
+      metrics.setBytesLeftToMove(bytesLeftToMove);
       if (bytesLeftToMove == 0) {
         return newResult(ExitStatus.SUCCESS, bytesLeftToMove, 0);
       } else {
@@ -766,6 +778,7 @@ public class Balancer {
       System.out.println(e + ".  Exiting ...");
       return newResult(ExitStatus.INTERRUPTED);
     } finally {
+      metrics.setIterateRunning(false);
       dispatcher.shutdownNow();
     }
   }
@@ -848,6 +861,10 @@ public class Balancer {
   static int run(Collection<URI> namenodes, Collection<String> nsIds,
       final BalancerParameters p, Configuration conf)
       throws IOException, InterruptedException {
+    DefaultMetricsSystem.initialize("Balancer");
+    JvmMetrics.create("Balancer",
+        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+        DefaultMetricsSystem.instance());
     if (!p.getRunAsService()) {
       return doBalance(namenodes, nsIds, p, conf);
     }
@@ -893,6 +910,8 @@ public class Balancer {
           time2Str(scheduleInterval));
       Thread.sleep(scheduleInterval);
     }
+    DefaultMetricsSystem.shutdown();
+
     // normal stop
     return 0;
   }
