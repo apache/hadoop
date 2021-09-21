@@ -32,7 +32,12 @@ import java.util.Map;
 public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   private final Map<String, Float> resourcesByName = new HashMap<>();
 
-  public static ResourceVector empty() {
+  /**
+   * Creates a new {@code ResourceVector} with all pre-defined resources set to
+   * zero.
+   * @return zero resource vector
+   */
+  public static ResourceVector newInstance() {
     ResourceVector emptyResourceVector = new ResourceVector();
     for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
       emptyResourceVector.setValue(resource.getName(), 0);
@@ -41,7 +46,13 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
     return emptyResourceVector;
   }
 
-  public static ResourceVector uniform(float value) {
+  /**
+   * Creates a new {@code ResourceVector} with all pre-defined resources set to
+   * the same value.
+   * @param value the value to set all resources to
+   * @return uniform resource vector
+   */
+  public static ResourceVector of(float value) {
     ResourceVector emptyResourceVector = new ResourceVector();
     for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
       emptyResourceVector.setValue(resource.getName(), value);
@@ -51,7 +62,7 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   }
 
   public float getValue(String resourceName) {
-    return resourcesByName.getOrDefault(resourceName, 1f);
+    return resourcesByName.getOrDefault(resourceName, 0f);
   }
 
   public void setValue(String resourceName, float value) {

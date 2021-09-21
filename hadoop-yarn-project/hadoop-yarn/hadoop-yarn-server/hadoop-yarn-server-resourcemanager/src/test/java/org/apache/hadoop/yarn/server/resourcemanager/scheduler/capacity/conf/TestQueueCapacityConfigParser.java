@@ -22,8 +22,8 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueResourceVectorEntry;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueVectorResourceType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,6 +34,7 @@ public class TestQueueCapacityConfigParser {
 
   private static final String QUEUE = "root.test";
   private static final String ABSOLUTE_RESOURCE = "[memory-mb=12Gi, vcores=6, yarn.io/gpu=10]";
+  private static final String ABSOLUTE_RESOURCE_MEMORY_VCORE = "[memory-mb=12Gi, vcores=6]";
   private static final String MIXED_RESOURCE = "[memory-mb=1024, vcores=50%, yarn.io/gpu=6w]";
   private static final String RESOURCE_TYPES = "yarn.io/gpu";
 
@@ -45,26 +46,26 @@ public class TestQueueCapacityConfigParser {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.setCapacity(QUEUE, 50);
 
-    QueueCapacityVector percentageResourceVector = capacityConfigParser.parse(conf, QUEUE, "");
-    List<QueueResourceVectorEntry> resources = Lists.newArrayList(percentageResourceVector.iterator());
+    QueueCapacityVector percentageCapacityVector = capacityConfigParser.parse(conf, QUEUE, "");
+    List<QueueCapacityVectorEntry> resources = Lists.newArrayList(percentageCapacityVector.iterator());
 
-    Assert.assertEquals(QueueVectorResourceType.PERCENTAGE, resources.get(0).getVectorResourceType());
+    Assert.assertEquals(QueueCapacityType.PERCENTAGE, resources.get(0).getVectorResourceType());
     Assert.assertEquals(50f, resources.get(0).getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.PERCENTAGE, resources.get(1).getVectorResourceType());
+    Assert.assertEquals(QueueCapacityType.PERCENTAGE, resources.get(1).getVectorResourceType());
     Assert.assertEquals(50f, resources.get(1).getResourceValue(), 1e-6);
 
-    QueueCapacityVector rootResourceVector = capacityConfigParser.parse(conf,
+    QueueCapacityVector rootCapacityVector = capacityConfigParser.parse(conf,
         CapacitySchedulerConfiguration.ROOT, "");
-    List<QueueResourceVectorEntry> rootResources =
-        Lists.newArrayList(rootResourceVector.iterator());
+    List<QueueCapacityVectorEntry> rootResources =
+        Lists.newArrayList(rootCapacityVector.iterator());
 
-    Assert.assertEquals(QueueVectorResourceType.PERCENTAGE,
+    Assert.assertEquals(QueueCapacityType.PERCENTAGE,
         rootResources.get(0).getVectorResourceType());
     Assert.assertEquals(100f,
         rootResources.get(0).getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.PERCENTAGE,
+    Assert.assertEquals(QueueCapacityType.PERCENTAGE,
         rootResources.get(1).getVectorResourceType());
     Assert.assertEquals(100f,
         rootResources.get(1).getResourceValue(), 1e-6);
@@ -75,13 +76,13 @@ public class TestQueueCapacityConfigParser {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.setNonLabeledQueueWeight(QUEUE, 6);
 
-    QueueCapacityVector weightResourceVector = capacityConfigParser.parse(conf, QUEUE, "");
-    List<QueueResourceVectorEntry> resources = Lists.newArrayList(weightResourceVector.iterator());
+    QueueCapacityVector weightCapacityVector = capacityConfigParser.parse(conf, QUEUE, "");
+    List<QueueCapacityVectorEntry> resources = Lists.newArrayList(weightCapacityVector.iterator());
 
-    Assert.assertEquals(QueueVectorResourceType.WEIGHT, resources.get(0).getVectorResourceType());
+    Assert.assertEquals(QueueCapacityType.WEIGHT, resources.get(0).getVectorResourceType());
     Assert.assertEquals(6f, resources.get(0).getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.WEIGHT, resources.get(1).getVectorResourceType());
+    Assert.assertEquals(QueueCapacityType.WEIGHT, resources.get(1).getVectorResourceType());
     Assert.assertEquals(6f, resources.get(1).getResourceValue(), 1e-6);
   }
 
@@ -92,16 +93,21 @@ public class TestQueueCapacityConfigParser {
     conf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_TYPES);
     ResourceUtils.resetResourceTypes(conf);
 
-    QueueCapacityVector absoluteResourceVector = capacityConfigParser.parse(conf, QUEUE, "");
+    QueueCapacityVector absoluteCapacityVector = capacityConfigParser.parse(conf, QUEUE, "");
 
-    Assert.assertEquals(QueueVectorResourceType.ABSOLUTE, absoluteResourceVector.getResource("memory-mb").getVectorResourceType());
-    Assert.assertEquals(12 * 1024, absoluteResourceVector.getResource("memory-mb").getResourceValue(), 1e-6);
+    Assert.assertEquals(QueueCapacityType.ABSOLUTE, absoluteCapacityVector.getResource("memory-mb").getVectorResourceType());
+    Assert.assertEquals(12 * 1024, absoluteCapacityVector.getResource("memory-mb").getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.ABSOLUTE, absoluteResourceVector.getResource("vcores").getVectorResourceType());
-    Assert.assertEquals(6f, absoluteResourceVector.getResource("vcores").getResourceValue(), 1e-6);
+    Assert.assertEquals(QueueCapacityType.ABSOLUTE, absoluteCapacityVector.getResource("vcores").getVectorResourceType());
+    Assert.assertEquals(6f, absoluteCapacityVector.getResource("vcores").getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.ABSOLUTE, absoluteResourceVector.getResource("yarn.io/gpu").getVectorResourceType());
-    Assert.assertEquals(10f, absoluteResourceVector.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
+    Assert.assertEquals(QueueCapacityType.ABSOLUTE, absoluteCapacityVector.getResource("yarn.io/gpu").getVectorResourceType());
+    Assert.assertEquals(10f, absoluteCapacityVector.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
+
+    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE) + CapacitySchedulerConfiguration.CAPACITY, ABSOLUTE_RESOURCE_MEMORY_VCORE);
+    QueueCapacityVector withoutGpuVector = capacityConfigParser.parse(conf, QUEUE, "");
+
+    Assert.assertEquals(2, withoutGpuVector.getResourceCount());
   }
 
   @Test
@@ -112,22 +118,22 @@ public class TestQueueCapacityConfigParser {
     conf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_TYPES);
     ResourceUtils.resetResourceTypes(conf);
 
-    QueueCapacityVector mixedResourceVector =
+    QueueCapacityVector mixedCapacityVector =
         capacityConfigParser.parse(conf, QUEUE, "");
 
-    Assert.assertEquals(QueueVectorResourceType.ABSOLUTE,
-        mixedResourceVector.getResource("memory-mb").getVectorResourceType());
-    Assert.assertEquals(1024, mixedResourceVector.getResource("memory-mb").getResourceValue(), 1e-6);
+    Assert.assertEquals(QueueCapacityType.ABSOLUTE,
+        mixedCapacityVector.getResource("memory-mb").getVectorResourceType());
+    Assert.assertEquals(1024, mixedCapacityVector.getResource("memory-mb").getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.PERCENTAGE,
-        mixedResourceVector.getResource("vcores").getVectorResourceType());
+    Assert.assertEquals(QueueCapacityType.PERCENTAGE,
+        mixedCapacityVector.getResource("vcores").getVectorResourceType());
     Assert.assertEquals(50f,
-        mixedResourceVector.getResource("vcores").getResourceValue(), 1e-6);
+        mixedCapacityVector.getResource("vcores").getResourceValue(), 1e-6);
 
-    Assert.assertEquals(QueueVectorResourceType.WEIGHT,
-        mixedResourceVector.getResource("yarn.io/gpu").getVectorResourceType());
+    Assert.assertEquals(QueueCapacityType.WEIGHT,
+        mixedCapacityVector.getResource("yarn.io/gpu").getVectorResourceType());
     Assert.assertEquals(6f,
-        mixedResourceVector.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
+        mixedCapacityVector.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
   }
 
   @Test
@@ -138,7 +144,7 @@ public class TestQueueCapacityConfigParser {
 
     QueueCapacityVector invalidResourceCapacity =
         capacityConfigParser.parse(conf, QUEUE, "");
-    List<QueueResourceVectorEntry> resources =
+    List<QueueCapacityVectorEntry> resources =
         Lists.newArrayList(invalidResourceCapacity.iterator());
     Assert.assertEquals(resources.size(), 0);
 
@@ -147,7 +153,7 @@ public class TestQueueCapacityConfigParser {
 
     QueueCapacityVector emptyCapacity =
         capacityConfigParser.parse(conf, QUEUE, "");
-    List<QueueResourceVectorEntry> emptyResources =
+    List<QueueCapacityVectorEntry> emptyResources =
         Lists.newArrayList(emptyCapacity.iterator());
     Assert.assertEquals(emptyResources.size(), 0);
 
@@ -156,7 +162,7 @@ public class TestQueueCapacityConfigParser {
 
     QueueCapacityVector nonSetCapacity =
         capacityConfigParser.parse(conf, QUEUE, "");
-    List<QueueResourceVectorEntry> nonSetResources =
+    List<QueueCapacityVectorEntry> nonSetResources =
         Lists.newArrayList(nonSetCapacity.iterator());
     Assert.assertEquals(nonSetResources.size(), 0);
   }
