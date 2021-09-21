@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -257,7 +258,7 @@ public class CSMappingPlacementRule extends PlacementRule {
 
   private String validateAndNormalizeQueue(
       String queueName, boolean allowCreate) throws YarnException {
-    MappingQueuePath path = new MappingQueuePath(queueName);
+    QueuePath path = new QueuePath(queueName);
 
     if (path.hasEmptyPart()) {
       throw new YarnException("Invalid path returned by rule: '" +
