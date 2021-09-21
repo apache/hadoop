@@ -133,7 +133,7 @@ public class DefaultS3ClientFactory extends Configured
 
     // Get the encryption method for this bucket.
     S3AEncryptionMethods encryptionMethods =
-        getEncryptionAlgorithm(uri.getHost(), conf);
+        getEncryptionAlgorithm(bucket, conf);
     try {
       // If CSE is enabled then build a S3EncryptionClient.
       if (S3AEncryptionMethods.CSE_KMS.getMethod()
