@@ -81,7 +81,13 @@ public class ConfiguredNodeLabels {
    * @return all node labels
    */
   public Set<String> getAllConfiguredLabels() {
-    return configuredNodeLabelsByQueue.values().stream()
+    Set<String> nodeLabels = configuredNodeLabelsByQueue.values().stream()
         .flatMap(Set::stream).collect(Collectors.toSet());
+
+    if (nodeLabels.size() == 0) {
+      nodeLabels = NO_LABEL;
+    }
+
+    return nodeLabels;
   }
 }
