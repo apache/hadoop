@@ -2304,6 +2304,13 @@
   </description>
 </property>
 
+  <property>
+    <name>fs.azure.buffer.dir</name>
+    <value>${hadoop.tmp.dir}/abfs</value>
+    <description>Directory path for buffer files needed to upload data blocks
+      in AbfsOutputStream.</description>
+  </property>
+
 <property>
   <name>fs.AbstractFileSystem.gs.impl</name>
   <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS</value>
