@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
@@ -45,6 +46,8 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -139,17 +142,42 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs)
+      throws IOException {
+    return fs.getIsNamespaceEnabled(getTestTracingContext(fs, false));
+  }
+
+  public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
+      boolean needsPrimaryReqId) {
+    String correlationId, fsId;
+    TracingHeaderFormat format;
+    if (fs == null) {
+      correlationId = "test-corr-id";
+      fsId = "test-filesystem-id";
+      format = TracingHeaderFormat.ALL_ID_FORMAT;
+    } else {
+      AbfsConfiguration abfsConf = fs.getAbfsStore().getAbfsConfiguration();
+      correlationId = abfsConf.getClientCorrelationId();
+      fsId = fs.getFileSystemId();
+      format = abfsConf.getTracingHeaderFormat();
+    }
+    return new TracingContext(correlationId, fsId,
+        FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
+  }
+
 
   @Before
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
 
-    // Only live account without namespace support can run ABFS&WASB compatibility tests
-    if (!isIPAddress
-        && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
-        && !abfs.getIsNamespaceEnabled()) {
-      final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl(), abfsConfig.isHttpsAlwaysUsed()));
+    // Only live account without namespace support can run ABFS&WASB
+    // compatibility tests
+    if (!isIPAddress && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
+        && !abfs.getIsNamespaceEnabled(getTestTracingContext(
+            getFileSystem(), false))) {
+      final URI wasbUri = new URI(
+          abfsUrlToWasbUrl(getTestUrl(), abfsConfig.isHttpsAlwaysUsed()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
 
@@ -180,22 +208,23 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (abfs == null) {
         return;
       }
+      TracingContext tracingContext = getTestTracingContext(getFileSystem(), false);
 
       if (usingFilesystemForSASTests) {
         abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
         AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-        tempFs.getAbfsStore().deleteFilesystem();
+        tempFs.getAbfsStore().deleteFilesystem(tracingContext);
       }
       else if (!useConfiguredFileSystem) {
         // Delete all uniquely created filesystem from the account
         final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-        abfsStore.deleteFilesystem();
+        abfsStore.deleteFilesystem(tracingContext);
 
         AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
             new Callable<Hashtable<String, String>>() {
               @Override
               public Hashtable<String, String> call() throws Exception {
-                return abfsStore.getFilesystemProperties();
+                return abfsStore.getFilesystemProperties(tracingContext);
               }
             });
         if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
@@ -439,7 +468,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
 
     return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
-        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
+        getTestTracingContext(fs, false));
   }
 
   /**
