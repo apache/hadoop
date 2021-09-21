@@ -103,4 +103,17 @@ public class TestQueuePath {
     Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
         rootPathCollection.get(0));
   }
+
+  @Test
+  public void testEquals() {
+    QueuePath queuePath = new QueuePath(TEST_QUEUE);
+    QueuePath queuePathSame = new QueuePath(TEST_QUEUE);
+
+    QueuePath empty = new QueuePath("");
+    QueuePath emptySame = new QueuePath("");
+
+    Assert.assertEquals(queuePath, queuePathSame);
+    Assert.assertEquals(empty, emptySame);
+    Assert.assertNotEquals(null, queuePath);
+  }
 }
