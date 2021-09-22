@@ -725,7 +725,7 @@
 
   <property>
     <name>dfs.federation.router.federation.rename.bandwidth</name>
-    <value></value>
+    <value>10</value>
     <description>
       Specify bandwidth per map in MB.
     </description>
@@ -733,7 +733,7 @@
 
   <property>
     <name>dfs.federation.router.federation.rename.map</name>
-    <value></value>
+    <value>10</value>
     <description>
       Max number of concurrent maps to use for copy.
     </description>
