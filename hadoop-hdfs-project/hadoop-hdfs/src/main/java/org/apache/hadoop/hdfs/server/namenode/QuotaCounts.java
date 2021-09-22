@@ -57,14 +57,10 @@ public class QuotaCounts {
    */
   static <T extends Enum<T>> EnumCounters<T> modify(EnumCounters<T> counter,
       Consumer<EnumCounters<T>> action) {
-    try {
-      action.accept(counter);
-    } catch (ConstEnumException cee) {
-      // We don't call clone here because ConstEnumCounters.clone() will return
-      // an object of class ConstEnumCounters. We want EnumCounters.
+    if (counter instanceof ConstEnumCounters) {
       counter = counter.deepCopyEnumCounter();
-      action.accept(counter);
     }
+    action.accept(counter);
     return counter;
   }
 
