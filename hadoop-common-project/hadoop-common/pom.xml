@@ -365,16 +365,6 @@
       <artifactId>wildfly-openssl-java</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.xerial.snappy</groupId>
-      <artifactId>snappy-java</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.lz4</groupId>
-      <artifactId>lz4-java</artifactId>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
 
   <build>

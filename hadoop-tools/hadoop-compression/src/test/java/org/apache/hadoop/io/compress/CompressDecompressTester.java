@@ -31,7 +31,6 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
-import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
@@ -312,7 +311,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
       final Joiner joiner = Joiner.on("- ");
       final ImmutableMap<Class<? extends Compressor>, Integer> emptySize = ImmutableMap
           .of(Lz4Compressor.class, 4, ZlibCompressor.class, 16,
-              SnappyCompressor.class, 4, BuiltInZlibDeflater.class, 16);
+              BuiltInZlibDeflater.class, 16);
 
       @Override
       void assertCompression(String name, Compressor compressor,
@@ -482,8 +481,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
     else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
       return ZlibFactory.isNativeZlibLoaded(new Configuration());
-    } else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)) {
-      return true;
     }
 
     return false;      

@@ -11,8 +11,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-org.apache.hadoop.io.compress.BZip2Codec
-org.apache.hadoop.io.compress.DefaultCodec
-org.apache.hadoop.io.compress.GzipCodec
-org.apache.hadoop.io.compress.ZStandardCodec
-
+org.apache.hadoop.io.compress.DeflateCodec
+org.apache.hadoop.io.compress.Lz4Codec
+org.apache.hadoop.io.compress.SnappyCodec

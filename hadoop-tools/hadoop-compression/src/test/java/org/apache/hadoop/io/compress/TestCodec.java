@@ -143,12 +143,6 @@ public class TestCodec {
   }
   
   @Test
-  public void testSnappyCodec() throws IOException {
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
-  }
-  
-  @Test
   public void testLz4Codec() throws IOException {
     conf.setBoolean(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_USELZ4HC_KEY,
@@ -626,48 +620,6 @@ public class TestCodec {
     LOG.info("SUCCESS! Completed SequenceFileCodecTest with codec \"" + codecClass + "\"");
   }
   
-  /**
-   * Regression test for HADOOP-8423: seeking in a block-compressed
-   * stream would not properly reset the block decompressor state.
-   */
-  @Test
-  public void testSnappyMapFile() throws Exception {
-    codecTestMapFile(SnappyCodec.class, CompressionType.BLOCK, 100);
-  }
-  
-  private void codecTestMapFile(Class<? extends CompressionCodec> clazz,
-      CompressionType type, int records) throws Exception {
-    
-    FileSystem fs = FileSystem.get(conf);
-    LOG.info("Creating MapFiles with " + records  + 
-            " records using codec " + clazz.getSimpleName());
-    Path path = new Path(GenericTestUtils.getTempPath(
-        clazz.getSimpleName() + "-" + type + "-" + records));
-
-    LOG.info("Writing " + path);
-    createMapFile(conf, fs, path, clazz.newInstance(), type, records);
-    MapFile.Reader reader = new MapFile.Reader(path, conf);
-    Text key1 = new Text("002");
-    assertNotNull(reader.get(key1, new Text()));
-    Text key2 = new Text("004");
-    assertNotNull(reader.get(key2, new Text()));
-  }
-  
-  private static void createMapFile(Configuration conf, FileSystem fs, Path path, 
-      CompressionCodec codec, CompressionType type, int records) throws IOException {
-    MapFile.Writer writer = 
-        new MapFile.Writer(conf, path,
-            MapFile.Writer.keyClass(Text.class),
-            MapFile.Writer.valueClass(Text.class),
-            MapFile.Writer.compression(type, codec));
-    Text key = new Text();
-    for (int j = 0; j < records; j++) {
-        key.set(String.format("%03d", j));
-        writer.append(key, key);
-    }
-    writer.close();
-  }
-
   public static void main(String[] args) throws IOException {
     int count = 10000;
     String codecClass = "org.apache.hadoop.io.compress.DefaultCodec";
