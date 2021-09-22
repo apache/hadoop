@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
@@ -259,16 +260,32 @@ public final class TimelineFilterUtils {
     return strSet;
   }
 
+
   public static void extractFamilyFilters(
       Filter filterList, FilterList removedFilterList, Scan scan) {
     if (filterList instanceof FamilyFilter) {
       FamilyFilter ff = (FamilyFilter) filterList;
       scan.addFamily(ff.getComparator().getValue());
-
     } else if (filterList instanceof FilterList) {
       FilterList filterListBase = (FilterList) filterList;
       for (Filter fs: filterListBase.getFilters()) {
         extractFamilyFilters(fs,removedFilterList,scan);
+      }
+    }
+    else{
+      removedFilterList.addFilter(filterList);
+    }
+  }
+
+  public static void extractFamilyFilters(
+      Filter filterList, FilterList removedFilterList, Get get) {
+    if (filterList instanceof FamilyFilter) {
+      FamilyFilter ff = (FamilyFilter) filterList;
+      get.addFamily(ff.getComparator().getValue());
+    } else if (filterList instanceof FilterList) {
+      FilterList filterListBase = (FilterList) filterList;
+      for (Filter fs: filterListBase.getFilters()) {
+        extractFamilyFilters(fs,removedFilterList,get);
       }
     }
     else{

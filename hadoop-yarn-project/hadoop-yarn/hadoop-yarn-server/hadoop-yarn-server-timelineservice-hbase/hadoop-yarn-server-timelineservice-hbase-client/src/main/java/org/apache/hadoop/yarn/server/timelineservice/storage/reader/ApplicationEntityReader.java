@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.HBaseTimelin
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.RowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TimelineStorageUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-
 import com.google.common.base.Preconditions;
 
 /**
@@ -66,6 +65,7 @@ import com.google.common.base.Preconditions;
  * application table.
  */
 class ApplicationEntityReader extends GenericEntityReader {
+
   private static final ApplicationTableRW APPLICATION_TABLE =
       new ApplicationTableRW();
 
@@ -330,6 +330,11 @@ class ApplicationEntityReader extends GenericEntityReader {
     setMetricsTimeRange(get);
     get.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
+      FilterList removedFilterList = new FilterList();
+      for (Filter f: filterList.getFilters()){
+        // Added this to remove Family filter from filterList and add as "addFamiliy"
+       TimelineFilterUtils.extractFamilyFilters(filterList,removedFilterList,get);
+      }
       get.setFilter(filterList);
     }
     return getTable().getResult(hbaseConf, conn, get);
