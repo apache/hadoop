@@ -72,6 +72,7 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import javax.crypto.SecretKey;
+import javax.security.auth.DestroyFailedException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
@@ -245,8 +246,8 @@ public class AbfsClient implements Closeable {
       List<AbfsHttpHeader> requestHeaders, String path,
       boolean isCreateFileRequest, EncryptionAdapter encryptionAdapter,
       TracingContext tracingContext)
-      throws IOException {
-    String encodedKey, encodedKeySHA256, encryptionContext;
+      throws IOException, DestroyFailedException {
+    String encodedKey, encodedKeySHA256;
     switch (encryptionType) {
     case GLOBAL_KEY:
       encodedKey = clientProvidedEncryptionKey;
@@ -255,17 +256,21 @@ public class AbfsClient implements Closeable {
     case ENCRYPTION_CONTEXT:
       if (isCreateFileRequest) {
         // get new context for create file request
-        encryptionContext = encryptionAdapter.fetchEncryptionContext();
+        SecretKey encryptionContext =
+            encryptionAdapter.fetchEncryptionContext();
         computeKeys(encryptionAdapter);
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-            encryptionContext));
+            IOUtils.toString(encryptionContext.getEncoded(),
+                StandardCharsets.UTF_8.name())));
+        encryptionContext.destroy();
 
       } else if (encryptionAdapter == null) {
-        encryptionContext = getPathStatus(path, false,
-            tracingContext).getResult().getResponseHeader(X_MS_PROPERTIES);
+        SecretKey encryptionContext = encryptionContextProvider.getSecretKeyFromBytes(
+            getPathStatus(path, false, tracingContext).getResult()
+                .getResponseHeader(X_MS_PROPERTIES)
+                .getBytes(StandardCharsets.UTF_8));
         encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
             path, encryptionContext);
-        computeKeys(encryptionAdapter);
       }
       // use cached encryption keys from input/output streams
       encodedKey = IOUtils.toString(encryptionAdapter.getEncodedKey(),
@@ -402,7 +407,7 @@ public class AbfsClient implements Closeable {
       final boolean overwrite, final String permission, final String umask,
       final boolean isAppendBlob, final String eTag,
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
       addEncryptionKeyRequestHeaders(requestHeaders, path, true, encryptionAdapter,
@@ -539,7 +544,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation renamePath(String source, final String destination,
       final String continuation, TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
@@ -602,7 +607,8 @@ public class AbfsClient implements Closeable {
       final Instant renameRequestStartTime,
       final AbfsRestOperation op,
       final String destination,
-      TracingContext tracingContext) throws IOException {
+      TracingContext tracingContext) throws IOException,
+      DestroyFailedException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
       // Server has returned HTTP 404, which means rename source no longer
@@ -634,7 +640,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation append(final String path, final byte[] buffer,
       AppendRequestParameters reqParams, final String cachedSasToken,
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(requestHeaders, path, false,
         encryptionAdapter, tracingContext);
@@ -705,7 +711,7 @@ public class AbfsClient implements Closeable {
   // in case we are doing a retry after checking the length of the file
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
                                        final long length, TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
       final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext);
@@ -725,7 +731,7 @@ public class AbfsClient implements Closeable {
       boolean retainUncommittedData, boolean isClose,
       final String cachedSasToken, final String leaseId,
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(requestHeaders, path, false,
         encryptionAdapter, tracingContext);
@@ -759,7 +765,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation setPathProperties(final String path, final String properties,
                                              TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(requestHeaders, path, false,
         null, tracingContext);
@@ -787,7 +793,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation getPathStatus(final String path, final boolean includeProperties,
                                          TracingContext tracingContext)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -819,7 +825,8 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
                                 final int bufferLength, final String eTag,
       String cachedSasToken, EncryptionAdapter encryptionAdapter,
-      TracingContext tracingContext) throws IOException {
+      TracingContext tracingContext) throws IOException,
+      DestroyFailedException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(requestHeaders, path, false,
      encryptionAdapter, tracingContext);

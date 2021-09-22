@@ -41,7 +41,7 @@ public interface EncryptionContextProvider extends Destroyable {
    * @return encryptionContext string
    * @throws IOException
    */
-  String getEncryptionContext(String path) throws IOException;
+  SecretKey getEncryptionContext(String path) throws IOException;
 
   /**
    * Fetch encryption key in-exchange for encryption context
@@ -51,7 +51,9 @@ public interface EncryptionContextProvider extends Destroyable {
    * @return Encryption key
    * @throws IOException
    */
-  SecretKey getEncryptionKey(String path, String encryptionContext) throws IOException;
+  SecretKey getEncryptionKey(String path, SecretKey encryptionContext) throws IOException;
+
+  SecretKey getSecretKeyFromBytes(byte[] secret);
 
   void destroy();
 }

@@ -70,7 +70,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY;
@@ -133,7 +133,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to read with different CPK headers
     Configuration conf = fs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "different-1234567890123456789012");
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          FSDataInputStream iStream = fs2.open(new Path(fileName))) {
@@ -145,7 +145,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
 
     //  Trying to read with no CPK headers
-    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    conf.unset(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
     try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
         .get(conf); FSDataInputStream iStream = fs3.open(new Path(fileName))) {
       int len = 8 * ONE_MB;
@@ -183,7 +183,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to read with CPK headers
     Configuration conf = fs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "12345678901234567890123456789012");
 
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
@@ -219,7 +219,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append with different CPK headers
     Configuration conf = fs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "different-1234567890123456789012");
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
@@ -230,7 +230,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
 
     //  Trying to append with no CPK headers
-    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    conf.unset(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
     try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
         .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
       LambdaTestUtils.intercept(IOException.class, () -> {
@@ -265,7 +265,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to append with CPK headers
     Configuration conf = fs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "12345678901234567890123456789012");
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
@@ -337,7 +337,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     conf.unset(FS_AZURE_ABFS_ACCOUNT_NAME);
     conf.set(FS_AZURE_ABFS_ACCOUNT_NAME, accountName);
     conf.set(FS_AZURE_ACCOUNT_KEY + "." + accountName, accountKey);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "123456789012345678901234567890ab");
     conf.set("fs.defaultFS", "abfs://" + fileSystemName + "@" + accountName);
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
@@ -359,8 +359,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
 
     //  Trying to read fs2DestFilePath with different CPK headers
-    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.unset(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "different-1234567890123456789012");
     try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
         .get(conf); FSDataInputStream iStream = fs3.open(fs2DestFilePath)) {
@@ -372,7 +372,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     }
 
     //  Trying to read fs2DestFilePath with no CPK headers
-    conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+    conf.unset(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
     try (AzureBlobFileSystem fs4 = (AzureBlobFileSystem) FileSystem
         .get(conf); FSDataInputStream iStream = fs4.open(fs2DestFilePath)) {
       int length = 8 * ONE_MB;
@@ -426,7 +426,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying with different CPK headers
     Configuration conf = fs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "different-1234567890123456789012");
     AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
     AbfsClient abfsClient2 = fs2.getAbfsClient();
@@ -437,7 +437,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     if (isWithCPK) {
       //  Trying with no CPK headers
-      conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+      conf.unset(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
       AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.get(conf);
       AbfsClient abfsClient3 = fs3.getAbfsClient();
       abfsRestOperation = abfsClient3
@@ -566,7 +566,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     //  Trying to read with different CPK headers
     Configuration conf = fs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         "different-1234567890123456789012");
     try (AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(conf);
          AbfsClient abfsClient2 = fs2.getAbfsClient()) {
@@ -578,7 +578,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
 
     //  Trying to read with no CPK headers
     if (isWithCPK) {
-      conf.unset(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+      conf.unset(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
       try (AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem
           .get(conf); AbfsClient abfsClient3 = fs3.getAbfsClient()) {
         LambdaTestUtils.intercept(IOException.class, () -> {
@@ -878,7 +878,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     Configuration conf = abfs.getConf();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     String encryptionKey = conf
-        .get(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+        .get(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
     if (encryptionKey == null || encryptionKey.isEmpty()) {
       return "";
     }
@@ -945,11 +945,11 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
       throws IOException {
     Configuration conf = getRawConfiguration();
     if (withCPK) {
-      conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName(),
+      conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + getAccountName(),
           cpk);
     } else {
       conf.unset(
-          FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + getAccountName());
+          FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + getAccountName());
     }
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
   }
@@ -960,13 +960,13 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     Configuration conf = abfsConf.getRawConfiguration();
     String accountName = conf.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     String cpk = conf
-        .get(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName);
+        .get(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName);
     if (cpk == null || cpk.isEmpty()) {
       cpk = "01234567890123456789012345678912";
     }
     cpk = "different-" + cpk;
     String differentCpk = cpk.substring(0, ENCRYPTION_KEY_LEN - 1);
-    conf.set(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY + "." + accountName,
+    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + accountName,
         differentCpk);
     conf.set("fs.defaultFS",
         "abfs://" + getFileSystemName() + "@" + accountName);

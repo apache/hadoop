@@ -1040,7 +1040,7 @@ public class AbfsConfiguration{
   }
 
   public String getClientProvidedEncryptionKey() {
-    String accSpecEncKey = accountConf(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY);
+    String accSpecEncKey = accountConf(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY);
     return rawConfig.get(accSpecEncKey, null);
   }
 

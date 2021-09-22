@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
+import javax.security.auth.DestroyFailedException;
+
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -196,7 +198,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (streamStatistics != null) {
       streamStatistics.readOperationStarted();
     }
-    int bytesRead = readRemote(position, buffer, offset, length, tracingContext);
+    int bytesRead = 0;
+    try {
+      bytesRead = readRemote(position, buffer, offset, length, tracingContext);
+    } catch (DestroyFailedException e) {
+      LOG.debug(e.getMessage());
+    }
     if (statistics != null) {
       statistics.incrementBytesRead(bytesRead);
     }
@@ -258,12 +265,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         limit = 0;
         bCursor = 0;
       }
-      if (shouldReadFully()) {
-        lastReadBytes = readFileCompletely(b, currentOff, currentLen);
-      } else if (shouldReadLastBlock()) {
-        lastReadBytes = readLastBlock(b, currentOff, currentLen);
-      } else {
-        lastReadBytes = readOneBlock(b, currentOff, currentLen);
+      try {
+        if (shouldReadFully()) {
+          lastReadBytes = readFileCompletely(b, currentOff, currentLen);
+        } else if (shouldReadLastBlock()) {
+          lastReadBytes = readLastBlock(b, currentOff, currentLen);
+        } else {
+          lastReadBytes = readOneBlock(b, currentOff, currentLen);
+        }
+      } catch (DestroyFailedException e) {
+        LOG.debug(e.getMessage());
+        throw new IOException(e);
       }
       if (lastReadBytes > 0) {
         currentOff += lastReadBytes;
@@ -288,7 +300,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         && this.fCursor >= footerStart;
   }
 
-  private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
+  private int readOneBlock(final byte[] b, final int off, final int len)
+      throws IOException, DestroyFailedException {
     if (len == 0) {
       return 0;
     }
@@ -341,7 +354,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readFileCompletely(final byte[] b, final int off, final int len)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     if (len == 0) {
       return 0;
     }
@@ -356,7 +369,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readLastBlock(final byte[] b, final int off, final int len)
-      throws IOException {
+      throws IOException, DestroyFailedException {
     if (len == 0) {
       return 0;
     }
@@ -375,7 +388,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int optimisedRead(final byte[] b, final int off, final int len,
-      final long readFrom, final long actualLen) throws IOException {
+      final long readFrom, final long actualLen)
+      throws IOException, DestroyFailedException {
     fCursor = readFrom;
     int totalBytesRead = 0;
     int lastBytesRead = 0;
@@ -469,7 +483,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
-                           final boolean bypassReadAhead) throws IOException {
+                           final boolean bypassReadAhead)
+      throws IOException, DestroyFailedException {
     if (readAheadEnabled && !bypassReadAhead) {
       // try reading from read-ahead
       if (offset != 0) {
@@ -518,7 +533,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
+  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext)
+      throws IOException, DestroyFailedException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }

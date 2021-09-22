@@ -10,8 +10,8 @@ import java.util.UUID;
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
   String dummyKey = UUID.randomUUID().toString();
-  HashMap<String, String> pathToContextMap = new HashMap<>();
-  HashMap<String, String> contextToKeyMap = new HashMap<>();
+  HashMap<String, SecretKey> pathToContextMap = new HashMap<>();
+  HashMap<SecretKey, SecretKey> contextToKeyMap = new HashMap<>();
   @Override
   public void initialize(Configuration configuration, String accountName,
       String fileSystem) throws IOException {
@@ -19,23 +19,25 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   }
 
   @Override
-  public String getEncryptionContext(String path)
+  public SecretKey getEncryptionContext(String path)
       throws IOException {
-    String newContext = UUID.randomUUID().toString();
+    SecretKey newContext =
+        new Key(UUID.randomUUID().toString().getBytes(StandardCharsets.UTF_8));
     pathToContextMap.put(path, newContext);
     //    String key = UUID.randomUUID().toString();
-    String key = dummyKey; // replace with above once server supports
+    SecretKey key = new Key(dummyKey.getBytes(StandardCharsets.UTF_8));
+    // replace with above once server supports
     contextToKeyMap.put(newContext, key);
     return newContext;
   }
 
   @Override
   public SecretKey getEncryptionKey(String path,
-      String encryptionContext) throws IOException {
+      SecretKey encryptionContext) throws IOException {
     if (!encryptionContext.equals(pathToContextMap.get(path))) {
       throw new IOException("encryption context does not match path");
     }
-    return new Key(encryptionContext);
+    return contextToKeyMap.get(encryptionContext);
   }
 
   @Override
@@ -46,9 +48,9 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   class Key implements SecretKey {
 
     private final byte[] key;
-    Key(String encryptionContext) {
-      key =
-          contextToKeyMap.get(encryptionContext).getBytes(StandardCharsets.UTF_8);
+
+    Key(byte[] secret) {
+      key = secret;
     }
     @Override
     public String getAlgorithm() {

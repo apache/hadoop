@@ -12,7 +12,7 @@ import java.io.IOException;
 
 public class EncryptionAdapter implements Destroyable {
   String path;
-  String encryptionContext;
+  SecretKey encryptionContext;
   SecretKey encryptionKey;
   EncryptionContextProvider provider;
   byte[] encodedKey = null;
@@ -21,7 +21,7 @@ public class EncryptionAdapter implements Destroyable {
       LoggerFactory.getLogger(EncryptionAdapter.class);
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
-      String encryptionContext) throws IOException {
+      SecretKey encryptionContext) throws IOException {
     this(provider, path);
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
@@ -41,7 +41,7 @@ public class EncryptionAdapter implements Destroyable {
     return provider.getEncryptionKey(path, encryptionContext);
   }
 
-  public String fetchEncryptionContext() throws IOException {
+  public SecretKey fetchEncryptionContext() throws IOException {
     encryptionContext = provider.getEncryptionContext(path);
     return encryptionContext;
   }
