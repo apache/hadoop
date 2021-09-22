@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -33,10 +34,12 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
@@ -46,6 +49,7 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderUtils;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterList;
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineFilterUtils;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.timelineservice.storage.application.ApplicationColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTable;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnPrefix;
@@ -70,6 +74,7 @@ import com.google.common.base.Preconditions;
  * table.
  */
 class GenericEntityReader extends TimelineEntityReader {
+
   private static final EntityTableRW ENTITY_TABLE = new EntityTableRW();
 
   /**
@@ -533,7 +538,12 @@ class GenericEntityReader extends TimelineEntityReader {
     setMetricsTimeRange(scan);
     scan.setMaxVersions(getDataToRetrieve().getMetricsLimit());
     if (filterList != null && !filterList.getFilters().isEmpty()) {
-      scan.setFilter(filterList);
+      FilterList removedFilterList = new FilterList();
+      for (Filter f: filterList.getFilters()){
+        // Added this to remove Family filter from filterList and add as "addFamiliy"
+        TimelineFilterUtils.extractFamilyFilters(filterList,removedFilterList,scan);
+      }
+      scan.setFilter(removedFilterList);
     }
     return getTable().getResultScanner(hbaseConf, conn, scan);
   }

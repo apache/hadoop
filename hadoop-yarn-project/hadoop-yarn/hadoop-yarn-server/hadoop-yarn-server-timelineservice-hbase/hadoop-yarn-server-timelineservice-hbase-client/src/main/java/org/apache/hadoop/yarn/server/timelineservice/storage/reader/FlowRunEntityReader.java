@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.BinaryPrefixComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FamilyFilter;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
@@ -56,7 +57,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKey;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKeyPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-
 import com.google.common.base.Preconditions;
 
 /**
@@ -65,7 +65,6 @@ import com.google.common.base.Preconditions;
  */
 class FlowRunEntityReader extends TimelineEntityReader {
   private static final FlowRunTableRW FLOW_RUN_TABLE = new FlowRunTableRW();
-
   FlowRunEntityReader(TimelineReaderContext ctxt,
       TimelineEntityFilters entityFilters, TimelineDataToRetrieve toRetrieve) {
     super(ctxt, entityFilters, toRetrieve);
@@ -250,8 +249,14 @@ class FlowRunEntityReader extends TimelineEntityReader {
 
     FilterList newList = new FilterList();
     newList.addFilter(new PageFilter(getFilters().getLimit()));
+
     if (filterList != null && !filterList.getFilters().isEmpty()) {
-      newList.addFilter(filterList);
+      FilterList removedFilterList = new FilterList();
+      for (Filter f: filterList.getFilters()){
+        // Added this to remove Family filter from filterList and add as "addFamiliy"
+        TimelineFilterUtils.extractFamilyFilters(filterList,removedFilterList,scan);
+      }
+      newList.addFilter(removedFilterList);
     }
     scan.setFilter(newList);
     scan.setMaxVersions(Integer.MAX_VALUE);
