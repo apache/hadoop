@@ -741,8 +741,15 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Current usable resource for this queue and partition is the max of
       // queueCurrentLimit and queuePartitionResource.
-      Resource queuePartitionUsableResource = Resources.max(resourceCalculator,
-          lastClusterResource, queueCurrentLimit, queuePartitionResource);
+      // If any of the resources available to this queue are less than queue's
+      // guarantee, use the guarantee as the queuePartitionUsableResource
+      // because nothing less than the queue's guarantee should be used when
+      // calculating the AM limit.
+      Resource queuePartitionUsableResource =
+          (Resources.fitsIn(resourceCalculator,
+            labelManager.getResourceByLabel(nodePartition, lastClusterResource),
+            queuePartitionResource, queueCurrentLimit)) ?
+              queueCurrentLimit : queuePartitionResource;
 
       Resource amResouceLimit = Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionUsableResource, amResourcePercent,
