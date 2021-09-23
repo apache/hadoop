@@ -46,6 +46,7 @@ public final class Preconditions {
       "The argument object is NULL";
   private static final String CHECK_ARGUMENT_EX_MESSAGE =
       "The argument expression is false";
+
   private Preconditions() {
   }
 
@@ -198,7 +199,7 @@ public final class Preconditions {
   public static void checkArgument(
       final boolean expression,
       final String errorMsg,
-      Object ... errorMsgArgs) {
+      Object... errorMsgArgs) {
     if (!expression) {
       String msg;
       try {
