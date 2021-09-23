@@ -5242,7 +5242,7 @@ public class TestLeafQueue {
     cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
     cs.reinitialize(conf, cs.getRMContext());
 
-    ParentQueue root = (ParentQueue) cs.getRootQueue();
+    ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
 
     Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
         root.configuredNodeLabels);
