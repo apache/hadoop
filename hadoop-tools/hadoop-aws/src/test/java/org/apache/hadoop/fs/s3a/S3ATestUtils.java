@@ -1551,14 +1551,4 @@ public final class S3ATestUtils {
           + s3AEncryptionMethod.getMethod());
     }
   }
-
-  /**
-   * Skip if a test uses CSE.
-   */
-  public static void skipIfCSEIsEnabled(Configuration configuration) {
-    String encryption = configuration.get(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM, "");
-    if (encryption.equals(S3AEncryptionMethods.CSE_KMS.getMethod())) {
-      skip("CSE encryption has been set");
-    }
-  }
 }

@@ -372,11 +372,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       AuditIntegration.stubAuditManager();
 
   /**
-<<<<<<< HEAD
    * Is this S3A FS instance using S3 client side encryption?
-=======
-   * Bucket AccessPoint.
->>>>>>> 6bd0b3939cd (Addressing PR comments)
    */
   private boolean isCSEEnabled;
 
