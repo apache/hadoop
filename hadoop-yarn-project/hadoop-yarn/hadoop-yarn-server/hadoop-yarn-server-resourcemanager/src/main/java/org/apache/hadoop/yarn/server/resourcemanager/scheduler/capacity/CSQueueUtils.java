@@ -93,14 +93,14 @@ public class CSQueueUtils {
             csConf.getLabeledQueueWeight(queuePath, label));
       }
 
-      /*float absCapacity = queueCapacities.getCapacity(label);
-      float absMaxCapacity = queueCapacities.getMaximumCapacity(label);
-      if (absCapacity > absMaxCapacity) {
+      float capacity = queueCapacities.getCapacity(label);
+      float maxCapacity = queueCapacities.getMaximumCapacity(label);
+      if (capacity > maxCapacity) {
         throw new IllegalArgumentException("Illegal queue capacity setting "
-            + "(abs-capacity=" + absCapacity + ") > (abs-maximum-capacity="
-            + absMaxCapacity + ") for queue=["
+            + "(abs-capacity=" + capacity + ") > (abs-maximum-capacity="
+            + maxCapacity + ") for queue=["
             + queuePath + "],label=[" + label + "]");
-      }*/
+      }
     }
   }
 
