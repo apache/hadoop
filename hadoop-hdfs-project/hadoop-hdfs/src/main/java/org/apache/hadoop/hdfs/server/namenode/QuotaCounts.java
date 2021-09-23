@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.util.ConstEnumCounters;
 import org.apache.hadoop.hdfs.util.EnumCounters;
-import org.apache.hadoop.hdfs.util.ConstEnumCounters.ConstEnumException;
 
 import java.util.function.Consumer;
 
