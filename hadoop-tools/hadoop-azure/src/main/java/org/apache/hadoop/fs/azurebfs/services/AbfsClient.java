@@ -383,6 +383,10 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException ex) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw ex;
+      }
       if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         String existingResource =
             op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
@@ -506,6 +510,10 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
+        // If we have no HTTP response, throw the original exception.
+        if (!op.hasResult()) {
+          throw e;
+        }
         final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
             renameRequestStartTime, op, destination, tracingContext);
         if (idempotencyOp.getResult().getStatusCode()
@@ -530,7 +538,7 @@ public class AbfsClient implements Closeable {
    * the one initiated from this ABFS filesytem instance as it was retried. This
    * should be a corner case hence going ahead with LMT check.
    * @param renameRequestStartTime startTime for the rename request
-   * @param op Rename request REST operation response
+   * @param op Rename request REST operation response with non-null HTTP response
    * @param destination rename destination path
    * @param tracingContext Tracks identifiers for request header
    * @return REST operation response post idempotency check
@@ -541,6 +549,7 @@ public class AbfsClient implements Closeable {
       final AbfsRestOperation op,
       final String destination,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
+    assert op.hasResult();
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
       // Server has returned HTTP 404, which means rename source no longer
@@ -612,6 +621,10 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
       if (reqParams.isAppendBlob()
           && appendSuccessCheckOp(op, path,
           (reqParams.getPosition() + reqParams.getLength()), tracingContext)) {
@@ -796,6 +809,10 @@ public class AbfsClient implements Closeable {
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
+      // If we have no HTTP response, throw the original exception.
+      if (!op.hasResult()) {
+        throw e;
+      }
       final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
       if (idempotencyOp.getResult().getStatusCode()
           == op.getResult().getStatusCode()) {
@@ -822,10 +839,11 @@ public class AbfsClient implements Closeable {
    * delete issued from this filesystem instance.
    * These are few corner cases and usually returning a success at this stage
    * should help the job to continue.
-   * @param op Delete request REST operation response
+   * @param op Delete request REST operation response with non-null HTTP response
    * @return REST operation response post idempotency check
    */
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
+    assert op.hasResult();
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {

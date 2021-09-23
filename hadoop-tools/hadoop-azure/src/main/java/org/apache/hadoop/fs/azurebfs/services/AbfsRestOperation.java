@@ -71,6 +71,13 @@ public class AbfsRestOperation {
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
 
+  /**
+   * Returns true if there is a non-null HTTP response from the ABFS call.
+   */
+  public boolean hasResult() {
+    return result != null;
+  }
+
   public AbfsHttpOperation getResult() {
     return result;
   }
