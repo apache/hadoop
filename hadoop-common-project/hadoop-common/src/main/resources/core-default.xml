@@ -1606,6 +1606,14 @@
 </property>
 
 <property>
+  <name>fs.s3a.accesspoint.required</name>
+  <value>false</value>
+  <description>Require that all S3 access is made through Access Points and not through
+  buckets directly. If enabled, use per-bucket overrides to allow bucket access to a specific set
+  of buckets.</description>
+</property>
+
+<property>
   <name>fs.s3a.block.size</name>
   <value>32M</value>
   <description>Block size to use when reading files using s3a: file system.
