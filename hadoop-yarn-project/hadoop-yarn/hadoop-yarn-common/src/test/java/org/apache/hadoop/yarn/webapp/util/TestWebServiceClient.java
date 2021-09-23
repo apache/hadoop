@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.webapp;
+package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.File;
 import java.net.HttpURLConnection;

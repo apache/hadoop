@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.webapp;
+package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -46,8 +46,8 @@ public class WebServiceClient {
    * Construct a new WebServiceClient based on the configuration. It will try to
    * load SSL certificates when it is specified.
    *
-   * @param conf Configuration object
-   * @throws Exception if creation of SSLFactory fails
+   * @param conf Configuration
+   * @throws Exception
    */
   public static void initialize(Configuration conf) throws Exception {
     if (instance == null) {
@@ -75,8 +75,8 @@ public class WebServiceClient {
   /**
    * Start SSL factory.
    *
-   * @param conf
-   * @return
+   * @param conf Configuration
+   * @return sslfactory object
    * @throws Exception
    */
   private static SSLFactory createSSLFactory(Configuration conf)
