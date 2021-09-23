@@ -401,7 +401,7 @@ public abstract class AbstractCSQueue implements CSQueue {
             .getConfiguredNodeLabels(queuePath);
       }
 
-      configuredCapacityVectors = csContext.getConfiguration()
+      configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath, configuredNodeLabels);
 
       // After we setup labels, we can setup capacities
@@ -1197,6 +1197,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       readLock.unlock();
     }
 
+  }
+
+  @Override
+  public Set<String> getConfiguredNodeLabels() {
+    return configuredNodeLabels;
   }
 
   @Override

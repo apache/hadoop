@@ -422,6 +422,8 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   QueueCapacityVector getConfiguredCapacityVector(String label);
 
+  Set<String> getConfiguredNodeLabels();
+
   /**
    * Get effective capacity of queue. If min/max resource is configured,
    * preference will be given to absolute configuration over normal capacity.

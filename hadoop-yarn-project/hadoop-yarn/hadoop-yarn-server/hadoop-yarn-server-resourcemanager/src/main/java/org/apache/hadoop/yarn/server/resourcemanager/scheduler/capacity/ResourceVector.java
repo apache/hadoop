@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
@@ -59,6 +60,32 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
     }
 
     return emptyResourceVector;
+  }
+
+  /**
+   * Creates a new {@code ResourceVector} with the values set in a
+   * {@code Resource} object.
+   * @param resource resource object the resource vector will be based on
+   * @return uniform resource vector
+   */
+  public static ResourceVector of(Resource resource) {
+    ResourceVector resourceVector = new ResourceVector();
+    for (ResourceInformation resourceInformation : resource.getResources()) {
+      resourceVector.setValue(resourceInformation.getName(),
+          resourceInformation.getValue());
+    }
+
+    return resourceVector;
+  }
+
+  /**
+   * Subtract values for each resource defined in the given resource vector.
+   * @param otherResourceVector rhs resource vector of the subtraction
+   */
+  public void subtract(ResourceVector otherResourceVector) {
+    for (Map.Entry<String, Float> resource : otherResourceVector) {
+      setValue(resource.getKey(), getValue(resource.getKey()) - resource.getValue());
+    }
   }
 
   public float getValue(String resourceName) {
