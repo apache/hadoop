@@ -37,14 +37,15 @@ public class TestLocalFSCopyFromLocal extends AbstractContractCopyFromLocalTest 
 
   @Test
   public void testDestinationFileIsToParentDirectory() throws Throwable {
-    describe("Source is a file and destination is its own parent directory");
+    describe("Source is a file and destination is its own parent directory. " +
+      "Copying will cause the source file to be deleted.");
 
     File file = createTempFile("local");
     Path dest = new Path(file.getParentFile().toURI());
     Path src = new Path(file.toURI());
 
-    intercept(PathOperationException.class,
-        () -> getFileSystem().copyFromLocalFile( true, true, src, dest));
+    getFileSystem().copyFromLocalFile(true, true, src, dest);
+    assertPathDoesNotExist("Source found", src);
   }
 
   @Test
