@@ -176,9 +176,6 @@ class IncrementalBlockReportManager {
       }
     }
 
-    /* set blocks to zero */
-    this.dnMetrics.resetBlocksInPendingIBR();
-
     readyToSend = false;
     return reports.toArray(new StorageReceivedDeletedBlocks[reports.size()]);
   }
@@ -198,6 +195,9 @@ class IncrementalBlockReportManager {
     // Generate a list of the pending reports for each storage under the lock
     final StorageReceivedDeletedBlocks[] reports = generateIBRs();
     if (reports.length == 0) {
+      /* set blocks to zero */
+      this.dnMetrics.resetBlocksInPendingIBR();
+
       // Nothing new to report.
       return;
     }
@@ -212,6 +212,8 @@ class IncrementalBlockReportManager {
       namenode.blockReceivedAndDeleted(registration, bpid, reports);
       success = true;
     } finally {
+      /* set blocks to zero */
+      this.dnMetrics.resetBlocksInPendingIBR();
 
       if (success) {
         dnMetrics.addIncrementalBlockReport(monotonicNow() - startTime,
