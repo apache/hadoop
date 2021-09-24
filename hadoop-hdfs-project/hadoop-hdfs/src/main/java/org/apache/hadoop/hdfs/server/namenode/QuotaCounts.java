@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.util.ConstEnumCounters;
 import org.apache.hadoop.hdfs.util.EnumCounters;
-import org.apache.hadoop.hdfs.util.ConstEnumCounters.ConstEnumException;
 
 import java.util.function.Consumer;
 
@@ -57,14 +56,10 @@ public class QuotaCounts {
    */
   static <T extends Enum<T>> EnumCounters<T> modify(EnumCounters<T> counter,
       Consumer<EnumCounters<T>> action) {
-    try {
-      action.accept(counter);
-    } catch (ConstEnumException cee) {
-      // We don't call clone here because ConstEnumCounters.clone() will return
-      // an object of class ConstEnumCounters. We want EnumCounters.
+    if (counter instanceof ConstEnumCounters) {
       counter = counter.deepCopyEnumCounter();
-      action.accept(counter);
     }
+    action.accept(counter);
     return counter;
   }
 
