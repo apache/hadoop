@@ -96,7 +96,9 @@ public class LeaseRenewer {
    * @param renewer Instance to be cleared from Factory
    */
   public static void remove(LeaseRenewer renewer) {
-    Factory.INSTANCE.remove(renewer);
+    synchronized (renewer) {
+      Factory.INSTANCE.remove(renewer);
+    }
   }
 
   /**
