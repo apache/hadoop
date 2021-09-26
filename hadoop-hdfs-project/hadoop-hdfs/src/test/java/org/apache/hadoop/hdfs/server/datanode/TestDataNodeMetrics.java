@@ -169,6 +169,7 @@ public class TestDataNodeMetrics {
     conf.setInt(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, interval);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3).build();
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
     try {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
@@ -197,14 +198,11 @@ public class TestDataNodeMetrics {
       fout.close();
       dout.close();
       DatanodeInfo headDatanodeInfo = pipeline[0];
-      DataNode headNode = null;
       List<DataNode> datanodes = cluster.getDataNodes();
-      for (DataNode datanode : datanodes) {
-        if (datanode.getDatanodeId().equals(headDatanodeInfo)) {
-          headNode = datanode;
-          break;
-        }
-      }
+      DataNode headNode = datanodes.stream().filter(d -> d.getDatanodeId().equals(headDatanodeInfo))
+          .findFirst().orElseGet(null);
+      assertNotNull("Could not find the head of the datanode write pipeline",
+          headNode);
       MetricsRecordBuilder dnMetrics = getMetrics(headNode.getMetrics().name());
       assertTrue("More than 1 packet received",
           getLongCounter("PacketsReceived", dnMetrics) > 1L);
@@ -216,6 +214,7 @@ public class TestDataNodeMetrics {
       if (cluster != null) {
         cluster.shutdown();
       }
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 
