@@ -30,6 +30,7 @@ using ::testing::_;
 
 using namespace hdfs;
 
+
 namespace hdfs {
 
 TEST(ConfigurationTest, TestDegenerateInputs) {
