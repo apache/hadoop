@@ -44,7 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 @SuppressWarnings("deprecation")
-public class JobClientUnitTest {
+public class TestJobClients {
   
   public class TestJobClient extends JobClient {
 
