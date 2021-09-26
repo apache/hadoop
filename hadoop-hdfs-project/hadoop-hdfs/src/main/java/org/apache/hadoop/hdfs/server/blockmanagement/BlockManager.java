@@ -759,8 +759,10 @@ public class BlockManager implements BlockStatsMXBean {
     try {
       redundancyThread.interrupt();
       blockReportThread.interrupt();
+      markedDeleteBlockScrubberThread.interrupt();
       redundancyThread.join(3000);
       blockReportThread.join(3000);
+      markedDeleteBlockScrubberThread.join(3000);
     } catch (InterruptedException ie) {
     }
     datanodeManager.close();
@@ -4940,8 +4942,6 @@ public class BlockManager implements BlockStatsMXBean {
     private boolean isSleep;
 
     private void remove(long time) {
-      // Reentrant write lock, Release the lock when the remove is
-      // complete
       if (checkToDeleteIterator()) {
         namesystem.writeLock();
         try {
@@ -4965,24 +4965,28 @@ public class BlockManager implements BlockStatsMXBean {
     @Override
     public void run() {
       LOG.info("Start MarkedDeleteBlockScrubber thread");
-      while (namesystem.isRunning()) {
+      while (namesystem.isRunning() &&
+          !Thread.currentThread().isInterrupted()) {
         if (!markedDeleteQueue.isEmpty() || checkToDeleteIterator()) {
-          namesystem.writeLock();
           try {
             NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
             metrics.setDeleteBlocksQueued(markedDeleteQueue.size());
             isSleep = false;
             long startTime = Time.monotonicNow();
             remove(startTime);
-            while (!isSleep && !markedDeleteQueue.isEmpty()) {
+            while (!isSleep && !markedDeleteQueue.isEmpty() &&
+                !Thread.currentThread().isInterrupted()) {
               List<BlockInfo> markedDeleteList = markedDeleteQueue.poll();
               if (markedDeleteList != null) {
                 toDeleteIterator = markedDeleteList.listIterator();
               }
               remove(startTime);
             }
-          } finally {
-            namesystem.writeUnlock();
+          } catch (Exception e){
+            LOG.warn("MarkedDeleteBlockScrubber encountered an exception" +
+                " during the block deletion process, " +
+                " the deletion of the block will retry in {} millisecond.",
+                deleteBlockUnlockIntervalTimeMs, e);
           }
         }
         if (isSleep) {
@@ -4993,7 +4997,7 @@ public class BlockManager implements BlockStatsMXBean {
           Thread.sleep(deleteBlockUnlockIntervalTimeMs);
         } catch (InterruptedException e) {
           LOG.info("Stopping MarkedDeleteBlockScrubber.");
-          Thread.currentThread().interrupt();
+          break;
         }
       }
     }
