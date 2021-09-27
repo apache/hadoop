@@ -1468,51 +1468,6 @@ For a site configuration of:
 The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
 `arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
 
-This *does not hold* when encryption settings are held in JCEKS stores.
-In that situation, *a global declaration using the newer key takes priority
-over a per-bucket declaration with the older key name.
-
-
-
-
-### Customizing S3A secrets held in credential files
-
-
-Secrets in JCEKS files or provided by other Hadoop credential providers
-can also be configured on a per bucket basis. The S3A client will
-look for the per-bucket secrets be
-
-
-Consider a JCEKS file with six keys:
-
-```
-fs.s3a.access.key
-fs.s3a.secret.key
-fs.s3a.encryption.algorithm
-fs.s3a.encryption.key
-fs.s3a.bucket.nightly.access.key
-fs.s3a.bucket.nightly.secret.key
-fs.s3a.bucket.nightly.session.token
-fs.s3a.bucket.nightly.encryption.key
-fs.s3a.bucket.nightly.encryption.algorithm
-```
-
-When accessing the bucket `s3a://nightly/`, the per-bucket configuration
-options for that bucket will be used, here the access keys and token,
-and including the encryption algorithm and key.
-
-If the configuration mixes old and new key names, then the new names take
-priority over the older values, even if they are not scoped to the bucket
-
-```
-fs.s3a.encryption.algorithm
-fs.s3a.encryption.key
-fs.s3a.bucket.nightly.server-side-encryption-algorithm
-fs.s3a.bucket.nightly.server-side-encryption.key
-```
-
-
-
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
 
 S3 Buckets are hosted in different "regions", the default being "US-East".

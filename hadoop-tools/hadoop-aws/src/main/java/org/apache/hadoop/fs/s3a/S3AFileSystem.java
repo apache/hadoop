@@ -458,9 +458,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // look for encryption data
       // DT Bindings may override this
-      setEncryptionSecrets(new EncryptionSecrets(
-          getEncryptionAlgorithm(bucket, conf),
-          getS3EncryptionKey(bucket, getConf())));
+      setEncryptionSecrets(
+          buildEncryptionSecrets(bucket, conf));
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);

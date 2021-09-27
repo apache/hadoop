@@ -34,22 +34,26 @@ import org.apache.commons.lang3.StringUtils;
  */
 public enum S3AEncryptionMethods {
 
-  NONE("", false),
-  SSE_S3("AES256", true),
-  SSE_KMS("SSE-KMS", true),
-  SSE_C("SSE-C", true),
-  CSE_KMS("CSE-KMS", false),
-  CSE_CUSTOM("CSE-CUSTOM", false);
+  NONE("", false, false),
+  SSE_S3("AES256", true, false),
+  SSE_KMS("SSE-KMS", true, false),
+  SSE_C("SSE-C", true, true),
+  CSE_KMS("CSE-KMS", false, true),
+  CSE_CUSTOM("CSE-CUSTOM", false, true);
 
   static final String UNKNOWN_ALGORITHM
       = "Unknown encryption algorithm ";
 
-  private String method;
-  private boolean serverSide;
+  private final String method;
+  private final boolean serverSide;
+  private final boolean requiresSecret;
 
-  S3AEncryptionMethods(String method, final boolean serverSide) {
+  S3AEncryptionMethods(String method,
+      final boolean serverSide,
+      final boolean requiresSecret) {
     this.method = method;
     this.serverSide = serverSide;
+    this.requiresSecret = requiresSecret;
   }
 
   public String getMethod() {
@@ -62,6 +66,14 @@ public enum S3AEncryptionMethods {
    */
   public boolean isServerSide() {
     return serverSide;
+  }
+
+  /**
+   * Does this encryption algorithm require a secret?
+   * @return true if a secret must be retrieved.
+   */
+  public boolean requiresSecret() {
+    return requiresSecret;
   }
 
   /**

@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
@@ -37,7 +38,9 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BUCKET_PREFIX;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assertOptionEquals;
 import static org.apache.hadoop.fs.s3a.S3AUtils.CREDENTIAL_PROVIDER_PATH;
@@ -232,16 +235,27 @@ public class TestBucketConfiguration extends AbstractHadoopTestBase {
         CredentialProviderFactory.getProviders(conf).get(0);
     provider.createCredentialEntry(S3_ENCRYPTION_ALGORITHM,
         NEW_ALGORITHM_KEY_GLOBAL.toCharArray());
+    provider.createCredentialEntry(S3_ENCRYPTION_KEY,
+        "global s3 encryption key".toCharArray());
     provider.createCredentialEntry(
         FS_S3A_BUCKET_PREFIX + "b." + SERVER_SIDE_ENCRYPTION_ALGORITHM,
         OLD_ALGORITHM_KEY_BUCKET.toCharArray());
+    final String bucketKey = "bucket-server-side-encryption-key";
+    provider.createCredentialEntry(
+        FS_S3A_BUCKET_PREFIX + "b." + SERVER_SIDE_ENCRYPTION_KEY,
+        bucketKey.toCharArray());
     provider.flush();
 
     // Get the encryption method and verify that the value is per-bucket of
     // old keys.
-    final String value = S3AUtils.getEncryptionAlgorithm("b", conf).getMethod();
-    Assertions.assertThat(value)
-        .describedAs("lookupPassword(%s)", S3_ENCRYPTION_ALGORITHM)
+    final EncryptionSecrets secrets = S3AUtils.buildEncryptionSecrets("b", conf);
+    Assertions.assertThat(secrets.getEncryptionMethod().getMethod())
+        .describedAs("buildEncryptionSecrets() encryption algorithm resolved to %s", secrets)
         .isEqualTo(OLD_ALGORITHM_KEY_BUCKET);
+
+    Assertions.assertThat(secrets.getEncryptionKey())
+        .describedAs("buildEncryptionSecrets() encryption key resolved to %s", secrets)
+        .isEqualTo(bucketKey);
+
   }
 }

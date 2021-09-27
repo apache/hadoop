@@ -172,7 +172,7 @@ public class DefaultS3ClientFactory extends Configured
     Configuration conf = getConf();
 
     // CSE-KMS Method
-    String kmsKeyId = getS3EncryptionKey(bucket, conf);
+    String kmsKeyId = getS3EncryptionKey(bucket, conf, true);
     // Check if kmsKeyID is not null
     Preconditions.checkArgument(!StringUtils.isBlank(kmsKeyId), "CSE-KMS "
         + "method requires KMS key ID. Use " + S3_ENCRYPTION_KEY

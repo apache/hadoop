@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
@@ -83,8 +84,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -93,6 +92,9 @@ import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
@@ -1553,13 +1555,13 @@ public final class S3ATestUtils {
     // if S3 encryption algorithm is not set to desired method or AWS encryption
     // key is not set, then skip.
     String bucket = getTestBucketName(configuration);
-    if (!s3AEncryptionMethod.getMethod().equals(getEncryptionAlgorithm(bucket,
-        configuration).getMethod()) || StringUtils.isBlank(getS3EncryptionKey(bucket,
-        configuration))
-    ) {
+    final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+    if (!s3AEncryptionMethod.getMethod().equals(secrets.getEncryptionMethod().getMethod())
+        || StringUtils.isBlank(secrets.getEncryptionKey())) {
       skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
           .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
-          + s3AEncryptionMethod.getMethod());
+          + s3AEncryptionMethod.getMethod()
+          + " in " + secrets);
     }
   }
 }
