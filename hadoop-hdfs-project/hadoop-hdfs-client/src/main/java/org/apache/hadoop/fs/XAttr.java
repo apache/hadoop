@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.fs;
 
-import java.util.Arrays;
-
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
+
+import java.nio.charset.Charset;
 
 /**
  * XAttr is the POSIX Extended Attribute model similar to that found in
@@ -158,6 +158,6 @@ public class XAttr {
   @Override
   public String toString() {
     return "XAttr [ns=" + ns + ", name=" + name + ", value="
-        + Arrays.toString(value) + "]";
+        + new String(value, Charset.defaultCharset()) + "]";
   }
 }
