@@ -1330,11 +1330,11 @@ void TaskUsage()
   // jobobject's are being used.
   // ProcessTree.isSetsidSupported()
   fwprintf(stdout, L"\
-Usage: task create [OPTIONS] [TASKNAME] [COMMAND_LINE]\n\
+Usage: task create [OPTOINS] [TASKNAME] [COMMAND_LINE]\n\
          Creates a new task job object with taskname and options to set CPU\n\
          and memory limits on the job object\n\
 \n\
-         OPTIONS: -c [cpu rate] set the cpu rate limit on the job object.\n\
+         OPTIONS: -c [cup rate] set the cpu rate limit on the job object.\n\
                   -m [memory] set the memory limit on the job object.\n\
          The cpu limit is an integral value of percentage * 100. The memory\n\
          limit is an integral number of memory in MB. \n\
