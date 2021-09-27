@@ -45,6 +45,8 @@ import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Shell;
+
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -113,7 +115,12 @@ public class TestNetUtils {
       fail("Should not have connected");
     } catch (UnknownHostException uhe) {
       LOG.info("Got exception: ", uhe);
-      GenericTestUtils.assertExceptionContains("invalid-test-host:0", uhe);
+      if (Shell.isJavaVersionAtLeast(17)) {
+        GenericTestUtils
+            .assertExceptionContains("invalid-test-host/<unresolved>:0", uhe);
+      } else {
+        GenericTestUtils.assertExceptionContains("invalid-test-host:0", uhe);
+      }
     }
   }
 
