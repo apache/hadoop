@@ -2218,6 +2218,8 @@
       </activation>
       <properties>
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
+        <!-- To make protoc work on Apple Silicon via fallback -->
+        <os.detected.classifier>osx-x86_64</os.detected.classifier>
       </properties>
     </profile>
     <profile>
