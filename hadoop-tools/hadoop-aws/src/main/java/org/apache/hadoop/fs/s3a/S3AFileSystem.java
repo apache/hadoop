@@ -377,7 +377,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean isCSEEnabled;
 
   /**
-   * Bucket AccessPoint
+   * Bucket AccessPoint.
    */
   private ArnResource accessPoint;
 
