@@ -41,14 +41,7 @@ public class ITestS3AHugeFilesEncryption extends AbstractSTestS3AHugeFiles {
   @Override
   public void setup() throws Exception {
     Configuration c = new Configuration();
-    String kmsKey = c.get(SERVER_SIDE_ENCRYPTION_KEY);
-    String encryptionAlgorithm = c.get(SERVER_SIDE_ENCRYPTION_ALGORITHM);
-    if (kmsKey == null || StringUtils.isBlank(kmsKey) || encryptionAlgorithm == null ||
-        !encryptionAlgorithm.equals(S3AEncryptionMethods.CSE_KMS.name())) {
-      skip(SERVER_SIDE_ENCRYPTION_KEY + " is not set for " +
-          SSE_KMS.getMethod() + " or CSE-KMS algorithm is used instead of "
-          + "SSE-KMS");
-    }
+    skipIfEncryptionNotSet(c, SSE_KMS);
     super.setup();
   }
 
