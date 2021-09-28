@@ -813,7 +813,8 @@ class BPOfferService {
       BPServiceActor actor) throws IOException {
     switch(cmd.getAction()) {
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
-      LOG.info("DatanodeCommand action from standby: DNA_ACCESSKEYUPDATE");
+      LOG.info("DatanodeCommand action from standby NN {}: DNA_ACCESSKEYUPDATE",
+          actor.getNNSocketAddress());
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
@@ -829,10 +830,12 @@ class BPOfferService {
     case DatanodeProtocol.DNA_CACHE:
     case DatanodeProtocol.DNA_UNCACHE:
     case DatanodeProtocol.DNA_ERASURE_CODING_RECONSTRUCTION:
-      LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
+      LOG.warn("Got a command from standby NN {} - ignoring command: {}",
+          actor.getNNSocketAddress(), cmd.getAction());
       break;
     default:
-      LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
+      LOG.warn("Unknown DatanodeCommand action: {} from standby NN {}",
+          cmd.getAction(), actor.getNNSocketAddress());
     }
     return true;
   }
