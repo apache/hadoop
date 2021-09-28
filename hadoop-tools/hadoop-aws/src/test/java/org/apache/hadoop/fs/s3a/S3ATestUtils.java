@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
-import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -264,7 +263,7 @@ public final class S3ATestUtils {
    * @param messages messages found in the PathIOE that trigger a test to skip
    * @throws PathIOException Throws PathIOE if it doesn't relate to any message in {@code messages}.
    */
-  public static void skipIfIOEContainsMessage(PathIOException ioe, String ...messages)
+  public static void skipIfIOEContainsMessage(PathIOException ioe, String...messages)
       throws PathIOException {
     for (String message: messages) {
       if (ioe.toString().contains(message)) {

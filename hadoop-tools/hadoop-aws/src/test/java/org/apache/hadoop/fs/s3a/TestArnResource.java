@@ -37,9 +37,10 @@ public class TestArnResource extends HadoopTestBase {
     String accessPoint = "testAp";
     String accountId = "123456789101";
     String[][] regionPartitionEndpoints = new String[][] {
-        { Regions.EU_WEST_1.getName(), "aws", "s3-accesspoint.eu-west-1.amazonaws.com" },
-        { Regions.US_GOV_EAST_1.getName(), "aws-us-gov", "s3-accesspoint.us-gov-east-1.amazonaws.com" },
-        { Regions.CN_NORTH_1.getName(), "aws-cn", "s3-accesspoint.cn-north-1.amazonaws.com.cn" },
+        {Regions.EU_WEST_1.getName(), "aws", "s3-accesspoint.eu-west-1.amazonaws.com"},
+        {Regions.US_GOV_EAST_1.getName(), "aws-us-gov",
+            "s3-accesspoint.us-gov-east-1.amazonaws.com"},
+        {Regions.CN_NORTH_1.getName(), "aws-cn", "s3-accesspoint.cn-north-1.amazonaws.com.cn"},
     };
 
     for (String[] testPair : regionPartitionEndpoints) {

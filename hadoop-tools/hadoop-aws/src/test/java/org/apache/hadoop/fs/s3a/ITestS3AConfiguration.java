@@ -370,7 +370,7 @@ public class ITestS3AConfiguration {
         throw e;
       }
 
-      GenericTestUtils.assertExceptionContains(AP_ILLEGAL_ACCESS , e);
+      GenericTestUtils.assertExceptionContains(AP_ILLEGAL_ACCESS, e);
     }
   }
 

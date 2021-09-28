@@ -26,7 +26,7 @@ import com.amazonaws.regions.RegionUtils;
 /**
  * Represents an Arn Resource, this can be an accesspoint or bucket.
  */
-public class ArnResource {
+public final class ArnResource {
 
   /**
    * Resource name.
