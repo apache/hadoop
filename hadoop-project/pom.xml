@@ -23,7 +23,7 @@
     <version>3.2.1</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.2.1</version>
+  <version>3.2.1.1</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -1853,7 +1853,7 @@
               <target>${javac.version}</target>
               <compilerArguments>
                 <Xlint/>
-				<Xlint:-unchecked/>
+				<!--Xlint:-unchecked/-->
                 <Xmaxwarns>9999</Xmaxwarns>
               </compilerArguments>
             </configuration>
