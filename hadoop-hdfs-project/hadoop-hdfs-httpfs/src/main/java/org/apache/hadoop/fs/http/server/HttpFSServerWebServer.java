@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter.CONF_PREFIX;
 import static org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX;
