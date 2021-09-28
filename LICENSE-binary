@@ -300,7 +300,7 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
-org.apache.kafka:kafka-clients:2.4.0
+org.apache.kafka:kafka-clients:2.8.1
 org.apache.kerby:kerb-admin:1.0.1
 org.apache.kerby:kerb-client:1.0.1
 org.apache.kerby:kerb-common:1.0.1
@@ -365,7 +365,7 @@ hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-nativet
 hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/compat/{fstatat|openat|unlinkat}.h
 
-com.github.luben:zstd-jni:1.4.3-1
+com.github.luben:zstd-jni:1.4.9-1
 dnsjava:dnsjava:2.1.7
 org.codehaus.woodstox:stax2-api:4.2.1
 
