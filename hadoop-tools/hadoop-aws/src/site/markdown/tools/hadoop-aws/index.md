@@ -1632,15 +1632,9 @@ bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
 Before using Access Points make sure you're not impacted by the following:
 - `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
 - The endpoint for S3 requests will automatically change from `s3.amazonaws.com` to use
-`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. This **only**
-happens if the `fs.s3a.endpoint` property isn't set. The endpoint property overwrites any changes,
-this is intentional so FIPS or DualStack endpoints can be set. While considering endpoints,
-if you have any custom signers that use the host endpoint property make sure to update them if
-needed;
-- Access Point names don't have to be globally unique, in the same way that bucket names have to.
-This means you may end up in a situation where you have two Access Points with the same name. If you
-do end up in this situation then use per bucket overrides and provide an alias to one of your
-access points;
+`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
+considering endpoints, if you have any custom signers that use the host endpoint property make
+sure to update them if needed;
 
 ## <a name="upload"></a>How S3A writes data to S3
 

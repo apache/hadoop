@@ -223,6 +223,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_S3GUARD_INCOMPATIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
@@ -786,7 +787,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 s3.getBucketAcl(bucket);
               } catch (AmazonServiceException ex) {
                 int statusCode = ex.getStatusCode();
-                if (statusCode == 404 || (statusCode == 403 && accessPoint != null)) {
+                if (statusCode == SC_404 || (statusCode == SC_403 && accessPoint != null)) {
                   return false;
                 }
               }
