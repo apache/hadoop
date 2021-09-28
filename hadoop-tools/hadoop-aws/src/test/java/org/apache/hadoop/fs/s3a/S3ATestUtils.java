@@ -94,7 +94,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
