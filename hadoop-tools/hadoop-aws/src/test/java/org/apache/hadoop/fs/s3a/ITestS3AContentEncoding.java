@@ -18,31 +18,33 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import static org.apache.hadoop.fs.s3a.Constants.CONTENT_ENCODING;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_CONTENT_ENCODING;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.decodeBytes;
 
 /**
  * Tests of content encoding object meta data.
  */
 public class ITestS3AContentEncoding extends AbstractS3ATestBase {
 
+  private static final String GZIP = "gzip";
+
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.set(CONTENT_ENCODING, "gzip");
+    removeBaseAndBucketOverrides(conf, CONTENT_ENCODING);
+    conf.set(CONTENT_ENCODING, GZIP);
 
     return conf;
   }
@@ -52,6 +54,11 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     Path dir = methodPath();
     fs.mkdirs(dir);
+    // even with content encoding enabled, directories do not have
+    // encoding.
+    Assertions.assertThat(getEncoding(dir))
+        .describedAs("Encoding of object %s", dir)
+        .isNull();
     Path path = new Path(dir, "1");
     ContractTestUtils.touch(fs, path);
     assertObjectHasEncoding(path);
@@ -63,15 +70,24 @@ public class ITestS3AContentEncoding extends AbstractS3ATestBase {
   /**
    * Assert that a given object has gzip encoding specified.
    * @param path path
+   *
    */
   private void assertObjectHasEncoding(Path path) throws Throwable {
+    Assertions.assertThat(getEncoding(path))
+        .describedAs("Encoding of object %s", path)
+        .isEqualTo(GZIP);
+  }
+
+  /**
+   * Get the encoding of a path.
+   * @param path path
+   * @return encoding string or null
+   * @throws IOException IO Failure.
+   */
+  private String getEncoding(Path path) throws IOException {
     S3AFileSystem fs = getFileSystem();
 
-    StoreContext storeContext = fs.createStoreContext();
     Map<String, byte[]> xAttrs = fs.getXAttrs(path);
-    String encoding = decodeBytes(xAttrs.get(XA_CONTENT_ENCODING));
-    Assertions.assertThat(encoding)
-        .describedAs("Encoding of object %s should be gzip, is %s", path, encoding)
-        .isEqualTo("gzip");
+    return decodeBytes(xAttrs.get(XA_CONTENT_ENCODING));
   }
 }
