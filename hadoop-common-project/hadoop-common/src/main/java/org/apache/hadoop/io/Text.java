@@ -310,9 +310,9 @@ public class Text extends BinaryComparable
       // If the calculated value is beyond the size
       // limit, we cap it to ARRAY_MAX_SIZE
 
-      int targetSize = (int)Math.min(ARRAY_MAX_SIZE,
-          Math.max((long)capacity,
-              (long) bytes.length + (bytes.length >> 1)));
+      long targetSizeLong = bytes.length + (bytes.length >> 1);
+      int targetSize = (int)Math.min(targetSizeLong, ARRAY_MAX_SIZE);
+      targetSize = Math.max(capacity, targetSize);
 
       bytes = new byte[targetSize];
       return true;
