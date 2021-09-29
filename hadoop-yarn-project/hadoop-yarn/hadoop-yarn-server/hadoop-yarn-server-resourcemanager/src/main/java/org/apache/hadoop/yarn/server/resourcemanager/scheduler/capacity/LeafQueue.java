@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -1939,8 +1938,9 @@ public class LeafQueue extends AbstractCSQueue {
       updateAbsoluteCapacities();
 
       super.updateEffectiveResources(clusterResource);
-      super.updateMaxAppRelatedField(csContext.getConfiguration(),
-              this);
+
+      // Update maximum applications for the queue and for users
+      updateMaximumApplications(csContext.getConfiguration());
 
       updateCurrentResourceLimits(currentResourceLimits, clusterResource);
 
@@ -2324,6 +2324,55 @@ public class LeafQueue extends AbstractCSQueue {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  void updateMaximumApplications(CapacitySchedulerConfiguration conf) {
+    int maxApplications = conf.getMaximumApplicationsPerQueue(getQueuePath());
+
+    int maxGlobalApplications = conf.getGlobalMaximumApplicationsPerQueue();
+    if (maxGlobalApplications < 0) {
+      maxGlobalApplications = conf.getMaximumSystemApplications();
+    }
+
+    String maxLabel = RMNodeLabelsManager.NO_LABEL;
+    if (maxApplications < 0) {
+      if (this.capacityConfigType == CapacityConfigType.ABSOLUTE_RESOURCE) {
+        for (String label : configuredNodeLabels) {
+          int maxApplicationsByLabel = (int) (maxGlobalApplications
+              * queueCapacities.getAbsoluteCapacity(label));
+          if (maxApplicationsByLabel > maxApplications) {
+            maxApplications = maxApplicationsByLabel;
+            maxLabel = label;
+          }
+        }
+      } else {
+        maxApplications = maxGlobalApplications;
+      }
+    }
+    setMaxApplications(maxApplications);
+
+    updateMaxAppsPerUser();
+
+    LOG.info("LeafQueue:" + getQueuePath() +
+        "update max app related, maxApplications="
+        + maxApplications + ", maxApplicationsPerUser="
+        + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
+        .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
+        .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(maxLabel));
+  }
+
+  private void updateMaxAppsPerUser() {
+    int maxApplicationsPerUser = maxApplications;
+    if (getUsersManager().getUserLimitFactor() != -1) {
+      int maxApplicationsWithUserLimits = (int) (maxApplications
+          * (getUsersManager().getUserLimit() / 100.0f)
+          * getUsersManager().getUserLimitFactor());
+      maxApplicationsPerUser = Math.min(maxApplications,
+          maxApplicationsWithUserLimits);
+    }
+
+    setMaxApplicationsPerUser(maxApplicationsPerUser);
   }
 
   /**
