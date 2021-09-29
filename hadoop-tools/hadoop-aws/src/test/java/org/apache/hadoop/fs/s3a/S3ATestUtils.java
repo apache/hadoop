@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
-import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -257,17 +256,19 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Either skip if PathIOE occurred due to S3CSE and S3Guard
-   * incompatibility or throw the PathIOE.
+   * Skip if PathIOE occurred due to exception which contains a message which signals
+   * an incompatibility or throw the PathIOE.
    *
    * @param ioe PathIOE being parsed.
-   * @throws PathIOException Throws PathIOE if it doesn't relate to S3CSE
-   *                         and S3Guard incompatibility.
+   * @param messages messages found in the PathIOE that trigger a test to skip
+   * @throws PathIOException Throws PathIOE if it doesn't relate to any message in {@code messages}.
    */
-  public static void maybeSkipIfS3GuardAndS3CSEIOE(PathIOException ioe)
+  public static void skipIfIOEContainsMessage(PathIOException ioe, String...messages)
       throws PathIOException {
-    if (ioe.toString().contains(InternalConstants.CSE_S3GUARD_INCOMPATIBLE)) {
-      skip("Skipping since CSE is enabled with S3Guard.");
+    for (String message: messages) {
+      if (ioe.toString().contains(message)) {
+        skip("Skipping because: " + message);
+      }
     }
     throw ioe;
   }
@@ -1549,5 +1550,4 @@ public final class S3ATestUtils {
           + s3AEncryptionMethod.getMethod());
     }
   }
-
 }

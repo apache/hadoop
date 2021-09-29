@@ -1122,4 +1122,8 @@ public final class Constants {
    */
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
+  /**
+   * Require that all S3 access is made through Access Points.
+   */
+  public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
 }

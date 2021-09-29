@@ -66,6 +66,8 @@ public class ITestS3AConfiguration {
   private static final String EXAMPLE_ID = "AKASOMEACCESSKEY";
   private static final String EXAMPLE_KEY =
       "RGV0cm9pdCBSZ/WQgY2xl/YW5lZCB1cAEXAMPLE";
+  private static final String AP_ILLEGAL_ACCESS =
+      "ARN of type accesspoint cannot be passed as a bucket";
 
   private Configuration conf;
   private S3AFileSystem fs;
@@ -361,6 +363,14 @@ public class ITestS3AConfiguration {
       // isn't in the same region as the s3 client default. See
       // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
       assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.getStatusCode());
+    } catch (final IllegalArgumentException e) {
+      // Path style addressing does not work with AP ARNs
+      if (!fs.getBucket().contains("arn:")) {
+        LOG.error("Caught unexpected exception: ", e);
+        throw e;
+      }
+
+      GenericTestUtils.assertExceptionContains(AP_ILLEGAL_ACCESS, e);
     }
   }
 
