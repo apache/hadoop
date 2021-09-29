@@ -300,7 +300,6 @@ public class TestJournalNode {
 
   }
 
-
   @Test(timeout=100000)
   public void testReturnsSegmentInfoAtEpochTransition() throws Exception {
     ch.newEpoch(1).get();
