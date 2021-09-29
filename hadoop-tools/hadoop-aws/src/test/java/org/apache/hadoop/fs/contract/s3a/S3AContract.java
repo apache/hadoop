@@ -26,8 +26,9 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipIfS3GuardAndS3CSEIOE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfIOEContainsMessage;
 
 /**
  * The contract of S3A: only enabled if the test bucket is provided.
@@ -77,8 +78,10 @@ public class S3AContract extends AbstractBondedFSContract {
     try {
       super.init();
     } catch (PathIOException ioe) {
-      // Skip the tests if S3-CSE and S3-Guard are enabled.
-      maybeSkipIfS3GuardAndS3CSEIOE(ioe);
+      // Skip the tests if (S3-CSE or Access Points) and S3-Guard are enabled.
+      skipIfIOEContainsMessage(ioe,
+          InternalConstants.CSE_S3GUARD_INCOMPATIBLE,
+          InternalConstants.AP_S3GUARD_INCOMPATIBLE);
     }
   }
 
