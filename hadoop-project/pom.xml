@@ -48,7 +48,7 @@
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <jdiff.version>1.0.9</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
-    <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
+    <xerces.jdiff.version>2.12.1</xerces.jdiff.version>
 
     <kafka.version>2.8.1</kafka.version>
 
