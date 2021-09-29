@@ -100,7 +100,7 @@ class JournalMetrics {
     return "Journal-" + journal.getJournalId();
   }
 
-  @Metric(value={"JournalId", "Current JournalId"}, type= Type.TAG)
+  @Metric(value={"JournalId", "Current JournalId"}, type=Type.TAG)
   public String getJournalId() {
     return journal.getJournalId();
   }
