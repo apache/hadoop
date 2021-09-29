@@ -1428,9 +1428,9 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 
 #### per-bucket configuration and deprecated configuration options
 
-Excluding secrets held in JCEKS files, a per-bucket declaration of a
-deprecated property will take priority over a global option.
-
+Per-bucket declaration of the deprecated encryption options
+will take priority over a global option -even when the
+global option uses the newer configuration keys.
 
 This means that when setting encryption options in XML files,
 the option, `fs.bucket.BUCKET.fs.s3a.server-side-encryption-algorithm`

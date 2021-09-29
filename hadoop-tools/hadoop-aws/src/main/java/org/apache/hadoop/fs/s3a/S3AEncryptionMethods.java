@@ -25,12 +25,6 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * This enum is to centralize the encryption methods and
  * the value required in the configuration.
- *
- * There's two enum values for the two client encryption mechanisms the AWS
- * S3 SDK supports, even though these are not currently supported in S3A.
- * This is to aid supporting CSE in some form in future, fundamental
- * issues about file length of encrypted data notwithstanding.
- *
  */
 public enum S3AEncryptionMethods {
 
@@ -41,11 +35,27 @@ public enum S3AEncryptionMethods {
   CSE_KMS("CSE-KMS", false, true),
   CSE_CUSTOM("CSE-CUSTOM", false, true);
 
+  /**
+   * Error string when {@link #getMethod(String)} fails.
+   * Used in tests.
+   */
   static final String UNKNOWN_ALGORITHM
       = "Unknown encryption algorithm ";
 
+  /**
+   * What is the encryption method?
+   */
   private final String method;
+
+  /**
+   * Is this server side?
+   */
   private final boolean serverSide;
+
+  /**
+   * Does the encryption method require a
+   * secret in the encryption.key property?
+   */
   private final boolean requiresSecret;
 
   S3AEncryptionMethods(String method,
@@ -87,7 +97,7 @@ public enum S3AEncryptionMethods {
       return NONE;
     }
     for (S3AEncryptionMethods v : values()) {
-      if (v.getMethod().equals(name)) {
+      if (v.getMethod().equalsIgnoreCase(name)) {
         return v;
       }
     }
