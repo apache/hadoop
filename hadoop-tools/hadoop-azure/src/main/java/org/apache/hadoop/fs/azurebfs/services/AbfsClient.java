@@ -39,6 +39,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -549,7 +550,7 @@ public class AbfsClient implements Closeable {
       final AbfsRestOperation op,
       final String destination,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    assert op.hasResult();
+    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
       // Server has returned HTTP 404, which means rename source no longer
@@ -843,7 +844,7 @@ public class AbfsClient implements Closeable {
    * @return REST operation response post idempotency check
    */
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
-    assert op.hasResult();
+    Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
