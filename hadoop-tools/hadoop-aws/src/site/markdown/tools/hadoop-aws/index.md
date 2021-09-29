@@ -1080,6 +1080,17 @@ options are covered in [Testing](./testing.md).
      client has permission to read the bucket.
   </description>
 </property>
+
+<property>
+  <name>fs.s3a.object.content.encoding</name>
+  <value></value>
+  <description>
+    Content encoding: gzip, deflate, compress, br, etc.
+    This will be set in the "Content-Encoding" header of the object,
+    and returned in HTTP HEAD/GET requests.
+  </description>
+</property>
+
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery

@@ -988,12 +988,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // request factory.
     initCannedAcls(getConf());
 
+    // Any encoding type
+    String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
+
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
         .withCannedACL(getCannedACL())
         .withEncryptionSecrets(requireNonNull(encryptionSecrets))
         .withMultipartPartCountLimit(partCountLimit)
         .withRequestPreparer(getAuditManager()::requestCreated)
+        .withContentEncoding(contentEncoding)
         .build();
   }
 
