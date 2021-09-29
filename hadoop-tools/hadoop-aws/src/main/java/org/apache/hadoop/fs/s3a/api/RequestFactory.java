@@ -101,6 +101,12 @@ public interface RequestFactory {
   S3AEncryptionMethods getServerSideEncryptionAlgorithm();
 
   /**
+   * Get the content encoding (e.g. gzip) or return null if none.
+   * @return content encoding
+   */
+  String getContentEncoding();
+
+  /**
    * Create a new object metadata instance.
    * Any standard metadata headers are added here, for example:
    * encryption.
