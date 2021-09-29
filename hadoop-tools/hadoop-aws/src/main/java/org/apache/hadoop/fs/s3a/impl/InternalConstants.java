@@ -95,6 +95,9 @@ public final class InternalConstants {
               Arrays.asList(Constants.INPUT_FADVISE,
                   Constants.READAHEAD_RANGE)));
 
+  /** 403 error code. */
+  public static final int SC_403 = 403;
+
   /** 404 error code. */
   public static final int SC_404 = 404;
 
@@ -134,4 +137,15 @@ public final class InternalConstants {
    */
   public static final int CSE_PADDING_LENGTH = 16;
 
+  /**
+   * Error message to indicate Access Points are required to be used for S3 access.
+   */
+  public static final String AP_REQUIRED_EXCEPTION = "Access Points usage is required" +
+      " but not configured for the bucket.";
+
+  /**
+   * AccessPoint ARN for the bucket. When set as a bucket override the requests for that bucket
+   * will go through the AccessPoint.
+   */
+  public static final String ARN_BUCKET_OPTION = "fs.s3a.bucket.%s.accesspoint.arn";
 }
