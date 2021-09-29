@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -95,6 +96,9 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
+    String arnKey = String.format(InternalConstants.ARN_BUCKET_OPTION, bucketName);
+    String arn = conf.getTrimmed(arnKey, "");
+
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
         AUTHORITATIVE_PATH);
@@ -104,6 +108,12 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
     disableFilesystemCaching(conf);
+
+    // AccessPoint ARN is the only per bucket configuration that must be kept.
+    if (!arn.isEmpty()) {
+      conf.set(arnKey, arn);
+    }
+
     return conf;
   }
 
