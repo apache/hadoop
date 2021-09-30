@@ -34,11 +34,13 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
@@ -60,11 +62,13 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     skipIfEncryptionNotSet(c, getSSEAlgorithm());
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected void patchConfigurationEncryptionSettings(
       final Configuration conf) {
     removeBaseAndBucketOverrides(conf,
-        S3_ENCRYPTION_ALGORITHM);
+        S3_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM);
     conf.set(S3_ENCRYPTION_ALGORITHM,
             getSSEAlgorithm().getMethod());
   }
@@ -89,7 +93,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
   protected void assertEncrypted(Path path) throws IOException {
     S3AFileSystem fs = getFileSystem();
     Configuration c = fs.getConf();
-    String kmsKey = c.getTrimmed(S3_ENCRYPTION_KEY);
+    String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
     EncryptionTestUtils.assertEncrypted(fs, path, SSE_KMS, kmsKey);
   }
 
@@ -145,7 +149,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
       ContractTestUtils.rename(kmsFS, src, targetDir);
       Path renamedFile = new Path(targetDir, src.getName());
       ContractTestUtils.verifyFileContents(fs, renamedFile, data);
-      String kmsKey = fs2Conf.getTrimmed(S3_ENCRYPTION_KEY);
+      String kmsKey = getS3EncryptionKey(getTestBucketName(fs2Conf), fs2Conf);
       // we assert that the renamed file has picked up the KMS key of our FS
       EncryptionTestUtils.assertEncrypted(fs, renamedFile, SSE_KMS, kmsKey);
     }
