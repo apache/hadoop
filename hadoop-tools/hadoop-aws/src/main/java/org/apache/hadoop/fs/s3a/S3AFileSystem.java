@@ -427,17 +427,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // look for encryption data
       // DT Bindings may override this
-      setEncryptionSecrets(new EncryptionSecrets(
-          getEncryptionAlgorithm(bucket, conf),
-          getS3EncryptionKey(bucket, getConf())));
+      setEncryptionSecrets(
+          buildEncryptionSecrets(bucket, conf));
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
       initializeStatisticsBinding();
       // If CSE-KMS method is set then CSE is enabled.
-      isCSEEnabled = S3AUtils.lookupPassword(conf,
-          Constants.S3_ENCRYPTION_ALGORITHM, "")
-          .equals(S3AEncryptionMethods.CSE_KMS.getMethod());
+      isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
+          .equals(getS3EncryptionAlgorithm().getMethod());
       LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
       setCSEGauge();
       // Username is the current user at the time the FS was instantiated.
