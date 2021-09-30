@@ -58,8 +58,9 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
@@ -96,6 +97,9 @@ public class DefaultS3ClientFactory extends Configured
   /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
   private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
 
+  /** Bucket name. */
+  private String bucket;
+
   /**
    * Create the client by preparing the AwsConf configuration
    * and then invoking {@code buildAmazonS3Client()}.
@@ -105,9 +109,10 @@ public class DefaultS3ClientFactory extends Configured
       final URI uri,
       final S3ClientCreationParameters parameters) throws IOException {
     Configuration conf = getConf();
+    bucket = uri.getHost();
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(conf,
-            uri.getHost(),
+            bucket,
             Constants.AWS_SERVICE_IDENTIFIER_S3);
     // add any headers
     parameters.getHeaders().forEach((h, v) ->
@@ -126,10 +131,13 @@ public class DefaultS3ClientFactory extends Configured
       awsConf.setUserAgentSuffix(parameters.getUserAgentSuffix());
     }
 
+    // Get the encryption method for this bucket.
+    S3AEncryptionMethods encryptionMethods =
+        getEncryptionAlgorithm(bucket, conf);
     try {
-      if (S3AEncryptionMethods.getMethod(S3AUtils.
-          lookupPassword(conf, S3_ENCRYPTION_ALGORITHM, null))
-          .equals(S3AEncryptionMethods.CSE_KMS)) {
+      // If CSE is enabled then build a S3EncryptionClient.
+      if (S3AEncryptionMethods.CSE_KMS.getMethod()
+          .equals(encryptionMethods.getMethod())) {
         return buildAmazonS3EncryptionClient(
             awsConf,
             parameters);
@@ -163,12 +171,11 @@ public class DefaultS3ClientFactory extends Configured
         new AmazonS3EncryptionClientV2Builder();
     Configuration conf = getConf();
 
-    //CSE-KMS Method
-    String kmsKeyId = S3AUtils.lookupPassword(conf,
-        S3_ENCRYPTION_KEY, null);
+    // CSE-KMS Method
+    String kmsKeyId = getS3EncryptionKey(bucket, conf, true);
     // Check if kmsKeyID is not null
-    Preconditions.checkArgument(kmsKeyId != null, "CSE-KMS method "
-        + "requires KMS key ID. Use " + S3_ENCRYPTION_KEY
+    Preconditions.checkArgument(!StringUtils.isBlank(kmsKeyId), "CSE-KMS "
+        + "method requires KMS key ID. Use " + S3_ENCRYPTION_KEY
         + " property to set it. ");
 
     EncryptionMaterialsProvider materialsProvider =

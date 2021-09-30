@@ -66,8 +66,10 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException.TOKEN_MISMATCH;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
@@ -146,7 +148,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     String s3EncryptionMethod =
         conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM,
             S3AEncryptionMethods.SSE_KMS.getMethod());
-    String s3EncryptionKey = conf.getTrimmed(Constants.S3_ENCRYPTION_KEY, "");
+    String s3EncryptionKey = getS3EncryptionKey(getTestBucketName(conf), conf);
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
         Constants.S3_ENCRYPTION_ALGORITHM,

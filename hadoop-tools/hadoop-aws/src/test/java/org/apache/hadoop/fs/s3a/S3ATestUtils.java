@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
@@ -61,6 +62,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -91,6 +93,8 @@ import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
@@ -246,9 +250,10 @@ public final class S3ATestUtils {
    *
    * @param conf Test Configuration.
    */
-  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf) {
-    String encryptionMethod =
-        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM, "");
+  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf)
+      throws IOException {
+    String encryptionMethod = getEncryptionAlgorithm(getTestBucketName(conf),
+        conf).getMethod();
     String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
     if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
         !metaStore.equals(S3GUARD_METASTORE_NULL)) {
@@ -1238,7 +1243,13 @@ public final class S3ATestUtils {
   public static void assertOptionEquals(Configuration conf,
       String key,
       String expected) {
-    assertEquals("Value of " + key, expected, conf.get(key));
+    String actual = conf.get(key);
+    String origin = actual == null
+        ? "(none)"
+        : "[" + StringUtils.join(conf.getPropertySources(key), ", ") + "]";
+    Assertions.assertThat(actual)
+        .describedAs("Value of %s with origin %s", key, origin)
+        .isEqualTo(expected);
   }
 
   /**
@@ -1538,15 +1549,17 @@ public final class S3ATestUtils {
    * @param configuration configuration to probe.
    */
   public static void skipIfEncryptionNotSet(Configuration configuration,
-      S3AEncryptionMethods s3AEncryptionMethod) {
+      S3AEncryptionMethods s3AEncryptionMethod) throws IOException {
     // if S3 encryption algorithm is not set to desired method or AWS encryption
     // key is not set, then skip.
-    if (!configuration.getTrimmed(S3_ENCRYPTION_ALGORITHM, "")
-        .equals(s3AEncryptionMethod.getMethod())
-        || configuration.get(Constants.S3_ENCRYPTION_KEY) == null) {
+    String bucket = getTestBucketName(configuration);
+    final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+    if (!s3AEncryptionMethod.getMethod().equals(secrets.getEncryptionMethod().getMethod())
+        || StringUtils.isBlank(secrets.getEncryptionKey())) {
       skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
           .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
-          + s3AEncryptionMethod.getMethod());
+          + s3AEncryptionMethod.getMethod()
+          + " in " + secrets);
     }
   }
 
