@@ -43,6 +43,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
@@ -368,6 +369,20 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     LOG.trace("getFileStatus('{}')", path);
     return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () ->
         operations.getFileStatus(path));
+  }
+
+  /**
+   * Get a file status value or, if the path doesn't exist, return null.
+   * @param path path
+   * @return true if the path resolves to a file
+   * @throws IOException IO Failure.
+   */
+  protected final boolean isFile(
+      final Path path)
+      throws IOException {
+    LOG.trace("getFileStatus('{}')", path);
+    return trackDuration(getIOStatistics(), OP_IS_FILE, () ->
+        operations.isFile(path));
   }
 
   /**

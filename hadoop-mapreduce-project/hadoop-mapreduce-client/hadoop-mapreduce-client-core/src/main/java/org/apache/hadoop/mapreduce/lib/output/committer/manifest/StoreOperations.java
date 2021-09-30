@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.io.Closeable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -43,6 +44,24 @@ public interface StoreOperations extends Closeable {
    * @throws IOException failure.
    */
   FileStatus getFileStatus(Path path) throws IOException;
+
+  /**
+   * Is a path a file? Used during directory creation.
+   * The default is a copy & paste of FileSystem.isFile();
+   * {@code StoreOperationsThroughFileSystem} calls into
+   * the FS direct so that stores which optimize their probes
+   * can save on IO.
+   * @param path path to probe
+   * @return true if the path resolves to a file
+   * @throws IOException failure other than FileNotFoundException
+   */
+  default boolean isFile(Path path) throws IOException {
+    try {
+      return getFileStatus(path).isFile();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
 
   /**
    * Forward to {@link FileSystem#delete(Path, boolean)}.

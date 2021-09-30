@@ -46,6 +46,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
 
   /**
    * How many task attempts to make.
+   * Override point.
    * @return a number > 0.
    */
   protected int numberOfTaskAttempts() {
@@ -121,7 +122,8 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // now let's see about aggregating a large set of directories
     List<Path> createdDirectories = new CreateOutputDirectoriesStage(
         getJobStageConfig())
-        .apply(loadedManifests);
+        .apply(loadedManifests)
+        .getDirectories();
 
     // but after the merge process, only one per generated file output
     // dir exists

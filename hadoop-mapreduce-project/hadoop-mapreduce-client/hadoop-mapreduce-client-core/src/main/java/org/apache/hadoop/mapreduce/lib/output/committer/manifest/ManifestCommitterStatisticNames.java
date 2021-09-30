@@ -108,6 +108,7 @@ public final class ManifestCommitterStatisticNames {
   /** Creating a single directory {@value}. */
   public static final String OP_CREATE_ONE_DIRECTORY =
       "op_create_one_directory";
+
   /**
    * A file in the destination directory tree has been deleted.
    *  {@value}.
@@ -132,7 +133,7 @@ public final class ManifestCommitterStatisticNames {
   public static final String OP_LOAD_MANIFEST = "op_load_manifest";
 
   /**
-   * mkdir faillure statistic: {@value}.
+   * mkdir failure statistic: {@value}.
    * This is incremented whenever mkdir() returns false, e.g because
    * there was a file at the end of the path.
    */
@@ -146,6 +147,11 @@ public final class ManifestCommitterStatisticNames {
    */
   public static final String OP_MSYNC = "op_msync";
 
+  /**
+   * Preparing ancestor dirs: {@value}.
+   * Probing for paths being files, and if true: deleting them.
+   */
+  public static final String OP_PREPARE_DIR_ANCESTORS = "op_prepare_dir_ancestors";
 
   /** Rename a file: {@value}. */
   public static final String OP_RENAME_FILE = OP_RENAME;

@@ -70,6 +70,11 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
   }
 
   @Override
+  public boolean isFile(Path path) throws IOException {
+    return fileSystem.isFile(path);
+  }
+
+  @Override
   public boolean delete(Path path, boolean recursive)
       throws IOException {
     return fileSystem.delete(path, recursive);

@@ -25,6 +25,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_RE
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_DIRECTORY;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.*;
@@ -113,14 +114,17 @@ public final class ManifestCommitterConstants {
       OP_CREATE_ONE_DIRECTORY,
       OP_DIRECTORY_SCAN,
       OP_DELETE,
+      OP_DELETE_FILE_UNDER_DESTINATION,
       OP_GET_FILE_STATUS,
       OP_IS_DIRECTORY,
+      OP_IS_FILE,
       OP_LIST_STATUS,
       OP_LOAD_MANIFEST,
       OP_LOAD_ALL_MANIFESTS,
       OP_MKDIRS,
       OP_MKDIRS_RETURNED_FALSE,
       OP_MSYNC,
+      OP_PREPARE_DIR_ANCESTORS,
       OP_RENAME_FILE,
       OP_SAVE_TASK_MANIFEST,
 

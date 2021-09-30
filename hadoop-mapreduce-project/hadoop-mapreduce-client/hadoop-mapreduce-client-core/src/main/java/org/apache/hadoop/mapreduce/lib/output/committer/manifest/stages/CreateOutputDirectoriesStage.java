@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MKDIRS_RETURNED_FALSE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_PREPARE_DIR_ANCESTORS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
 
 /**
@@ -54,7 +56,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * The stage returns the list of directories created.
  */
 public class CreateOutputDirectoriesStage extends
-    AbstractJobCommitStage<List<TaskManifest>, List<Path>> {
+    AbstractJobCommitStage<List<TaskManifest>, CreateOutputDirectoriesStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CreateOutputDirectoriesStage.class);
@@ -78,14 +80,14 @@ public class CreateOutputDirectoriesStage extends
   }
 
   @Override
-  protected List<Path> executeStage(
+  protected Result executeStage(
       final List<TaskManifest> taskManifests)
       throws IOException {
 
     LOG.info("Creating directories");
     final List<Path> directories = createAllDirectories(taskManifests);
     LOG.debug("Created {} directories", directories.size());
-    return directories;
+    return new Result(directories);
   }
 
   /**
@@ -118,29 +120,92 @@ public class CreateOutputDirectoriesStage extends
     To maintain the exact behavior of v1
      */
 
-
     // there are no duplicates: creating the set is sufficient
     // to filter all these out.
 
-    // TODO: somehow create all parent dirs (or at least delete files
-    // at those locations) be for
+    // include parents in the paths
+    final Set<Path> ancestors = extractAncestors(getStageConfig().getDestinationDir(),
+        directoriesToCreate
+    );
+
+    // clean up parent dirs. No attempt is made to create them, because
+    // we know mkdirs() will do that.
+    trackDurationOfInvocation(getIOStatistics(), OP_PREPARE_DIR_ANCESTORS, () ->
+        TaskPool.foreach(ancestors)
+            .executeWith(getIOProcessors())
+            .stopOnFailure()
+            .run(dir -> {
+              updateAuditContext(OP_PREPARE_DIR_ANCESTORS);
+              if (isFile(dir)) {
+                // it's a file: delete it.
+                LOG.info("Deleting file {}", dir);
+                delete(dir, false, OP_DELETE_FILE_UNDER_DESTINATION);
+              }
+              // and add to dir map.
+              putDirectoryMap(dir);
+            }));
 
     // now probe for and create. There are some marginal optimizations such
     // as removing any parent entries from the dest tree.
     //
-    trackDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () -> {
-      TaskPool.foreach(directoriesToCreate)
-          .executeWith(getIOProcessors())
-          .stopOnFailure()
-          .run(dir -> {
-            updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
-            if (maybeCreateOneDirectory(dir)) {
-              addCreatedDirectory(dir);
-            }
-          });
-    });
+    trackDurationOfInvocation(getIOStatistics(), OP_CREATE_DIRECTORIES, () ->
+        TaskPool.foreach(directoriesToCreate)
+            .executeWith(getIOProcessors())
+            .stopOnFailure()
+            .run(dir -> {
+              updateAuditContext(OP_STAGE_JOB_CREATE_TARGET_DIRS);
+              if (maybeCreateOneDirectory(dir)) {
+                addCreatedDirectory(dir);
+              }
+            }));
     return createdDirectories;
   }
+
+  /**
+   * Determine all ancestors of the dirs to create which are
+   * under the dest path, not in the set of dirs to create.
+   * Static and public for testability.
+   * @param destDir destination dir of the job
+   * @param directoriesToCreate set of dirs to create from tasks.
+   * @return the set of parent dirs
+   */
+  public static Set<Path> extractAncestors(Path destDir,
+      Collection<Path> directoriesToCreate) {
+    Set<Path> ancestors = new HashSet<>(directoriesToCreate.size());
+    // minor optimization to save a set lookup on the common case where
+    // multiple dirs in the list contain the same parent
+    Path previousAncestor = destDir;
+    for (Path dir : directoriesToCreate) {
+      if (dir.isRoot()) {
+        // sanity check
+        LOG.warn("root directory {} is one of the destination directories", dir);
+        break;
+      }
+      if (ancestors.contains(dir) || destDir.equals(dir)) {
+        // dir is in the ancestor set or is the destDir itself
+        continue;
+      }
+      // get its ancestor
+      Path ancestor = dir.getParent();
+      // add all the parents.
+      while (!ancestor.isRoot()
+          && !ancestor.equals(destDir)
+          && !ancestor.equals(previousAncestor)
+          && !ancestors.contains(ancestor)
+          && !directoriesToCreate.contains(ancestor)) {
+        // add to the set of dirs to create
+        ancestors.add(ancestor);
+        // and determine next parent
+        ancestor = ancestor.getParent();
+      }
+      // and remember the previous, so that we can bail out fast if there is a
+      // set of partitions.
+      previousAncestor = dir.getParent();
+    }
+    return ancestors;
+  }
+
+
 
   /**
    * Set up the destination directories while trying to minimize the amount
@@ -160,7 +225,7 @@ public class CreateOutputDirectoriesStage extends
     // create the dir
     if (mkdirs(path, false)) {
       // add the dir to the map, along with all parents.
-      addDirectoryAndParentsToDirectoryMap(path);
+      putDirectoryMap(path);
       return true;
     }
     LOG.debug("Failed to create a directory {}", path);
@@ -199,6 +264,8 @@ public class CreateOutputDirectoriesStage extends
         // mkdirs() could also fail if there is a parent path which
         // is a file
         getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
+
+        // require the dir to exist, raising an exception if it does not.
         directoryMustExist("Creating directory ", path);
       } else {
         // all good, dir was created
@@ -223,7 +290,7 @@ public class CreateOutputDirectoriesStage extends
    * Add a dir and all parents to the directory map.
    * @param dir directory.
    */
-  private void addDirectoryAndParentsToDirectoryMap(Path dir) {
+  private void putDirectoryMap(Path dir) {
     dirMap.put(dir, dir);
     addParentsToDirectoryMap(dir);
   }
@@ -237,6 +304,21 @@ public class CreateOutputDirectoriesStage extends
     while (parent != null && !parent.isRoot() && !getDestinationDir().equals(parent)) {
       dirMap.put(parent, parent);
       parent = parent.getParent();
+    }
+  }
+
+  /**
+   * Result of the operation..
+   */
+  public static final class Result {
+    final List<Path> directories;
+
+    public Result(List<Path> directories) {
+      this.directories = directories;
+    }
+
+    public List<Path> getDirectories() {
+      return directories;
     }
   }
 

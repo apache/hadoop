@@ -329,9 +329,9 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0300_executeTask00() throws Throwable {
     describe("Create the files for Task 00, then commit the task");
-    List<Path> files = createFiles(dirs.getTaskAttemptPath(taskAttempt00),
+    List<Path> files = createFilesOrDirs(dirs.getTaskAttemptPath(taskAttempt00),
         "part-00", getSubmitter().getPool(),
-        DEPTH, WIDTH, FILES_PER_DIRECTORY);
+        DEPTH, WIDTH, FILES_PER_DIRECTORY, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta00Config)
         .apply(null);
@@ -359,9 +359,9 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0310_executeTask01() throws Throwable {
     describe("Create the files for Task 01, then commit the task");
-    List<Path> files = createFiles(dirs.getTaskAttemptPath(taskAttempt01),
+    List<Path> files = createFilesOrDirs(dirs.getTaskAttemptPath(taskAttempt01),
         "part-00", getSubmitter().getPool(),
-        DEPTH, WIDTH, FILES_PER_DIRECTORY);
+        DEPTH, WIDTH, FILES_PER_DIRECTORY, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta01Config)
         .apply(null);
@@ -389,10 +389,10 @@ public class TestJobThroughManifestCommitter
   @Test
   public void test_0320_executeTask10() throws Throwable {
     describe("Create the files for Task 10, then commit the task");
-    List<Path> files = createFiles(
+    List<Path> files = createFilesOrDirs(
         dirs.getTaskAttemptPath(ta10Config.getTaskAttemptId()),
         "part-01", getSubmitter().getPool(),
-        DEPTH, WIDTH + 1, FILES_PER_DIRECTORY - 1);
+        DEPTH, WIDTH + 1, FILES_PER_DIRECTORY - 1, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta10Config)
         .apply(null);
@@ -406,10 +406,10 @@ public class TestJobThroughManifestCommitter
   public void test_0340_setupThenAbortTask11() throws Throwable {
     describe("Setup then abort task attempt 11");
     Path ta11Path = new SetupTaskStage(ta11Config).apply("11");
-    List<Path> files = createFiles(
+    List<Path> files = createFilesOrDirs(
         ta11Path,
         "part-01", getSubmitter().getPool(),
-        2, 1, 1);
+        2, 1, 1, false);
 
     Path deletedDir = new AbortTaskStage(ta11Config).apply(false);
     assertPathDoesNotExist("aborted directory", ta11Path);
@@ -557,7 +557,7 @@ public class TestJobThroughManifestCommitter
         OP_STAGE_JOB_CLEANUP, true, true, false, false);
     // the first run will list the three task attempt dirs and delete each
     // one before the toplevel dir.
-    CleanupJobStage.CleanupResult result = new CleanupJobStage(
+    CleanupJobStage.Result result = new CleanupJobStage(
         jobStageConfig).apply(arguments);
     assertCleanupResult(result, CleanupJobStage.Outcome.PARALLEL_DELETE, 1 + 3);
     assertPathDoesNotExist("Job attempt dir", result.getDirectory());

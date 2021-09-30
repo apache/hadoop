@@ -455,7 +455,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @throws IOException failure
    * @return the outcome
    */
-  private CleanupJobStage.CleanupResult executeCleanup(
+  private CleanupJobStage.Result executeCleanup(
       final String statisticName,
       final JobContext jobContext,
       final ManifestCommitterConfig committerConfig) throws IOException {

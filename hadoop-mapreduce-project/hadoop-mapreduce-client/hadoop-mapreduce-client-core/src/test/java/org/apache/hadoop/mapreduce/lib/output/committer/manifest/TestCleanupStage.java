@@ -155,7 +155,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     describe("cleanup where delete fails but rename() works." +
         " Even without suppressing exceptions");
     failures.addDeletePathToTimeOut(getJobStageConfig().getOutputTempSubDir());
-    CleanupJobStage.CleanupResult result = cleanup(true, false, false, false,
+    CleanupJobStage.Result result = cleanup(true, false, false, false,
         CleanupJobStage.Outcome.RENAMED_TO_TRASH, ROOT_DELETE_COUNT);
     verifyJobDirsCleanedUp();
     // result contains the delete exception
@@ -181,7 +181,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     Path tempSubDir = getJobStageConfig().getOutputTempSubDir();
     failures.addDeletePathToTimeOut(tempSubDir);
     failures.addMoveToTrashToFail(tempSubDir);
-    CleanupJobStage.CleanupResult result = cleanup(true, false, true, false,
+    CleanupJobStage.Result result = cleanup(true, false, true, false,
         CleanupJobStage.Outcome.FAILURE, ROOT_DELETE_COUNT);
 
     // now throw it.

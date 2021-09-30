@@ -57,7 +57,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 public class CleanupJobStage extends
     AbstractJobCommitStage<
         CleanupJobStage.Arguments,
-        CleanupJobStage.CleanupResult> {
+        CleanupJobStage.Result> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       CleanupJobStage.class);
@@ -103,7 +103,7 @@ public class CleanupJobStage extends
    * @throws IOException failure was raised an exceptions weren't surpressed.
    */
   @Override
-  protected CleanupJobStage.CleanupResult executeStage(
+  protected Result executeStage(
       final Arguments args)
       throws IOException {
     stageName = getStageName(args);
@@ -112,12 +112,12 @@ public class CleanupJobStage extends
     LOG.info("Cleaup of directory {} with {}", baseDir, args);
     if (!args.enabled) {
       LOG.info("Cleanup of {} disabled", baseDir);
-      return new CleanupJobStage.CleanupResult(Outcome.DISABLED, baseDir,
+      return new Result(Outcome.DISABLED, baseDir,
           0, null, null);
     }
     // shortcut of a single existence check before anything else
     if (getFileStatusOrNull(baseDir) == null) {
-      return new CleanupJobStage.CleanupResult(Outcome.NOTHING_TO_CLEAN_UP,
+      return new Result(Outcome.NOTHING_TO_CLEAN_UP,
           baseDir,
           0, null, null);
     }
@@ -228,7 +228,7 @@ public class CleanupJobStage extends
       }
     }
 
-    CleanupResult result = new CleanupResult(
+    Result result = new Result(
         outcome,
         baseDir,
         deleteDirCount.get(),
@@ -426,7 +426,7 @@ public class CleanupJobStage extends
    * is created and returned), then the exception
    * MUST NOT be null.
    */
-  public static final class CleanupResult {
+  public static final class Result {
 
     /** Outcome. */
     private final Outcome outcome;
@@ -455,7 +455,7 @@ public class CleanupJobStage extends
      */
     private final StoreOperations.MoveToTrashResult moveResult;
 
-    public CleanupResult(
+    public Result(
         final Outcome outcome,
         final Path directory,
         final int deleteCalls,

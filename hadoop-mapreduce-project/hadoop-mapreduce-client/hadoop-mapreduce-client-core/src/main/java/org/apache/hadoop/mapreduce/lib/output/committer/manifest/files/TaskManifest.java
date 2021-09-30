@@ -79,7 +79,6 @@ public class TaskManifest extends AbstractManifestData<TaskManifest> {
       "org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest/"
       + VERSION;
 
-
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskManifest.class);
 

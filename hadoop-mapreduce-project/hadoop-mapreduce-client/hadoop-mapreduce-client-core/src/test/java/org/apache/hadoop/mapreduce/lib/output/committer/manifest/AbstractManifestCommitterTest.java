@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
@@ -387,21 +389,25 @@ public abstract class AbstractManifestCommitterTest
    * Create a directory tree through an executor.
    * dirs created = width^depth;
    * file count = width^depth * files
+   * If createDirs == true, then directories are created at the bottom,
+   * not files.
    * @param base base dir
    * @param prefix prefix for filenames.
-   * @param submit submitter.
+   * @param executor submitter.
    * @param depth depth of dirs
    * @param width width of dirs
    * @param files files to add in each base dir.
+   * @param createDirs create directories rather than files?
    * @return the list of paths
    * @throws IOException failure.
    */
-  public final List<Path> createFiles(Path base,
+  public final List<Path> createFilesOrDirs(Path base,
       String prefix,
-      ExecutorService submit,
+      ExecutorService executor,
       int depth,
       int width,
-      int files) throws IOException {
+      int files,
+      boolean createDirs) throws IOException {
 
     try (DurationInfo ignored = new DurationInfo(LOG, true,
         "Creating Files %s (%d, %d, %d) under %s",
@@ -410,9 +416,12 @@ public abstract class AbstractManifestCommitterTest
       assertPathExists("Task attempt dir", base);
 
       // create the files in the thread pool.
-      List<Future<Path>> futures = createFiles(
+      List<Future<Path>> futures = createFilesOrDirs(
           new ArrayList<>(),
-          base, prefix, submit, depth, width, files);
+          base, prefix,
+          executor,
+          depth, width, files,
+          createDirs);
       List<Path> result = new ArrayList<>();
 
       // now wait for the creations to finish.
@@ -423,37 +432,45 @@ public abstract class AbstractManifestCommitterTest
     }
   }
 
-  private final AtomicLong dataCounter = new AtomicLong();
+  /**
+   * Counter incremented for each file created.
+   */
+  private final AtomicLong fileDataGenerator = new AtomicLong();
 
   /**
-   * Create the files; done in a treewalk and building up
+   * Create files or directories; done in a treewalk and building up
    * a list of futures to wait for. The list is
    * build up incrementally rather than through some merging of
    * lists created down the tree.
-   * @param prefix prefix for filenames.
+   * If createDirs == true, then directories are created at the bottom,
+   * not files.
+   *
    * @param futures list of futures to build up.
    * @param base base dir
-   * @param submit submitter.
+   * @param prefix prefix for filenames.
+   * @param executor submitter.
    * @param depth depth of dirs
    * @param width width of dirs
    * @param files files to add in each base dir.
+   * @param createDirs create directories rather than files?
    * @return the list of futures
    */
-  private List<Future<Path>> createFiles(
+  private List<Future<Path>> createFilesOrDirs(
       List<Future<Path>> futures,
       Path base,
       String prefix,
-      ExecutorService submit,
+      ExecutorService executor,
       int depth,
       int width,
-      int files) {
+      int files,
+      boolean createDirs) {
 
     if (depth > 0) {
       // still creating directories
       for (int i = 0; i < width; i++) {
         Path child = new Path(base,
-            String.format("child-%02d-%02d", depth, i));
-        createFiles(futures, child, prefix, submit, depth - 1, width, files);
+            String.format("dir-%02d-%02d", depth, i));
+        createFilesOrDirs(futures, child, prefix, executor, depth - 1, width, files, false);
       }
     } else {
       // time to create files
@@ -461,19 +478,80 @@ public abstract class AbstractManifestCommitterTest
         Path file = new Path(base,
             String.format("%s-%04d", prefix,
                 CREATE_FILE_COUNTER.incrementAndGet()));
-        Future<Path> f = submit.submit(() -> {
-          byte[] data = new byte[2];
-          long entry = dataCounter.incrementAndGet() & 0xffff;
-          data[0] = (byte) (entry & 0xff);
-          data[1] = (byte) ((entry & 0xff00) >> 8);
-          ContractTestUtils.createFile(getFileSystem(), file, true, data);
+        // buld the data. Not actually used in mkdir.
+        long entry = fileDataGenerator.incrementAndGet() & 0xffff;
+        byte[] data = new byte[2];
+        data[0] = (byte) (entry & 0xff);
+        data[1] = (byte) ((entry & 0xff00) >> 8);
+        // the async operation.
+        Future<Path> f = executor.submit(() -> {
+          if (!createDirs) {
+            // create files
+            ContractTestUtils.createFile(getFileSystem(), file, true, data);
+          } else {
+            // create directories
+            mkdirs(file);
+          }
           return file;
         });
         futures.add(f);
       }
     }
     return futures;
+  }
 
+  /**
+   * Create a list of paths under a dir.
+   * @param base base dir
+   * @param count count
+   * @return the list
+   */
+  protected List<Path> subpaths(Path base, int count) {
+    return IntStream.rangeClosed(1, count)
+        .mapToObj(i -> new Path(base, String.format("entry-%02d", i)))
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Submit a mkdir call to the executor pool.
+   * @param path path of dir to create.
+   * @return future
+   */
+  protected Future<Path> asyncMkdir(final Path path) {
+    return getSubmitter().getPool().submit(() -> {
+      mkdirs(path);
+      return path;
+    });
+  }
+
+  /**
+   * Given a list of paths, create the dirs async.
+   * @param paths path list
+   * @throws IOException failure
+   */
+  protected void asyncMkdirs(Collection<Path> paths) throws IOException {
+    List<Future<Path>> futures = new ArrayList<>();
+
+    // initiate
+    for (Path path: paths) {
+      futures.add(asyncMkdir(path));
+    }
+    // await
+    for (Future<Path> f : futures) {
+      awaitFuture(f);
+    }
+  }
+
+  /**
+   * Submit an oepration to create a file to the executor pool.
+   * @param path path of file to create.
+   * @return future
+   */
+  protected Future<Path> asyncPut(final Path path, byte[] data) {
+    return getSubmitter().getPool().submit(() -> {
+      ContractTestUtils.createFile(getFileSystem(), path, true, data);
+      return path;
+    });
   }
 
   /**
@@ -681,7 +759,7 @@ public abstract class AbstractManifestCommitterTest
 
     try (DurationInfo di = new DurationInfo(LOG, true, "create manifests")) {
 
-      // build a list of the task IDs.a
+      // build a list of the task IDs.
       // it's really hard to create a list of Integers; the java8
       // IntStream etc doesn't quite fit as they do their best
       // keep things unboxed, trying to map(Integer::valueOf) doesn't help.
@@ -810,7 +888,7 @@ public abstract class AbstractManifestCommitterTest
    * @param expectedDirsDeleted #of directories deleted. -1 for no checks
    */
   protected void assertCleanupResult(
-      CleanupJobStage.CleanupResult result,
+      CleanupJobStage.Result result,
       CleanupJobStage.Outcome outcome,
       int expectedDirsDeleted) {
     Assertions.assertThat(result.getOutcome())
@@ -845,7 +923,7 @@ public abstract class AbstractManifestCommitterTest
    * @return the result
    * @throws IOException non-suppressed exception
    */
-  protected CleanupJobStage.CleanupResult cleanup(
+  protected CleanupJobStage.Result cleanup(
       final boolean enabled,
       final boolean deleteTaskAttemptDirsInParallel,
       final boolean suppressExceptions,
@@ -853,7 +931,7 @@ public abstract class AbstractManifestCommitterTest
       final CleanupJobStage.Outcome outcome,
       final int expectedDirsDeleted) throws IOException {
     StageConfig stageConfig = getJobStageConfig();
-    CleanupJobStage.CleanupResult result = new CleanupJobStage(stageConfig)
+    CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
         .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
             enabled, deleteTaskAttemptDirsInParallel, suppressExceptions, moveToTrash));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
