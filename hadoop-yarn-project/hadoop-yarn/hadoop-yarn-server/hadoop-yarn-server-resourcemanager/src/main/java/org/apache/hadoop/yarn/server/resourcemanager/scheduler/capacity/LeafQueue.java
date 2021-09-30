@@ -2327,7 +2327,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   void updateMaximumApplications(CapacitySchedulerConfiguration conf) {
-    int maxApplications = conf.getMaximumApplicationsPerQueue(getQueuePath());
+    int maxAppsForQueue = conf.getMaximumApplicationsPerQueue(getQueuePath());
 
     int maxGlobalApplications = conf.getGlobalMaximumApplicationsPerQueue();
     if (maxGlobalApplications < 0) {
@@ -2335,27 +2335,27 @@ public class LeafQueue extends AbstractCSQueue {
     }
 
     String maxLabel = RMNodeLabelsManager.NO_LABEL;
-    if (maxApplications < 0) {
+    if (maxAppsForQueue < 0) {
       if (this.capacityConfigType == CapacityConfigType.ABSOLUTE_RESOURCE) {
         for (String label : configuredNodeLabels) {
           int maxApplicationsByLabel = (int) (maxGlobalApplications
               * queueCapacities.getAbsoluteCapacity(label));
-          if (maxApplicationsByLabel > maxApplications) {
-            maxApplications = maxApplicationsByLabel;
+          if (maxApplicationsByLabel > maxAppsForQueue) {
+            maxAppsForQueue = maxApplicationsByLabel;
             maxLabel = label;
           }
         }
       } else {
-        maxApplications = maxGlobalApplications;
+        maxAppsForQueue = maxGlobalApplications;
       }
     }
-    setMaxApplications(maxApplications);
+    setMaxApplications(maxAppsForQueue);
 
     updateMaxAppsPerUser();
 
     LOG.info("LeafQueue:" + getQueuePath() +
         "update max app related, maxApplications="
-        + maxApplications + ", maxApplicationsPerUser="
+        + maxAppsForQueue + ", maxApplicationsPerUser="
         + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
         .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
         .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
@@ -2363,16 +2363,16 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   private void updateMaxAppsPerUser() {
-    int maxApplicationsPerUser = maxApplications;
+    int maxAppsPerUser = maxApplications;
     if (getUsersManager().getUserLimitFactor() != -1) {
       int maxApplicationsWithUserLimits = (int) (maxApplications
           * (getUsersManager().getUserLimit() / 100.0f)
           * getUsersManager().getUserLimitFactor());
-      maxApplicationsPerUser = Math.min(maxApplications,
+      maxAppsPerUser = Math.min(maxApplications,
           maxApplicationsWithUserLimits);
     }
 
-    setMaxApplicationsPerUser(maxApplicationsPerUser);
+    setMaxApplicationsPerUser(maxAppsPerUser);
   }
 
   /**
