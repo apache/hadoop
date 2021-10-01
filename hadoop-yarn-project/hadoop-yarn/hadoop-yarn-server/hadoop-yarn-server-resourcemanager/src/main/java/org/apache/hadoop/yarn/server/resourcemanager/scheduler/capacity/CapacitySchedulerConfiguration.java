@@ -1672,7 +1672,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getBoolean(LAZY_PREEMPTION_ENABLED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 
-  public boolean shouldAppFailFast(Configuration conf) {
+  public static boolean shouldAppFailFast(Configuration conf) {
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 

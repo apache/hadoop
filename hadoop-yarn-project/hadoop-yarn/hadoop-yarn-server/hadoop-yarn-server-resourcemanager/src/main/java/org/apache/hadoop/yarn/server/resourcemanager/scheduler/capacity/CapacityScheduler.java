@@ -234,6 +234,7 @@ public class CapacityScheduler extends
   private boolean multiNodePlacementEnabled;
 
   private boolean printedVerboseLoggingForAsyncScheduling;
+  private boolean appShouldFailFast;
 
   /**
    * EXPERT
@@ -354,6 +355,9 @@ public class CapacityScheduler extends
 
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
       this.maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
+
+      this.appShouldFailFast = CapacitySchedulerConfiguration.shouldAppFailFast(
+          getConfig());
 
       // number of threads for async scheduling
       int maxAsyncSchedulingThreads = this.conf.getInt(
@@ -491,6 +495,8 @@ public class CapacityScheduler extends
         assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
         maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
         offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+        appShouldFailFast = CapacitySchedulerConfiguration.shouldAppFailFast(
+            getConfig());
 
         LOG.info("assignMultipleEnabled = " + assignMultipleEnabled + "\n" +
             "maxAssignPerHeartbeat = " + maxAssignPerHeartbeat + "\n" +
@@ -880,7 +886,7 @@ public class CapacityScheduler extends
       if (queue == null) {
         //During a restart, this indicates a queue was removed, which is
         //not presently supported
-        if (!getConfiguration().shouldAppFailFast(getConfig())) {
+        if (!appShouldFailFast) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
                   "Application killed on recovery as it"
@@ -901,7 +907,7 @@ public class CapacityScheduler extends
       if (!(queue instanceof LeafQueue)) {
         // During RM restart, this means leaf queue was converted to a parent
         // queue, which is not supported for running apps.
-        if (!getConfiguration().shouldAppFailFast(getConfig())) {
+        if (!appShouldFailFast) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
                   "Application killed on recovery as it was "
@@ -952,32 +958,36 @@ public class CapacityScheduler extends
       ApplicationPlacementContext placementContext,
       boolean isRecovery) {
     CSQueue queue = getQueue(queueName);
-    ApplicationPlacementContext fallbackContext = placementContext;
+    QueuePath queuePath = new QueuePath(queueName);
 
     if (queue != null) {
       return queue;
     }
 
-    // Even if placement rules are turned off, we still have the opportunity
-    // to auto create a queue.
-    if (placementContext == null) {
-      fallbackContext = CSQueueUtils.extractQueuePath(queueName);
-    }
-
-    //we need to make sure there are no empty path parts present
-    QueuePath path = new QueuePath(fallbackContext.getFullQueuePath());
-    if (path.hasEmptyPart()) {
-      LOG.error("Application submitted to invalid path: '{}'", path);
+    if (isAmbiguous(queueName)) {
       return null;
     }
 
-    if (!fallbackContext.hasParentQueue()) {
+    if (placementContext != null) {
+      queuePath = new QueuePath(placementContext.getFullQueuePath());
+    }
+
+    //we need to make sure there are no empty path parts present
+    if (queuePath.hasEmptyPart()) {
+      LOG.error("Application submitted to invalid path due to empty parts: " +
+          "'{}'", queuePath);
+      return null;
+    }
+
+    if (!queuePath.hasParent()) {
+      LOG.error("Application submitted to a queue without parent" +
+          " '{}'", queuePath);
       return null;
     }
 
     try {
       writeLock.lock();
-      return queueManager.createQueue(fallbackContext);
+      return queueManager.createQueue(queuePath);
     } catch (YarnException | IOException e) {
       // A null queue is expected if the placementContext is null. In order
       // not to disrupt the control flow, if we fail to auto create a queue,
@@ -998,14 +1008,14 @@ public class CapacityScheduler extends
       ApplicationId applicationId, String user, String queueName,
       boolean isRecovery, Exception e) {
     if (isRecovery) {
-      if (!getConfiguration().shouldAppFailFast(getConfig())) {
+      if (!appShouldFailFast) {
         LOG.error("Could not auto-create leaf queue " + queueName +
             " due to : ", e);
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.KILL,
                 "Application killed on recovery"
                     + " as it was submitted to queue " + queueName
-                    + " which could not be auto-created"));
+                    + " which did not exist and could not be auto-created"));
       } else {
         String queueErrorMsg =
             "Queue named " + queueName + " could not be "

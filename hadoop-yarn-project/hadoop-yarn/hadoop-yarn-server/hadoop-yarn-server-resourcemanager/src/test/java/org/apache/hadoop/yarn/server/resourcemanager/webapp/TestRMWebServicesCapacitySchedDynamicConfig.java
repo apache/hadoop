@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -359,8 +360,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
 
   private LeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
-    return autoQueueHandler.createQueue(
-        CSQueueUtils.extractQueuePath(queuePath));
+    return autoQueueHandler.createQueue(new QueuePath(queuePath));
   }
 
   private JSONObject sendRequestToSchedulerEndpoint() throws Exception {
