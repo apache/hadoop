@@ -336,25 +336,25 @@ Then, import to eclipse by specifying the root directory of the project via
 ----------------------------------------------------------------------------------
 Building distributions:
 
-Create binary distribution without native code and without documentation:
+Create binary distribution without native code and without Javadocs:
 
   $ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true
 
-Create binary distribution with native code and with documentation:
+Create binary distribution with native code:
 
-  $ mvn package -Pdist,native,docs -DskipTests -Dtar
+  $ mvn package -Pdist,native -DskipTests -Dtar
 
 Create source distribution:
 
   $ mvn package -Psrc -DskipTests
 
-Create source and binary distributions with native code and documentation:
+Create source and binary distributions with native code:
 
-  $ mvn package -Pdist,native,docs,src -DskipTests -Dtar
+  $ mvn package -Pdist,native,src -DskipTests -Dtar
 
 Create a local staging version of the website (in /tmp/hadoop-site)
 
-  $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+  $ mvn site site:stage -Preleasedocs,docs -DstagingDirectory=/tmp/hadoop-site
 
 Note that the site needs to be built in a second pass after other artifacts.
 
