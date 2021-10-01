@@ -16,11 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util;
+package org.apache.hadoop.classification;
 
 /**
  * Annotates a program element that exists, or is more widely visible than
- * otherwise necessary, only for use in test code.
+ * otherwise necessary, specifically for use in test code.
+ * More precisely <i>test code within the hadoop-* modules</i>.
+ * Moreover, this gives the implicit scope and stability of:
+ * <pre>
+ *   {@link InterfaceAudience.Private}
+ *   {@link InterfaceStability.Unstable}
+ * </pre>
+ * If external modules need to access/override these methods, then
+ * they MUST be re-scoped as public/limited private.
  */
 public @interface VisibleForTesting {
 }
