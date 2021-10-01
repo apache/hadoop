@@ -19,6 +19,29 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.findQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ExpectedCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupBlockedQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupOtherBlockedQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfWithoutChildrenOfB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithB1AsParentQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB1;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
@@ -644,225 +667,6 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     resourceManager.getResourceScheduler().handle(nodeUpdate);
   }
 
-  /**
-   * @param conf
-   * @return
-   *           root
-   *          /      \
-   *        a         b
-   *       / \     /  |  \
-   *      a1  a2  b1  b2 b3
-   *
-   */
-  private CapacitySchedulerConfiguration setupQueueConfiguration(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] {"a1", "a2"});
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
-    conf.setCapacity(B1, B1_CAPACITY);
-    conf.setUserLimitFactor(B1, 100.0f);
-    conf.setCapacity(B2, B2_CAPACITY);
-    conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, B3_CAPACITY);
-    conf.setUserLimitFactor(B3, 100.0f);
-
-    LOG.info("Setup top-level queues a and b");
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has deleted all childred of queue(b)
-   *           root
-   *          /     \
-   *        a        b
-   *       / \
-   *      a1  a2
-   */
-  private CapacitySchedulerConfiguration setupQueueConfWithOutChildrenOfB(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a","b"});
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] {"a1","a2"});
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    LOG.info("Setup top-level queues a and b (without children)");
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has deleted a queue(b1)
-   *           root
-   *          /     \
-   *        a        b
-   *       / \       | \
-   *      a1  a2    b2  b3
-   */
-  private CapacitySchedulerConfiguration setupQueueConfigurationWithOutB1(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { "a", "b" });
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    conf.setQueues(B, new String[] { "b2", "b3" });
-    conf.setCapacity(B2, B2_CAPACITY + B1_CAPACITY); //as B1 is deleted
-    conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, B3_CAPACITY);
-    conf.setUserLimitFactor(B3, 100.0f);
-
-    LOG.info("Setup top-level queues a and b (without b3)");
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has converted b1 to parent queue
-   *           root
-   *          /     \
-   *        a        b
-   *       / \    /  |  \
-   *      a1  a2 b1  b2  b3
-   *              |
-   *             b11
-   */
-  private CapacitySchedulerConfiguration
-      setupQueueConfigurationWithB1AsParentQueue(
-          CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { "a", "b" });
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    conf.setQueues(B, new String[] {"b1","b2", "b3"});
-    conf.setCapacity(B1, B1_CAPACITY);
-    conf.setUserLimitFactor(B1, 100.0f);
-    conf.setCapacity(B2, B2_CAPACITY);
-    conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, B3_CAPACITY);
-    conf.setUserLimitFactor(B3, 100.0f);
-
-    // Set childQueue for B1
-    conf.setQueues(B1, new String[] {"b11"});
-    String B11 = B1 + ".b11";
-    conf.setCapacity(B11, 100.0f);
-    conf.setUserLimitFactor(B11, 100.0f);
-
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has deleted a
-   *          Parent queue(b)
-   */
-  private CapacitySchedulerConfiguration setupQueueConfigurationWithOutB(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
-
-    conf.setCapacity(A, A_CAPACITY + B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    LOG.info("Setup top-level queues a");
-    return conf;
-  }
-
-
-  private CapacitySchedulerConfiguration setupBlockedQueueConfiguration(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[]{"a", "b"});
-
-    conf.setCapacity(A, 80f);
-    conf.setCapacity(B, 20f);
-    conf.setUserLimitFactor(A, 100);
-    conf.setUserLimitFactor(B, 100);
-    conf.setMaximumCapacity(A, 100);
-    conf.setMaximumCapacity(B, 100);
-    LOG.info("Setup top-level queues a and b");
-    return conf;
-  }
-
-  private CapacitySchedulerConfiguration setupOtherBlockedQueueConfiguration(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[]{"p1", "p2"});
-
-    conf.setCapacity(P1, 50f);
-    conf.setMaximumCapacity(P1, 50f);
-    conf.setCapacity(P2, 50f);
-    conf.setMaximumCapacity(P2, 100f);
-    // Define 2nd-level queues
-    conf.setQueues(P1, new String[] {"x1", "x2"});
-    conf.setCapacity(X1, 80f);
-    conf.setMaximumCapacity(X1, 100f);
-    conf.setUserLimitFactor(X1, 2f);
-    conf.setCapacity(X2, 20f);
-    conf.setMaximumCapacity(X2, 100f);
-    conf.setUserLimitFactor(X2, 2f);
-
-    conf.setQueues(P2, new String[]{"y1", "y2"});
-    conf.setCapacity(Y1, 80f);
-    conf.setUserLimitFactor(Y1, 2f);
-    conf.setCapacity(Y2, 20f);
-    conf.setUserLimitFactor(Y2, 2f);
-    return conf;
-  }
 
   @Test
   public void testMaximumCapacitySetup() {
@@ -925,74 +729,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     conf.setCapacity(A, 80f);
     conf.setCapacity(B, 20f);
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, 80f, 20f);
+    checkQueueStructureCapacities(cs, getDefaultCapacities(80f / 100.0f, 20f / 100.0f));
     cs.stop();
-  }
-
-  void checkQueueCapacities(CapacityScheduler cs,
-      float capacityA, float capacityB) {
-    CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueA = findQueue(rootQueue, A);
-    CSQueue queueB = findQueue(rootQueue, B);
-    CSQueue queueA1 = findQueue(queueA, A1);
-    CSQueue queueA2 = findQueue(queueA, A2);
-    CSQueue queueB1 = findQueue(queueB, B1);
-    CSQueue queueB2 = findQueue(queueB, B2);
-    CSQueue queueB3 = findQueue(queueB, B3);
-
-    float capA = capacityA / 100.0f;
-    float capB = capacityB / 100.0f;
-
-    checkQueueCapacity(queueA, capA, capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueB, capB, capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueA1, A1_CAPACITY / 100.0f,
-        (A1_CAPACITY/100.0f) * capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueA2, A2_CAPACITY / 100.0f,
-        (A2_CAPACITY/100.0f) * capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueB1, B1_CAPACITY / 100.0f,
-        (B1_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueB2, B2_CAPACITY / 100.0f,
-        (B2_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueB3, B3_CAPACITY / 100.0f,
-        (B3_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-  }
-
-  void checkQueueCapacity(CSQueue q, float expectedCapacity,
-      float expectedAbsCapacity, float expectedMaxCapacity,
-      float expectedAbsMaxCapacity) {
-    final float epsilon = 1e-5f;
-    assertEquals("capacity", expectedCapacity, q.getCapacity(), epsilon);
-    assertEquals("absolute capacity", expectedAbsCapacity,
-        q.getAbsoluteCapacity(), epsilon);
-    assertEquals("maximum capacity", expectedMaxCapacity,
-        q.getMaximumCapacity(), epsilon);
-    assertEquals("absolute maximum capacity", expectedAbsMaxCapacity,
-        q.getAbsoluteMaximumCapacity(), epsilon);
-  }
-
-  CSQueue findQueue(CSQueue root, String queuePath) {
-    if (root.getQueuePath().equals(queuePath)) {
-      return root;
-    }
-
-    List<CSQueue> childQueues = root.getChildQueues();
-    if (childQueues != null) {
-      for (CSQueue q : childQueues) {
-        if (queuePath.startsWith(q.getQueuePath())) {
-          CSQueue result = findQueue(q, queuePath);
-          if (result != null) {
-            return result;
-          }
-        }
-      }
-    }
-
-    return null;
   }
 
   private void checkApplicationResourceUsage(int expected,
@@ -1110,35 +853,40 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf),
-      new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM(), null));
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+        null, new RMContainerTokenSecretManager(conf),
+        new NMTokenSecretManagerInRM(conf),
+        new ClientToAMTokenSecretManagerInRM(), null));
+    checkQueueStructureCapacities(cs);
 
     // Add a new queue b4
-    String B4 = B + ".b4";
-    float B4_CAPACITY = 10;
+    final String b4 = B + ".b4";
+    final float b4Capacity = 10;
+    final float modifiedB3Capacity = B3_CAPACITY - b4Capacity;
 
-    B3_CAPACITY -= B4_CAPACITY;
     try {
       conf.setCapacity(A, 80f);
       conf.setCapacity(B, 20f);
-      conf.setQueues(B, new String[] {"b1", "b2", "b3", "b4"});
+      conf.setQueues(B, new String[]{"b1", "b2", "b3", "b4"});
       conf.setCapacity(B1, B1_CAPACITY);
       conf.setCapacity(B2, B2_CAPACITY);
-      conf.setCapacity(B3, B3_CAPACITY);
-      conf.setCapacity(B4, B4_CAPACITY);
-      cs.reinitialize(conf,mockContext);
-      checkQueueCapacities(cs, 80f, 20f);
+      conf.setCapacity(B3, modifiedB3Capacity);
+      conf.setCapacity(b4, b4Capacity);
+      cs.reinitialize(conf, mockContext);
+
+      final float capA = 80f / 100.0f;
+      final float capB = 20f / 100.0f;
+      Map<String, ExpectedCapacities> expectedCapacities = getDefaultCapacities(capA, capB);
+      expectedCapacities.put(B3, new ExpectedCapacities(modifiedB3Capacity / 100.0f, capB));
+      expectedCapacities.put(b4, new ExpectedCapacities(b4Capacity / 100.0f, capB));
+      checkQueueStructureCapacities(cs, expectedCapacities);
 
       // Verify parent for B4
       CSQueue rootQueue = cs.getRootQueue();
       CSQueue queueB = findQueue(rootQueue, B);
-      CSQueue queueB4 = findQueue(queueB, B4);
+      CSQueue queueB4 = findQueue(queueB, b4);
 
       assertEquals(queueB, queueB4.getParent());
     } finally {
-      B3_CAPACITY += B4_CAPACITY;
       cs.stop();
     }
   }
@@ -3111,7 +2859,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     assertEquals("max allocation in CS",
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -3206,7 +2954,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);
@@ -3277,7 +3025,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     assertEquals("max allocation MB in CS", 10240,
         cs.getMaximumResourceCapability().getMemorySize());
@@ -3323,7 +3071,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     assertEquals("max allocation MB in CS", 10240,
         cs.getMaximumResourceCapability().getMemorySize());
@@ -3398,7 +3146,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);
@@ -3509,7 +3257,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     setMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT,
             "memory-mb=" + largerMem + ",vcores=2");
@@ -4944,7 +4692,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // test delete leaf queue when there is application running.
     Map<String, CSQueue> queues =
@@ -4955,7 +4703,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         .thenReturn(QueueState.STOPPED);
     cs.getCapacitySchedulerQueueManager().addQueue(b1QTobeDeleted, csB1Queue);
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB1(conf);
+    setupQueueConfigurationWithoutB1(conf);
     try {
       cs.reinitialize(conf, mockContext);
       fail("Expected to throw exception when refresh queue tries to delete a"
@@ -4966,7 +4714,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete leaf queue(root.b.b1) when there is no application running.
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB1(conf);
+    setupQueueConfigurationWithoutB1(conf);
     try {
       cs.reinitialize(conf, mockContext);
     } catch (IOException e) {
@@ -4986,7 +4734,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // set the configurations such that it fails once but should be successfull
     // next time
@@ -5010,7 +4758,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete Parent queue when there is application running.
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB(conf);
+    setupQueueConfigurationWithoutB(conf);
     try {
       cs.reinitialize(conf, mockContext);
       fail("Expected to throw exception when refresh queue tries to delete a"
@@ -5021,7 +4769,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete Parent queue when there is no application running.
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB(conf);
+    setupQueueConfigurationWithoutB(conf);
     try {
       cs.reinitialize(conf, mockContext);
     } catch (IOException e) {
@@ -5061,7 +4809,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // test delete all leaf queues when there is no application running.
     Map<String, CSQueue> queues =
@@ -5081,7 +4829,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfWithOutChildrenOfB(conf);
+    setupQueueConfWithoutChildrenOfB(conf);
 
     // test convert parent queue to leaf queue(root.b) when there is no
     // application running.
@@ -5138,7 +4886,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     String targetQueue = "b1";
     CSQueue b1 = cs.getQueue(targetQueue);

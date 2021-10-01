@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -44,20 +58,6 @@ import org.junit.Test;
 public class TestCapacitySchedulerDynamicBehavior {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCapacitySchedulerDynamicBehavior.class);
-  private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-  private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-  private static final String B1 = B + ".b1";
-  private static final String B2 = B + ".b2";
-  private static final String B3 = B + ".b3";
-  private static float A_CAPACITY = 10.5f;
-  private static float B_CAPACITY = 89.5f;
-  private static float A1_CAPACITY = 30;
-  private static float A2_CAPACITY = 70;
-  private static float B1_CAPACITY = 79.2f;
-  private static float B2_CAPACITY = 0.8f;
-  private static float B3_CAPACITY = 20;
-
-  private final TestCapacityScheduler tcs = new TestCapacityScheduler();
 
   private int GB = 1024;
 
@@ -98,7 +98,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     cs.setEntitlement("a2", new QueueEntitlement(A2_CAPACITY / 100, 1.0f));
 
     // Verify all allocations match
-    tcs.checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // Reinitialize and verify all dynamic queued survived
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
@@ -106,7 +106,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     conf.setCapacity(B, 20f);
     cs.reinitialize(conf, rm.getRMContext());
 
-    tcs.checkQueueCapacities(cs, 80f, 20f);
+    checkQueueStructureCapacities(cs, getDefaultCapacities(80f / 100.0f, 20f / 100.0f));
   }
 
   @Test
@@ -154,7 +154,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     cs.setEntitlement("a2", new QueueEntitlement(A2_CAPACITY / 100, 1.0f));
 
     // Verify all allocations match
-    tcs.checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     cs.stop();
   }
