@@ -401,4 +401,29 @@ public class MetricsAsserts {
           geq(0l));
     }
   }
+
+  /**
+   * Assert a tag of metric as expected.
+   * @param name  of the metric tag
+   * @param expected  value of the metric tag
+   * @param rb  the record builder mock used to getMetrics
+   */
+  public static void assertTag(String name, String expected,
+      MetricsRecordBuilder rb) {
+    Assert.assertEquals("Bad Tag for metric " + name,
+        expected, getStringTag(name, rb));
+  }
+
+  /**
+   * get the value tag for the metric.
+   * @param name  of the metric tag
+   * @param rb value of the metric tag
+   * @return the value tag for the metric
+   */
+  public static String getStringTag(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(rb).tag(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
+  }
 }
