@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.util;
 
+import java.util.function.Supplier;
+
 import org.junit.Test;
 
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -117,6 +119,106 @@ public class TestPreconditions {
     LambdaTestUtils.intercept(NullPointerException.class,
         Preconditions.getDefaultNullMSG(),
         () -> Preconditions.checkNotNull(null,
+            () -> String.format(NULL_FORMATTER, NON_NULL_STRING)));
+  }
+
+  @Test
+  public void testCheckArgumentWithSuccess() throws Exception {
+    // success
+    Preconditions.checkArgument(true);
+    // null supplier
+    Preconditions.checkArgument(true, null);
+    // null message
+    Preconditions.checkArgument(true, (String) null);
+    Preconditions.checkArgument(true, NON_NULL_STRING);
+    // null in string format
+    Preconditions.checkArgument(true, EXPECTED_ERROR_MSG_ARGS, null, null);
+    // illegalformat
+    Preconditions.checkArgument(true, EXPECTED_ERROR_MSG_ARGS, 1, 2);
+    // ill-formated string supplier
+    Preconditions.checkArgument(true, ()-> String.format("%d",
+        NON_INT_STRING));
+    // null pattern to string formatter
+    Preconditions.checkArgument(true, NULL_FORMATTER, null, 1);
+    // null arguments to string formatter
+    Preconditions.checkArgument(true, EXPECTED_ERROR_MSG_ARGS,
+        null, null);
+    // illegal format exception
+    Preconditions.checkArgument(true, "message %d %d",
+        NON_INT_STRING, 1);
+    // insufficient arguments
+    Preconditions.checkArgument(true, EXPECTED_ERROR_MSG_ARGS,
+        NON_INT_STRING);
+    // null format in string supplier
+    Preconditions.checkArgument(true,
+        () -> String.format(NULL_FORMATTER, NON_INT_STRING));
+  }
+
+  @Test
+  public void testCheckArgumentWithFailure() throws Exception {
+    // failure without message
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> Preconditions.checkArgument(false));
+    errorMessage = null;
+    // failure with Null message
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        null,
+        () -> Preconditions.checkArgument(false, errorMessage));
+    // failure with message
+    errorMessage = EXPECTED_ERROR_MSG;
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        errorMessage,
+        () -> Preconditions.checkArgument(false, errorMessage));
+
+    // failure with message format
+    errorMessage = EXPECTED_ERROR_MSG + " %s";
+    String arg = "IllegalArgExcep";
+    String expectedMSG = String.format(errorMessage, arg);
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        expectedMSG,
+        () -> Preconditions.checkArgument(false, errorMessage, arg));
+
+    // failure with multiple arg message format
+    errorMessage = EXPECTED_ERROR_MSG_ARGS;
+    expectedMSG =
+        String.format(errorMessage, arg, 1);
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        expectedMSG,
+        () -> Preconditions.checkArgument(false, errorMessage, arg, 1));
+
+    // ignore illegal format will be thrown if the case is not handled correctly
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        Preconditions.getDefaultCheckArgumentMSG(),
+        () -> Preconditions.checkArgument(false,
+            errorMessage, 1, NON_INT_STRING));
+
+    // ignore illegal format will be thrown for insufficient Insufficient Args
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        Preconditions.getDefaultCheckArgumentMSG(),
+        () -> Preconditions.checkArgument(false, errorMessage, NON_NULL_STRING));
+
+    // failure with Null supplier
+    final Supplier<String> nullSupplier = null;
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        null,
+        () -> Preconditions.checkArgument(false, nullSupplier));
+
+    // ignore illegal format in supplier
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        Preconditions.getDefaultCheckArgumentMSG(),
+        () -> Preconditions.checkArgument(false,
+            () -> String.format(errorMessage, 1, NON_INT_STRING)));
+
+    // ignore insufficient arguments in string Supplier
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        Preconditions.getDefaultCheckArgumentMSG(),
+        () -> Preconditions.checkArgument(false,
+            () -> String.format(errorMessage, NON_NULL_STRING)));
+
+    // ignore null formatter
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        Preconditions.getDefaultCheckArgumentMSG(),
+        () -> Preconditions.checkArgument(false,
             () -> String.format(NULL_FORMATTER, NON_NULL_STRING)));
   }
 }
