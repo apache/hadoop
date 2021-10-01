@@ -218,7 +218,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /**
    * Get time between we receiving the operation and sending it to the Namenode.
-   * @return Processing time in nanoseconds.
+   * @return Processing time in milliseconds.
    */
   private long getProcessingTime() {
     if (START_TIME.get() != null && START_TIME.get() > 0 &&
@@ -230,7 +230,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /**
    * Get time between now and when the operation was forwarded to the Namenode.
-   * @return Current proxy time in nanoseconds.
+   * @return Current proxy time in milliseconds.
    */
   private long getProxyTime() {
     if (PROXY_TIME.get() != null && PROXY_TIME.get() > 0) {
