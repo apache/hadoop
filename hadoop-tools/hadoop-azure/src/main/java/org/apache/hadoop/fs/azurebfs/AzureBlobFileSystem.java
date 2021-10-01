@@ -206,12 +206,12 @@ public class AzureBlobFileSystem extends FileSystem
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     // bufferSize is unused.
-    return open(path, Optional.empty());
+      return open(path, Optional.empty());
   }
 
   private FSDataInputStream open(final Path path,
       final Optional<OpenFileParameters> parameters)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
 

@@ -199,11 +199,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       streamStatistics.readOperationStarted();
     }
     int bytesRead = 0;
-    try {
-      bytesRead = readRemote(position, buffer, offset, length, tracingContext);
-    } catch (DestroyFailedException e) {
-      LOG.debug(e.getMessage());
-    }
+    bytesRead = readRemote(position, buffer, offset, length, tracingContext);
     if (statistics != null) {
       statistics.incrementBytesRead(bytesRead);
     }
@@ -534,7 +530,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }

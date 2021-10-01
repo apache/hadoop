@@ -53,7 +53,5 @@ public interface EncryptionContextProvider extends Destroyable {
    */
   SecretKey getEncryptionKey(String path, SecretKey encryptionContext) throws IOException;
 
-  SecretKey getSecretKeyFromBytes(byte[] secret);
-
   void destroy();
 }
