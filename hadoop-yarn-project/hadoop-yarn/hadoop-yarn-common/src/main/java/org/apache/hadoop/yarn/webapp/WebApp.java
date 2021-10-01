@@ -190,6 +190,7 @@ public abstract class WebApp extends ServletModule {
       params.put(FeaturesAndProperties.FEATURE_XMLROOTELEMENT_PROCESSING, "true");
       params.put(ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS, GZIPContentEncodingFilter.class.getName());
       params.put(ResourceConfig.PROPERTY_CONTAINER_RESPONSE_FILTERS, GZIPContentEncodingFilter.class.getName());
+      filter("/application.wadl").through(RemoveGeneratedByJerseyFromApplicationWADLFilter.class);
       filter("/*").through(getWebAppFilterClass(), params);
     }
   }
