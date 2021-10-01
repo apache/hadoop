@@ -1136,4 +1136,15 @@ public class DFSUtilClient {
     return (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
         + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
   }
+
+  /**
+   * Returns true if the name of snapshot is vlaid.
+   * @param snapshotName name of the snapshot.
+   * @return true if the name of snapshot is vlaid.
+   */
+  public static boolean isValidSnapshotName(String snapshotName) {
+    // If any of the snapshots specified in the getSnapshotDiffReport call
+    // is null or empty, it points to the current tree.
+    return (snapshotName != null && !snapshotName.isEmpty());
+  }
 }

@@ -1451,12 +1451,6 @@ public class WebHdfsFileSystem extends FileSystem
         new SnapshotNameParam(snapshotNewName)).run();
   }
 
-  private boolean isValidSnapshotName(String snapshotName) {
-    // If any of the snapshots specified in the getSnapshotDiffReport call
-    // is null or empty, it points to the current tree.
-    return (snapshotName != null && !snapshotName.isEmpty());
-  }
-
   private SnapshotDiffReport getSnapshotDiffReportWithoutListing(
       final Path snapshotDir, final String fromSnapshot, final String toSnapshot)
       throws IOException {
@@ -1477,7 +1471,8 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
 
-    if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(toSnapshot)) {
+    if (!DFSUtilClient.isValidSnapshotName(fromSnapshot) ||
+        !DFSUtilClient.isValidSnapshotName(toSnapshot)) {
       // In case the diff needs to be computed between a snapshot and the current
       // tree, we should not do iterative diffReport computation as the iterative
       // approach might fail if in between the rpc calls the current tree
