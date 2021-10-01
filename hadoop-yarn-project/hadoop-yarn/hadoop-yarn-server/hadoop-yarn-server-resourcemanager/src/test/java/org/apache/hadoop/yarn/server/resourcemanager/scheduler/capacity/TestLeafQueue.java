@@ -53,6 +53,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -5214,6 +5215,37 @@ public class TestLeafQueue {
         (int)(conf.getMaximumSystemApplications() *
             e.getQueueCapacities().getAbsoluteCapacity("test")),
         e.getMaxApplications());
+  }
+
+  @Test
+  public void testRootHasAllNodeLabelsOfItsDescendants() throws IOException {
+    CapacitySchedulerConfiguration conf = csConf;
+    String rootChild = root.getChildQueues().get(0).getQueuePath();
+
+    conf.setCapacityByLabel(rootChild, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
+
+    conf.setCapacityByLabel(rootChild, "test2", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test2", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test2", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test2", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test2", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test2", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test2", 0);
+
+    cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
+    cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
+    cs.reinitialize(conf, cs.getRMContext());
+
+    ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
+
+    Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
+        rootQueue.configuredNodeLabels);
   }
 
   @After

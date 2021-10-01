@@ -77,6 +77,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.UNDEFINED;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -463,8 +464,13 @@ public abstract class AbstractCSQueue implements CSQueue {
     if (csContext.getCapacitySchedulerQueueManager() != null
         && csContext.getCapacitySchedulerQueueManager()
         .getConfiguredNodeLabels() != null) {
-      this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
-          .getConfiguredNodeLabels().getLabelsByQueue(getQueuePath());
+      if (getQueuePath().equals(ROOT)) {
+        this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
+            .getConfiguredNodeLabels().getAllConfiguredLabels();
+      } else {
+        this.configuredNodeLabels = csContext.getCapacitySchedulerQueueManager()
+            .getConfiguredNodeLabels().getLabelsByQueue(getQueuePath());
+      }
     } else {
       // Fallback to suboptimal but correct logic
       this.configuredNodeLabels = csContext.getConfiguration()
