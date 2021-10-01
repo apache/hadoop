@@ -471,8 +471,7 @@ public class UsersManager implements AbstractUsersManager {
   }
 
   private float getUserWeightFromQueue(String userName) {
-    Float weight = lQueue.getUserWeights().get(userName);
-    return (weight == null) ? 1.0f : weight.floatValue();
+    return lQueue.getUserWeights().getByUser(userName);
   }
 
   /**

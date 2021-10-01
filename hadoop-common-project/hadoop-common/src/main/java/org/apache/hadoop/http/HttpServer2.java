@@ -243,7 +243,9 @@ public final class HttpServer2 implements FilterContainer {
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
-    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
+    private final List<String> authFilterConfigurationPrefixes =
+        new ArrayList<>(Collections.singletonList(
+            "hadoop.http.authentication."));
     private String excludeCiphers;
 
     private boolean xFrameEnabled;
@@ -365,8 +367,15 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
-    public Builder authFilterConfigurationPrefix(String value) {
-      this.authFilterConfigurationPrefix = value;
+    public Builder setAuthFilterConfigurationPrefix(String value) {
+      this.authFilterConfigurationPrefixes.clear();
+      this.authFilterConfigurationPrefixes.add(value);
+      return this;
+    }
+
+    public Builder setAuthFilterConfigurationPrefixes(String[] prefixes) {
+      this.authFilterConfigurationPrefixes.clear();
+      Collections.addAll(this.authFilterConfigurationPrefixes, prefixes);
       return this;
     }
 
@@ -473,8 +482,10 @@ public final class HttpServer2 implements FilterContainer {
       HttpServer2 server = new HttpServer2(this);
 
       if (this.securityEnabled &&
-          !this.conf.get(authFilterConfigurationPrefix + "type").
-          equals(PseudoAuthenticationHandler.TYPE)) {
+          authFilterConfigurationPrefixes.stream().noneMatch(
+              prefix -> this.conf.get(prefix + "type")
+                  .equals(PseudoAuthenticationHandler.TYPE))
+      ) {
         server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
       }
 
@@ -811,18 +822,25 @@ public final class HttpServer2 implements FilterContainer {
       throws Exception {
     final Configuration conf = b.conf;
     Properties config = getFilterProperties(conf,
-                                            b.authFilterConfigurationPrefix);
+        b.authFilterConfigurationPrefixes);
     return AuthenticationFilter.constructSecretProvider(
         ctx, config, b.disallowFallbackToRandomSignerSecretProvider);
   }
 
-  private static Properties getFilterProperties(Configuration conf, String
-      prefix) {
-    Properties prop = new Properties();
-    Map<String, String> filterConfig = AuthenticationFilterInitializer
-        .getFilterConfigMap(conf, prefix);
-    prop.putAll(filterConfig);
-    return prop;
+  public static Properties getFilterProperties(Configuration conf, List<String> prefixes) {
+    Properties props = new Properties();
+    for (String prefix : prefixes) {
+      Map<String, String> filterConfigMap =
+          AuthenticationFilterInitializer.getFilterConfigMap(conf, prefix);
+      for (Map.Entry<String, String> entry : filterConfigMap.entrySet()) {
+        Object previous = props.setProperty(entry.getKey(), entry.getValue());
+        if (previous != null && !previous.equals(entry.getValue())) {
+          LOG.warn("Overwriting configuration for key='{}' with value='{}' " +
+              "previous value='{}'", entry.getKey(), entry.getValue(), previous);
+        }
+      }
+    }
+    return props;
   }
 
   private static void addNoCacheFilter(ServletContextHandler ctxt) {

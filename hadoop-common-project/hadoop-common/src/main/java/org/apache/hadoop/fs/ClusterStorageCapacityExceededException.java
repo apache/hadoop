@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * cluster filesystem is exceeded. See also
  * https://issues.apache.org/jira/browse/MAPREDUCE-7148.
  */
-@InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce", "Tez" })
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ClusterStorageCapacityExceededException extends IOException {
   private static final long serialVersionUID = 1L;

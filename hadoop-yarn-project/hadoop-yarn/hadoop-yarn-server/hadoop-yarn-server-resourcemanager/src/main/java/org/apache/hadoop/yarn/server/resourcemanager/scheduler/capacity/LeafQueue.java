@@ -109,8 +109,6 @@ public class LeafQueue extends AbstractCSQueue {
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
-  private CapacitySchedulerContext scheduler;
-  
   private final UsersManager usersManager;
 
   // cache last cluster resource to compute actual capacity
@@ -162,9 +160,8 @@ public class LeafQueue extends AbstractCSQueue {
       IOException {
     super(cs, configuration, queueName, parent, old);
     setDynamicQueue(isDynamic);
-    this.scheduler = cs;
 
-    this.usersManager = new UsersManager(metrics, this, labelManager, scheduler,
+    this.usersManager = new UsersManager(metrics, this, labelManager, csContext,
         resourceCalculator);
 
     // One time initialization is enough since it is static ordering policy
@@ -217,7 +214,7 @@ public class LeafQueue extends AbstractCSQueue {
       }
 
       priorityAcls = conf.getPriorityAcls(getQueuePath(),
-          scheduler.getMaxClusterLevelAppPriority());
+          csContext.getMaxClusterLevelAppPriority());
 
       if (!SchedulerUtils.checkQueueLabelExpression(this.accessibleLabels,
           this.defaultLabelExpression, null)) {
@@ -262,17 +259,8 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
       // Validate leaf queue's user's weights.
-      float queueUL = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
-      for (Entry<String, Float> e : getUserWeights().entrySet()) {
-        float val = e.getValue().floatValue();
-        if (val < 0.0f || val > (100.0f / queueUL)) {
-          throw new IOException("Weight (" + val + ") for user \"" + e.getKey()
-              + "\" must be between 0 and" + " 100 / " + queueUL + " (= " +
-              100.0f/queueUL + ", the number of concurrent active users in "
-              + getQueuePath() + ")");
-        }
-      }
-
+      float queueUserLimit = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
+      getUserWeights().validateForLeafQueue(queueUserLimit, getQueuePath());
       usersManager.updateUserWeights();
 
       LOG.info(
@@ -803,8 +791,13 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Current usable resource for this queue and partition is the max of
       // queueCurrentLimit and queuePartitionResource.
-      Resource queuePartitionUsableResource = Resources.max(resourceCalculator,
-          lastClusterResource, queueCurrentLimit, queuePartitionResource);
+      // If any of the resources available to this queue are less than queue's
+      // guarantee, use the guarantee as the queuePartitionUsableResource
+      // because nothing less than the queue's guarantee should be used when
+      // calculating the AM limit.
+      Resource queuePartitionUsableResource = (Resources.fitsIn(
+          resourceCalculator, queuePartitionResource, queueCurrentLimit)) ?
+              queueCurrentLimit : queuePartitionResource;
 
       Resource amResouceLimit = Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionUsableResource, amResourcePercent,
@@ -2031,7 +2024,7 @@ public class LeafQueue extends AbstractCSQueue {
     // Careful! Locking order is important!
     writeLock.lock();
     try {
-      FiCaSchedulerNode node = scheduler.getNode(
+      FiCaSchedulerNode node = csContext.getNode(
           rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, attempt,
           rmContainer.getContainer().getResource(), node.getPartition(),
@@ -2158,7 +2151,7 @@ public class LeafQueue extends AbstractCSQueue {
     if (application != null && rmContainer != null
         && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       FiCaSchedulerNode node =
-          scheduler.getNode(rmContainer.getContainer().getNodeId());
+          csContext.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, application, rmContainer.getContainer()
           .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
@@ -2178,7 +2171,7 @@ public class LeafQueue extends AbstractCSQueue {
     if (application != null && rmContainer != null
           && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
       FiCaSchedulerNode node =
-          scheduler.getNode(rmContainer.getContainer().getNodeId());
+          csContext.getNode(rmContainer.getContainer().getNodeId());
       releaseResource(clusterResource, application, rmContainer.getContainer()
           .getResource(), node.getPartition(), rmContainer);
       LOG.info("movedContainer" + " container=" + rmContainer.getContainer()

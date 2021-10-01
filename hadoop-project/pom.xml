@@ -48,9 +48,9 @@
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <jdiff.version>1.0.9</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
-    <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
+    <xerces.jdiff.version>2.12.1</xerces.jdiff.version>
 
-    <kafka.version>2.4.0</kafka.version>
+    <kafka.version>2.8.1</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -2240,6 +2240,8 @@
       </activation>
       <properties>
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
+        <!-- To make protoc work on Apple Silicon via fallback -->
+        <os.detected.classifier>osx-x86_64</os.detected.classifier>
       </properties>
     </profile>
     <profile>

@@ -472,6 +472,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   /**
    * Create an IOStatistics store which updates FS metrics
    * as well as IOStatistics.
+   * @return instance of the store.
    */
   public IOStatisticsStore createMetricsUpdatingStore() {
     return new MetricsUpdatingIOStatisticsStore();

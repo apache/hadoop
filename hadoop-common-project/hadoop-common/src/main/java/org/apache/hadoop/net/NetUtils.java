@@ -739,6 +739,23 @@ public class NetUtils {
   public static String getHostPortString(InetSocketAddress addr) {
     return addr.getHostName() + ":" + addr.getPort();
   }
+
+  /**
+   * Get port as integer from host port string like host:port.
+   *
+   * @param addr host + port string like host:port.
+   * @return an integer value representing the port.
+   * @throws IllegalArgumentException if the input is not in the correct format.
+   */
+  public static int getPortFromHostPortString(String addr)
+      throws IllegalArgumentException {
+    String[] hostport = addr.split(":");
+    if (hostport.length != 2) {
+      String errorMsg = "Address should be <host>:<port>, but it is " + addr;
+      throw new IllegalArgumentException(errorMsg);
+    }
+    return Integer.parseInt(hostport[1]);
+  }
   
   /**
    * Checks if {@code host} is a local host name and return {@link InetAddress}

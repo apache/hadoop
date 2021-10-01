@@ -23,18 +23,21 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
+import java.security.Principal;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -49,6 +52,8 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * Shows application information specific to the fair
  * scheduler as part of the fair scheduler page.
@@ -58,10 +63,19 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
   final FairSchedulerInfo fsinfo;
   final Configuration conf;
   final ResourceManager rm;
+  final boolean filterAppsByUser;
+
   @Inject
   public FairSchedulerAppsBlock(ResourceManager rm, ViewContext ctx,
       Configuration conf) {
     super(ctx);
+    this.conf = conf;
+    this.rm = rm;
+
+    this.filterAppsByUser  = conf.getBoolean(
+        YarnConfiguration.FILTER_ENTITY_LIST_BY_USER,
+        YarnConfiguration.DEFAULT_DISPLAY_APPS_FOR_LOGGED_IN_USER);
+
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     fsinfo = new FairSchedulerInfo(scheduler);
     apps = new ConcurrentHashMap<ApplicationId, RMApp>();
@@ -70,13 +84,52 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       if (!(RMAppState.NEW.equals(entry.getValue().getState())
           || RMAppState.NEW_SAVING.equals(entry.getValue().getState())
           || RMAppState.SUBMITTED.equals(entry.getValue().getState()))) {
-        apps.put(entry.getKey(), entry.getValue());
+        if (!filterAppsByUser || hasAccess(entry.getValue(),
+            ctx.requestContext().getRequest())) {
+          apps.put(entry.getKey(), entry.getValue());
+        }
       }
     }
-    this.conf = conf;
-    this.rm = rm;
   }
-  
+
+  private UserGroupInformation getCallerUserGroupInformation(
+      HttpServletRequest hsr, boolean usePrincipal) {
+    String remoteUser = hsr.getRemoteUser();
+    if (usePrincipal) {
+      Principal princ = hsr.getUserPrincipal();
+      remoteUser = princ == null ? null : princ.getName();
+    }
+
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+
+    return callerUGI;
+  }
+
+  protected Boolean hasAccess(RMApp app, HttpServletRequest hsr) {
+    // Check for the authorization.
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    List<String> forwardedAddresses = null;
+    String forwardedFor = hsr.getHeader(RMWSConsts.FORWARDED_FOR);
+    if (forwardedFor != null) {
+      forwardedAddresses = Arrays.asList(forwardedFor.split(","));
+    }
+
+    if (callerUGI != null
+        && !(this.rm.getApplicationACLsManager().checkAccess(callerUGI,
+        ApplicationAccessType.VIEW_APP, app.getUser(),
+        app.getApplicationId())
+        || this.rm.getQueueACLsManager().checkAccess(callerUGI,
+        QueueACL.ADMINISTER_QUEUE, app, hsr.getRemoteAddr(),
+        forwardedAddresses))) {
+      return false;
+    }
+    return true;
+  }
+
+
   @Override public void render(Block html) {
     TBODY<TABLE<Hamlet>> tbody = html.
       table("#apps").
@@ -160,7 +213,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
 
       String trackingURL =
         !appInfo.isTrackingUrlReady()? "#" : appInfo.getTrackingUrlPretty();
-      
+
       appsTableData.append(trackingURL).append("'>")
       .append(appInfo.getTrackingUI()).append("</a>\"],\n");
 

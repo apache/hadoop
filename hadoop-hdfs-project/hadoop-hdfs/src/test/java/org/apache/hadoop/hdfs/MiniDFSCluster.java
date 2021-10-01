@@ -2483,12 +2483,8 @@ public class MiniDFSCluster implements AutoCloseable {
 
   public void waitDatanodeFullyStarted(DataNode dn, int timeout)
       throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return dn.isDatanodeFullyStarted();
-      }
-    }, 100, timeout);
+    GenericTestUtils.waitFor(dn::isDatanodeFullyStarted, 100, timeout,
+        "Datanode is not started even after " + timeout + " ms of waiting");
   }
 
   private void waitDataNodeFullyStarted(final DataNode dn)

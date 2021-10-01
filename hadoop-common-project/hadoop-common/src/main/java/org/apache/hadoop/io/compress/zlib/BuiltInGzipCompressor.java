@@ -56,7 +56,6 @@ public class BuiltInGzipCompressor implements Compressor {
 
   private int numExtraBytesWritten = 0;
 
-  private int currentBufLen = 0;
   private int accuBufLen = 0;
 
   private final Checksum crc = DataChecksum.newCrc32();
@@ -85,10 +84,6 @@ public class BuiltInGzipCompressor implements Compressor {
     }
 
     int compressedBytesWritten = 0;
-
-    if (currentBufLen <= 0) {
-      return compressedBytesWritten;
-    }
 
     // If we are not within uncompressed data yet, output the header.
     if (state == BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC) {
@@ -166,7 +161,6 @@ public class BuiltInGzipCompressor implements Compressor {
   public void reinit(Configuration conf) {
     init(conf);
     numExtraBytesWritten = 0;
-    currentBufLen = 0;
     headerOff = 0;
     trailerOff = 0;
     crc.reset();
@@ -178,7 +172,6 @@ public class BuiltInGzipCompressor implements Compressor {
     deflater.reset();
     state = BuiltInGzipDecompressor.GzipStateLabel.HEADER_BASIC;
     numExtraBytesWritten = 0;
-    currentBufLen = 0;
     headerOff = 0;
     trailerOff = 0;
     crc.reset();
@@ -201,8 +194,7 @@ public class BuiltInGzipCompressor implements Compressor {
 
     deflater.setInput(b, off, len);
     crc.update(b, off, len);  // CRC-32 is on uncompressed data
-    currentBufLen = len;
-    accuBufLen += currentBufLen;
+    accuBufLen += len;
   }
 
   private int writeHeader(byte[] b, int off, int len) {
@@ -251,7 +243,6 @@ public class BuiltInGzipCompressor implements Compressor {
 
     if (trailerOff == gzipTrailerLen) {
       state = BuiltInGzipDecompressor.GzipStateLabel.FINISHED;
-      currentBufLen = 0;
       headerOff = 0;
       trailerOff = 0;
     }

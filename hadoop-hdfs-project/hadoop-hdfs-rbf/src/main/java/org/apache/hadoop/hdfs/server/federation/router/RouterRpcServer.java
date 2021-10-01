@@ -436,7 +436,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       URI journalUri;
       try {
         journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
-      } catch (URISyntaxException e) {
+      } catch (URISyntaxException | NullPointerException e) {
         throw new IOException("Bad journal uri. Please check configuration for "
             + SCHEDULER_JOURNAL_URI);
       }
@@ -1135,6 +1135,23 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
       DatanodeReportType type) throws IOException {
+    return getDatanodeStorageReportMap(type, true, -1);
+  }
+
+  /**
+   * Get the list of datanodes per subcluster.
+   *
+   * @param type Type of the datanodes to get.
+   * @param requireResponse If true an exception will be thrown if all calls do
+   *          not complete. If false exceptions are ignored and all data results
+   *          successfully received are returned.
+   * @param timeOutMs Time out for the reply in milliseconds.
+   * @return nsId to datanode list.
+   * @throws IOException If the method cannot be invoked remotely.
+   */
+  public Map<String, DatanodeStorageReport[]> getDatanodeStorageReportMap(
+      DatanodeReportType type, boolean requireResponse, long timeOutMs)
+      throws IOException {
 
     Map<String, DatanodeStorageReport[]> ret = new LinkedHashMap<>();
     RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
@@ -1142,7 +1159,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     Map<FederationNamespaceInfo, DatanodeStorageReport[]> results =
         rpcClient.invokeConcurrent(
-            nss, method, true, false, DatanodeStorageReport[].class);
+            nss, method, requireResponse, false, timeOutMs, DatanodeStorageReport[].class);
     for (Entry<FederationNamespaceInfo, DatanodeStorageReport[]> entry :
         results.entrySet()) {
       FederationNamespaceInfo ns = entry.getKey();

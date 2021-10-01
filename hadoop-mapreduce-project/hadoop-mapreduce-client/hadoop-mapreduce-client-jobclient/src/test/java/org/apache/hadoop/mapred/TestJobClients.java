@@ -44,8 +44,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 @SuppressWarnings("deprecation")
-public class JobClientUnitTest {
-  
+public class TestJobClients {
+
   public class TestJobClient extends JobClient {
 
     TestJobClient(JobConf jobConf) throws IOException {
@@ -99,57 +99,57 @@ public class JobClientUnitTest {
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
     JobID id = new JobID("test",0);
-    
+
     when(mockCluster.getJob(id)).thenReturn(null);
-    
+
     TaskReport[] result = client.getMapTaskReports(id);
     assertEquals(0, result.length);
-    
+
     verify(mockCluster).getJob(id);
   }
-  
+
   @Test
   public void testReduceTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
     JobID id = new JobID("test",0);
-    
+
     when(mockCluster.getJob(id)).thenReturn(null);
-    
+
     TaskReport[] result = client.getReduceTaskReports(id);
     assertEquals(0, result.length);
-    
+
     verify(mockCluster).getJob(id);
   }
-  
+
   @Test
   public void testSetupTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
     JobID id = new JobID("test",0);
-    
+
     when(mockCluster.getJob(id)).thenReturn(null);
-    
+
     TaskReport[] result = client.getSetupTaskReports(id);
     assertEquals(0, result.length);
-    
+
     verify(mockCluster).getJob(id);
   }
-  
+
   @Test
   public void testCleanupTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
     JobID id = new JobID("test",0);
-    
+
     when(mockCluster.getJob(id)).thenReturn(null);
-    
+
     TaskReport[] result = client.getCleanupTaskReports(id);
     assertEquals(0, result.length);
-    
+
     verify(mockCluster).getJob(id);
   }
 
@@ -184,7 +184,7 @@ public class JobClientUnitTest {
     when(mockCluster.getJob(jobID)).thenReturn(mockJob);
 
     client.setCluster(mockCluster);
-    
+
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     client.displayJobList(new JobStatus[] {mockJobStatus}, new PrintWriter(out));
     String commandLineOutput = out.toString();

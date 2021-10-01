@@ -133,43 +133,48 @@ public final class RouterYarnClientUtils {
     ApplicationResourceUsageReport uamResourceReport =
         uam.getApplicationResourceUsageReport();
 
-    amResourceReport.setNumUsedContainers(
-        amResourceReport.getNumUsedContainers() +
-            uamResourceReport.getNumUsedContainers());
+    if (amResourceReport == null) {
+      am.setApplicationResourceUsageReport(uamResourceReport);
+    } else if (uamResourceReport != null) {
 
-    amResourceReport.setNumReservedContainers(
-        amResourceReport.getNumReservedContainers() +
-            uamResourceReport.getNumReservedContainers());
+      amResourceReport.setNumUsedContainers(
+          amResourceReport.getNumUsedContainers() +
+              uamResourceReport.getNumUsedContainers());
 
-    amResourceReport.setUsedResources(Resources.add(
-        amResourceReport.getUsedResources(),
-        uamResourceReport.getUsedResources()));
+      amResourceReport.setNumReservedContainers(
+          amResourceReport.getNumReservedContainers() +
+              uamResourceReport.getNumReservedContainers());
 
-    amResourceReport.setReservedResources(Resources.add(
-        amResourceReport.getReservedResources(),
-        uamResourceReport.getReservedResources()));
+      amResourceReport.setUsedResources(Resources.add(
+          amResourceReport.getUsedResources(),
+          uamResourceReport.getUsedResources()));
 
-    amResourceReport.setNeededResources(Resources.add(
-        amResourceReport.getNeededResources(),
-        uamResourceReport.getNeededResources()));
+      amResourceReport.setReservedResources(Resources.add(
+          amResourceReport.getReservedResources(),
+          uamResourceReport.getReservedResources()));
 
-    amResourceReport.setMemorySeconds(
-        amResourceReport.getMemorySeconds() +
-            uamResourceReport.getMemorySeconds());
+      amResourceReport.setNeededResources(Resources.add(
+          amResourceReport.getNeededResources(),
+          uamResourceReport.getNeededResources()));
 
-    amResourceReport.setVcoreSeconds(
-        amResourceReport.getVcoreSeconds() +
-            uamResourceReport.getVcoreSeconds());
+      amResourceReport.setMemorySeconds(
+          amResourceReport.getMemorySeconds() +
+              uamResourceReport.getMemorySeconds());
 
-    amResourceReport.setQueueUsagePercentage(
-        amResourceReport.getQueueUsagePercentage() +
-            uamResourceReport.getQueueUsagePercentage());
+      amResourceReport.setVcoreSeconds(
+          amResourceReport.getVcoreSeconds() +
+              uamResourceReport.getVcoreSeconds());
 
-    amResourceReport.setClusterUsagePercentage(
-        amResourceReport.getClusterUsagePercentage() +
-            uamResourceReport.getClusterUsagePercentage());
+      amResourceReport.setQueueUsagePercentage(
+          amResourceReport.getQueueUsagePercentage() +
+              uamResourceReport.getQueueUsagePercentage());
 
-    am.setApplicationResourceUsageReport(amResourceReport);
+      amResourceReport.setClusterUsagePercentage(
+          amResourceReport.getClusterUsagePercentage() +
+              uamResourceReport.getClusterUsagePercentage());
+
+      am.setApplicationResourceUsageReport(amResourceReport);
+    }
   }
 
   /**

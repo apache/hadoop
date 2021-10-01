@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -402,7 +403,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void test_040_PositionedReadHugeFile() throws Throwable {
     assumeHugeFileExists();
     final String encryption = getConf().getTrimmed(
-        SERVER_SIDE_ENCRYPTION_ALGORITHM);
+        Constants.S3_ENCRYPTION_ALGORITHM);
     boolean encrypted = encryption != null;
     if (encrypted) {
       LOG.info("File is encrypted with algorithm {}", encryption);

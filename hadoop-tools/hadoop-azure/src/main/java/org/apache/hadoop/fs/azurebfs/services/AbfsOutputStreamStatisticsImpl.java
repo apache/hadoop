@@ -42,7 +42,9 @@ public class AbfsOutputStreamStatisticsImpl
           StreamStatisticNames.BYTES_UPLOAD_SUCCESSFUL,
           StreamStatisticNames.BYTES_UPLOAD_FAILED,
           StreamStatisticNames.QUEUE_SHRUNK_OPS,
-          StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS
+          StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS,
+          StreamStatisticNames.BLOCKS_ALLOCATED,
+          StreamStatisticNames.BLOCKS_RELEASED
       )
       .withDurationTracking(
           StreamStatisticNames.TIME_SPENT_ON_PUT_REQUEST,
@@ -59,6 +61,11 @@ public class AbfsOutputStreamStatisticsImpl
       ioStatisticsStore.getCounterReference(StreamStatisticNames.BYTES_UPLOAD_SUCCESSFUL);
   private final AtomicLong writeCurrentBufferOps =
       ioStatisticsStore.getCounterReference(StreamStatisticNames.WRITE_CURRENT_BUFFER_OPERATIONS);
+
+  private final AtomicLong blocksAllocated =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.BLOCKS_ALLOCATED);
+  private final AtomicLong blocksReleased =
+      ioStatisticsStore.getCounterReference(StreamStatisticNames.BLOCKS_RELEASED);
 
   /**
    * Records the need to upload bytes and increments the total bytes that
@@ -131,6 +138,22 @@ public class AbfsOutputStreamStatisticsImpl
   @Override
   public void writeCurrentBuffer() {
     writeCurrentBufferOps.incrementAndGet();
+  }
+
+  /**
+   * Increment the counter to indicate a block has been allocated.
+   */
+  @Override
+  public void blockAllocated() {
+    blocksAllocated.incrementAndGet();
+  }
+
+  /**
+   * Increment the counter to indicate a block has been released.
+   */
+  @Override
+  public void blockReleased() {
+    blocksReleased.incrementAndGet();
   }
 
   /**

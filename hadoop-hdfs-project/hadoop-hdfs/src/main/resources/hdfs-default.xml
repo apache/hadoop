@@ -1012,6 +1012,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.safemode.recheck.interval</name>
+  <value>1000</value>
+  <description>
+    Interval in msec for checking safe mode.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.safemode.extension</name>
   <value>30000</value>
   <description>
@@ -2868,6 +2876,10 @@
     maintain a mapping of cached blocks to DataNodes via processing DataNode
     cache reports.  Based on these reports and addition and removal of caching
     directives, the NameNode will schedule caching and uncaching work.
+    In the current implementation, centralized caching introduces additional
+    write lock overhead (see CacheReplicationMonitor#rescan) even if no path
+    to cache is specified, so we recommend disabling this feature when not in
+    use. We will disable centralized caching by default in later versions.
   </description>
 </property>
 

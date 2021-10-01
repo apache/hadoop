@@ -207,6 +207,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.replqueue.threshold-pct";
   public static final String  DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY = "dfs.namenode.safemode.min.datanodes";
   public static final int     DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT = 0;
+  public static final String  DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY =
+      "dfs.namenode.safemode.recheck.interval";
+  public static final long    DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_DEFAULT =
+      1000;
   public static final String  DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
   public static final String  DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_DEFAULT =
@@ -462,6 +466,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS_DEFAULT = 30000L;
   public static final String  DFS_NAMENODE_CACHING_ENABLED_KEY =
       "dfs.namenode.caching.enabled";
+  // TODO: Default value to be set false in 4.0.0 release onwards (HDFS-16209)
   public static final boolean DFS_NAMENODE_CACHING_ENABLED_DEFAULT = true;
 
   /** Pending period of block deletion since NameNode startup */

@@ -237,7 +237,7 @@ To start a Hadoop cluster you will need to start both the HDFS and YARN cluster.
 
 The first time you bring up HDFS, it must be formatted. Format a new distributed filesystem as *hdfs*:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format <cluster_name>
+    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format
 
 Start the HDFS NameNode with the following command on the designated node as *hdfs*:
 

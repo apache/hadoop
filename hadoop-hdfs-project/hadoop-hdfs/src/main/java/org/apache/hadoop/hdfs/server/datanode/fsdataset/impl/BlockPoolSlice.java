@@ -102,7 +102,12 @@ class BlockPoolSlice {
   private final Runnable shutdownHook;
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  private final boolean deleteDuplicateReplicas;
+
+  /**
+   * Only tests are allowed to modify the value. For source code,
+   * this should be treated as final only.
+   */
+  private boolean deleteDuplicateReplicas;
   private static final String REPLICA_CACHE_FILE = "replicas";
   private final long replicaCacheExpiry;
   private final File replicaCacheDir;
@@ -440,7 +445,7 @@ class BlockPoolSlice {
           "Recovered " + numRecovered + " replicas from " + lazypersistDir);
     }
 
-    boolean  success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
+    boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
     if (!success) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
@@ -1081,4 +1086,11 @@ class BlockPoolSlice {
     addReplicaThreadPool.shutdown();
     addReplicaThreadPool = null;
   }
+
+  @VisibleForTesting
+  void setDeleteDuplicateReplicasForTests(
+      boolean deleteDuplicateReplicasForTests) {
+    this.deleteDuplicateReplicas = deleteDuplicateReplicasForTests;
+  }
+
 }

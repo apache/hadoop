@@ -67,6 +67,8 @@ allowed_expr+="|^krb5_udp-template.conf$"
 # Jetty uses this style sheet for directory listings. TODO ensure our
 # internal use of jetty disallows directory listings and remove this.
 allowed_expr+="|^jetty-dir.css$"
+# Snappy java is native library. We cannot relocate it to under org/apache/hadoop.
+allowed_expr+="|^org/xerial/"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0
