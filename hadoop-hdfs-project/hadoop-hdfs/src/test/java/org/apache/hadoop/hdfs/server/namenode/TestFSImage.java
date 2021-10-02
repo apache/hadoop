@@ -84,6 +84,7 @@ import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import static org.junit.Assert.assertArrayEquals;
 
@@ -1096,6 +1097,99 @@ public class TestFSImage {
       // continuous range of the file. They should also line up with the parent
       ensureSubSectionsAlignWithParent(inodeSubSections, inodeSection);
       ensureSubSectionsAlignWithParent(dirSubSections, dirSection);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testNumInodeWithParallelLoad() throws IOException {
+    Configuration conf = new Configuration();
+
+    MiniDFSCluster cluster = null;
+    try {
+      // generate MiniDFSCluster
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, "true");
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, "1");
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, "4");
+      conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, "4");
+
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      String baseDir = "/abc";
+      Path basePath = new Path(baseDir);
+      if (fs.exists(basePath)) {
+        fs.delete(basePath, true);
+      }
+      fs.mkdirs(basePath);
+      // create 10 directories with 5 files per directory
+      for (int i = 0; i < 10; i++) {
+        Path dir = new Path(baseDir + "/" + i);
+        for (int j = 0; j < 5; j++) {
+          Path f = new Path(dir, Integer.toString(j));
+          FSDataOutputStream os = fs.create(f);
+          os.write(1);
+          os.close();
+        }
+      }
+
+      GenericTestUtils.LogCapturer logs = GenericTestUtils.LogCapturer.
+          captureLogs(FSImageFormatPBINode.LOG);
+      GenericTestUtils.setLogLevel(FSImageFormatPBINode.LOG, Level.INFO);
+      // checkpoint
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      logs.clearOutput();
+      cluster.restartNameNode();
+      cluster.waitActive();
+
+      FSDirectory fsDir = cluster.getNamesystem().getFSDirectory();
+      int inodeSize = fsDir.getINodeMap().size();
+      assertEquals(62, inodeSize);
+
+      String content = logs.getOutput();
+      assertTrue(content.contains("Completed loading all INodeDirectory " +
+          "sub-sections. Loaded 12 inodes."));
+      assertTrue(content.contains("Completed loading all INode sections. " +
+          "Loaded 62 inodes."));
+
+      fs.delete(basePath, true);
+      fs.mkdirs(basePath);
+      for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 5; j++) {
+          Path dir = new Path(baseDir + "/" + i + "/" + j); // multi-level directory
+          for (int t = 0; t < 5; t++) {
+            Path f = new Path(dir, Integer.toString(j));
+            FSDataOutputStream os = fs.create(f);
+            os.write(1);
+            os.close();
+          }
+        }
+      }
+
+      // checkpoint
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      logs.clearOutput();
+      cluster.restartNameNode();
+      cluster.waitActive();
+
+      fsDir = cluster.getNamesystem().getFSDirectory();
+      inodeSize = fsDir.getINodeMap().size();
+      assertEquals(112, inodeSize);
+
+      content = logs.getOutput();
+      assertTrue(content.contains("Completed loading all INodeDirectory " +
+          "sub-sections. Loaded 62 inodes."));
+      assertTrue(content.contains("Completed loading all INode sections. " +
+          "Loaded 112 inodes."));
     } finally {
       if (cluster != null) {
         cluster.shutdown();
