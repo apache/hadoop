@@ -87,7 +87,7 @@ public final class DockerClientConfigHandler {
     if (fs != null) {
       FSDataInputStream fileHandle = fs.open(configFile);
       if (fileHandle != null) {
-        contents = IOUtils.toString(fileHandle);
+        contents = IOUtils.toString(fileHandle, Charset.defaultCharset());
       }
     }
     if (contents == null) {
