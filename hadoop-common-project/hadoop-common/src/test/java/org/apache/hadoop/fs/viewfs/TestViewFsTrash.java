@@ -37,8 +37,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
-
 
 public class TestViewFsTrash {
   private static final Logger LOG = LoggerFactory.getLogger(TestViewFsTrash.class);
@@ -107,9 +105,6 @@ public class TestViewFsTrash {
   @Before
   public void setUp() throws Exception {
     Configuration targetFSConf = new Configuration();
-    // Trash with 12 second deletes and 6 seconds checkpoints
-    targetFSConf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
-    targetFSConf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
     targetFSConf.setClass("fs.file.impl", TestViewFsTrash.TestLFS.class, FileSystem.class);
 
     fsTarget = FileSystem.getLocal(targetFSConf);
