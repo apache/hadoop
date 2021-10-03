@@ -21,6 +21,8 @@
 
 #include <string>
 
+#include <gmock/gmock.h>
+
 #include "hdfs-allow-snapshot.h"
 
 namespace hdfs::tools::test {
@@ -36,21 +38,15 @@ public:
   AllowSnapshotMock(const int argc, char **argv) : AllowSnapshot(argc, argv) {}
 
   // Abiding to the Rule of 5
-  AllowSnapshotMock(const AllowSnapshotMock &) = default;
-  AllowSnapshotMock(AllowSnapshotMock &&) = default;
+  AllowSnapshotMock(const AllowSnapshotMock &) = delete;
+  AllowSnapshotMock(AllowSnapshotMock &&) = delete;
   AllowSnapshotMock &operator=(const AllowSnapshotMock &) = delete;
   AllowSnapshotMock &operator=(AllowSnapshotMock &&) = delete;
-  ~AllowSnapshotMock() override = default;
+  ~AllowSnapshotMock() override;
 
-  /**
-   * {@inheritdoc}
-   */
-  [[nodiscard]] bool HandleHelp() const override;
+  MOCK_METHOD(bool, HandleHelp, (), (const, override));
 
-  /**
-   * {@inheritdoc}
-   */
-  [[nodiscard]] bool HandlePath(const std::string &path) const override;
+  MOCK_METHOD(bool, HandlePath, (const std::string &), (const, override));
 };
 } // namespace hdfs::tools::test
 

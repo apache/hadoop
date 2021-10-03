@@ -25,6 +25,7 @@
 #include <string>
 #include <tuple>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "hdfs-tool.h"
@@ -81,25 +82,35 @@ TEST_P(HdfsToolNegativeTest, RunTool) {
   EXPECT_ANY_THROW({ std::ignore = this->hdfs_tool_->Do(); });
 }
 
-template <class T> std::unique_ptr<hdfs::tools::HdfsTool> PassAPath() {
+template <class T> std::unique_ptr<T> PassAPath() {
   constexpr auto argc = 2;
   static std::string exe("hdfs_tool_name");
   static std::string arg1("a/b/c");
 
   static char *argv[] = {exe.data(), arg1.data()};
-  return std::make_unique<T>(argc, argv);
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  EXPECT_CALL(*hdfs_tool, HandlePath(arg1))
+      .Times(1)
+      .WillOnce(testing::Return(true));
+  return hdfs_tool;
 }
 
-template <class T> std::unique_ptr<hdfs::tools::HdfsTool> CallHelp() {
+template <class T> std::unique_ptr<T> CallHelp() {
   constexpr auto argc = 2;
   static std::string exe("hdfs_tool_name");
   static std::string arg1("-h");
 
   static char *argv[] = {exe.data(), arg1.data()};
-  return std::make_unique<T>(argc, argv);
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  EXPECT_CALL(*hdfs_tool, HandleHelp())
+      .Times(1)
+      .WillOnce(testing::Return(true));
+  return hdfs_tool;
 }
 
-template <class T> std::unique_ptr<hdfs::tools::HdfsTool> Pass2Paths() {
+template <class T> std::unique_ptr<T> Pass2Paths() {
   constexpr auto argc = 3;
   static std::string exe("hdfs_tool_name");
   static std::string arg1("a/b/c");
