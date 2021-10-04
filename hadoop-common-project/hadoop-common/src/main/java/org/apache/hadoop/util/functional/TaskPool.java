@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.util.functional;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -33,6 +34,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.RemoteIterator;
+
+import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterable;
 
 /**
  * Utility class for parallel execution, takes closures for the various
@@ -42,6 +46,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  * the Netflix committer patch.
  * Apoche Iceberg has its own version of this, with a common ancestor
  * at some point in its history.
+ * A key difference with this class is that the itertor is always,
+ * internally, an {@link RemoteIterator}.
+ * This is to allow tasks to be scheduled while directory listngs are still
+ * paging in results.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -84,7 +92,7 @@ public final class TaskPool {
    * @param <I> item type
    */
   public static class Builder<I> {
-    private final Iterable<I> items;
+    private final RemoteIterator<I> items;
     private Submitter service = null;
     private FailureTask<I, ?> onFailure = null;
     private boolean stopOnFailure = false;
@@ -98,8 +106,15 @@ public final class TaskPool {
      * Create the builder.
      * @param items items to process
      */
-    Builder(Iterable<I> items) {
+    Builder(RemoteIterator<I> items) {
       this.items = items;
+    }
+    /**
+     * Create the builder.
+     * @param items items to process
+     */
+    Builder(Iterable<I> items) {
+      this(remoteIteratorFromIterable(items));
     }
 
     /**
@@ -152,7 +167,7 @@ public final class TaskPool {
       return this;
     }
 
-    public <E extends Exception> boolean run(Task<I, E> task) throws E {
+    public <E extends Exception> boolean run(Task<I, E> task) throws E, IOException {
       if (service != null) {
         return runParallel(task);
       } else {
@@ -161,11 +176,11 @@ public final class TaskPool {
     }
 
     private <E extends Exception> boolean runSingleThreaded(Task<I, E> task)
-        throws E {
+        throws E, IOException {
       List<I> succeeded = new ArrayList<>();
       List<Exception> exceptions = new ArrayList<>();
 
-      Iterator<I> iterator = items.iterator();
+      RemoteIterator<I> iterator = items;
       boolean threw = true;
       try {
         while (iterator.hasNext()) {
@@ -193,7 +208,10 @@ public final class TaskPool {
         }
 
         threw = false;
-
+      } catch (IOException iteratorIOE) {
+        // an IOE is reaised here during iteration
+        LOG.debug("IOException when iterating through {}", iterator, iteratorIOE);
+        throw iteratorIOE;
       } finally {
         // threw handles exceptions that were *not* caught by the catch block,
         // and exceptions that were caught and possibly handled by onFailure
@@ -241,7 +259,7 @@ public final class TaskPool {
     }
 
     private <E extends Exception> boolean runParallel(final Task<I, E> task)
-        throws E {
+        throws E, IOException {
       final Queue<I> succeeded = new ConcurrentLinkedQueue<>();
       final Queue<Exception> exceptions = new ConcurrentLinkedQueue<>();
       final AtomicBoolean taskFailed = new AtomicBoolean(false);
@@ -250,60 +268,71 @@ public final class TaskPool {
 
       List<Future<?>> futures = new ArrayList<>();
 
-      for (final I item : items) {
-        // submit a task for each item that will either run or abort the task
-        futures.add(service.submit(() -> {
-          if (!(stopOnFailure && taskFailed.get())) {
-            // run the task
-            boolean threw = true;
-            try {
-              LOG.debug("Executing task");
-              task.run(item);
-              succeeded.add(item);
-              LOG.debug("Task succeeded");
+      IOException iteratorIOE = null;
+      final RemoteIterator<I> iterator = this.items;
+      try {
+        while(iterator.hasNext()) {
+          final I item = iterator.next();
+          // submit a task for each item that will either run or abort the task
+          futures.add(service.submit(() -> {
+            if (!(stopOnFailure && taskFailed.get())) {
+              // run the task
+              boolean threw = true;
+              try {
+                LOG.debug("Executing task");
+                task.run(item);
+                succeeded.add(item);
+                LOG.debug("Task succeeded");
 
-              threw = false;
+                threw = false;
 
-            } catch (Exception e) {
-              taskFailed.set(true);
-              exceptions.add(e);
-              LOG.info("Task failed", e);
+              } catch (Exception e) {
+                taskFailed.set(true);
+                exceptions.add(e);
+                LOG.info("Task failed", e);
 
-              if (onFailure != null) {
-                try {
-                  onFailure.run(item, e);
-                } catch (Exception failException) {
-                  LOG.error("Failed to clean up on failure", e);
-                  // swallow the exception
+                if (onFailure != null) {
+                  try {
+                    onFailure.run(item, e);
+                  } catch (Exception failException) {
+                    LOG.error("Failed to clean up on failure", e);
+                    // swallow the exception
+                  }
+                }
+              } finally {
+                if (threw) {
+                  taskFailed.set(true);
                 }
               }
-            } finally {
-              if (threw) {
-                taskFailed.set(true);
+
+            } else if (abortTask != null) {
+              // abort the task instead of running it
+              if (stopAbortsOnFailure && abortFailed.get()) {
+                return;
+              }
+
+              boolean failed = true;
+              try {
+                LOG.info("Aborting task");
+                abortTask.run(item);
+                failed = false;
+              } catch (Exception e) {
+                LOG.error("Failed to abort task", e);
+                // swallow the exception
+              } finally {
+                if (failed) {
+                  abortFailed.set(true);
+                }
               }
             }
-
-          } else if (abortTask != null) {
-            // abort the task instead of running it
-            if (stopAbortsOnFailure && abortFailed.get()) {
-              return;
-            }
-
-            boolean failed = true;
-            try {
-              LOG.info("Aborting task");
-              abortTask.run(item);
-              failed = false;
-            } catch (Exception e) {
-              LOG.error("Failed to abort task", e);
-              // swallow the exception
-            } finally {
-              if (failed) {
-                abortFailed.set(true);
-              }
-            }
-          }
-        }));
+          }));
+        }
+      } catch (IOException e) {
+        // iterotor failure.
+        LOG.debug("IOException when iterating through {}", iterator, e);
+        iteratorIOE = e;
+        // mark as a task failure so all submitted tasks will halt/abort
+        taskFailed.set(true);
       }
 
       // let the above tasks complete (or abort)
@@ -340,8 +369,17 @@ public final class TaskPool {
         waitFor(futures);
       }
 
-      if (!suppressExceptions && !exceptions.isEmpty()) {
-        TaskPool.<E>throwOne(exceptions);
+      if (!suppressExceptions) {
+        // give priority to execution exceptions over
+        // iterator exceptions.
+        if (!exceptions.isEmpty()) {
+          TaskPool.<E>throwOne(exceptions);
+        }
+        // raise any iterator exception.
+        if (iteratorIOE != null) {
+          throw iteratorIOE;
+        }
+
       }
 
       return !taskFailed.get();
@@ -380,7 +418,23 @@ public final class TaskPool {
     }
   }
 
+  /**
+   * Create a task builder for the iterable.
+   * @param items item source.
+   * @param <I> type of result.
+   * @return builder.
+   */
   public static <I> Builder<I> foreach(Iterable<I> items) {
+    return new Builder<>(items);
+  }
+
+  /**
+   * Create a task builder for the remote iterator.
+   * @param items item source.
+   * @param <I> type of result.
+   * @return builder.
+   */
+  public static <I> Builder<I> foreach(RemoteIterator<I> items) {
     return new Builder<>(items);
   }
 

@@ -61,26 +61,70 @@ public class UnreliableStoreOperations implements StoreOperations {
 
   public static final String SIMULATED_FAILURE = "Simulated failure";
 
+  /**
+   * Underlying store operations to wrap.
+   */
   private final StoreOperations wrappedOperations;
 
+  /**
+   * Paths of delete operations to fail.
+   */
   private final Set<Path> deletePathsToFail = new HashSet<>();
 
+  /**
+   * Paths of delete operations to time out, as ABFS may.
+   */
   private final Set<Path> deletePathsToTimeOut = new HashSet<>();
 
+  /**
+   * Paths of List operations to fail.
+   */
+  private final Set<Path> listToFail = new HashSet<>();
+
+  /**
+   * Paths of move to trash operations to fail.
+   */
   private final Set<Path> moveToTrashToFail = new HashSet<>();
 
+  /**
+   * Paths of mkdirs operations to fail.
+   */
   private final Set<Path> mkdirsToFail = new HashSet<>();
 
+  /**
+   * Paths which don't exist.
+   */
   private final Set<Path> pathNotFound = new HashSet<>();
 
+  /**
+   * Source file whose rename will fail.
+   */
   private final Set<Path> renameSourceFilesToFail = new HashSet<>();
 
+  /**
+   * Dest dir into which all renames will fail.
+   * Subdirectories under this are not checked.
+   */
   private final Set<Path> renameDestDirsToFail = new HashSet<>();
 
+  /**
+   * Path of save() to fail.
+   */
+  private final Set<Path> saveToFail = new HashSet<>();
+
+  /**
+   * timeout sleep.
+   */
   private int timeoutSleepTimeMillis;
 
+  /**
+   * Should rename thrown an exception or just return false.
+   */
   private boolean renameToFailWithException = true;
 
+  /**
+   * Is trash disabled on this FS?
+   */
   private boolean trashDisabled;
 
   public UnreliableStoreOperations(final StoreOperations wrappedOperations) {
@@ -135,19 +179,11 @@ public class UnreliableStoreOperations implements StoreOperations {
   }
 
   /**
-   * Add a path to the list of rename source paths to fail.
+   * Add a path to the list of paths where list will fail.
    * @param path path to add.
    */
-  public void addRenameSourceFilesToFail(Path path) {
-    renameSourceFilesToFail.add(requireNonNull(path));
-  }
-
-  /**
-   * Add a path to the list of dest dirs to fail.
-   * @param path path to add.
-   */
-  public void addRenameDestDirsFail(Path path) {
-    renameDestDirsToFail.add(requireNonNull(path));
+  public void addListToFail(Path path) {
+    listToFail.add(requireNonNull(path));
   }
 
   /**
@@ -172,6 +208,30 @@ public class UnreliableStoreOperations implements StoreOperations {
    */
   public void addPathNotFound(Path path) {
     pathNotFound.add(requireNonNull(path));
+  }
+
+  /**
+   * Add a path to the list of rename source paths to fail.
+   * @param path path to add.
+   */
+  public void addRenameSourceFilesToFail(Path path) {
+    renameSourceFilesToFail.add(requireNonNull(path));
+  }
+
+  /**
+   * Add a path to the list of dest dirs to fail.
+   * @param path path to add.
+   */
+  public void addRenameDestDirsFail(Path path) {
+    renameDestDirsToFail.add(requireNonNull(path));
+  }
+
+  /**
+   * Add a path to the list of paths where save will fail.
+   * @param path path to add.
+   */
+  public void addSaveToFail(Path path) {
+    saveToFail.add(requireNonNull(path));
   }
 
   public boolean isTrashDisabled() {
@@ -276,6 +336,7 @@ public class UnreliableStoreOperations implements StoreOperations {
   public RemoteIterator<FileStatus> listStatusIterator(final Path path)
       throws IOException {
     verifyExists(path);
+    maybeRaiseIOE("listStatus", path, listToFail);
     return wrappedOperations.listStatusIterator(path);
   }
 
@@ -290,6 +351,7 @@ public class UnreliableStoreOperations implements StoreOperations {
   public <T extends AbstractManifestData<T>> void save(T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
+    maybeRaiseIOE("save", path, saveToFail);
     wrappedOperations.save(manifestData, path, overwrite);
   }
 

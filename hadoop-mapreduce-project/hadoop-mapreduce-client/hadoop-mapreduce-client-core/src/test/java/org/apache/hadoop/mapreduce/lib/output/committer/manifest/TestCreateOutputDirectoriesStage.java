@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
@@ -39,6 +40,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry.dirEntry;
 
@@ -79,45 +81,43 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
    * Fault Injection.
    */
   private UnreliableStoreOperations failures;
+  private Path destDir;
+  private CreateOutputDirectoriesStage mkdirStage;
+  private StageConfig stageConfig;
+  private IOStatisticsStore iostats;
 
   @Override
   public void setup() throws Exception {
     super.setup();
+    destDir = methodPath();
+    // clean up dest dir completely
+    destDir.getFileSystem(getConfiguration()).delete(destDir, true);
     failures
         = new UnreliableStoreOperations(createStoreOperations());
     setStoreOperations(failures);
-    Path destDir = methodPath();
-    StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
+    stageConfig = createStageConfigForJob(JOB1, destDir);
     setJobStageConfig(stageConfig);
     new SetupJobStage(stageConfig).apply(true);
-
+    mkdirStage = new CreateOutputDirectoriesStage(stageConfig);
+    iostats = stageConfig.getIOStatistics();
   }
 
   @Test
   public void testPrepareSomeDirs() throws Throwable {
-    final StageConfig stageConfig = getJobStageConfig();
-    final IOStatisticsStore iostats = stageConfig.getIOStatistics();
-    final Path destDir = stageConfig.getDestinationDir();
     // assert original count of dirs created == 1
     verifyStatisticCounterValue(iostats, OP_MKDIRS, 1);
 
     final int dirCount = 8;
     final List<Path> dirs = subpaths(destDir, dirCount);
     final List<FileOrDirEntry> dirEntries = dirEntries(dirs);
-    final TaskManifest taskManifest = new TaskManifest();
-    taskManifest.getDirectoriesToCreate().addAll(dirEntries);
-    final TaskManifest taskManifest2 = new TaskManifest();
-    taskManifest2.getDirectoriesToCreate().addAll(dirEntries);
 
-
-    final CreateOutputDirectoriesStage stage
-        = new CreateOutputDirectoriesStage(stageConfig);
+    // two manifests with duplicate entries
     final ArrayList<TaskManifest> manifests = Lists.newArrayList(
-        taskManifest,
-        taskManifest2);
-    final CreateOutputDirectoriesStage.Result result = stage.apply(manifests);
-    Assertions.assertThat(result.getDirectories())
-        .describedAs("output of %s", stage)
+        manifestWithDirsToCreate(dirEntries),
+        manifestWithDirsToCreate(dirEntries));
+    final CreateOutputDirectoriesStage.Result result = mkdirStage.apply(manifests);
+    Assertions.assertThat(result.getCreatedDirectories())
+        .describedAs("output of %s", mkdirStage)
         .containsExactlyInAnyOrderElementsOf(dirs);
 
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
@@ -132,7 +132,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
     // mkdirs() is called the same number of times, because there's no
     // check for existence
-    Assertions.assertThat(r2.getDirectories())
+    Assertions.assertThat(r2.getCreatedDirectories())
         .describedAs("output of %s", s2)
         .containsExactlyInAnyOrderElementsOf(dirs);
     LOG.info("Job Statistics after second pass\n{}", ioStatisticsToPrettyString(iostats));
@@ -141,6 +141,9 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     verifyStatisticCounterValue(iostats, OP_DELETE_FILE_UNDER_DESTINATION, 0);
     verifyStatisticCounterValue(iostats, OP_IS_FILE, 0);
 
+    // and they are also tagged as created in the map
+    dirs.forEach(d ->
+      assertDirMapStatus(r2, d, CreateOutputDirectoriesStage.DirMapState.dirWasCreated));
   }
 
   /**
@@ -148,9 +151,95 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
    * @param paths list of paths
    * @return list of entries where src == dest.
    */
-  List<FileOrDirEntry> dirEntries(Collection<Path> paths) {
+  protected List<FileOrDirEntry> dirEntries(Collection<Path> paths) {
     return paths.stream()
         .map(p -> dirEntry(p, p))
         .collect(Collectors.toList());
   }
+
+  protected TaskManifest manifestWithDirsToCreate(List<FileOrDirEntry> dirEntries) {
+    final TaskManifest taskManifest = new TaskManifest();
+    taskManifest.getDirectoriesToCreate().addAll(dirEntries);
+    return taskManifest;
+  }
+
+  /**
+   * Assert the directory map status of a path.
+   * @param result stage result
+   * @param path path to look up
+   * @param expected expected value.
+   */
+  private static void assertDirMapStatus(
+      CreateOutputDirectoriesStage.Result result,
+      Path path,
+      CreateOutputDirectoriesStage.DirMapState expected) {
+    Assertions.assertThat(result.getDirMap().get(path))
+        .describedAs("Directory Map entry for %s", path)
+        .isNotNull()
+        .isEqualTo(expected);
+  }
+
+  /**
+   * Prepare a deep tree {@code c ^ 3} of entryes
+   */
+  @Test
+  public void testPrepareDeepTree() throws Throwable {
+
+    // build the lists of paths for the different levels
+    final int c = getDeepTreeWidth();
+    final List<Path> level0 = subpaths(destDir, c);
+    final List<Path> level1 = level0.stream().flatMap(p ->
+            subpaths(p, c).stream())
+        .collect(Collectors.toList());
+    final List<Path> level2 = level1.stream().flatMap(p ->
+            subpaths(p, c).stream())
+        .collect(Collectors.toList());
+
+    // one of the level 0 paths is going to be a file
+    final Path parentIsFile = level0.get(1);
+    // one entry has a dir already
+    final Path parentIsDir = level1.get(0);
+    // and one of the dest dirs is a file.
+    final Path destIsFile = level2.get(0);
+
+    // prepare the output
+    CompletableFuture.allOf(
+        asyncPut(parentIsFile, NO_DATA),
+        asyncPut(destIsFile, NO_DATA),
+        asyncMkdir(parentIsDir))
+        .join();
+
+    // manifest dir entry list is only that bottom list
+    final List<FileOrDirEntry> dirEntries = dirEntries(level2);
+
+
+    final ArrayList<TaskManifest> manifests = Lists.newArrayList(
+        manifestWithDirsToCreate(dirEntries));
+    final CreateOutputDirectoriesStage.Result result = mkdirStage.apply(manifests);
+    LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
+
+
+    // mkdirs failed for the file
+    verifyStatisticCounterValue(iostats, OP_MKDIRS + SUFFIX_FAILURES, 1);
+    assertDirMapStatus(result, destIsFile,
+        CreateOutputDirectoriesStage.DirMapState.mkdirRaisedException);
+    // for the parent dir, all is good
+    assertDirMapStatus(result, parentIsFile,
+        CreateOutputDirectoriesStage.DirMapState.ancestorWasFileNowDeleted);
+    Assertions.assertThat(result.getCreatedDirectories())
+        .describedAs("output of %s", mkdirStage)
+        .containsExactlyInAnyOrderElementsOf(level2);
+
+  }
+
+  /**
+   * Get the width of the deep tree; subclasses may tune for test performance, though
+   * a wide one is more realistic of real jobs.
+   * @return number of subdirs to create at each level. Must be at least 2
+   */
+  protected int getDeepTreeWidth() {
+    return 4;
+  }
+
+
 }

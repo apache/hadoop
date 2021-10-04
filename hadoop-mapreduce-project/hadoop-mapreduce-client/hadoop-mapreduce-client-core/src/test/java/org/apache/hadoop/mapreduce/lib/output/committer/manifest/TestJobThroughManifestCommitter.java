@@ -330,7 +330,7 @@ public class TestJobThroughManifestCommitter
   public void test_0300_executeTask00() throws Throwable {
     describe("Create the files for Task 00, then commit the task");
     List<Path> files = createFilesOrDirs(dirs.getTaskAttemptPath(taskAttempt00),
-        "part-00", getSubmitter().getPool(),
+        "part-00", getExecutorService(), 
         DEPTH, WIDTH, FILES_PER_DIRECTORY, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta00Config)
@@ -360,7 +360,7 @@ public class TestJobThroughManifestCommitter
   public void test_0310_executeTask01() throws Throwable {
     describe("Create the files for Task 01, then commit the task");
     List<Path> files = createFilesOrDirs(dirs.getTaskAttemptPath(taskAttempt01),
-        "part-00", getSubmitter().getPool(),
+        "part-00", getExecutorService(),
         DEPTH, WIDTH, FILES_PER_DIRECTORY, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta01Config)
@@ -391,7 +391,7 @@ public class TestJobThroughManifestCommitter
     describe("Create the files for Task 10, then commit the task");
     List<Path> files = createFilesOrDirs(
         dirs.getTaskAttemptPath(ta10Config.getTaskAttemptId()),
-        "part-01", getSubmitter().getPool(),
+        "part-01", getExecutorService(),
         DEPTH, WIDTH + 1, FILES_PER_DIRECTORY - 1, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta10Config)
@@ -408,7 +408,7 @@ public class TestJobThroughManifestCommitter
     Path ta11Path = new SetupTaskStage(ta11Config).apply("11");
     List<Path> files = createFilesOrDirs(
         ta11Path,
-        "part-01", getSubmitter().getPool(),
+        "part-01", getExecutorService(),
         2, 1, 1, false);
 
     Path deletedDir = new AbortTaskStage(ta11Config).apply(false);

@@ -123,7 +123,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     List<Path> createdDirectories = new CreateOutputDirectoriesStage(
         getJobStageConfig())
         .apply(loadedManifests)
-        .getDirectories();
+        .getCreatedDirectories();
 
     // but after the merge process, only one per generated file output
     // dir exists

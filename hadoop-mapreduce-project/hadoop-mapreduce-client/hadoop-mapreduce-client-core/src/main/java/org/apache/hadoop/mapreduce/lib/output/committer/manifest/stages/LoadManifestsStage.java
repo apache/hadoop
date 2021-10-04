@@ -31,13 +31,11 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.commons.io.FileUtils.byteCountToDisplaySize;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DIRECTORY_SCAN;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_ALL_MANIFESTS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.maybeAddIOStatistics;
@@ -89,21 +87,17 @@ public class LoadManifestsStage extends
         getJobAttemptDir());
     pruneManifests = prune;
     // build a list of all manifests in the JA directory.
-    List<FileStatus> manifestFiles = new ArrayList<>();
-    trackDurationOfInvocation(getIOStatistics(), OP_DIRECTORY_SCAN, () -> {
-      msync(getJobAttemptDir());
-      final RemoteIterator<FileStatus> source = listManifestsInJobAttemptDir();
-      RemoteIterators.foreach(source, manifestFiles::add);
-      // if the iterator provided statistics, collect them.
-      maybeAddIOStatistics(getIOStatistics(), source);
-    });
+    msync(getJobAttemptDir());
+    final RemoteIterator<FileStatus> manifestFiles = listManifestsInJobAttemptDir();
 
     final List<TaskManifest> manifestList = loadAllManifests(manifestFiles);
     LOG.info("Summary of {} manifests loaded in {}: {}",
-        manifestFiles.size(),
+        manifestList.size(),
         getJobAttemptDir(),
         summaryInfo);
 
+    // collect any stats
+    maybeAddIOStatistics(getIOStatistics(), manifestFiles);
     return new LoadManifestsStage.Result(summaryInfo, manifestList);
   }
 
@@ -114,14 +108,13 @@ public class LoadManifestsStage extends
    * @throws IOException IO Failure.
    */
   private List<TaskManifest> loadAllManifests(
-      final List<FileStatus> manifestFiles) throws IOException {
+      final RemoteIterator<FileStatus> manifestFiles) throws IOException {
 
-    trackDurationOfInvocation(getIOStatistics(), OP_LOAD_ALL_MANIFESTS, () -> {
-      TaskPool.foreach(manifestFiles)
-          .executeWith(getIOProcessors())
-          .stopOnFailure()
-          .run(this::processOneManifest);
-    });
+    trackDurationOfInvocation(getIOStatistics(), OP_LOAD_ALL_MANIFESTS, () ->
+        TaskPool.foreach(manifestFiles)
+            .executeWith(getIOProcessors())
+            .stopOnFailure()
+            .run(this::processOneManifest));
     return manifests;
   }
 

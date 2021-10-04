@@ -163,10 +163,9 @@ public final class ScanTaskAttemptDirectoryStage
       // add any statistics provided by the listing.
       maybeAddIOStatistics(getIOStatistics(), listing);
     }
-    // if files were added and this is not the base directory.
-    // it will need to be created.
-    // TODO: reinstate once debugged
-    if (depth > 0 /*&& files > 0*/) {
+    // if this is not the base directory.
+    // it must exist
+    if (depth > 0) {
       manifest.addDirectory(dirEntry(srcDir, destDir));
     }
 

@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
@@ -149,6 +150,8 @@ public abstract class AbstractManifestCommitterTest
    * duplicate filenames are never created. Helps assign blame.
    */
   private static final AtomicLong CREATE_FILE_COUNTER = new AtomicLong();
+
+  protected static final byte[] NO_DATA = new byte[0];
 
   /**
    * Submitter for tasks; may be null.
@@ -338,6 +341,13 @@ public abstract class AbstractManifestCommitterTest
   }
 
   /**
+   * Get the executor which the submitter also uses.
+   * @return an executor.
+   */
+  protected ExecutorService getExecutorService() {
+    return getSubmitter().getPool();
+  }
+  /**
    * @return IOStatistics for stage.
    */
   protected final IOStatisticsStore getStageStatistics() {
@@ -517,11 +527,17 @@ public abstract class AbstractManifestCommitterTest
    * @param path path of dir to create.
    * @return future
    */
-  protected Future<Path> asyncMkdir(final Path path) {
-    return getSubmitter().getPool().submit(() -> {
-      mkdirs(path);
-      return path;
+  protected CompletableFuture<Path> asyncMkdir(final Path path) {
+    CompletableFuture<Path> f = new CompletableFuture<>();
+    getExecutorService().submit(() -> {
+      try {
+        mkdirs(path);
+        f.complete(path);
+      } catch (IOException e) {
+        f.completeExceptionally(e);
+      }
     });
+    return f;
   }
 
   /**
@@ -530,8 +546,7 @@ public abstract class AbstractManifestCommitterTest
    * @throws IOException failure
    */
   protected void asyncMkdirs(Collection<Path> paths) throws IOException {
-    List<Future<Path>> futures = new ArrayList<>();
-
+    List<CompletableFuture<Path>> futures = new ArrayList<>();
     // initiate
     for (Path path: paths) {
       futures.add(asyncMkdir(path));
@@ -547,11 +562,17 @@ public abstract class AbstractManifestCommitterTest
    * @param path path of file to create.
    * @return future
    */
-  protected Future<Path> asyncPut(final Path path, byte[] data) {
-    return getSubmitter().getPool().submit(() -> {
-      ContractTestUtils.createFile(getFileSystem(), path, true, data);
-      return path;
+  protected CompletableFuture<Path> asyncPut(final Path path, byte[] data) {
+    CompletableFuture<Path> f = new CompletableFuture<>();
+    getExecutorService().submit(() -> {
+      try {
+        ContractTestUtils.createFile(getFileSystem(), path, true, data);
+        f.complete(path);
+      } catch (IOException e) {
+        f.completeExceptionally(e);
+      }
     });
+    return f;
   }
 
   /**

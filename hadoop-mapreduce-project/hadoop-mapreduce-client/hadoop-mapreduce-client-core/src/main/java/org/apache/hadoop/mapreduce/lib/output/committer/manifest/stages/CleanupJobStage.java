@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -150,15 +149,13 @@ public class CleanupJobStage extends
               RemoteIterators.filteringRemoteIterator(
                   listStatusIterator(taskSubDir),
                   FileStatus::isDirectory);
-          List<FileStatus> taskAttemptDirs = RemoteIterators.toList(dirs);
-          getIOStatistics().aggregate((retrieveIOStatistics(dirs)));
-          LOG.info("Attempting Parallel deletion of {} task attempt dir(s)",
-              taskAttemptDirs.size());
-          TaskPool.foreach(taskAttemptDirs)
+          TaskPool.foreach(dirs)
               .executeWith(getIOProcessors())
               .stopOnFailure()
               .suppressExceptions(false)
               .run(this::rmTaskAttemptDir);
+          getIOStatistics().aggregate((retrieveIOStatistics(dirs)));
+
           if (getLastDeleteException() != null) {
             // one of the task attempts failed.
             throw getLastDeleteException();
@@ -173,6 +170,7 @@ public class CleanupJobStage extends
           // failure. Log and continue
           LOG.info("Exception while listing/deleting task attempts under {}; continuing",
               taskSubDir, ex);
+          // not overreacting here as the base delete will still get executing
           outcome = Outcome.DELETED;
         }
       }
@@ -357,7 +355,7 @@ public class CleanupJobStage extends
   /**
    * Build an options argument from a configuration, using the
    * settings from FileOutputCommitter and manifest committer.
-   * @param statisticName
+   * @param statisticName statistic name to use in duration tracking.
    * @param conf configuration to use.
    * @return the options to process
    */

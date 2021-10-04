@@ -52,7 +52,7 @@ public interface StoreOperations extends Closeable {
    * the FS direct so that stores which optimize their probes
    * can save on IO.
    * @param path path to probe
-   * @return true if the path resolves to a file
+   * @return true if the path exists and resolves to a file
    * @throws IOException failure other than FileNotFoundException
    */
   default boolean isFile(Path path) throws IOException {
