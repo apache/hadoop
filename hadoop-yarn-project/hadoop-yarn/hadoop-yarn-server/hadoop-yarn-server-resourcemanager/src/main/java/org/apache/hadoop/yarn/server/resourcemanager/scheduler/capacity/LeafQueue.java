@@ -878,7 +878,7 @@ public class LeafQueue extends AbstractCSQueue {
         }
 
         // Check user am resource limit
-        User user = getUser(application.getUser());
+        User user = usersManager.getUserAndAddIfAbsent(application.getUser());
         Resource userAMLimit = userAmPartitionLimit.get(partitionName);
 
         // Verify whether we already calculated user-am-limit for this label.
