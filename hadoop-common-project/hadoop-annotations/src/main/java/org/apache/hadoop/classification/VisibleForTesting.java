@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.classification;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * Annotates a program element that exists, or is more widely visible than
  * otherwise necessary, specifically for use in test code.
@@ -30,5 +36,8 @@ package org.apache.hadoop.classification;
  * If external modules need to access/override these methods, then
  * they MUST be re-scoped as public/limited private.
  */
+@Retention(RetentionPolicy.CLASS)
+@Target({ ElementType.TYPE, ElementType.METHOD })
+@Documented
 public @interface VisibleForTesting {
 }
