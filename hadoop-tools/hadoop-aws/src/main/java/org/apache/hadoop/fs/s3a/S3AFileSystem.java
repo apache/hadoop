@@ -216,6 +216,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_S3GUARD_INCOMPATIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
@@ -785,7 +786,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 s3.getBucketAcl(bucket);
               } catch (AmazonServiceException ex) {
                 int statusCode = ex.getStatusCode();
-                if (statusCode == SC_404 || (statusCode == SC_403 && accessPoint != null)) {
+                if (statusCode == SC_404 ||
+                    (statusCode == SC_403 && ex.getMessage().contains(AP_INACCESSIBLE))) {
                   return false;
                 }
               }
