@@ -155,6 +155,11 @@ public final class InternalConstants {
       " but not configured for the bucket.";
 
   /**
+   * Error message to indicate Access Points are not accessible or don't exist.
+   */
+  public static final String AP_INACCESSIBLE = "Could not access through this access point";
+
+  /**
    * AccessPoint ARN for the bucket. When set as a bucket override the requests for that bucket
    * will go through the AccessPoint.
    */
