@@ -44,7 +44,7 @@ public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
   Configuration conf;
-  static FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
+  private static FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
 
   static class TestLFS extends LocalFileSystem {
     private static final Logger LOG = LoggerFactory.getLogger(TestLFS.class);
