@@ -103,7 +103,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   public ITestCustomerProvidedKey() throws Exception {
     boolean isCPKTestsEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_CPK_ENABLED, false);
-    Assume.assumeTrue(isCPKTestsEnabled);
+//    Assume.assumeTrue(isCPKTestsEnabled);
   }
 
   @Test
@@ -198,7 +198,8 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testAppendWithCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
-    final String fileName = path("/" + methodName.getMethodName()).toString();
+    final String fileName =
+        new Path("/" + methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     //  Trying to append with correct CPK headers

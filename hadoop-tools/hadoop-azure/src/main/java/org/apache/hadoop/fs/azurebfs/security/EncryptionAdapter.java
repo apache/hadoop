@@ -1,6 +1,5 @@
 package org.apache.hadoop.fs.azurebfs.security;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +21,8 @@ public class EncryptionAdapter implements Destroyable {
   SecretKey encryptionContext;
   SecretKey encryptionKey;
   EncryptionContextProvider provider;
-  byte[] encodedKey = null;
-  byte[] encodedKeySHA = null;
+  String encodedKey = null;
+  String encodedKeySHA = null;
   private static final Logger LOG =
       LoggerFactory.getLogger(EncryptionAdapter.class);
 
@@ -50,20 +49,38 @@ public class EncryptionAdapter implements Destroyable {
 
   public SecretKey fetchEncryptionContextAndComputeKeys() throws IOException {
     encryptionContext = provider.getEncryptionContext(path);
-    SecretKey key = getEncryptionKey();
-    encodedKey = getBase64EncodedString(key.getEncoded()).getBytes(
-        StandardCharsets.UTF_8);
-    encodedKeySHA = getBase64EncodedString(getSHA256Hash(
-        IOUtils.toString(key.getEncoded(),
-            StandardCharsets.UTF_8.name()))).getBytes(StandardCharsets.UTF_8);
+    computeKeys();
     return encryptionContext;
   }
 
-  public byte[] getEncodedKey() {
+  public void computeKeys() throws IOException {
+    SecretKey key = getEncryptionKey();
+    System.out.println("key "+ new String(key.getEncoded(),
+        StandardCharsets.UTF_8));
+    //    encodedKey = getBase64EncodedString(key.getEncoded()).getBytes(
+    //        StandardCharsets.UTF_8.name());
+    //    encodedKey = getBase64EncodedString(new String(key.getEncoded(), StandardCharsets.UTF_8)).getBytes(
+    //        StandardCharsets.UTF_8.name()); //this is in byte [] form
+    encodedKey = getBase64EncodedString(new String(key.getEncoded(),
+        StandardCharsets.UTF_8));
+    //    encodedKeySHA = getBase64EncodedString(getSHA256Hash(
+    //        IOUtils.toString(key.getEncoded(),
+    //            StandardCharsets.UTF_8.name()))).getBytes(StandardCharsets.UTF_8);
+    encodedKeySHA = getBase64EncodedString(getSHA256Hash(new String(key.getEncoded(),
+        StandardCharsets.UTF_8)));
+  }
+
+  public String getEncodedKey() throws IOException {
+    if (encodedKey == null) {
+      computeKeys();
+    }
     return encodedKey;
   }
 
-  public byte[] getEncodedKeySHA() {
+  public String getEncodedKeySHA() throws IOException {
+    if (encodedKeySHA == null) {
+      computeKeys();
+    }
     return encodedKeySHA;
   }
 

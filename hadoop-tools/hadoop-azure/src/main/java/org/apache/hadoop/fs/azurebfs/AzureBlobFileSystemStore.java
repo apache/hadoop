@@ -728,8 +728,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           encryptionAdapter = new EncryptionAdapter(
               client.getEncryptionContextProvider(), path.toString(),
-              op.getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
-                  .getBytes(StandardCharsets.UTF_8));
+                "context".getBytes(StandardCharsets.UTF_8));
+//              op.getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
+//                  .getBytes(StandardCharsets.UTF_8));
         }
       }
 
