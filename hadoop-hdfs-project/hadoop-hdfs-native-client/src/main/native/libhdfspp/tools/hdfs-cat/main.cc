@@ -20,9 +20,22 @@
 #include <exception>
 #include <iostream>
 
+#include <google/protobuf/stubs/common.h>
+
 #include "hdfs-cat.h"
 
 int main(int argc, char *argv[]) {
+  const auto result = std::atexit([]() -> void {
+    // Clean up static data on exit and prevent valgrind memory leaks
+    google::protobuf::ShutdownProtobufLibrary();
+  });
+  if (result != 0) {
+    std::cerr
+        << "Error: Unable to schedule clean-up tasks for HDFS cat tool, exiting"
+        << std::endl;
+    std::exit(EXIT_FAILURE);
+  }
+
   hdfs::tools::Cat cat(argc, argv);
   auto success = false;
 
@@ -33,7 +46,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (!success) {
-    exit(EXIT_FAILURE);
+    std::exit(EXIT_FAILURE);
   }
   return 0;
 }

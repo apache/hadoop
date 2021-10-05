@@ -26,10 +26,18 @@
 #include "hdfs-cat.h"
 
 namespace hdfs::tools::test {
+/**
+ * {@class CatMock} is an {@class Cat} whereby it mocks the
+ * HandleHelp and HandlePath methods for testing their functionality.
+ */
 class CatMock : public hdfs::tools::Cat {
 public:
+  /**
+   * {@inheritdoc}
+   */
   CatMock(const int argc, char **argv) : Cat(argc, argv) {}
 
+  // Abiding to the Rule of 5
   CatMock(const CatMock &) = delete;
   CatMock(CatMock &&) = delete;
   CatMock &operator=(const CatMock &) = delete;

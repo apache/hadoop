@@ -26,8 +26,15 @@
 #include "hdfs-tool.h"
 
 namespace hdfs::tools {
+/**
+ * {@class Cat} is an {@class HdfsTool} that reads the contents of the file
+ * located at an HDFS path and writes to stdout.
+ */
 class Cat : public HdfsTool {
 public:
+  /**
+   * {@inheritdoc}
+   */
   Cat(int argc, char **argv);
 
   // Abiding to the Rule of 5

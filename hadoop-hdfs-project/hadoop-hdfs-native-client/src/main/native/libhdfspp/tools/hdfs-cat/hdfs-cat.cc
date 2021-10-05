@@ -22,8 +22,6 @@
 #include <sstream>
 #include <string>
 
-#include <google/protobuf/stubs/common.h>
-
 #include "hdfs-cat.h"
 #include "tools_common.h"
 
@@ -101,9 +99,6 @@ bool Cat::HandlePath(const std::string &path) const {
   }
 
   readFile(fs, uri.get_path(), 0, stdout, false);
-
-  // Clean up static data and prevent valgrind memory leaks
-  google::protobuf::ShutdownProtobufLibrary();
   return true;
 }
 } // namespace hdfs::tools
