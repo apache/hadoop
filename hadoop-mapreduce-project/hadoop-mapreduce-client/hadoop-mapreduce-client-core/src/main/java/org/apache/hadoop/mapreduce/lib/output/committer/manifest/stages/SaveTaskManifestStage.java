@@ -74,7 +74,7 @@ public class SaveTaskManifestStage extends
         getRequiredTaskId());
     Path manifestTempFile = manifestTempPathForTaskAttempt(jobAttemptDir,
         getRequiredTaskAttemptId());
-    LOG.info("Saving manifest file to {}", manifestFile);
+    LOG.info("{}: Saving manifest file to {}", getName(), manifestFile);
     save(manifest, manifestTempFile, manifestFile);
     return manifestFile;
   }

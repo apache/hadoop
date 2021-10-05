@@ -330,7 +330,7 @@ public class TestJobThroughManifestCommitter
   public void test_0300_executeTask00() throws Throwable {
     describe("Create the files for Task 00, then commit the task");
     List<Path> files = createFilesOrDirs(dirs.getTaskAttemptPath(taskAttempt00),
-        "part-00", getExecutorService(), 
+        "part-00", getExecutorService(),
         DEPTH, WIDTH, FILES_PER_DIRECTORY, false);
     // saves the task manifest to the job dir
     CommitTaskStage.Result result = new CommitTaskStage(ta00Config)

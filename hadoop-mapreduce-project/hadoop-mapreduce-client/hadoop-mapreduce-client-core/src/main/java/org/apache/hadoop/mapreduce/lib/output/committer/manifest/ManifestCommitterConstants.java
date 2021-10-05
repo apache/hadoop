@@ -50,9 +50,8 @@ public final class ManifestCommitterConstants {
   /**
    * Format string used to build a summary file from a Job ID.
    */
-  public static final String SUMMARY_FILENAME_FORMAT = SUMMARY_FILENAME_PREFIX +
-      "%s.json";
-
+  public static final String SUMMARY_FILENAME_FORMAT =
+      SUMMARY_FILENAME_PREFIX + "%s.json";
 
   /**
    * Suffix to use for temp files before renaming them.
@@ -71,8 +70,7 @@ public final class ManifestCommitterConstants {
    * Format string for building a job dir.
    * Value: {@value}.
    */
-  public static final String JOB_DIR_FORMAT_STR =
-      "manifest_%s";
+  public static final String JOB_DIR_FORMAT_STR = "manifest_%s";
 
   /**
    * Format string for building a job attempt dir.
@@ -80,8 +78,7 @@ public final class ManifestCommitterConstants {
    * can be found trivially.
    * Value: {@value}.
    */
-  public static final String JOB_ATTEMPT_DIR_FORMAT_STR =
-      "%d";
+  public static final String JOB_ATTEMPT_DIR_FORMAT_STR = "%d";
 
 
   /**
@@ -129,7 +126,10 @@ public final class ManifestCommitterConstants {
       OP_SAVE_TASK_MANIFEST,
 
       OBJECT_LIST_REQUEST,
-      OBJECT_CONTINUE_LIST_REQUEST
+      OBJECT_CONTINUE_LIST_REQUEST,
+
+      IO_ACQUIRE_READ_PERMIT,
+      IO_ACQUIRE_WRITE_PERMIT
   };
 
   /**
@@ -174,42 +174,19 @@ public final class ManifestCommitterConstants {
    * It has been restored in recent spark releases.
    * If found: it is used instead of the MR job attempt ID.
    */
-  public static final String SPARK_WRITE_UUID =
-      "spark.sql.sources.writeJobUUID";
+  public static final String SPARK_WRITE_UUID = "spark.sql.sources.writeJobUUID";
 
   /**
    * String to use as source of the job ID.
    * This SHOULD be kept in sync with that of
    * {@code AbstractS3ACommitter.JobUUIDSource}.
    */
-  public static final String JOB_ID_SOURCE_MAPREDUCE =
-      "JobID";
+  public static final String JOB_ID_SOURCE_MAPREDUCE = "JobID";
 
   /**
    * Prefix to use for config options: {@value }.
    */
   public static final String OPT_PREFIX = "mapreduce.manifest.committer.";
-
-  /**
-   * Threads to use for IO.
-   */
-  public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.thread.count";
-
-  /**
-   * Default value:  {@value }.
-   */
-  public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
-
-  /**
-   * Should the output be validated?
-   */
-  public static final String OPT_VALIDATE_OUTPUT = OPT_PREFIX
-      + "validate.output";
-
-  /**
-   * Default value:  {@value }.
-   */
-  public static final boolean OPT_VALIDATE_OUTPUT_DEFAULT = false;
 
   /**
    * rather than delete in cleanup, should the working directory
@@ -222,8 +199,7 @@ public final class ManifestCommitterConstants {
   /**
    * Default value:  {@value }.
    */
-  public static final boolean OPT_CLEANUP_MOVE_TO_TRASH_DEFAULT =
-      false;
+  public static final boolean OPT_CLEANUP_MOVE_TO_TRASH_DEFAULT = false;
 
   /**
    * Should dir cleanup do parallel deletion of task attempt dirs
@@ -237,8 +213,38 @@ public final class ManifestCommitterConstants {
   /**
    * Default value:  {@value}.
    */
-  public static final boolean OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS_DEFAULT =
-      true;
+  public static final boolean OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS_DEFAULT = true;
+
+  /**
+   * Threads to use for IO.
+   */
+  public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.thread.count";
+
+  /**
+   * Default value:  {@value }.
+   */
+  public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
+
+  /**
+   * Rate limit in operations/second for read operations.
+   */
+  public static final String OPT_IO_READ_RATE = OPT_PREFIX + "io.read.rate";
+
+  /**
+   * Default value:  {@value }.
+   */
+  public static final int OPT_IO_READ_RATE_DEFAULT = 10000;
+
+  /**
+   * Rate limit in operations/second for write operations.
+   */
+  public static final String OPT_IO_WRITE_RATE = OPT_PREFIX + "io.write.rate";
+
+  /**
+   * Default value:  {@value }.
+   */
+  public static final int OPT_IO_WRITE_RATE_DEFAULT = 10000;
+
 
   /**
    * Directory for saving job summary reports.
@@ -247,6 +253,16 @@ public final class ManifestCommitterConstants {
    */
   public static final String OPT_SUMMARY_REPORT_DIR =
       OPT_PREFIX + "summary.report.directory";
+
+  /**
+   * Should the output be validated?
+   */
+  public static final String OPT_VALIDATE_OUTPUT = OPT_PREFIX + "validate.output";
+
+  /**
+   * Default value:  {@value }.
+   */
+  public static final boolean OPT_VALIDATE_OUTPUT_DEFAULT = false;
 
   /**
    * Name of the factory: {@value}.
@@ -269,6 +285,51 @@ public final class ManifestCommitterConstants {
    * Task ID attribute in audit context: {@value}.
    */
   public static final String CONTEXT_ATTR_TASK_ATTEMPT_ID = "ta";
+
+  /**
+   * Read permit cost for any of the status probes: {@value}.
+   */
+  public static final int PERMIT_READ_GET_FILE_STATUS = 1;
+
+  /**
+   * Read permit cost for list operations: {@value}.
+   */
+  public static final int PERMIT_READ_LIST = 2;
+
+  /**
+   * Read permit cost for list operations: {@value}.
+   */
+  public static final int PERMIT_READ_OPEN_FILE = 2;
+
+  /**
+   * Write permit cost for delete(): {@value}.
+   */
+  public static final int PERMIT_WRITE_CREATE_FILE = 1;
+
+  /**
+   * Write permit cost for delete(): {@value}.
+   */
+  public static final int PERMIT_WRITE_DELETE = 1;
+
+  /**
+   * Write permit cost for mkdir(): {@value}.
+   */
+  public static final int PERMIT_WRITE_MKDIR = 1;
+
+  /**
+   * Write permit cost for rename(): {@value}.
+   */
+  public static final int PERMIT_WRITE_RENAME = 1;
+
+  /**
+   * Format string for task attempt names.
+   */
+  public static final String NAME_FORMAT_TASK_ATTEMPT = "[Task-Attempt %s]";
+
+  /**
+   * Format string for job attempt names.
+   */
+  public static final String NAME_FORMAT_JOB_ATTEMPT = "[Job-Attempt %s]";
 
   private ManifestCommitterConstants() {
   }

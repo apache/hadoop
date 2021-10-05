@@ -68,12 +68,11 @@ public final class ScanTaskAttemptDirectoryStage
   protected TaskManifest executeStage(final Void arguments)
       throws IOException {
 
-    final String taskAttemptId = getRequiredTaskAttemptId();
     final Path taskAttemptDir = getRequiredTaskAttemptDir();
     final TaskManifest manifest = createTaskManifest(getStageConfig());
 
-    LOG.info("Task Attempt {} scanning directory {}",
-        taskAttemptId, taskAttemptDir);
+    LOG.info("{}: scanning directory {}",
+        getName(), taskAttemptDir);
 
     final int depth = scanDirectoryTree(manifest, taskAttemptDir,
         getDestinationDir(),
@@ -85,13 +84,13 @@ public final class ScanTaskAttemptDirectoryStage
     long fileDataSize = fileSummary.getSum();
     long fileCount = fileSummary.getCount();
     int dirCount = manifest.getDirectoriesToCreate().size();
-    LOG.info("Task Attempt {} directory {};",
-        taskAttemptId,
-        taskAttemptDir);
-    LOG.info("Contained {} file(s); data size {}",
+    LOG.info("{}: directory {} contained {} file(s); data size {}",
+        getName(),
+        taskAttemptDir,
         fileCount,
         fileDataSize);
-    LOG.info("Directory count = {}; maximum depth {}",
+    LOG.info("{}: Directory count = {}; maximum depth {}",
+        getName(),
         dirCount,
         depth);
     // add statistics about the task output which, when aggregated, provides
@@ -170,9 +169,9 @@ public final class ScanTaskAttemptDirectoryStage
     }
 
     // now scan the subdirectories
-    LOG.debug("Number of subdirectories under {} found: {}",
-        srcDir, subdirs.size());
-    LOG.debug("File count {}", files);
+    LOG.debug("{}: Number of subdirectories under {} found: {}; file count {}",
+        getName(), srcDir, subdirs.size(), files);
+
     for (FileStatus st : subdirs) {
       Path destSubDir = new Path(destDir, st.getPath().getName());
       final int d = scanDirectoryTree(manifest, st.getPath(), destSubDir,

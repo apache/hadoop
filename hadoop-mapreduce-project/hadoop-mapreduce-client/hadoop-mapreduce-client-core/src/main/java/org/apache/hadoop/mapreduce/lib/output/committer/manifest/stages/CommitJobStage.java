@@ -83,7 +83,7 @@ public class CommitJobStage extends
     // and hence all aggregate stats from the tasks.
     ManifestSuccessData successData;
     successData = new RenameFilesStage(getStageConfig()).apply(manifests);
-    LOG.debug("_SUCCESS file summary {}", successData.toJson());
+    LOG.debug("{}: _SUCCESS file summary {}", getName(), successData.toJson());
     // update the counter of bytes committed and files.
     // use setCounter so as to ignore any values accumlated when
     // aggregating tasks.
@@ -100,7 +100,7 @@ public class CommitJobStage extends
 
       Path succesPath = new SaveSuccessFileStage(getStageConfig())
           .apply(successData);
-      LOG.debug("Saving _SUCCESS file to {}", succesPath);
+      LOG.debug("{}: Saving _SUCCESS file to {}", getName(), succesPath);
     }
 
     return new CommitJobStage.Result(successData, manifests);

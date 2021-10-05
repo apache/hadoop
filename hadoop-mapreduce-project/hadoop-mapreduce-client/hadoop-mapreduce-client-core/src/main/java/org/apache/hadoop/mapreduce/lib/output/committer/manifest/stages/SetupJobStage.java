@@ -50,7 +50,7 @@ public class SetupJobStage extends
   @Override
   protected Path executeStage(final Boolean deleteMarker) throws IOException {
     final Path path = getJobAttemptDir();
-    LOG.info("Creating Job Attempt directory {}", path);
+    LOG.info("{}: Creating Job Attempt directory {}", getName(), path);
     createNewDirectory("Job setup", path);
     // delete any success marker if so instructed.
     if (deleteMarker) {

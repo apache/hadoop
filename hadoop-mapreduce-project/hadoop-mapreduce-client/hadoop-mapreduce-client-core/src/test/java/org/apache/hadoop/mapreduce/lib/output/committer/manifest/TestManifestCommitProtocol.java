@@ -1406,6 +1406,7 @@ public class TestManifestCommitProtocol
    * @throws Exception failure
    */
   @Test
+  @SuppressWarnings("unchecked")
   public void testConcurrentCommitTaskWithSubDir() throws Exception {
     Job job = newJob();
     FileOutputFormat.setOutputPath(job, outputDir);

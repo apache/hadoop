@@ -24,6 +24,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitt
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -130,6 +131,21 @@ public class StageConfig {
    */
   private final ThreadLocal<JsonSerialization<TaskManifest>> threadLocalSerializer =
       ThreadLocal.withInitial(TaskManifest::serializer);
+
+  /**
+   * Rate limiter for read operations.
+   */
+  private RateLimiter readLimiter;
+
+  /**
+   * Rate limiter for read operations.
+   */
+  private RateLimiter writeLimiter;
+
+  /**
+   * Name for logging.
+   */
+  private String name = "";
 
   public StageConfig() {
   }
@@ -327,6 +343,46 @@ public class StageConfig {
   }
 
   /**
+   * Set read limiter
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withReadLimiter(RateLimiter value) {
+    checkOpen();
+    readLimiter = value;
+    return this;
+  }
+
+  /**
+   * Set write limiter value.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withWriteLimiter(RateLimiter value) {
+    checkOpen();
+    writeLimiter = value;
+    return this;
+  }
+
+  /**
+   * Set name of task/job.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withName(String value) {
+    name = value;
+    return this;
+  }
+
+  /**
+   * Get name of task/job.
+   * @return name for logging.
+   */
+  public String getName() {
+    return name;
+  }
+
+  /**
    * Handler for stage entry events.
    * @return the handler.
    */
@@ -445,6 +501,50 @@ public class StageConfig {
    */
   public JsonSerialization<TaskManifest> currentManifestSerializer() {
     return threadLocalSerializer.get();
+  }
+
+  /**
+   * Read limiter.
+   * @return Read limiter.
+   */
+  public RateLimiter getReadLimiter() {
+    return readLimiter;
+  }
+
+  /**
+   * Write limiter.
+   * @return Write limiter.
+   */
+  public RateLimiter getWriteLimiter() {
+    return writeLimiter;
+  }
+
+  /**
+   * Acquire a given number of read permits.
+   * The subsequent caller will block if the rate
+   * limiter mandates it.
+   * no-op if (in test setups) there's no rate limiter.
+   * @param permits permit count.
+   * @return delay in seconds; 0 if none.
+   */
+  public double acquireReadPermits(int permits) {
+    return readLimiter != null
+        ? readLimiter.acquire(permits)
+        : 0.0;
+  }
+
+  /**
+   * Acquire a given number of write permits.
+   * The subsequent caller will block if the rate
+   * limiter mandates it.
+   * no-op if (in test setups) there's no rate limiter.
+   * @param permits permit count.
+   * @return delay in seconds; 0 if none.
+   */
+  public double acquireWritePermits(int permits) {
+    return writeLimiter != null
+        ? writeLimiter.acquire(permits)
+        : 0.0;
   }
 
   /**

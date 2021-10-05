@@ -56,6 +56,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJ
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
@@ -71,6 +72,9 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig.createCloseableTaskSubmitter;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.NAME_FORMAT_JOB_ATTEMPT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
@@ -100,8 +104,7 @@ public abstract class AbstractManifestCommitterTest
    * Some Job and task IDs.
    */
   protected static final ManifestCommitterTestSupport.JobAndTaskIDsForTests
-      TASK_IDS =
-      new ManifestCommitterTestSupport.JobAndTaskIDsForTests(2, 2);
+      TASK_IDS = new ManifestCommitterTestSupport.JobAndTaskIDsForTests(2, 2);
 
   public static final int JOB1 = 1;
 
@@ -720,19 +723,24 @@ public abstract class AbstractManifestCommitterTest
       final int taskIndex,
       final int taskAttemptNumber,
       final Path outputPath) {
+    final String jobId = TASK_IDS.getJobId();
     ManifestCommitterSupport.AttemptDirectories attemptDirs =
         new ManifestCommitterSupport.AttemptDirectories(outputPath,
-            TASK_IDS.getJobId(), jobAttemptNumber);
+            jobId, jobAttemptNumber);
     StageConfig config = new StageConfig();
     config
-        .withOperations(getStoreOperations())
-        .withJobId(TASK_IDS.getJobId())
+        .withIOProcessors(getSubmitter())
+        .withIOStatistics(getStageStatistics())
+        .withJobId(jobId)
         .withJobIdSource(JOB_ID_SOURCE_MAPREDUCE)
         .withJobAttemptNumber(jobAttemptNumber)
         .withJobDirectories(attemptDirs)
-        .withIOProcessors(getSubmitter())
-        .withIOStatistics(getStageStatistics())
-        .withProgressable(getProgressCounter());
+        .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
+        .withOperations(getStoreOperations())
+        .withProgressable(getProgressCounter())
+        .withReadLimiter(RateLimiter.create(OPT_IO_READ_RATE_DEFAULT))
+        .withWriteLimiter(RateLimiter.create(OPT_IO_WRITE_RATE_DEFAULT))
+    ;
 
     // if there's a task attempt ID set, set up its details
     if (taskIndex >= 0) {

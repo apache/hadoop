@@ -71,7 +71,8 @@ public class SaveSuccessFileStage extends
     // Save the marker
     Path successFile = getStageConfig().getJobSuccessMarkerPath();
     Path successTempFile = new Path(jobAttemptDir, SUCCESS_MARKER + TMP_SUFFIX);
-    LOG.debug("Saving _SUCCESS file to {} via {}", successFile,
+    LOG.debug("{}: Saving _SUCCESS file to {} via {}", successFile,
+        getName(),
         successTempFile);
     save(successData, successTempFile, successFile);
     return successFile;

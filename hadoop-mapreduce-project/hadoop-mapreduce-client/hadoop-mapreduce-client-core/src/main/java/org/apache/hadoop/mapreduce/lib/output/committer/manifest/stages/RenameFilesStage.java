@@ -140,7 +140,7 @@ public class RenameFilesStage extends
     // report progress back
     progress();
     // do the rename
-    rename(entry.getSourcePath(), entry.getDestPath());
+    renameFile(entry.getSourcePath(), entry.getDestPath());
 
     // update the list and IOStats
     synchronized (this) {

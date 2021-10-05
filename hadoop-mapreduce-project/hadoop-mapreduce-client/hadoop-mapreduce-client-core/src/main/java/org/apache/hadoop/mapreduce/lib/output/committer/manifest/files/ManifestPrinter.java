@@ -129,7 +129,7 @@ public class ManifestPrinter extends Configured implements Tool {
 
   /**
    */
-  public static void main(String argv[]) throws Exception {
+  public static void main(String[] argv) throws Exception {
     int res = ToolRunner.run(new ManifestPrinter(), argv);
     System.exit(res);
   }

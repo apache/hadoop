@@ -179,8 +179,7 @@ public final class ManifestCommitterSupport {
     manifest.setJobId(stageConfig.getJobId());
     manifest.setJobAttemptNumber(stageConfig.getJobAttemptNumber());
     manifest.setTaskAttemptDir(
-        stageConfig.getTaskAttemptDir()
-            .toUri().toString());
+        stageConfig.getTaskAttemptDir().toUri().toString());
     return manifest;
   }
 

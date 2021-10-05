@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageEventCallbacks;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -42,6 +43,10 @@ import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.SUCCESS
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.buildJobUUID;
@@ -140,6 +145,21 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
   private final StageEventCallbacks stageEventCallbacks;
 
   /**
+   * Read operation rate limit per second..
+   */
+  private final int readRate;
+
+  /**
+   * Write operation rate limit per second..
+   */
+  private final int writeRate;
+
+  /**
+   * Name for logging.
+   */
+  private final String name;
+
+  /**
    * Constructor.
    * @param outputPath destination path of the job.
    * @param role role for log messages.
@@ -175,6 +195,9 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
     this.dirs = new ManifestCommitterSupport.AttemptDirectories(outputPath,
         this.jobUniqueId, jobAttemptNumber);
 
+    this.readRate = conf.getInt(OPT_IO_READ_RATE, OPT_IO_READ_RATE_DEFAULT);
+    this.writeRate = conf.getInt(OPT_IO_WRITE_RATE, OPT_IO_WRITE_RATE_DEFAULT);
+
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
       // it's a task
@@ -187,6 +210,7 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
       taskAttemptDir = dirs.getTaskAttemptPath(taskAttemptId);
       // the context is also the progress callback.
       progressable = tac;
+      name = String.format(ManifestCommitterConstants.NAME_FORMAT_TASK_ATTEMPT, taskAttemptId);
 
     } else {
       // it's a job
@@ -194,13 +218,15 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
       taskAttemptId = "";
       taskAttemptDir = null;
       progressable = null;
+      name =  String.format(ManifestCommitterConstants.NAME_FORMAT_JOB_ATTEMPT, jobAttemptId);
     }
   }
 
   @Override
   public String toString() {
     return "ManifestCommitterConfig{" +
-        "destinationDir=" + destinationDir +
+        "name=" + name +
+        ", destinationDir=" + destinationDir +
         ", role='" + role + '\'' +
         ", taskAttemptDir=" + taskAttemptDir +
         ", createJobMarker=" + createJobMarker +
@@ -232,17 +258,24 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
   StageConfig createJobStageConfig() {
     StageConfig stageConfig = new StageConfig();
     stageConfig
-        .withStageEventCallbacks(stageEventCallbacks)
         .withIOStatistics(iostatistics)
+        .withJobAttemptNumber(jobAttemptNumber)
         .withJobDirectories(dirs)
         .withJobId(jobUniqueId)
         .withJobIdSource(jobUniqueIdSource)
+        .withName(name)
         .withProgressable(progressable)
-        .withJobAttemptNumber(jobAttemptNumber)
+        .withStageEventCallbacks(stageEventCallbacks)
         .withTaskAttemptDir(taskAttemptDir)
         .withTaskAttemptId(taskAttemptId)
         .withTaskId(taskId);
 
+    if (readRate > 0) {
+      stageConfig.withReadLimiter(RateLimiter.create(readRate));
+    }
+    if (writeRate > 0) {
+      stageConfig.withWriteLimiter(RateLimiter.create(writeRate));
+    }
     return stageConfig;
   }
 
@@ -292,6 +325,10 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
 
   public boolean getValidateOutput() {
     return validateOutput;
+  }
+
+  public String getName() {
+    return name;
   }
 
   @Override

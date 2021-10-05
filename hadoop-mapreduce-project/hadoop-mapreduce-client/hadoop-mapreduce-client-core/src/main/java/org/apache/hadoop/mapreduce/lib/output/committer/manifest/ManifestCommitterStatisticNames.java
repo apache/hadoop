@@ -102,6 +102,12 @@ public final class ManifestCommitterStatisticNames {
   public static final String COMMITTER_TASK_FILE_SIZE_MEAN =
       "committer_task_file_size";
 
+  /** Time to acquire read permit {@value}. */
+  public static final String IO_ACQUIRE_READ_PERMIT = "io_acquire_read_permit";
+
+  /** Time to acquire write permit {@value}. */
+  public static final String IO_ACQUIRE_WRITE_PERMIT = "io_acquire_write_permit";
+
   /** Directory creation {@value}. */
   public static final String OP_CREATE_DIRECTORIES = "op_create_directories";
 

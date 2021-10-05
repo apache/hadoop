@@ -81,7 +81,7 @@ Some matching spark configuration changes, especially for parquet binding, will 
 These can be done in `core-site.xml`, if it is not defined in the `mapred-default.xml` JAR.
 
 
-```
+```xml
 <property>
   <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
   <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
@@ -98,9 +98,6 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
 </property>
 
 ```
-
-
-### 
 
 In `spark-default`
 
@@ -169,6 +166,8 @@ or in the case of S3A filesystems, one of the S3A committers. They all use the s
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
+| `mapreduce.manifest.committer.io.read.rate` | Rate limit in operations/second for read operations. | `10000` |
+| `mapreduce.manifest.committer.io.write.rate` | Rate limit in operations/second for write operations. | `10000` |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
@@ -246,4 +245,22 @@ If the dir could not be deleted/renamed:
 It's complicated, but the goal is to perform a fast/scalable delete
 fall back to a rename to trash if that fails, and
 throw a meaningful exception if that didn't work.
+
+# Rate Limiting
+
+To avoid triggering store throttling and backoff delays, the committer rate-limits read- and write
+operations per second. 
+
+| Option | Meaning | 
+|--------|---------|
+| `mapreduce.manifest.committer.io.read.rate` | Rate limit in operations/second for read operations. |
+| `mapreduce.manifest.committer.io.write.rate` | Rate limit in operations/second for write operations. |
+
+Set the options to `0` remove all rate limiting.
+
+If rate limiting is imposed, The statistics `io_acquire_write_permit` and `io_acquire_read_permit` report
+the time to acquire permits and so identify any delays.
+
+The need for any throttling can be determined by looking at job logs to see if throttling events and
+retries took place, or, (often easier) the store service's logs and their throttling status codes (usually 503 or 500).
 

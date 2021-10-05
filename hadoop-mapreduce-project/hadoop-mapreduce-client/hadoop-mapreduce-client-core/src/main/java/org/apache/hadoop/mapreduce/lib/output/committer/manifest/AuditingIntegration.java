@@ -77,8 +77,8 @@ public final class AuditingIntegration {
    * @param stage stage name.
    */
   public static void enterStageWorker(String jobId, String stage) {
-      CommonAuditContext context = currentAuditContext();
-      context.put(AuditConstants.PARAM_JOB_ID, jobId);
-      context.put(CONTEXT_ATTR_STAGE, stage);
+    CommonAuditContext context = currentAuditContext();
+    context.put(AuditConstants.PARAM_JOB_ID, jobId);
+    context.put(CONTEXT_ATTR_STAGE, stage);
   }
 }

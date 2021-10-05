@@ -52,6 +52,15 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AuditingIntegration.enterStageWorker;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_READ_GET_FILE_STATUS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_READ_LIST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_READ_OPEN_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_CREATE_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_DELETE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_MKDIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
@@ -127,6 +136,11 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   private DurationTracker stageExecutionTracker;
 
   /**
+   * Name for logging.
+   */
+  private final String name;
+
+  /**
    * Constructor.
    * @param isTaskStage Is this a task stage?
    * @param stageConfig stage-independent configuration.
@@ -150,12 +164,19 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     this.ioProcessors = bindProcessor(
         requireIOProcessors,
         stageConfig.getIoProcessors());
+    String stageName;
     if (isTaskStage) {
       // force fast failure.
       getRequiredTaskId();
       getRequiredTaskAttemptId();
       getRequiredTaskAttemptDir();
+      stageName = String.format("[Task-Attempt %s]", getRequiredTaskAttemptId());
+    } else  {
+      stageName = String.format("[Job-Attempt %s/%02d]",
+          stageConfig.getJobId(),
+          stageConfig.getJobAttemptNumber());
     }
+    name = stageName;
   }
 
   /**
@@ -192,23 +213,25 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     getStageConfig().enterStage(stageName);
     String statisticName = getStageStatisticName(arguments);
     // The tracker here
-    LOG.info("Executing Stage {}", stageName);
+    LOG.info("{}: Executing Stage {}", getName(), stageName);
     stageExecutionTracker = createTracker(getIOStatistics(), statisticName);
     try {
       // exec the input function and return its value
       final OUT out = executeStage(arguments);
-      LOG.info("Stage {} completed after {}",
+      LOG.info("{}: Stage {} completed after {}",
+          getName(),
           stageName,
           OperationDuration.humanTime(
               stageExecutionTracker.asDuration().toMillis()));
       return out;
     } catch (IOException | RuntimeException e) {
-      LOG.error("Stage {} failed: after {}: {}",
+      LOG.error("{}: Stage {} failed: after {}: {}",
+          getName(),
           stageName,
           OperationDuration.humanTime(
               stageExecutionTracker.asDuration().toMillis()),
           e.toString());
-      LOG.debug("Stage failure:", e);
+      LOG.debug("{}: Stage failure:", getName(), e);
       // input function failed: note it
       stageExecutionTracker.failed();
       // and rethrow
@@ -284,21 +307,49 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         getStageExecutionTracker().asDuration());
   }
 
+  /**
+   * Acquire a given number of read permits.
+   * The subsequent caller will block if the rate
+   * limiter mandates it.
+   * no-op if (in test setups) there's no rate limiter.
+   * Acquisition duration is added to stats when rate-limited.
+   * @param permits permit count.
+   */
+  public void acquireReadPermits(int permits) {
+    final double wait = stageConfig.acquireReadPermits(permits);
+    if (wait > 0) {
+      // rate limiting took place
+      getIOStatistics().addTimedOperation(
+          IO_ACQUIRE_READ_PERMIT,
+          (long)(wait * 1000));
+    }
+  }
+
+  /**
+   * Acquire a given number of write permits.
+   * The subsequent caller will block if the rate
+   * limiter mandates it.
+   * no-op if (in test setups) there's no rate limiter.
+   * Acquisition duration is added to stats when rate-limited.
+   * @param permits permit count.
+   */
+  public void acquireWritePermits(int permits) {
+    final double wait = stageConfig.acquireWritePermits(permits);
+    if (wait > 0) {
+      // rate limiting took place
+      getIOStatistics().addTimedOperation(
+          IO_ACQUIRE_WRITE_PERMIT,
+          (long) (wait * 1000));
+    }
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "AbstractJobCommitStage{");
     sb.append(isTaskStage ? "Task Stage" : "Job Stage");
-    sb.append(" name='").append(stageStatisticName).append('\'');
-    if (isTaskStage) {
-      sb.append(", Task Attempt ID=")
-          .append(getTaskAttemptId());
-    } else {
-      sb.append(", ID =")
-          .append(getJobId())
-          .append("; attempt #")
-          .append(getJobAttemptNumber());
-    }
+    sb.append(" name='").append(name).append('\'');
+    sb.append(" stage='").append(stageStatisticName).append('\'');
     sb.append('}');
     return sb.toString();
   }
@@ -366,9 +417,11 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final FileStatus getFileStatus(
       final Path path)
       throws IOException {
-    LOG.trace("getFileStatus('{}')", path);
-    return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () ->
-        operations.getFileStatus(path));
+    LOG.trace("{}: getFileStatus('{}')", getName(), path);
+    return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () -> {
+      acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
+      return operations.getFileStatus(path);
+    });
   }
 
   /**
@@ -380,9 +433,11 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final boolean isFile(
       final Path path)
       throws IOException {
-    LOG.trace("getFileStatus('{}')", path);
-    return trackDuration(getIOStatistics(), OP_IS_FILE, () ->
-        operations.isFile(path));
+    LOG.trace("{}: isFile('{}')", getName(), path);
+    return trackDuration(getIOStatistics(), OP_IS_FILE, () -> {
+      acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
+      return operations.isFile(path);
+    });
   }
 
   /**
@@ -396,7 +451,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path path,
       final boolean recursive)
       throws IOException {
-    LOG.trace("delete('{}, {}')", path, recursive);
+    LOG.trace("{}: delete('{}, {}')", getName(), path, recursive);
     return delete(path, recursive, OP_DELETE);
   }
 
@@ -413,8 +468,10 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final boolean recursive,
       final String statistic)
       throws IOException {
-    return trackDuration(getIOStatistics(), statistic, () ->
-        operations.delete(path, recursive));
+    return trackDuration(getIOStatistics(), statistic, () -> {
+      acquireWritePermits(PERMIT_WRITE_DELETE);
+      return operations.delete(path, recursive);
+    });
   }
 
   /**
@@ -428,8 +485,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path path,
       final boolean escalateFailure)
       throws IOException {
-    LOG.trace("mkdirs('{}')", path);
+    LOG.trace("{}: mkdirs('{}')", getName(), path);
     return trackDuration(getIOStatistics(), OP_MKDIRS, () -> {
+      acquireWritePermits(PERMIT_WRITE_MKDIR);
       boolean success = operations.mkdirs(path);
       if (!success && escalateFailure) {
         throw new PathIOException(path.toUri().toString(),
@@ -450,9 +508,11 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final RemoteIterator<FileStatus> listStatusIterator(
       final Path path)
       throws IOException {
-    LOG.trace("listStatusIterator('{}')", path);
-    return trackDuration(getIOStatistics(), OP_LIST_STATUS, () ->
-        operations.listStatusIterator(path));
+    LOG.trace("{}: listStatusIterator('{}')", getName(), path);
+    return trackDuration(getIOStatistics(), OP_LIST_STATUS, () -> {
+      acquireReadPermits(PERMIT_READ_LIST);
+      return operations.listStatusIterator(path);
+    });
   }
 
   /**
@@ -464,11 +524,13 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final TaskManifest loadManifest(
       final FileStatus status)
       throws IOException {
-    LOG.trace("loadManifest('{}')", status);
-    return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () ->
-        operations.loadTaskManifest(
-            stageConfig.currentManifestSerializer(),
-            status));
+    LOG.trace("{}: loadManifest('{}')", getName(), status);
+    return trackDuration(getIOStatistics(), OP_LOAD_MANIFEST, () -> {
+      acquireReadPermits(PERMIT_READ_OPEN_FILE);
+      return operations.loadTaskManifest(
+          stageConfig.currentManifestSerializer(),
+          status);
+    });
   }
 
   /**
@@ -489,6 +551,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws IOException IO failure
    */
   protected final void msync(Path path) throws IOException {
+    LOG.trace("{}: msync('{}')", getName(), path);
     trackDurationOfInvocation(getIOStatistics(), OP_MSYNC, () ->
         operations.msync(path));
   }
@@ -506,6 +569,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final Path createNewDirectory(
       final String operation,
       final Path path) throws IOException {
+    LOG.trace("{}: {} createNewDirectory('{}')", getName(), operation, path);
     // check for dir existence before trying to create.
     try {
       final FileStatus status = getFileStatus(path);
@@ -554,10 +618,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final <T extends AbstractManifestData> void save(T manifestData,
       final Path tempPath,
       final Path finalPath) throws IOException {
-    LOG.trace("save('{}, {}, {}')", manifestData, tempPath, finalPath);
-    trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
-        operations.save(manifestData, tempPath, true));
-    rename(tempPath, finalPath);
+    LOG.trace("{}: save('{}, {}, {}')", getName(), manifestData, tempPath, finalPath);
+    trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () -> {
+      acquireWritePermits(PERMIT_WRITE_CREATE_FILE);
+      operations.save(manifestData, tempPath, true);
+    });
+    renameFile(tempPath, finalPath);
   }
 
   /**
@@ -568,27 +634,30 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws IOException failure
    * @throws PathIOException if the rename() call returned false.
    */
-  protected final void rename(final Path source, final Path dest)
+  protected final void renameFile(final Path source, final Path dest)
       throws IOException {
+    LOG.debug("{}: renameFile('{}', '{}')", getName(), source, dest);
+
     // delete the destination, always, knowing that it's a no-op if
     // the data isn't there. Skipping the change saves one round trip
     // to actually look for the file/object
     boolean deleted = delete(dest, true);
     // log the outcome in case of emergency diagnostics traces
     // being needed.
-    LOG.debug("delete('{}') returned {}')", dest, deleted);
+    LOG.debug("{}: delete('{}') returned {}'", getName(), dest, deleted);
 
     // now do the rename.
     // the uprating of a false to PathIOE is done in the duration
-    // tracker, so failures are counted.
+    // tracker, so failures can be observed in the statistics.
     trackDurationOfInvocation(getIOStatistics(), OP_RENAME_FILE, () -> {
+      acquireWritePermits(PERMIT_WRITE_RENAME);
       boolean renamed = operations.renameFile(source, dest);
       if (!renamed) {
         // rename failed, and the FS isn't telling us why.
         // lets see what happened.
         final FileStatus sourceStatus = getFileStatusOrNull(source);
         final FileStatus destStatus = getFileStatusOrNull(dest);
-        LOG.error("rename failure from {} to {}", sourceStatus, destStatus);
+        LOG.error("{}: rename failure from {} to {}", getName(), sourceStatus, destStatus);
         throw new PathIOException(source.toString(),
             FAILED_TO_RENAME +
                 " " + sourceStatus
@@ -675,6 +744,14 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final Path getDestinationDir() {
     return stageConfig.getDestinationDir();
+  }
+
+  /**
+   * Stage confog name, for logging.
+   * @return name.
+   */
+  public final String getName() {
+    return name;
   }
 
   /**

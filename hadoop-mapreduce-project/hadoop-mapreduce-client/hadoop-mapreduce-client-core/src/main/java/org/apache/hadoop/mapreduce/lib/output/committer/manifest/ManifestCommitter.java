@@ -148,7 +148,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
 
   /**
    * Committer method invoked; generates a config for it.
-   * Calls {@link #updateCommonContext(ManifestCommitterConfig)}
+   * Calls {@code #updateCommonContextOnCommitterEntry()}
    * to update the audit context.
    * @param isTask is this a task entry point?
    * @param context context
@@ -302,9 +302,10 @@ public class ManifestCommitter extends PathOutputCommitter implements
       throws IOException {
     ManifestCommitterConfig committerConfig = enterCommitter(true,
         context);
-    new AbortTaskStage(committerConfig.createJobStageConfig()
-        .withOperations(createStoreOperations())
-        .build())
+    new AbortTaskStage(
+        committerConfig.createJobStageConfig()
+            .withOperations(createStoreOperations())
+            .build())
         .apply(false);
     logCommitterStatisticsAtDebug();
   }
@@ -371,7 +372,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
 
       if (committerConfig.getValidateOutput()) {
         // cache and restore the active stage field
-        LOG.info("Validating output.");
+        LOG.info("{}: Validating output.", committerConfig.getName());
         new ValidateRenamedFilesStage(stageConfig)
             .apply(result.getManifests());
       }
@@ -390,7 +391,8 @@ public class ManifestCommitter extends PathOutputCommitter implements
           true,
           true);
       // print job commit stats
-      LOG.info("Job Commit statistics {}",
+      LOG.info("{}: Job Commit statistics {}",
+          committerConfig.getName(),
           ioStatisticsToPrettyString(iostatistics));
     }
   }
@@ -462,10 +464,11 @@ public class ManifestCommitter extends PathOutputCommitter implements
     try (CloseableTaskPoolSubmitter ioProcs =
              committerConfig.createSubmitter()) {
 
-      return new CleanupJobStage(committerConfig
-          .createJobStageConfig()
-          .withOperations(createStoreOperations())
-          .withIOProcessors(ioProcs).build())
+      return new CleanupJobStage(
+          committerConfig.createJobStageConfig()
+              .withOperations(createStoreOperations())
+              .withIOProcessors(ioProcs)
+              .build())
           .apply(cleanupStageOptionsFromConfig(
               statisticName,
               jobContext.getConfiguration()));

@@ -69,6 +69,13 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
     return fileSystem.getFileStatus(path);
   }
 
+  /**
+   * Using FileSystem.isFile to offer stores the option to optimize their probes.
+   * @param path path to probe
+   * @return true if the path resolves to a file.
+   * @throws IOException IO failure.
+   */
+  @SuppressWarnings("deprecation")
   @Override
   public boolean isFile(Path path) throws IOException {
     return fileSystem.isFile(path);

@@ -54,7 +54,7 @@ public class AbortTaskStage extends
       throws IOException {
     final Path dir = getTaskAttemptDir();
     if (dir != null) {
-      LOG.info("Deleting task attempt directory {}", dir);
+      LOG.info("{}: Deleting task attempt directory {}", getName(), dir);
       deleteDir(dir, suppressExceptions);
     }
     return dir;

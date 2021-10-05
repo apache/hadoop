@@ -143,7 +143,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
     // and they are also tagged as created in the map
     dirs.forEach(d ->
-      assertDirMapStatus(r2, d, CreateOutputDirectoriesStage.DirMapState.dirWasCreated));
+        assertDirMapStatus(r2, d, CreateOutputDirectoriesStage.DirMapState.dirWasCreated));
   }
 
   /**
@@ -180,7 +180,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
   }
 
   /**
-   * Prepare a deep tree {@code c ^ 3} of entryes
+   * Prepare a deep tree {@code c ^ 3} of entries.
    */
   @Test
   public void testPrepareDeepTree() throws Throwable {

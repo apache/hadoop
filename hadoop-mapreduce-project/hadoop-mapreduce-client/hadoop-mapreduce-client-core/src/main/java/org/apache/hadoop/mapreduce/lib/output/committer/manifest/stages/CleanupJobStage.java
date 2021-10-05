@@ -108,9 +108,9 @@ public class CleanupJobStage extends
     stageName = getStageName(args);
     // this is $dest/_temporary
     final Path baseDir = requireNonNull(getStageConfig().getOutputTempSubDir());
-    LOG.info("Cleaup of directory {} with {}", baseDir, args);
+    LOG.info("{}: Cleaup of directory {} with {}", getName(), baseDir, args);
     if (!args.enabled) {
-      LOG.info("Cleanup of {} disabled", baseDir);
+      LOG.info("{}: Cleanup of {} disabled", getName(), baseDir);
       return new Result(Outcome.DISABLED, baseDir,
           0, null, null);
     }
@@ -133,7 +133,7 @@ public class CleanupJobStage extends
 
     if (attemptDelete) {
       // to delete.
-      LOG.info("Deleting job directory {}", baseDir);
+      LOG.info("{}: Deleting job directory {}", getName(), baseDir);
 
       if (args.deleteTaskAttemptDirsInParallel) {
         // Attempt to do a parallel delete of task attempt dirs;
@@ -164,11 +164,12 @@ public class CleanupJobStage extends
           outcome = Outcome.PARALLEL_DELETE;
         } catch (FileNotFoundException ex) {
           // not a problem if there's no dir to list.
-          LOG.debug("Task attempt dir {} not found", taskSubDir);
+          LOG.debug("{}: Task attempt dir {} not found", getName(), taskSubDir);
           outcome = Outcome.DELETED;
         } catch (IOException ex) {
           // failure. Log and continue
-          LOG.info("Exception while listing/deleting task attempts under {}; continuing",
+          LOG.info("{}: Exception while listing/deleting task attempts under {}; continuing",
+              getName(),
               taskSubDir, ex);
           // not overreacting here as the base delete will still get executing
           outcome = Outcome.DELETED;
@@ -178,7 +179,7 @@ public class CleanupJobStage extends
       exception = rmOneDir(baseDir);
       if (exception != null) {
         // failure, report and continue
-        LOG.warn("Deleting job directory {} failed: moving to trash", baseDir);
+        LOG.warn("{}: Deleting job directory {} failed: moving to trash", getName(), baseDir);
         moveToTrash = true;
         // assume failure.
         outcome = Outcome.FAILURE;
@@ -196,7 +197,7 @@ public class CleanupJobStage extends
       // move temp dir to trash.
       progress();
 
-      LOG.info("Moving temporary directory to trash {}", baseDir);
+      LOG.info("{}: Moving temporary directory to trash {}", getName(), baseDir);
       moveToTrashResult = moveOutputTemporaryDirToTrash();
       // if rename did not work, maybe raise an exception
       // this depends on whether delete was attempted first,

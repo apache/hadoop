@@ -83,7 +83,8 @@ public class LoadManifestsStage extends
   protected LoadManifestsStage.Result executeStage(
       final Boolean prune) throws IOException {
 
-    LOG.info("Executing Manifest Job Commit with manifests in {}",
+    LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
+        getName(),
         getJobAttemptDir());
     pruneManifests = prune;
     // build a list of all manifests in the JA directory.
@@ -91,7 +92,8 @@ public class LoadManifestsStage extends
     final RemoteIterator<FileStatus> manifestFiles = listManifestsInJobAttemptDir();
 
     final List<TaskManifest> manifestList = loadAllManifests(manifestFiles);
-    LOG.info("Summary of {} manifests loaded in {}: {}",
+    LOG.info("{}: Summary of {} manifests loaded in {}: {}",
+        getName(),
         manifestList.size(),
         getJobAttemptDir(),
         summaryInfo);
