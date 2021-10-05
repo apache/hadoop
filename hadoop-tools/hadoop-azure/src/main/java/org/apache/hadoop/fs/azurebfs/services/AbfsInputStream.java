@@ -46,8 +46,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
-import javax.security.auth.DestroyFailedException;
-
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -261,17 +259,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         limit = 0;
         bCursor = 0;
       }
-      try {
-        if (shouldReadFully()) {
-          lastReadBytes = readFileCompletely(b, currentOff, currentLen);
-        } else if (shouldReadLastBlock()) {
-          lastReadBytes = readLastBlock(b, currentOff, currentLen);
-        } else {
-          lastReadBytes = readOneBlock(b, currentOff, currentLen);
-        }
-      } catch (DestroyFailedException e) {
-        LOG.debug(e.getMessage());
-        throw new IOException(e);
+      if (shouldReadFully()) {
+        lastReadBytes = readFileCompletely(b, currentOff, currentLen);
+      } else if (shouldReadLastBlock()) {
+        lastReadBytes = readLastBlock(b, currentOff, currentLen);
+      } else {
+        lastReadBytes = readOneBlock(b, currentOff, currentLen);
       }
       if (lastReadBytes > 0) {
         currentOff += lastReadBytes;
@@ -297,7 +290,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readOneBlock(final byte[] b, final int off, final int len)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     if (len == 0) {
       return 0;
     }
@@ -350,7 +343,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readFileCompletely(final byte[] b, final int off, final int len)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     if (len == 0) {
       return 0;
     }
@@ -365,7 +358,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readLastBlock(final byte[] b, final int off, final int len)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     if (len == 0) {
       return 0;
     }
@@ -385,7 +378,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int optimisedRead(final byte[] b, final int off, final int len,
       final long readFrom, final long actualLen)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     fCursor = readFrom;
     int totalBytesRead = 0;
     int lastBytesRead = 0;
@@ -480,7 +473,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead)
-      throws IOException, DestroyFailedException {
+      throws IOException {
     if (readAheadEnabled && !bypassReadAhead) {
       // try reading from read-ahead
       if (offset != 0) {

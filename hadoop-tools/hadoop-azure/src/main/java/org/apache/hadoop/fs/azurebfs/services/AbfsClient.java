@@ -238,14 +238,15 @@ public class AbfsClient implements Closeable {
         // get new context for create file request
         SecretKey encryptionContext =
             encryptionAdapter.fetchEncryptionContextAndComputeKeys();
-//        requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-//            IOUtils.toString(encryptionContext.getEncoded(),
-//                StandardCharsets.UTF_8.name())));
-//        try {
-//          encryptionContext.destroy();
-//        } catch (DestroyFailedException e) {
-//          throw new IOException(e.getMessage());
-//        }
+        requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
+            new String(encryptionContext.getEncoded(),
+                StandardCharsets.UTF_8)));
+        try {
+          encryptionContext.destroy();
+        } catch (DestroyFailedException e) {
+          throw new IOException(
+              "Could not destroy encryptionContext: " + e.getMessage());
+        }
       } else if (encryptionAdapter == null) {
         // get encryption context from GetPathStatus response header
         encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
@@ -254,14 +255,8 @@ public class AbfsClient implements Closeable {
             .getBytes(StandardCharsets.UTF_8));
       }
       // else use cached encryption keys from input/output streams
-//      encodedKey = IOUtils.toString(encryptionAdapter.getEncodedKey(),
-//          StandardCharsets.UTF_8.name());
       encodedKey = encryptionAdapter.getEncodedKey();
-      System.out.println("1 " + encodedKey);
-//      encodedKeySHA256 = IOUtils.toString(encryptionAdapter.getEncodedKeySHA(),
-//          StandardCharsets.UTF_8.name());
       encodedKeySHA256 = encryptionAdapter.getEncodedKeySHA();
-      System.out.println("2 " + encodedKeySHA256);
       break;
 
     default: return; // no client-provided encryption keys

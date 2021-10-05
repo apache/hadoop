@@ -36,6 +36,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -244,7 +245,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testAppendWithoutCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(false);
-    final String fileName = path("/" + methodName.getMethodName()).toString();
+    final String fileName = new Path("/" + methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     //  Trying to append without CPK headers
@@ -487,7 +488,9 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
         .createPath(testFileName, true, true,
             isNamespaceEnabled ? getOctalNotation(permission) : null,
             isNamespaceEnabled ? getOctalNotation(umask) : null, false, null,
-            null, tracingContext);
+            new EncryptionAdapter(abfsClient.getEncryptionContextProvider(),
+                testFileName, "context".getBytes(StandardCharsets.UTF_8)),
+            tracingContext);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
         X_MS_ENCRYPTION_KEY_SHA256, getCPKSha(fs));
