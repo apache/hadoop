@@ -31,13 +31,7 @@ add_library(tools_common $<TARGET_OBJECTS:tools_common_obj>)
 add_library(hdfs_tool_obj OBJECT hdfs-tool.cc)
 target_include_directories(hdfs_tool_obj PRIVATE ../tools)
 
-add_library(hdfs_cat_lib STATIC  $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-cat/hdfs-cat.cc)
-target_include_directories(hdfs_cat_lib PRIVATE ../tools hdfs-cat ${Boost_INCLUDE_DIRS})
-target_link_libraries(hdfs_cat_lib PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
-
-add_executable(hdfs_cat hdfs-cat/main.cc)
-target_include_directories(hdfs_cat PRIVATE ../tools)
-target_link_libraries(hdfs_cat PRIVATE hdfs_cat_lib)
+add_subdirectory(hdfs-cat)
 
 add_executable(hdfs_chgrp hdfs_chgrp.cc)
 target_link_libraries(hdfs_chgrp tools_common hdfspp_static)
