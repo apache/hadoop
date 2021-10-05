@@ -17,17 +17,8 @@
   under the License.
 */
 
-#include <string>
-
-#include <gtest/gtest.h>
-
 #include "hdfs-allow-snapshot-mock.h"
 
 namespace hdfs::tools::test {
-bool AllowSnapshotMock::HandleHelp() const { return true; }
-
-bool AllowSnapshotMock::HandlePath(const std::string &path) const {
-  EXPECT_STREQ(path.c_str(), "a/b/c") << "Expecting the path a/b/c here";
-  return true;
-}
+AllowSnapshotMock::~AllowSnapshotMock() {}
 } // namespace hdfs::tools::test
