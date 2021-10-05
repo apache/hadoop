@@ -37,7 +37,8 @@ import java.lang.annotation.Target;
  * they MUST be re-scoped as public/limited private.
  */
 @Retention(RetentionPolicy.CLASS)
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.FIELD,
+    ElementType.CONSTRUCTOR })
 @Documented
 public @interface VisibleForTesting {
 }
