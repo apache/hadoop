@@ -31,7 +31,7 @@ import java.util.TimerTask;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 
 import org.apache.commons.configuration2.PropertiesConfiguration;

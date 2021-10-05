@@ -35,7 +35,7 @@ import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.QuantileEstimator;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**

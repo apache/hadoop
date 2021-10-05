@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
