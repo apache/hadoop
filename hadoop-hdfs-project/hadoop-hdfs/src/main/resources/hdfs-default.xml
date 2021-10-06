@@ -3367,6 +3367,25 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.client.refresh.read-block-locations.register-automatically</name>
+    <value>true</value>
+    <description>
+      Whether to auto-register all DFSInputStreams for background LocatedBlock refreshes.
+      If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.refresh.read-block-locations.threads</name>
+    <value>5</value>
+    <description>
+      Number of threads to use for refreshing LocatedBlocks of registered
+      DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+      this may help refresh them all in a timely manner.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>
