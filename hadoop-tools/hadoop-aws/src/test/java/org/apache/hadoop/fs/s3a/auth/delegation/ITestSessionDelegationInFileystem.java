@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.fs.s3a.Invoker;
-import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
@@ -69,6 +68,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException.TOKEN_MISMATCH;
@@ -145,9 +145,13 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
-    String s3EncryptionMethod =
-        conf.getTrimmed(Constants.S3_ENCRYPTION_ALGORITHM,
-            S3AEncryptionMethods.SSE_KMS.getMethod());
+    String s3EncryptionMethod;
+    try {
+      s3EncryptionMethod =
+          getEncryptionAlgorithm(getTestBucketName(conf), conf).getMethod();
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to lookup encryption algorithm.");
+    }
     String s3EncryptionKey = getS3EncryptionKey(getTestBucketName(conf), conf);
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
