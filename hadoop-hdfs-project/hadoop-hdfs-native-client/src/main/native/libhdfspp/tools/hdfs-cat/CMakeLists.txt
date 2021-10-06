@@ -23,3 +23,5 @@ target_link_libraries(hdfs_cat_lib PRIVATE Boost::boost Boost::program_options t
 add_executable(hdfs_cat main.cc)
 target_include_directories(hdfs_cat PRIVATE ../../tools)
 target_link_libraries(hdfs_cat PRIVATE hdfs_cat_lib)
+
+install(TARGETS hdfs_cat RUNTIME DESTINATION bin)
