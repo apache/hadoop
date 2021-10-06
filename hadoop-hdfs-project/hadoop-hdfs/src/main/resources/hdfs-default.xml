@@ -4005,7 +4005,7 @@
   <value>10000,6,60000,10</value>
   <description>
     Specify a policy of multiple linear random retry for WebHDFS client,
-    e.g. given pairs of number of retries and sleep time (n0, t0), (n1, t1),
+    e.g. given pairs of sleep time and number of retries (t0, n0), (t1, n1),
     ..., the first n0 retries sleep t0 milliseconds on average,
     the following n1 retries sleep t1 milliseconds on average, and so on.
   </description>
@@ -4454,7 +4454,10 @@
   <name>dfs.client.retry.policy.spec</name>
   <value>10000,6,60000,10</value>
   <description>
-    Set to pairs of timeouts and retries for DFSClient.
+    Specify a policy of multiple linear random retry for the DFS client,
+    e.g. given pairs of sleep time and number of retries (t0, n0), (t1, n1),
+    ..., the first n0 retries sleep t0 milliseconds on average,
+    the following n1 retries sleep t1 milliseconds on average, and so on.
   </description>
 </property>
 
