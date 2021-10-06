@@ -282,12 +282,25 @@ public class TestContainersMonitorResourceChange {
 
   @Test
   public void testContainersCPUResourceForDefaultValue() throws Exception {
+    testContainerMonitoringInvalidResources(
+        MockCPUResourceCalculatorProcessTree.class.getCanonicalName());
+
+  }
+
+  @Test
+  public void testContainersMemoryResourceUnavailable() throws Exception {
+    testContainerMonitoringInvalidResources(
+        MockMemoryResourceCalculatorProcessTree.class.getCanonicalName());
+  }
+
+  private void testContainerMonitoringInvalidResources(
+      String processTreeClassName) throws Exception {
     Configuration newConf = new Configuration(conf);
     // set container monitor interval to be 20s
     newConf.setLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS, 20L);
     containersMonitor = createContainersMonitor(executor, dispatcher, context);
     newConf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
-        MockCPUResourceCalculatorProcessTree.class.getCanonicalName());
+        processTreeClassName);
     // set container monitor interval to be 20ms
     containersMonitor.init(newConf);
     containersMonitor.start();
@@ -305,7 +318,7 @@ public class TestContainersMonitorResourceChange {
         0, containersMonitor.getContainersUtilization()
             .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)));
 
-    // Verify the container utilization value. Since atleast one round is done,
+    // Verify the container utilization value. Since at least one round is done,
     // we can expect a non-zero value for container utilization as
     // MockCPUResourceCalculatorProcessTree#getCpuUsagePercent will return 50.
     waitForContainerResourceUtilizationChange(containersMonitor, 100);
@@ -324,12 +337,13 @@ public class TestContainersMonitorResourceChange {
       }
 
       LOG.info(
-          "Monitor thread is waiting for resource utlization change.");
+          "Monitor thread is waiting for resource utilization change.");
       Thread.sleep(WAIT_MS_PER_LOOP);
       timeWaiting += WAIT_MS_PER_LOOP;
     }
 
-    assertTrue("Resource utilization is not changed from second run onwards",
+    assertTrue("Resource utilization is not changed after " +
+            timeoutMsecs / WAIT_MS_PER_LOOP + " updates",
         0 != containersMonitor.getContainersUtilization()
             .compareTo(ResourceUtilization.newInstance(0, 0, 0.0f)));
   }

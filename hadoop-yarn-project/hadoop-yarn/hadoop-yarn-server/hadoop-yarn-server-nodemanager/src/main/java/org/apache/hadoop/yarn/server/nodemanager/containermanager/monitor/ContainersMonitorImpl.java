@@ -537,6 +537,16 @@ public class ContainersMonitorImpl extends AbstractService implements
             pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getVirtualMemorySize();
             long currentPmemUsage = pTree.getRssMemorySize();
+            LOG.info("currentVmem {} currentPmem {} ", currentVmemUsage, currentPmemUsage);
+
+            if (currentVmemUsage < 0 || currentPmemUsage < 0) {
+              // YARN-6862/YARN-5021 If the container just exited or for
+              // another reason the physical/virtual memory is UNAVAILABLE (-1)
+              // the values shouldn't be aggregated.
+              LOG.info("Skipping monitoring container {} because "
+                  + "memory usage is not available.", containerId);
+              continue;
+            }
 
             // if machine has 6 cores and 3 are used,
             // cpuUsagePercentPerCore should be 300%
