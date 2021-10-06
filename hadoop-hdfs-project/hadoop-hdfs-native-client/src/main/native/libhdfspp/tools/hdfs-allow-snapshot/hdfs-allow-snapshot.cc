@@ -23,8 +23,6 @@
 #include <sstream>
 #include <string>
 
-#include <google/protobuf/stubs/common.h>
-
 #include "hdfs-allow-snapshot.h"
 #include "tools_common.h"
 
@@ -112,9 +110,6 @@ bool AllowSnapshot::HandlePath(const std::string &path) const {
     std::cerr << "Error: " << status.ToString() << std::endl;
     return false;
   }
-
-  // Clean up static data and prevent valgrind memory leaks
-  google::protobuf::ShutdownProtobufLibrary();
   return true;
 }
 } // namespace hdfs::tools
