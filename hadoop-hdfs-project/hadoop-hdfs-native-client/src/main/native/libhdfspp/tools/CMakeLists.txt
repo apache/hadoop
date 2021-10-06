@@ -89,8 +89,7 @@ target_link_libraries(hdfs_createSnapshot tools_common hdfspp_static)
 add_executable(hdfs_renameSnapshot hdfs_renameSnapshot.cc)
 target_link_libraries(hdfs_renameSnapshot tools_common hdfspp_static)
 
-add_executable(hdfs_deleteSnapshot hdfs_deleteSnapshot.cc)
-target_link_libraries(hdfs_deleteSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-delete-snapshot)
 
 add_executable(hdfs_tail hdfs_tail.cc)
 target_link_libraries(hdfs_tail tools_common hdfspp_static)
