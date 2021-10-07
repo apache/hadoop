@@ -26,16 +26,18 @@ import org.junit.Assert;
 
 import java.util.Set;
 
-public class CapacitySchedulerTestBase {
-  protected final int GB = 1024;
+public final class CapacitySchedulerTestUtilities {
+  public static final int GB = 1024;
 
-  @SuppressWarnings("unchecked")
-  protected <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
-    return set;
+  private CapacitySchedulerTestUtilities() {
   }
 
-  protected void checkPendingResource(MockRM rm, String queueName, int memory,
+  @SuppressWarnings("unchecked")
+  public static <E> Set<E> toSet(E... elements) {
+    return Sets.newHashSet(elements);
+  }
+
+  public static void checkPendingResource(MockRM rm, String queueName, int memory,
       String label) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
@@ -47,7 +49,7 @@ public class CapacitySchedulerTestBase {
   }
 
 
-  protected void checkPendingResourceGreaterThanZero(MockRM rm, String queueName,
+  public static void checkPendingResourceGreaterThanZero(MockRM rm, String queueName,
       String label) {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     CSQueue queue = cs.getQueue(queueName);
@@ -56,7 +58,7 @@ public class CapacitySchedulerTestBase {
         .getMemorySize() > 0);
   }
 
-  protected void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,
+  public static void waitforNMRegistered(ResourceScheduler scheduler, int nodecount,
       int timesec) throws InterruptedException {
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < timesec * 1000) {
