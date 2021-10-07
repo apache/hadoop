@@ -46,6 +46,8 @@ public final class Preconditions {
       "The argument object is NULL";
   private static final String CHECK_ARGUMENT_EX_MESSAGE =
       "The argument expression is false";
+  private static final String CHECK_STATE_EX_MESSAGE =
+      "The state expression is false";
 
   private Preconditions() {
   }
@@ -240,6 +242,91 @@ public final class Preconditions {
     }
   }
 
+  /**
+   * Ensures the truth of an expression involving the state of the calling instance
+   * without involving any parameters to the calling method.
+   *
+   * @param expression a boolean expression
+   * @throws IllegalStateException if {@code expression} is false
+   */
+  public static void checkState(final boolean expression) {
+    if (!expression) {
+      throw new IllegalStateException();
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression involving the state of the calling instance
+   * without involving any parameters to the calling method.
+   *
+   * @param expression a boolean expression
+   * @param errorMessage the exception message to use if the check fails; will be converted to a
+   *     string using {@link String#valueOf(Object)}
+   * @throws IllegalStateException if {@code expression} is false
+   */
+  public static void checkState(final boolean expression, final Object errorMessage) {
+    if (!expression) {
+      throw new IllegalStateException(String.valueOf(errorMessage));
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression involving the state of the calling instance
+   * without involving any parameters to the calling method.
+   *
+   * <p>The message of the exception is {@code String.format(f, m)}.</p>
+   *
+   * @param expression a boolean expression
+   * @param errorMsg  the {@link String#format(String, Object...)}
+   *                 exception message if valid. Otherwise,
+   *                 the message is {@link #CHECK_STATE_EX_MESSAGE}
+   * @param errorMsgArgs the optional values for the formatted exception message.
+   * @throws IllegalStateException if {@code expression} is false
+   */
+  public static void checkState(
+      final boolean expression,
+      final String errorMsg,
+      Object... errorMsgArgs) {
+    if (!expression) {
+      String msg;
+      try {
+        msg = String.format(errorMsg, errorMsgArgs);
+      } catch (Exception e) {
+        LOG.debug("Error formatting message", e);
+        msg = CHECK_STATE_EX_MESSAGE;
+      }
+      throw new IllegalStateException(msg);
+    }
+  }
+
+  /**
+   * Preconditions that the expression involving one or more parameters to the calling method.
+   *
+   * <p>The message of the exception is {@code msgSupplier.get()}.</p>
+   *
+   * @param expression a boolean expression
+   * @param msgSupplier  the {@link Supplier#get()} set the
+   *                 exception message if valid. Otherwise,
+   *                 the message is {@link #CHECK_STATE_EX_MESSAGE}
+   * @throws IllegalStateException if {@code expression} is false
+   */
+  public static void checkState(
+      final boolean expression,
+      final Supplier<String> msgSupplier) {
+    if (!expression) {
+      String msg;
+      try {
+        // note that we can get NPE evaluating the message itself;
+        // but we do not want this to override the actual NPE.
+        msg = msgSupplier.get();
+      } catch (Exception e) {
+        LOG.debug("Error formatting message", e);
+        msg = CHECK_STATE_EX_MESSAGE;
+      }
+      throw new IllegalStateException(msg);
+    }
+  }
+
   /* @VisibleForTesting */
   static String getDefaultNullMSG() {
     return VALIDATE_IS_NOT_NULL_EX_MESSAGE;
@@ -248,5 +335,10 @@ public final class Preconditions {
   /* @VisibleForTesting */
   static String getDefaultCheckArgumentMSG() {
     return CHECK_ARGUMENT_EX_MESSAGE;
+  }
+
+  /* @VisibleForTesting */
+  static String getDefaultCheckStateMSG() {
+    return CHECK_STATE_EX_MESSAGE;
   }
 }
