@@ -126,12 +126,13 @@ public class ServiceAuthorizationManager {
     }
     if (addr != null) {
       String hostAddress = addr.getHostAddress();
-      if (hosts.length != 2 || !hosts[0].includes(hostAddress) ||
-          hosts[1].includes(hostAddress)) {
+      if (hosts.length != 2 ||
+          !hosts[0].includes(hostAddress, user.getUserName()) ||
+          hosts[1].includes(hostAddress, user.getUserName())) {
         AUDITLOG.warn(AUTHZ_FAILED_FOR + " for protocol=" + protocol
             + " from host = " +  hostAddress);
         throw new AuthorizationException("Host " + hostAddress +
-            " is not authorized for protocol " + protocol) ;
+            " is not authorized for protocol " + protocol);
       }
     }
     AUDITLOG.info(AUTHZ_SUCCESSFUL_FOR + user + " for protocol="+protocol);

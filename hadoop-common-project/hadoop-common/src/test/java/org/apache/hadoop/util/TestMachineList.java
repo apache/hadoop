@@ -42,8 +42,12 @@ public class TestMachineList {
   private static String IP_CIDR_LIST =
     "10.222.0.0/16,10.119.103.110,10.119.103.112,10.119.103.114,10.241.23.0/24";
   private static String HOST_LIST = "host1,host4";
+  private static String HOSTNAME_IP_USER_CIDR_LIST =
+      "host1:user1|user2,10.222.0.0/16:user1|" +
+          "user2,10.119.103.110:*,10.119.103.111";
   private static String HOSTNAME_IP_CIDR_LIST =
-    "host1,10.222.0.0/16,10.119.103.110,10.119.103.112,10.119.103.114,10.241.23.0/24,host4,";
+    "host1,10.222.0.0/16,10.119.103.110," +
+        "10.119.103.112,10.119.103.114,10.241.23.0/24,host4,";
 
   class TestAddressFactory extends MachineList.InetAddressFactory {
     private Map<String, InetAddress> cache = new HashMap<>();
@@ -148,18 +152,18 @@ public class TestMachineList {
   public void testHostNamesReverserIpMatch() throws UnknownHostException {
     // create MachineList with a list of of Hostnames
     TestAddressFactory addressFactory = new TestAddressFactory();
-    addressFactory.put("1.2.3.1", "host1");
-    addressFactory.put("1.2.3.4", "host4");
-    addressFactory.put("1.2.3.5", "host5");
+    addressFactory.put("192.168.1.1", "host1");
+    addressFactory.put("192.168.1.4", "host4");
+    addressFactory.put("192.168.1.5", "host5");
 
     MachineList ml = new MachineList(
         StringUtils.getTrimmedStringCollection(HOST_LIST), addressFactory );
 
     //test for inclusion with an known IP
-    assertTrue(ml.includes("1.2.3.4"));
+    assertTrue(ml.includes("192.168.1.4"));
 
     //test for exclusion with an unknown IP
-    assertFalse(ml.includes("1.2.3.5"));
+    assertFalse(ml.includes("192.168.1.5"));
   }
 
   @Test
@@ -215,6 +219,27 @@ public class TestMachineList {
     assertFalse(ml.includes("10.119.103.111"));
   }
 
+  @Test
+  public void testIpWithUser() throws UnknownHostException {
+    TestAddressFactory addressFactory = new TestAddressFactory();
+    addressFactory.put("192.168.1.2", "host1");
+    //create MachineList with a list of of ip ranges specified in CIDR format
+    MachineList ml =
+        new MachineList(HOSTNAME_IP_USER_CIDR_LIST, addressFactory);
+    // test IPHost
+    assertTrue(ml.includes("192.168.1.2", "user1"));
+    assertFalse(ml.includes("192.168.1.2", "user3"));
+    assertTrue(ml.includes("192.168.1.2", null));
+    // test net ranges
+    assertTrue(ml.includes("10.222.0.1", "user1"));
+    assertFalse(ml.includes("10.222.0.1", "user3"));
+    assertTrue(ml.includes("10.222.0.1", null));
+    // test user list *
+    assertTrue(ml.includes("10.119.103.110", null));
+    assertTrue(ml.includes("10.119.103.110", "user3"));
+    // test user list is null
+    assertFalse(ml.includes("10.119.103.111", "user3"));
+  }
   @Test
   public void testCIDRWith8BitMask() {
     //create MachineList with a list of of ip ranges specified in CIDR format

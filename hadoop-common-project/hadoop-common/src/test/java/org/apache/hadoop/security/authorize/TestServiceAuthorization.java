@@ -41,9 +41,10 @@ public class TestServiceAuthorization {
   private static final String ADDRESS =  "0.0.0.0";
   private static final String HOST_CONFIG = "test.protocol.hosts";
   private static final String BLOCKED_HOST_CONFIG = "test.protocol.hosts.blocked";
-  private static final String AUTHORIZED_IP = "1.2.3.4";
-  private static final String UNAUTHORIZED_IP = "1.2.3.5";
-  private static final String IP_RANGE = "10.222.0.0/16,10.113.221.221";
+  private static final String AUTHORIZED_IP = "192.168.1.1";
+  private static final String UNAUTHORIZED_IP = "192.168.1.2";
+  private static final String IP_RANGE =
+      "10.222.0.0/16:drwho@EXAMPLE.COM,10.113.221.221:drwho@EXAMPLE.COM";
 
   public interface TestProtocol1 extends TestProtocol {};
 
@@ -246,7 +247,7 @@ public class TestServiceAuthorization {
     ServiceAuthorizationManager serviceAuthorizationManager =
         new ServiceAuthorizationManager();
     Configuration conf = new Configuration ();
-    conf.set(HOST_CONFIG, "1.2.3.4");
+    conf.set(HOST_CONFIG, "192.168.1.1:drwho@EXAMPLE.COM");
     serviceAuthorizationManager.refresh(conf, new TestPolicyProvider());
     try {
       serviceAuthorizationManager.authorize(drwho, TestProtocol.class, conf,
@@ -360,7 +361,7 @@ public class TestServiceAuthorization {
     conf.set(
         "security.service.authorization.default.hosts.blocked",
         IP_RANGE);
-    conf.set(BLOCKED_HOST_CONFIG, "1.2.3.4");
+    conf.set(BLOCKED_HOST_CONFIG, "192.168.1.1:drwho@EXAMPLE.COM");
     serviceAuthorizationManager.refresh(conf, new TestPolicyProvider());
     // TestProtocol can be accessed from "10.222.0.0" because it blocks only "1.2.3.4"
     try {
@@ -372,7 +373,7 @@ public class TestServiceAuthorization {
     // TestProtocol cannot be accessed from  "1.2.3.4"
     try {
       serviceAuthorizationManager.authorize(drwho,
-          TestProtocol.class, conf, InetAddress.getByName("1.2.3.4"));
+          TestProtocol.class, conf, InetAddress.getByName("192.168.1.1"));
       fail();
     } catch (AuthorizationException e) {
       //expects Exception
@@ -380,7 +381,7 @@ public class TestServiceAuthorization {
     // TestProtocol1 can be accessed from "1.2.3.4" because it uses default block list
     try {
       serviceAuthorizationManager.authorize(drwho,
-         TestProtocol1.class, conf, InetAddress.getByName("1.2.3.4"));
+          TestProtocol1.class, conf, InetAddress.getByName("192.168.1.1"));
     } catch (AuthorizationException e) {
       fail();
     }
