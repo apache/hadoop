@@ -16,7 +16,12 @@
 # limitations under the License.
 #
 
-add_executable(hdfs_tool_test hdfs-allow-snapshot-mock.cc hdfs-cat-mock.cc hdfs-tool-test.cc main.cc)
-target_include_directories(hdfs_tool_test PRIVATE ../tools ../../tools ../../tools/hdfs-allow-snapshot ../../tools/hdfs-cat)
-target_link_libraries(hdfs_tool_test PRIVATE gmock_main hdfs_allowSnapshot_lib hdfs_cat_lib)
-add_test(hdfs_tool_test hdfs_tool_test)
+add_library(hdfs_cat_lib STATIC  $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-cat.cc)
+target_include_directories(hdfs_cat_lib PRIVATE ../../tools hdfs-cat ${Boost_INCLUDE_DIRS})
+target_link_libraries(hdfs_cat_lib PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
+
+add_executable(hdfs_cat main.cc)
+target_include_directories(hdfs_cat PRIVATE ../../tools)
+target_link_libraries(hdfs_cat PRIVATE hdfs_cat_lib)
+
+install(TARGETS hdfs_cat RUNTIME DESTINATION bin)

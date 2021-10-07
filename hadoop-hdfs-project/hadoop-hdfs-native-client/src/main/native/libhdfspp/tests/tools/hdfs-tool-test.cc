@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "hdfs-allow-snapshot-mock.h"
+#include "hdfs-cat-mock.h"
 #include "hdfs-tool-test.h"
 
 HdfsToolBasicTest::~HdfsToolBasicTest() {}
@@ -30,6 +31,14 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(PassAPath<hdfs::tools::test::AllowSnapshotMock>,
                     CallHelp<hdfs::tools::test::AllowSnapshotMock>));
 
+INSTANTIATE_TEST_SUITE_P(HdfsCat, HdfsToolBasicTest,
+                         testing::Values(PassAPath<hdfs::tools::test::CatMock>,
+                                         CallHelp<hdfs::tools::test::CatMock>));
+
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTest,
     testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsCat, HdfsToolNegativeTest,
+    testing::Values(Pass2Paths<hdfs::tools::test::CatMock>));
