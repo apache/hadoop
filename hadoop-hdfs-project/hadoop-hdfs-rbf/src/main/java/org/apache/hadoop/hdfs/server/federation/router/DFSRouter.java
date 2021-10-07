@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 

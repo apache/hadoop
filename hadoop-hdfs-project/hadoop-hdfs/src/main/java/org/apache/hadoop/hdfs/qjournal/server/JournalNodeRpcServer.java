@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;

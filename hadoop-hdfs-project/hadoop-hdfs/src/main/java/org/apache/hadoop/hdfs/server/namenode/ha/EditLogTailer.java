@@ -58,7 +58,7 @@ import org.apache.hadoop.security.SecurityUtil;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 

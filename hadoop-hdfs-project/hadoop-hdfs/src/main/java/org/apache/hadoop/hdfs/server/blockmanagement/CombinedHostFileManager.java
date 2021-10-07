@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.UnmodifiableIterator;

@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs;
 import org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceJob;
