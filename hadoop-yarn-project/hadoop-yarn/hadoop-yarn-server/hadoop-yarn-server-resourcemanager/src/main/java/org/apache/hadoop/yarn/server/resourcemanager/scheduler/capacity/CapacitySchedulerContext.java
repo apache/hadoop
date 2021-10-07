@@ -97,6 +97,12 @@ public interface CapacitySchedulerContext {
   boolean isConfigurationMutable();
 
   /**
+   * Returns if reservation scheduling is enabled.
+   * @return if reservation scheduling is enabled
+   */
+  boolean isReservationEnabled();
+
+  /**
    * Get clock from scheduler
    * @return Clock
    */

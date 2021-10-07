@@ -1156,6 +1156,7 @@ public class LeafQueue extends AbstractCSQueue {
     }
 
     setPreemptionAllowed(currentResourceLimits, candidates.getPartition());
+    currentResourceLimits.setAllowReservation(csContext.isReservationEnabled());
 
     // Check for reserved resources, try to allocate reserved container first.
     CSAssignment assignment = allocateFromReservedContainer(clusterResource,

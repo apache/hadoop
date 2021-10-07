@@ -234,6 +234,7 @@ public class CapacityScheduler extends
   private boolean multiNodePlacementEnabled;
 
   private boolean printedVerboseLoggingForAsyncScheduling;
+  private boolean reservationEnabled;
 
   /**
    * EXPERT
@@ -387,6 +388,8 @@ public class CapacityScheduler extends
             this.conf.getMultiNodePlacementPolicies());
       }
 
+      reservationEnabled = this.conf.isReservationEnabled();
+
       LOG.info("Initialized CapacityScheduler with " + "calculator="
           + getResourceCalculator().getClass() + ", " + "minimumAllocation="
           + getMinimumResourceCapability() + ", " + "maximumAllocation="
@@ -396,7 +399,8 @@ public class CapacityScheduler extends
           + multiNodePlacementEnabled + ", " + "assignMultipleEnabled="
           + assignMultipleEnabled + ", " + "maxAssignPerHeartbeat="
           + maxAssignPerHeartbeat + ", " + "offswitchPerHeartbeatLimit="
-          + offswitchPerHeartbeatLimit);
+          + offswitchPerHeartbeatLimit + ", " + "reservationEnabled="
+          + reservationEnabled);
     } finally {
       writeLock.unlock();
     }
@@ -3446,5 +3450,9 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setQueueManager(CapacitySchedulerQueueManager qm) {
     this.queueManager = qm;
+  }
+
+  public boolean isReservationEnabled() {
+    return reservationEnabled;
   }
 }
