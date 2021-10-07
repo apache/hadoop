@@ -19,7 +19,6 @@
 
 #include "hdfs-allow-snapshot-mock.h"
 
-
 namespace hdfs::tools::test {
 AllowSnapshotMock::~AllowSnapshotMock() {}
 } // namespace hdfs::tools::test
