@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -113,7 +114,7 @@ public class ResourceGzMojo extends AbstractMojo {
               BufferedReader is = Files.newBufferedReader(path)
           ) {
             getLog().info("Compressing " + path + " to " + outFile);
-            IOUtils.copy(is, os);
+            IOUtils.copy(is, os, Charset.defaultCharset());
           }
         } else {
           throw new IOException("Directory " + outFile.getParent()
