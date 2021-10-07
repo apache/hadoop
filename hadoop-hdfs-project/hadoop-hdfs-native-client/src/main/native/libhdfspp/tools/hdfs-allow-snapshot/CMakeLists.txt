@@ -23,3 +23,5 @@ target_link_libraries(hdfs_allowSnapshot_lib PRIVATE Boost::boost Boost::program
 add_executable(hdfs_allowSnapshot main.cc)
 target_include_directories(hdfs_allowSnapshot PRIVATE ../../tools)
 target_link_libraries(hdfs_allowSnapshot PRIVATE hdfs_allowSnapshot_lib)
+
+install(TARGETS hdfs_allowSnapshot RUNTIME DESTINATION bin)
