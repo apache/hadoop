@@ -18,6 +18,7 @@
 
 add_executable(hdfs_tool_tests
                 hdfs-allow-snapshot-mock.cc
+                hdfs-delete-snapshot-mock.cc
                 hdfs-cat-mock.cc
                 hdfs-tool-test-fixtures.cc
                 hdfs-tool-tests.cc
@@ -31,5 +32,6 @@ target_include_directories(hdfs_tool_tests PRIVATE
 target_link_libraries(hdfs_tool_tests PRIVATE
                        gmock_main
                        hdfs_allowSnapshot_lib
+                       hdfs_deleteSnapshot_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)

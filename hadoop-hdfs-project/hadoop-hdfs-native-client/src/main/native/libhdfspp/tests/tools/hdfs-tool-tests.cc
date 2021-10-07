@@ -21,6 +21,7 @@
 
 #include "hdfs-allow-snapshot-mock.h"
 #include "hdfs-cat-mock.h"
+#include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-tool-test-fixtures.h"
 #include "hdfs-tool-tests.h"
 
@@ -40,9 +41,18 @@ INSTANTIATE_TEST_SUITE_P(HdfsCat, HdfsToolBasicTest,
                                          CallHelp<hdfs::tools::test::CatMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsDeleteSnapshot, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::DeleteSnapshotMock>,
+                    Pass2Paths<hdfs::tools::test::DeleteSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsCat, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::CatMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsDeleteSnapshot, HdfsToolNegativeTestReturnsFalse,
+    testing::Values(PassAPath<hdfs::tools::test::DeleteSnapshotMock>));

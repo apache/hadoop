@@ -35,9 +35,7 @@ bool DeleteSnapshot::Initialize() {
   add_options("help,h", "Show the help for hdfs_deleteSnapshot");
   add_options("path", po::value<std::string>(),
               "The path to the directory that is snapshot-able");
-  add_options("name", po::value<std::string>(),
-              "The name of the "
-              "snapshot");
+  add_options("name", po::value<std::string>(), "The name of the snapshot");
 
   // We allow only two arguments to be passed to this tool. An exception is
   // thrown if more than two arguments are passed.
