@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /**
  * Cancels a running plan.
@@ -76,7 +77,7 @@ public class CancelCommand extends Command {
           "Invalid plan file specified.");
       String planData = null;
       try (FSDataInputStream plan = open(planFile)) {
-        planData = IOUtils.toString(plan);
+        planData = IOUtils.toString(plan, Charset.defaultCharset());
       }
       cancelPlan(planData);
     }

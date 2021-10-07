@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +126,8 @@ public class TestOfflineImageViewerForXAttr {
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
 
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils
+          .toString(connection.getInputStream(), Charset.defaultCharset());
 
       assertTrue("Missing user.attr1 in response ",
           content.contains("user.attr1"));
@@ -150,7 +152,8 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils
+          .toString(connection.getInputStream(), Charset.defaultCharset());
 
       assertTrue("Missing user.attr1 in response ",
           content.contains("user.attr1"));
@@ -183,7 +186,8 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils
+          .toString(connection.getInputStream(), Charset.defaultCharset());
       assertEquals(attr1JSon, content);
     }
   }
@@ -205,7 +209,8 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils.toString(connection.getInputStream());
+      String content = IOUtils
+          .toString(connection.getInputStream(), Charset.defaultCharset());
       assertEquals(attr1JSon, content);
 
     }
