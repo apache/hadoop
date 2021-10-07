@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**

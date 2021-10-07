@@ -126,7 +126,7 @@ import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
