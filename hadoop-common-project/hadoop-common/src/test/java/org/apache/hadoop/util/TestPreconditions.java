@@ -221,4 +221,104 @@ public class TestPreconditions {
         () -> Preconditions.checkArgument(false,
             () -> String.format(NULL_FORMATTER, NON_NULL_STRING)));
   }
+
+  @Test
+  public void testCheckStateWithSuccess() throws Exception {
+    // success
+    Preconditions.checkState(true);
+    // null supplier
+    Preconditions.checkState(true, null);
+    // null message
+    Preconditions.checkState(true, (String) null);
+    Preconditions.checkState(true, NON_NULL_STRING);
+    // null in string format
+    Preconditions.checkState(true, EXPECTED_ERROR_MSG_ARGS, null, null);
+    // illegalformat
+    Preconditions.checkState(true, EXPECTED_ERROR_MSG_ARGS, 1, 2);
+    // ill-formated string supplier
+    Preconditions.checkState(true, ()-> String.format("%d",
+        NON_INT_STRING));
+    // null pattern to string formatter
+    Preconditions.checkState(true, NULL_FORMATTER, null, 1);
+    // null arguments to string formatter
+    Preconditions.checkState(true, EXPECTED_ERROR_MSG_ARGS,
+        null, null);
+    // illegal format exception
+    Preconditions.checkState(true, "message %d %d",
+        NON_INT_STRING, 1);
+    // insufficient arguments
+    Preconditions.checkState(true, EXPECTED_ERROR_MSG_ARGS,
+        NON_INT_STRING);
+    // null format in string supplier
+    Preconditions.checkState(true,
+        () -> String.format(NULL_FORMATTER, NON_INT_STRING));
+  }
+
+  @Test
+  public void testCheckStateWithFailure() throws Exception {
+    // failure without message
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        () -> Preconditions.checkState(false));
+    errorMessage = null;
+    // failure with Null message
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        null,
+        () -> Preconditions.checkState(false, errorMessage));
+    // failure with message
+    errorMessage = EXPECTED_ERROR_MSG;
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        errorMessage,
+        () -> Preconditions.checkState(false, errorMessage));
+
+    // failure with message format
+    errorMessage = EXPECTED_ERROR_MSG + " %s";
+    String arg = "IllegalStaExcep";
+    String expectedMSG = String.format(errorMessage, arg);
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        expectedMSG,
+        () -> Preconditions.checkState(false, errorMessage, arg));
+
+    // failure with multiple arg message format
+    errorMessage = EXPECTED_ERROR_MSG_ARGS;
+    expectedMSG =
+        String.format(errorMessage, arg, 1);
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        expectedMSG,
+        () -> Preconditions.checkState(false, errorMessage, arg, 1));
+
+    // ignore illegal format will be thrown if the case is not handled correctly
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        Preconditions.getDefaultCheckStateMSG(),
+        () -> Preconditions.checkState(false,
+            errorMessage, 1, NON_INT_STRING));
+
+    // ignore illegal format will be thrown for insufficient Insufficient Args
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        Preconditions.getDefaultCheckStateMSG(),
+        () -> Preconditions.checkState(false, errorMessage, NON_NULL_STRING));
+
+    // failure with Null supplier
+    final Supplier<String> nullSupplier = null;
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        null,
+        () -> Preconditions.checkState(false, nullSupplier));
+
+    // ignore illegal format in supplier
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        Preconditions.getDefaultCheckStateMSG(),
+        () -> Preconditions.checkState(false,
+            () -> String.format(errorMessage, 1, NON_INT_STRING)));
+
+    // ignore insufficient arguments in string Supplier
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        Preconditions.getDefaultCheckStateMSG(),
+        () -> Preconditions.checkState(false,
+            () -> String.format(errorMessage, NON_NULL_STRING)));
+
+    // ignore null formatter
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        Preconditions.getDefaultCheckStateMSG(),
+        () -> Preconditions.checkState(false,
+            () -> String.format(NULL_FORMATTER, NON_NULL_STRING)));
+  }
 }
