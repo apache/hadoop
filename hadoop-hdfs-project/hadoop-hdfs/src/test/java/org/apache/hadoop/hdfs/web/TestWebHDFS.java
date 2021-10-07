@@ -1554,7 +1554,7 @@ public class TestWebHDFS {
     conn.setRequestMethod(TYPE);
     conn.setInstanceFollowRedirects(false);
     String response =
-        IOUtils.toString(conn.getInputStream(), Charset.defaultCharset());
+        IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
     LOG.info("Response was : " + response);
     Assert.assertEquals(
       "Response wasn't " + HttpURLConnection.HTTP_OK,

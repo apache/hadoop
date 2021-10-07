@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -135,7 +136,7 @@ public class TestApplicationClassLoader {
 
     InputStream in = appClassloader.getResourceAsStream("resource.txt");
     assertNotNull("Resource should not be null for app classloader", in);
-    assertEquals("hello", IOUtils.toString(in, Charset.defaultCharset()));
+    assertEquals("hello", IOUtils.toString(in, StandardCharsets.UTF_8));
   }
   
   private File makeTestJar() throws IOException {

@@ -98,6 +98,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
@@ -549,7 +550,7 @@ public class ServiceScheduler extends CompositeService {
                 case TEMPLATE:
                   try (FSDataInputStream fileInput = fileSystem
                       .open(new Path(key.getSrcFile()))) {
-                    return IOUtils.toString(fileInput, Charset.defaultCharset());
+                    return IOUtils.toString(fileInput, StandardCharsets.UTF_8);
                   }
                 default:
                   return null;

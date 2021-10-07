@@ -30,6 +30,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -244,7 +245,7 @@ public class ReflectionUtils {
         try {
           ByteArrayOutputStream buffer = new ByteArrayOutputStream();
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
-          log.info(buffer.toString(Charset.defaultCharset().name()));
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException ignored) {
         }
       }
@@ -273,7 +274,7 @@ public class ReflectionUtils {
         try {
           ByteArrayOutputStream buffer = new ByteArrayOutputStream();
           printThreadInfo(new PrintStream(buffer, false, "UTF-8"), title);
-          log.info(buffer.toString(Charset.defaultCharset().name()));
+          log.info(buffer.toString(StandardCharsets.UTF_8.name()));
         } catch (UnsupportedEncodingException ignored) {
         }
       }

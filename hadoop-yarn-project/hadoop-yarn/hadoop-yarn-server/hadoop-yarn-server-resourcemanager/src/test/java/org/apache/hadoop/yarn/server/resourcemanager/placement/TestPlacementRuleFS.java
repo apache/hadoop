@@ -32,6 +32,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -194,8 +195,7 @@ public class TestPlacementRuleFS {
     Document doc = null;
     try {
       DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-      doc = builder.parse(IOUtils.toInputStream(str,
-          Charset.defaultCharset()));
+      doc = builder.parse(IOUtils.toInputStream(str, StandardCharsets.UTF_8));
     } catch (Exception ex) {
       fail("Element creation failed, failing test");
     }
