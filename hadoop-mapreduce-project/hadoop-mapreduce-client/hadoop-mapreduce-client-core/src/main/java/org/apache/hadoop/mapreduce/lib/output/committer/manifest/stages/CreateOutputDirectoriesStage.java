@@ -97,9 +97,9 @@ public class CreateOutputDirectoriesStage extends
       final List<TaskManifest> taskManifests)
       throws IOException {
 
-    LOG.info("Creating output directories");
+    LOG.info("{}: Creating output directories", getName());
     final List<Path> directories = createAllDirectories(taskManifests);
-    LOG.debug("Created {} directories", directories.size());
+    LOG.debug("{}: Created {} directories", getName(), directories.size());
     return new Result(directories, dirMap);
   }
 
@@ -153,18 +153,7 @@ public class CreateOutputDirectoriesStage extends
             .stopOnFailure()
             .run(dir -> {
               updateAuditContext(OP_PREPARE_DIR_ANCESTORS);
-              LOG.debug("Probing parent dir {}", dir);
-              if (isFile(dir)) {
-                // it's a file: delete it.
-                LOG.info("Deleting file {}", dir);
-                delete(dir, false, OP_DELETE_FILE_UNDER_DESTINATION);
-                // note its final state
-                addToDirectoryMap(dir, DirMapState.ancestorWasFileNowDeleted);
-              } else {
-                // and add to dir map as a dir or missing entry
-                LOG.debug("Dir {} is missing or a directory", dir);
-                addToDirectoryMap(dir, DirMapState.ancestorWasDirOrMissing);
-              }
+              prepareParentDir(dir);
             }));
 
     // now probe for and create the parent dirs of all renames
@@ -179,6 +168,23 @@ public class CreateOutputDirectoriesStage extends
               }
             }));
     return createdDirectories;
+  }
+
+  private void prepareParentDir(Path dir) throws IOException {
+    // report progress back
+    progress();
+    LOG.debug("{}: Probing parent dir {}", getName(), dir);
+    if (isFile(dir)) {
+      // it's a file: delete it.
+      LOG.info("{}: Deleting file {}", getName(), dir);
+      delete(dir, false, OP_DELETE_FILE_UNDER_DESTINATION);
+      // note its final state
+      addToDirectoryMap(dir, DirMapState.ancestorWasFileNowDeleted);
+    } else {
+      // and add to dir map as a dir or missing entry
+      LOG.debug("{}: Dir {} is missing or a directory", getName(), dir);
+      addToDirectoryMap(dir, DirMapState.ancestorWasDirOrMissing);
+    }
   }
 
   /**
@@ -200,7 +206,7 @@ public class CreateOutputDirectoriesStage extends
     for (Path dir : directoriesToCreate) {
       if (dir.isRoot()) {
         // sanity check
-        LOG.warn("root directory {} is one of the destination directories", dir);
+        LOG.warn("Root directory {} is one of the destination directories", dir);
         break;
       }
       if (ancestors.contains(dir) || destDir.equals(dir)) {
@@ -242,11 +248,13 @@ public class CreateOutputDirectoriesStage extends
     // if a directory is in the map: return.
     final DirMapState dirMapState = dirMap.get(path);
     if (dirMapState != null) {
-      LOG.info("Directory {} found in state {}; no need to create", path, dirMapState);
+      LOG.info("{}: Directory {} found in state {}; no need to create",
+          getName(), path, dirMapState);
       // already exists in this job
       return false;
     }
-
+    // report progress back
+    progress();
     DirMapState outcome = DirMapState.dirWasCreated;
 
     // create the dir
@@ -258,11 +266,12 @@ public class CreateOutputDirectoriesStage extends
       }
       getIOStatistics().incrementCounter(OP_MKDIRS_RETURNED_FALSE);
       outcome = DirMapState.mkdirReturnedFalse;
-      LOG.info("mkdirs({}) returned false, attempting to recover", path);
+      LOG.info("{}: mkdirs({}) returned false, attempting to recover",
+          getName(), path);
     } catch (IOException e) {
       // can be caused by file existing, etc.
-      LOG.info("mkdir({}) raised exception {}", path, e.toString());
-      LOG.debug("Mkdir stack", e);
+      LOG.info("{}: mkdir({}) raised exception {}", getName(), path, e.toString());
+      LOG.debug("{}: Mkdir stack", getName(), e);
       outcome = DirMapState.mkdirRaisedException;
     }
 
@@ -273,18 +282,20 @@ public class CreateOutputDirectoriesStage extends
     if (st != null) {
       if (!st.isDirectory()) {
         // is bad: delete a file
-        LOG.info("Deleting file where a directory should go: {}", st);
+        LOG.info("{}: Deleting file where a directory should go: {}",
+            getName(), st);
         delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
         create = true;
       } else {
         // is good.
-        LOG.warn("Even though mkdirs({}) failed, there is a directory there", path);
+        LOG.warn("{}: Even though mkdirs({}) failed, there is a directory there",
+            getName(), path);
         create = false;
       }
     } else {
       // nothing found. This should never happen as the first mkdirs should have created it.
       // so the getFileStatus call never reached.
-      LOG.warn("Although mkdirs({}) returned false, there's nothing at that path to prevent it",
+      LOG.warn("{}: Although mkdirs({}) returned false, there's nothing at that path to prevent it",
           path);
       create = true;
     }

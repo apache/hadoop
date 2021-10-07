@@ -93,10 +93,10 @@ public class RenameFilesStage extends
     final ManifestSuccessData success = createManifestOutcome(getStageConfig(),
         OP_STAGE_JOB_COMMIT);
 
-    LOG.info("Executing Manifest Job Commit with manifests in {}",
-        getJobAttemptDir());
+    LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
+        getName(), getJobAttemptDir());
 
-    LOG.info("Committing the output of successful tasks");
+    LOG.info("{}: Committing the output of successful tasks", getName());
     // first step is to aggregate the output of all manifests into a single
     // list of files to commit.
     // Which Guava can do in a zero-copy concatenated iterator
@@ -112,8 +112,8 @@ public class RenameFilesStage extends
 
     // synchronized block to keep spotbugs happy.
     List<FileOrDirEntry> committed = getFilesCommitted();
-    LOG.info("Files committed: {}. Total size {}",
-        committed.size(), getTotalFileSize());
+    LOG.info("{}: Files committed: {}. Total size {}",
+        getName(), committed.size(), getTotalFileSize());
 
     // Add a subset of the destination files to the success file;
     // enough for simple testing

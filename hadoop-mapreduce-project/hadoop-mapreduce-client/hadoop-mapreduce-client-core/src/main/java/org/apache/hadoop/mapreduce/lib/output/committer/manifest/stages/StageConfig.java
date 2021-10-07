@@ -343,7 +343,7 @@ public class StageConfig {
   }
 
   /**
-   * Set read limiter
+   * Set read limiter.
    * @param value new value
    * @return the builder
    */

@@ -739,8 +739,7 @@ public abstract class AbstractManifestCommitterTest
         .withOperations(getStoreOperations())
         .withProgressable(getProgressCounter())
         .withReadLimiter(RateLimiter.create(OPT_IO_READ_RATE_DEFAULT))
-        .withWriteLimiter(RateLimiter.create(OPT_IO_WRITE_RATE_DEFAULT))
-    ;
+        .withWriteLimiter(RateLimiter.create(OPT_IO_WRITE_RATE_DEFAULT));
 
     // if there's a task attempt ID set, set up its details
     if (taskIndex >= 0) {

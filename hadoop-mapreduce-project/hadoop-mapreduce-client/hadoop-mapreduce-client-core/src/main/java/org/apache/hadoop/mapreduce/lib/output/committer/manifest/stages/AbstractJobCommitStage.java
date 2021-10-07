@@ -316,13 +316,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param permits permit count.
    */
   public void acquireReadPermits(int permits) {
-    final double wait = stageConfig.acquireReadPermits(permits);
-    if (wait > 0) {
-      // rate limiting took place
-      getIOStatistics().addTimedOperation(
-          IO_ACQUIRE_READ_PERMIT,
-          (long)(wait * 1000));
-    }
+    noteAnyRateLimiting(IO_ACQUIRE_READ_PERMIT,
+        stageConfig.acquireReadPermits(permits));
   }
 
   /**
@@ -334,11 +329,21 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param permits permit count.
    */
   public void acquireWritePermits(int permits) {
-    final double wait = stageConfig.acquireWritePermits(permits);
+    noteAnyRateLimiting(IO_ACQUIRE_WRITE_PERMIT,
+        stageConfig.acquireWritePermits(permits));
+  }
+
+  /**
+   * Note any rate limiting to the given timing statistic.
+   * If the wait was 0, no statistics are updated.
+   * @param statistic statistic key.
+   * @param wait wait time in seconds.
+   */
+  private void noteAnyRateLimiting(String statistic, double wait) {
     if (wait > 0) {
       // rate limiting took place
       getIOStatistics().addTimedOperation(
-          IO_ACQUIRE_WRITE_PERMIT,
+          statistic,
           (long) (wait * 1000));
     }
   }

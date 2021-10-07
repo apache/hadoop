@@ -165,8 +165,8 @@ public class LoadManifestsStage extends
     final String id = manifest.getTaskAttemptID();
     final int filecount = manifest.getFilesToCommit().size();
     final long size = manifest.getTotalFileSize();
-    LOG.info("Task Attempt {} file {}: File count: {}; data size={}",
-        id, status.getPath(), filecount, size);
+    LOG.info("{}: Task Attempt {} file {}: File count: {}; data size={}",
+        getName(), id, status.getPath(), filecount, size);
     return manifest;
   }
 

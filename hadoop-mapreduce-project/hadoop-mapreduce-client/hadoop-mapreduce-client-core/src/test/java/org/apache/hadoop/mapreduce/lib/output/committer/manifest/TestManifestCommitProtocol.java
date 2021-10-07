@@ -99,7 +99,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * It is subclassed in the ABFS integration tests.
  * Derived from the S3A protocol suite, which was itself based off
  * the test suite {@code TestFileOutputCommitter}.
+ *
+ * Some of the methods trigger java warnings about unchecked casts;
+ * it's impossible to remove them, so the checks are suppressed.
  */
+@SuppressWarnings("unchecked")
 public class TestManifestCommitProtocol
     extends AbstractManifestCommitterTest {
 
@@ -1406,7 +1410,6 @@ public class TestManifestCommitProtocol
    * @throws Exception failure
    */
   @Test
-  @SuppressWarnings("unchecked")
   public void testConcurrentCommitTaskWithSubDir() throws Exception {
     Job job = newJob();
     FileOutputFormat.setOutputPath(job, outputDir);
