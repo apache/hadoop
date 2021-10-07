@@ -138,7 +138,8 @@ public class MountTableResolver
           FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE,
           FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT);
       this.locationCache = CacheBuilder.newBuilder()
-          // To warkaround guava bug https://github.com/google/guava/issues/1055
+          // To workaround guava bug https://github.com/google/guava/issues/1055
+          // Fixed since guava 13.0
           .initialCapacity(maxCacheSize)
           .maximumSize(maxCacheSize)
           .build();
