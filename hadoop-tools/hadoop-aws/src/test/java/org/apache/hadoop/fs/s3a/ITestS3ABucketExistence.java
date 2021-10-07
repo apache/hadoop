@@ -37,8 +37,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESSPOINT_REQUIRED;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -58,8 +56,6 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
   public void testNoBucketProbing() throws Exception {
     describe("Disable init-time probes and expect FS operations to fail");
     Configuration conf = createConfigurationWithProbe(0);
-    // metastores can bypass S3 checks, so disable S3Guard, always
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
 
     fs = FileSystem.get(uri, conf);
 

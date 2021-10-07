@@ -118,7 +118,7 @@ public final class NetworkBinding {
    * See also {@code com.amazonaws.services.s3.model.Region.fromValue()}
    * for its conversion logic.
    * @param region region from S3 call.
-   * @return the region to use in DDB etc.
+   * @return the region to use in AWS services.
    */
   public static String fixBucketRegion(final String region) {
     return region == null || region.equals("US")

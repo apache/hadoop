@@ -275,8 +275,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
       // this is a failure path, so fail with a meaningful error
       fail("request to create a file should have failed");
     } catch (AWSBadRequestException expected){
-      // likely at two points in the operation, depending on
-      // S3Guard state
+      // likely at two points in the operation, incuding fs creation itself.
     } finally {
       IOUtils.closeStream(fs);
     }
