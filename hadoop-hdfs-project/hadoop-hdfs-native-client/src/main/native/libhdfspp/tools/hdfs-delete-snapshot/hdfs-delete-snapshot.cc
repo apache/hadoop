@@ -37,7 +37,9 @@ bool DeleteSnapshot::Initialize() {
               "The path to the directory that is snapshot-able");
   add_options("name", po::value<std::string>(), "The name of the snapshot");
 
-  // Register "path" and "name" as positional arguments
+  // Register "path" and "name" as positional arguments.
+  // We allow only two arguments to be passed to this tool. An exception is
+  // thrown if more than two arguments are passed.
   pos_opt_desc_.add("path", 1);
   pos_opt_desc_.add("name", 1);
 
