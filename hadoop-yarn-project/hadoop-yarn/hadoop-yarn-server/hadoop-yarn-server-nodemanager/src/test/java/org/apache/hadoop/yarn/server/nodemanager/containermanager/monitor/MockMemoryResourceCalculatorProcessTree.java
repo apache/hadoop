@@ -25,8 +25,9 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
  */
 public class MockMemoryResourceCalculatorProcessTree
     extends ResourceCalculatorProcessTree {
+  private final long memorySize = 500000000L;
 
-  private long rssMemorySize = 500000000;
+  private long rssMemorySize = memorySize;
   private long virtualMemorySize = ResourceCalculatorProcessTree.UNAVAILABLE;
 
   /**
@@ -62,11 +63,11 @@ public class MockMemoryResourceCalculatorProcessTree
     long rssMemory = this.rssMemorySize;
     // First getter call will return with 500000000, and second call will
     // return -1, rest of the calls will return a valid value.
-    if (rssMemory == 500000000) {
+    if (rssMemory == memorySize) {
       this.rssMemorySize = ResourceCalculatorProcessTree.UNAVAILABLE;
     }
     if (rssMemory == ResourceCalculatorProcessTree.UNAVAILABLE) {
-      this.rssMemorySize = 700000000;
+      this.rssMemorySize = 2 * memorySize;
     }
     return rssMemory;
   }
@@ -77,7 +78,7 @@ public class MockMemoryResourceCalculatorProcessTree
     // First getter call will return with -1, and rest of the calls will
     // return a valid value.
     if (virtualMemory == ResourceCalculatorProcessTree.UNAVAILABLE) {
-      this.virtualMemorySize = 200000000;
+      this.virtualMemorySize = 3 * memorySize;
     }
     return virtualMemory;
   }

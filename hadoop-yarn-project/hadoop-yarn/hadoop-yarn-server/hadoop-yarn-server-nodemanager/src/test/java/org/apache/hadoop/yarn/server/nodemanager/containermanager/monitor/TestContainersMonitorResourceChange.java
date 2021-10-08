@@ -296,12 +296,11 @@ public class TestContainersMonitorResourceChange {
   private void testContainerMonitoringInvalidResources(
       String processTreeClassName) throws Exception {
     Configuration newConf = new Configuration(conf);
-    // set container monitor interval to be 20s
+    // set container monitor interval to be 20ms
     newConf.setLong(YarnConfiguration.NM_CONTAINER_MON_INTERVAL_MS, 20L);
     containersMonitor = createContainersMonitor(executor, dispatcher, context);
     newConf.set(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE,
         processTreeClassName);
-    // set container monitor interval to be 20ms
     containersMonitor.init(newConf);
     containersMonitor.start();
 
