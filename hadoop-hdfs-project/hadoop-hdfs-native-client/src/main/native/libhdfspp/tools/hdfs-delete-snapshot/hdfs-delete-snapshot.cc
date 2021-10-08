@@ -67,8 +67,8 @@ std::string DeleteSnapshot::GetDescription() const {
   std::stringstream desc;
   desc << "Usage: hdfs_deleteSnapshot [OPTION] PATH NAME" << std::endl
        << std::endl
-       << "Delete a snapshot NAME from a snapshottable directory." << std::endl
-       << "This operation requires owner privilege of the snapshottable "
+       << "Delete a snapshot NAME from a snapshot-able directory." << std::endl
+       << "This operation requires owner privilege of the snapshot-able "
           "directory."
        << std::endl
        << std::endl
