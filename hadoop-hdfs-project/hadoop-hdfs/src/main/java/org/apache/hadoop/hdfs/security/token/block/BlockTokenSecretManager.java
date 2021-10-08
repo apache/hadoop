@@ -226,7 +226,7 @@ public class BlockTokenSecretManager extends
     if (isMaster || exportedKeys == null) {
       return;
     }
-    LOG.info("Setting block keys");
+    LOG.info("Setting block keys. BlockPool = {} .", blockPoolId);
     removeExpiredKeys();
     this.currentKey = exportedKeys.getCurrentKey();
     BlockKey[] receivedKeys = exportedKeys.getAllKeys();
