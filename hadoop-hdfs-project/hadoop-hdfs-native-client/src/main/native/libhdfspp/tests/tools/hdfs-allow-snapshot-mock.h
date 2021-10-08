@@ -19,7 +19,10 @@
 #ifndef LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT_MOCK
 #define LIBHDFSPP_TOOLS_HDFS_ALLOW_SNAPSHOT_MOCK
 
+#include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include <gmock/gmock.h>
 
@@ -43,6 +46,18 @@ public:
   AllowSnapshotMock &operator=(const AllowSnapshotMock &) = delete;
   AllowSnapshotMock &operator=(AllowSnapshotMock &&) = delete;
   ~AllowSnapshotMock() override;
+
+  /**
+   * Defines the methods and the corresponding arguments that are expected
+   * to be called on this instance of {@link HdfsTool} for the given test case.
+   *
+   * @param test_case An {@link std::function} object that points to the
+   * function defining the test case
+   * @param args The arguments that are passed to this test case
+   */
+  void
+  SetExpectations(std::function<std::unique_ptr<AllowSnapshotMock>()> test_case,
+                  const std::vector<std::string> &args = {}) const;
 
   MOCK_METHOD(bool, HandleHelp, (), (const, override));
 
