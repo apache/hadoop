@@ -78,13 +78,7 @@ target_link_libraries(hdfs_moveToLocal tools_common hdfspp_static)
 add_executable(hdfs_setrep hdfs_setrep.cc)
 target_link_libraries(hdfs_setrep tools_common hdfspp_static)
 
-add_library(hdfs_allowSnapshot_lib STATIC  $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-allow-snapshot/hdfs-allow-snapshot.cc)
-target_include_directories(hdfs_allowSnapshot_lib PRIVATE ../tools hdfs-allow-snapshot ${Boost_INCLUDE_DIRS})
-target_link_libraries(hdfs_allowSnapshot_lib PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
-
-add_executable(hdfs_allowSnapshot hdfs-allow-snapshot/main.cc)
-target_include_directories(hdfs_allowSnapshot PRIVATE ../tools)
-target_link_libraries(hdfs_allowSnapshot PRIVATE hdfs_allowSnapshot_lib)
+add_subdirectory(hdfs-allow-snapshot)
 
 add_executable(hdfs_disallowSnapshot hdfs_disallowSnapshot.cc)
 target_link_libraries(hdfs_disallowSnapshot tools_common hdfspp_static)
