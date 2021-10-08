@@ -23,6 +23,15 @@
 #include <memory>
 #include <string>
 
+/**
+ * This file contains the generalized test cases to run against  the derivatives
+ * of {@link hdfs::tools::HdfsTool}.
+ *
+ * Each test case passes the arguments to the {@link hdfs::tools::HdfsTool} and
+ * calls the method to set the expectation on the instance of {@link
+ * hdfs::tools::HdfsTool} as defined in its corresponding mock implementation.
+ */
+
 template <class T> std::unique_ptr<T> PassAPath() {
   constexpr auto argc = 2;
   static std::string exe("hdfs_tool_name");

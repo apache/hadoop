@@ -48,6 +48,14 @@ public:
   DeleteSnapshotMock &operator=(DeleteSnapshotMock &&) = delete;
   ~DeleteSnapshotMock() override;
 
+  /**
+   * Defines the methods and the corresponding arguments that are expected
+   * to be called on this instance of {@link HdfsTool} for the given test case.
+   *
+   * @param test_case An {@link std::function} object that points to the
+   * function defining the test case
+   * @param args The arguments that are passed to this test case
+   */
   void SetExpectations(
       std::function<std::unique_ptr<DeleteSnapshotMock>()> test_case,
       const std::vector<std::string> &args = {}) const;

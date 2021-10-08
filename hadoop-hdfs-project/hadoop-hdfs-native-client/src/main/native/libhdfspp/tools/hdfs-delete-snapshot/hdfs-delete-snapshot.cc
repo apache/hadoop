@@ -37,8 +37,7 @@ bool DeleteSnapshot::Initialize() {
               "The path to the directory that is snapshot-able");
   add_options("name", po::value<std::string>(), "The name of the snapshot");
 
-  // We allow only two arguments to be passed to this tool. An exception is
-  // thrown if more than two arguments are passed.
+  // Register "path" and "name" as positional arguments
   pos_opt_desc_.add("path", 1);
   pos_opt_desc_.add("name", 1);
 
@@ -52,12 +51,15 @@ bool DeleteSnapshot::Initialize() {
 }
 
 bool DeleteSnapshot::ValidateConstraints() const {
+  // Only "help" is allowed as single argument
   if (argc_ == 2) {
     if (opt_val_.count("help") > 0) {
       return true;
     }
     return false;
   }
+
+  // Rest of the cases must contain more than 1 argument on the command line
   return argc_ > 2;
 }
 
