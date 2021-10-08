@@ -292,7 +292,7 @@ public class TestPendingReconstruction {
       try {
         // Use a wrong gen stamp.
         blkManager.addBlock(desc[0].getStorageInfos()[0],
-            new Block(1, 1, 0), null);
+            new Block(1, 1, 0), null, 0);
       } finally {
         fsn.writeUnlock();
       }
@@ -306,7 +306,7 @@ public class TestPendingReconstruction {
       fsn.writeLock();
       try {
         blkManager.addBlock(desc[0].getStorageInfos()[0],
-            new Block(1, 1, 1), null);
+            new Block(1, 1, 1), null, 0);
       } finally {
         fsn.writeUnlock();
       }
@@ -546,7 +546,7 @@ public class TestPendingReconstruction {
       // not calling addBlock on block1 will make it timeout later.
       DatanodeStorageInfo[] storageInfos =
           DFSTestUtil.createDatanodeStorageInfos(1);
-      bm.addBlock(storageInfos[0], blockInfo0, null);
+      bm.addBlock(storageInfos[0], blockInfo0, null, 0);
 
       // call schedule replication on blockInfo2 will fail the re-replication.
       // because there is no source data to replicate from.

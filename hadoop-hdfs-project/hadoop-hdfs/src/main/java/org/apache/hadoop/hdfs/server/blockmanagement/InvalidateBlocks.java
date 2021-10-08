@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -48,9 +49,9 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
  */
 @InterfaceAudience.Private
 class InvalidateBlocks {
-  private final Map<DatanodeInfo, LightWeightHashSet<Block>>
+  private final Map<DatanodeInfo, LightWeightHashSet<BlockWithDeletionTime>>
       nodeToBlocks = new HashMap<>();
-  private final Map<DatanodeInfo, LightWeightHashSet<Block>>
+  private final Map<DatanodeInfo, LightWeightHashSet<BlockWithDeletionTime>>
       nodeToECBlocks = new HashMap<>();
   private final LongAdder numBlocks = new LongAdder();
   private final LongAdder numECBlocks = new LongAdder();
@@ -109,15 +110,15 @@ class InvalidateBlocks {
     return numECBlocks.longValue();
   }
 
-  private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn) {
+  private LightWeightHashSet<BlockWithDeletionTime> getBlocksSet(final DatanodeInfo dn) {
     return nodeToBlocks.get(dn);
   }
 
-  private LightWeightHashSet<Block> getECBlocksSet(final DatanodeInfo dn) {
+  private LightWeightHashSet<BlockWithDeletionTime> getECBlocksSet(final DatanodeInfo dn) {
     return nodeToECBlocks.get(dn);
   }
 
-  private LightWeightHashSet<Block> getBlocksSet(final DatanodeInfo dn,
+  private LightWeightHashSet<BlockWithDeletionTime> getBlocksSet(final DatanodeInfo dn,
       final Block block) {
     if (blockIdManager.isStripedBlock(block)) {
       return getECBlocksSet(dn);
@@ -138,8 +139,8 @@ class InvalidateBlocks {
   }
 
   private long getBlockSetsSize(final DatanodeInfo dn) {
-    LightWeightHashSet<Block> replicaBlocks = getBlocksSet(dn);
-    LightWeightHashSet<Block> stripedBlocks = getECBlocksSet(dn);
+    LightWeightHashSet<BlockWithDeletionTime> replicaBlocks = getBlocksSet(dn);
+    LightWeightHashSet<BlockWithDeletionTime> stripedBlocks = getECBlocksSet(dn);
     return ((replicaBlocks == null ? 0 : replicaBlocks.size()) +
         (stripedBlocks == null ? 0 : stripedBlocks.size()));
   }
@@ -152,46 +153,53 @@ class InvalidateBlocks {
    * returns false.
    */
   synchronized boolean contains(final DatanodeInfo dn, final Block block) {
-    final LightWeightHashSet<Block> s = getBlocksSet(dn, block);
+    final LightWeightHashSet<BlockWithDeletionTime> s = getBlocksSet(dn, block);
     if (s == null) {
       return false; // no invalidate blocks for this storage ID
     }
-    Block blockInSet = s.getElement(block);
+    BlockWithDeletionTime key = new BlockWithDeletionTime(block);
+    BlockWithDeletionTime blockInSet = s.getElement(key);
     return blockInSet != null &&
-        block.getGenerationStamp() == blockInSet.getGenerationStamp();
+        block.getGenerationStamp() == blockInSet.block.getGenerationStamp();
+  }
+
+  synchronized void add(final Block block, final DatanodeInfo datanodeInfo,
+      final boolean log) {
+    addWithGracePeriod(block, datanodeInfo, 0, log);
   }
 
   /**
    * Add a block to the block collection which will be
    * invalidated on the specified datanode.
    */
-  synchronized void add(final Block block, final DatanodeInfo datanode,
-      final boolean log) {
-    LightWeightHashSet<Block> set = getBlocksSet(datanode, block);
+  synchronized void addWithGracePeriod(final Block block, final DatanodeInfo datanode,
+      final long gracePeriodMs, final boolean log) {
+    LightWeightHashSet<BlockWithDeletionTime> set = getBlocksSet(datanode, block);
     if (set == null) {
       set = new LightWeightHashSet<>();
       putBlocksSet(datanode, block, set);
     }
-    if (set.add(block)) {
+    BlockWithDeletionTime key = new BlockWithDeletionTime(block, gracePeriodMs);
+    if (set.add(key)) {
       if (blockIdManager.isStripedBlock(block)) {
         numECBlocks.increment();
       } else {
         numBlocks.increment();
       }
       if (log) {
-        NameNode.blockStateChangeLog.debug("BLOCK* {}: add {} to {}",
-            getClass().getSimpleName(), block, datanode);
+        NameNode.blockStateChangeLog.debug("BLOCK* {}: add {} to {} with grace period {}ms",
+            getClass().getSimpleName(), block, datanode, gracePeriodMs);
       }
     }
   }
 
   /** Remove a storage from the invalidatesSet */
   synchronized void remove(final DatanodeInfo dn) {
-    LightWeightHashSet<Block> replicaBlockSets = nodeToBlocks.remove(dn);
+    LightWeightHashSet<BlockWithDeletionTime> replicaBlockSets = nodeToBlocks.remove(dn);
     if (replicaBlockSets != null) {
       numBlocks.add(replicaBlockSets.size() * -1);
     }
-    LightWeightHashSet<Block> ecBlocksSet = nodeToECBlocks.remove(dn);
+    LightWeightHashSet<BlockWithDeletionTime> ecBlocksSet = nodeToECBlocks.remove(dn);
     if (ecBlocksSet != null) {
       numECBlocks.add(ecBlocksSet.size() * -1);
     }
@@ -199,8 +207,9 @@ class InvalidateBlocks {
 
   /** Remove the block from the specified storage. */
   synchronized void remove(final DatanodeInfo dn, final Block block) {
-    final LightWeightHashSet<Block> v = getBlocksSet(dn, block);
-    if (v != null && v.remove(block)) {
+    final LightWeightHashSet<BlockWithDeletionTime> v = getBlocksSet(dn, block);
+    BlockWithDeletionTime key = new BlockWithDeletionTime(block);
+    if (v != null && v.remove(key)) {
       if (blockIdManager.isStripedBlock(block)) {
         numECBlocks.decrement();
       } else {
@@ -213,10 +222,10 @@ class InvalidateBlocks {
   }
 
   private void dumpBlockSet(final Map<DatanodeInfo,
-      LightWeightHashSet<Block>> nodeToBlocksMap, final PrintWriter out) {
-    for(Entry<DatanodeInfo, LightWeightHashSet<Block>> entry :
+      LightWeightHashSet<BlockWithDeletionTime>> nodeToBlocksMap, final PrintWriter out) {
+    for(Entry<DatanodeInfo, LightWeightHashSet<BlockWithDeletionTime>> entry :
         nodeToBlocksMap.entrySet()) {
-      final LightWeightHashSet<Block> blocks = entry.getValue();
+      final LightWeightHashSet<BlockWithDeletionTime> blocks = entry.getValue();
       if (blocks != null && blocks.size() > 0) {
         out.println(entry.getKey());
         out.println(StringUtils.join(',', blocks));
@@ -257,13 +266,15 @@ class InvalidateBlocks {
    * message is limited.
    * @return the remaining limit
    */
-  private int getBlocksToInvalidateByLimit(LightWeightHashSet<Block> blockSet,
+  private int getBlocksToInvalidateByLimit(LightWeightHashSet<BlockWithDeletionTime> blockSet,
       List<Block> toInvalidate, LongAdder statsAdder, int limit) {
     assert blockSet != null;
     int remainingLimit = limit;
-    List<Block> polledBlocks = blockSet.pollN(limit);
+    long now = Time.monotonicNow();
+    List<BlockWithDeletionTime> polledBlocks = blockSet.pollNWithFilter(limit,
+        block -> now >= block.readyForDeleteAt);
     remainingLimit -= polledBlocks.size();
-    toInvalidate.addAll(polledBlocks);
+    polledBlocks.stream().map(block -> block.block).forEach(toInvalidate::add);
     statsAdder.add(polledBlocks.size() * -1);
     return remainingLimit;
   }
@@ -302,5 +313,52 @@ class InvalidateBlocks {
     nodeToECBlocks.clear();
     numBlocks.reset();
     numECBlocks.reset();
+  }
+
+  /**
+   * Wraps a Block with a deletion time. Only the Block is counted
+   * for hashCode and equals, as the deletion time is considered non-identifying
+   * metadata. The deletion time is used for filtering blocks on read, such that
+   * we can only return blocks which are ready for deletion.
+   */
+  static class BlockWithDeletionTime {
+    private final Block block;
+    private final long readyForDeleteAt;
+
+    /**
+     * Creates a BlockWithDeletionTime with a timestamp of 0, which
+     * ensures the block will be considered immediately ready for deletion.
+     */
+    private BlockWithDeletionTime(Block block) {
+      this(block, 0);
+    }
+
+    /**
+     * Creates a BlockWithDeletionTime with a timestamp in the future,
+     * based on the passed gracePeriodMs. The block will be considered
+     * ready for deletion once time surpasses now + grace period.
+     */
+    private BlockWithDeletionTime(Block block, long gracePeriodMs) {
+      this.block = block;
+      this.readyForDeleteAt = Time.monotonicNow() + gracePeriodMs;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      BlockWithDeletionTime that = (BlockWithDeletionTime) o;
+      return block.equals(that.block);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(block);
+    }
+
+    @Override
+    public String toString() {
+      return block.toString();
+    }
   }
 }

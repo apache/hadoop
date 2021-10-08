@@ -473,6 +473,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_KEY = "dfs.namenode.startup.delay.block.deletion.sec";
   public static final long    DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_SEC_DEFAULT = 0L;
 
+  /** Grace period for replaced blocks, before being sent to DataNodes for invalidation */
+  public static final String DFS_NAMENODE_BLOCK_REPLACE_GRACE_PERIOD_MS_KEY = "dfs.namenode.block.replace.grace.period.ms";
+  public static final long DFS_NAMENODE_BLOCK_REPLACE_GRACE_PERIOD_MS_DEFAULT = 0;
+
   /** Block deletion increment. */
   public static final String DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY =
       "dfs.namenode.block.deletion.increment";

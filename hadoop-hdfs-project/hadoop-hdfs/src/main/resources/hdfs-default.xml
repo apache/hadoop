@@ -3453,6 +3453,16 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block.replace.grace.period.ms</name>
+  <value>0</value>
+  <description>The delay in milliseconds before a replaced block replica is deemed eligible for
+  invalidation on the old DataNode. The NameNode will only send invalidate commands to DataNodes
+  for replaced blocks whose initial replacement time as at least this long ago. This is useful to
+  give clients time to refresh block locations before the block actually goes away and results
+  in ReplicaNotFoundExceptions.</description>
+</property>
+
+<property>
   <name>dfs.datanode.block.id.layout.upgrade.threads</name>
   <value>6</value>
   <description>The number of threads to use when creating hard links from
