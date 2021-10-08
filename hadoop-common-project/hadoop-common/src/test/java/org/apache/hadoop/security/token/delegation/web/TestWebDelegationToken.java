@@ -64,7 +64,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedActionException;

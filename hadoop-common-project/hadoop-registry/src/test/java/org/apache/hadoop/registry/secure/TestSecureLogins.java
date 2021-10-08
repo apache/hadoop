@@ -20,7 +20,6 @@ package org.apache.hadoop.registry.secure;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;

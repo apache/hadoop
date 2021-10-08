@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

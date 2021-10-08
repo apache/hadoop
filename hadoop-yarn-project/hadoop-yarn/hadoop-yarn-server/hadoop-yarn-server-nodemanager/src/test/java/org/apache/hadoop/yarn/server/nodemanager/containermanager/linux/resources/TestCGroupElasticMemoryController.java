@@ -26,7 +26,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
