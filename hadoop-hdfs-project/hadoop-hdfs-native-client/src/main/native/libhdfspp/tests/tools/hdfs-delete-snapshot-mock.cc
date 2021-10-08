@@ -17,8 +17,37 @@
   under the License.
 */
 
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <gmock/gmock.h>
+
 #include "hdfs-delete-snapshot-mock.h"
+#include "hdfs-tool-test.h"
 
 namespace hdfs::tools::test {
-DeleteSnapshotMock::~DeleteSnapshotMock() {}
+DeleteSnapshotMock::~DeleteSnapshotMock() = default;
+
+void DeleteSnapshotMock::SetExpectations(
+    std::function<std::unique_ptr<DeleteSnapshotMock>()> test_case,
+    const std::vector<std::string> &args) const {
+  const auto test_case_func =
+      test_case.target<std::unique_ptr<DeleteSnapshotMock> (*)()>();
+  ASSERT_NE(test_case_func, nullptr);
+
+  if (*test_case_func == &CallHelp<DeleteSnapshotMock>) {
+    EXPECT_CALL(*this, HandleHelp()).Times(1).WillOnce(testing::Return(true));
+    return;
+  }
+
+  if (*test_case_func == &Pass2Paths<DeleteSnapshotMock>) {
+    const auto arg1 = args[0];
+    const auto arg2 = args[1];
+    EXPECT_CALL(*this, HandleSnapshot(arg1, arg2))
+        .Times(1)
+        .WillOnce(testing::Return(true));
+  }
+}
 } // namespace hdfs::tools::test

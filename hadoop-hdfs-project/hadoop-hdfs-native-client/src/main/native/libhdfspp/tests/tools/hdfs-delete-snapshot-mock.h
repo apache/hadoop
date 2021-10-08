@@ -19,7 +19,10 @@
 #ifndef LIBHDFSPP_TOOLS_HDFS_DELETE_SNAPSHOT_MOCK
 #define LIBHDFSPP_TOOLS_HDFS_DELETE_SNAPSHOT_MOCK
 
+#include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include <gmock/gmock.h>
 
@@ -44,6 +47,10 @@ public:
   DeleteSnapshotMock &operator=(const DeleteSnapshotMock &) = delete;
   DeleteSnapshotMock &operator=(DeleteSnapshotMock &&) = delete;
   ~DeleteSnapshotMock() override;
+
+  void SetExpectations(
+      std::function<std::unique_ptr<DeleteSnapshotMock>()> test_case,
+      const std::vector<std::string> &args = {}) const;
 
   MOCK_METHOD(bool, HandleHelp, (), (const, override));
 
