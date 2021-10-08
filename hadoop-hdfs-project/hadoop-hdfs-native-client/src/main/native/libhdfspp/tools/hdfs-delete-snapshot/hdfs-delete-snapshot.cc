@@ -51,6 +51,16 @@ bool DeleteSnapshot::Initialize() {
   return true;
 }
 
+bool DeleteSnapshot::ValidateConstraints() const {
+  if (argc_ == 2) {
+    if (opt_val_.count("help") > 0) {
+      return true;
+    }
+    return false;
+  }
+  return argc_ > 2;
+}
+
 std::string DeleteSnapshot::GetDescription() const {
   std::stringstream desc;
   desc << "Usage: hdfs_deleteSnapshot [OPTION] PATH NAME" << std::endl
