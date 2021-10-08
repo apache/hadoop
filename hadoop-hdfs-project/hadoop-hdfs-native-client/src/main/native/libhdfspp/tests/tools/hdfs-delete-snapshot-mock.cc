@@ -33,10 +33,13 @@ DeleteSnapshotMock::~DeleteSnapshotMock() = default;
 void DeleteSnapshotMock::SetExpectations(
     std::function<std::unique_ptr<DeleteSnapshotMock>()> test_case,
     const std::vector<std::string> &args) const {
+  // Get the pointer to the function that defines the test case
   const auto test_case_func =
       test_case.target<std::unique_ptr<DeleteSnapshotMock> (*)()>();
   ASSERT_NE(test_case_func, nullptr);
 
+  // Set the expected method calls and their corresponding arguments for each
+  // test case
   if (*test_case_func == &CallHelp<DeleteSnapshotMock>) {
     EXPECT_CALL(*this, HandleHelp()).Times(1).WillOnce(testing::Return(true));
     return;
