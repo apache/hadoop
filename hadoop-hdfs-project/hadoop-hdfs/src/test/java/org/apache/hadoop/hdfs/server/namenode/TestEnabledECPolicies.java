@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.*;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -187,6 +188,45 @@ public class TestEnabledECPolicies {
     // All the policies are disabled if the default policy is empty
     getPoliciesResult = manager.getPolicies();
     assertAllPoliciesAreDisabled(getPoliciesResult);
+  }
+
+  @Test
+  public void testLoadPolicyWithCounter() throws Exception {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    final String testPolicy = "RS-3-2-1024k";
+    final String defaultPolicy = conf.getTrimmed(
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT);
+    assertNotEquals("The default policy and the next default policy " +
+            "should not be the same!", testPolicy, defaultPolicy);
+
+    StartupProgress prog = NameNode.getStartupProgress();
+    Step step = new Step(StepType.ERASURE_CODING_POLICIES);
+    prog.beginStep(Phase.LOADING_FSIMAGE, step);
+    StartupProgress.Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE,
+        step);
+    StartupProgressView progView = prog.createView();
+    long count = progView.getCount(Phase.LOADING_FSIMAGE, step);
+    assertEquals(count, 0);
+
+    ErasureCodingPolicyManager manager =
+            ErasureCodingPolicyManager.getInstance();
+    // Change the default policy to a new one
+    conf.set(
+            DFSConfigKeys.DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY,
+            testPolicy);
+    manager.init(conf);
+    // Load policies similar to when fsimage is loaded at namenode startup
+    manager.loadPolicies(constructAllDisabledInitialPolicies(), conf, counter);
+
+    ErasureCodingPolicyInfo[] getPoliciesResult = manager.getPolicies();
+    boolean isEnabled = isPolicyEnabled(testPolicy, getPoliciesResult);
+    assertTrue("The new default policy should be " +
+            "in enabled state!", isEnabled);
+
+    progView = prog.createView();
+    count = progView.getCount(Phase.LOADING_FSIMAGE, step);
+    assertEquals(count, getPoliciesResult.length);
   }
 
   private void testGetPolicies(ErasureCodingPolicy[] enabledPolicies)
