@@ -18,10 +18,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hdfs.util.ProtectedDirsConfigReader;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
@@ -525,23 +524,9 @@ public class FSDirectory implements Closeable {
    */
   @VisibleForTesting
   static SortedSet<String> parseProtectedDirectories(Configuration conf) {
-    return parseProtectedDirectories(conf
-        .getTrimmedStringCollection(FS_PROTECTED_DIRECTORIES));
-  }
-
-  /**
-   * Parse configuration setting dfs.namenode.protected.directories to retrieve
-   * the set of protected directories.
-   *
-   * @param protectedDirsString
-   *          a comma separated String representing a bunch of paths.
-   * @return a TreeSet
-   */
-  @VisibleForTesting
-  static SortedSet<String> parseProtectedDirectories(
-      final String protectedDirsString) {
-    return parseProtectedDirectories(StringUtils
-        .getTrimmedStringCollection(protectedDirsString));
+    return parseProtectedDirectories(
+        ProtectedDirsConfigReader.parseProtectedDirsFromConfig(
+                conf.getTrimmed(FS_PROTECTED_DIRECTORIES)));
   }
 
   private static SortedSet<String> parseProtectedDirectories(
@@ -560,21 +545,15 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Set directories that cannot be removed unless empty, even by an
+   * Refresh directories that cannot be removed unless empty, even by an
    * administrator.
    *
-   * @param protectedDirsString
-   *          comma separated list of protected directories
    */
-  String setProtectedDirectories(String protectedDirsString) {
-    if (protectedDirsString == null) {
-      protectedDirectories = new TreeSet<>();
-    } else {
-      protectedDirectories = parseProtectedDirectories(protectedDirsString);
-    }
-
-    return Joiner.on(",").skipNulls().join(protectedDirectories);
+  void refreshProtectedDirectories(Configuration newConf) {
+    LOG.info("Refresh protected directories from config file");
+    protectedDirectories = parseProtectedDirectories(newConf);
   }
+
 
   BlockManager getBlockManager() {
     return getFSNamesystem().getBlockManager();

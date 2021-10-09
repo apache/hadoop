@@ -1229,6 +1229,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
+  public void refreshProtectedDirectories() throws IOException {
+    clientProto.refreshProtectedDirectories();
+  }
+
+  @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
     return clientProto.getContentSummary(path);
   }

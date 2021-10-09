@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshProtectedDirectoriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshProtectedDirectoriesResponseProto;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.ProtocolStringList;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -444,6 +446,10 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   private static final SatisfyStoragePolicyResponseProto
       VOID_SATISFYSTORAGEPOLICY_RESPONSE = SatisfyStoragePolicyResponseProto
       .getDefaultInstance();
+
+  private static final RefreshProtectedDirectoriesResponseProto
+      VOID_REFRESHPROTECTEDDIRECTORIES_RESPONSE =
+      RefreshProtectedDirectoriesResponseProto.newBuilder().build();
 
   /**
    * Constructor
@@ -1253,6 +1259,18 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.setBalancerBandwidth(req.getBandwidth());
       return VOID_SETBALANCERBANDWIDTH_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RefreshProtectedDirectoriesResponseProto refreshProtectedDirectories(
+      RpcController controller, RefreshProtectedDirectoriesRequestProto req)
+      throws ServiceException {
+    try {
+      server.refreshProtectedDirectories();
+      return VOID_REFRESHPROTECTEDDIRECTORIES_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
     }

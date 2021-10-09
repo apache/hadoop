@@ -80,7 +80,7 @@ public class TestTools {
         "-rollEdits", "-restoreFailedStorage", "-refreshNodes",
         "-finalizeUpgrade", "-metasave", "-refreshUserToGroupsMappings",
         "-printTopology", "-refreshNamenodes", "-deleteBlockPool",
-        "-setBalancerBandwidth", "-fetchImage");
+        "-setBalancerBandwidth", "-refreshProtectedDirectories", "-fetchImage");
     try {
       for (String arg : args)
         assertTrue(ToolRunner.run(new DFSAdmin(), fillArgs(arg)) == -1);

@@ -2454,6 +2454,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Requests the namenode to refresh protected directories from config.
+   * See {@link ClientProtocol#refreshProtectedDirectories()}
+   * for more details.
+   *
+   * @see ClientProtocol#refreshProtectedDirectories()
+   */
+  public void refreshProtectedDirectories() throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("refreshProtectedDirectories")) {
+      namenode.refreshProtectedDirectories();
+    }
+  }
+
+  /**
    * @see ClientProtocol#finalizeUpgrade()
    */
   public void finalizeUpgrade() throws IOException {

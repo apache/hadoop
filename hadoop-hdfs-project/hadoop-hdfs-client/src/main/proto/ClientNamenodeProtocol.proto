@@ -761,6 +761,12 @@ message SetBalancerBandwidthResponseProto { // void response
 message GetDataEncryptionKeyRequestProto { // no parameters
 }
 
+message RefreshProtectedDirectoriesRequestProto { // no parameters
+}
+
+message RefreshProtectedDirectoriesResponseProto { // void response
+}
+
 message GetDataEncryptionKeyResponseProto {
   optional DataEncryptionKeyProto dataEncryptionKey = 1;
 }
@@ -982,6 +988,8 @@ service ClientNamenodeProtocol {
       returns(hadoop.common.CancelDelegationTokenResponseProto);
   rpc setBalancerBandwidth(SetBalancerBandwidthRequestProto)
       returns(SetBalancerBandwidthResponseProto);
+  rpc refreshProtectedDirectories(RefreshProtectedDirectoriesRequestProto)
+      returns(RefreshProtectedDirectoriesResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
       returns(GetDataEncryptionKeyResponseProto);
   rpc createSnapshot(CreateSnapshotRequestProto)

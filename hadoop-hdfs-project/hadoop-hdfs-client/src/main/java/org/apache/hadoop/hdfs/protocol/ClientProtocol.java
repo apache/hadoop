@@ -1042,6 +1042,14 @@ public interface ClientProtocol {
   void setBalancerBandwidth(long bandwidth) throws IOException;
 
   /**
+   * Tell namenode to refresh protected directories from config.
+   *
+   * @throws IOException If an I/O error occurred.
+   */
+  @Idempotent
+  void refreshProtectedDirectories() throws IOException;
+
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    *
