@@ -17,8 +17,40 @@
   under the License.
 */
 
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "hdfs-allow-snapshot-mock.h"
+#include "hdfs-tool-tests.h"
 
 namespace hdfs::tools::test {
-AllowSnapshotMock::~AllowSnapshotMock() {}
+AllowSnapshotMock::~AllowSnapshotMock() = default;
+
+void AllowSnapshotMock::SetExpectations(
+    std::function<std::unique_ptr<AllowSnapshotMock>()> test_case,
+    const std::vector<std::string> &args) const {
+  // Get the pointer to the function that defines the test case
+  const auto test_case_func =
+      test_case.target<std::unique_ptr<AllowSnapshotMock> (*)()>();
+  ASSERT_NE(test_case_func, nullptr);
+
+  // Set the expected method calls and their corresponding arguments for each
+  // test case
+  if (*test_case_func == &CallHelp<AllowSnapshotMock>) {
+    EXPECT_CALL(*this, HandleHelp()).Times(1).WillOnce(testing::Return(true));
+    return;
+  }
+
+  if (*test_case_func == &PassAPath<AllowSnapshotMock>) {
+    const auto arg1 = args[0];
+    EXPECT_CALL(*this, HandlePath(arg1))
+        .Times(1)
+        .WillOnce(testing::Return(true));
+  }
+}
 } // namespace hdfs::tools::test
