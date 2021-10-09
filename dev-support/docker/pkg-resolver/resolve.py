@@ -20,6 +20,7 @@
 Platform package dependency resolver for building Apache Hadoop.
 """
 
+from __future__ import print_function
 import json
 import os
 import sys
@@ -36,7 +37,7 @@ def get_packages(platform):
     with open('pkg-resolver/packages.json', encoding='utf-8', mode='r') as pkg_file:
         pkgs = json.loads(pkg_file.read())
     packages = []
-    for platforms in filter(lambda x: x.get(platform) is not None, pkgs.values()):
+    for platforms in [x for x in pkgs.values() if x.get(platform) is not None]:
         if isinstance(platforms.get(platform), list):
             packages.extend(platforms.get(platform))
         else:
@@ -46,16 +47,16 @@ def get_packages(platform):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        sys.stderr.write('ERROR: Need at least 1 argument, {} were provided{}'.format(len(sys.argv) - 1, os.linesep))
+        sys.stderr.write('ERROR: Need at least 1 argument, {} were provided{}'.format(
+            len(sys.argv) - 1, os.linesep))
         sys.exit(1)
 
-    platform_arg = sys.argv[1]
-    if not is_supported_platform(platform_arg):
+    PLATFORM_ARG = sys.argv[1]
+    if not is_supported_platform(PLATFORM_ARG):
         sys.stderr.write(
             'ERROR: The given platform {} is not supported. '
             'Please refer to platforms.json for a list of supported platforms{}'.format(
-                platform_arg, os.linesep))
+                PLATFORM_ARG, os.linesep))
         sys.exit(1)
 
-    packages_to_install = get_packages(platform_arg)
-    print(' '.join(packages_to_install))
+    print(' '.join(get_packages(PLATFORM_ARG)))

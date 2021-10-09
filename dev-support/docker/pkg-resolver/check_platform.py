@@ -44,7 +44,8 @@ def is_supported_platform(platform):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        sys.stderr.write('ERROR: Expecting 1 argument, {} were provided{}'.format(len(sys.argv) - 1, os.linesep))
+        sys.stderr.write('ERROR: Expecting 1 argument, {} were provided{}'.format(
+            len(sys.argv) - 1, os.linesep))
         sys.exit(1)
 
     sys.exit(0 if is_supported_platform(sys.argv[1]) else 1)
