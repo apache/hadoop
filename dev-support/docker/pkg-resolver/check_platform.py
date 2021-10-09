@@ -21,6 +21,7 @@ Checks whether the given platform is supported for building Apache Hadoop
 """
 
 import json
+import os
 import sys
 
 
@@ -43,8 +44,7 @@ def is_supported_platform(platform):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print('ERROR: Expecting 1 argument, {} were provided'.format(len(sys.argv) - 1),
-              file=sys.stderr)
+        sys.stderr.write('ERROR: Expecting 1 argument, {} were provided{}'.format(len(sys.argv) - 1, os.linesep))
         sys.exit(1)
 
     sys.exit(0 if is_supported_platform(sys.argv[1]) else 1)
