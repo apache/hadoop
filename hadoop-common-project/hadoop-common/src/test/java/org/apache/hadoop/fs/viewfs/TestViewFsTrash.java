@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.TestTrash;
 import org.junit.After;
 import org.junit.Before;
@@ -53,52 +54,23 @@ public class TestViewFsTrash {
       this(new Path(fileSystemTestHelper.getTestRootDir()));
     }
     TestLFS(Path home) throws IOException {
-      super();
+
+      super(new RawLocalFileSystem() {
+        @Override
+        protected Path getInitialWorkingDirectory() {
+          return makeQualified(home);
+        }
+
+        @Override
+        public Path getHomeDirectory() {
+          return makeQualified(home);
+        }
+      });
       this.home = home;
     }
     @Override
     public Path getHomeDirectory() {
       return home;
-    }
-
-    /*
-     * We need to override getTrashRoot and getTrashRoots.
-     * Otherwise, RawLocalFileSystem.getTrashRoot() will be called, which in turn calls
-     * FileSystem.getTrashRoot(), which will call RawLocalFileSystem.getHomeDirectory(),
-     * which returns the value from System.property("user.home").
-     */
-    @Override
-    public Path getTrashRoot(Path path) {
-      return this.makeQualified(new Path(getHomeDirectory().toUri().getPath(), TRASH_PREFIX));
-    }
-
-    @Override
-    public Collection<FileStatus> getTrashRoots(boolean allUsers) {
-      Path userHome = new Path(getHomeDirectory().toUri().getPath());
-      List<FileStatus> ret = new ArrayList<>();
-      try {
-        if (!allUsers) {
-          Path userTrash = new Path(userHome, TRASH_PREFIX);
-          if (exists(userTrash)) {
-            ret.add(getFileStatus(userTrash));
-          }
-        } else {
-          Path homeParent = userHome.getParent();
-          if (exists(homeParent)) {
-            FileStatus[] candidates = listStatus(homeParent);
-            for (FileStatus candidate : candidates) {
-              Path userTrash = new Path(candidate.getPath(), TRASH_PREFIX);
-              if (exists(userTrash)) {
-                candidate.setPath(userTrash);
-                ret.add(candidate);
-              }
-            }
-          }
-        }
-      } catch (IOException e) {
-        LOG.warn("Cannot get all trash roots", e);
-      }
-      return ret;
     }
   }
 
