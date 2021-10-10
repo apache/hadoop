@@ -19,12 +19,7 @@ package org.apache.hadoop.fs.viewfs;
 
 
 import java.io.IOException;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
@@ -35,12 +30,9 @@ import org.apache.hadoop.fs.TestTrash;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 public class TestViewFsTrash {
-  private static final Logger LOG = LoggerFactory.getLogger(TestViewFsTrash.class);
 
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
@@ -48,7 +40,6 @@ public class TestViewFsTrash {
   private static FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
 
   static class TestLFS extends LocalFileSystem {
-    private static final Logger LOG = LoggerFactory.getLogger(TestLFS.class);
     Path home;
     TestLFS() throws IOException {
       this(new Path(fileSystemTestHelper.getTestRootDir()));
