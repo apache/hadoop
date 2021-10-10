@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 
 #include "hdfs-delete-snapshot-mock.h"
-#include "hdfs-tool-test.h"
+#include "hdfs-tool-tests.h"
 
 namespace hdfs::tools::test {
 DeleteSnapshotMock::~DeleteSnapshotMock() = default;
