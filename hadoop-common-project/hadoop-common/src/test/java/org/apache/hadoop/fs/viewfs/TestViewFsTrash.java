@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.viewfs;
 
 
 import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -31,9 +32,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-
 public class TestViewFsTrash {
-
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
   Configuration conf;
