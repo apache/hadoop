@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-add_library(hdfs_deleteSnapshot_lib STATIC  $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-delete-snapshot.cc)
+add_library(hdfs_deleteSnapshot_lib STATIC $<TARGET_OBJECTS:hdfs_tool_obj> hdfs-delete-snapshot.cc)
 target_include_directories(hdfs_deleteSnapshot_lib PRIVATE ../../tools ${Boost_INCLUDE_DIRS})
 target_link_libraries(hdfs_deleteSnapshot_lib PRIVATE Boost::boost Boost::program_options tools_common hdfspp_static)
 

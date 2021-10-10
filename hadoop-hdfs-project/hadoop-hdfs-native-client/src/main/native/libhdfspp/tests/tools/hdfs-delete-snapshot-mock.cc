@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-tool-test.h"
