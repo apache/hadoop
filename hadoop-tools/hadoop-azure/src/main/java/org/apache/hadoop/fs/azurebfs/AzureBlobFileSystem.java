@@ -98,8 +98,6 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
-import javax.security.auth.DestroyFailedException;
-
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -206,12 +204,11 @@ public class AzureBlobFileSystem extends FileSystem
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     // bufferSize is unused.
-      return open(path, Optional.empty());
+    return open(path, Optional.empty());
   }
 
   private FSDataInputStream open(final Path path,
-      final Optional<OpenFileParameters> parameters)
-      throws IOException {
+      final Optional<OpenFileParameters> parameters) throws IOException {
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
 

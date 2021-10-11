@@ -24,7 +24,6 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorCompletionService;
@@ -678,11 +677,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @Override
   public IOStatistics getIOStatistics() {
     return ioStatistics;
-  }
-
-  @VisibleForTesting
-  public boolean isEncryptionAdapterCached() {
-    return encryptionAdapter != null;
   }
 
   @VisibleForTesting

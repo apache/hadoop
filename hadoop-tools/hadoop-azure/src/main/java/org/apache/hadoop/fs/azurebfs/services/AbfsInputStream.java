@@ -196,8 +196,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (streamStatistics != null) {
       streamStatistics.readOperationStarted();
     }
-    int bytesRead = 0;
-    bytesRead = readRemote(position, buffer, offset, length, tracingContext);
+    int bytesRead = readRemote(position, buffer, offset, length, tracingContext);
     if (statistics != null) {
       statistics.incrementBytesRead(bytesRead);
     }
@@ -289,8 +288,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         && this.fCursor >= footerStart;
   }
 
-  private int readOneBlock(final byte[] b, final int off, final int len)
-      throws IOException {
+  private int readOneBlock(final byte[] b, final int off, final int len) throws IOException {
     if (len == 0) {
       return 0;
     }
@@ -377,8 +375,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int optimisedRead(final byte[] b, final int off, final int len,
-      final long readFrom, final long actualLen)
-      throws IOException {
+      final long readFrom, final long actualLen) throws IOException {
     fCursor = readFrom;
     int totalBytesRead = 0;
     int lastBytesRead = 0;
@@ -472,8 +469,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
-                           final boolean bypassReadAhead)
-      throws IOException {
+                           final boolean bypassReadAhead) throws IOException {
     if (readAheadEnabled && !bypassReadAhead) {
       // try reading from read-ahead
       if (offset != 0) {
@@ -522,8 +518,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext)
-      throws IOException {
+  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }

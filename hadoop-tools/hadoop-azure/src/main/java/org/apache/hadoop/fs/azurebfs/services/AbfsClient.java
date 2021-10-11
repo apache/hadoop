@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
@@ -250,9 +251,10 @@ public class AbfsClient implements Closeable {
       } else if (encryptionAdapter == null) {
         // get encryption context from GetPathStatus response header
         encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
-            path, getPathStatus(path, false, tracingContext).getResult()
-            .getResponseHeader(X_MS_PROPERTIES)
-            .getBytes(StandardCharsets.UTF_8));
+            new Path(path).toUri().getPath(),
+            getPathStatus(path, false, tracingContext).getResult()
+                .getResponseHeader(X_MS_PROPERTIES)
+                .getBytes(StandardCharsets.UTF_8));
       }
       // else use cached encryption keys from input/output streams
       encodedKey = encryptionAdapter.getEncodedKey();

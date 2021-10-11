@@ -161,7 +161,6 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY = "fs.azure.encryption.client-provided-key";
   /** Custom EncryptionContextProvider type */
   public static final String FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE = "fs.azure.encryption.context.provider.type";
-  public static final String FS_AZURE_ENCRYPTION_MODE = "fs.azure.encryption.mode";
 
   /** End point of ABFS account: {@value}. */
   public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";

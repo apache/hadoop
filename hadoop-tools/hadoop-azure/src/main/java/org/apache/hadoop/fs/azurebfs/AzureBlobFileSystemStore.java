@@ -127,8 +127,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.utils.URIBuilder;
 
-import javax.security.auth.DestroyFailedException;
-
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -530,7 +528,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
-          client.getEncryptionContextProvider(), path.toString());
+          client.getEncryptionContextProvider(), getRelativePath(path));
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
@@ -727,8 +725,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           encryptionAdapter = new EncryptionAdapter(
-              client.getEncryptionContextProvider(), path.toString(),
-              op.getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
+              client.getEncryptionContextProvider(), getRelativePath(path),
+//              op.getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
+              "context"
                   .getBytes(StandardCharsets.UTF_8));
         }
       }
@@ -811,7 +810,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       byte[] encryptionContext = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
               .getBytes(StandardCharsets.UTF_8);
       EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
-          client.getEncryptionContextProvider(), path.toString(),
+          client.getEncryptionContextProvider(), getRelativePath(path),
           encryptionContext);
 
       return new AbfsOutputStream(
@@ -1604,7 +1603,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
   }
 
-  private String getRelativePath(final Path path) {
+  public String getRelativePath(final Path path) {
     Preconditions.checkNotNull(path, "path");
     return path.toUri().getPath();
   }

@@ -276,7 +276,7 @@ public final class TestAbfsClient {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
-        null,
+            null,
         abfsClientContext);
 
     return testClient;

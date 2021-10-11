@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 
 /**
  * Class to hold extra input stream configs.

@@ -72,6 +72,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY;
@@ -104,13 +105,16 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   public ITestCustomerProvidedKey() throws Exception {
     boolean isCPKTestsEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_CPK_ENABLED, false);
-//    Assume.assumeTrue(isCPKTestsEnabled);
+    Assume.assumeTrue(isCPKTestsEnabled);
+    Assume.assumeTrue(
+        getConfiguration().get(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE)
+            == null);
   }
 
   @Test
   public void testReadWithCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
-    String fileName = path("/" + methodName.getMethodName()).toString();
+    String fileName = new Path("/" + methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();
@@ -160,7 +164,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testReadWithoutCPK() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(false);
-    String fileName = path("/" + methodName.getMethodName()).toString();
+    String fileName = new Path("/" + methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     AbfsClient abfsClient = fs.getAbfsClient();
@@ -281,7 +285,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
   @Test
   public void testSetGetXAttr() throws Exception {
     final AzureBlobFileSystem fs = getAbfs(true);
-    final String fileName = path(methodName.getMethodName()).toString();
+    final String fileName = new Path(methodName.getMethodName()).toString();
     createFileAndGetContent(fs, fileName, FILE_SIZE);
 
     String valSent = "testValue";
