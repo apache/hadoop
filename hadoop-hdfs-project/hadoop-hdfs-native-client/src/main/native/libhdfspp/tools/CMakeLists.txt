@@ -60,8 +60,7 @@ target_link_libraries(hdfs_stat tools_common hdfspp_static)
 add_executable(hdfs_count hdfs_count.cc)
 target_link_libraries(hdfs_count tools_common hdfspp_static)
 
-add_executable(hdfs_df hdfs_df.cc)
-target_link_libraries(hdfs_df tools_common hdfspp_static)
+add_subdirectory(hdfs-df)
 
 add_executable(hdfs_du hdfs_du.cc)
 target_link_libraries(hdfs_du tools_common hdfspp_static)

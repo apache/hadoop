@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "hdfs-allow-snapshot-mock.h"
+#include "hdfs-df-mock.h"
 #include "hdfs-cat-mock.h"
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-tool-test-fixtures.h"
@@ -46,6 +47,10 @@ INSTANTIATE_TEST_SUITE_P(HdfsCat, HdfsToolBasicTest,
                          testing::Values(PassAPath<hdfs::tools::test::CatMock>,
                                          CallHelp<hdfs::tools::test::CatMock>));
 
+INSTANTIATE_TEST_SUITE_P(HdfsDf, HdfsToolBasicTest,
+                         testing::Values(PassAPath<hdfs::tools::test::DfMock>,
+                                         CallHelp<hdfs::tools::test::DfMock>));
+
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolBasicTest,
     testing::Values(CallHelp<hdfs::tools::test::DeleteSnapshotMock>,
@@ -54,6 +59,10 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsDf, HdfsToolNegativeTestThrows,
+    testing::Values(Pass2Paths<hdfs::tools::test::DfMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsCat, HdfsToolNegativeTestThrows,
