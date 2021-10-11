@@ -39,12 +39,4 @@ public class AbfsHttpHeader {
   public String getValue() {
     return value;
   }
-
-  @Override
-  public boolean equals(Object header) {
-    Preconditions.checkArgument(header instanceof AbfsHttpHeader);
-    AbfsHttpHeader httpHeader = (AbfsHttpHeader) header;
-    return httpHeader.getName().equals(name) && httpHeader.getValue()
-        .equals(value);
-  }
 }

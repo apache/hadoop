@@ -27,9 +27,9 @@ import java.util.HashMap;
 import org.apache.hadoop.conf.Configuration;
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
-  String dummyKey = "12345678901234567890123456789012";
-  HashMap<String, String> pathToContextMap = new HashMap<>();
-  HashMap<String, Key> contextToKeyMap = new HashMap<>();
+  private String dummyKey = "12345678901234567890123456789012";
+  private HashMap<String, String> pathToContextMap = new HashMap<>();
+  private HashMap<String, Key> contextToKeyMap = new HashMap<>();
   @Override
   public void initialize(Configuration configuration, String accountName,
       String fileSystem) throws IOException {
@@ -89,7 +89,7 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
 
     @Override
     public void destroy() {
-      Arrays.fill(key, (byte)0);
+      Arrays.fill(key, (byte) 0);
     }
   }
 }

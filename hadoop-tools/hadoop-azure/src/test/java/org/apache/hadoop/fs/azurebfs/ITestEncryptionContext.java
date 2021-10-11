@@ -158,8 +158,8 @@ public class ITestEncryptionContext extends AbstractAbfsIntegrationTest {
     // without encryption headers in request
     fs.getAbfsClient().setEncryptionType(EncryptionType.NONE);
     LambdaTestUtils.intercept(IOException.class, () -> fs.getAbfsClient()
-        .getPathStatus(fs.getAbfsStore().getRelativePath(testPath),
-            true,getTestTracingContext(fs, false)));
+        .getPathStatus(fs.getAbfsStore().getRelativePath(testPath), true,
+            getTestTracingContext(fs, false)));
     fs.getAbfsClient().setEncryptionType(EncryptionType.ENCRYPTION_CONTEXT);
     return (AbfsOutputStream) out.getWrappedStream();
   }

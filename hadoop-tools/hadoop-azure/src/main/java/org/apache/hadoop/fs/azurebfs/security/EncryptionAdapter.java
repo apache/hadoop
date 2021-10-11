@@ -35,12 +35,12 @@ import java.util.Base64;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
 public class EncryptionAdapter implements Destroyable {
-  String path;
-  SecretKey encryptionContext;
-  SecretKey encryptionKey;
-  EncryptionContextProvider provider;
-  String encodedKey = null;
-  String encodedKeySHA = null;
+  private final String path;
+  private SecretKey encryptionContext;
+  private SecretKey encryptionKey;
+  private final EncryptionContextProvider provider;
+  private String encodedKey = null;
+  private String encodedKeySHA = null;
   private static final Logger LOG =
       LoggerFactory.getLogger(EncryptionAdapter.class);
 
@@ -99,7 +99,7 @@ public class EncryptionAdapter implements Destroyable {
   }
 
   public class ABFSSecretKey implements SecretKey {
-    final byte[] secret;
+    private final byte[] secret;
     public ABFSSecretKey(byte[] secret) {
       this.secret = secret;
     }
