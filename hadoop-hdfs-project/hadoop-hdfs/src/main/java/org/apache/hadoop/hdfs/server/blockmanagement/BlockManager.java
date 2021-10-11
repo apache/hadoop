@@ -3562,7 +3562,7 @@ public class BlockManager implements BlockStatsMXBean {
   /*
    * Stop the ongoing initialisation of reconstruction queues
    */
-  private void stopReconstructionInitializer() {
+  public void stopReconstructionInitializer() {
     if (reconstructionQueuesInitializer != null) {
       reconstructionQueuesInitializer.interrupt();
       try {
