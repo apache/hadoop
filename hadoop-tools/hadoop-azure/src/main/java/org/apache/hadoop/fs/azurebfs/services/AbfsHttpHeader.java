@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
 /**
  * The Http Request / Response Headers for Rest AbfsClient.
  */

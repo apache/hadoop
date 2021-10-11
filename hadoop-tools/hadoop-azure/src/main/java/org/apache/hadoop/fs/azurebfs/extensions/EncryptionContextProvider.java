@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import org.apache.hadoop.conf.Configuration;
-
 import javax.crypto.SecretKey;
 import javax.security.auth.Destroyable;
 import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
 
 public interface EncryptionContextProvider extends Destroyable {
   /**
@@ -30,6 +30,7 @@ public interface EncryptionContextProvider extends Destroyable {
    *
    * @param configuration rawConfig instance
    * @param accountName Account Name (with domain)
+   * @param fileSystem container name
    * @throws IOException error in initialization
    */
   void initialize(Configuration configuration, String accountName, String fileSystem) throws IOException;
@@ -39,7 +40,7 @@ public interface EncryptionContextProvider extends Destroyable {
    *
    * @param path file path from filesystem root
    * @return encryptionContext string
-   * @throws IOException
+   * @throws IOException error in fetching encryption context
    */
   SecretKey getEncryptionContext(String path) throws IOException;
 
@@ -49,7 +50,7 @@ public interface EncryptionContextProvider extends Destroyable {
    * @param path file path from filesystem root
    * @param encryptionContext encryptionContext fetched from server
    * @return Encryption key
-   * @throws IOException
+   * @throws IOException error in fetching encryption key
    */
   SecretKey getEncryptionKey(String path, SecretKey encryptionContext) throws IOException;
 
