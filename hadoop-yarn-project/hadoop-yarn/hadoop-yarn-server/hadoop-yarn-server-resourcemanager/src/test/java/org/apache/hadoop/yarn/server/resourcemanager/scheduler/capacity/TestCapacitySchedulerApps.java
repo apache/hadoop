@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -422,15 +423,8 @@ public class TestCapacitySchedulerApps {
   @Test
   public void testMoveAppPendingMetrics() throws Exception {
     MockRM rm = setUpMove();
-    AbstractYarnScheduler scheduler =
-        (AbstractYarnScheduler) rm.getResourceScheduler();
-    QueueMetrics metrics = scheduler.getRootQueueMetrics();
-    List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
-    List<ApplicationAttemptId> appsInB1 = scheduler.getAppsInQueue("b1");
-
-    assertEquals(0, appsInA1.size());
-    assertEquals(0, appsInB1.size());
-    Assert.assertEquals(0, metrics.getAppsPending());
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    assertApps(scheduler, 0, 0, 0);
 
     // submit two apps in a1
     RMApp app1 = MockRMAppSubmitter.submit(rm,
@@ -447,12 +441,7 @@ public class TestCapacitySchedulerApps {
             .withAcls(null)
             .withQueue("a1")
             .build());
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertEquals(2, appsInA1.size());
-    assertEquals(0, appsInB1.size());
-    assertEquals(2, metrics.getAppsPending());
+    assertApps(scheduler, 2, 0, 2);
 
     // submit one app in b1
     RMApp app3 = MockRMAppSubmitter.submit(rm,
@@ -462,40 +451,33 @@ public class TestCapacitySchedulerApps {
             .withAcls(null)
             .withQueue("b1")
             .build());
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertEquals(2, appsInA1.size());
-    assertEquals(1, appsInB1.size());
-    assertEquals(3, metrics.getAppsPending());
+    assertApps(scheduler, 2, 1, 3);
 
     // now move the app1 from a1 to b1
     scheduler.moveApplication(app1.getApplicationId(), "b1");
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertEquals(1, appsInA1.size());
-    assertEquals(2, appsInB1.size());
-    assertEquals(3, metrics.getAppsPending());
+    assertApps(scheduler, 1, 2, 3);
 
     // now move the app2 from a1 to b1
     scheduler.moveApplication(app2.getApplicationId(), "b1");
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertEquals(0, appsInA1.size());
-    assertEquals(3, appsInB1.size());
-    assertEquals(3, metrics.getAppsPending());
+    assertApps(scheduler, 0, 3, 3);
 
     // now move the app3 from b1 to a1
     scheduler.moveApplication(app3.getApplicationId(), "a1");
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertEquals(1, appsInA1.size());
-    assertEquals(2, appsInB1.size());
-    assertEquals(3, metrics.getAppsPending());
+    assertApps(scheduler, 1, 2, 3);
     rm.stop();
+  }
+
+  private void assertApps(ResourceScheduler scheduler,
+                          int a1Size,
+                          int b1Size,
+                          int appsPending) {
+    assertAppsSize(scheduler, "a1", a1Size);
+    assertAppsSize(scheduler, "b1", b1Size);
+    assertEquals(appsPending, scheduler.getRootQueueMetrics().getAppsPending());
+  }
+
+  private void assertAppsSize(ResourceScheduler scheduler, String queueName, int size) {
+    assertEquals(size, scheduler.getAppsInQueue(queueName).size());
   }
 
   @Test
@@ -519,47 +501,34 @@ public class TestCapacitySchedulerApps {
             .getCurrentApplicationAttemptId();
 
     // check preconditions
-    List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
-    assertEquals(1, appsInA1.size());
-    String queue =
-        scheduler.getApplicationAttempt(appsInA1.get(0)).getQueue()
-            .getQueueName();
-    Assert.assertEquals("a1", queue);
-
-    List<ApplicationAttemptId> appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-
-    List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    List<ApplicationAttemptId> appsInA2 = scheduler.getAppsInQueue("a2");
-    assertTrue(appsInA2.isEmpty());
+    assertOneAppInQueue(scheduler, "a1");
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a2");
 
     // now move the app
     scheduler.moveApplication(app.getApplicationId(), "a2");
 
     // check postconditions
-    appsInA2 = scheduler.getAppsInQueue("a2");
-    assertEquals(1, appsInA2.size());
-    queue =
-        scheduler.getApplicationAttempt(appsInA2.get(0)).getQueue()
-            .getQueueName();
-    Assert.assertEquals("a2", queue);
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    assertTrue(appsInA1.isEmpty());
-
-    appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-
-    appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a1");
+    assertOneAppInQueue(scheduler, "a2");
 
     rm.stop();
+  }
+
+  private void assertApps(ResourceScheduler scheduler,
+                          String queueName,
+                          ApplicationAttemptId... apps) {
+    assertEquals(Lists.newArrayList(apps), scheduler.getAppsInQueue(queueName));
+  }
+
+  private void assertOneAppInQueue(AbstractYarnScheduler scheduler, String queueName) {
+    List<ApplicationAttemptId> apps = scheduler.getAppsInQueue(queueName);
+    assertEquals(1, apps.size());
+    Assert.assertEquals(queueName,
+        scheduler.getApplicationAttempt(apps.get(0)).getQueue().getQueueName());
   }
 
   @Test
@@ -1023,52 +992,24 @@ public class TestCapacitySchedulerApps {
             .getCurrentApplicationAttemptId();
 
     // check preconditions
-    List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
-    assertEquals(1, appsInA1.size());
-
-    List<ApplicationAttemptId> appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-    String queue =
-        scheduler.getApplicationAttempt(appsInA1.get(0)).getQueue()
-            .getQueueName();
-    Assert.assertEquals("a1", queue);
-
-    List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    List<ApplicationAttemptId> appsInB1 = scheduler.getAppsInQueue("b1");
-    assertTrue(appsInB1.isEmpty());
-
-    List<ApplicationAttemptId> appsInB = scheduler.getAppsInQueue("b");
-    assertTrue(appsInB.isEmpty());
+    assertOneAppInQueue(scheduler, "a1");
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a1", appAttemptId);
+    assertApps(scheduler, "b1");
+    assertApps(scheduler, "b");
 
     // now move the app
     scheduler.moveAllApps("a1", "b1");
 
-    // check postconditions
+    // check post conditions
     Thread.sleep(1000);
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertEquals(1, appsInB1.size());
-    queue =
-        scheduler.getApplicationAttempt(appsInB1.get(0)).getQueue()
-            .getQueueName();
-    Assert.assertEquals("b1", queue);
-
-    appsInB = scheduler.getAppsInQueue("b");
-    assertTrue(appsInB.contains(appAttemptId));
-    assertEquals(1, appsInB.size());
-
-    appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    assertTrue(appsInA1.isEmpty());
-
-    appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.isEmpty());
+    assertOneAppInQueue(scheduler, "b1");
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "b", appAttemptId);
+    assertApps(scheduler, "b1", appAttemptId);
+    assertApps(scheduler, "a1");
+    assertApps(scheduler, "a");
 
     rm.stop();
   }
@@ -1076,7 +1017,7 @@ public class TestCapacitySchedulerApps {
   @Test
   public void testMoveAllAppsInvalidDestination() throws Exception {
     MockRM rm = setUpMove();
-    YarnScheduler scheduler = rm.getResourceScheduler();
+    ResourceScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
     MockRMAppSubmissionData data =
@@ -1093,22 +1034,11 @@ public class TestCapacitySchedulerApps {
             .getCurrentApplicationAttemptId();
 
     // check preconditions
-    List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
-    assertEquals(1, appsInA1.size());
-
-    List<ApplicationAttemptId> appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-
-    List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    List<ApplicationAttemptId> appsInB1 = scheduler.getAppsInQueue("b1");
-    assertTrue(appsInB1.isEmpty());
-
-    List<ApplicationAttemptId> appsInB = scheduler.getAppsInQueue("b");
-    assertTrue(appsInB.isEmpty());
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a1", appAttemptId);
+    assertApps(scheduler, "b");
+    assertApps(scheduler, "b1");
 
     // now move the app
     try {
@@ -1118,23 +1048,12 @@ public class TestCapacitySchedulerApps {
       // expected
     }
 
-    // check postconditions, app should still be in a1
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    assertEquals(1, appsInA1.size());
-
-    appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-
-    appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertTrue(appsInB1.isEmpty());
-
-    appsInB = scheduler.getAppsInQueue("b");
-    assertTrue(appsInB.isEmpty());
+    // check post conditions, app should still be in a1
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a1", appAttemptId);
+    assertApps(scheduler, "b");
+    assertApps(scheduler, "b1");
 
     rm.stop();
   }
@@ -1142,7 +1061,7 @@ public class TestCapacitySchedulerApps {
   @Test
   public void testMoveAllAppsInvalidSource() throws Exception {
     MockRM rm = setUpMove();
-    YarnScheduler scheduler = rm.getResourceScheduler();
+    ResourceScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
     MockRMAppSubmissionData data =
@@ -1159,22 +1078,11 @@ public class TestCapacitySchedulerApps {
             .getCurrentApplicationAttemptId();
 
     // check preconditions
-    List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
-    assertEquals(1, appsInA1.size());
-
-    List<ApplicationAttemptId> appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-
-    List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    List<ApplicationAttemptId> appsInB1 = scheduler.getAppsInQueue("b1");
-    assertTrue(appsInB1.isEmpty());
-
-    List<ApplicationAttemptId> appsInB = scheduler.getAppsInQueue("b");
-    assertTrue(appsInB.isEmpty());
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a1", appAttemptId);
+    assertApps(scheduler, "b");
+    assertApps(scheduler, "b1");
 
     // now move the app
     try {
@@ -1184,23 +1092,12 @@ public class TestCapacitySchedulerApps {
       // expected
     }
 
-    // check postconditions, app should still be in a1
-    appsInA1 = scheduler.getAppsInQueue("a1");
-    assertEquals(1, appsInA1.size());
-
-    appsInA = scheduler.getAppsInQueue("a");
-    assertTrue(appsInA.contains(appAttemptId));
-    assertEquals(1, appsInA.size());
-
-    appsInRoot = scheduler.getAppsInQueue("root");
-    assertTrue(appsInRoot.contains(appAttemptId));
-    assertEquals(1, appsInRoot.size());
-
-    appsInB1 = scheduler.getAppsInQueue("b1");
-    assertTrue(appsInB1.isEmpty());
-
-    appsInB = scheduler.getAppsInQueue("b");
-    assertTrue(appsInB.isEmpty());
+    // check post conditions, app should still be in a1
+    assertApps(scheduler, "root", appAttemptId);
+    assertApps(scheduler, "a", appAttemptId);
+    assertApps(scheduler, "a1", appAttemptId);
+    assertApps(scheduler, "b");
+    assertApps(scheduler, "b1");
 
     rm.stop();
   }
