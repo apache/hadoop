@@ -57,7 +57,7 @@ import org.xbill.DNS.Name;
 import org.xbill.DNS.ResolverConfig;
 
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
 /**

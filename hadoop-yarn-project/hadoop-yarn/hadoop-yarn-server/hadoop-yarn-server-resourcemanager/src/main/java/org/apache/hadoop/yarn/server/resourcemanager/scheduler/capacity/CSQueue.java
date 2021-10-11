@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -393,10 +392,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   Priority getPriority();
 
   /**
-   * Get a map of usernames and weights
-   * @return map of usernames and corresponding weight
+   * Get the UserWeights object that wraps a map of usernames and weights
+   * @return The UserWeights object.
    */
-  Map<String, Float> getUserWeights();
+  UserWeights getUserWeights();
 
   /**
    * Get QueueResourceQuotas associated with each queue.

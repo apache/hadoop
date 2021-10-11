@@ -23,8 +23,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.Charset;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -224,7 +225,8 @@ public final class ProviderUtils {
           throw new IOException("Password file does not exist");
         }
         try (InputStream is = pwdFile.openStream()) {
-          pass = IOUtils.toString(is).trim().toCharArray();
+          pass = IOUtils.toString(is, Charset.defaultCharset()).trim()
+              .toCharArray();
         }
       }
     }

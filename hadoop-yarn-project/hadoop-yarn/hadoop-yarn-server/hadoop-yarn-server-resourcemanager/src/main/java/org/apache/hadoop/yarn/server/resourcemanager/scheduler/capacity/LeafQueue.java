@@ -259,17 +259,8 @@ public class LeafQueue extends AbstractCSQueue {
           conf.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
 
       // Validate leaf queue's user's weights.
-      float queueUL = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
-      for (Entry<String, Float> e : getUserWeights().entrySet()) {
-        float val = e.getValue().floatValue();
-        if (val < 0.0f || val > (100.0f / queueUL)) {
-          throw new IOException("Weight (" + val + ") for user \"" + e.getKey()
-              + "\" must be between 0 and" + " 100 / " + queueUL + " (= " +
-              100.0f/queueUL + ", the number of concurrent active users in "
-              + getQueuePath() + ")");
-        }
-      }
-
+      float queueUserLimit = Math.min(100.0f, conf.getUserLimit(getQueuePath()));
+      getUserWeights().validateForLeafQueue(queueUserLimit, getQueuePath());
       usersManager.updateUserWeights();
 
       LOG.info(
@@ -800,8 +791,13 @@ public class LeafQueue extends AbstractCSQueue {
 
       // Current usable resource for this queue and partition is the max of
       // queueCurrentLimit and queuePartitionResource.
-      Resource queuePartitionUsableResource = Resources.max(resourceCalculator,
-          lastClusterResource, queueCurrentLimit, queuePartitionResource);
+      // If any of the resources available to this queue are less than queue's
+      // guarantee, use the guarantee as the queuePartitionUsableResource
+      // because nothing less than the queue's guarantee should be used when
+      // calculating the AM limit.
+      Resource queuePartitionUsableResource = (Resources.fitsIn(
+          resourceCalculator, queuePartitionResource, queueCurrentLimit)) ?
+              queueCurrentLimit : queuePartitionResource;
 
       Resource amResouceLimit = Resources.multiplyAndNormalizeUp(
           resourceCalculator, queuePartitionUsableResource, amResourcePercent,
@@ -882,7 +878,7 @@ public class LeafQueue extends AbstractCSQueue {
         }
 
         // Check user am resource limit
-        User user = getUser(application.getUser());
+        User user = usersManager.getUserAndAddIfAbsent(application.getUser());
         Resource userAMLimit = userAmPartitionLimit.get(partitionName);
 
         // Verify whether we already calculated user-am-limit for this label.

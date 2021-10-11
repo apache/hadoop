@@ -19,7 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1907,10 +1907,12 @@ public class Client implements AutoCloseable {
         }
       }
       if (length <= 0) {
-        throw new RpcException("RPC response has invalid length");
+        throw new RpcException(String.format("RPC response has " +
+            "invalid length of %d", length));
       }
       if (maxResponseLength > 0 && length > maxResponseLength) {
-        throw new RpcException("RPC response exceeds maximum data length");
+        throw new RpcException(String.format("RPC response has a " +
+            "length of %d exceeds maximum data length", length));
       }
       ByteBuffer bb = ByteBuffer.allocate(length);
       in.readFully(bb.array());

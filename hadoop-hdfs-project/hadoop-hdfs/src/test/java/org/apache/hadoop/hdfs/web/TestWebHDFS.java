@@ -48,6 +48,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
@@ -1552,7 +1553,8 @@ public class TestWebHDFS {
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(TYPE);
     conn.setInstanceFollowRedirects(false);
-    String response = IOUtils.toString(conn.getInputStream());
+    String response =
+        IOUtils.toString(conn.getInputStream(), Charset.defaultCharset());
     LOG.info("Response was : " + response);
     Assert.assertEquals(
       "Response wasn't " + HttpURLConnection.HTTP_OK,

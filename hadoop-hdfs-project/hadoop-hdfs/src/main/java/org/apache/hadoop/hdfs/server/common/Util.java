@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.net.DomainNameResolver;
@@ -436,5 +437,31 @@ public final class Util {
     }
 
     return isEnabled;
+  }
+
+  /**
+   * Return the standard deviation of storage block pool usage.
+   */
+  public static float getBlockPoolUsedPercentStdDev(StorageReport[] storageReports) {
+    ArrayList<Float> usagePercentList = new ArrayList<>();
+    float totalUsagePercent = 0.0f;
+    float dev = 0.0f;
+
+    if (storageReports.length == 0) {
+      return dev;
+    }
+
+    for (StorageReport s : storageReports) {
+      usagePercentList.add(s.getBlockPoolUsagePercent());
+      totalUsagePercent += s.getBlockPoolUsagePercent();
+    }
+
+    totalUsagePercent /= storageReports.length;
+    for (Float usagePercent : usagePercentList) {
+      dev += (usagePercent - totalUsagePercent)
+          * (usagePercent - totalUsagePercent);
+    }
+    dev = (float) Math.sqrt(dev / usagePercentList.size());
+    return dev;
   }
 }

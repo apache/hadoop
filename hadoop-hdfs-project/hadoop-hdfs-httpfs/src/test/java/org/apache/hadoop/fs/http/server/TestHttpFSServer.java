@@ -231,8 +231,9 @@ public class TestHttpFSServer extends HFSTestCase {
     // HTTPFS configuration
     conf = new Configuration(false);
     if (addDelegationTokenAuthHandler) {
-      conf.set("httpfs.authentication.type",
-               HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
+      conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
+              AuthenticationFilter.AUTH_TYPE,
+          HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
     }
     conf.set("httpfs.services.ext", MockGroups.class.getName());
     conf.set("httpfs.admin.group", HadoopUsersConfTestHelper.
@@ -243,8 +244,9 @@ public class TestHttpFSServer extends HFSTestCase {
     conf.set("httpfs.proxyuser." +
              HadoopUsersConfTestHelper.getHadoopProxyUser() + ".hosts",
              HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
-    conf.set("httpfs.authentication.signature.secret.file",
-             secretFile.getAbsolutePath());
+    conf.set(HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX +
+            AuthenticationFilter.SIGNATURE_SECRET_FILE,
+        secretFile.getAbsolutePath());
     conf.set("httpfs.hadoop.config.dir", hadoopConfDir.toString());
     if (sslEnabled) {
       conf.set("httpfs.ssl.enabled", "true");

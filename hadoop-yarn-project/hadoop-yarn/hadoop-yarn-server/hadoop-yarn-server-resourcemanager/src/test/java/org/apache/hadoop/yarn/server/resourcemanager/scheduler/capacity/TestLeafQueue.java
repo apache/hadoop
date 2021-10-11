@@ -53,6 +53,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1902,7 +1903,7 @@ public class TestLeafQueue {
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
         + ".user-settings.user_0." + CapacitySchedulerConfiguration.USER_WEIGHT,
         1.5f);
-    // Set weight for "firstname.lastname" to be 0.7f for the a queue
+    // Set weight for "firstname.lastname" to be 0.7f for the "a" queue
     // in the configs. Notice the user contains a dot. This is to test
     // that weights are accepted for a username that contains dots.
     csConf.setFloat("yarn.scheduler.capacity." + a.getQueuePath()
@@ -1914,10 +1915,10 @@ public class TestLeafQueue {
     when(csContext.getClusterResource())
         .thenReturn(Resources.createResource(16 * GB, 32));
     // Verify that configs were updated and parsed correctly.
-    Assert.assertNull(a.getUserWeights().get("user_0"));
+    Assert.assertEquals(UserWeights.DEFAULT_WEIGHT, a.getUserWeights().getByUser("user_0"), 0.0f);
     a.reinitialize(a, csContext.getClusterResource());
-    assertEquals(1.5f, a.getUserWeights().get("user_0"), 0.0f);
-    assertEquals(0.7f, a.getUserWeights().get("firstname.lastname"), 0.0f);
+    assertEquals(1.5f, a.getUserWeights().getByUser("user_0"), 0.0f);
+    assertEquals(0.7f, a.getUserWeights().getByUser("firstname.lastname"), 0.0f);
 
     // set maxCapacity
     a.setMaxCapacity(1.0f);
@@ -5214,6 +5215,37 @@ public class TestLeafQueue {
         (int)(conf.getMaximumSystemApplications() *
             e.getQueueCapacities().getAbsoluteCapacity("test")),
         e.getMaxApplications());
+  }
+
+  @Test
+  public void testRootHasAllNodeLabelsOfItsDescendants() throws IOException {
+    CapacitySchedulerConfiguration conf = csConf;
+    String rootChild = root.getChildQueues().get(0).getQueuePath();
+
+    conf.setCapacityByLabel(rootChild, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test", 0);
+
+    conf.setCapacityByLabel(rootChild, "test2", 100);
+    conf.setCapacityByLabel(rootChild + "." + A, "test2", 20);
+    conf.setCapacityByLabel(rootChild + "." + B, "test2", 40);
+    conf.setCapacityByLabel(rootChild + "." + C, "test2", 10);
+    conf.setCapacityByLabel(rootChild + "." + C + "." + C1, "test2", 100);
+    conf.setCapacityByLabel(rootChild + "." + D, "test2", 30);
+    conf.setCapacityByLabel(rootChild + "." + E, "test2", 0);
+
+    cs.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(conf);
+    cs.setMaxRunningAppsEnforcer(new CSMaxRunningAppsEnforcer(cs));
+    cs.reinitialize(conf, cs.getRMContext());
+
+    ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
+
+    Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
+        rootQueue.configuredNodeLabels);
   }
 
   @After

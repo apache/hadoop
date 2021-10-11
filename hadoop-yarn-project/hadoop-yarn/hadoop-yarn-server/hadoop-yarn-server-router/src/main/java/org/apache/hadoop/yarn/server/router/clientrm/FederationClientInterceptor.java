@@ -664,11 +664,10 @@ public class FederationClientInterceptor
         federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
-    ArrayList<SubClusterId> clusterList = new ArrayList<>(subclusters.keySet());
     Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics;
 
     try {
-      clusterMetrics = invokeConcurrent(clusterList, remoteMethod,
+      clusterMetrics = invokeConcurrent(subclusters.keySet(), remoteMethod,
           GetClusterMetricsResponse.class);
 
     } catch (Exception ex) {

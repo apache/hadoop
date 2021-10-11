@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
+
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -54,6 +55,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -1348,7 +1350,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
           ENDPOINT,
           StringUtils.isNotEmpty(endpoint) ? endpoint : "(unset)");
       String encryption =
-          printOption(out, "\tEncryption", SERVER_SIDE_ENCRYPTION_ALGORITHM,
+          printOption(out, "\tEncryption", Constants.S3_ENCRYPTION_ALGORITHM,
               "none");
       printOption(out, "\tInput seek policy", INPUT_FADVISE, INPUT_FADV_NORMAL);
       printOption(out, "\tChange Detection Source", CHANGE_DETECT_SOURCE,

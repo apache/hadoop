@@ -358,6 +358,18 @@ public final class StreamStatisticNames {
   public static final String REMOTE_BYTES_READ
       = "remote_bytes_read";
 
+  /**
+   * Total number of Data blocks allocated by an outputStream.
+   */
+  public static final String BLOCKS_ALLOCATED
+      = "blocks_allocated";
+
+  /**
+   * Total number of Data blocks released by an outputStream.
+   */
+  public static final String BLOCKS_RELEASED
+      = "blocks_released";
+
   private StreamStatisticNames() {
   }
 
