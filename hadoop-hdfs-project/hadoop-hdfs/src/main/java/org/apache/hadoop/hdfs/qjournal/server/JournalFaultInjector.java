@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 
 import java.io.IOException;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 

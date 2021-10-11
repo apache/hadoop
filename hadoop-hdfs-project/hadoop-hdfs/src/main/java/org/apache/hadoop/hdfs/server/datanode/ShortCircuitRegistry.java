@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;

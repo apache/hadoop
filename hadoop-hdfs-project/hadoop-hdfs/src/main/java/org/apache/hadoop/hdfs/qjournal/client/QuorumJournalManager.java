@@ -59,7 +59,7 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;

@@ -88,7 +88,7 @@ import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import javax.annotation.Nonnull;
 

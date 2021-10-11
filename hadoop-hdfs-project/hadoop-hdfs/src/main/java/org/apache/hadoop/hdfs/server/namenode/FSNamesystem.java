@@ -341,7 +341,7 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
