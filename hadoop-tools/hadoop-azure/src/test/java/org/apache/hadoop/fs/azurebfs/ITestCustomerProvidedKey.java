@@ -438,7 +438,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     AbfsClient abfsClient2 = fs2.getAbfsClient();
     TracingContext tracingContext = getTestTracingContext(fs, false);
     abfsRestOperation = abfsClient2.listPath(testDirName, false, INT_50,
-        null, null);
+        null, getTestTracingContext(fs2, true));
     assertListstatus(fs, abfsRestOperation, testPath);
 
     if (isWithCPK) {
@@ -667,7 +667,7 @@ public class ITestCustomerProvidedKey extends AbstractAbfsIntegrationTest {
     assertResponseHeader(abfsRestOperation, false,
         X_MS_REQUEST_SERVER_ENCRYPTED, "");
 
-    abfsRestOperation = abfsClient.getPathStatus(testFileName, false,
+    abfsRestOperation = abfsClient.getPathStatus(testFileName, true,
         tracingContext);
     assertCPKHeaders(abfsRestOperation, isWithCPK);
     assertResponseHeader(abfsRestOperation, isWithCPK,
