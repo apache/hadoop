@@ -64,8 +64,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
@@ -114,7 +112,6 @@ import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -125,9 +122,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.Event;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -161,7 +155,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.CSQueueMetricsForCustomResources;
@@ -183,7 +176,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
@@ -675,38 +667,6 @@ public class TestCapacityScheduler {
   }
 
   @Test
-  public void testReconnectedNode() throws Exception {
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(csConf);
-    CapacityScheduler cs = new CapacityScheduler();
-    cs.setConf(new YarnConfiguration());
-    cs.setRMContext(resourceManager.getRMContext());
-    cs.init(csConf);
-    cs.start();
-    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
-      null, null, new RMContainerTokenSecretManager(csConf),
-      new NMTokenSecretManagerInRM(csConf),
-      new ClientToAMTokenSecretManagerInRM(), null));
-
-    RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
-    RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
-
-    cs.handle(new NodeAddedSchedulerEvent(n1));
-    cs.handle(new NodeAddedSchedulerEvent(n2));
-
-    Assert.assertEquals(6 * GB, cs.getClusterResource().getMemorySize());
-
-    // reconnect n1 with downgraded memory
-    n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 1);
-    cs.handle(new NodeRemovedSchedulerEvent(n1));
-    cs.handle(new NodeAddedSchedulerEvent(n1));
-
-    Assert.assertEquals(4 * GB, cs.getClusterResource().getMemorySize());
-    cs.stop();
-  }
-
-  @Test
   public void testCapacitySchedulerInfo() throws Exception {
     QueueInfo queueInfo = resourceManager.getResourceScheduler().getQueueInfo("a", true, true);
     Assert.assertEquals("Queue Name should be a", "a",
@@ -733,36 +693,6 @@ public class TestCapacityScheduler {
       }
     }
     return result;
-  }
-
-  @Test
-  public void testBlackListNodes() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    MockRM rm = new MockRM(conf);
-    rm.start();
-    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
-
-    String host = "127.0.0.1";
-    RMNode node =
-        MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1, host);
-    cs.handle(new NodeAddedSchedulerEvent(node));
-
-    ApplicationAttemptId appAttemptId = appHelper(rm, cs, 100, 1, "default", "user");
-
-    // Verify the blacklist can be updated independent of requesting containers
-    cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
-        Collections.<ContainerId>emptyList(),
-        Collections.singletonList(host), null, NULL_UPDATE_REQUESTS);
-    Assert.assertTrue(cs.getApplicationAttempt(appAttemptId)
-        .isPlaceBlacklisted(host));
-    cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
-        Collections.<ContainerId>emptyList(), null,
-        Collections.singletonList(host), NULL_UPDATE_REQUESTS);
-    Assert.assertFalse(cs.getApplicationAttempt(appAttemptId)
-        .isPlaceBlacklisted(host));
-    rm.stop();
   }
 
   @Test
@@ -1140,37 +1070,6 @@ public class TestCapacityScheduler {
     otherThread.join();
 
     rm.stop();
-  }
-
-  @Test
-  public void testNumClusterNodes() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
-    CapacityScheduler cs = new CapacityScheduler();
-    cs.setConf(conf);
-    RMContext rmContext = TestUtils.getMockRMContext();
-    cs.setRMContext(rmContext);
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(csConf);
-    cs.init(csConf);
-    cs.start();
-    assertEquals(0, cs.getNumClusterNodes());
-
-    RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
-    RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
-    cs.handle(new NodeAddedSchedulerEvent(n1));
-    cs.handle(new NodeAddedSchedulerEvent(n2));
-    assertEquals(2, cs.getNumClusterNodes());
-
-    cs.handle(new NodeRemovedSchedulerEvent(n1));
-    assertEquals(1, cs.getNumClusterNodes());
-    cs.handle(new NodeAddedSchedulerEvent(n1));
-    assertEquals(2, cs.getNumClusterNodes());
-    cs.handle(new NodeRemovedSchedulerEvent(n2));
-    cs.handle(new NodeRemovedSchedulerEvent(n1));
-    assertEquals(0, cs.getNumClusterNodes());
-
-    cs.stop();
   }
 
   @Test(timeout = 120000)
@@ -2023,35 +1922,6 @@ public class TestCapacityScheduler {
     assertEquals(15, fiCaApp2.getHeadroom().getVirtualCores());
   }
 
-  @Test
-  public void testDefaultNodeLabelExpressionQueueConfig() throws Exception {
-    CapacityScheduler cs = new CapacityScheduler();
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(conf);
-    conf.setDefaultNodeLabelExpression("root.a", " x");
-    conf.setDefaultNodeLabelExpression("root.b", " y ");
-    cs.setConf(new YarnConfiguration());
-    cs.setRMContext(resourceManager.getRMContext());
-    cs.init(conf);
-    cs.start();
-
-    QueueInfo queueInfoA = cs.getQueueInfo("a", true, false);
-    Assert.assertEquals("Queue Name should be a", "a",
-        queueInfoA.getQueueName());
-    Assert.assertEquals("Queue Path should be root.a", "root.a",
-        queueInfoA.getQueuePath());
-    Assert.assertEquals("Default Node Label Expression should be x", "x",
-        queueInfoA.getDefaultNodeLabelExpression());
-
-    QueueInfo queueInfoB = cs.getQueueInfo("b", true, false);
-    Assert.assertEquals("Queue Name should be b", "b",
-        queueInfoB.getQueueName());
-    Assert.assertEquals("Queue Path should be root.b", "root.b",
-        queueInfoB.getQueuePath());
-    Assert.assertEquals("Default Node Label Expression should be y", "y",
-        queueInfoB.getDefaultNodeLabelExpression());
-  }
-
   @Test(timeout = 60000)
   public void testAMLimitUsage() throws Exception {
 
@@ -2253,171 +2123,6 @@ public class TestCapacityScheduler {
     } else {
       Assert.fail("Cannot find RMContainer");
     }
-  }
-  @Test
-  public void testRemovedNodeDecommissioningNode() throws Exception {
-    NodeStatus mockNodeStatus = createMockNodeStatus();
-
-    // Register nodemanager
-    NodeManager nm = registerNode(resourceManager, "host_decom", 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
-        mockNodeStatus);
-
-    RMNode node =
-        resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
-    // Send a heartbeat to kick the tires on the Scheduler
-    NodeUpdateSchedulerEvent nodeUpdate = new NodeUpdateSchedulerEvent(node);
-    resourceManager.getResourceScheduler().handle(nodeUpdate);
-
-    // force remove the node to simulate race condition
-    ((CapacityScheduler) resourceManager.getResourceScheduler()).getNodeTracker().
-        removeNode(nm.getNodeId());
-    // Kick off another heartbeat with the node state mocked to decommissioning
-    RMNode spyNode =
-        Mockito.spy(resourceManager.getRMContext().getRMNodes()
-            .get(nm.getNodeId()));
-    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
-    resourceManager.getResourceScheduler().handle(
-        new NodeUpdateSchedulerEvent(spyNode));
-  }
-
-  @Test
-  public void testResourceUpdateDecommissioningNode() throws Exception {
-    // Mock the RMNodeResourceUpdate event handler to update SchedulerNode
-    // to have 0 available resource
-    RMContext spyContext = Mockito.spy(resourceManager.getRMContext());
-    Dispatcher mockDispatcher = mock(AsyncDispatcher.class);
-    when(mockDispatcher.getEventHandler()).thenReturn(new EventHandler<Event>() {
-      @Override
-      public void handle(Event event) {
-        if (event instanceof RMNodeResourceUpdateEvent) {
-          RMNodeResourceUpdateEvent resourceEvent =
-              (RMNodeResourceUpdateEvent) event;
-          resourceManager
-              .getResourceScheduler()
-              .getSchedulerNode(resourceEvent.getNodeId())
-              .updateTotalResource(resourceEvent.getResourceOption().getResource());
-        }
-      }
-    });
-    Mockito.doReturn(mockDispatcher).when(spyContext).getDispatcher();
-    ((CapacityScheduler) resourceManager.getResourceScheduler())
-        .setRMContext(spyContext);
-    ((AsyncDispatcher) mockDispatcher).start();
-
-    NodeStatus mockNodeStatus = createMockNodeStatus();
-
-    // Register node
-    String host_0 = "host_0";
-    NodeManager nm_0 = registerNode(resourceManager, host_0, 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
-        mockNodeStatus);
-    // ResourceRequest priorities
-    Priority priority_0 = Priority.newInstance(0);
-
-    // Submit an application
-    Application application_0 =
-        new Application("user_0", "a1", resourceManager);
-    application_0.submit();
-
-    application_0.addNodeManager(host_0, 1234, nm_0);
-
-    Resource capability_0_0 = Resources.createResource(1 * GB, 1);
-    application_0.addResourceRequestSpec(priority_0, capability_0_0);
-
-    Task task_0_0 =
-        new Task(application_0, priority_0, new String[] { host_0 });
-    application_0.addTask(task_0_0);
-
-    // Send resource requests to the scheduler
-    application_0.schedule();
-
-    nodeUpdate(resourceManager, nm_0);
-    // Kick off another heartbeat with the node state mocked to decommissioning
-    // This should update the schedulernodes to have 0 available resource
-    RMNode spyNode =
-        Mockito.spy(resourceManager.getRMContext().getRMNodes()
-            .get(nm_0.getNodeId()));
-    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
-    resourceManager.getResourceScheduler().handle(
-        new NodeUpdateSchedulerEvent(spyNode));
-
-    // Get allocations from the scheduler
-    application_0.schedule();
-
-    // Check the used resource is 1 GB 1 core
-    Assert.assertEquals(1 * GB, nm_0.getUsed().getMemorySize());
-    Resource usedResource =
-        resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getAllocatedResource();
-    Assert.assertEquals("Used Resource Memory Size should be 1GB", 1 * GB,
-        usedResource.getMemorySize());
-    Assert.assertEquals("Used Resource Virtual Cores should be 1", 1,
-        usedResource.getVirtualCores());
-    // Check total resource of scheduler node is also changed to 1 GB 1 core
-    Resource totalResource =
-        resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getTotalResource();
-    Assert.assertEquals("Total Resource Memory Size should be 1GB", 1 * GB,
-        totalResource.getMemorySize());
-    Assert.assertEquals("Total Resource Virtual Cores should be 1", 1,
-        totalResource.getVirtualCores());
-    // Check the available resource is 0/0
-    Resource availableResource =
-        resourceManager.getResourceScheduler()
-            .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
-    Assert.assertEquals("Available Resource Memory Size should be 0", 0,
-        availableResource.getMemorySize());
-    Assert.assertEquals("Available Resource Memory Size should be 0", 0,
-        availableResource.getVirtualCores());
-    // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
-    // be skipped for DECOMMISSIONING state since the total resource is
-    // already equal to used resource from the previous heartbeat.
-    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
-    resourceManager.getResourceScheduler().handle(
-        new NodeUpdateSchedulerEvent(spyNode));
-    verify(mockDispatcher, times(4)).getEventHandler();
-  }
-
-  @Test
-  public void testSchedulingOnRemovedNode() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-        ResourceScheduler.class);
-    conf.setBoolean(
-        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
-            false);
-
-    MockRM rm = new MockRM(conf);
-    rm.start();
-    RMApp app = MockRMAppSubmitter.submitWithMemory(100, rm);
-    rm.drainEvents();
-
-    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10240, 10);
-    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
-
-    //remove nm2 to keep am alive
-    MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10240, 10);
-
-    am.allocate(ResourceRequest.ANY, 2048, 1, null);
-
-    CapacityScheduler scheduler =
-        (CapacityScheduler) rm.getRMContext().getScheduler();
-    FiCaSchedulerNode node =
-        (FiCaSchedulerNode)
-            scheduler.getNodeTracker().getNode(nm2.getNodeId());
-    scheduler.handle(new NodeRemovedSchedulerEvent(
-        rm.getRMContext().getRMNodes().get(nm2.getNodeId())));
-    // schedulerNode is removed, try allocate a container
-    scheduler.allocateContainersToNode(new SimpleCandidateNodeSet<>(node),
-        true);
-
-    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
-        new AppAttemptRemovedSchedulerEvent(
-            am.getApplicationAttemptId(),
-            RMAppAttemptState.FINISHED, false);
-    scheduler.handle(appRemovedEvent1);
-    rm.stop();
   }
 
   @Test
