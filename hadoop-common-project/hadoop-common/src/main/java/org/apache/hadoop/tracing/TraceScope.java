@@ -17,31 +17,42 @@
  */
 package org.apache.hadoop.tracing;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import java.io.Closeable;
 
-/**
- * This class provides utility functions for tracing.
- */
-@InterfaceAudience.Private
-public class TraceUtils {
-  static final String DEFAULT_HADOOP_TRACE_PREFIX = "hadoop.htrace.";
+public class TraceScope implements Closeable {
+  Span span;
 
-  public static TraceConfiguration wrapHadoopConf(final String prefix,
-      final Configuration conf) {
-    return null;
+  public TraceScope(Span span) {
+    this.span = span;
   }
 
-  public static Tracer createAndRegisterTracer(String name) {
-    return null;
+  // Add tag to the span
+  public void addKVAnnotation(String key, String value) {
   }
 
-  public static SpanContext byteStringToSpanContext(ByteString byteString) {
-    return null;
+  public void addKVAnnotation(String key, Number value) {
   }
 
-  public static ByteString spanContextToByteString(SpanContext context) {
-    return null;
+  public void addTimelineAnnotation(String msg) {
+  }
+
+  public Span span() {
+    return span;
+  }
+
+  public Span getSpan() {
+    return span;
+  }
+
+  public void reattach() {
+  }
+
+  public void detach() {
+  }
+
+  public void close() {
+    if (span != null) {
+      span.close();
+    }
   }
 }

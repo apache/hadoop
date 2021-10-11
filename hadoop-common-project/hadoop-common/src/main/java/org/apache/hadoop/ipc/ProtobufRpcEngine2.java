@@ -38,8 +38,8 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.tracing.TraceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

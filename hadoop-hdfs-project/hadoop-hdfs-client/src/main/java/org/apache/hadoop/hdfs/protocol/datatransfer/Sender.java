@@ -52,8 +52,9 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
-import org.apache.htrace.core.SpanId;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.tracing.TraceUtils;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
 
@@ -212,11 +213,12 @@ public class Sender implements DataTransferProtocol {
     ReleaseShortCircuitAccessRequestProto.Builder builder =
         ReleaseShortCircuitAccessRequestProto.newBuilder().
             setSlotId(PBHelperClient.convert(slotId));
-    SpanId spanId = Tracer.getCurrentSpanId();
-    if (spanId.isValid()) {
-      builder.setTraceInfo(DataTransferTraceInfoProto.newBuilder().
-          setTraceId(spanId.getHigh()).
-          setParentId(spanId.getLow()));
+    Span span = Tracer.getCurrentSpan();
+    if (span != null) {
+      DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
+          DataTransferTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.getContext()));
+      builder.setTraceInfo(traceInfoProtoBuilder);
     }
     ReleaseShortCircuitAccessRequestProto proto = builder.build();
     send(out, Op.RELEASE_SHORT_CIRCUIT_FDS, proto);
@@ -227,11 +229,12 @@ public class Sender implements DataTransferProtocol {
     ShortCircuitShmRequestProto.Builder builder =
         ShortCircuitShmRequestProto.newBuilder().
             setClientName(clientName);
-    SpanId spanId = Tracer.getCurrentSpanId();
-    if (spanId.isValid()) {
-      builder.setTraceInfo(DataTransferTraceInfoProto.newBuilder().
-          setTraceId(spanId.getHigh()).
-          setParentId(spanId.getLow()));
+    Span span = Tracer.getCurrentSpan();
+    if (span != null) {
+      DataTransferTraceInfoProto.Builder traceInfoProtoBuilder =
+          DataTransferTraceInfoProto.newBuilder().setSpanContext(
+              TraceUtils.spanContextToByteString(span.getContext()));
+      builder.setTraceInfo(traceInfoProtoBuilder);
     }
     ShortCircuitShmRequestProto proto = builder.build();
     send(out, Op.REQUEST_SHORT_CIRCUIT_SHM, proto);

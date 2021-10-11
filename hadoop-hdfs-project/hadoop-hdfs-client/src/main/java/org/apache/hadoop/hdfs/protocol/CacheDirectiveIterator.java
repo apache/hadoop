@@ -27,8 +27,8 @@ import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.ipc.RemoteException;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.Tracer;
 
 /**
  * CacheDirectiveIterator is a remote iterator that iterates cache directives.
