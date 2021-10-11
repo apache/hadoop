@@ -22,6 +22,9 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
+import org.apache.hadoop.yarn.health.HealthCheckService;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -195,6 +198,7 @@ public class ResourceManager extends CompositeService
   private Dispatcher rmDispatcher;
   @VisibleForTesting
   protected AdminService adminService;
+  private HealthCheckService healthCheckService;
 
   /**
    * "Active" services. Services that need to run only on the Active RM.
@@ -331,6 +335,11 @@ public class ResourceManager extends CompositeService
     adminService = createAdminService();
     addService(adminService);
     rmContext.setRMAdminService(adminService);
+
+    healthCheckService = new HealthCheckService();
+    addService(healthCheckService);
+    rmContext.setHealthCheckService(healthCheckService);
+    healthCheckService.registerReporter("RM", this);
 
     // elector must be added post adminservice
     if (this.rmContext.isHAEnabled()) {
@@ -1086,7 +1095,7 @@ public class ResourceManager extends CompositeService
 
   @Private
   private class SchedulerEventDispatcher extends
-      EventDispatcher<SchedulerEvent> {
+      EventDispatcher<SchedulerEvent> implements HealthReporter {
 
     private final Thread eventProcessorMonitor;
 
@@ -1098,6 +1107,28 @@ public class ResourceManager extends CompositeService
       this.eventProcessorMonitor
           .setName("ResourceManager Event Processor Monitor");
     }
+
+    @Override
+    public HealthReport getHealthReport() {
+      boolean stopped = isStopped();
+      int eventQueueSize = getEventQueueSize();
+      boolean rmEventProcMonitorEnable = ClusterMetrics.getMetrics().getRmEventProcMonitorEnable();
+      long rmEventProcCPUAvg = ClusterMetrics.getMetrics().getRmEventProcCPUAvg();
+      long rmEventProcCPUMax = ClusterMetrics.getMetrics().getRmEventProcCPUMax();
+      HealthReport report = HealthReport.getInstance(getName(), !stopped);
+      if (rmEventProcMonitorEnable) {
+        report.setWorkState(rmEventProcCPUAvg < 0.3 ? HealthReport.WorkState.IDLE :
+                rmEventProcCPUAvg > 0.8 ? HealthReport.WorkState.BUSY : HealthReport.WorkState.NORMAL);
+      }
+      // TODO: workState judging by estimatedDelayTime
+      report.putMetrics("stopped", stopped);
+      report.putMetrics("eventQueueSize", eventQueueSize);
+      report.putMetrics("rmEventProcMonitorEnable", rmEventProcMonitorEnable);
+      report.putMetrics("rmEventProcCPUAvg", rmEventProcCPUAvg);
+      report.putMetrics("rmEventProcCPUMax", rmEventProcCPUMax);
+      return report;
+    }
+
     // EventProcessorMonitor keeps track of how much CPU the EventProcessor
     // thread is using. It takes a configurable number of samples per minute,
     // and then reports the Avg and Max of previous 60 seconds as cluster
@@ -1441,6 +1472,8 @@ public class ResourceManager extends CompositeService
         IsResourceManagerActiveServlet.class);
 
     webApp = builder.start(new RMWebApp(this), uiWebAppContext);
+    healthCheckService.registerReporter("RMWebApp", webApp);
+    LOG.info("DEBUG add RMWebApp to HealthCheckService");
   }
 
   private String getWebAppsPath(String appName) {
@@ -1472,6 +1505,7 @@ public class ResourceManager extends CompositeService
     if (activeServices != null) {
       clusterTimeStamp = System.currentTimeMillis();
       activeServices.start();
+      healthCheckService.registerReporter("RMActiveServices", activeServices);
     }
   }
 
@@ -1483,6 +1517,7 @@ public class ResourceManager extends CompositeService
     if (activeServices != null) {
       activeServices.stop();
       activeServices = null;
+      healthCheckService.registerReporter("RMActiveServices", null);
     }
   }
 

@@ -25,6 +25,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.health.HealthCheckService;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.timelineservice.RMTimelineCollectorManager;
@@ -46,6 +47,7 @@ public class RMServiceContext {
   private HAServiceState haServiceState =
       HAServiceProtocol.HAServiceState.INITIALIZING;
   private AdminService adminService;
+  private HealthCheckService healthCheckService;
   private ConfigurationProvider configurationProvider;
   private Configuration yarnConfiguration;
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
@@ -94,6 +96,14 @@ public class RMServiceContext {
 
   void setRMAdminService(AdminService service) {
     this.adminService = service;
+  }
+
+  public HealthCheckService getHealthCheckService() {
+    return healthCheckService;
+  }
+
+  public void setHealthCheckService(HealthCheckService service) {
+    this.healthCheckService = service;
   }
 
   void setHAEnabled(boolean rmHAEnabled) {

@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.yarn.health.HealthCheckService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -213,6 +214,15 @@ public class RMContextImpl implements RMContext {
 
   void setRMAdminService(AdminService adminService) {
     serviceContext.setRMAdminService(adminService);
+  }
+
+  @Override
+  public HealthCheckService getHealthCheckService() {
+    return serviceContext.getHealthCheckService();
+  }
+
+  void setHealthCheckService(HealthCheckService healthCheckService) {
+    serviceContext.setHealthCheckService(healthCheckService);
   }
 
   @Override

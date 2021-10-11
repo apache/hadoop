@@ -35,6 +35,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
@@ -174,7 +177,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 public class CapacityScheduler extends
     AbstractYarnScheduler<FiCaSchedulerApp, FiCaSchedulerNode> implements
     PreemptableResourceScheduler, CapacitySchedulerContext, Configurable,
-    ResourceAllocationCommitter, MutableConfScheduler {
+    ResourceAllocationCommitter, MutableConfScheduler, HealthReporter {
 
   private static final Marker FATAL =
       MarkerFactory.getMarker("FATAL");
@@ -642,6 +645,32 @@ public class CapacityScheduler extends
 
     }
     Thread.sleep(cs.getAsyncScheduleInterval());
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    HealthReport report;
+    if (scheduleAsynchronously) {
+      boolean resourceCommitterAlive = resourceCommitterService != null && resourceCommitterService.isAlive();
+      boolean asyncSchedulersAllAlive = asyncSchedulerThreads != null;
+      for (int i = 0; asyncSchedulersAllAlive && i < asyncSchedulerThreads.size(); i++) {
+        asyncSchedulersAllAlive &= asyncSchedulerThreads.get(i).isAlive();
+      }
+      boolean noPendingBacklog = getAsyncSchedulingPendingBacklogs() == 0;
+      report = HealthReport.getInstance(getName(),
+              resourceCommitterAlive && asyncSchedulersAllAlive,
+              noPendingBacklog ? HealthReport.WorkState.IDLE : HealthReport.WorkState.BUSY);
+    } else {
+      long avgSchedulerNodeHBInterval = CapacitySchedulerMetrics.getMetrics().schedulerNodeHBInterval
+              .getEstimator().snapshot().get(MutableQuantiles.quantiles[0]);
+      long nmHBInterval = yarnConf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
+              YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+      HealthReport.WorkState workState = avgSchedulerNodeHBInterval <= 2 * nmHBInterval ? HealthReport.WorkState.IDLE :
+              avgSchedulerNodeHBInterval > 3 * nmHBInterval ? HealthReport.WorkState.BUSY
+                      : HealthReport.WorkState.NORMAL;
+      report = HealthReport.getInstance(getName(), HealthReport.WorkState.NORMAL == workState, workState);
+    }
+    return report;
   }
 
   static class AsyncScheduleThread extends Thread {

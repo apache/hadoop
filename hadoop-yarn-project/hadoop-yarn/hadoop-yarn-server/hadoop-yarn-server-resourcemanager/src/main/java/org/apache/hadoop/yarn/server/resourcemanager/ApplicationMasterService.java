@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.yarn.health.HealthCheckService;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -82,7 +85,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 @SuppressWarnings("unchecked")
 @Private
 public class ApplicationMasterService extends AbstractService implements
-    ApplicationMasterProtocol {
+    ApplicationMasterProtocol, HealthReporter {
   private static final Logger LOG = LoggerFactory.
       getLogger(ApplicationMasterService.class);
 
@@ -516,7 +519,12 @@ public class ApplicationMasterService extends AbstractService implements
     finishedAttemptCache.clear();
     super.serviceStop();
   }
-  
+
+  @Override
+  public HealthReport getHealthReport() {
+    return HealthCheckService.checkRPCServer(server);
+  }
+
   public static class AllocateResponseLock {
     private AllocateResponse response;
     

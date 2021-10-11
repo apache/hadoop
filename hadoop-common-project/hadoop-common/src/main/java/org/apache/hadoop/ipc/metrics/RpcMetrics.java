@@ -344,6 +344,10 @@ public class RpcMetrics {
     return deferredRpcProcessingTime.lastStat().stddev();
   }
 
+  public MutableRate getRpcQueueTime() {
+    return rpcQueueTime;
+  }
+
   @VisibleForTesting
   public MetricsTag getTag(String tagName) {
     return registry.getTag(tagName);

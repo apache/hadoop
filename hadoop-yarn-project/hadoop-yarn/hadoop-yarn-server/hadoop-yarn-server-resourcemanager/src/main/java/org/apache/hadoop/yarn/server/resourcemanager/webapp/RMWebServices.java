@@ -129,6 +129,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.health.HealthCheckService;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
@@ -214,6 +215,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.dao.HealthReportInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
@@ -2933,6 +2935,33 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       return Response.status(Status.INTERNAL_SERVER_ERROR)
           .entity(e.getMessage()).build();
     }
+    return Response.status(Status.OK).build();
+  }
+
+  @GET
+  @Path(RMWSConsts.HEALTH_CHECK)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+          MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public HealthReportInfo healthCheck() {
+    return new HealthReportInfo(rm.getRMContext().getHealthCheckService().healthCheck());
+  }
+
+  @PUT
+  @Path(RMWSConsts.HEALTH_CHECK)
+  public Response configHealthCheck(
+          @QueryParam("autoCheckPeriod") Long autoCheckPeriod,
+          @QueryParam("maxTorranceTime") Long maxTorranceTime) {
+    if (autoCheckPeriod == null && maxTorranceTime == null) {
+      return Response.status(Status.OK).build();
+    }
+    HealthCheckService service = rm.getRMContext().getHealthCheckService();
+    if (autoCheckPeriod != null) {
+      service.setAutoCheckPeriod(autoCheckPeriod);
+    }
+    if (maxTorranceTime != null) {
+      service.setMaxTorranceTime(maxTorranceTime);
+    }
+    service.refresh();
     return Response.status(Status.OK).build();
   }
 }

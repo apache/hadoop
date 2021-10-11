@@ -50,18 +50,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -3996,5 +3985,14 @@ public abstract class Server {
 
   public String getServerName() {
     return serverName;
+  }
+
+  public Map<String, Long> getHandlerStateCount() {
+    return Arrays.stream(handlers).map(Thread::getState)
+            .collect(Collectors.groupingBy(Enum::toString, Collectors.counting()));
+  }
+
+  public boolean isRunning() {
+    return running;
   }
 }

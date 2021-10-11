@@ -31,6 +31,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
 
 import org.slf4j.Logger;
@@ -51,7 +53,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * @see WebApps for a usage example
  */
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
-public abstract class WebApp extends ServletModule {
+public abstract class WebApp extends ServletModule implements HealthReporter {
   private static final Logger LOG = LoggerFactory.getLogger(WebApp.class);
 
   public enum HTTP { GET, POST, HEAD, PUT, DELETE };
@@ -299,4 +301,21 @@ public abstract class WebApp extends ServletModule {
 
   public abstract void setup();
 
+  @Override
+  public HealthReport getHealthReport() {
+    int currentThreads = httpServer().getCurrentThreads();
+    int idleThreads = httpServer().getIdleThreads();
+    int maxThreads = httpServer().getMaxThreads();
+    double utilizationRatio = (currentThreads - idleThreads) / (maxThreads + .0);
+    HealthReport report = HealthReport.getInstance("WebApp-" + name() + "-" + wsName(),
+            httpServer().isAlive(),
+            utilizationRatio < 0.2 ? HealthReport.WorkState.IDLE :
+                    utilizationRatio > 0.8 ? HealthReport.WorkState.BUSY :
+                            HealthReport.WorkState.NORMAL);
+    report.putMetrics("currentThreads", currentThreads);
+    report.putMetrics("idleThreads", idleThreads);
+    report.putMetrics("maxThreads", maxThreads);
+    report.putMetrics("utilizationRatio", utilizationRatio);
+    return report;
+  }
 }

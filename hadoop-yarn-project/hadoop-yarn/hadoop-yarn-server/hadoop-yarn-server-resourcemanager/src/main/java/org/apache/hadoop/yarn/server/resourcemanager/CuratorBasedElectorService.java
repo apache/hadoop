@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.curator.CuratorZookeeperClient;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
@@ -40,7 +44,7 @@ import java.io.IOException;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class CuratorBasedElectorService extends AbstractService
-    implements EmbeddedElector, LeaderLatchListener {
+    implements EmbeddedElector, LeaderLatchListener, HealthReporter {
   public static final Logger LOG =
       LoggerFactory.getLogger(CuratorBasedElectorService.class);
   private LeaderLatch leaderLatch;
@@ -135,5 +139,17 @@ public class CuratorBasedElectorService extends AbstractService
   @VisibleForTesting
   public CuratorFramework getCuratorClient() {
     return this.curator;
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    CuratorFrameworkState state = curator.getState();
+    CuratorZookeeperClient client = curator.getZookeeperClient();
+    boolean zkConnected = client != null && client.isConnected();
+    HealthReport report = HealthReport.getInstance(getName(),
+            state == CuratorFrameworkState.STARTED && zkConnected);
+    report.putMetrics("curatorState", state.toString());
+    report.putMetrics("zkConnected", zkConnected);
+    return report;
   }
 }
