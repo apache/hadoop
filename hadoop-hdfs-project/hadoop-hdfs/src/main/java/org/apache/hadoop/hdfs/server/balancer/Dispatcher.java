@@ -288,6 +288,12 @@ public class Dispatcher {
           if (isGoodBlockCandidate(source, target, targetStorageType, block)) {
             if (block instanceof DBlockStriped) {
               reportedBlock = ((DBlockStriped) block).getInternalBlock(source);
+              if (reportedBlock == null) {
+                LOG.info(
+                    "No striped internal block on source {}, block {}. Skipping.",
+                    source, block);
+                return false;
+              }
             } else {
               reportedBlock = block;
             }
@@ -501,7 +507,7 @@ public class Dispatcher {
       this.cellSize = cellSize;
     }
 
-    public DBlock getInternalBlock(StorageGroup storage) {
+    DBlock getInternalBlock(StorageGroup storage) {
       int idxInLocs = locations.indexOf(storage);
       if (idxInLocs == -1) {
         return null;
@@ -520,7 +526,11 @@ public class Dispatcher {
 
     @Override
     public long getNumBytes(StorageGroup storage) {
-      return getInternalBlock(storage).getNumBytes();
+      DBlock block = getInternalBlock(storage);
+      if (block == null) {
+        return 0;
+      }
+      return block.getNumBytes();
     }
   }
 
