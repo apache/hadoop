@@ -368,13 +368,11 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
     readLock.lock();
     try {
-      List<QueueManagementChange> queueManagementChanges = new ArrayList<>();
-
       // Map of LeafQueue -> QueueCapacities - keep adding the computed
       // entitlements to this map and finally
       // build the leaf queue configuration Template for all identified leaf
       // queues
-      Map<String, QueueCapacities> leafQueueEntitlements = new HashMap<>();
+      LeafQueueEntitlements leafQueueEntitlements = new LeafQueueEntitlements();
       for (String nodeLabel : leafQueueTemplateNodeLabels) {
         DeactivatedLeafQueuesByLabel deactivatedLeafQueues =
             deactivateLeafQueues(nodeLabel, leafQueueEntitlements);
@@ -418,8 +416,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
             // Compute entitlement changes for the identified leaf queues
             // which is appended to the List of computedEntitlements
-            updateLeafQueueCapacitiesByLabel(nodeLabel, leafQueuesToBeActivated,
-                leafQueueEntitlements);
+            updateLeafQueueCapacitiesByLabel(nodeLabel, leafQueuesToBeActivated, leafQueueEntitlements);
 
             if (LOG.isDebugEnabled()) {
               if (leafQueuesToBeActivated.size() > 0) {
@@ -433,19 +430,19 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       }
 
       //Populate new entitlements
-
+      List<QueueManagementChange> queueManagementChanges = new ArrayList<>();
       for (final Iterator<Map.Entry<String, QueueCapacities>> iterator =
-           leafQueueEntitlements.entrySet().iterator(); iterator.hasNext(); ) {
-        Map.Entry<String, QueueCapacities> queueCapacities = iterator.next();
-        String leafQueueName = queueCapacities.getKey();
+           leafQueueEntitlements.getEntitlements().entrySet().iterator(); iterator.hasNext(); ) {
+        Map.Entry<String, QueueCapacities> queueCapacitiesMap = iterator.next();
+        String leafQueueName = queueCapacitiesMap.getKey();
+        QueueCapacities capacities = queueCapacitiesMap.getValue();
         AutoCreatedLeafQueue leafQueue =
             (AutoCreatedLeafQueue) scheduler.getCapacitySchedulerQueueManager()
                 .getQueue(leafQueueName);
-        AutoCreatedLeafQueueConfig newTemplate = buildTemplate(
-            queueCapacities.getValue());
-        queueManagementChanges.add(
-            new QueueManagementChange.UpdateQueue(leafQueue, newTemplate));
-
+        AutoCreatedLeafQueueConfig newTemplate = buildTemplate(capacities);
+        QueueManagementChange.UpdateQueue updateChange =
+            new QueueManagementChange.UpdateQueue(leafQueue, newTemplate);
+        queueManagementChanges.add(updateChange);
       }
       return queueManagementChanges;
     } finally {
@@ -454,7 +451,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private DeactivatedLeafQueuesByLabel deactivateLeafQueues(String nodeLabel,
-      Map<String, QueueCapacities> leafQueueEntitlements) throws SchedulerDynamicEditException {
+      LeafQueueEntitlements leafQueueEntitlements) throws SchedulerDynamicEditException {
     // check if any leaf queues need to be deactivated based on pending applications
     float parentAbsoluteCapacity =
         managedParentQueue.getQueueCapacities().getAbsoluteCapacity(nodeLabel);
@@ -594,7 +591,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
   private Map<String, QueueCapacities> deactivateLeafQueuesIfInActive(
       ParentQueue parentQueue, String nodeLabel,
-      Map<String, QueueCapacities> leafQueueEntitlements)
+      LeafQueueEntitlements leafQueueEntitlements)
       throws SchedulerDynamicEditException {
     Map<String, QueueCapacities> deactivatedQueues = new HashMap<>();
 
@@ -602,13 +599,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) childQueue;
       if (leafQueue != null) {
         if (isActive(leafQueue, nodeLabel) && !hasPendingApps(leafQueue)) {
-          if (!leafQueueEntitlements.containsKey(leafQueue.getQueuePath())) {
-            leafQueueEntitlements.put(leafQueue.getQueuePath(),
-                new QueueCapacities(false));
-          }
-
-          QueueCapacities capacities = leafQueueEntitlements.get(
-              leafQueue.getQueuePath());
+          QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueue(leafQueue);
           updateToZeroCapacity(capacities, nodeLabel, (LeafQueue)childQueue);
           deactivatedQueues.put(leafQueue.getQueuePath(),
               leafQueueTemplateCapacities);
@@ -624,14 +615,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
   private void updateLeafQueueCapacitiesByLabel(String nodeLabel,
       Set<String> leafQueuesToBeActivated,
-      Map<String, QueueCapacities> leafQueueEntitlements) {
+      LeafQueueEntitlements leafQueueEntitlements) {
     for (String curLeafQueue : leafQueuesToBeActivated) {
-      if (!leafQueueEntitlements.containsKey(curLeafQueue)) {
-        leafQueueEntitlements.put(curLeafQueue, new QueueCapacities(false));
-        // Activate queues if capacity is available
-      }
-
-      QueueCapacities capacities = leafQueueEntitlements.get(curLeafQueue);
+      QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(curLeafQueue);
       updateCapacityFromTemplate(capacities, nodeLabel);
     }
   }
