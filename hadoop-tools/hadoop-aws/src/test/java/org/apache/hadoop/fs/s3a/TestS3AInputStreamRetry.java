@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.SocketException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import com.amazonaws.SdkClientException;
