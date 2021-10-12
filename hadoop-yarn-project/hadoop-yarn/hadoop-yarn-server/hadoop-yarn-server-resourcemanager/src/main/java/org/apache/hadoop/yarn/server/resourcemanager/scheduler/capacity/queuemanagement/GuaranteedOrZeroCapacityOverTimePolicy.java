@@ -390,8 +390,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
         if (LOG.isDebugEnabled()) {
           if (deactivatedLeafQueues.size() > 0) {
-            LOG.debug("Parent queue = {},  " +
-                    ", nodeLabel = {}, deactivated leaf queues = [{}] ",
+            LOG.debug("Parent queue = {}, nodeLabel = {}, deactivated leaf queues = [{}] ",
                 managedParentQueue.getQueuePath(), nodeLabel,
                 deactivatedLeafQueues.size() > 25 ? deactivatedLeafQueues
                     .size() : deactivatedLeafQueues);
