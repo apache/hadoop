@@ -21,19 +21,20 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 
 /**
- * Mock class to obtain resource usage (CPU).
+ * Mock class to obtain resource usage (Memory).
  */
-public class MockCPUResourceCalculatorProcessTree
-    extends ResourceCalculatorProcessTree {
+public class MockMemoryResourceCalculatorProcessTree extends ResourceCalculatorProcessTree {
+  private final long memorySize = 500000000L;
 
-  private long cpuPercentage = ResourceCalculatorProcessTree.UNAVAILABLE;
+  private long rssMemorySize = memorySize;
+  private long virtualMemorySize = ResourceCalculatorProcessTree.UNAVAILABLE;
 
   /**
-   * Constructor for MockCPUResourceCalculatorProcessTree with specified root
+   * Constructor for MockMemoryResourceCalculatorProcessTree with specified root
    * process.
    * @param root
    */
-  public MockCPUResourceCalculatorProcessTree(String root) {
+  public MockMemoryResourceCalculatorProcessTree(String root) {
     super(root);
   }
 
@@ -57,24 +58,32 @@ public class MockCPUResourceCalculatorProcessTree
   }
 
   @Override
-  public long getVirtualMemorySize(int olderThanAge) {
-    return 0;
+  public long getRssMemorySize(int olderThanAge) {
+    long rssMemory = this.rssMemorySize;
+    // First getter call will return with 500000000, and second call will
+    // return -1, rest of the calls will return a valid value.
+    if (rssMemory == memorySize) {
+      this.rssMemorySize = ResourceCalculatorProcessTree.UNAVAILABLE;
+    }
+    if (rssMemory == ResourceCalculatorProcessTree.UNAVAILABLE) {
+      this.rssMemorySize = 2 * memorySize;
+    }
+    return rssMemory;
   }
 
   @Override
-  public long getRssMemorySize(int olderThanAge) {
-    return 0;
+  public long getVirtualMemorySize(int olderThanAge) {
+    long virtualMemory = this.virtualMemorySize;
+    // First getter call will return with -1, and rest of the calls will
+    // return a valid value.
+    if (virtualMemory == ResourceCalculatorProcessTree.UNAVAILABLE) {
+      this.virtualMemorySize = 3 * memorySize;
+    }
+    return virtualMemory;
   }
 
   @Override
   public float getCpuUsagePercent() {
-    long cpu = this.cpuPercentage;
-    // First getter call will be returned with -1, and other calls will
-    // return non-zero value as defined below.
-    if (cpu == ResourceCalculatorProcessTree.UNAVAILABLE) {
-      // Set a default value other than 0 for test.
-      this.cpuPercentage = 50;
-    }
-    return cpu;
+    return 0;
   }
 }
