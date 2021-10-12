@@ -348,7 +348,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
    * Compute/Adjust child queue capacities
    * for auto created leaf queues
    * This computes queue entitlements but does not update LeafQueueState or
-   * queue capacities. Scheduler calls commitQueueManagemetChanges after
+   * queue capacities. Scheduler calls commitQueueManagementChanges after
    * validation after applying queue changes and commits to LeafQueueState
    * are done in commitQueueManagementChanges.
    *
@@ -373,7 +373,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     readLock.lock();
     try {
       List<QueueManagementChange> queueManagementChanges = new ArrayList<>();
-      List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
 
       //Map of LeafQueue->QueueCapacities - keep adding the computed
       // entitlements to this map and finally
@@ -425,6 +424,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         }
 
         if (availableCapacity >= leafQueueTemplateAbsoluteCapacity) {
+          List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
           //sort applications across leaf queues by submit time
           if (pendingApps.size() > 0) {
             int maxLeafQueuesTobeActivated = getMaxLeavesToBeActivated(
