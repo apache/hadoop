@@ -345,12 +345,11 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   /**
-   * Compute/Adjust child queue capacities
-   * for auto created leaf queues
-   * This computes queue entitlements but does not update LeafQueueState or
-   * queue capacities. Scheduler calls commitQueueManagementChanges after
-   * validation after applying queue changes and commits to LeafQueueState
-   * are done in commitQueueManagementChanges.
+   * Computes / adjusts child queue capacities for auto created leaf queues.
+   * This method computes queue entitlements but does not update LeafQueueState or
+   * queue capacities.
+   * Scheduler calls commitQueueManagementChanges after validation after applying queue changes 
+   * and commits to LeafQueueState are done in commitQueueManagementChanges.
    *
    * @return List of Queue Management change suggestions which could potentially
    * be committed/rejected by the scheduler due to validation failures
@@ -383,8 +382,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         // check if any leaf queues need to be deactivated based on pending
         // applications
         float parentAbsoluteCapacity =
-            managedParentQueue.getQueueCapacities().getAbsoluteCapacity(
-                nodeLabel);
+            managedParentQueue.getQueueCapacities().getAbsoluteCapacity(nodeLabel);
         float leafQueueTemplateAbsoluteCapacity =
             leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel);
         Map<String, QueueCapacities> deactivatedLeafQueues =
@@ -402,7 +400,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         }
 
         float deactivatedCapacity = getTotalDeactivatedCapacity(deactivatedLeafQueues, nodeLabel);
-
         float sumOfChildQueueActivatedCapacity = parentQueueState.
             getAbsoluteActivatedChildQueueCapacity(nodeLabel);
 
@@ -438,7 +435,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
                 nodeLabel, pendingApps, maxLeafQueuesTobeActivated,
                 deactivatedLeafQueues.keySet());
 
-            //Compute entitlement changes for the identified leaf queues
+            // Compute entitlement changes for the identified leaf queues
             // which is appended to the List of computedEntitlements
             updateLeafQueueCapacitiesByLabel(nodeLabel, leafQueuesToBeActivated,
                 leafQueueEntitlements);
