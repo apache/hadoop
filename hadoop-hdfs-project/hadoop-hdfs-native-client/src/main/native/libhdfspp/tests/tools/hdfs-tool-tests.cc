@@ -21,6 +21,7 @@
 
 #include "hdfs-allow-snapshot-mock.h"
 #include "hdfs-cat-mock.h"
+#include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-tool-test-fixtures.h"
 #include "hdfs-tool-tests.h"
 
@@ -28,6 +29,12 @@
  * This file combines the test fixtures defined in {@file
  * hdfs-tool-test-fixtures.h} and the test cases defined in {@file
  * hdfs-tool-test.h} to yield the test suite.
+ */
+
+/**
+ * This file combines the test fixtures defined in {@file
+ * hdfs-tool-test-fixtures.h} and the test cases defined in {@file
+ * hdfs-tool-test.h} to yield the test structure.
  */
 
 INSTANTIATE_TEST_SUITE_P(
@@ -40,9 +47,18 @@ INSTANTIATE_TEST_SUITE_P(HdfsCat, HdfsToolBasicTest,
                                          CallHelp<hdfs::tools::test::CatMock>));
 
 INSTANTIATE_TEST_SUITE_P(
+    HdfsDeleteSnapshot, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::DeleteSnapshotMock>,
+                    Pass2Paths<hdfs::tools::test::DeleteSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsCat, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::CatMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsDeleteSnapshot, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::DeleteSnapshotMock>));
