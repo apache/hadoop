@@ -1234,7 +1234,7 @@ public class TestCapacityScheduler {
     CSQueue queueB2 = findQueue(queueB, B2);
 
     // When preemption turned on for the whole system
-    // (yarn.resourcemanager.scheduler.monitor.enable=true), and with no other 
+    // (yarn.resourcemanager.scheduler.monitor.enable=true), and with no other
     // preemption properties set, queue root.b.b2 should be preemptable.
     assertFalse("queue " + B2 + " should default to preemptable",
                queueB2.getPreemptionDisabled());
@@ -1264,7 +1264,6 @@ public class TestCapacityScheduler {
     assertFalse("queue " + B2 + " should have been preemptable",
         queueB2.getPreemptionDisabled());
   }
-  
 
   private void waitContainerAllocated(MockAM am, int mem, int nContainer,
       int startContainerId, MockRM rm, MockNM nm) throws Exception {
