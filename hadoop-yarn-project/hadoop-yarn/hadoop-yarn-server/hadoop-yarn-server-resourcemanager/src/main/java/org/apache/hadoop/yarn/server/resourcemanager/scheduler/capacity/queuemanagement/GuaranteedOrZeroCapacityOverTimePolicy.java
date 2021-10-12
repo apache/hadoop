@@ -367,14 +367,14 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
             managedParentQueue.getAutoCreatedQueueManagementPolicy());
 
     //TODO : Add support for node labels on leaf queue template configurations
-    //synch/add missing leaf queue(s) if any to state
+    //sync / add missing leaf queue(s) if any TO state
     updateLeafQueueState();
 
     readLock.lock();
     try {
       List<QueueManagementChange> queueManagementChanges = new ArrayList<>();
 
-      //Map of LeafQueue->QueueCapacities - keep adding the computed
+      // Map of LeafQueue->QueueCapacities - keep adding the computed
       // entitlements to this map and finally
       // build the leaf queue configuration Template for all identified leaf
       // queues
@@ -388,30 +388,27 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         float leafQueueTemplateAbsoluteCapacity =
             leafQueueTemplateCapacities.getAbsoluteCapacity(nodeLabel);
         Map<String, QueueCapacities> deactivatedLeafQueues =
-            deactivateLeafQueuesIfInActive(managedParentQueue, nodeLabel,
-                leafQueueEntitlements);
+            deactivateLeafQueuesIfInActive(managedParentQueue, nodeLabel, leafQueueEntitlements);
 
         if (LOG.isDebugEnabled()) {
-          if ( deactivatedLeafQueues.size() > 0) {
-              LOG.debug("Parent queue = {},  " +
-                   ", nodeLabel = {}, deactivated leaf queues = [{}] ",
-                  managedParentQueue.getQueuePath(), nodeLabel,
-                  deactivatedLeafQueues.size() > 25 ? deactivatedLeafQueues
-                      .size() : deactivatedLeafQueues);
+          if (deactivatedLeafQueues.size() > 0) {
+            LOG.debug("Parent queue = {},  " +
+                    ", nodeLabel = {}, deactivated leaf queues = [{}] ",
+                managedParentQueue.getQueuePath(), nodeLabel,
+                deactivatedLeafQueues.size() > 25 ? deactivatedLeafQueues
+                    .size() : deactivatedLeafQueues);
 
           }
         }
 
-        float deactivatedCapacity = getTotalDeactivatedCapacity(
-            deactivatedLeafQueues, nodeLabel);
+        float deactivatedCapacity = getTotalDeactivatedCapacity(deactivatedLeafQueues, nodeLabel);
 
         float sumOfChildQueueActivatedCapacity = parentQueueState.
             getAbsoluteActivatedChildQueueCapacity(nodeLabel);
 
         //Check if we need to activate anything at all?
-        float availableCapacity =
-            parentAbsoluteCapacity - sumOfChildQueueActivatedCapacity
-                + deactivatedCapacity + EPSILON;
+        float availableCapacity = parentAbsoluteCapacity - sumOfChildQueueActivatedCapacity +
+            deactivatedCapacity + EPSILON;
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("Parent queue = " + managedParentQueue.getQueuePath()
@@ -433,7 +430,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
             if (LOG.isDebugEnabled()) {
               LOG.debug("Parent queue = " + managedParentQueue.getQueuePath()
-                  +  " : Found " + maxLeafQueuesTobeActivated + " leaf queues"
+                  + " : Found " + maxLeafQueuesTobeActivated + " leaf queues"
                   + " to be activated with " + pendingApps.size() + " apps ");
             }
 
@@ -450,7 +447,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
               if (leafQueuesToBeActivated.size() > 0) {
                 LOG.debug("Activated leaf queues : [{}]",
                     leafQueuesToBeActivated.size() < 25 ?
-                    leafQueuesToBeActivated : leafQueuesToBeActivated.size());
+                        leafQueuesToBeActivated : leafQueuesToBeActivated.size());
               }
             }
           }
