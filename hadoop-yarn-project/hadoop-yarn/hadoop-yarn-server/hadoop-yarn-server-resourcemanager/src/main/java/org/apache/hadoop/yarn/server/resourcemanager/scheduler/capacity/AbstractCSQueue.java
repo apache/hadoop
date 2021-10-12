@@ -100,7 +100,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   String defaultLabelExpression;
   private String multiNodeSortingPolicyName = null;
 
-  Map<AccessType, AccessControlList> acls = 
+  Map<AccessType, AccessControlList> acls =
       new HashMap<AccessType, AccessControlList>();
   volatile boolean reservationsContinueLooking;
   private volatile boolean preemptionDisabled;
@@ -112,7 +112,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   volatile ResourceUsage queueUsage;
 
   private final boolean fullPathQueueNamingPolicy = false;
-  
+
   // Track capacities like used-capcity/abs-used-capacity/capacity/abs-capacity,
   // etc.
   QueueCapacities queueCapacities;
@@ -134,7 +134,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected CapacityConfigType capacityConfigType =
       CapacityConfigType.NONE;
 
-  private final RecordFactory recordFactory = 
+  private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   protected CapacitySchedulerContext csContext;
   protected YarnAuthorizationProvider authorizer = null;
@@ -250,12 +250,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   public QueueState getState() {
     return state;
   }
-  
+
   @Override
   public CSQueueMetrics getMetrics() {
     return metrics;
   }
-  
+
   @Override
   public String getQueueShortName() {
     return queueName;
@@ -283,7 +283,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   public void setParent(CSQueue newParentQueue) {
     this.parent = newParentQueue;
   }
-  
+
   public Set<String> getAccessibleNodeLabels() {
     return accessibleLabels;
   }
@@ -344,7 +344,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   public String getDefaultNodeLabelExpression() {
     return defaultLabelExpression;
   }
-  
+
   void setupQueueConfigs(Resource clusterResource)
       throws IOException {
     setupQueueConfigs(clusterResource, csContext.getConfiguration());
@@ -471,8 +471,14 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   private void setupMaximumAllocation(CapacitySchedulerConfiguration csConf) {
     String myQueuePath = getQueuePath();
+    /* YARN-10869: When using AutoCreatedLeafQueues, the passed configuration
+    * object is a cloned one containing only the template configs
+    * (see ManagedParentQueue#getLeafQueueConfigs). To ensure that the actual
+    * cluster maximum allocation is fetched the original config object should
+    * be used.
+    */
     Resource clusterMax = ResourceUtils
-            .fetchMaximumAllocationFromConfig(csConf);
+        .fetchMaximumAllocationFromConfig(this.csContext.getConfiguration());
     Resource queueMax = csConf.getQueueMaximumAllocation(myQueuePath);
 
     maximumAllocation = Resources.clone(
@@ -740,7 +746,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     stats.setReservedContainers(getMetrics().getReservedContainers());
     return stats;
   }
-  
+
   public Map<String, QueueConfigurations> getQueueConfigurations() {
     Map<String, QueueConfigurations> queueConfigurations = new HashMap<>();
     Set<String> nodeLabels = getNodeLabelsForQueue();
@@ -776,12 +782,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   public Resource getMaximumAllocation() {
     return maximumAllocation;
   }
-  
+
   @Private
   public Resource getMinimumAllocation() {
     return minimumAllocation;
   }
-  
+
   void allocateResource(Resource clusterResource,
       Resource resource, String nodePartition) {
     writeLock.lock();
@@ -796,7 +802,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
-  
+
   protected void releaseResource(Resource clusterResource,
       Resource resource, String nodePartition) {
     writeLock.lock();
@@ -811,12 +817,12 @@ public abstract class AbstractCSQueue implements CSQueue {
       writeLock.unlock();
     }
   }
-  
+
   @Private
   public boolean getReservationContinueLooking() {
     return reservationsContinueLooking;
   }
-  
+
   @Private
   public Map<AccessType, AccessControlList> getACLs() {
     readLock.lock();
@@ -841,12 +847,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   public boolean getIntraQueuePreemptionDisabledInHierarchy() {
     return intraQueuePreemptionDisabledInHierarchy;
   }
-  
+
   @Private
   public QueueCapacities getQueueCapacities() {
     return queueCapacities;
   }
-  
+
   @Private
   public ResourceUsage getQueueResourceUsage() {
     return queueUsage;
@@ -1018,7 +1024,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       // all queues on this label equals to total resource with the label.
       return labelManager.getResourceByLabel(nodePartition, clusterResource);
     }
-    
+
     return Resources.none();
   }
 
@@ -1159,7 +1165,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       parent.incPendingResource(nodeLabel, resourceToInc);
     }
   }
-  
+
   @Override
   public void decPendingResource(String nodeLabel, Resource resourceToDec) {
     if (nodeLabel == null) {
@@ -1171,7 +1177,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       parent.decPendingResource(nodeLabel, resourceToDec);
     }
   }
-  
+
   @Override
   public void incUsedResource(String nodeLabel, Resource resourceToInc,
       SchedulerApplicationAttempt application) {
@@ -1206,14 +1212,14 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   /**
    * Return if the queue has pending resource on given nodePartition and
-   * schedulingMode. 
+   * schedulingMode.
    */
-  boolean hasPendingResourceRequest(String nodePartition, 
+  boolean hasPendingResourceRequest(String nodePartition,
       Resource cluster, SchedulingMode schedulingMode) {
     return SchedulerUtils.hasPendingResourceRequest(resourceCalculator,
         queueUsage, nodePartition, cluster, schedulingMode);
   }
-  
+
   public boolean accessibleToPartition(String nodePartition) {
     // if queue's label is *, it can access any node
     if (accessibleLabels != null
