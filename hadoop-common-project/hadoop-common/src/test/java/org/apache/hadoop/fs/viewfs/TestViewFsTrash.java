@@ -36,40 +36,15 @@ public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
   Configuration conf;
-  private static FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper();
-
-  static class TestLFS extends LocalFileSystem {
-    Path home;
-    TestLFS() throws IOException {
-      this(new Path(fileSystemTestHelper.getTestRootDir()));
-    }
-    TestLFS(Path home) throws IOException {
-
-      super(new RawLocalFileSystem() {
-        @Override
-        protected Path getInitialWorkingDirectory() {
-          return makeQualified(home);
-        }
-
-        @Override
-        public Path getHomeDirectory() {
-          return makeQualified(home);
-        }
-      });
-      this.home = home;
-    }
-    @Override
-    public Path getHomeDirectory() {
-      return home;
-    }
-  }
+  private FileSystemTestHelper fileSystemTestHelper;
 
   @Before
   public void setUp() throws Exception {
     Configuration targetFSConf = new Configuration();
-    targetFSConf.setClass("fs.file.impl", TestViewFsTrash.TestLFS.class, FileSystem.class);
+    targetFSConf.setClass("fs.file.impl", TestTrash.TestLFS.class, FileSystem.class);
 
     fsTarget = FileSystem.getLocal(targetFSConf);
+    fileSystemTestHelper = new FileSystemTestHelper(fsTarget.getHomeDirectory().toUri().getPath());
 
     conf = ViewFileSystemTestSetup.createConfig();
     fsView = ViewFileSystemTestSetup.setupForViewFileSystem(conf, fileSystemTestHelper, fsTarget);
@@ -79,7 +54,7 @@ public class TestViewFsTrash {
      * Need to set the fs.file.impl to TestViewFsTrash.TestLFS. Otherwise, it will load
      * LocalFileSystem implementation which uses System.getProperty("user.home") for homeDirectory.
      */
-    conf.setClass("fs.file.impl", TestViewFsTrash.TestLFS.class, FileSystem.class);
+    conf.setClass("fs.file.impl", TestTrash.TestLFS.class, FileSystem.class);
 
   }
  

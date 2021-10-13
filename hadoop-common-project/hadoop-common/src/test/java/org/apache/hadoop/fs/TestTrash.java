@@ -794,7 +794,7 @@ public class TestTrash {
     }
   }
 
-  static class TestLFS extends LocalFileSystem {
+  public static class TestLFS extends LocalFileSystem {
     private URI uriName = null;
     Path home;
     TestLFS() {
