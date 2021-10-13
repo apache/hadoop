@@ -1491,8 +1491,11 @@ public class NNThroughputBenchmark implements Tool {
     );
     System.err.println();
     GenericOptionsParser.printGenericCommandUsage(System.err);
-    System.err.println("If connecting to a remote NameNode with -fs option, " +
-        "dfs.namenode.fs-limits.min-block-size should be set to 16.");
+    int blockSize = config.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 0);
+    if (blockSize != BLOCK_SIZE) {
+      System.err.println("If connecting to a remote NameNode with -fs option, " +
+          "dfs.blocksize should be set to 16.");
+    }
     ExitUtil.terminate(-1);
   }
 
