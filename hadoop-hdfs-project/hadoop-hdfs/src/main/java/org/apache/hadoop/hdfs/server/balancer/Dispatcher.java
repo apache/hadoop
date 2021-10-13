@@ -241,7 +241,7 @@ public class Dispatcher {
     private DDatanode proxySource;
     private StorageGroup target;
 
-    private PendingMove(Source source, StorageGroup target) {
+    PendingMove(Source source, StorageGroup target) {
       this.source = source;
       this.target = target;
     }
@@ -282,7 +282,7 @@ public class Dispatcher {
     /**
      * @return true if the given block is good for the tentative move.
      */
-    private boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
+    boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
       synchronized (block) {
         synchronized (movedBlocks) {
           if (isGoodBlockCandidate(source, target, targetStorageType, block)) {
@@ -1319,7 +1319,7 @@ public class Dispatcher {
    * 2. the block does not have a replica/internalBlock on the target;
    * 3. doing the move does not reduce the number of racks that the block has
    */
-  private boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
+  boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
       StorageType targetStorageType, DBlock block) {
     if (source.equals(target)) {
       return false;
