@@ -245,8 +245,7 @@ public class StripedBlockUtil {
     Arrays.sort(cpy);
     // full stripe is a stripe has at least dataBlkNum full cells.
     // lastFullStripeIdx is the index of the last full stripe.
-    int lastFullStripeIdx =
-        (int) (cpy[cpy.length - dataBlkNum] / cellSize);
+    long lastFullStripeIdx = cpy[cpy.length - dataBlkNum] / cellSize;
     return lastFullStripeIdx * stripeSize; // return the safeLength
     // TODO: Include lastFullStripeIdx+1 stripe in safeLength, if there exists
     // such a stripe (and it must be partial).
