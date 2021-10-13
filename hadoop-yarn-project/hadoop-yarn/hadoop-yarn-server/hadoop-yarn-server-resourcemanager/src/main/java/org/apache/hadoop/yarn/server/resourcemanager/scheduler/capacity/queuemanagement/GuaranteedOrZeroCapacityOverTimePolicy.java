@@ -430,21 +430,13 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       }
 
       //Populate new entitlements
-      List<QueueManagementChange> queueManagementChanges = new ArrayList<>();
-      for (final Iterator<Map.Entry<String, QueueCapacities>> iterator =
-           leafQueueEntitlements.getEntitlements().entrySet().iterator(); iterator.hasNext(); ) {
-        Map.Entry<String, QueueCapacities> queueCapacitiesMap = iterator.next();
-        String leafQueueName = queueCapacitiesMap.getKey();
-        QueueCapacities capacities = queueCapacitiesMap.getValue();
+      return leafQueueEntitlements.mapToQueueManagementChanges((leafQueueName, capacities) -> {
         AutoCreatedLeafQueue leafQueue =
             (AutoCreatedLeafQueue) scheduler.getCapacitySchedulerQueueManager()
                 .getQueue(leafQueueName);
         AutoCreatedLeafQueueConfig newTemplate = buildTemplate(capacities);
-        QueueManagementChange.UpdateQueue updateChange =
-            new QueueManagementChange.UpdateQueue(leafQueue, newTemplate);
-        queueManagementChanges.add(updateChange);
-      }
-      return queueManagementChanges;
+        return new QueueManagementChange.UpdateQueue(leafQueue, newTemplate);
+      });
     } finally {
       readLock.unlock();
     }

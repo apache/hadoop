@@ -18,9 +18,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuema
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementChange;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 public class LeafQueueEntitlements {
   private final Map<String, QueueCapacities> entitlements = new HashMap<>();
@@ -38,5 +42,11 @@ public class LeafQueueEntitlements {
 
   public Map<String, QueueCapacities> getEntitlements() {
     return entitlements;
+  }
+  
+  public List<QueueManagementChange> mapToQueueManagementChanges(
+      BiFunction<String, QueueCapacities, QueueManagementChange> func) {
+    return entitlements.entrySet().stream().map(e -> func.apply(e.getKey(), e.getValue()))
+        .collect(Collectors.toList());
   }
 }
