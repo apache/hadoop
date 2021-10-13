@@ -117,9 +117,10 @@ public class TestTrash extends TestCase {
 
   /**
    * Test trash for the shell's delete command for the default file system
-   * specified in the paramter conf
-   * @param conf 
+   * specified in the parameter conf
+   * @param conf - configuration object for the filesystem
    * @param base - the base path where files are created
+   * @param trashRootFs - the filesystem object to test trash
    * @param trashRoot - the expected place where the trashbin resides
    * @throws IOException
    */
@@ -679,7 +680,7 @@ public class TestTrash extends TestCase {
     }
   }
 
-  static class TestLFS extends LocalFileSystem {
+  public static class TestLFS extends LocalFileSystem {
     Path home;
     TestLFS() {
       this(TEST_DIR);
