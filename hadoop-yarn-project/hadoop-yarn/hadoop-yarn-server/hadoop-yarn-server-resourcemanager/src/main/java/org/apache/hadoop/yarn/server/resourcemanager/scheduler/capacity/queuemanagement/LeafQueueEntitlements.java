@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public class LeafQueueEntitlements {
   private final Map<String, QueueCapacities> entitlements = new HashMap<>();
-  
+
   public QueueCapacities getCapacityOfQueue(AutoCreatedLeafQueue leafQueue) {
     return getCapacityOfQueueByPath(leafQueue.getQueuePath());
   }
@@ -43,7 +43,7 @@ public class LeafQueueEntitlements {
   public Map<String, QueueCapacities> getEntitlements() {
     return entitlements;
   }
-  
+
   public List<QueueManagementChange> mapToQueueManagementChanges(
       BiFunction<String, QueueCapacities, QueueManagementChange> func) {
     return entitlements.entrySet().stream().map(e -> func.apply(e.getKey(), e.getValue()))

@@ -346,7 +346,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
    * Computes / adjusts child queue capacities for auto created leaf queues.
    * This method computes queue entitlements but does not update LeafQueueState or
    * queue capacities.
-   * Scheduler calls commitQueueManagementChanges after validation after applying queue changes 
+   * Scheduler calls commitQueueManagementChanges after validation after applying queue changes
    * and commits to LeafQueueState are done in commitQueueManagementChanges.
    *
    * @return List of Queue Management change suggestions which could potentially
@@ -374,7 +374,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         DeactivatedLeafQueuesByLabel deactivatedLeafQueues =
             deactivateLeafQueues(parentQueueState, nodeLabel, leafQueueEntitlements);
         deactivatedLeafQueues.printToDebug(LOG);
-        
+
         //Check if we need to activate anything at all?
         if (deactivatedLeafQueues.canActivateLeafQueues()) {
           activateLeafQueues(leafQueueEntitlements, nodeLabel, deactivatedLeafQueues);
@@ -399,7 +399,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     //sort applications across leaf queues by submit time
     List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
     if (pendingApps.size() > 0) {
-      int maxLeafQueuesTobeActivated = deactivatedLeafQueues.getMaxLeavesToBeActivated(pendingApps.size());
+      int maxLeafQueuesTobeActivated = deactivatedLeafQueues.
+          getMaxLeavesToBeActivated(pendingApps.size());
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Parent queue = {}, Found {} leaf queues to be activated with {} aps",
@@ -415,8 +416,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       updateLeafQueueCapacitiesByLabel(nodeLabel, leafQueuesToBeActivated, leafQueueEntitlements);
 
       if (LOG.isDebugEnabled() && leafQueuesToBeActivated.size() > 0) {
-          LOG.debug("Activated leaf queues : [{}]",
-              getListContentsUpToLimit(leafQueuesToBeActivated));
+        LOG.debug("Activated leaf queues : [{}]",
+            getListContentsUpToLimit(leafQueuesToBeActivated));
       }
     }
   }
@@ -427,7 +428,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private Object getMapUpToLimit(Map<String, QueueCapacities> deactivatedLeafQueues) {
-    return deactivatedLeafQueues.size() > DEFAULT_QUEUE_PRINT_SIZE_LIMIT ? 
+    return deactivatedLeafQueues.size() > DEFAULT_QUEUE_PRINT_SIZE_LIMIT ?
         deactivatedLeafQueues.size() : deactivatedLeafQueues;
   }
 
@@ -443,9 +444,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         deactivateLeafQueuesIfInActive(managedParentQueue, nodeLabel, leafQueueEntitlements);
 
     if (LOG.isDebugEnabled() && deactivatedLeafQueues.size() > 0) {
-        LOG.debug("Parent queue = {}, nodeLabel = {}, deactivated leaf queues = [{}] ",
-            managedParentQueue.getQueuePath(), nodeLabel,
-            getMapUpToLimit(deactivatedLeafQueues));
+      LOG.debug("Parent queue = {}, nodeLabel = {}, deactivated leaf queues = [{}] ",
+          managedParentQueue.getQueuePath(), nodeLabel,
+          getMapUpToLimit(deactivatedLeafQueues));
     }
 
     return new DeactivatedLeafQueuesByLabel(deactivatedLeafQueues,
@@ -610,10 +611,10 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       updateCapacityFromTemplate(capacities, nodeLabel);
     }
   }
-  
+
   /**
    * Commit queue management changes - which involves updating required state
-   * on parent/underlying leaf queues
+   * on parent/underlying leaf queues.
    *
    * @param queueManagementChanges Queue Management changes to commit
    * @throws SchedulerDynamicEditException when validation fails

@@ -51,7 +51,7 @@ public class DeactivatedLeafQueuesByLabel {
     this.sumOfChildQueueActivatedCapacity = sumOfChildQueueActivatedCapacity;
     this.parentAbsoluteCapacity = parentAbsoluteCapacity;
     this.leafQueueTemplateAbsoluteCapacity = leafQueueTemplateAbsoluteCapacity;
-    
+
     this.totalDeactivatedCapacity = getTotalDeactivatedCapacity();
     this.availableCapacity = parentAbsoluteCapacity - sumOfChildQueueActivatedCapacity +
         this.totalDeactivatedCapacity + EPSILON;

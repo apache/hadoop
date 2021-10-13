@@ -19,9 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuema
 import org.junit.Test;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 public class TestDeactivatedLeafQueuesByLabel {
   @Test
