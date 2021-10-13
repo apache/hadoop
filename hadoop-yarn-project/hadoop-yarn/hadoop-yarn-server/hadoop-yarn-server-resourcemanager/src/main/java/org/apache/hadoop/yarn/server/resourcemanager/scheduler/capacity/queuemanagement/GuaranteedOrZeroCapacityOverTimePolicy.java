@@ -81,6 +81,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 public class GuaranteedOrZeroCapacityOverTimePolicy
     implements AutoCreatedQueueManagementPolicy {
 
+  private static final int DEFAULT_QUEUE_PRINT_SIZE_LIMIT = 25;
   private CapacitySchedulerContext scheduler;
   private ManagedParentQueue managedParentQueue;
 
@@ -387,30 +388,28 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
             deactivatedCapacity + EPSILON;
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Parent queue = " + managedParentQueue.getQueuePath()
-              + ", nodeLabel = " + nodeLabel + ", absCapacity = "
-              + parentAbsoluteCapacity + ", leafQueueAbsoluteCapacity = "
-              + leafQueueTemplateAbsoluteCapacity + ", deactivatedCapacity = "
-              + deactivatedCapacity + " , absChildActivatedCapacity = "
-              + sumOfChildQueueActivatedCapacity + ", availableCapacity = "
-              + availableCapacity);
+          LOG.debug("Parent queue = {}, nodeLabel = {}, absCapacity = {}, " +
+              "leafQueueAbsoluteCapacity = {}, deactivatedCapacity = {}, " +
+              "absChildActivatedCapacity = {}, availableCapacity = {}",
+              managedParentQueue.getQueuePath(), nodeLabel, parentAbsoluteCapacity,
+              leafQueueTemplateAbsoluteCapacity, deactivatedCapacity,
+              sumOfChildQueueActivatedCapacity, availableCapacity);
         }
 
         if (availableCapacity >= leafQueueTemplateAbsoluteCapacity) {
-          List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
           //sort applications across leaf queues by submit time
+          List<FiCaSchedulerApp> pendingApps = getSortedPendingApplications();
           if (pendingApps.size() > 0) {
             int maxLeafQueuesTobeActivated = getMaxLeavesToBeActivated(
                 availableCapacity, leafQueueTemplateAbsoluteCapacity,
                 pendingApps.size());
 
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Parent queue = " + managedParentQueue.getQueuePath()
-                  + " : Found " + maxLeafQueuesTobeActivated + " leaf queues"
-                  + " to be activated with " + pendingApps.size() + " apps ");
+              LOG.debug("Parent queue = {}, Found {} leaf queues to be activated with {} aps",
+                  managedParentQueue.getQueuePath(), maxLeafQueuesTobeActivated, pendingApps.size());
             }
 
-            LinkedHashSet<String> leafQueuesToBeActivated = getSortedLeafQueues(
+            Set<String> leafQueuesToBeActivated = getSortedLeafQueues(
                 nodeLabel, pendingApps, maxLeafQueuesTobeActivated,
                 deactivatedLeafQueues.getQueues());
 
@@ -421,8 +420,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
             if (LOG.isDebugEnabled()) {
               if (leafQueuesToBeActivated.size() > 0) {
                 LOG.debug("Activated leaf queues : [{}]",
-                    leafQueuesToBeActivated.size() < 25 ?
-                        leafQueuesToBeActivated : leafQueuesToBeActivated.size());
+                    getListContentsUpToLimit(leafQueuesToBeActivated));
               }
             }
           }
@@ -442,6 +440,17 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     }
   }
 
+  private Object getListContentsUpToLimit(Set<String> leafQueuesToBeActivated) {
+    return leafQueuesToBeActivated.size() < DEFAULT_QUEUE_PRINT_SIZE_LIMIT ?
+        leafQueuesToBeActivated : leafQueuesToBeActivated.size();
+  }
+
+  private Object getMapUpToLimit(Map<String, QueueCapacities> deactivatedLeafQueues) {
+    return deactivatedLeafQueues.size() > DEFAULT_QUEUE_PRINT_SIZE_LIMIT ? 
+        deactivatedLeafQueues.size() : deactivatedLeafQueues;
+  }
+
+
   private DeactivatedLeafQueuesByLabel deactivateLeafQueues(String nodeLabel,
       LeafQueueEntitlements leafQueueEntitlements) throws SchedulerDynamicEditException {
     // check if any leaf queues need to be deactivated based on pending applications
@@ -456,8 +465,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       if (deactivatedLeafQueues.size() > 0) {
         LOG.debug("Parent queue = {}, nodeLabel = {}, deactivated leaf queues = [{}] ",
             managedParentQueue.getQueuePath(), nodeLabel,
-            deactivatedLeafQueues.size() > 25 ? deactivatedLeafQueues
-                .size() : deactivatedLeafQueues);
+            getMapUpToLimit(deactivatedLeafQueues));
       }
     }
     return new DeactivatedLeafQueuesByLabel(nodeLabel,
@@ -608,17 +616,15 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   private void updateLeafQueueCapacitiesByLabel(String nodeLabel,
       Set<String> leafQueuesToBeActivated,
       LeafQueueEntitlements leafQueueEntitlements) {
-    for (String curLeafQueue : leafQueuesToBeActivated) {
-      QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(curLeafQueue);
+    for (String leafQueue : leafQueuesToBeActivated) {
+      QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(leafQueue);
       updateCapacityFromTemplate(capacities, nodeLabel);
     }
   }
 
   @VisibleForTesting
   public int getMaxLeavesToBeActivated(float availableCapacity,
-      float childQueueAbsoluteCapacity, int numPendingApps)
-      throws SchedulerDynamicEditException {
-
+      float childQueueAbsoluteCapacity, int numPendingApps) {
     if (childQueueAbsoluteCapacity > 0) {
       int numLeafQueuesNeeded = (int) Math.floor(
           availableCapacity / childQueueAbsoluteCapacity);
