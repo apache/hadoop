@@ -211,6 +211,8 @@ public final class RMWSConsts {
   public static final String SIGNAL_TO_CONTAINER =
       "/containers/{containerid}/signal/{command}";
 
+  public static final String HEALTH_CHECK = "/healthcheck";
+
   // ----------------QueryParams for RMWebServiceProtocol----------------
 
   public static final String TIME = "time";

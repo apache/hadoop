@@ -29,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.yarn.health.HealthCheckService;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -108,7 +111,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 public class AdminService extends CompositeService implements
-    HAServiceProtocol, ResourceManagerAdministrationProtocol {
+    HAServiceProtocol, ResourceManagerAdministrationProtocol, HealthReporter {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AdminService.class);
@@ -1104,5 +1107,10 @@ public class AdminService extends CompositeService implements
           .anyMatch(inactiveNode -> inactiveNode.getHost().equals(node));
     }
     return isKnown;
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    return HealthCheckService.checkRPCServer(server);
   }
 }

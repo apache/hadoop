@@ -1293,6 +1293,18 @@ public final class HttpServer2 implements FilterContainer {
     pool.setMaxThreads(max);
   }
 
+  public int getCurrentThreads() {
+    return webServer.getThreadPool().getThreads();
+  }
+
+  public int getIdleThreads() {
+    return webServer.getThreadPool().getIdleThreads();
+  }
+
+  public int getMaxThreads() {
+    return ((QueuedThreadPool) webServer.getThreadPool()).getMaxThreads();
+  }
+
   private void initSpnego(Configuration conf, String hostName,
       String usernameConfKey, String keytabConfKey) throws IOException {
     Map<String, String> params = new HashMap<>();

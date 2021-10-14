@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.slf4j.Logger;
@@ -179,7 +181,7 @@ import java.util.Set;
  */
 @Private
 @Unstable
-public class ZKRMStateStore extends RMStateStore {
+public class ZKRMStateStore extends RMStateStore implements HealthReporter {
   private static final Logger LOG =
       LoggerFactory.getLogger(ZKRMStateStore.class);
 
@@ -239,6 +241,14 @@ public class ZKRMStateStore extends RMStateStore {
   private volatile Clock clock = SystemClock.getInstance();
   @VisibleForTesting
   protected ZKRMStateStoreOpDurations opDurations;
+
+  @Override
+  public HealthReport getHealthReport() {
+    boolean healthy = zkManager != null && zkManager.getCurator() != null
+            && zkManager.getCurator().getZookeeperClient() != null
+            && zkManager.getCurator().getZookeeperClient().isConnected();
+    return HealthReport.getInstance(getName(), healthy);
+  }
 
   /*
    * Indicates different app attempt state store operations.

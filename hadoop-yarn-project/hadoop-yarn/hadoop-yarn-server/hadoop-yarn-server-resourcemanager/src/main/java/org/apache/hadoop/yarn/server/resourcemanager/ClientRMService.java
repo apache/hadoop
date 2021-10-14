@@ -40,6 +40,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.cli.UnrecognizedOptionException;
 import org.apache.commons.lang3.Range;
+import org.apache.hadoop.yarn.health.HealthCheckService;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -208,7 +211,7 @@ import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
  * interfaces to the resource manager from the client.
  */
 public class ClientRMService extends AbstractService implements
-    ApplicationClientProtocol {
+    ApplicationClientProtocol, HealthReporter {
   private static final ArrayList<ApplicationReport> EMPTY_APPS_REPORT = new ArrayList<ApplicationReport>();
 
   private static final Logger LOG =
@@ -1944,5 +1947,10 @@ public class ClientRMService extends AbstractService implements
   @VisibleForTesting
   public void setDisplayPerUserApps(boolean displayPerUserApps) {
     this.filterAppsByUser = displayPerUserApps;
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    return HealthCheckService.checkRPCServer(server);
   }
 }

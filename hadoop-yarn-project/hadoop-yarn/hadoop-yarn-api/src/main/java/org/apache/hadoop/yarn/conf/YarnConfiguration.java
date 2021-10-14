@@ -4614,6 +4614,17 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_YARN_WORKFLOW_ID_TAG_PREFIX =
       "workflowid:";
 
+
+  public static final String HEALTH_PREFIX =
+          YARN_PREFIX + "health.";
+  public static final String HEALTH_AUTO_CHECK_PERIOD =
+          HEALTH_PREFIX + "auto-check-period";
+  public static final long DEFAULT_HEALTH_AUTO_CHECK_PERIOD = 1800;
+
+  public static final String HEALTH_MAX_TORRANCE_TIME =
+          HEALTH_PREFIX + "max-torrance-time";
+  public static final long DEFAULT_HEALTH_MAX_TORRANCE_TIME = 300;
+
   public YarnConfiguration() {
     super();
   }

@@ -30,6 +30,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -55,7 +57,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 @SuppressWarnings("rawtypes")
 @Public
 @Evolving
-public class AsyncDispatcher extends AbstractService implements Dispatcher {
+public class AsyncDispatcher extends AbstractService implements Dispatcher, HealthReporter {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AsyncDispatcher.class);
@@ -300,6 +302,19 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @Override
   public EventHandler<Event> getEventHandler() {
     return handlerInstance;
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    Thread.State eventHandlingState = eventHandlingThread.getState();
+    int eventQueueSize = eventQueue.size();
+    // TODO queueTime / handlingTime / processingTime / estimatedDelayTime
+    HealthReport report = HealthReport.getInstance(getName(),
+            eventHandlingState != Thread.State.TERMINATED);
+    // TODO: workState judging by estimatedDelayTime
+    report.putMetrics("eventHandlingState", eventHandlingState);
+    report.putMetrics("eventQueueSize", eventQueueSize);
+    return report;
   }
 
   class GenericEventHandler implements EventHandler<Event> {

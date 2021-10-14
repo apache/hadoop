@@ -33,6 +33,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.yarn.health.HealthCheckService;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -95,7 +98,7 @@ import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class ResourceTrackerService extends AbstractService implements
-    ResourceTracker {
+    ResourceTracker, HealthReporter {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ResourceTrackerService.class);
@@ -1060,5 +1063,10 @@ public class ResourceTrackerService extends AbstractService implements
     }
     nodeHeartBeatResponse.setTokenSequenceNo(
         this.rmContext.getTokenSequenceNo());
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    return HealthCheckService.checkRPCServer(server);
   }
 }

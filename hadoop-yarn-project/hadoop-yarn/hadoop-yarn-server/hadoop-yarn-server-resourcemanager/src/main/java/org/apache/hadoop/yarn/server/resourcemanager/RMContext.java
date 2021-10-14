@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.health.HealthCheckService;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
@@ -101,6 +102,8 @@ public interface RMContext extends ApplicationMasterServiceContext {
   ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager();
 
   AdminService getRMAdminService();
+
+  HealthCheckService getHealthCheckService();
 
   ClientRMService getClientRMService();
 

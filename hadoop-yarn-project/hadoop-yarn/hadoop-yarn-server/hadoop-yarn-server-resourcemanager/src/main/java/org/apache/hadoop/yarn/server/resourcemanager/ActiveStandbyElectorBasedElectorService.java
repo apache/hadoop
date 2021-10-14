@@ -19,6 +19,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.yarn.health.HealthReport;
+import org.apache.hadoop.yarn.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,7 +53,7 @@ import java.util.TimerTask;
 @InterfaceStability.Unstable
 public class ActiveStandbyElectorBasedElectorService extends AbstractService
     implements EmbeddedElector,
-    ActiveStandbyElector.ActiveStandbyElectorCallback {
+    ActiveStandbyElector.ActiveStandbyElectorCallback, HealthReporter {
   private static final Logger LOG = LoggerFactory.
       getLogger(ActiveStandbyElectorBasedElectorService.class.getName());
   private static final HAServiceProtocol.StateChangeRequestInfo req =
@@ -267,5 +269,11 @@ public class ActiveStandbyElectorBasedElectorService extends AbstractService
   @Override
   public String getZookeeperConnectionState() {
     return elector.getHAZookeeperConnectionState();
+  }
+
+  @Override
+  public HealthReport getHealthReport() {
+    return HealthReport.getInstance(getName(),
+            "CONNECTED".equals(elector.getHAZookeeperConnectionState()));
   }
 }
