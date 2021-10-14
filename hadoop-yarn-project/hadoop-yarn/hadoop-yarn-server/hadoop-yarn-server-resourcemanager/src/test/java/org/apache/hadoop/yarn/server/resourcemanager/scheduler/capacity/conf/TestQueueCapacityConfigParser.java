@@ -107,7 +107,8 @@ public class TestQueueCapacityConfigParser {
     conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE) + CapacitySchedulerConfiguration.CAPACITY, ABSOLUTE_RESOURCE_MEMORY_VCORE);
     QueueCapacityVector withoutGpuVector = capacityConfigParser.parse(conf, QUEUE, "");
 
-    Assert.assertEquals(2, withoutGpuVector.getResourceCount());
+    Assert.assertEquals(3, withoutGpuVector.getResourceCount());
+    Assert.assertEquals(0f, withoutGpuVector.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
   }
 
   @Test
@@ -134,6 +135,17 @@ public class TestQueueCapacityConfigParser {
         mixedCapacityVector.getResource("yarn.io/gpu").getVectorResourceType());
     Assert.assertEquals(6f,
         mixedCapacityVector.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
+
+    // Test undefined capacity type default value
+    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
+        + CapacitySchedulerConfiguration.CAPACITY, "[memory-mb=12Gi,vcores=6]");
+
+    QueueCapacityVector mixedCapacityVectorWithGpuUndefined =
+        capacityConfigParser.parse(conf, QUEUE, "");
+    Assert.assertEquals(QueueCapacityType.ABSOLUTE,
+        mixedCapacityVectorWithGpuUndefined.getResource("memory-mb").getVectorResourceType());
+    Assert.assertEquals(0, mixedCapacityVectorWithGpuUndefined.getResource("yarn.io/gpu").getResourceValue(), 1e-6);
+
   }
 
   @Test
@@ -146,7 +158,7 @@ public class TestQueueCapacityConfigParser {
         capacityConfigParser.parse(conf, QUEUE, "");
     List<QueueCapacityVectorEntry> resources =
         Lists.newArrayList(invalidResourceCapacity.iterator());
-    Assert.assertEquals(resources.size(), 0);
+    Assert.assertEquals(0, resources.size());
 
     conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
         + CapacitySchedulerConfiguration.CAPACITY, "");
@@ -165,5 +177,10 @@ public class TestQueueCapacityConfigParser {
     List<QueueCapacityVectorEntry> nonSetResources =
         Lists.newArrayList(nonSetCapacity.iterator());
     Assert.assertEquals(nonSetResources.size(), 0);
+  }
+
+  @Test
+  public void testResourceVector() {
+
   }
 }

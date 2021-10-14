@@ -22,11 +22,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,7 +45,7 @@ import java.util.regex.Pattern;
  */
 public class QueueCapacityConfigParser {
   private static final String UNIFORM_REGEX = "^([0-9.]+)(.*)";
-  private static final String RESOURCE_REGEX = "^\\[[\\w\\.,\\-_=%\\ /]+\\]$";
+  private static final String RESOURCE_REGEX = "^\\[([\\w\\.,\\-_%\\ /]+=[\\w\\.,\\-_%\\ /]+)+\\]$";
 
   private static final Pattern RESOURCE_PATTERN = Pattern.compile(RESOURCE_REGEX);
   private static final Pattern UNIFORM_PATTERN = Pattern.compile(UNIFORM_REGEX);
@@ -71,7 +69,7 @@ public class QueueCapacityConfigParser {
                                    String queuePath, String label) {
 
     if (queuePath.equals(CapacitySchedulerConfiguration.ROOT)) {
-      return createUniformCapacityVector(QueueCapacityType.PERCENTAGE, 100f);
+      return QueueCapacityVector.of(100f, QueueCapacityType.PERCENTAGE);
     }
 
     String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
@@ -79,7 +77,7 @@ public class QueueCapacityConfigParser {
     String capacityString = conf.get(propertyName);
 
     if (capacityString == null) {
-      return QueueCapacityVector.newInstance();
+      return new QueueCapacityVector();
     }
 
     for (Parser parser : parsers) {
@@ -89,7 +87,7 @@ public class QueueCapacityConfigParser {
       }
     }
 
-    return QueueCapacityVector.newInstance();
+    return new QueueCapacityVector();
   }
 
   /**
@@ -115,17 +113,7 @@ public class QueueCapacityConfigParser {
       }
     }
 
-    return createUniformCapacityVector(capacityType, Float.parseFloat(value));
-  }
-
-  private QueueCapacityVector createUniformCapacityVector(QueueCapacityType vectorResourceType, float parsedValue) {
-    Set<String> resourceTypes = ResourceUtils.getResourceTypes().keySet();
-    QueueCapacityVector resource = QueueCapacityVector.newInstance();
-
-    for (String resourceName : resourceTypes) {
-      resource.setResource(resourceName, parsedValue, vectorResourceType);
-    }
-    return resource;
+    return QueueCapacityVector.of(Float.parseFloat(value), capacityType);
   }
 
   /**
@@ -168,7 +156,8 @@ public class QueueCapacityConfigParser {
     return capacityVector;
   }
 
-  private void setCapacityVector(QueueCapacityVector resource, String resourceName, String resourceValue) {
+  private void setCapacityVector(
+      QueueCapacityVector resource, String resourceName, String resourceValue) {
     QueueCapacityType capacityType = QueueCapacityType.ABSOLUTE;
 
     // Extract suffix from a value eg. for 6w extract w
@@ -194,6 +183,18 @@ public class QueueCapacityConfigParser {
     }
 
     resource.setResource(cleanResourceName, convertedValue, capacityType);
+  }
+
+  /**
+   * Checks whether the given capacity string is in a capacity vector compatible
+   * format.
+   * @param configuredCapacity capacity string
+   * @return true, if capacity string is in capacity vector format,
+   * false otherwise
+   */
+  public boolean isCapacityVectorFormat(String configuredCapacity) {
+    return configuredCapacity != null
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
   }
 
   private static class Parser {

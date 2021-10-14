@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -32,22 +33,57 @@ import java.util.Set;
  */
 public class QueueCapacityVector implements
     Iterable<QueueCapacityVector.QueueCapacityVectorEntry> {
+  private static final String START_PARENTHESES = "[";
+  private static final String END_PARENTHESES = "]";
+  private static final String RESOURCE_DELIMITER = ",";
+  private static final String VALUE_DELIMITER = "=";
+
   private final ResourceVector resource;
   private final Map<String, QueueCapacityType> capacityTypes
       = new HashMap<>();
   private final Map<QueueCapacityType, Set<String>> capacityTypePerResource
       = new HashMap<>();
 
-  public QueueCapacityVector(ResourceVector resource) {
+  public QueueCapacityVector() {
+    this.resource = new ResourceVector();
+  }
+
+  private QueueCapacityVector(ResourceVector resource) {
     this.resource = resource;
   }
 
   /**
-   * Creates a new empty {@code QueueCapacityVector}.
-   * @return empty capacity vector
+   * Creates a zero {@code QueueCapacityVector}. The resources are defined
+   * in absolute capacity type by default.
+   *
+   * @return zero capacity vector
    */
   public static QueueCapacityVector newInstance() {
-    return new QueueCapacityVector(new ResourceVector());
+    QueueCapacityVector newCapacityVector =
+        new QueueCapacityVector(ResourceVector.newInstance());
+    for (Map.Entry<String, Float> resourceEntry : newCapacityVector.resource) {
+      newCapacityVector.storeResourceType(resourceEntry.getKey(),
+          QueueCapacityType.ABSOLUTE);
+    }
+
+    return newCapacityVector;
+  }
+
+  /**
+   * Creates a uniform and homogeneous {@code QueueCapacityVector}.
+   * The resources are defined in absolute capacity type by default.
+   *
+   * @return uniform capacity vector
+   */
+  public static QueueCapacityVector of(
+      float value, QueueCapacityType capacityType) {
+    QueueCapacityVector newCapacityVector =
+        new QueueCapacityVector(ResourceVector.of(value));
+    for (Map.Entry<String, Float> resourceEntry : newCapacityVector.resource) {
+      newCapacityVector.storeResourceType(resourceEntry.getKey(), capacityType);
+    }
+
+    return newCapacityVector;
   }
 
   public QueueCapacityVectorEntry getResource(String resourceName) {
@@ -57,6 +93,7 @@ public class QueueCapacityVector implements
 
   /**
    * Returns the number of resources defined for this vector.
+   *
    * @return number of resources
    */
   public int getResourceCount() {
@@ -65,8 +102,9 @@ public class QueueCapacityVector implements
 
   /**
    * Set the value and capacity type of a resource.
+   *
    * @param resourceName name of the resource
-   * @param value value of the resource
+   * @param value        value of the resource
    * @param capacityType type of the resource
    */
   public void setResource(String resourceName, float value,
@@ -82,6 +120,7 @@ public class QueueCapacityVector implements
 
   /**
    * A shorthand to retrieve the value stored for the memory resource.
+   *
    * @return value of memory resource
    */
   public float getMemory() {
@@ -89,13 +128,22 @@ public class QueueCapacityVector implements
   }
 
   /**
-   * Returns the name of all resources of
-   * @param resourceType
-   * @return
+   * Returns the name of all resources that are defined in the given capacity
+   * type.
+   *
+   * @param capacityType the capacity type of the resources
+   * @return all resource names for the given capacity type
    */
   public Set<String> getResourceNamesByCapacityType(
-      QueueCapacityType resourceType) {
-    return capacityTypePerResource.get(resourceType);
+      QueueCapacityType capacityType) {
+    return capacityTypePerResource.getOrDefault(capacityType,
+        Collections.emptySet());
+  }
+
+  public boolean isResourceOfType(
+      String resourceName, QueueCapacityType capacityType) {
+    return capacityTypes.containsKey(resourceName) &&
+        capacityTypes.get(resourceName).equals(capacityType);
   }
 
   @Override
@@ -123,6 +171,7 @@ public class QueueCapacityVector implements
 
   /**
    * Returns a set of all capacity type defined for this vector.
+   *
    * @return capacity types
    */
   public Set<QueueCapacityType> getDefinedCapacityTypes() {
@@ -131,11 +180,37 @@ public class QueueCapacityVector implements
 
   private void storeResourceType(
       String resourceName, QueueCapacityType resourceType) {
-    if (!capacityTypePerResource.containsKey(resourceType)) {
-      capacityTypePerResource.put(resourceType, new HashSet<>());
+    if (capacityTypes.get(resourceName) != null
+        && !capacityTypes.get(resourceName).equals(resourceType)) {
+      capacityTypePerResource.get(capacityTypes.get(resourceName))
+          .remove(resourceName);
     }
+
+    capacityTypePerResource.putIfAbsent(resourceType, new HashSet<>());
     capacityTypePerResource.get(resourceType).add(resourceName);
     capacityTypes.put(resourceName, resourceType);
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder stringVector = new StringBuilder();
+    stringVector.append(START_PARENTHESES);
+
+    int resourceCount = 0;
+    for (Map.Entry<String, Float> resourceEntry : resource) {
+      resourceCount++;
+      stringVector.append(resourceEntry.getKey())
+          .append(VALUE_DELIMITER)
+          .append(resourceEntry.getValue())
+          .append(capacityTypes.get(resourceEntry.getKey()).postfix);
+      if (resourceCount < capacityTypes.size()) {
+        stringVector.append(RESOURCE_DELIMITER);
+      }
+    }
+
+    stringVector.append(END_PARENTHESES);
+
+    return stringVector.toString();
   }
 
   /**
