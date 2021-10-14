@@ -870,9 +870,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
-      byte[] encryptionContext = "context"
-//          op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
-              .getBytes(StandardCharsets.UTF_8);
+      byte[] encryptionContext = op.getResult()
+          .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
+          .getBytes(StandardCharsets.UTF_8);
       EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
           client.getEncryptionContextProvider(), getRelativePath(path),
           encryptionContext);
@@ -1688,7 +1688,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
   }
 
-  private String convertXmsPropertiesToCommaSeparatedString(final Hashtable<String, String> properties) throws
+  public String convertXmsPropertiesToCommaSeparatedString(final Hashtable<String,
+      String> properties) throws
           CharacterCodingException {
     StringBuilder commaSeparatedProperties = new StringBuilder();
 

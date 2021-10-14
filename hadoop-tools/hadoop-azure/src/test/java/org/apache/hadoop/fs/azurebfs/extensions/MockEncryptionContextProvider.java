@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
   private String dummyKey = "12345678901234567890123456789012";
@@ -91,6 +92,16 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
     public void destroy() {
       Arrays.fill(key, (byte) 0);
     }
+  }
+
+  @VisibleForTesting
+  public String getEncryptionKeyForTest(String encryptionContext) {
+    return new String(contextToKeyMap.get(encryptionContext).getEncoded());
+  }
+
+  @VisibleForTesting
+  public String getEncryptionContextForTest(String path) {
+    return pathToContextMap.get(path);
   }
 }
 
