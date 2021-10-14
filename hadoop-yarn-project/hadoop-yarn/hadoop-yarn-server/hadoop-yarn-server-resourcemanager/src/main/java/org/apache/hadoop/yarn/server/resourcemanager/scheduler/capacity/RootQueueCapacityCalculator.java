@@ -27,21 +27,25 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Q
 public class RootQueueCapacityCalculator extends
     AbstractQueueCapacityCalculator {
   @Override
-  public void setup(CSQueue queue, CapacitySchedulerConfiguration conf, String label) {
+  public void setup(CSQueue queue, String label) {
     queue.getQueueCapacities().setCapacity(label, 100f);
   }
 
   @Override
   public void calculateChildQueueResources(
-      QueueHierarchyUpdateContext updateContext, CSQueue parentQueue, String label) {
-    for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
-      updateContext.getRelativeResourceRatio(ROOT, label).setValue(
-          resource.getName(), 1);
+      QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
+    for (String label : parentQueue.getConfiguredNodeLabels()) {
+      for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
+        updateContext.getRelativeResourceRatio(ROOT, label).setValue(
+            resource.getName(), 1);
 
-      parentQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-          .setResourceValue(resource.getName(),
-              updateContext.getUpdatedClusterResource().getResourceValue(
-                  resource.getName()));
+        parentQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
+            .setResourceValue(resource.getName(),
+                updateContext.getUpdatedClusterResource(label).getResourceValue(
+                    resource.getName()));
+      }
+
+      setNormalizedResourceRatio(updateContext, parentQueue, label);
     }
   }
 

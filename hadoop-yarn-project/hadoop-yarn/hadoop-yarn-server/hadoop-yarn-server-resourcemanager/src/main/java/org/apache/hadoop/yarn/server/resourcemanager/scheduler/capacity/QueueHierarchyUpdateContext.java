@@ -20,8 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.collections.map.LazyMap;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,10 +37,12 @@ public class QueueHierarchyUpdateContext {
   private final Map<String, QueueBranchContext> queueBranchContext
       = LazyMap.decorate(new HashMap<String, QueueBranchContext>(),
       QueueBranchContext::new);
+  private final RMNodeLabelsManager labelsManager;
   private Map<String, Map<String, ResourceVector>> normalizedResourceRatios =
       createLazyResourceVector();
   private Map<String, Map<String, ResourceVector>> relativeResourceRatio =
       createLazyResourceVector();
+  private List<QueueUpdateWarning> warnings = new ArrayList<>();
 
   public QueueHierarchyUpdateContext(
       Resource updatedClusterResource,
@@ -47,10 +52,13 @@ public class QueueHierarchyUpdateContext {
         .normalizedResourceRatios;
     this.relativeResourceRatio = queueHierarchyUpdateContext
         .relativeResourceRatio;
+    this.labelsManager = queueHierarchyUpdateContext.labelsManager;
   }
 
-  public QueueHierarchyUpdateContext(Resource updatedClusterResource) {
+  public QueueHierarchyUpdateContext(Resource updatedClusterResource,
+                                     RMNodeLabelsManager labelsManager) {
     this.updatedClusterResource = updatedClusterResource;
+    this.labelsManager = labelsManager;
   }
 
   private static Map<String, Map<String, ResourceVector>>
@@ -66,8 +74,8 @@ public class QueueHierarchyUpdateContext {
    * Returns the overall cluster resource available for the update phase.
    * @return cluster resource
    */
-  public Resource getUpdatedClusterResource() {
-    return updatedClusterResource;
+  public Resource getUpdatedClusterResource(String label) {
+    return labelsManager.getResourceByLabel(label, updatedClusterResource);
   }
 
   /**
@@ -100,5 +108,13 @@ public class QueueHierarchyUpdateContext {
   public ResourceVector getRelativeResourceRatio(
       String queuePath, String label) {
     return relativeResourceRatio.get(queuePath).get(label);
+  }
+
+  public void addUpdateWarning(QueueUpdateWarning warning) {
+    warnings.add(warning);
+  }
+
+  public List<QueueUpdateWarning> getUpdateWarnings() {
+    return warnings;
   }
 }

@@ -20,14 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSortedSet;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -40,9 +40,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
  */
 public class CapacitySchedulerQueueCapacityHandler {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CapacitySchedulerQueueCapacityHandler.class);
+
   private static final Set<QueueCapacityType> CALCULATOR_PRECEDENCE =
-      ImmutableSortedSet.of(
-          QueueCapacityType.PERCENTAGE);
+      ImmutableSet.of(
+          QueueCapacityType.ABSOLUTE,
+          QueueCapacityType.PERCENTAGE,
+          QueueCapacityType.WEIGHT);
 
   private final Map<QueueCapacityType, AbstractQueueCapacityCalculator>
       calculators;
@@ -50,13 +55,17 @@ public class CapacitySchedulerQueueCapacityHandler {
       new RootQueueCapacityCalculator();
   private QueueHierarchyUpdateContext lastUpdateContext;
 
-  public CapacitySchedulerQueueCapacityHandler() {
+  public CapacitySchedulerQueueCapacityHandler(RMNodeLabelsManager labelsManager) {
     this.calculators = new HashMap<>();
     this.lastUpdateContext = new QueueHierarchyUpdateContext(
-        Resource.newInstance(0, 0));
+        Resource.newInstance(0, 0), labelsManager);
 
+    this.calculators.put(QueueCapacityType.ABSOLUTE,
+        new AbsoluteResourceCapacityCalculator());
     this.calculators.put(QueueCapacityType.PERCENTAGE,
         new PercentageQueueCapacityCalculator());
+    this.calculators.put(QueueCapacityType.WEIGHT,
+        new WeightQueueCapacityCalculator());
   }
 
   /**
@@ -64,15 +73,14 @@ public class CapacitySchedulerQueueCapacityHandler {
    * These values are not calculated but defined at configuration time.
    *
    * @param queue queue to set capacity config values to
-   * @param conf  configuration from which the values are derived
    */
-  public void setup(CSQueue queue, CapacitySchedulerConfiguration conf) {
+  public void setup(CSQueue queue) {
     for (String label : queue.getConfiguredNodeLabels()) {
       for (QueueCapacityType capacityType :
           queue.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
         AbstractQueueCapacityCalculator calculator =
             calculators.get(capacityType);
-        calculator.setup(queue, conf, label);
+        calculator.setup(queue, label);
       }
     }
   }
@@ -84,7 +92,7 @@ public class CapacitySchedulerQueueCapacityHandler {
    * @param clusterResource resource of the cluster
    * @param queue           queue to update
    */
-  public void update(Resource clusterResource, CSQueue queue) {
+  public QueueHierarchyUpdateContext update(Resource clusterResource, CSQueue queue) {
     QueueHierarchyUpdateContext newContext =
         new QueueHierarchyUpdateContext(clusterResource, lastUpdateContext);
     this.lastUpdateContext = newContext;
@@ -94,6 +102,8 @@ public class CapacitySchedulerQueueCapacityHandler {
     }
 
     update(queue, newContext);
+
+    return newContext;
   }
 
   private void update(
@@ -102,10 +112,19 @@ public class CapacitySchedulerQueueCapacityHandler {
       return;
     }
 
-    collectCapacities(queueHierarchyContext, parent);
     calculateResources(queueHierarchyContext, parent,
         CALCULATOR_PRECEDENCE.stream().map((calculators::get))
             .collect(Collectors.toList()));
+
+    for (String label : parent.getConfiguredNodeLabels()) {
+      if (!queueHierarchyContext.getQueueBranchContext(parent.getQueuePath())
+          .getRemainingResource(label).equals(ResourceVector.newInstance())) {
+        queueHierarchyContext.addUpdateWarning(
+            QueueUpdateWarning.BRANCH_UNDERUTILIZED.ofQueue(
+                parent.getQueuePath()));
+      }
+    }
+
     updateChildren(queueHierarchyContext, parent);
   }
 
@@ -116,7 +135,7 @@ public class CapacitySchedulerQueueCapacityHandler {
       queueHierarchyContext.getQueueBranchContext(parent.getQueuePath())
           .setRemainingResource(label, ResourceVector.of(parent.getEffectiveCapacity(label)));
       for (AbstractQueueCapacityCalculator calculator : usableCalculators) {
-        calculator.calculateChildQueueResources(queueHierarchyContext, parent, label);
+        calculator.calculateChildQueueResources(queueHierarchyContext, parent);
       }
       setMetrics(parent, label);
     }
@@ -127,31 +146,6 @@ public class CapacitySchedulerQueueCapacityHandler {
     if (parent.getChildQueues() != null) {
       for (CSQueue childQueue : parent.getChildQueues()) {
         update(childQueue, queueHierarchyContext);
-      }
-    }
-  }
-
-  /**
-   * Collects capacity values of all queue on the same level for each resource.
-   *
-   * @param queueHierarchyContext update context of the queue hierarchy
-   * @param parent parent of the branch
-   */
-  private void collectCapacities(
-      QueueHierarchyUpdateContext queueHierarchyContext, CSQueue parent) {
-    List<CSQueue> siblingsOfLevel = parent.getChildQueues();
-    if (CollectionUtils.isEmpty(siblingsOfLevel)) {
-      return;
-    }
-
-    for (CSQueue queue : siblingsOfLevel) {
-      for (String label : queue.getConfiguredNodeLabels()) {
-        for (QueueCapacityVectorEntry capacityResource :
-            queue.getConfiguredCapacityVector(label)) {
-          queueHierarchyContext.getQueueBranchContext(
-                  parent.getQueuePath()).getSumByLabel(label)
-              .increment(capacityResource);
-        }
       }
     }
   }

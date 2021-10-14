@@ -542,8 +542,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+    boolean isCapacityVectorFormat = queueCapacityConfigParser
+        .isCapacityVectorFormat(configuredCapacity);
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || isCapacityVectorFormat) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
@@ -775,6 +777,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       set.add(RMNodeLabelsManager.ANY);
     }
     return Collections.unmodifiableSet(set);
+  }
+
+  public void setCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + CAPACITY;
+    set(capacityPropertyName, capacityVector);
   }
 
   private boolean configuredWeightAsCapacity(String configureValue) {
@@ -2676,6 +2683,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     String units = getUnits(splits[1]);
+
+    if (!UnitsConversionUtil.KNOWN_UNITS.contains(units)) {
+      return;
+    }
+
     Long resourceValue = Long
         .valueOf(splits[1].substring(0, splits[1].length() - units.length()));
 

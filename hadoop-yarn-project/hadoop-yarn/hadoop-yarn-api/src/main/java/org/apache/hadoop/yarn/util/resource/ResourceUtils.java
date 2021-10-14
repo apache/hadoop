@@ -818,6 +818,17 @@ public class ResourceUtils {
     return res;
   }
 
+  public static Resource multiply(Resource lhs, float rhs) {
+    Resource newResource = Resource.newInstance(0, 0);
+
+    for (ResourceInformation resourceInformation : lhs.getResources()) {
+      newResource.setResourceValue(resourceInformation.getName(),
+          (long) Math.floor(resourceInformation.getValue() * rhs));
+    }
+
+    return newResource;
+  }
+
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static Resource createResourceFromString(

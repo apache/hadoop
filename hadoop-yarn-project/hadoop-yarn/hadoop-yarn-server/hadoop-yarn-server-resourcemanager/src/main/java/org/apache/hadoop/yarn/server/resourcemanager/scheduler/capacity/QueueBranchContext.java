@@ -30,21 +30,8 @@ import java.util.Map;
  * branch (all siblings that have a common parent).
  */
 public class QueueBranchContext {
-  private final Map<String, CapacitySum> sumCapacitiesByLabel = new HashMap<>();
   private final Map<String, ResourceVector> remainingResourceByLabel = new HashMap<>();
-
-  /**
-   * Returns summarized capacity values for a label.
-   * @param label node label
-   * @return summarized capacity values
-   */
-  public CapacitySum getSumByLabel(String label) {
-    if (!sumCapacitiesByLabel.containsKey(label)) {
-      sumCapacitiesByLabel.put(label, new CapacitySum());
-    }
-
-    return sumCapacitiesByLabel.get(label);
-  }
+  private boolean isUpdated = false;
 
   public void setRemainingResource(String label, ResourceVector resource) {
     remainingResourceByLabel.put(label, resource);
@@ -60,26 +47,11 @@ public class QueueBranchContext {
     return remainingResourceByLabel.get(label);
   }
 
-  public static class CapacitySum {
-    private Map<String, Map<QueueCapacityType, Float>> sum = new HashMap<>();
+  public void setUpdateFlag() {
+    isUpdated = true;
+  }
 
-    public void increment(QueueCapacityVectorEntry resource) {
-      Map<QueueCapacityType, Float> sumByResourceName;
-
-      if (sum.containsKey(resource.getResourceName())) {
-        sumByResourceName = sum.get(resource.getResourceName());
-      } else {
-        sumByResourceName = new HashMap<>();
-        sum.put(resource.getResourceName(), sumByResourceName);
-      }
-
-      sumByResourceName.put(resource.getVectorResourceType(), sumByResourceName.getOrDefault(
-          resource.getVectorResourceType(), 0f) + resource.getResourceValue());
-    }
-
-    public float getSum(String resourceName, QueueCapacityType resourceType) {
-      return sum.getOrDefault(resourceName,
-          Collections.emptyMap()).getOrDefault(resourceType, 0f);
-    }
+  public boolean isParentAlreadyUpdated() {
+    return isUpdated;
   }
 }
