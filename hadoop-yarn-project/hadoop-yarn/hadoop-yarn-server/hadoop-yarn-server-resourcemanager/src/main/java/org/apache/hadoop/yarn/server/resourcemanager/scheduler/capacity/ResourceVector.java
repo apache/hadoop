@@ -39,12 +39,12 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
    * @return zero resource vector
    */
   public static ResourceVector newInstance() {
-    ResourceVector emptyResourceVector = new ResourceVector();
+    ResourceVector zeroResourceVector = new ResourceVector();
     for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
-      emptyResourceVector.setValue(resource.getName(), 0);
+      zeroResourceVector.setValue(resource.getName(), 0);
     }
 
-    return emptyResourceVector;
+    return zeroResourceVector;
   }
 
   /**
@@ -88,8 +88,12 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
     }
   }
 
-  public float getValue(String resourceName) {
-    return resourcesByName.getOrDefault(resourceName, 0f);
+  public void increment(String resourceName, float value) {
+    setValue(resourceName, getValue(resourceName) + value);
+  }
+
+  public Float getValue(String resourceName) {
+    return resourcesByName.get(resourceName);
   }
 
   public void setValue(String resourceName, float value) {
@@ -99,5 +103,22 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   @Override
   public Iterator<Map.Entry<String, Float>> iterator() {
     return resourcesByName.entrySet().iterator();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    return this.resourcesByName.equals(((ResourceVector) o).resourcesByName);
+  }
+
+  @Override
+  public int hashCode() {
+    return resourcesByName.hashCode();
   }
 }
