@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -125,7 +126,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
       conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
       LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
       NodeHealthCheckerService healthChecker =
-          new NodeHealthCheckerService(dirsHandler);
+          new NodeHealthCheckerServiceImpl(dirsHandler);
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);

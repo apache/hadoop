@@ -140,8 +140,9 @@ public class TestNodeHealthCheckerService {
     }
     nodeHealthScriptRunner = spy(nodeHealthScriptRunner);
     NodeHealthCheckerService nodeHealthChecker =
-        new NodeHealthCheckerService(dirsHandler);
-    nodeHealthChecker.addHealthReporter(nodeHealthScriptRunner);
+        new NodeHealthCheckerServiceImpl(dirsHandler);
+    ((NodeHealthCheckerServiceImpl) nodeHealthChecker)
+        .addHealthReporter(nodeHealthScriptRunner);
     nodeHealthChecker.init(conf);
 
     doReturn(true).when(nodeHealthScriptRunner).isHealthy();
@@ -190,7 +191,7 @@ public class TestNodeHealthCheckerService {
         healthStatus.getIsNodeHealthy());
     Assert.assertTrue("Node script time out message not propagated",
         healthStatus.getHealthReport().equals(
-            Joiner.on(NodeHealthCheckerService.SEPARATOR).skipNulls().join(
+            Joiner.on(NodeHealthCheckerServiceImpl.SEPARATOR).skipNulls().join(
                 NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG,
                 Strings.emptyToNull(
                     nodeHealthChecker.getDiskHandler()
@@ -230,8 +231,9 @@ public class TestNodeHealthCheckerService {
     Configuration conf = new Configuration();
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
     NodeHealthCheckerService nodeHealthChecker =
-        new NodeHealthCheckerService(dirsHandler);
-    nodeHealthChecker.addHealthReporter(customHealthReporter);
+        new NodeHealthCheckerServiceImpl(dirsHandler);
+    ((NodeHealthCheckerServiceImpl) nodeHealthChecker)
+        .addHealthReporter(customHealthReporter);
     nodeHealthChecker.init(conf);
 
     assertThat(nodeHealthChecker.isHealthy()).isTrue();
@@ -246,7 +248,7 @@ public class TestNodeHealthCheckerService {
     Configuration conf = new Configuration();
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
     NodeHealthCheckerService nodeHealthChecker =
-        new NodeHealthCheckerService(dirsHandler);
+        new NodeHealthCheckerServiceImpl(dirsHandler);
     nodeHealthChecker.init(conf);
     assertThat(nodeHealthChecker.isHealthy()).isTrue();
 

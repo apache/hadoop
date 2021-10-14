@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsPage.ContainersLogsBlock;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -80,7 +81,7 @@ public class TestContainerLogsPage {
 
   private NodeHealthCheckerService createNodeHealthCheckerService() {
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
-    return new NodeHealthCheckerService(dirsHandler);
+    return new NodeHealthCheckerServiceImpl(dirsHandler);
   }
 
   @Test(timeout=30000)

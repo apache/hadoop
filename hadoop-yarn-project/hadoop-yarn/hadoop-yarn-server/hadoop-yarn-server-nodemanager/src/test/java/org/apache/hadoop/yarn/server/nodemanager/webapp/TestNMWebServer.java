@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -80,7 +81,7 @@ public class TestNMWebServer {
 
   private NodeHealthCheckerService createNodeHealthCheckerService() {
     LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
-    return new NodeHealthCheckerService(dirsHandler);
+    return new NodeHealthCheckerServiceImpl(dirsHandler);
   }
 
   private int startNMWebAppServer(String webAddr) {

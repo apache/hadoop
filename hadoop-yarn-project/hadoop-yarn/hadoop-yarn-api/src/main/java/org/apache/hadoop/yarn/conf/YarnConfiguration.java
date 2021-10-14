@@ -2008,6 +2008,10 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_NM_CONTAINER_METRICS_UNREGISTER_DELAY_MS =
       10000;
 
+  /** The Service to check the health of the node. */
+  public static final String NM_HEALTH_CHECKER_SERVICE =
+      NM_PREFIX + "health-checker-service.class";
+
   /** Prefix for all node manager disk health checker configs. */
   private static final String NM_DISK_HEALTH_CHECK_PREFIX =
       "yarn.nodemanager.disk-health-checker.";

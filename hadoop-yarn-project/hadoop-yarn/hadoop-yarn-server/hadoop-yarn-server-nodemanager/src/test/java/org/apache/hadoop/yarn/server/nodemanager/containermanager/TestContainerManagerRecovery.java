@@ -85,7 +85,6 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -106,6 +105,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerScheduler;
 
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerServiceImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.TestNodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
@@ -156,8 +156,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     delSrvc.init(conf);
     exec = createContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
-    nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
-    nodeHealthChecker.init(conf);
+    setNodeHealthCheckerService(
+        new NodeHealthCheckerServiceImpl(dirsHandler), conf);
 
   }
 
