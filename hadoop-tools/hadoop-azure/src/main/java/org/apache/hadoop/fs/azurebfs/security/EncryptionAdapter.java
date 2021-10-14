@@ -18,19 +18,19 @@
 
 package org.apache.hadoop.fs.azurebfs.security;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.crypto.SecretKey;
-import javax.security.auth.DestroyFailedException;
-import javax.security.auth.Destroyable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
+import javax.crypto.SecretKey;
+import javax.security.auth.DestroyFailedException;
+import javax.security.auth.Destroyable;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
@@ -62,7 +62,8 @@ public class EncryptionAdapter implements Destroyable {
     if (encryptionKey != null) {
       return encryptionKey;
     }
-    return provider.getEncryptionKey(path, encryptionContext);
+    encryptionKey = provider.getEncryptionKey(path, encryptionContext);
+    return encryptionKey;
   }
 
   public SecretKey fetchEncryptionContextAndComputeKeys() throws IOException {

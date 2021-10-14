@@ -101,7 +101,7 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private final EncryptionContextProvider encryptionContextProvider;
+  private EncryptionContextProvider encryptionContextProvider;
   private EncryptionType encryptionType;
 
   private final ListeningScheduledExecutorService executorService;
@@ -253,7 +253,7 @@ public class AbfsClient implements Closeable {
         encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
             new Path(path).toUri().getPath(),
             getPathStatus(path, false, tracingContext).getResult()
-                .getResponseHeader(X_MS_PROPERTIES)
+                .getResponseHeader(X_MS_ENCRYPTION_CONTEXT)
                 .getBytes(StandardCharsets.UTF_8));
       }
       // else use cached encryption keys from input/output streams
@@ -1249,6 +1249,11 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   public SASTokenProvider getSasTokenProvider() {
     return this.sasTokenProvider;
+  }
+
+  @VisibleForTesting
+  public void setEncryptionContextProvider(EncryptionContextProvider provider) {
+    encryptionContextProvider = provider;
   }
 
   /**

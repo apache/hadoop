@@ -790,8 +790,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           encryptionAdapter = new EncryptionAdapter(
               client.getEncryptionContextProvider(), getRelativePath(path),
-//              op.getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
-              "context"
+              op.getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
                   .getBytes(StandardCharsets.UTF_8));
         }
       }
@@ -871,7 +870,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
-      byte[] encryptionContext = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES)
+      byte[] encryptionContext = "context"
+//          op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
               .getBytes(StandardCharsets.UTF_8);
       EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
           client.getEncryptionContextProvider(), getRelativePath(path),
