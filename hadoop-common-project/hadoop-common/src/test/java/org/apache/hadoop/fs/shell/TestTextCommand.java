@@ -27,7 +27,7 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -125,7 +125,7 @@ public class TestTextCommand {
 
   private String inputStreamToString(InputStream stream) throws IOException {
     StringWriter writer = new StringWriter();
-    IOUtils.copy(stream, writer, Charset.defaultCharset());
+    IOUtils.copy(stream, writer, StandardCharsets.UTF_8);
     return writer.toString();
   }
 

@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -126,8 +126,7 @@ public class TestOfflineImageViewerForXAttr {
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
 
-      String content = IOUtils
-          .toString(connection.getInputStream(), Charset.defaultCharset());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
 
       assertTrue("Missing user.attr1 in response ",
           content.contains("user.attr1"));
@@ -152,8 +151,7 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils
-          .toString(connection.getInputStream(), Charset.defaultCharset());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
 
       assertTrue("Missing user.attr1 in response ",
           content.contains("user.attr1"));
@@ -186,8 +184,7 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils
-          .toString(connection.getInputStream(), Charset.defaultCharset());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
       assertEquals(attr1JSon, content);
     }
   }
@@ -209,8 +206,7 @@ public class TestOfflineImageViewerForXAttr {
       connection.connect();
 
       assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      String content = IOUtils
-          .toString(connection.getInputStream(), Charset.defaultCharset());
+      String content = IOUtils.toString(connection.getInputStream(), StandardCharsets.UTF_8);
       assertEquals(attr1JSon, content);
 
     }

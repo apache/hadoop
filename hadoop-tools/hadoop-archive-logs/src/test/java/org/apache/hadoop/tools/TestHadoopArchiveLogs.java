@@ -42,7 +42,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 public class TestHadoopArchiveLogs {
@@ -279,8 +279,7 @@ public class TestHadoopArchiveLogs {
     Assert.assertFalse(localScript.exists());
     hal.generateScript(localScript);
     Assert.assertTrue(localScript.exists());
-    String script =
-        IOUtils.toString(localScript.toURI(), Charset.defaultCharset());
+    String script = IOUtils.toString(localScript.toURI(), StandardCharsets.UTF_8);
     String[] lines = script.split("\n");
     Assert.assertEquals(22, lines.length);
     Assert.assertEquals("#!/bin/bash", lines[0]);
