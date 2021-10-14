@@ -269,10 +269,12 @@
               <rules>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
-                  <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
+                  <reason>Use hadoop-common provided implementations rather than the one provided by Guava</reason>
                   <bannedImports>
                     <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
                     <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
+                    <bannedImport>com.google.common.base.Preconditions</bannedImport>
                   </bannedImports>
                 </restrictImports>
               </rules>

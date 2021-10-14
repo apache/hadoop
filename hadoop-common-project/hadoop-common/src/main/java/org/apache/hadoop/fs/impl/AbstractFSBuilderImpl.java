@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Builder for filesystem/filecontext operations of various kinds,

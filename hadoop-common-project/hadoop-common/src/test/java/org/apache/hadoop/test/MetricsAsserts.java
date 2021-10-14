@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 
 import org.junit.Assert;
 
