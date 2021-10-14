@@ -372,7 +372,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       LeafQueueEntitlements leafQueueEntitlements = new LeafQueueEntitlements();
       for (String nodeLabel : leafQueueTemplateNodeLabels) {
         DeactivatedLeafQueuesByLabel deactivatedLeafQueues =
-            deactivateLeafQueues(parentQueueState, nodeLabel, leafQueueEntitlements);
+            deactivateLeafQueues(nodeLabel, leafQueueEntitlements);
         deactivatedLeafQueues.printToDebug(LOG);
 
         //Check if we need to activate anything at all?
@@ -432,8 +432,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
         deactivatedLeafQueues.size() : deactivatedLeafQueues;
   }
 
-  private DeactivatedLeafQueuesByLabel deactivateLeafQueues(ParentQueueState parentQueueState,
-      String nodeLabel,
+  private DeactivatedLeafQueuesByLabel deactivateLeafQueues(String nodeLabel,
       LeafQueueEntitlements leafQueueEntitlements) throws SchedulerDynamicEditException {
     // check if any leaf queues need to be deactivated based on pending applications
     float parentAbsoluteCapacity =
