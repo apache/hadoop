@@ -46,7 +46,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -924,7 +924,7 @@ public class KDiag extends Configured implements Tool, Closeable {
    */
   private void dump(File file) throws IOException {
     try (InputStream in = Files.newInputStream(file.toPath())) {
-      for (String line : IOUtils.readLines(in, Charset.defaultCharset())) {
+      for (String line : IOUtils.readLines(in, StandardCharsets.UTF_8)) {
         println("%s", line);
       }
     }

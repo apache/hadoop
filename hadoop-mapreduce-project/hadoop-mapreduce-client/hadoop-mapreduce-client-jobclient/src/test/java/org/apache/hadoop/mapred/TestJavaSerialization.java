@@ -23,7 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
@@ -135,8 +135,7 @@ public class TestJavaSerialization {
           new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(1, outputFiles.length);
     try (InputStream is = fs.open(outputFiles[0])) {
-      String reduceOutput =
-          org.apache.commons.io.IOUtils.toString(is, Charset.defaultCharset());
+      String reduceOutput = org.apache.commons.io.IOUtils.toString(is, StandardCharsets.UTF_8);
       String[] lines = reduceOutput.split("\n");
       assertEquals("Unexpected output; received output '" + reduceOutput + "'",
           "a\t1", lines[0]);

@@ -21,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
@@ -223,8 +222,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       Process process = Runtime.getRuntime().exec(
           new String[] { "bash", "-c", command });
       br = new BufferedReader(
-          new InputStreamReader(process.getInputStream(),
-                                Charset.defaultCharset()));
+          new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
       String line = null;
       while ((line = br.readLine()) != null) {
         String[] nameId = line.split(regex);

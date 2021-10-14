@@ -24,7 +24,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -350,8 +350,7 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     try {
-      return Integer.parseInt(
-          FileUtils.readFileToString(file, Charset.defaultCharset()).trim());
+      return Integer.parseInt(FileUtils.readFileToString(file, StandardCharsets.UTF_8).trim());
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
     }

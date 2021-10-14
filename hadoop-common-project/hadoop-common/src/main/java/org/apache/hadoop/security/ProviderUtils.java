@@ -23,7 +23,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
@@ -225,8 +225,7 @@ public final class ProviderUtils {
           throw new IOException("Password file does not exist");
         }
         try (InputStream is = pwdFile.openStream()) {
-          pass = IOUtils.toString(is, Charset.defaultCharset()).trim()
-              .toCharArray();
+          pass = IOUtils.toString(is, StandardCharsets.UTF_8).trim().toCharArray();
         }
       }
     }

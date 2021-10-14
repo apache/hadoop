@@ -57,7 +57,7 @@ import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1711,8 +1711,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.connect();
     // Verify that we read what we wrote
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    String content = IOUtils.toString(
-        conn.getInputStream(), Charset.defaultCharset());
+    String content = IOUtils.toString(conn.getInputStream(), StandardCharsets.UTF_8);
     Assert.assertEquals(testContent, content);
 
 
