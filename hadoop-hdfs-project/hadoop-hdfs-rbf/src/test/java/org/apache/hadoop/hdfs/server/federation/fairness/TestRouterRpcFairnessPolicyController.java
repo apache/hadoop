@@ -103,7 +103,7 @@ public class TestRouterRpcFairnessPolicyController {
   }
 
   @Test
-  public void TestGetAvailableHandlerOnPerNs() {
+  public void testGetAvailableHandlerOnPerNs() {
     RouterRpcFairnessPolicyController routerRpcFairnessPolicyController
         = getFairnessPolicyController(30);
     assertEquals("{\"concurrent\":10,\"ns2\":10,\"ns1\":10}",
