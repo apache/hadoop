@@ -23,7 +23,8 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import com.google.gson.JsonObject;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,8 +80,14 @@ public class AbstractRouterRpcFairnessPolicyController
 
   @Override
   public String getAvailableHandlerOnPerNs() {
-    JsonObject json = new JsonObject();
-    permits.forEach((ns, smp) -> json.addProperty(ns, smp.availablePermits()));
+    JSONObject json = new JSONObject();
+    for (Map.Entry<String, Semaphore> entry : permits.entrySet()) {
+      try {
+        json.put(entry.getKey(), entry.getValue().availablePermits());
+      } catch (JSONException e) {
+        LOG.warn("Cannot put {} into JSONObject", entry.getKey(), e);
+      }
+    }
     return json.toString();
   }
 }
