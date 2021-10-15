@@ -272,7 +272,7 @@ public class StripedBlockUtil {
       long offsetInBlk, int idxInBlockGroup) {
     long cellIdxInBlk = offsetInBlk / cellSize;
     return cellIdxInBlk * cellSize * dataBlkNum // n full stripes before offset
-        + idxInBlockGroup * cellSize // m full cells before offset
+        + (long)idxInBlockGroup * cellSize // m full cells before offset
         + offsetInBlk % cellSize; // partial cell
   }
 
