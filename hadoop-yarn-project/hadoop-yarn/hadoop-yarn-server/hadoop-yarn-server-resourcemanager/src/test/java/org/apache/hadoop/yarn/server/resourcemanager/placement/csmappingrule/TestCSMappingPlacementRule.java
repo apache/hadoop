@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.Groups;
@@ -51,8 +53,12 @@ import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUP_MAPPING;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestCSMappingPlacementRule {
@@ -770,5 +776,123 @@ public class TestCSMappingPlacementRule {
     assertPlace(
         "Application should have been placed to root.groups.sec_dot_test_dot_grp",
         engine, app, "test.user", "root.groups.sec_dot_test_dot_grp");
+  }
+  
+  @Test
+  /**
+   * 1. Create a Configuration object in which the property "hadoop.security.group.mapping" refers to an existing a test implementation.
+   * 2. Create a mock CapacityScheduler where getConf() and getConfiguration() contain different 
+   * settings for "hadoop.security.group.mapping". Since getConf() is the service config, this 
+   * should return the config object created in step #1.
+   * 3. Create an instance of CSMappingPlacementRule with a single primary group rule.
+   * 4. Run the placement evaluation.
+   * 5. Expected: returned queue matches what is supposed to be coming from the test group 
+   * mapping service ("testuser" --> "testqueue").
+   * 6. Modify "hadoop.security.group.mapping" in the config object created in step #1. (SKIPPED FOR NOW)
+   * 7. Call Groups.refresh() which changes the group mapping ("testuser" --> "testqueue2"). This
+   * requires that the test group mapping service implement GroupMappingServiceProvider
+   * .cacheGroupsRefresh().
+   * 8. Create a new instance of CSMappingPlacementRule.
+   * 9. Run the placement evaluation again
+   * 10. Expected: with the same user, the target queue has changed.
+   * 
+   * This looks convoluted, but these steps make sure that:
+   *
+   * 1. CSMappingPlacementRule will force the initialization of groups.
+   * 2. We select the correct configuration for group service init.
+   * 3. We don't create a new Groups instance if the singleton is initialized, so we cover the 
+   * original problem described in YARN-10597.
+   */
+  public void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws YarnException, IOException {
+    //Create service-wide configuration object
+    Configuration conf = new Configuration();
+    conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
+
+    //Create CS configuration object with a single, primary group mapping rule
+    List<MappingRule> mappingRules = new ArrayList<>();
+    mappingRules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("testuser"),
+            (new MappingRuleActions.PlaceToQueueAction(
+                "root.man.%primary_group", true))
+                .setFallbackReject()));
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration() {
+      @Override
+      public List<MappingRule> getMappingRules() throws IOException {
+        return mappingRules;
+      }
+    };
+    csConf.setOverrideWithQueueMappings(true);
+    //Intentionally add a dummy implementation class - The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the CapacitySchedulerConfiguration instance!
+    csConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
+    
+    //Create mock CapacitySchedulerQueueManager / CapacityScheduler
+    CapacitySchedulerQueueManager qm =
+        mock(CapacitySchedulerQueueManager.class);
+    createQueueHierarchy(qm);
+
+    CapacityScheduler cs = mock(CapacityScheduler.class);
+    when(cs.getConfiguration()).thenReturn(csConf);
+    when(cs.getConf()).thenReturn(conf);
+    when(cs.getCapacitySchedulerQueueManager()).thenReturn(qm);
+
+    //Create app, submit to placement engine, expecting queue=testGroup1
+    ApplicationSubmissionContext app = createApp("app");
+    CSMappingPlacementRule engine = new CSMappingPlacementRule();
+    engine.setFailOnConfigError(true);
+    engine.initialize(cs);
+    assertPlace(engine, app, "testuser", "root.man.testGroup1");
+    
+    //TODO
+//    conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
+    //Refresh the groups, this makes testGroup0 as primary group
+    engine.getGroups().refresh();
+
+    //Create app, submit to placement engine, expecting queue=testGroup0 (the new primary group)
+    CSMappingPlacementRule engine2 = new CSMappingPlacementRule();
+    engine2.setFailOnConfigError(true);
+    engine2.initialize(cs);
+    assertPlace(engine2, app, "testuser", "root.man.testGroup0");
+  }
+
+  public static class MockUnixGroupsMapping implements
+      GroupMappingServiceProvider {
+    
+    public MockUnixGroupsMapping() {
+      updateGroups();
+    }
+
+    private static List<String> group = new ArrayList<>();
+
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      return group;
+    }
+
+    @Override
+    public void cacheGroupsRefresh() throws IOException {
+      group.add(0, "testGroup0");
+    }
+
+    @Override
+    public void cacheGroupsAdd(List<String> groups) throws IOException {
+      // Do nothing
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return ImmutableSet.copyOf(group);
+    }
+
+    public static void updateGroups() {
+      group.clear();
+      group.add("testGroup1");
+      group.add("testGroup2");
+      group.add("testGroup3");
+    }
+
+    public static void resetGroups() {
+      updateGroups();
+    }
   }
 }
