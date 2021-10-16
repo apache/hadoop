@@ -22,7 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
@@ -126,7 +126,7 @@ public class TestGpuResourcePlugin {
   }
 
   @Test
-  public void testNodeGPUUtilization()
+  public void testAvgNodeGpuUtilization()
       throws Exception {
     GpuDiscoverer gpuDiscoverer = createNodeGPUUtilizationDiscoverer();
 
@@ -134,7 +134,7 @@ public class TestGpuResourcePlugin {
         new GpuNodeResourceUpdateHandler(gpuDiscoverer, new Configuration());
 
     Assert.assertEquals(0.5F,
-        gpuNodeResourceUpdateHandler.getNodeGpuUtilization(), 1e-6);
+        gpuNodeResourceUpdateHandler.getAvgNodeGpuUtilization(), 1e-6);
   }
 
   private GpuDiscoverer createNodeGPUUtilizationDiscoverer()

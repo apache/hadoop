@@ -20,12 +20,15 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.SignableRequest;
+import com.amazonaws.auth.AWS4Signer;
+import com.amazonaws.arn.Arn;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.Signer;
 import com.amazonaws.services.s3.internal.AWSS3V4Signer;
@@ -142,7 +145,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
 
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
-    conf.set(Constants.ENDPOINT, endpoint);
+
     // make absolutely sure there is no caching.
     disableFilesystemCaching(conf);
 
@@ -169,23 +172,77 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       LOG.info("Creating Signer #{}", c);
     }
 
+    /**
+     * Method to sign the incoming request with credentials.
+     *
+     * NOTE: In case of Client-side encryption, we do a "Generate Key" POST
+     * request to AWSKMS service rather than S3, this was causing the test to
+     * break. When this request happens, we have the endpoint in form of
+     * "kms.[REGION].amazonaws.com", and bucket-name becomes "kms". We can't
+     * use AWSS3V4Signer for AWSKMS service as it contains a header
+     * "x-amz-content-sha256:UNSIGNED-PAYLOAD", which returns a 400 bad
+     * request because the signature calculated by the service doesn't match
+     * what we sent.
+     * @param request the request to sign.
+     * @param credentials credentials used to sign the request.
+     */
     @Override
     public void sign(SignableRequest<?> request, AWSCredentials credentials) {
       int c = INVOCATION_COUNT.incrementAndGet();
       LOG.info("Signing request #{}", c);
 
       String host = request.getEndpoint().getHost();
-      String bucketName = host.split("\\.")[0];
+      String bucketName = parseBucketFromHost(host);
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi", e);
       }
-      AWSS3V4Signer realSigner = new AWSS3V4Signer();
-      realSigner.setServiceName("s3");
-      realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
-      realSigner.sign(request, credentials);
+      if (bucketName.equals("kms")) {
+        AWS4Signer realKMSSigner = new AWS4Signer();
+        realKMSSigner.setServiceName("kms");
+        if (lastStoreValue != null) {
+          realKMSSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+        }
+        realKMSSigner.sign(request, credentials);
+      } else {
+        AWSS3V4Signer realSigner = new AWSS3V4Signer();
+        realSigner.setServiceName("s3");
+        if (lastStoreValue != null) {
+          realSigner.setRegionName(lastStoreValue.conf.get(TEST_REGION_KEY));
+        }
+        realSigner.sign(request, credentials);
+      }
+    }
+
+    private String parseBucketFromHost(String host) {
+      String[] hostBits = host.split("\\.");
+      String bucketName = hostBits[0];
+      String service = hostBits[1];
+
+      if (bucketName.equals("kms")) {
+        return bucketName;
+      }
+
+      if (service.contains("s3-accesspoint") || service.contains("s3-outposts")
+          || service.contains("s3-object-lambda")) {
+        // If AccessPoint then bucketName is of format `accessPoint-accountId`;
+        String[] accessPointBits = hostBits[0].split("-");
+        int lastElem = accessPointBits.length - 1;
+        String accountId = accessPointBits[lastElem];
+        String accessPointName = String.join("", Arrays.copyOf(accessPointBits, lastElem));
+        Arn arn = Arn.builder()
+            .withAccountId(accountId)
+            .withPartition("aws")
+            .withRegion(hostBits[2])
+            .withResource("accesspoint" + "/" + accessPointName)
+            .withService("s3").build();
+
+        bucketName = arn.toString();
+      }
+
+      return bucketName;
     }
 
     public static int getInstantiationCount() {

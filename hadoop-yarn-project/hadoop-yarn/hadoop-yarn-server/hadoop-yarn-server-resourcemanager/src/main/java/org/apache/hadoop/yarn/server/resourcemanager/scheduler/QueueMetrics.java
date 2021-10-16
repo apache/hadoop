@@ -50,7 +50,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
 @InterfaceAudience.Private
@@ -181,7 +181,11 @@ public class QueueMetrics implements MetricsSource {
   public QueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
 
-    registry = new MetricsRegistry(RECORD_INFO);
+    if (this instanceof PartitionQueueMetrics) {
+      registry = new MetricsRegistry(P_RECORD_INFO);
+    } else {
+      registry = new MetricsRegistry(RECORD_INFO);
+    }
     this.queueName = queueName;
 
     this.parent = parent != null ? parent.getMetrics() : null;

@@ -23,6 +23,7 @@ import java.io.PrintStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.ipc.CallerContext;
 
 /**
@@ -63,6 +64,10 @@ public class ToolRunner {
       CallerContext ctx = new CallerContext.Builder("CLI").build();
       CallerContext.setCurrent(ctx);
     }
+    // Note the entry point in the audit context; this
+    // may be used in audit events set to cloud store logs
+    // or elsewhere.
+    CommonAuditContext.noteEntryPoint(tool);
     
     if(conf == null) {
       conf = new Configuration();

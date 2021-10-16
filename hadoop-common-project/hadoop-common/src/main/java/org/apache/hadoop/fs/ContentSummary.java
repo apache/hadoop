@@ -282,6 +282,20 @@ public class ContentSummary extends QuotaUsage implements Writable{
   private static final String ALL_HEADER = QUOTA_HEADER + SUMMARY_HEADER;
 
   /**
+   * Output format:
+   * <--------20-------->
+   * ERASURECODING_POLICY
+   */
+  private static final String ERASURECODING_POLICY_FORMAT = "%20s ";
+
+  private static final String ERASURECODING_POLICY_HEADER_FIELD =
+      "ERASURECODING_POLICY";
+
+  /** The header string. */
+  private static final String ERASURECODING_POLICY_HEADER = String.format(
+      ERASURECODING_POLICY_FORMAT, ERASURECODING_POLICY_HEADER_FIELD);
+
+  /**
    * Output format:<-------18-------> <----------24---------->
    * <----------24---------->. <-------------28------------> SNAPSHOT_LENGTH
    * SNAPSHOT_FILE_COUNT SNAPSHOT_DIR_COUNT SNAPSHOT_SPACE_CONSUMED
@@ -306,6 +320,10 @@ public class ContentSummary extends QuotaUsage implements Writable{
    */
   public static String getHeader(boolean qOption) {
     return qOption ? ALL_HEADER : SUMMARY_HEADER;
+  }
+
+  public static String getErasureCodingPolicyHeader() {
+    return ERASURECODING_POLICY_HEADER;
   }
 
   public static String getSnapshotHeader() {
@@ -442,6 +460,15 @@ public class ContentSummary extends QuotaUsage implements Writable{
     return humanReadable
       ? StringUtils.TraditionalBinaryPrefix.long2String(size, "", 1)
       : String.valueOf(size);
+  }
+
+  /**
+   * @return Constant-width String representation of Erasure Coding Policy
+   */
+  public String toErasureCodingPolicy() {
+    return String.format(ERASURECODING_POLICY_FORMAT,
+        erasureCodingPolicy.equals("Replicated")
+            ? erasureCodingPolicy : "EC:" + erasureCodingPolicy);
   }
 
   /**

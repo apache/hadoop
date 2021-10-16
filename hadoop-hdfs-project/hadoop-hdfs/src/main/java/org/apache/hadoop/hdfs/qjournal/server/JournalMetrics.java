@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import java.io.IOException;
 
 import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metric.Type;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
@@ -51,12 +52,7 @@ class JournalMetrics {
   @Metric("Number of bytes served via RPC")
   MutableCounterLong bytesServedViaRpc;
 
-  @Metric
-  MutableStat rpcRequestCacheMissAmount = new MutableStat(
-      "RpcRequestCacheMissAmount", "Number of RPC requests unable to be " +
-      "served due to lack of availability in cache, and how many " +
-      "transactions away the request was from being in the cache.",
-      "Misses", "Txns");
+  private MutableStat rpcRequestCacheMissAmount;
 
   @Metric("Number of RPC requests with zero edits returned")
   MutableCounterLong rpcEmptyResponses;
@@ -87,6 +83,11 @@ class JournalMetrics {
           "syncs" + interval + "s",
           "Journal sync time", "ops", "latencyMicros", interval);
     }
+    rpcRequestCacheMissAmount = registry
+        .newStat("RpcRequestCacheMissAmount", "Number of RPC requests unable to be " +
+                "served due to lack of availability in cache, and how many " +
+                "transactions away the request was from being in the cache.",
+            "Misses", "Txns");
   }
   
   public static JournalMetrics create(Journal j) {
@@ -97,6 +98,11 @@ class JournalMetrics {
 
   String getName() {
     return "Journal-" + journal.getJournalId();
+  }
+
+  @Metric(value={"JournalId", "Current JournalId"}, type=Type.TAG)
+  public String getJournalId() {
+    return journal.getJournalId();
   }
 
   @Metric("Current writer's epoch")
@@ -148,5 +154,9 @@ class JournalMetrics {
 
   public void incrNumEditLogsSynced() {
     numEditLogsSynced.incr();
+  }
+
+  public void addRpcRequestCacheMissAmount(long cacheMissAmount) {
+    rpcRequestCacheMissAmount.add(cacheMissAmount);
   }
 }

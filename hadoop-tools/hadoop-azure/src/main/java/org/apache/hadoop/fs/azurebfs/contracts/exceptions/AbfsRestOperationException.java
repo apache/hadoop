@@ -87,7 +87,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
               "Operation failed: \"%1$s\", %2$s, HEAD, %3$s",
               abfsHttpOperation.getStatusDescription(),
               abfsHttpOperation.getStatusCode(),
-              abfsHttpOperation.getSignatureMaskedUrl());
+              abfsHttpOperation.getMaskedUrl());
     }
 
     return String.format(
@@ -95,7 +95,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
             abfsHttpOperation.getStatusDescription(),
             abfsHttpOperation.getStatusCode(),
             abfsHttpOperation.getMethod(),
-            abfsHttpOperation.getSignatureMaskedUrl(),
+            abfsHttpOperation.getMaskedUrl(),
             abfsHttpOperation.getStorageErrorCode(),
             // Remove break line to ensure the request id and timestamp can be shown in console.
             abfsHttpOperation.getStorageErrorMessage().replaceAll("\\n", " "));

@@ -33,11 +33,14 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.HashMap;
 
@@ -61,6 +64,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
@@ -70,6 +74,8 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.fs.azure.security.RemoteWasbDelegationTokenManager;
 import org.apache.hadoop.fs.azure.security.WasbDelegationTokenManager;
+import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -79,6 +85,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 
@@ -90,7 +97,7 @@ import static org.apache.hadoop.fs.azure.NativeAzureFileSystemHelper.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.microsoft.azure.storage.StorageException;
 
 /**
@@ -913,6 +920,43 @@ public class NativeAzureFileSystem extends FileSystem {
 
        throw e;
       }
+    }
+
+    @Override
+    public int read(long position, byte[] buffer, int offset, int length)
+        throws IOException {
+      // SpotBugs reports bug type IS2_INCONSISTENT_SYNC here.
+      // This report is not valid here.
+      // 'this.in' is instance of BlockBlobInputStream and read(long, byte[], int, int)
+      // calls it's Super class method when 'fs.azure.block.blob.buffered.pread.disable'
+      // is configured false. Super class FSInputStream's implementation is having
+      // proper synchronization.
+      // When 'fs.azure.block.blob.buffered.pread.disable' is true, we want a lock free
+      // implementation of blob read. Here we don't use any of the InputStream's
+      // shared resource (buffer) and also don't change any cursor position etc.
+      // So its safe to go with unsynchronized way of read.
+      if (in instanceof PositionedReadable) {
+        try {
+          int result = ((PositionedReadable) this.in).read(position, buffer,
+              offset, length);
+          if (null != statistics && result > 0) {
+            statistics.incrementBytesRead(result);
+          }
+          return result;
+        } catch (IOException e) {
+          Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(e);
+          if (innerException instanceof StorageException) {
+            LOG.error("Encountered Storage Exception for read on Blob : {}"
+                + " Exception details: {} Error Code : {}",
+                key, e, ((StorageException) innerException).getErrorCode());
+            if (NativeAzureFileSystemHelper.isFileNotFoundException((StorageException) innerException)) {
+              throw new FileNotFoundException(String.format("%s is not found", key));
+            }
+          }
+          throw e;
+        }
+      }
+      return super.read(position, buffer, offset, length);
     }
 
     @Override
@@ -3043,6 +3087,12 @@ public class NativeAzureFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws FileNotFoundException, IOException {
+    return open(f, bufferSize, Optional.empty());
+  }
+
+  private FSDataInputStream open(Path f, int bufferSize,
+      Optional<Configuration> options)
+      throws FileNotFoundException, IOException {
 
     LOG.debug("Opening file: {}", f.toString());
 
@@ -3077,7 +3127,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
     InputStream inputStream;
     try {
-      inputStream = store.retrieve(key);
+      inputStream = store.retrieve(key, 0, options);
     } catch(Exception ex) {
       Throwable innerException = NativeAzureFileSystemHelper.checkForAzureStorageException(ex);
 
@@ -3092,6 +3142,18 @@ public class NativeAzureFileSystem extends FileSystem {
 
     return new FSDataInputStream(new BufferedFSInputStream(
         new NativeAzureFsInputStream(inputStream, key, meta.getLen()), bufferSize));
+  }
+
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(Path path,
+      OpenFileParameters parameters) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
+        Collections.emptySet(),
+        "for " + path);
+    return LambdaUtils.eval(
+        new CompletableFuture<>(), () ->
+            open(path, parameters.getBufferSize(), Optional.of(parameters.getOptions())));
   }
 
   @Override

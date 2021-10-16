@@ -38,14 +38,20 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 
+import java.lang.reflect.Field;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,6 +73,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.StringUtils;
+import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -655,9 +662,11 @@ public class TestBalancer {
     int numOfDatanodes = capacities.length;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
-                                  .numDataNodes(0)
-                                  .build();
+      cluster = new MiniDFSCluster
+          .Builder(conf)
+          .numDataNodes(0)
+          .setNNRedundancyConsiderLoad(false)
+          .build();
       cluster.getConfiguration(0).setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
           DFSConfigKeys.DFS_REPLICATION_DEFAULT);
       conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
@@ -1217,6 +1226,52 @@ public class TestBalancer {
     assertEquals(1, p.getBlockPools().size());
   }
 
+  @Test
+  public void testBalancerCliParseHotBlockTimeInterval() {
+    String[] parameters = new String[]{"-hotBlockTimeInterval", "1000"};
+    BalancerParameters p = Balancer.Cli.parse(parameters);
+    assertEquals(1000, p.getHotBlockTimeInterval());
+  }
+
+  @Test
+  public void testBalancerDispatchHotBlockTimeInterval() {
+    String[] parameters = new String[]{"-hotBlockTimeInterval", "1000"};
+    BalancerParameters p = Balancer.Cli.parse(parameters);
+    Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    try {
+      cluster = new MiniDFSCluster
+          .Builder(conf)
+          .numDataNodes(0)
+          .setNNRedundancyConsiderLoad(false)
+          .build();
+      cluster.getConfiguration(0).setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      cluster.waitClusterUp();
+      cluster.waitActive();
+      Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
+      List<NameNodeConnector> connectors =
+          NameNodeConnector.newNameNodeConnectors(namenodes,
+              Balancer.class.getSimpleName(),
+              Balancer.BALANCER_ID_PATH, conf,
+              BalancerParameters.DEFAULT.getMaxIdleIteration());
+      Balancer run = new Balancer(
+          connectors.get(0), p, new HdfsConfiguration());
+      Field field = run.getClass().getDeclaredField("dispatcher");
+      field.setAccessible(true);
+      Object dispatcher = field.get(run);
+      Field field1 =
+          dispatcher.getClass().getDeclaredField("hotBlockTimeInterval");
+      field1.setAccessible(true);
+      Object hotBlockTimeInterval = field1.get(dispatcher);
+      assertEquals(1000, (long)hotBlockTimeInterval);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+  }
+
   /**
    * Verify balancer exits 0 on success.
    */
@@ -1614,9 +1669,37 @@ public class TestBalancer {
       // verify locations of striped blocks
       locatedBlocks = client.getBlockLocations(fileName, 0, fileLen);
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks, groupSize);
+
+      // Test handling NPE with striped blocks
+      testNullStripedBlocks(conf);
+
     } finally {
       cluster.shutdown();
     }
+  }
+
+  private void testNullStripedBlocks(Configuration conf) throws IOException {
+    NameNodeConnector nnc = NameNodeConnector.newNameNodeConnectors(
+        DFSUtil.getInternalNsRpcUris(conf),
+        Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
+        BalancerParameters.DEFAULT.getMaxIdleIteration()).get(0);
+    Dispatcher dispatcher = new Dispatcher(nnc, Collections.emptySet(),
+        Collections.<String> emptySet(), 1, 1, 0,
+        1, 1, conf);
+    Dispatcher spyDispatcher = spy(dispatcher);
+    Dispatcher.PendingMove move = spyDispatcher.new PendingMove(
+        mock(Dispatcher.Source.class),
+        mock(Dispatcher.DDatanode.StorageGroup.class));
+    Dispatcher.DBlockStriped block = mock(Dispatcher.DBlockStriped.class);
+
+    doReturn(null).when(block).getInternalBlock(any());
+    doReturn(true)
+        .when(spyDispatcher)
+        .isGoodBlockCandidate(any(), any(), any(), any());
+
+    when(move.markMovedIfGoodBlock(block, DEFAULT)).thenCallRealMethod();
+
+    assertFalse(move.markMovedIfGoodBlock(block, DEFAULT));
   }
 
   /**

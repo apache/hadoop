@@ -28,7 +28,10 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Tool;
 import org.junit.Test;
 
@@ -129,8 +132,24 @@ public class TestBalancerService {
           newBalancerService(conf, new String[] {"-asService"});
       balancerThread.start();
 
+      // Check metrics
+      final String balancerMetricsName = "Balancer-"
+          + cluster.getNameNode(0).getNamesystem().getBlockPoolId();
+      GenericTestUtils.waitFor(() -> {
+        // Validate metrics after metrics system initiated.
+        if (DefaultMetricsSystem.instance().getSource(balancerMetricsName) == null) {
+          return false;
+        }
+        MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
+        return rb != null && MetricsAsserts.getLongGauge("BytesLeftToMove", rb) > 0;
+      }, 100, 2000);
+
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
           cluster, BalancerParameters.DEFAULT);
+
+      MetricsRecordBuilder rb = MetricsAsserts.getMetrics(balancerMetricsName);
+      assertTrue(MetricsAsserts.getLongGauge("BytesMovedInCurrentRun", rb) > 0);
+
       cluster.triggerHeartbeats();
       cluster.triggerBlockReports();
 

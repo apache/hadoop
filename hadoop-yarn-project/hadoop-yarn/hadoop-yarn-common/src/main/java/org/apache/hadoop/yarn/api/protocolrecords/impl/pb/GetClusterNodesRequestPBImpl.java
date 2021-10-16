@@ -52,7 +52,7 @@ public class GetClusterNodesRequestPBImpl extends GetClusterNodesRequest {
     viaProto = true;
   }
   
-  public GetClusterNodesRequestProto getProto() {
+  public synchronized GetClusterNodesRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -60,13 +60,13 @@ public class GetClusterNodesRequestPBImpl extends GetClusterNodesRequest {
   }
   
   @Override
-  public EnumSet<NodeState> getNodeStates() {
+  public synchronized EnumSet<NodeState> getNodeStates() {
     initNodeStates();
     return this.states;
   }
   
   @Override
-  public void setNodeStates(final EnumSet<NodeState> states) {
+  public synchronized void setNodeStates(final EnumSet<NodeState> states) {
     initNodeStates();
     this.states.clear();
     if (states == null) {

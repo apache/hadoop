@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -623,6 +623,9 @@ public class ApplicationImpl implements Application {
     public void transition(ApplicationImpl app, ApplicationEvent event) {
       ApplicationId appId = event.getApplicationID();
       app.context.getApplications().remove(appId);
+      if (null != app.context.getNodeManagerMetrics()) {
+        app.context.getNodeManagerMetrics().endRunningApplication();
+      }
       app.aclsManager.removeApplication(appId);
       try {
         app.context.getNMStateStore().removeApplication(appId);

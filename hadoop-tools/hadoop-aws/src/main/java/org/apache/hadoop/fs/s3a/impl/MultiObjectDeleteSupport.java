@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +106,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
           error.getMessage());
       LOG.warn(item);
       result.append(item);
-      if (exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
+      if (exitCode == null || exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
         exitCode = code;
       }
     }

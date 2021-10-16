@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.security.ssl;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -273,8 +273,8 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
     } else {
       KeyStore keystore = KeyStore.getInstance(keystoreType);
       keystore.load(null, null);
-      KeyManagerFactory keyMgrFactory = KeyManagerFactory
-              .getInstance(SSLFactory.SSLCERTIFICATE);
+      KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
+          SSLFactory.KEY_MANAGER_SSLCERTIFICATE);
 
       keyMgrFactory.init(keystore, null);
       keyManagers = keyMgrFactory.getKeyManagers();

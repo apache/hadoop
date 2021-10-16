@@ -128,7 +128,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.log4j.LogManager;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.ClientHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1619,12 +1619,9 @@ public class ApplicationMaster {
   }
 
   private String readContent(String filePath) throws IOException {
-    DataInputStream ds = null;
-    try {
-      ds = new DataInputStream(new FileInputStream(filePath));
+    try (DataInputStream ds = new DataInputStream(
+        new FileInputStream(filePath))) {
       return ds.readUTF();
-    } finally {
-      org.apache.commons.io.IOUtils.closeQuietly(ds);
     }
   }
 

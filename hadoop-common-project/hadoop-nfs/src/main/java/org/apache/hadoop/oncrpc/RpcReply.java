@@ -19,8 +19,7 @@ package org.apache.hadoop.oncrpc;
 
 import org.apache.hadoop.oncrpc.security.RpcAuthInfo;
 import org.apache.hadoop.oncrpc.security.Verifier;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Represents an RPC message of type RPC reply as defined in RFC 1831

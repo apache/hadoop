@@ -255,7 +255,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(SECRET_KEY, "not secret");
     expectFileSystemCreateFailure(conf,
         AWSBadRequestException.class,
-        "IncompleteSignature");
+        "not a valid " +
+        "key=value pair (missing equal-sign) in Authorization header");
   }
 
   @Test

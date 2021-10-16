@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.Groups;
@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +42,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 /**
  * This class is responsible for making application submissions to queue
@@ -55,6 +54,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 public class CSMappingPlacementRule extends PlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(CSMappingPlacementRule.class);
+  private static final String DOT = ".";
+  private static final String DOT_REPLACEMENT = "_dot_";
 
   private CapacitySchedulerQueueManager queueManager;
   private List<MappingRule> mappingRules;
@@ -194,12 +195,13 @@ public class CSMappingPlacementRule extends PlacementRule {
       return;
     }
     Iterator<String> it = groupsSet.iterator();
-    String primaryGroup = it.next();
+    String primaryGroup = cleanName(it.next());
 
     ArrayList<String> secondaryGroupList = new ArrayList<>();
 
     while (it.hasNext()) {
-      secondaryGroupList.add(it.next());
+      String groupName = cleanName(it.next());
+      secondaryGroupList.add(groupName);
     }
 
     if (secondaryGroupList.size() == 0) {
@@ -226,7 +228,7 @@ public class CSMappingPlacementRule extends PlacementRule {
       ApplicationSubmissionContext asc, String user) {
     VariableContext vctx = new VariableContext();
 
-    vctx.put("%user", user);
+    vctx.put("%user", cleanName(user));
     //If the specified matches the default it means NO queue have been specified
     //as per ClientRMService#submitApplication which sets the queue to default
     //when no queue is provided.
@@ -256,7 +258,7 @@ public class CSMappingPlacementRule extends PlacementRule {
 
   private String validateAndNormalizeQueue(
       String queueName, boolean allowCreate) throws YarnException {
-    MappingQueuePath path = new MappingQueuePath(queueName);
+    QueuePath path = new QueuePath(queueName);
 
     if (path.hasEmptyPart()) {
       throw new YarnException("Invalid path returned by rule: '" +
@@ -520,6 +522,17 @@ public class CSMappingPlacementRule extends PlacementRule {
       //config information to leak to the client side
       throw new YarnException("Application submission have been rejected by a" +
           " mapping rule. Please see the logs for details");
+    }
+  }
+
+  private String cleanName(String name) {
+    if (name.contains(DOT)) {
+      String converted = name.replaceAll("\\.", DOT_REPLACEMENT);
+      LOG.warn("Name {} is converted to {} when it is used as a queue name.",
+          name, converted);
+      return converted;
+    } else {
+      return name;
     }
   }
 }

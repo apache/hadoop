@@ -36,7 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 class FSEditLogAsync extends FSEditLog implements Runnable {
@@ -125,9 +125,14 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
 
   @Override
   void logEdit(final FSEditLogOp op) {
+    assert isOpenForWrite();
+
     Edit edit = getEditInstance(op);
     THREAD_EDIT.set(edit);
-    enqueueEdit(edit);
+    synchronized(this) {
+      enqueueEdit(edit);
+      beginTransaction(op);
+    }
   }
 
   @Override

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -66,6 +66,12 @@ public class DataNodeFaultInjector {
 
   public void delaySendingAckToUpstream(final String upstreamAddr)
       throws IOException {
+  }
+
+  /**
+   * Used as a hook to delay sending the response of the last packet.
+   */
+  public void delayAckLastPacket() throws IOException {
   }
 
   /**

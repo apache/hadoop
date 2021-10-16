@@ -27,7 +27,7 @@ import java.util.HashMap;
 
 import javax.servlet.ServletContext;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -253,7 +253,7 @@ public class NameNodeHttpServer {
     httpServer.addInternalServlet(IsNameNodeActiveServlet.SERVLET_NAME,
         IsNameNodeActiveServlet.PATH_SPEC,
         IsNameNodeActiveServlet.class);
-    httpServer.addInternalServlet("topology",
+    httpServer.addInternalServlet(NetworkTopologyServlet.SERVLET_NAME,
         NetworkTopologyServlet.PATH_SPEC, NetworkTopologyServlet.class);
   }
 

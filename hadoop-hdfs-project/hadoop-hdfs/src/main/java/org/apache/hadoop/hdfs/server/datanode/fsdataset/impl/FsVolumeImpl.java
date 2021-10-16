@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -86,7 +87,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -865,7 +866,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
               }
 
               File blkFile = getBlockFile(bpid, block);
-              File metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              File metaFile ;
+              try {
+                 metaFile = FsDatasetUtil.findMetaFile(blkFile);
+              } catch (FileNotFoundException e){
+                LOG.warn("nextBlock({}, {}): {}", storageID, bpid,
+                    e.getMessage());
+                continue;
+              }
+
               block.setGenerationStamp(
                   Block.getGenerationStamp(metaFile.getName()));
               block.setNumBytes(blkFile.length());
@@ -1451,7 +1460,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
           long blockId = Block.getBlockId(file.getName());
           verifyFileLocation(file, bpFinalizedDir,
               blockId);
-          report.add(new ScanInfo(blockId, null, file, this));
+          report.add(new ScanInfo(blockId, dir, null, fileNames.get(i), this));
         }
         continue;
       }
@@ -1474,7 +1483,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
         }
       }
       verifyFileLocation(blockFile, bpFinalizedDir, blockId);
-      report.add(new ScanInfo(blockId, blockFile, metaFile, this));
+      report.add(new ScanInfo(blockId, dir, blockFile.getName(),
+          metaFile == null ? null : metaFile.getName(), this));
     }
   }
 

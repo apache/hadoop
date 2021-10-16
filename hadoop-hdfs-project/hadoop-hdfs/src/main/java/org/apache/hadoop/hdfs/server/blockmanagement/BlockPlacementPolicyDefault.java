@@ -39,7 +39,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * The class is responsible for choosing the desired number of targets
@@ -1104,8 +1104,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // check if the target is a slow node
     if (dataNodePeerStatsEnabled && excludeSlowNodesEnabled) {
-      Set<Node> nodes = DatanodeManager.getSlowNodes();
-      if (nodes.contains(node)) {
+      Set<String> slowNodesUuidSet = DatanodeManager.getSlowNodesUuidSet();
+      if (slowNodesUuidSet.contains(node.getDatanodeUuid())) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_SLOW);
         return false;
       }

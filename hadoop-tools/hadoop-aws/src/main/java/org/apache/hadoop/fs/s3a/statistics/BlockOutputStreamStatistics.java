@@ -134,4 +134,14 @@ public interface BlockOutputStreamStatistics extends Closeable,
    * @return the value or null if no matching gauge was found.
    */
   Long lookupGaugeValue(String name);
+
+  /**
+   * Syncable.hflush() has been invoked.
+   */
+  void hflushInvoked();
+
+  /**
+   * Syncable.hsync() has been invoked.
+   */
+  void hsyncInvoked();
 }

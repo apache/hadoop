@@ -20,14 +20,11 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.model.SSECustomerKey;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -45,6 +42,7 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -101,7 +99,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private S3Object object;
   private S3ObjectInputStream wrappedStream;
   private final S3AReadOpContext context;
-  private final AmazonS3 client;
+  private final InputStreamCallbacks client;
   private final String bucket;
   private final String key;
   private final String pathStr;
@@ -110,8 +108,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AInputStream.class);
   private final S3AInputStreamStatistics streamStatistics;
-  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
-  private String serverSideEncryptionKey;
   private S3AInputPolicy inputPolicy;
   private long readahead = Constants.DEFAULT_READAHEAD_RANGE;
 
@@ -150,7 +146,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   public S3AInputStream(S3AReadOpContext ctx,
       S3ObjectAttributes s3Attributes,
-      AmazonS3 client) {
+      InputStreamCallbacks client) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
@@ -166,9 +162,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.streamStatistics = ctx.getS3AStatisticsContext()
         .newInputStreamStatistics();
     this.ioStatistics = streamStatistics.getIOStatistics();
-    this.serverSideEncryptionAlgorithm =
-        s3Attributes.getServerSideEncryptionAlgorithm();
-    this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
     this.changeTracker = new ChangeTracker(uri,
         ctx.getChangeDetectionPolicy(),
         streamStatistics.getChangeTrackerStatistics(),
@@ -211,16 +204,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         inputPolicy);
 
     long opencount = streamStatistics.streamOpened();
-    GetObjectRequest request = new GetObjectRequest(bucket, key)
+    GetObjectRequest request = client.newGetRequest(key)
         .withRange(targetPos, contentRangeFinish - 1);
-    if (S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
-        StringUtils.isNotBlank(serverSideEncryptionKey)){
-      request.setSSECustomerKey(new SSECustomerKey(serverSideEncryptionKey));
-    }
     String operation = opencount == 0 ? OPERATION_OPEN : OPERATION_REOPEN;
     String text = String.format("%s %s at %d",
         operation, uri, targetPos);
     changeTracker.maybeApplyConstraint(request);
+
     DurationTracker tracker = streamStatistics.initiateGetRequest();
     try {
       object = Invoker.once(text, uri,
@@ -428,16 +418,22 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     int byteRead = invoker.retry("read", pathStr, true,
         () -> {
           int b;
+          // When exception happens before re-setting wrappedStream in "reopen" called
+          // by onReadFailure, then wrappedStream will be null. But the **retry** may
+          // re-execute this block and cause NPE if we don't check wrappedStream
+          if (wrappedStream == null) {
+            reopen("failure recovery", getPos(), 1, false);
+          }
           try {
             b = wrappedStream.read();
           } catch (EOFException e) {
             return -1;
           } catch (SocketTimeoutException e) {
-            onReadFailure(e, 1, true);
-            b = wrappedStream.read();
+            onReadFailure(e, true);
+            throw e;
           } catch (IOException e) {
-            onReadFailure(e, 1, false);
-            b = wrappedStream.read();
+            onReadFailure(e, false);
+            throw e;
           }
           return b;
         });
@@ -454,15 +450,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * Handle an IOE on a read by attempting to re-open the stream.
+   * Close the stream on read failure.
    * The filesystem's readException count will be incremented.
    * @param ioe exception caught.
-   * @param length length of data being attempted to read
-   * @throws IOException any exception thrown on the re-open attempt.
    */
   @Retries.OnceTranslated
-  private void onReadFailure(IOException ioe, int length, boolean forceAbort)
-          throws IOException {
+  private void onReadFailure(IOException ioe, boolean forceAbort) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got exception while trying to read from stream {}, " +
           "client: {} object: {}, trying to recover: ",
@@ -473,7 +466,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           uri, client, object);
     }
     streamStatistics.readException();
-    reopen("failure recovery", pos, length, forceAbort);
+    closeStream("failure recovery", contentRangeFinish, forceAbort);
   }
 
   /**
@@ -516,17 +509,23 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     int bytesRead = invoker.retry("read", pathStr, true,
         () -> {
           int bytes;
+          // When exception happens before re-setting wrappedStream in "reopen" called
+          // by onReadFailure, then wrappedStream will be null. But the **retry** may
+          // re-execute this block and cause NPE if we don't check wrappedStream
+          if (wrappedStream == null) {
+            reopen("failure recovery", getPos(), 1, false);
+          }
           try {
             bytes = wrappedStream.read(buf, off, len);
           } catch (EOFException e) {
             // the base implementation swallows EOFs.
             return -1;
           } catch (SocketTimeoutException e) {
-            onReadFailure(e, len, true);
-            bytes = wrappedStream.read(buf, off, len);
+            onReadFailure(e, true);
+            throw e;
           } catch (IOException e) {
-            onReadFailure(e, len, false);
-            bytes= wrappedStream.read(buf, off, len);
+            onReadFailure(e, false);
+            throw e;
           }
           return bytes;
         });
@@ -567,6 +566,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         // close or abort the stream
         closeStream("close() operation", this.contentRangeFinish, false);
         LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
+        // end the client+audit span.
+        client.close();
         // this is actually a no-op
         super.close();
       } finally {
@@ -908,4 +909,27 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public IOStatistics getIOStatistics() {
     return ioStatistics;
   }
+
+  /**
+   * Callbacks for input stream IO.
+   */
+  public interface InputStreamCallbacks extends Closeable {
+
+    /**
+     * Create a GET request.
+     * @param key object key
+     * @return the request
+     */
+    GetObjectRequest newGetRequest(String key);
+
+    /**
+     * Execute the request.
+     * @param request the request
+     * @return the response
+     */
+    @Retries.OnceRaw
+    S3Object getObject(GetObjectRequest request);
+
+  }
+
 }

@@ -56,7 +56,7 @@ import org.apache.hadoop.tracing.TraceScope;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_SEQUENTIAL;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 
@@ -434,8 +434,8 @@ class BlockSender implements java.io.Closeable {
     } catch (IOException ioe) {
       IOUtils.cleanupWithLogger(null, volumeRef);
       IOUtils.closeStream(this);
-      org.apache.commons.io.IOUtils.closeQuietly(blockIn);
-      org.apache.commons.io.IOUtils.closeQuietly(checksumIn);
+      IOUtils.closeStream(blockIn);
+      IOUtils.closeStream(checksumIn);
       throw ioe;
     }
   }
@@ -632,6 +632,7 @@ class BlockSender implements java.io.Closeable {
          * 
          * Reporting of this case is done in DataXceiver#run
          */
+        LOG.warn("Sending packets timed out.", e);
       } else {
         /* Exception while writing to the client. Connection closure from
          * the other end is mostly the case and we do not care much about

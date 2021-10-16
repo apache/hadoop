@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,7 +84,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /** Dispatching block replica moves between datanodes. */
@@ -240,7 +241,7 @@ public class Dispatcher {
     private DDatanode proxySource;
     private StorageGroup target;
 
-    private PendingMove(Source source, StorageGroup target) {
+    PendingMove(Source source, StorageGroup target) {
       this.source = source;
       this.target = target;
     }
@@ -281,12 +282,18 @@ public class Dispatcher {
     /**
      * @return true if the given block is good for the tentative move.
      */
-    private boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
+    boolean markMovedIfGoodBlock(DBlock block, StorageType targetStorageType) {
       synchronized (block) {
         synchronized (movedBlocks) {
           if (isGoodBlockCandidate(source, target, targetStorageType, block)) {
             if (block instanceof DBlockStriped) {
               reportedBlock = ((DBlockStriped) block).getInternalBlock(source);
+              if (reportedBlock == null) {
+                LOG.info(
+                    "No striped internal block on source {}, block {}. Skipping.",
+                    source, block);
+                return false;
+              }
             } else {
               reportedBlock = block;
             }
@@ -398,13 +405,15 @@ public class Dispatcher {
         LOG.info("Successfully moved " + this);
       } catch (IOException e) {
         LOG.warn("Failed to move " + this, e);
+        nnc.getBlocksFailed().incrementAndGet();
         target.getDDatanode().setHasFailure();
         // Check that the failure is due to block pinning errors.
         if (e instanceof BlockPinningException) {
           // Pinned block can't be moved. Add this block into failure list.
           // Later in the next iteration mover will exclude these blocks from
           // pending moves.
-          target.getDDatanode().addBlockPinningFailures(this);
+          target.getDDatanode().addBlockPinningFailures(
+              this.reportedBlock.getBlock().getBlockId(), this.getSource());
           return;
         }
 
@@ -498,7 +507,7 @@ public class Dispatcher {
       this.cellSize = cellSize;
     }
 
-    public DBlock getInternalBlock(StorageGroup storage) {
+    DBlock getInternalBlock(StorageGroup storage) {
       int idxInLocs = locations.indexOf(storage);
       if (idxInLocs == -1) {
         return null;
@@ -517,7 +526,11 @@ public class Dispatcher {
 
     @Override
     public long getNumBytes(StorageGroup storage) {
-      return getInternalBlock(storage).getNumBytes();
+      DBlock block = getInternalBlock(storage);
+      if (block == null) {
+        return 0;
+      }
+      return block.getNumBytes();
     }
   }
 
@@ -642,7 +655,8 @@ public class Dispatcher {
     /** blocks being moved but not confirmed yet */
     private final List<PendingMove> pendings;
     private volatile boolean hasFailure = false;
-    private Map<Long, Set<DatanodeInfo>> blockPinningFailures = new HashMap<>();
+    private final Map<Long, Set<DatanodeInfo>> blockPinningFailures =
+        new ConcurrentHashMap<>();
     private volatile boolean hasSuccess = false;
     private ExecutorService moveExecutor;
 
@@ -728,16 +742,17 @@ public class Dispatcher {
       this.hasFailure = true;
     }
 
-    void addBlockPinningFailures(PendingMove pendingBlock) {
-      synchronized (blockPinningFailures) {
-        long blockId = pendingBlock.reportedBlock.getBlock().getBlockId();
-        Set<DatanodeInfo> pinnedLocations = blockPinningFailures.get(blockId);
+    private void addBlockPinningFailures(long blockId, DatanodeInfo source) {
+      blockPinningFailures.compute(blockId, (key, pinnedLocations) -> {
+        Set<DatanodeInfo> newPinnedLocations;
         if (pinnedLocations == null) {
-          pinnedLocations = new HashSet<>();
-          blockPinningFailures.put(blockId, pinnedLocations);
+          newPinnedLocations = new HashSet<>();
+        } else {
+          newPinnedLocations = pinnedLocations;
         }
-        pinnedLocations.add(pendingBlock.getSource());
-      }
+        newPinnedLocations.add(source);
+        return newPinnedLocations;
+      });
     }
 
     Map<Long, Set<DatanodeInfo>> getBlockPinningFailureList() {
@@ -1304,7 +1319,7 @@ public class Dispatcher {
    * 2. the block does not have a replica/internalBlock on the target;
    * 3. doing the move does not reduce the number of racks that the block has
    */
-  private boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
+  boolean isGoodBlockCandidate(StorageGroup source, StorageGroup target,
       StorageType targetStorageType, DBlock block) {
     if (source.equals(target)) {
       return false;

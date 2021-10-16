@@ -64,7 +64,7 @@ import org.apache.hadoop.tracing.Tracer;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.SYNC_FILE_RANGE_WRITE;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /** A class that receives a block and writes to its own disk, meanwhile
@@ -1492,6 +1492,8 @@ class BlockReceiver implements Closeable {
           if (lastPacketInBlock) {
             // Finalize the block and close the block file
             finalizeBlock(startTime);
+            // For test only, no-op in production system.
+            DataNodeFaultInjector.get().delayAckLastPacket();
           }
 
           Status myStatus = pkt != null ? pkt.ackStatus : Status.SUCCESS;
@@ -1551,11 +1553,12 @@ class BlockReceiver implements Closeable {
         DatanodeRegistration dnR = datanode.getDNRegistrationForBP(block
             .getBlockPoolId());
         ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT, inAddr,
-            myAddr, block.getNumBytes(), "HDFS_WRITE", clientname, offset,
-            dnR.getDatanodeUuid(), block, endTime - startTime));
+            myAddr, replicaInfo.getVolume(), block.getNumBytes(),
+            "HDFS_WRITE", clientname, offset, dnR.getDatanodeUuid(),
+            block, endTime - startTime));
       } else {
-        LOG.info("Received " + block + " size " + block.getNumBytes()
-            + " from " + inAddr);
+        LOG.info("Received " + block + " on volume "  + replicaInfo.getVolume()
+            + " size " + block.getNumBytes() + " from " + inAddr);
       }
     }
     

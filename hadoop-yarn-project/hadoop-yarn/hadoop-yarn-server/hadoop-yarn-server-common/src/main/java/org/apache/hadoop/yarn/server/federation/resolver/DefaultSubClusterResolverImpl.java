@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.federation.resolver;
 
 import java.io.BufferedReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -107,7 +107,7 @@ public class DefaultSubClusterResolverImpl extends AbstractSubClusterResolver
       }
 
       try {
-        reader = Files.newBufferedReader(file, Charset.defaultCharset());
+        reader = Files.newBufferedReader(file, StandardCharsets.UTF_8);
         String line = null;
         while ((line = reader.readLine()) != null) {
           String[] tokens = line.split(",");

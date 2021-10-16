@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -67,6 +68,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
 
@@ -227,6 +230,31 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
+  public void testAppLogsDomainLogLastlyScanned() throws Exception {
+    EntityGroupFSTimelineStore.AppLogs appLogs =
+            store.new AppLogs(mainTestAppId, mainTestAppDirPath,
+                    AppState.COMPLETED);
+    Path attemptDirPath = new Path(new Path(testActiveDirPath,
+            mainTestAppId.toString()),
+            getAttemptDirName(mainTestAppId));
+    //Delete the domain log from AppDirPath so first scan won't find it
+    fs.delete(new Path(attemptDirPath, TEST_DOMAIN_LOG_FILE_NAME), false);
+    appLogs.scanForLogs();
+    List<LogInfo> summaryLogs = appLogs.getSummaryLogs();
+    assertEquals(1, summaryLogs.size());
+    assertEquals(TEST_SUMMARY_LOG_FILE_NAME, summaryLogs.get(0).getFilename());
+
+    //Generate the domain log
+    FSDataOutputStream out = fs.create(
+            new Path(attemptDirPath, TEST_DOMAIN_LOG_FILE_NAME));
+    out.close();
+
+    appLogs.scanForLogs();
+    assertEquals(2, summaryLogs.size());
+    assertEquals(TEST_DOMAIN_LOG_FILE_NAME, summaryLogs.get(0).getFilename());
+  }
+
+  @Test
   public void testMoveToDone() throws Exception {
     EntityGroupFSTimelineStore.AppLogs appLogs =
         store.new AppLogs(mainTestAppId, mainTestAppDirPath,
@@ -252,6 +280,23 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     appLogs.parseSummaryLogs(tdm);
     PluginStoreTestUtils.verifyTestEntities(tdm);
     assertEquals(beforeScan + 2L, scanned.value());
+  }
+
+  @Test
+  public void testWithAnonymousUser() throws Exception {
+    try {
+      TimelineDataManager tdm = PluginStoreTestUtils.getTdmWithMemStore(config);
+      EntityGroupFSTimelineStore.AppLogs appLogs =
+              store.new AppLogs(mainTestAppId, mainTestAppDirPath,
+                      AppState.COMPLETED);
+      FileStatus fileStatus = mock(FileStatus.class);
+      when(fileStatus.getOwner()).thenReturn(null);
+      appLogs.scanForLogs();
+      appLogs.parseSummaryLogs(tdm);
+      PluginStoreTestUtils.verifyTestEntities(tdm);
+    } catch (IllegalArgumentException ie) {
+      Assert.fail("No exception needs to be thrown as anonymous user is configured");
+    }
   }
 
   @Test

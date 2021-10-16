@@ -34,21 +34,20 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
@@ -56,7 +55,7 @@ import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.VersionInfo;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +65,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -89,8 +89,10 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Utility methods for S3A code.
@@ -125,16 +127,19 @@ public final class S3AUtils {
   public static final String SSE_C_NO_KEY_ERROR =
       S3AEncryptionMethods.SSE_C.getMethod()
           + " is enabled but no encryption key was declared in "
-          + SERVER_SIDE_ENCRYPTION_KEY;
+          + Constants.S3_ENCRYPTION_KEY;
   /**
    * Encryption SSE-S3 is used but the caller also set an encryption key.
    */
   public static final String SSE_S3_WITH_KEY_ERROR =
       S3AEncryptionMethods.SSE_S3.getMethod()
           + " is enabled but an encryption key was set in "
-          + SERVER_SIDE_ENCRYPTION_KEY;
-  private static final String EOF_MESSAGE_IN_XML_PARSER
+          + Constants.S3_ENCRYPTION_KEY;
+  public static final String EOF_MESSAGE_IN_XML_PARSER
       = "Failed to sanitize XML document destined for handler class";
+
+  public static final String EOF_READ_DIFFERENT_LENGTH
+      = "Data read has a different length than the expected";
 
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
 
@@ -195,13 +200,14 @@ public final class S3AUtils {
         // interrupted IO, or a socket exception underneath that class
         return translateInterruptedException(exception, innerCause, message);
       }
-      if (signifiesConnectionBroken(exception)) {
+      if (isMessageTranslatableToEOF(exception)) {
         // call considered an sign of connectivity failure
         return (EOFException)new EOFException(message).initCause(exception);
       }
       if (exception instanceof CredentialInitializationException) {
         // the exception raised by AWSCredentialProvider list if the
-        // credentials were not accepted.
+        // credentials were not accepted,
+        // or auditing blocked the operation.
         return (AccessDeniedException)new AccessDeniedException(path, null,
             exception.toString()).initCause(exception);
       }
@@ -254,7 +260,7 @@ public final class S3AUtils {
       case 404:
         if (isUnknownBucket(ase)) {
           // this is a missing bucket
-          ioe = new UnknownStoreException(path, ase);
+          ioe = new UnknownStoreException(path, message, ase);
         } else {
           // a normal unknown object
           ioe = new FileNotFoundException(message);
@@ -415,13 +421,14 @@ public final class S3AUtils {
 
   /**
    * Cue that an AWS exception is likely to be an EOF Exception based
-   * on the message coming back from an XML/JSON parser. This is likely
-   * to be brittle, so only a hint.
+   * on the message coming back from the client. This is likely to be
+   * brittle, so only a hint.
    * @param ex exception
    * @return true if this is believed to be a sign the connection was broken.
    */
-  public static boolean signifiesConnectionBroken(SdkBaseException ex) {
-    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER);
+  public static boolean isMessageTranslatableToEOF(SdkBaseException ex) {
+    return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER) ||
+            ex.toString().contains(EOF_READ_DIFFERENT_LENGTH);
   }
 
   /**
@@ -517,6 +524,7 @@ public final class S3AUtils {
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
    * @param versionId S3 object versionId or null if unavailable
+   * @param isCSEEnabled is client side encryption enabled?
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
@@ -524,10 +532,15 @@ public final class S3AUtils {
       long blockSize,
       String owner,
       String eTag,
-      String versionId) {
+      String versionId,
+      boolean isCSEEnabled) {
     long size = summary.getSize();
+    // check if cse is enabled; strip out constant padding length.
+    if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
+      size -= CSE_PADDING_LENGTH;
+    }
     return createFileStatus(keyPath,
-        objectRepresentsDirectory(summary.getKey(), size),
+        objectRepresentsDirectory(summary.getKey()),
         size, summary.getLastModified(), blockSize, owner, eTag, versionId);
   }
 
@@ -568,14 +581,11 @@ public final class S3AUtils {
   /**
    * Predicate: does the object represent a directory?.
    * @param name object name
-   * @param size object size
    * @return true if it meets the criteria for being an object
    */
-  public static boolean objectRepresentsDirectory(final String name,
-      final long size) {
+  public static boolean objectRepresentsDirectory(final String name) {
     return !name.isEmpty()
-        && name.charAt(name.length() - 1) == '/'
-        && size == 0L;
+        && name.charAt(name.length() - 1) == '/';
   }
 
   /**
@@ -1149,7 +1159,7 @@ public final class S3AUtils {
   public static Configuration propagateBucketOptions(Configuration source,
       String bucket) {
 
-    Preconditions.checkArgument(StringUtils.isNotEmpty(bucket), "bucket");
+    Preconditions.checkArgument(StringUtils.isNotEmpty(bucket), "bucket is null/empty");
     final String bucketPrefix = FS_S3A_BUCKET_PREFIX + bucket +'.';
     LOG.debug("Propagating entries under {}", bucketPrefix);
     final Configuration dest = new Configuration(source);
@@ -1423,23 +1433,19 @@ public final class S3AUtils {
    * an array. Given tombstones are filtered out. If the iterator
    * does return any item, an empty array is returned.
    * @param iterator a non-null iterator
-   * @param tombstones
+   * @param tombstones possibly empty set of tombstones
    * @return a possibly-empty array of file status entries
-   * @throws IOException
+   * @throws IOException failure
    */
   public static S3AFileStatus[] iteratorToStatuses(
       RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
       throws IOException {
-    List<FileStatus> statuses = new ArrayList<>();
-
-    while (iterator.hasNext()) {
-      S3AFileStatus status = iterator.next();
-      if (!tombstones.contains(status.getPath())) {
-        statuses.add(status);
-      }
-    }
-
-    return statuses.toArray(new S3AFileStatus[0]);
+    // this will close the span afterwards
+    RemoteIterator<S3AFileStatus> source = filteringRemoteIterator(iterator,
+        st -> !tombstones.contains(st.getPath()));
+    S3AFileStatus[] statuses = RemoteIterators
+        .toArray(source, new S3AFileStatus[0]);
+    return statuses;
   }
 
   /**
@@ -1564,28 +1570,107 @@ public final class S3AUtils {
   }
 
   /**
-   * Get any SSE key from a configuration/credential provider.
-   * This operation handles the case where the option has been
-   * set in the provider or configuration to the option
-   * {@code OLD_S3A_SERVER_SIDE_ENCRYPTION_KEY}.
-   * IOExceptions raised during retrieval are swallowed.
+   * Lookup a per-bucket-secret from a configuration including JCEKS files.
+   * No attempt is made to look for the global configuration.
+   * @param bucket bucket or "" if none known
+   * @param conf configuration
+   * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
+   * @return the secret or null.
+   * @throws IOException on any IO problem
+   * @throws IllegalArgumentException bad arguments
+   */
+  private static String lookupBucketSecret(
+      String bucket,
+      Configuration conf,
+      String baseKey)
+      throws IOException {
+
+    Preconditions.checkArgument(!isEmpty(bucket), "null/empty bucket argument");
+    Preconditions.checkArgument(baseKey.startsWith(FS_S3A_PREFIX),
+        "%s does not start with $%s", baseKey, FS_S3A_PREFIX);
+    String subkey = baseKey.substring(FS_S3A_PREFIX.length());
+
+    // set from the long key unless overidden.
+    String longBucketKey = String.format(
+        BUCKET_PATTERN, bucket, baseKey);
+    String initialVal = getPassword(conf, longBucketKey, null, null);
+    // then override from the short one if it is set
+    String shortBucketKey = String.format(
+        BUCKET_PATTERN, bucket, subkey);
+    return getPassword(conf, shortBucketKey, initialVal, null);
+  }
+
+  /**
+   * Get any S3 encryption key, without propagating exceptions from
+   * JCEKs files.
    * @param bucket bucket to query for
    * @param conf configuration to examine
    * @return the encryption key or ""
    * @throws IllegalArgumentException bad arguments.
    */
-  public static String getServerSideEncryptionKey(String bucket,
+  public static String getS3EncryptionKey(
+      String bucket,
       Configuration conf) {
     try {
-      return lookupPassword(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
+      return getS3EncryptionKey(bucket, conf, false);
     } catch (IOException e) {
-      LOG.error("Cannot retrieve " + SERVER_SIDE_ENCRYPTION_KEY, e);
+      // never going to happen, but to make sure, covert to
+      // runtime exception
+      throw new UncheckedIOException(e);
+    }
+  }
+
+    /**
+     * Get any SSE/CSE key from a configuration/credential provider.
+     * This operation handles the case where the option has been
+     * set in the provider or configuration to the option
+     * {@code SERVER_SIDE_ENCRYPTION_KEY}.
+     * IOExceptions raised during retrieval are swallowed.
+     * @param bucket bucket to query for
+     * @param conf configuration to examine
+     * @param propagateExceptions should IO exceptions be rethrown?
+     * @return the encryption key or ""
+     * @throws IllegalArgumentException bad arguments.
+     * @throws IOException if propagateExceptions==true and reading a JCEKS file raised an IOE
+     */
+  @SuppressWarnings("deprecation")
+  public static String getS3EncryptionKey(
+      String bucket,
+      Configuration conf,
+      boolean propagateExceptions) throws IOException {
+    try {
+      // look up the per-bucket value of the new key,
+      // which implicitly includes the deprecation remapping
+      String key = lookupBucketSecret(bucket, conf, S3_ENCRYPTION_KEY);
+      if (key == null) {
+        // old key in bucket, jceks
+        key = lookupBucketSecret(bucket, conf, SERVER_SIDE_ENCRYPTION_KEY);
+      }
+      if (key == null) {
+        // new key, global; implicit translation of old key in XML files.
+        key = lookupPassword(null, conf, S3_ENCRYPTION_KEY);
+      }
+      if (key == null) {
+        // old key, JCEKS
+        key = lookupPassword(null, conf, SERVER_SIDE_ENCRYPTION_KEY);
+      }
+      if (key == null) {
+        // no key, return ""
+        key = "";
+      }
+      return key;
+    } catch (IOException e) {
+      if (propagateExceptions) {
+        throw e;
+      }
+      LOG.warn("Cannot retrieve {} for bucket {}",
+          S3_ENCRYPTION_KEY, bucket, e);
       return "";
     }
   }
 
   /**
-   * Get the server-side encryption algorithm.
+   * Get the server-side encryption or client side encryption algorithm.
    * This includes validation of the configuration, checking the state of
    * the encryption key given the chosen algorithm.
    *
@@ -1593,26 +1678,63 @@ public final class S3AUtils {
    * @param conf configuration to scan
    * @return the encryption mechanism (which will be {@code NONE} unless
    * one is set.
-   * @throws IOException on any validation problem.
+   * @throws IOException on JCKES lookup or invalid method/key configuration.
    */
   public static S3AEncryptionMethods getEncryptionAlgorithm(String bucket,
       Configuration conf) throws IOException {
-    S3AEncryptionMethods sse = S3AEncryptionMethods.getMethod(
-        lookupPassword(bucket, conf,
-            SERVER_SIDE_ENCRYPTION_ALGORITHM));
-    String sseKey = getServerSideEncryptionKey(bucket, conf);
-    int sseKeyLen = StringUtils.isBlank(sseKey) ? 0 : sseKey.length();
-    String diagnostics = passwordDiagnostics(sseKey, "key");
-    switch (sse) {
+    return buildEncryptionSecrets(bucket, conf).getEncryptionMethod();
+  }
+
+  /**
+   * Get the server-side encryption or client side encryption algorithm.
+   * This includes validation of the configuration, checking the state of
+   * the encryption key given the chosen algorithm.
+   *
+   * @param bucket bucket to query for
+   * @param conf configuration to scan
+   * @return the encryption mechanism (which will be {@code NONE} unless
+   * one is set and secrets.
+   * @throws IOException on JCKES lookup or invalid method/key configuration.
+   */
+  @SuppressWarnings("deprecation")
+  public static EncryptionSecrets buildEncryptionSecrets(String bucket,
+      Configuration conf) throws IOException {
+
+    // new key, per-bucket
+    // this will include fixup of the old key in config XML entries
+    String algorithm = lookupBucketSecret(bucket, conf, S3_ENCRYPTION_ALGORITHM);
+    if (algorithm == null) {
+      // try the old key, per-bucket setting, which will find JCEKS values
+      algorithm = lookupBucketSecret(bucket, conf, SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    }
+    if (algorithm == null) {
+      // new key, global setting
+      // this will include fixup of the old key in config XML entries
+      algorithm = lookupPassword(null, conf, S3_ENCRYPTION_ALGORITHM);
+    }
+    if (algorithm == null) {
+      // old key, global setting, for JCEKS entries.
+      algorithm = lookupPassword(null, conf, SERVER_SIDE_ENCRYPTION_ALGORITHM);
+    }
+    // now determine the algorithm
+    final S3AEncryptionMethods encryptionMethod = S3AEncryptionMethods.getMethod(algorithm);
+
+    // look up the encryption key
+    String encryptionKey = getS3EncryptionKey(bucket, conf,
+        encryptionMethod.requiresSecret());
+    int encryptionKeyLen =
+        StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();
+    String diagnostics = passwordDiagnostics(encryptionKey, "key");
+    switch (encryptionMethod) {
     case SSE_C:
       LOG.debug("Using SSE-C with {}", diagnostics);
-      if (sseKeyLen == 0) {
+      if (encryptionKeyLen == 0) {
         throw new IOException(SSE_C_NO_KEY_ERROR);
       }
       break;
 
     case SSE_S3:
-      if (sseKeyLen != 0) {
+      if (encryptionKeyLen != 0) {
         throw new IOException(SSE_S3_WITH_KEY_ERROR
             + " (" + diagnostics + ")");
       }
@@ -1623,12 +1745,17 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case CSE_KMS:
+      LOG.debug("Using CSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");
       break;
     }
-    return sse;
+    return new EncryptionSecrets(encryptionMethod, encryptionKey);
   }
 
   /**

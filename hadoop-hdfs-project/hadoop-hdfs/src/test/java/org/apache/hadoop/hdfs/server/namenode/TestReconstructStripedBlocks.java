@@ -364,7 +364,7 @@ public class TestReconstructStripedBlocks {
     }
   }
 
-  @Test(timeout=120000) // 1 min timeout
+  @Test(timeout=120000) // 2 min timeout
   public void testReconstructionWork() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);

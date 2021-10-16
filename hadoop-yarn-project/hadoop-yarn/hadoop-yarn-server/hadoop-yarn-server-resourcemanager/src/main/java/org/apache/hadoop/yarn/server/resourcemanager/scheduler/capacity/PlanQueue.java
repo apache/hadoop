@@ -38,7 +38,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
 
   private int maxAppsForReservation;
   private int maxAppsPerUserForReservation;
-  private int userLimit;
+  private float userLimit;
   private float userLimitFactor;
   protected CapacitySchedulerContext schedulerContext;
   private boolean showReservationsAsQueues;
@@ -60,15 +60,16 @@ public class PlanQueue extends AbstractManagedParentQueue {
               DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * super
               .getAbsoluteCapacity());
     }
-    int userLimit = conf.getUserLimit(queuePath);
-    float userLimitFactor = conf.getUserLimitFactor(queuePath);
-    int maxAppsPerUserForReservation =
-        (int) (maxAppsForReservation * (userLimit / 100.0f) * userLimitFactor);
-    if (userLimitFactor == -1) {
-      maxAppsPerUserForReservation = maxAppsForReservation;
+    float configuredUserLimit = conf.getUserLimit(queuePath);
+    float configuredUserLimitFactor = conf.getUserLimitFactor(queuePath);
+    int configuredMaxAppsPerUserForReservation =
+        (int) (maxAppsForReservation * (configuredUserLimit / 100.0f) *
+            configuredUserLimitFactor);
+    if (configuredUserLimitFactor == -1) {
+      configuredMaxAppsPerUserForReservation = maxAppsForReservation;
     }
-    updateQuotas(userLimit, userLimitFactor, maxAppsForReservation,
-        maxAppsPerUserForReservation);
+    updateQuotas(configuredUserLimit, configuredUserLimitFactor,
+        maxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
     StringBuffer queueInfo = new StringBuffer();
     queueInfo.append("Created Plan Queue: ").append(queueName)
@@ -76,9 +77,10 @@ public class PlanQueue extends AbstractManagedParentQueue {
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())
         .append("\nwith max reservation apps: [").append(maxAppsForReservation)
         .append("]\nwith max reservation apps per user: [")
-        .append(maxAppsPerUserForReservation).append("]\nwith user limit: [")
-        .append(userLimit).append("]\nwith user limit factor: [")
-        .append(userLimitFactor).append("].");
+        .append(configuredMaxAppsPerUserForReservation)
+        .append("]\nwith user limit: [")
+        .append(configuredUserLimit).append("]\nwith user limit factor: [")
+        .append(configuredUserLimitFactor).append("].");
     LOG.info(queueInfo.toString());
   }
 
@@ -123,12 +125,12 @@ public class PlanQueue extends AbstractManagedParentQueue {
     }
   }
 
-  private void updateQuotas(int userLimit, float userLimitFactor,
-      int maxAppsForReservation, int maxAppsPerUserForReservation) {
-    this.userLimit = userLimit;
-    this.userLimitFactor = userLimitFactor;
-    this.maxAppsForReservation = maxAppsForReservation;
-    this.maxAppsPerUserForReservation = maxAppsPerUserForReservation;
+  private void updateQuotas(float newUserLimit, float newUserLimitFactor,
+      int newMaxAppsForReservation, int newMaxAppsPerUserForReservation) {
+    this.userLimit = newUserLimit;
+    this.userLimitFactor = newUserLimitFactor;
+    this.maxAppsForReservation = newMaxAppsForReservation;
+    this.maxAppsPerUserForReservation = newMaxAppsPerUserForReservation;
   }
 
   /**
@@ -155,7 +157,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
    *
    * @return userLimit
    */
-  public int getUserLimitForReservation() {
+  public float getUserLimitForReservation() {
     return userLimit;
   }
 

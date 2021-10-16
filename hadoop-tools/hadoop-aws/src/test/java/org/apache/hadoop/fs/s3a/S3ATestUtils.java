@@ -29,10 +29,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
@@ -59,6 +61,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -67,7 +70,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -90,8 +92,9 @@ import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
-import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
@@ -188,6 +191,8 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     S3AFileSystem fs1 = new S3AFileSystem();
@@ -231,10 +236,46 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
+  }
+
+  /**
+   * Skip if S3Guard and S3CSE are enabled together.
+   *
+   * @param conf Test Configuration.
+   */
+  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf)
+      throws IOException {
+    String encryptionMethod = getEncryptionAlgorithm(getTestBucketName(conf),
+        conf).getMethod();
+    String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
+    if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
+        !metaStore.equals(S3GUARD_METASTORE_NULL)) {
+      skip("Skipped if CSE is enabled with S3Guard.");
+    }
+  }
+
+  /**
+   * Skip if PathIOE occurred due to exception which contains a message which signals
+   * an incompatibility or throw the PathIOE.
+   *
+   * @param ioe PathIOE being parsed.
+   * @param messages messages found in the PathIOE that trigger a test to skip
+   * @throws PathIOException Throws PathIOE if it doesn't relate to any message in {@code messages}.
+   */
+  public static void skipIfIOEContainsMessage(PathIOException ioe, String...messages)
+      throws PathIOException {
+    for (String message: messages) {
+      if (ioe.toString().contains(message)) {
+        skip("Skipping because: " + message);
+      }
+    }
+    throw ioe;
   }
 
   /**
@@ -854,21 +895,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Call a void operation; any exception raised is logged at info.
-   * This is for test teardowns.
-   * @param log log to use.
-   * @param operation operation to invoke
-   */
-  public static void callQuietly(final Logger log,
-      final Invoker.VoidOperation operation) {
-    try {
-      operation.execute();
-    } catch (Exception e) {
-      log.info(e.toString(), e);
-    }
-  }
-
-  /**
    * Deploy a hadoop service: init and start it.
    * @param conf configuration to use
    * @param service service to configure
@@ -1218,7 +1244,13 @@ public final class S3ATestUtils {
   public static void assertOptionEquals(Configuration conf,
       String key,
       String expected) {
-    assertEquals("Value of " + key, expected, conf.get(key));
+    String actual = conf.get(key);
+    String origin = actual == null
+        ? "(none)"
+        : "[" + StringUtils.join(conf.getPropertySources(key), ", ") + "]";
+    Assertions.assertThat(actual)
+        .describedAs("Value of %s with origin %s", key, origin)
+        .isEqualTo(expected);
   }
 
   /**
@@ -1450,35 +1482,6 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Wait for a deleted file to no longer be visible.
-   * @param fs filesystem
-   * @param testFilePath path to query
-   * @throws Exception failure
-   */
-  public static void awaitDeletedFileDisappearance(final S3AFileSystem fs,
-      final Path testFilePath) throws Exception {
-    eventually(
-        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
-        () -> intercept(FileNotFoundException.class,
-            () -> fs.getFileStatus(testFilePath)));
-  }
-
-  /**
-   * Wait for a file to be visible.
-   * @param fs filesystem
-   * @param testFilePath path to query
-   * @return the file status.
-   * @throws Exception failure
-   */
-  public static S3AFileStatus awaitFileStatus(S3AFileSystem fs,
-      final Path testFilePath)
-      throws Exception {
-    return (S3AFileStatus) eventually(
-        STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
-        () -> fs.getFileStatus(testFilePath));
-  }
-
-  /**
    * This creates a set containing all current threads and some well-known
    * thread names whose existence should not fail test runs.
    * They are generally static cleaner threads created by various classes
@@ -1541,4 +1544,23 @@ public final class S3ATestUtils {
         probes);
   }
 
+  /**
+   * Skip a test if encryption algorithm or encryption key is not set.
+   *
+   * @param configuration configuration to probe.
+   */
+  public static void skipIfEncryptionNotSet(Configuration configuration,
+      S3AEncryptionMethods s3AEncryptionMethod) throws IOException {
+    // if S3 encryption algorithm is not set to desired method or AWS encryption
+    // key is not set, then skip.
+    String bucket = getTestBucketName(configuration);
+    final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+    if (!s3AEncryptionMethod.getMethod().equals(secrets.getEncryptionMethod().getMethod())
+        || StringUtils.isBlank(secrets.getEncryptionKey())) {
+      skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
+          .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
+          + s3AEncryptionMethod.getMethod()
+          + " in " + secrets);
+    }
+  }
 }

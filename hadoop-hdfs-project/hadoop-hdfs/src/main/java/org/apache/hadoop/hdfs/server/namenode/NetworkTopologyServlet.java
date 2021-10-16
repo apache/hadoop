@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.StringUtils;
 
 import javax.servlet.ServletContext;
@@ -46,6 +46,7 @@ import java.util.TreeSet;
 @InterfaceAudience.Private
 public class NetworkTopologyServlet extends DfsServlet {
 
+  public static final String SERVLET_NAME = "topology";
   public static final String PATH_SPEC = "/topology";
 
   protected static final String FORMAT_JSON = "json";
@@ -90,7 +91,7 @@ public class NetworkTopologyServlet extends DfsServlet {
    * @param leaves leaves nodes under base scope
    * @param format the response format
    */
-  public void printTopology(PrintStream stream, List<Node> leaves,
+  protected void printTopology(PrintStream stream, List<Node> leaves,
       String format) throws BadFormatException, IOException {
     if (leaves.isEmpty()) {
       stream.print("No DataNodes");
@@ -120,7 +121,7 @@ public class NetworkTopologyServlet extends DfsServlet {
     }
   }
 
-  private void printJsonFormat(PrintStream stream, Map<String,
+  protected void printJsonFormat(PrintStream stream, Map<String,
       TreeSet<String>> tree, ArrayList<String> racks) throws IOException {
     JsonFactory dumpFactory = new JsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createGenerator(stream);
@@ -152,7 +153,7 @@ public class NetworkTopologyServlet extends DfsServlet {
     }
   }
 
-  private void printTextFormat(PrintStream stream, Map<String,
+  protected void printTextFormat(PrintStream stream, Map<String,
       TreeSet<String>> tree, ArrayList<String> racks) {
     for(String r : racks) {
       stream.println("Rack: " + r);
@@ -171,7 +172,7 @@ public class NetworkTopologyServlet extends DfsServlet {
   }
 
   @VisibleForTesting
-  static String parseAcceptHeader(HttpServletRequest request) {
+  protected static String parseAcceptHeader(HttpServletRequest request) {
     String format = request.getHeader(HttpHeaders.ACCEPT);
     return format != null && format.contains(FORMAT_JSON) ?
             FORMAT_JSON : FORMAT_TEXT;

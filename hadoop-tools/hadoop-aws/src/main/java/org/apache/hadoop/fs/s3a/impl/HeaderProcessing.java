@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 
@@ -82,7 +83,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
       XA_HEADER_PREFIX + Headers.CONTENT_DISPOSITION;
 
   /**
-   * Standard HTTP header found on some S3 objects: {@value}.
+   * Content encoding; can be configured: {@value}.
    */
   public static final String XA_CONTENT_ENCODING =
       XA_HEADER_PREFIX + Headers.CONTENT_ENCODING;
@@ -189,6 +190,15 @@ public class HeaderProcessing extends AbstractStoreOperation {
       XA_HEADER_PREFIX + Headers.STORAGE_CLASS;
 
   /**
+   * HTTP Referrer for logs: {@value}.
+   * This can be found in S3 logs, but is not set as
+   * an attribute in objects.
+   * <i>important: </i> the header value is deliberately
+   * a mis-spelling, as that is defined in RFC-1945.
+   */
+  public static final String HEADER_REFERRER = "Referer";
+
+  /**
    * Standard headers which are retrieved from HEAD Requests
    * and set as XAttrs if the response included the relevant header.
    */
@@ -231,11 +241,22 @@ public class HeaderProcessing extends AbstractStoreOperation {
       "application/xml";
 
   /**
+   * Directory content type : {@value}.
+   * Matches use/expectations of AWS S3 console.
+   */
+  public static final String CONTENT_TYPE_X_DIRECTORY =
+      "application/x-directory";
+
+  private final HeaderProcessingCallbacks callbacks;
+  /**
    * Construct.
    * @param storeContext store context.
+   * @param callbacks callbacks to the store
    */
-  public HeaderProcessing(final StoreContext storeContext) {
+  public HeaderProcessing(final StoreContext storeContext,
+      final HeaderProcessingCallbacks callbacks) {
     super(storeContext);
+    this.callbacks = callbacks;
   }
 
   /**
@@ -253,18 +274,17 @@ public class HeaderProcessing extends AbstractStoreOperation {
       final Path path,
       final Statistic statistic) throws IOException {
     StoreContext context = getStoreContext();
-    ContextAccessors accessors = context.getContextAccessors();
-    String objectKey = accessors.pathToKey(path);
+    String objectKey = context.pathToKey(path);
     ObjectMetadata md;
     String symbol = statistic.getSymbol();
     S3AStatisticsContext instrumentation = context.getInstrumentation();
     try {
       md = trackDuration(instrumentation, symbol, () ->
-              accessors.getObjectMetadata(objectKey));
+              callbacks.getObjectMetadata(objectKey));
     } catch (FileNotFoundException e) {
       // no entry. It could be a directory, so try again.
       md = trackDuration(instrumentation, symbol, () ->
-          accessors.getObjectMetadata(objectKey + "/"));
+          callbacks.getObjectMetadata(objectKey + "/"));
     }
     // all user metadata
     Map<String, String> rawHeaders = md.getUserMetadata();
@@ -281,8 +301,15 @@ public class HeaderProcessing extends AbstractStoreOperation {
         md.getContentEncoding());
     maybeSetHeader(headers, XA_CONTENT_LANGUAGE,
         md.getContentLanguage());
-    maybeSetHeader(headers, XA_CONTENT_LENGTH,
-        md.getContentLength());
+    // If CSE is enabled, use the unencrypted content length.
+    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+        && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
+      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+          md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
+    } else {
+      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+          md.getContentLength());
+    }
     maybeSetHeader(headers, XA_CONTENT_MD5,
         md.getContentMD5());
     maybeSetHeader(headers, XA_CONTENT_RANGE,
@@ -443,7 +470,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
    * @param source the {@link ObjectMetadata} to copy
    * @param dest the metadata to update; this is the return value.
    */
-  public void cloneObjectMetadata(ObjectMetadata source,
+  public static void cloneObjectMetadata(ObjectMetadata source,
       ObjectMetadata dest) {
 
     // Possibly null attributes
@@ -497,4 +524,16 @@ public class HeaderProcessing extends AbstractStoreOperation {
         .forEach(e -> dest.addUserMetadata(e.getKey(), e.getValue()));
   }
 
+  public interface HeaderProcessingCallbacks {
+
+    /**
+     * Retrieve the object metadata.
+     *
+     * @param key key to retrieve.
+     * @return metadata
+     * @throws IOException IO and object access problems.
+     */
+    @Retries.RetryTranslated
+    ObjectMetadata getObjectMetadata(String key) throws IOException;
+  }
 }

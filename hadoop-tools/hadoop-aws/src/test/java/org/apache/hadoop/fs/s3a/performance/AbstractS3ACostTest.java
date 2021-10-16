@@ -38,8 +38,10 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.statistics.StatisticTypeEnum;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -108,10 +110,30 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     this.authoritative = authoritative;
   }
 
+  /**
+   * Constructor for tests which don't include
+   * any for S3Guard.
+   * @param keepMarkers should markers be tested.
+   */
+  public AbstractS3ACostTest(
+      final boolean keepMarkers) {
+    this.s3guard = false;
+    this.keepMarkers = keepMarkers;
+    this.authoritative = false;
+  }
+
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
+    // If AccessPoint ARN is set guarded tests are skipped
+    String arnKey = String.format(InternalConstants.ARN_BUCKET_OPTION, bucketName);
+    String arn = conf.getTrimmed(arnKey, "");
+    if (isGuarded() && !arn.isEmpty()) {
+      ContractTestUtils.skip(
+          "Skipping test since AccessPoint ARN is set and is incompatible with S3Guard.");
+    }
+
     removeBucketOverrides(bucketName, conf,
         S3_METADATA_STORE_IMPL);
     if (!isGuarded()) {
@@ -133,6 +155,12 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
       conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
     }
     disableFilesystemCaching(conf);
+
+    // AccessPoint ARN is the only per bucket configuration that must be kept.
+    if (!arn.isEmpty()) {
+      conf.set(arnKey, arn);
+    }
+
     return conf;
   }
 
@@ -183,6 +211,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     deleteMarkerStatistic = isBulkDelete()
         ? OBJECT_BULK_DELETE_REQUEST
         : OBJECT_DELETE_REQUEST;
+
+    setSpanSource(fs);
   }
 
   public void assumeUnguarded() {
@@ -357,6 +387,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected <T> T verifyMetrics(
       Callable<T> eval,
       OperationCostValidator.ExpectedProbe... expected) throws Exception {
+    span();
     return costValidator.exec(eval, expected);
 
   }
@@ -379,6 +410,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
       String text,
       Callable<T> eval,
       OperationCostValidator.ExpectedProbe... expected) throws Exception {
+    span();
     return costValidator.intercepting(clazz, text, eval, expected);
   }
 
@@ -476,6 +508,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   /**
    * Execute a closure expecting a specific number of HEAD/LIST calls
    * on <i>raw</i> S3 stores only. The operation is always evaluated.
+   * A span is always created prior to the invocation; saves trouble
+   * in tests that way.
    * @param cost expected cost
    * @param eval closure to evaluate
    * @param <T> return type of closure
@@ -525,12 +559,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
       boolean needEmptyDirectoryFlag,
       Set<StatusProbeEnum> probes,
       OperationCost cost) throws Exception {
-    interceptRaw(FileNotFoundException.class, "",
-        cost, () ->
-            innerGetFileStatus(getFileSystem(),
-                path,
-                needEmptyDirectoryFlag,
-                probes));
+    try (AuditSpan span = span()) {
+      interceptRaw(FileNotFoundException.class, "",
+          cost, () ->
+              innerGetFileStatus(getFileSystem(),
+                  path,
+                  needEmptyDirectoryFlag,
+                  probes));
+    }
   }
 
   /**

@@ -21,10 +21,13 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.XAttrSetFlag;
 import org.junit.Assume;
 import org.junit.Test;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -42,7 +45,8 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testSetGetXAttr() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    Assume.assumeTrue(fs.getIsNamespaceEnabled());
+    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
+    Assume.assumeTrue(getIsNamespaceEnabled(fs));
 
     byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("hi");
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("你好");
@@ -55,8 +59,13 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     assertNull(fs.getXAttr(testFile, attributeName1));
 
     // after setting the xAttr on the file, the value should be retrievable
+    fs.registerListener(
+        new TracingHeaderValidator(conf.getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.SET_ATTR, true, 0));
     fs.setXAttr(testFile, attributeName1, attributeValue1);
+    fs.setListenerOperation(FSOperationType.GET_ATTR);
     assertArrayEquals(attributeValue1, fs.getXAttr(testFile, attributeName1));
+    fs.registerListener(null);
 
     // after setting a second xAttr on the file, the first xAttr values should not be overwritten
     fs.setXAttr(testFile, attributeName2, attributeValue2);
@@ -67,7 +76,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testSetGetXAttrCreateReplace() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    Assume.assumeTrue(fs.getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(fs));
     byte[] attributeValue = fs.getAbfsStore().encodeAttribute("one");
     String attributeName = "user.someAttribute";
     Path testFile = path("createReplaceXAttr");
@@ -84,7 +93,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testSetGetXAttrReplace() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    Assume.assumeTrue(fs.getIsNamespaceEnabled());
+    Assume.assumeTrue(getIsNamespaceEnabled(fs));
     byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("one");
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("two");
     String attributeName = "user.someAttribute";

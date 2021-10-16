@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -30,10 +30,10 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -270,16 +270,14 @@ public class TestContainerExecutor {
     try {
       int writtenExitCode = 10;
 
-      FileUtils.writeStringToFile(pidFile, "2992",
-          Charset.defaultCharset(), false);
+      FileUtils.writeStringToFile(pidFile, "2992", StandardCharsets.UTF_8, false);
 
       TimerTask task = new java.util.TimerTask() {
         @Override
         public void run() {
           try {
-            FileUtils.writeStringToFile(exitCodeFile,
-                Integer.toString(writtenExitCode),
-                Charset.defaultCharset(), false);
+            FileUtils.writeStringToFile(exitCodeFile, Integer.toString(writtenExitCode),
+                StandardCharsets.UTF_8, false);
           } catch (IOException ioe) {
             LOG.warn("Could not write pid file");
           }

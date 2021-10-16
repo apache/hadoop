@@ -28,6 +28,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 
 /**
  * Test AbfsOutputStream statistics.
@@ -241,10 +247,13 @@ public class ITestAbfsOutputStreamStatistics
       outputStream.write('a');
       outputStream.hflush();
 
-      AbfsOutputStreamStatisticsImpl abfsOutputStreamStatistics =
-          getAbfsOutputStreamStatistics(outputStream);
-      LOG.info("AbfsOutputStreamStats info: {}", abfsOutputStreamStatistics.toString());
-      Assertions.assertThat(abfsOutputStreamStatistics.getTimeSpentOnPutRequest())
+      IOStatistics ioStatistics = extractStatistics(fs);
+      LOG.info("AbfsOutputStreamStats info: {}",
+          ioStatisticsToPrettyString(ioStatistics));
+      Assertions.assertThat(
+          lookupMeanStatistic(ioStatistics,
+              AbfsStatistic.HTTP_PUT_REQUEST.getStatName()
+                  + StoreStatisticNames.SUFFIX_MEAN).mean())
           .describedAs("Mismatch in timeSpentOnPutRequest DurationTracker")
           .isGreaterThan(0.0);
     }

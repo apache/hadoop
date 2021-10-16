@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.event;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.metrics.EventTypeMetrics;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -160,5 +160,9 @@ public class EventDispatcher<T extends Event> extends
 
   protected boolean isStopped() {
     return this.stopped;
+  }
+
+  public int getEventQueueSize() {
+    return eventQueue.size();
   }
 }

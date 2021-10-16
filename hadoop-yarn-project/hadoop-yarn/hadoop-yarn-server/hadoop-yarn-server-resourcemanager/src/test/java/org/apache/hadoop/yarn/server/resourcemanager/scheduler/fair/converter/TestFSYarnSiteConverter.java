@@ -21,6 +21,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueDeletionPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueConfigurationAutoRefreshPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -67,6 +68,19 @@ public class TestFSYarnSiteConverter {
         yarnConvertedConfig.getInt(
             "yarn.scheduler.capacity.schedule-asynchronously" +
                 ".scheduling-interval-ms", -1));
+  }
+
+  @Test
+  public void testSiteQueueConfAutoRefreshConversion() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+        false, false, null);
+    assertTrue(yarnConvertedConfig.get(YarnConfiguration.
+        RM_SCHEDULER_ENABLE_MONITORS), true);
+    assertTrue("Scheduling Policies contains queue conf auto refresh",
+        yarnConvertedConfig.
+            get(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES)
+            .contains(QueueConfigurationAutoRefreshPolicy.
+                class.getCanonicalName()));
   }
 
   @Test

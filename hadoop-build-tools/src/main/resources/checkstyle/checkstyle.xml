@@ -69,7 +69,9 @@
 
     <!-- Checks for line length violations.                                 -->
     <!-- See https://checkstyle.sourceforge.io/config_sizes.html#LineLength -->
-    <module name="LineLength"/>
+    <module name="LineLength">
+        <property name="max" value="100"/>
+    </module>
 
     <module name="TreeWalker">
 
@@ -158,7 +160,9 @@
 
         <!-- Checks for blocks. You know, those {}'s         -->
         <!-- See http://checkstyle.sf.net/config_blocks.html -->
-        <module name="AvoidNestedBlocks"/>
+        <module name="AvoidNestedBlocks">
+          <property name="allowInSwitchCase" value="true"/>
+        </module>
         <module name="EmptyBlock"/>
         <module name="LeftCurly"/>
         <module name="NeedBraces"/>
