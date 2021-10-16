@@ -182,8 +182,7 @@ public class AvailableSpaceBlockPlacementPolicy extends
    */
   protected int compareDataNode(final DatanodeDescriptor a,
       final DatanodeDescriptor b, boolean isBalanceLocal) {
-    if (a.equals(b)
-        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < 5 || ((
+    if (a.equals(b) || ((
         isBalanceLocal && a.getDfsUsedPercent() < 50))) {
       return 0;
     }
