@@ -82,6 +82,8 @@ UserSpecificDocker
 #If this env varible is empty, docker will be started
 # in non interactive mode
 DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
+M2_REPOSITORY=${M2_REPOSITORY:-"${HOME}/.m2"}
+
 
 # By mapping the .m2 directory you can do an mvn install from
 # within the container and use the result on your normal
@@ -90,7 +92,8 @@ DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 docker run --rm=true $DOCKER_INTERACTIVE_RUN \
   -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
   -w "${DOCKER_HOME_DIR}/hadoop" \
-  -v "${HOME}/.m2:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
+  -v "${M2_REPOSITORY}:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
   -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
   -u "${USER_ID}" \
+  --env-file cloudera/docker.env \
   "hadoop-build-${USER_ID}" "$@"

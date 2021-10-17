@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+   <profiles>
+      <profile>
+         <id>hwx</id>
+         <repositories>
+            <repository>
+               <releases>
+                  <enabled>true</enabled>
+               </releases>
+               <snapshots>
+                  <enabled>true</enabled>
+               </snapshots>
+               <id>hortonworks.private</id>
+               <name>Hortonworks Private Dependencies</name>
+               <url>https://nexus-private.hortonworks.com/nexus/content/groups/public</url>
+            </repository>
+         </repositories>
+         <pluginRepositories>
+            <pluginRepository>
+               <id>hortonworks.private.plugins</id>
+               <releases>
+                  <enabled>true</enabled>
+               </releases>
+               <snapshots>
+                  <enabled>true</enabled>
+               </snapshots>
+               <url>https://nexus-private.hortonworks.com/nexus/content/groups/public</url>
+            </pluginRepository>
+         </pluginRepositories>
+      </profile>
+   </profiles>
+   <activeProfiles>
+      <activeProfile>hwx</activeProfile>
+   </activeProfiles>
+</settings>
+
