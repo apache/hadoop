@@ -61,6 +61,9 @@ public class TestAvailableSpaceBlockPlacementPolicy {
     conf.setFloat(
       DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
       0.6f);
+    conf.setInt(
+            DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERATE_KEY,
+            5);
     String[] racks = new String[numRacks];
     for (int i = 0; i < numRacks; i++) {
       racks[i] = "/rack" + i;

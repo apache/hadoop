@@ -120,6 +120,24 @@ The AvailableSpaceBlockPlacementPolicy is a space balanced block placement polic
 </property>
 
 <property>
+<name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerate</name>
+<value>5</value>
+<description>
+    Special value between 0 and 100, noninclusive.  Increases tolerance of
+    placing blocks on Datanodes with similar disk space used.
+</description>
+</property>
+
+<property>
+  <name>dfs.namenode.available-space-block-placement-policy.datanode-usgae-tolerace-fraction</name>
+  <value>0.6</value>
+  <description>
+    Special value between 1 and 100, noninclusive.  Increases chance of
+    placing blocks on Datanodes with less disk space used.
+</description>
+</property>
+
+<property>
   <name>
     dfs.namenode.available-space-block-placement-policy.balance-local-node
   </name>
@@ -158,6 +176,17 @@ amongst maximum number of racks possible and at the same time will try to choose
     more are the chances of choosing the datanode with less percentage of data.
     Similarly as the value moves near 0, the chances of choosing datanode with
     high load increases as the value reaches near 0.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerate</name>
+  <value>5</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 100, noninclusive.  Increases tolerance of
+    placing blocks on Datanodes with similar disk space used.
   </description>
 </property>
 ```

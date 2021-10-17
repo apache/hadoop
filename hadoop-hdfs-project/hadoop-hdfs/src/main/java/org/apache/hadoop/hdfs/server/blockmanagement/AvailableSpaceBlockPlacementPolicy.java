@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
-
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
@@ -37,6 +34,8 @@ import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+
 /**
  * Space balanced block placement policy.
  */
@@ -47,6 +46,8 @@ public class AvailableSpaceBlockPlacementPolicy extends
   private static final Random RAND = new Random();
   private int balancedPreference =
       (int) (100 * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+  private int balancedTolerate =
+          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERATE_DEFAULT;
   private boolean optimizeLocal;
 
   @Override
@@ -61,6 +62,11 @@ public class AvailableSpaceBlockPlacementPolicy extends
     LOG.info("Available space block placement policy initialized: "
         + DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY
         + " = " + balancedPreferencePercent);
+
+    balancedTolerate =
+            conf.getInt(
+                    DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERATE_KEY,
+                    DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERATE_DEFAULT);
 
     optimizeLocal = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY,
@@ -182,7 +188,8 @@ public class AvailableSpaceBlockPlacementPolicy extends
    */
   protected int compareDataNode(final DatanodeDescriptor a,
       final DatanodeDescriptor b, boolean isBalanceLocal) {
-    if (a.equals(b) || ((
+    if (a.equals(b)
+        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < balancedTolerate || ((
         isBalanceLocal && a.getDfsUsedPercent() < 50))) {
       return 0;
     }
