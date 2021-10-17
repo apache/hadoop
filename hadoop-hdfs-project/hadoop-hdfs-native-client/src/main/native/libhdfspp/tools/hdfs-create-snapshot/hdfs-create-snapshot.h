@@ -28,9 +28,8 @@
 
 namespace hdfs::tools {
 /**
- * {@class CreateSnapshot} is an {@class HdfsTool} that facilitates the
- * snapshots of a directory at PATH to be created, causing the directory to be
- * snapshot-able.
+ * {@class CreateSnapshot} is an {@class HdfsTool} that facilitates the creation
+ * of the snapshot of a snapshot-able directory located at PATH.
  */
 class CreateSnapshot : public HdfsTool {
 public:
