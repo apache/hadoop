@@ -23,7 +23,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 
 public class CSQueueUsageTracker {
   private final CSQueueMetrics metrics;
-  private volatile int numContainers;
+  private int numContainers;
 
   /**
    * The timestamp of the last submitted application to this queue.
@@ -48,11 +48,11 @@ public class CSQueueUsageTracker {
     return numContainers;
   }
 
-  public void increaseNumContainers() {
+  public synchronized void increaseNumContainers() {
     numContainers++;
   }
 
-  public void decreaseNumContainers() {
+  public synchronized void decreaseNumContainers() {
     numContainers--;
   }
 
