@@ -188,6 +188,24 @@ public class TestLeaseRecoveryStriped {
     }
   }
 
+  @Test
+  public void testSafeLength() {
+    checkSafeLength(0, 0); // Length of: 0
+    checkSafeLength(1024 * 1024, 6291456L); // Length of: 1 MiB
+    checkSafeLength(64 * 1024 * 1024, 402653184L); // Length of: 64 MiB
+    checkSafeLength(189729792, 1132462080L); // Length of: 189729792
+    checkSafeLength(256 * 1024 * 1024, 1610612736L); // Length of: 256 MiB
+    checkSafeLength(517399040, 3101687808L); // Length of: 517399040
+    checkSafeLength(1024 * 1024 * 1024, 6442450944L); // Length of: 1 GiB
+  }
+
+  private void checkSafeLength(int blockLength, long expectedSafeLength) {
+    int[] blockLengths = new int[]{blockLength, blockLength, blockLength, blockLength,
+        blockLength, blockLength};
+    long safeLength = new BlockLengths(ecPolicy, blockLengths).getSafeLength();
+    Assert.assertEquals(expectedSafeLength, safeLength);
+  }
+
   private void runTest(int[] blockLengths, long safeLength) throws Exception {
     writePartialBlocks(blockLengths);
 
