@@ -24,6 +24,7 @@
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-df-mock.h"
 #include "hdfs-disallow-snapshot-mock.h"
+#include "hdfs-rename-snapshot-mock.h"
 #include "hdfs-tool-test-fixtures.h"
 #include "hdfs-tool-tests.h"
 
@@ -44,6 +45,11 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(PassAPath<hdfs::tools::test::DisallowSnapshotMock>,
                     CallHelp<hdfs::tools::test::DisallowSnapshotMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsRenameSnapshot, HdfsToolBasicTest,
+    testing::Values(Pass3Paths<hdfs::tools::test::RenameSnapshotMock>,
+                    CallHelp<hdfs::tools::test::RenameSnapshotMock>));
+
 INSTANTIATE_TEST_SUITE_P(HdfsCat, HdfsToolBasicTest,
                          testing::Values(PassAPath<hdfs::tools::test::CatMock>,
                                          CallHelp<hdfs::tools::test::CatMock>));
@@ -61,6 +67,11 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
     testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsRenameSnapshot, HdfsToolNegativeTestThrows,
+    testing::Values(PassAPath<hdfs::tools::test::RenameSnapshotMock>,
+                    Pass2Paths<hdfs::tools::test::RenameSnapshotMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsDisallowSnapshot, HdfsToolNegativeTestThrows,
