@@ -2339,7 +2339,7 @@ public class LeafQueue extends AbstractCSQueue {
     if (maxAppsForQueue < 0) {
       if (maxDefaultPerQueueApps > 0 && this.capacityConfigType
           != CapacityConfigType.ABSOLUTE_RESOURCE) {
-        maxAppsForQueue = maxDefaultPerQueueApps;
+        maxAppsForQueue = baseMaxApplications;
       } else {
         for (String label : configuredNodeLabels) {
           int maxApplicationsByLabel = (int) (baseMaxApplications
