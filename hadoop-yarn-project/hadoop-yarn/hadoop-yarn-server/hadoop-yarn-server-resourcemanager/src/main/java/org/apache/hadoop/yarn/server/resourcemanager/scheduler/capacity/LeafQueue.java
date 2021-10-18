@@ -2332,7 +2332,8 @@ public class LeafQueue extends AbstractCSQueue {
     int maxGlobalApplications = conf.getGlobalMaximumApplicationsPerQueue();
     int maxSystemApplications = conf.getMaximumSystemApplications();
     int baseMaxApplications = maxGlobalApplications > 0 ?
-        maxGlobalApplications : maxSystemApplications;
+        Math.min(maxGlobalApplications, maxSystemApplications)
+        : maxSystemApplications;
 
     String maxLabel = RMNodeLabelsManager.NO_LABEL;
     if (maxAppsForQueue < 0) {
