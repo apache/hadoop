@@ -83,8 +83,7 @@ add_subdirectory(hdfs-disallow-snapshot)
 
 add_subdirectory(hdfs-create-snapshot)
 
-add_executable(hdfs_renameSnapshot hdfs_renameSnapshot.cc)
-target_link_libraries(hdfs_renameSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-rename-snapshot)
 
 add_subdirectory(hdfs-delete-snapshot)
 
