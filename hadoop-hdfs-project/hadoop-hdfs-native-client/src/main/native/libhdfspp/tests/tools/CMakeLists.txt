@@ -21,6 +21,7 @@ add_executable(hdfs_tool_tests
                 hdfs-disallow-snapshot-mock.cc
                 hdfs-rename-snapshot-mock.cc
                 hdfs-delete-snapshot-mock.cc
+                hdfs-create-snapshot-mock.cc
                 hdfs-cat-mock.cc
                 hdfs-tool-test-fixtures.cc
                 hdfs-tool-tests.cc
@@ -33,6 +34,7 @@ target_include_directories(hdfs_tool_tests PRIVATE
                             ../../tools/hdfs-allow-snapshot
                             ../../tools/hdfs-disallow-snapshot
                             ../../tools/hdfs-delete-snapshot
+                            ../../tools/hdfs-create-snapshot
                             ../../tools/hdfs-rename-snapshot
                             ../../tools/hdfs-cat)
 target_link_libraries(hdfs_tool_tests PRIVATE
@@ -41,6 +43,7 @@ target_link_libraries(hdfs_tool_tests PRIVATE
                        hdfs_allowSnapshot_lib
                        hdfs_disallowSnapshot_lib
                        hdfs_deleteSnapshot_lib
+                       hdfs_createSnapshot_lib
                        hdfs_renameSnapshot_lib
                        hdfs_cat_lib)
 add_test(hdfs_tool_tests hdfs_tool_tests)

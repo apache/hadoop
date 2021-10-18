@@ -83,4 +83,18 @@ template <class T> std::unique_ptr<T> Pass3Paths() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassNOptAndAPath() {
+  constexpr auto argc = 4;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("-n");
+  static std::string arg2("some_name");
+  static std::string arg3("g/h/i");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data(), arg3.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassNOptAndAPath<T>, {arg1, arg2, arg3});
+  return hdfs_tool;
+}
+
 #endif
