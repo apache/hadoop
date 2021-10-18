@@ -79,8 +79,7 @@ target_link_libraries(hdfs_setrep tools_common hdfspp_static)
 
 add_subdirectory(hdfs-allow-snapshot)
 
-add_executable(hdfs_disallowSnapshot hdfs_disallowSnapshot.cc)
-target_link_libraries(hdfs_disallowSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-disallow-snapshot)
 
 add_subdirectory(hdfs-create-snapshot)
 
