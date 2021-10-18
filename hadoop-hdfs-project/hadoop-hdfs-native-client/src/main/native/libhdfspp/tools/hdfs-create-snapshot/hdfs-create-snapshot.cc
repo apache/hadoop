@@ -96,7 +96,7 @@ bool CreateSnapshot::Do() {
     const auto name = opt_val_.count("name") > 0
                           ? std::optional{opt_val_["path"].as<std::string>()}
                           : std::nullopt;
-    return HandlePath(path, name);
+    return HandleSnapshot(path, name);
   }
 
   return true;
@@ -107,8 +107,8 @@ bool CreateSnapshot::HandleHelp() const {
   return true;
 }
 
-bool CreateSnapshot::HandlePath(const std::string &path,
-                                const std::optional<std::string> &name) const {
+bool CreateSnapshot::HandleSnapshot(
+    const std::string &path, const std::optional<std::string> &name) const {
   // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(path);
 

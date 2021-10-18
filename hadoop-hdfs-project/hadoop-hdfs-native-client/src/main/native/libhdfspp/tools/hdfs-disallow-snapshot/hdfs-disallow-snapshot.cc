@@ -86,7 +86,7 @@ bool DisallowSnapshot::Do() {
 
   if (opt_val_.count("path") > 0) {
     const auto path = opt_val_["path"].as<std::string>();
-    return HandlePath(path);
+    return HandleSnapshot(path);
   }
 
   return true;
@@ -97,7 +97,7 @@ bool DisallowSnapshot::HandleHelp() const {
   return true;
 }
 
-bool DisallowSnapshot::HandlePath(const std::string &path) const {
+bool DisallowSnapshot::HandleSnapshot(const std::string &path) const {
   // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(path);
 

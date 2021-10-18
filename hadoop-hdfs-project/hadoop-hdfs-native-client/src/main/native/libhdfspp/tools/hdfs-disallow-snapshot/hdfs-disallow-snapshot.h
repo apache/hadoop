@@ -79,7 +79,7 @@ protected:
    *
    * @return A boolean indicating the result of this operation.
    */
-  [[nodiscard]] virtual bool HandlePath(const std::string &path) const;
+  [[nodiscard]] virtual bool HandleSnapshot(const std::string &path) const;
 
 private:
   /**
