@@ -88,7 +88,7 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
     if (this.rootDirectory == null) {
       String dir = getConf().get(FEDERATION_STORE_FILE_DIRECTORY);
       if (dir == null) {
-        File tempDir = Files.createTempDir();
+        File tempDir = java.nio.file.Files.createTempDirectory().toFile();
         dir = tempDir.getAbsolutePath();
         LOG.warn("The root directory is not available, using {}", dir);
       }
