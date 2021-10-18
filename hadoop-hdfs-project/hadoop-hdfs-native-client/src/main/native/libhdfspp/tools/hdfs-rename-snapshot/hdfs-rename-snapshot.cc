@@ -59,10 +59,7 @@ bool RenameSnapshot::Initialize() {
 bool RenameSnapshot::ValidateConstraints() const {
   // Only "help" is allowed as single argument
   if (argc_ == 2) {
-    if (opt_val_.count("help") > 0) {
-      return true;
-    }
-    return false;
+    return opt_val_.count("help") > 0;
   }
 
   // Rest of the cases must contain more than 2 argument on the command line
