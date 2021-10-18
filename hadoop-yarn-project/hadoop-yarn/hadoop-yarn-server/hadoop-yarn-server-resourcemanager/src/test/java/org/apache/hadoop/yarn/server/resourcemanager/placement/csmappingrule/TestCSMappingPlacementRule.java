@@ -777,33 +777,43 @@ public class TestCSMappingPlacementRule {
         "Application should have been placed to root.groups.sec_dot_test_dot_grp",
         engine, app, "test.user", "root.groups.sec_dot_test_dot_grp");
   }
-  
-  @Test
+
   /**
-   * 1. Create a Configuration object in which the property "hadoop.security.group.mapping" refers to an existing a test implementation.
-   * 2. Create a mock CapacityScheduler where getConf() and getConfiguration() contain different 
-   * settings for "hadoop.security.group.mapping". Since getConf() is the service config, this 
-   * should return the config object created in step #1.
-   * 3. Create an instance of CSMappingPlacementRule with a single primary group rule.
-   * 4. Run the placement evaluation.
-   * 5. Expected: returned queue matches what is supposed to be coming from the test group 
-   * mapping service ("testuser" --> "testqueue").
-   * 6. Modify "hadoop.security.group.mapping" in the config object created in step #1. (SKIPPED FOR NOW)
-   * 7. Call Groups.refresh() which changes the group mapping ("testuser" --> "testqueue2"). This
+   * 1. Invoke Groups.reset(). This make sure that the underlying singleton {@link Groups#GROUPS}
+   * is set to null.<br>
+   * 2. Create a Configuration object in which the property "hadoop.security.group.mapping" 
+   * refers to an existing a test implementation.<br>
+   * 3. Create a mock CapacityScheduler where getConf() and getConfiguration() contain different
+   * settings for "hadoop.security.group.mapping". Since getConf() is the service config, this
+   * should return the config object created in step #2.<br>
+   * 4. Create an instance of CSMappingPlacementRule with a single primary group rule.<br>
+   * 5. Run the placement evaluation.<br>
+   * 6. Expected: The returned queue matches what is supposed to be coming from the test group
+   * mapping service ("testuser" --> "testGroup1").<br>
+   * 7. Modify "hadoop.security.group.mapping" in the config object created in step #2.
+   * This step is required to guarantee that the CSMappingPlacementRule doesn't try to recreate
+   * the group mapping implementation and uses the one that was previously created.<br>
+   * 8. Call Groups.refresh() which changes the group mapping ("testuser" --> "testGroup0"). This
    * requires that the test group mapping service implement GroupMappingServiceProvider
-   * .cacheGroupsRefresh().
-   * 8. Create a new instance of CSMappingPlacementRule.
-   * 9. Run the placement evaluation again
-   * 10. Expected: with the same user, the target queue has changed.
-   * 
-   * This looks convoluted, but these steps make sure that:
-   *
-   * 1. CSMappingPlacementRule will force the initialization of groups.
-   * 2. We select the correct configuration for group service init.
-   * 3. We don't create a new Groups instance if the singleton is initialized, so we cover the 
-   * original problem described in YARN-10597.
+   * .cacheGroupsRefresh().<br>
+   * 9. Create a new instance of CSMappingPlacementRule. This is important as we want to test
+   * that even this new {@link CSMappingPlacementRule} instance uses the same group mapping
+   * instance.<br>
+   * 10. Run the placement evaluation again<br>
+   * 11. Expected: with the same user, the target queue has changed to 'testGroup0'.<br>
+   * <p>
+   * These all looks convoluted, but the steps above make sure all the following conditions are met:
+   * <p>
+   * 1. CSMappingPlacementRule will force the initialization of groups.<br>
+   * 2. We select the correct configuration for group service init.<br>
+   * 3. We don't create a new Groups instance if the singleton is initialized, so we cover the
+   * original problem described in YARN-10597.<br>
    */
+  @Test
   public void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws YarnException, IOException {
+    Groups.reset();
+    final String user = "testuser";
+    
     //Create service-wide configuration object
     Configuration conf = new Configuration();
     conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
@@ -812,13 +822,13 @@ public class TestCSMappingPlacementRule {
     List<MappingRule> mappingRules = new ArrayList<>();
     mappingRules.add(
         new MappingRule(
-            MappingRuleMatchers.createUserMatcher("testuser"),
+            MappingRuleMatchers.createUserMatcher(user),
             (new MappingRuleActions.PlaceToQueueAction(
                 "root.man.%primary_group", true))
                 .setFallbackReject()));
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration() {
       @Override
-      public List<MappingRule> getMappingRules() throws IOException {
+      public List<MappingRule> getMappingRules() {
         return mappingRules;
       }
     };
@@ -826,7 +836,36 @@ public class TestCSMappingPlacementRule {
     //Intentionally add a dummy implementation class - The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the CapacitySchedulerConfiguration instance!
     csConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
     
-    //Create mock CapacitySchedulerQueueManager / CapacityScheduler
+    CapacityScheduler cs = createMockCS(conf, csConf);
+
+    //Create app, submit to placement engine, expecting queue=testGroup1
+    CSMappingPlacementRule engine = submitApp(cs);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(engine, app, user, "root.man.testGroup1");
+
+    //Intentionally add a dummy implementation class!
+    // The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the
+    // CapacitySchedulerConfiguration instance!
+    //This makes sure that the Groups instance is not recreated by CSMappingPlacementRule
+    conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
+    
+    //Refresh the groups, this makes testGroup0 as primary group.
+    engine.getGroups().refresh();
+
+    //Create app, submit to placement engine, expecting queue=testGroup0 (the new primary group)
+    engine = submitApp(cs);
+    assertPlace(engine, app, user, "root.man.testGroup0");
+  }
+
+  private CSMappingPlacementRule submitApp(CapacityScheduler cs) throws IOException {
+    CSMappingPlacementRule engine = new CSMappingPlacementRule();
+    engine.setFailOnConfigError(true);
+    engine.initialize(cs);
+    return engine;
+  }
+
+  private CapacityScheduler createMockCS(Configuration conf,
+      CapacitySchedulerConfiguration csConf) {
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
     createQueueHierarchy(qm);
@@ -835,24 +874,7 @@ public class TestCSMappingPlacementRule {
     when(cs.getConfiguration()).thenReturn(csConf);
     when(cs.getConf()).thenReturn(conf);
     when(cs.getCapacitySchedulerQueueManager()).thenReturn(qm);
-
-    //Create app, submit to placement engine, expecting queue=testGroup1
-    ApplicationSubmissionContext app = createApp("app");
-    CSMappingPlacementRule engine = new CSMappingPlacementRule();
-    engine.setFailOnConfigError(true);
-    engine.initialize(cs);
-    assertPlace(engine, app, "testuser", "root.man.testGroup1");
-    
-    //TODO
-//    conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
-    //Refresh the groups, this makes testGroup0 as primary group
-    engine.getGroups().refresh();
-
-    //Create app, submit to placement engine, expecting queue=testGroup0 (the new primary group)
-    CSMappingPlacementRule engine2 = new CSMappingPlacementRule();
-    engine2.setFailOnConfigError(true);
-    engine2.initialize(cs);
-    assertPlace(engine2, app, "testuser", "root.man.testGroup0");
+    return cs;
   }
 
   public static class MockUnixGroupsMapping implements
