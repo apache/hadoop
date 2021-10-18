@@ -64,7 +64,7 @@ protected:
   /**
    * {@inheritdoc}
    */
-  [[nodiscard]] bool ValidateConstraints() const override { return argc_ > 1; }
+  [[nodiscard]] bool ValidateConstraints() const override;
 
   /**
    * {@inheritdoc}

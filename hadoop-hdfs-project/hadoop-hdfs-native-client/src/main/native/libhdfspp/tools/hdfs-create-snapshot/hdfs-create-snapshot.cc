@@ -52,6 +52,21 @@ bool CreateSnapshot::Initialize() {
   return true;
 }
 
+bool CreateSnapshot::ValidateConstraints() const {
+  // Only "help" is allowed as single argument
+  if (argc_ == 2) {
+    return opt_val_.count("help") > 0;
+  }
+
+  // If the name option is specified, there will be 4 arguments in total
+  if (argc_ == 4) {
+    return opt_val_.count("name") > 0;
+  }
+
+  // Rest of the cases must contain more than 1 argument on the command line
+  return argc_ > 1;
+}
+
 std::string CreateSnapshot::GetDescription() const {
   std::stringstream desc;
   desc << "Usage: hdfs_createSnapshot [OPTION] PATH" << std::endl
