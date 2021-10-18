@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 
@@ -150,7 +151,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       s3EncryptionMethod =
           getEncryptionAlgorithm(getTestBucketName(conf), conf).getMethod();
     } catch (IOException e) {
-      throw new RuntimeException("Failed to lookup encryption algorithm.");
+      throw new UncheckedIOException("Failed to lookup encryption algorithm.",
+          e);
     }
     String s3EncryptionKey = getS3EncryptionKey(getTestBucketName(conf), conf);
     removeBaseAndBucketOverrides(conf,
