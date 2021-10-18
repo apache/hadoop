@@ -2329,17 +2329,17 @@ public class LeafQueue extends AbstractCSQueue {
   void updateMaximumApplications(CapacitySchedulerConfiguration conf) {
     int maxAppsForQueue = conf.getMaximumApplicationsPerQueue(getQueuePath());
 
-    int maxGlobalApplications = conf.getGlobalMaximumApplicationsPerQueue();
-    int maxSystemApplications = conf.getMaximumSystemApplications();
-    int baseMaxApplications = maxGlobalApplications > 0 ?
-        Math.min(maxGlobalApplications, maxSystemApplications)
-        : maxSystemApplications;
+    int maxDefaultPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
+    int maxSystemApps = conf.getMaximumSystemApplications();
+    int baseMaxApplications = maxDefaultPerQueueApps > 0 ?
+        Math.min(maxDefaultPerQueueApps, maxSystemApps)
+        : maxSystemApps;
 
     String maxLabel = RMNodeLabelsManager.NO_LABEL;
     if (maxAppsForQueue < 0) {
-      if (maxGlobalApplications > 0 && this.capacityConfigType
+      if (maxDefaultPerQueueApps > 0 && this.capacityConfigType
           != CapacityConfigType.ABSOLUTE_RESOURCE) {
-        maxAppsForQueue = maxGlobalApplications;
+        maxAppsForQueue = maxDefaultPerQueueApps;
       } else {
         for (String label : configuredNodeLabels) {
           int maxApplicationsByLabel = (int) (baseMaxApplications
