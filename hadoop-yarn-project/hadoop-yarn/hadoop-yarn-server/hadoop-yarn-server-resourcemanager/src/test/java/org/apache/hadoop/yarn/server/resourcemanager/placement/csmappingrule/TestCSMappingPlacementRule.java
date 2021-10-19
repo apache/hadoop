@@ -815,8 +815,8 @@ public class TestCSMappingPlacementRule {
     final String user = "testuser";
     
     //Create service-wide configuration object
-    Configuration conf = new Configuration();
-    conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
+    Configuration yarnConf = new Configuration();
+    yarnConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
 
     //Create CS configuration object with a single, primary group mapping rule
     List<MappingRule> mappingRules = new ArrayList<>();
@@ -836,10 +836,10 @@ public class TestCSMappingPlacementRule {
     //Intentionally add a dummy implementation class - The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the CapacitySchedulerConfiguration instance!
     csConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
     
-    CapacityScheduler cs = createMockCS(conf, csConf);
+    CapacityScheduler cs = createMockCS(yarnConf, csConf);
 
     //Create app, submit to placement engine, expecting queue=testGroup1
-    CSMappingPlacementRule engine = submitApp(cs);
+    CSMappingPlacementRule engine = initPlacementEngine(cs);
     ApplicationSubmissionContext app = createApp("app");
     assertPlace(engine, app, user, "root.man.testGroup1");
 
@@ -847,17 +847,17 @@ public class TestCSMappingPlacementRule {
     // The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the
     // CapacitySchedulerConfiguration instance!
     //This makes sure that the Groups instance is not recreated by CSMappingPlacementRule
-    conf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
+    yarnConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
     
-    //Refresh the groups, this makes testGroup0 as primary group.
+    //Refresh the groups, this makes testGroup0 as primary group for "testUser"
     engine.getGroups().refresh();
 
     //Create app, submit to placement engine, expecting queue=testGroup0 (the new primary group)
-    engine = submitApp(cs);
+    engine = initPlacementEngine(cs);
     assertPlace(engine, app, user, "root.man.testGroup0");
   }
 
-  private CSMappingPlacementRule submitApp(CapacityScheduler cs) throws IOException {
+  private CSMappingPlacementRule initPlacementEngine(CapacityScheduler cs) throws IOException {
     CSMappingPlacementRule engine = new CSMappingPlacementRule();
     engine.setFailOnConfigError(true);
     engine.initialize(cs);
@@ -881,7 +881,10 @@ public class TestCSMappingPlacementRule {
       GroupMappingServiceProvider {
     
     public MockUnixGroupsMapping() {
-      updateGroups();
+      group.clear();
+      group.add("testGroup1");
+      group.add("testGroup2");
+      group.add("testGroup3");
     }
 
     private static List<String> group = new ArrayList<>();
@@ -904,17 +907,6 @@ public class TestCSMappingPlacementRule {
     @Override
     public Set<String> getGroupsSet(String user) throws IOException {
       return ImmutableSet.copyOf(group);
-    }
-
-    public static void updateGroups() {
-      group.clear();
-      group.add("testGroup1");
-      group.add("testGroup2");
-      group.add("testGroup3");
-    }
-
-    public static void resetGroups() {
-      updateGroups();
     }
   }
 }
