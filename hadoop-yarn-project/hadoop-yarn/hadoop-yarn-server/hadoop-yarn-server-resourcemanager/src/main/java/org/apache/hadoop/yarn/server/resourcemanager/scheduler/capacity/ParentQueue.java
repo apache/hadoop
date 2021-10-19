@@ -1442,8 +1442,8 @@ public class ParentQueue extends AbstractCSQueue {
           .getResource(), node.getPartition());
       LOG.info("movedContainer" + " queueMoveIn=" + getQueuePath()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-          + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed() + " cluster="
-          + clusterResource);
+          + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed() +
+          " cluster=" + clusterResource);
       // Inform the parent
       if (parent != null) {
         parent.attachContainer(clusterResource, application, rmContainer);
@@ -1462,8 +1462,8 @@ public class ParentQueue extends AbstractCSQueue {
           node.getPartition());
       LOG.info("movedContainer" + " queueMoveOut=" + getQueuePath()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-          + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed() + " cluster="
-          + clusterResource);
+          + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed() +
+          " cluster=" + clusterResource);
       // Inform the parent
       if (parent != null) {
         parent.detachContainer(clusterResource, application, rmContainer);
