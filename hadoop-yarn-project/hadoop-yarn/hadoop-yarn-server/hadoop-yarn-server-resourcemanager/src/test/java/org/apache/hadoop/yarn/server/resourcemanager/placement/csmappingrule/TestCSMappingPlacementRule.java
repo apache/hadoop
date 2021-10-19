@@ -54,11 +54,8 @@ import static junit.framework.TestCase.assertNull;
 import static junit.framework.TestCase.assertTrue;
 import static junit.framework.TestCase.fail;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUP_MAPPING;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestCSMappingPlacementRule {
@@ -781,7 +778,7 @@ public class TestCSMappingPlacementRule {
   /**
    * 1. Invoke Groups.reset(). This make sure that the underlying singleton {@link Groups#GROUPS}
    * is set to null.<br>
-   * 2. Create a Configuration object in which the property "hadoop.security.group.mapping" 
+   * 2. Create a Configuration object in which the property "hadoop.security.group.mapping"
    * refers to an existing a test implementation.<br>
    * 3. Create a mock CapacityScheduler where getConf() and getConfiguration() contain different
    * settings for "hadoop.security.group.mapping". Since getConf() is the service config, this
@@ -813,10 +810,11 @@ public class TestCSMappingPlacementRule {
   public void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws YarnException, IOException {
     Groups.reset();
     final String user = "testuser";
-    
+
     //Create service-wide configuration object
     Configuration yarnConf = new Configuration();
-    yarnConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class, GroupMappingServiceProvider.class);
+    yarnConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, MockUnixGroupsMapping.class,
+        GroupMappingServiceProvider.class);
 
     //Create CS configuration object with a single, primary group mapping rule
     List<MappingRule> mappingRules = new ArrayList<>();
@@ -833,9 +831,11 @@ public class TestCSMappingPlacementRule {
       }
     };
     csConf.setOverrideWithQueueMappings(true);
-    //Intentionally add a dummy implementation class - The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the CapacitySchedulerConfiguration instance!
+    //Intentionally add a dummy implementation class -
+    // The "HADOOP_SECURITY_GROUP_MAPPING" should not be read from the
+    // CapacitySchedulerConfiguration instance!
     csConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
-    
+
     CapacityScheduler cs = createMockCS(yarnConf, csConf);
 
     //Create app, submit to placement engine, expecting queue=testGroup1
@@ -848,7 +848,7 @@ public class TestCSMappingPlacementRule {
     // CapacitySchedulerConfiguration instance!
     //This makes sure that the Groups instance is not recreated by CSMappingPlacementRule
     yarnConf.setClass(HADOOP_SECURITY_GROUP_MAPPING, String.class, Object.class);
-    
+
     //Refresh the groups, this makes testGroup0 as primary group for "testUser"
     engine.getGroups().refresh();
 
@@ -879,7 +879,7 @@ public class TestCSMappingPlacementRule {
 
   public static class MockUnixGroupsMapping implements
       GroupMappingServiceProvider {
-    
+
     public MockUnixGroupsMapping() {
       group.clear();
       group.add("testGroup1");
