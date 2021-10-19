@@ -20,8 +20,10 @@
 
 #include "common/util.h"
 
-#include <asio/read.hpp>
-
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/system/error_code.hpp>
 #include <google/protobuf/message_lite.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
@@ -39,7 +41,7 @@ struct ReadDelimitedPBMessageContinuation : public Continuation {
 
   virtual void Run(const Next &next) override {
     namespace pbio = google::protobuf::io;
-    auto handler = [this, next](const asio::error_code &ec, size_t) {
+    auto handler = [this, next](const boost::system::error_code &ec, size_t) {
       Status status;
       if (ec) {
         status = ToStatus(ec);
@@ -57,15 +59,15 @@ struct ReadDelimitedPBMessageContinuation : public Continuation {
       }
       next(status);
     };
-    asio::async_read(*stream_,
-        asio::buffer(buf_),
+    boost::asio::async_read(*stream_,
+        boost::asio::buffer(buf_),
         std::bind(&ReadDelimitedPBMessageContinuation::CompletionHandler, this,
                   std::placeholders::_1, std::placeholders::_2),
         handler);
   }
 
 private:
-  size_t CompletionHandler(const asio::error_code &ec, size_t transferred) {
+  size_t CompletionHandler(const boost::system::error_code &ec, size_t transferred) {
     if (ec) {
       return 0;
     }
@@ -103,7 +105,7 @@ struct WriteDelimitedPBMessageContinuation : Continuation {
       return;
     }
 
-    asio::async_write(*stream_, asio::buffer(buf_), [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); } );
+    boost::asio::async_write(*stream_, boost::asio::buffer(buf_), [next](const boost::system::error_code &ec, size_t) { next(ToStatus(ec)); } );
   }
 
 private:

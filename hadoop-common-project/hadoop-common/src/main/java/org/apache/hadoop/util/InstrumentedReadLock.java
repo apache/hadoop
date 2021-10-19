@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /**
@@ -75,7 +75,7 @@ public class InstrumentedReadLock extends InstrumentedLock {
     getLock().unlock();
     if (needReport) {
       readLockHeldTimeStamp.remove();
-      check(localLockAcquireTime, localLockReleaseTime);
+      check(localLockAcquireTime, localLockReleaseTime, true);
     }
   }
 

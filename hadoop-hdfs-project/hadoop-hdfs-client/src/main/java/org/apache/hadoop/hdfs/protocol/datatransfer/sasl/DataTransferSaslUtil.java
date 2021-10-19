@@ -57,11 +57,11 @@ import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
-import com.google.common.net.InetAddresses;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Utility methods implementing SASL negotiation for DataTransferProtocol.
@@ -305,20 +305,22 @@ public final class DataTransferSaslUtil {
   public static CipherOption negotiateCipherOption(Configuration conf,
       List<CipherOption> options) throws IOException {
     // Negotiate cipher suites if configured.  Currently, the only supported
-    // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
-    // values for future expansion.
+    // cipher suite is AES/CTR/NoPadding or SM4/CTR/NoPadding, but the protocol
+    // allows multiple values for future expansion.
     String cipherSuites = conf.get(DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
     if (cipherSuites == null || cipherSuites.isEmpty()) {
       return null;
     }
-    if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+    if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName()) &&
+        !cipherSuites.equals(CipherSuite.SM4_CTR_NOPADDING.getName())) {
       throw new IOException(String.format("Invalid cipher suite, %s=%s",
           DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
     }
     if (options != null) {
       for (CipherOption option : options) {
         CipherSuite suite = option.getCipherSuite();
-        if (suite == CipherSuite.AES_CTR_NOPADDING) {
+        if (suite == CipherSuite.AES_CTR_NOPADDING ||
+            suite == CipherSuite.SM4_CTR_NOPADDING) {
           int keyLen = conf.getInt(
               DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY,
               DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT) / 8;

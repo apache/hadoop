@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
@@ -28,6 +29,10 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
@@ -36,9 +41,17 @@ import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 @Provider
 public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
+  private static final Log LOG =
+      LogFactory.getLog(JAXBContextResolver.class.getName());
+
   private final Map<Class, JAXBContext> typesContextMap;
 
   public JAXBContextResolver() throws Exception {
+    this(new Configuration());
+  }
+
+  @Inject
+  public JAXBContextResolver(Configuration conf) throws Exception {
 
     JAXBContext context;
     JAXBContext unWrappedRootContext;
@@ -56,7 +69,9 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
             StatisticsItemInfo.class, CapacitySchedulerHealthInfo.class,
             FairSchedulerQueueInfoList.class, AppTimeoutsInfo.class,
             AppTimeoutInfo.class, ResourceInformationsInfo.class,
-            ActivitiesInfo.class, AppActivitiesInfo.class};
+            ActivitiesInfo.class, AppActivitiesInfo.class,
+            QueueAclsInfo.class, QueueAclInfo.class,
+            BulkActivitiesInfo.class};
     // these dao classes need root unwrapping
     final Class[] rootUnwrappedTypes =
         { NewApplication.class, ApplicationSubmissionContextInfo.class,
@@ -64,17 +79,54 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
             DelegationToken.class, AppQueue.class, AppPriority.class,
             ResourceOptionInfo.class };
 
+    ArrayList<Class> finalcTypesList = new ArrayList<>();
+    ArrayList<Class> finalRootUnwrappedTypesList = new ArrayList<>();
+
+    Collections.addAll(finalcTypesList, cTypes);
+    Collections.addAll(finalRootUnwrappedTypesList, rootUnwrappedTypes);
+
+    // Add Custom DAO Classes
+    Class[] daoClasses = null;
+    Class[] unwrappedDaoClasses = null;
+    boolean loadCustom = true;
+    try {
+      daoClasses = conf
+          .getClasses(YarnConfiguration.YARN_HTTP_WEBAPP_CUSTOM_DAO_CLASSES);
+      unwrappedDaoClasses = conf.getClasses(
+          YarnConfiguration.YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES);
+    } catch (Exception e) {
+      LOG.warn("Failed to load custom dao class: " + e);
+      loadCustom = false;
+    }
+
+    if (loadCustom) {
+      if (daoClasses != null) {
+        Collections.addAll(finalcTypesList, daoClasses);
+        LOG.debug("Added custom dao classes: " + Arrays.toString(daoClasses));
+      }
+      if (unwrappedDaoClasses != null) {
+        Collections.addAll(finalRootUnwrappedTypesList, unwrappedDaoClasses);
+        LOG.debug("Added custom Unwrapped dao classes: "
+            + Arrays.toString(unwrappedDaoClasses));
+      }
+    }
+
+    final Class[] finalcTypes = finalcTypesList
+        .toArray(new Class[finalcTypesList.size()]);
+    final Class[] finalRootUnwrappedTypes = finalRootUnwrappedTypesList
+        .toArray(new Class[finalRootUnwrappedTypesList.size()]);
+
     this.typesContextMap = new HashMap<Class, JAXBContext>();
     context =
         new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(false)
-          .build(), cTypes);
+          .build(), finalcTypes);
     unWrappedRootContext =
         new JSONJAXBContext(JSONConfiguration.natural().rootUnwrapping(true)
-          .build(), rootUnwrappedTypes);
-    for (Class type : cTypes) {
+          .build(), finalRootUnwrappedTypes);
+    for (Class type : finalcTypes) {
       typesContextMap.put(type, context);
     }
-    for (Class type : rootUnwrappedTypes) {
+    for (Class type : finalRootUnwrappedTypes) {
       typesContextMap.put(type, unWrappedRootContext);
     }
   }

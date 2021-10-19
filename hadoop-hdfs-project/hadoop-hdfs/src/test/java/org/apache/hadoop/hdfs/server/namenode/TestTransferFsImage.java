@@ -47,7 +47,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 
 public class TestTransferFsImage {

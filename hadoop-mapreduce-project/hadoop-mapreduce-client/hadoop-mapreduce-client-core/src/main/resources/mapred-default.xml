@@ -1267,6 +1267,29 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.pathcache.max-weight</name>
+  <value>10485760</value>
+  <description>The maximum total weight of entries the cache may contain.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.pathcache.expire-after-access-minutes</name>
+  <value>5</value>
+  <description>The length of time after an entry is last accessed that it
+    should be automatically removed.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.pathcache.concurrency-level</name>
+  <value>16</value>
+  <description>Uses the concurrency level to create a fixed number of hashtable
+    segments, each governed by its own write lock.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
   <value>org.apache.hadoop.mapreduce.task.reduce.Shuffle</value>
   <description>
@@ -1389,6 +1412,23 @@
     end notification. Cluster administrators can set this to limit how long
     after end of a job, the Application Master waits before exiting. Must be
     marked as final to prevent users from overriding this.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.end-notification.custom-notifier-class</name>
+  <description>A class to be invoked in order to send a notification after the
+               job has completed (success/failure). The class must implement
+               org.apache.hadoop.mapreduce.CustomJobEndNotifier. A notification
+               url still has to be set which will be passed to the notifyOnce
+               method of your implementation along with the Job's configuration.
+               If this is set instead of using a simple HttpURLConnection we'll
+               create a new instance of this class. For now this still only works
+               with HTTP/HTTPS URLs, but by implementing this class you can choose
+               how you want to make the notification itself. For example you can
+               choose to use a custom HTTP library, or do a delegation token
+               authentication, maybe set a custom SSL context on the connection, etc.
+               The class needs to have a no-arg constructor.
   </description>
 </property>
 

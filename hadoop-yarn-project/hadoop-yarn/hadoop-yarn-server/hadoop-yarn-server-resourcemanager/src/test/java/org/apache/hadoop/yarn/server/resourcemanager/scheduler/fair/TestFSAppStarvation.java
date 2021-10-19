@@ -22,6 +22,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.ControlledClock;
 
 import org.junit.After;
@@ -33,12 +38,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 
 /**
- * Test class to verify identification of app starvation
+ * Test class to verify identification of app starvation.
  */
 public class TestFSAppStarvation extends FairSchedulerTestBase {
 
@@ -186,53 +189,41 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
    * 3. Add two nodes to the cluster
    * 4. Submit an app that uses up all resources on the cluster
    */
-  private void setupStarvedCluster() throws IOException {
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-
-    // Default queue
-    out.println("<queue name=\"default\">");
-    out.println("</queue>");
-
-    // Queue with preemption disabled
-    out.println("<queue name=\"no-preemption\">");
-    out.println("<fairSharePreemptionThreshold>0" +
-        "</fairSharePreemptionThreshold>");
-    out.println("</queue>");
-
-    // Queue with minshare preemption enabled
-    out.println("<queue name=\"minshare\">");
-    out.println("<fairSharePreemptionThreshold>0" +
-        "</fairSharePreemptionThreshold>");
-    out.println("<minSharePreemptionTimeout>0" +
-        "</minSharePreemptionTimeout>");
-    out.println("<minResources>2048mb,2vcores</minResources>");
-    out.println("</queue>");
-
-    // FAIR queue with fairshare preemption enabled
-    out.println("<queue name=\"fairshare\">");
-    out.println("<fairSharePreemptionThreshold>1" +
-        "</fairSharePreemptionThreshold>");
-    out.println("<fairSharePreemptionTimeout>0" +
-        "</fairSharePreemptionTimeout>");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    addChildQueue(out, "fair");
-    out.println("</queue>");
-
-    // DRF queue with fairshare preemption enabled
-    out.println("<queue name=\"drf\">");
-    out.println("<fairSharePreemptionThreshold>1" +
-        "</fairSharePreemptionThreshold>");
-    out.println("<fairSharePreemptionTimeout>0" +
-        "</fairSharePreemptionTimeout>");
-    out.println("<schedulingPolicy>drf</schedulingPolicy>");
-    addChildQueue(out, "drf");
-    out.println("</queue>");
-    out.println("<defaultQueueSchedulingPolicy>drf" +
-        "</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+  private void setupStarvedCluster() {
+    AllocationFileWriter.create()
+        .drfDefaultQueueSchedulingPolicy()
+        // Default queue
+        .addQueue(new AllocationFileQueue.Builder("default").build())
+        // Queue with preemption disabled
+        .addQueue(new AllocationFileQueue.Builder("no-preemption")
+            .fairSharePreemptionThreshold(0).build())
+        // Queue with minshare preemption enabled
+        .addQueue(new AllocationFileQueue.Builder("minshare")
+            .fairSharePreemptionThreshold(0)
+            .minSharePreemptionTimeout(0)
+            .minResources("2048mb,2vcores")
+            .build())
+        // FAIR queue with fairshare preemption enabled
+        .addQueue(new AllocationFileQueue.Builder("fairshare")
+            .fairSharePreemptionThreshold(1)
+            .fairSharePreemptionTimeout(0)
+            .schedulingPolicy("fair")
+            .subQueue(new AllocationFileQueue.Builder("child")
+                .fairSharePreemptionThreshold(1)
+                .fairSharePreemptionTimeout(0)
+                .schedulingPolicy("fair").build())
+            .build())
+        // DRF queue with fairshare preemption enabled
+        .addQueue(new AllocationFileQueue.Builder("drf")
+            .fairSharePreemptionThreshold(1)
+            .fairSharePreemptionTimeout(0)
+            .schedulingPolicy("drf")
+            .subQueue(new AllocationFileQueue.Builder("child")
+                .fairSharePreemptionThreshold(1)
+                .fairSharePreemptionTimeout(0)
+                .schedulingPolicy("drf").build())
+            .build())
+        .writeToFile(ALLOC_FILE.getAbsolutePath());
 
     assertTrue("Allocation file does not exist, not running the test",
         ALLOC_FILE.exists());
@@ -256,17 +247,6 @@ public class TestFSAppStarvation extends FairSchedulerTestBase {
     sendEnoughNodeUpdatesToAssignFully();
 
     assertEquals(8, scheduler.getSchedulerApp(app).getLiveContainers().size());
-  }
-
-  private void addChildQueue(PrintWriter out, String policy) {
-    // Child queue under fairshare with same settings
-    out.println("<queue name=\"child\">");
-    out.println("<fairSharePreemptionThreshold>1" +
-        "</fairSharePreemptionThreshold>");
-    out.println("<fairSharePreemptionTimeout>0" +
-        "</fairSharePreemptionTimeout>");
-    out.println("<schedulingPolicy>" + policy + "</schedulingPolicy>");
-    out.println("</queue>");
   }
 
   private void submitAppsToEachLeafQueue() {

@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -97,11 +98,12 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Extends the {@code AbstractRESTRequestInterceptor} class and provides an
@@ -237,7 +239,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       SubClusterId subClusterId, String webAppAddress) {
     DefaultRequestInterceptorREST interceptor =
         getInterceptorForSubCluster(subClusterId);
-    if (interceptor == null) {
+    String webAppAddresswithScheme = WebAppUtils.getHttpSchemePrefix(
+            this.getConf()) + webAppAddress;
+    if (interceptor == null || !webAppAddresswithScheme.equals(interceptor.
+        getWebAppAddress())){
       interceptor = createInterceptorForSubCluster(subClusterId, webAppAddress);
     }
     return interceptor;
@@ -672,7 +677,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     AppsInfo apps = new AppsInfo();
     long startTime = clock.getTime();
 
@@ -701,7 +706,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           AppsInfo rmApps = interceptor.getApps(hsrCopy, stateQuery,
               statesQuery, finalStatusQuery, userQuery, queueQuery, count,
               startedBegin, startedEnd, finishBegin, finishEnd,
-              applicationTypes, applicationTags, unselectedFields);
+              applicationTypes, applicationTags, name, unselectedFields);
 
           if (rmApps == null) {
             routerMetrics.incrMultipleAppsFailedRetrieved();
@@ -1140,6 +1145,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
       String groupBy) {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
+      String groupBy, int activitiesCount) throws InterruptedException {
     throw new NotImplementedException("Code is not implemented");
   }
 

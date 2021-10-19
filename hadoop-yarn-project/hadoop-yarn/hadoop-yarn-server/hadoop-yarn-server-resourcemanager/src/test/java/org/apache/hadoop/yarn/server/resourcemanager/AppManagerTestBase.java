@@ -18,23 +18,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static java.util.stream.Collectors.toSet;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
-import java.util.List;
-import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.mockito.ArgumentCaptor;
 
 /**
  * Base class for AppManager related test.
@@ -75,33 +67,17 @@ public class AppManagerTestBase {
       return this.completedAppsInStateStore;
     }
 
-    public List<ApplicationId> getCompletedApps() {
-      return completedApps;
-    }
-
-    public Set<ApplicationId> getFirstNCompletedApps(int n) {
-      return getCompletedApps().stream().limit(n).collect(toSet());
-    }
-
-    public Set<ApplicationId> getCompletedAppsWithEvenIdsInRange(int n) {
-      return getCompletedApps().stream().limit(n)
-          .filter(app -> app.getId() % 2 == 0).collect(toSet());
-    }
-
-    public Set<ApplicationId> getRemovedAppsFromStateStore(int numRemoves) {
-      ArgumentCaptor<RMApp> argumentCaptor =
-          ArgumentCaptor.forClass(RMApp.class);
-      verify(stateStore, times(numRemoves))
-          .removeApplication(argumentCaptor.capture());
-      return argumentCaptor.getAllValues().stream().map(RMApp::getApplicationId)
-          .collect(toSet());
-    }
-
     public void submitApplication(
         ApplicationSubmissionContext submissionContext, String user)
         throws YarnException {
       super.submitApplication(submissionContext, System.currentTimeMillis(),
           user);
+    }
+
+    public String getUserNameForPlacement(final String user,
+        final ApplicationSubmissionContext context,
+        final PlacementManager placementManager) throws YarnException {
+      return super.getUserNameForPlacement(user, context, placementManager);
     }
   }
 }

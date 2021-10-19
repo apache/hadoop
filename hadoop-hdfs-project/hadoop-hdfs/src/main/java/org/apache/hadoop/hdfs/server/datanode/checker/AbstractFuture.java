@@ -20,15 +20,15 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.annotations.Beta;
-import com.google.common.annotations.GwtCompatible;
-import com.google.common.base.Preconditions;
-import static com.google.common.base.Preconditions.checkNotNull;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.Beta;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.GwtCompatible;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import static java.util.concurrent.atomic.AtomicReferenceFieldUpdater
     .newUpdater;
@@ -55,7 +55,7 @@ import java.util.logging.Logger;
  * include instantiating a {@link SettableFuture}, submitting a task to a
  * {@link ListeningExecutorService}, and deriving a {@code Future} from an
  * existing one, typically using methods like {@link Futures#transform
- * (ListenableFuture, com.google.common.base.Function) Futures.transform}
+ * (ListenableFuture, org.apache.hadoop.thirdparty.com.google.common.base.Function) Futures.transform}
  * and its overloaded versions.
  * <p>
  * <p>This class implements all methods in {@code ListenableFuture}.

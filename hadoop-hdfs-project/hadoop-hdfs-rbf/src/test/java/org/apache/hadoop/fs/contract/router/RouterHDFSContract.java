@@ -43,16 +43,20 @@ public class RouterHDFSContract extends HDFSContract {
   }
 
   public static void createCluster() throws IOException {
-    createCluster(null);
+    createCluster(false);
   }
 
-  public static void createCluster(Configuration conf) throws IOException {
-    createCluster(true, 2, conf);
+  public static void createCluster(boolean security) throws IOException {
+    createCluster(true, 2, security);
   }
 
   public static void createCluster(
-      boolean ha, int numNameServices, Configuration conf) throws IOException {
+      boolean ha, int numNameServices, boolean security) throws IOException {
     try {
+      Configuration conf = null;
+      if (security) {
+        conf = SecurityConfUtil.initSecurity();
+      }
       cluster = new MiniRouterDFSCluster(ha, numNameServices, conf);
 
       // Start NNs and DNs and wait until ready
@@ -87,6 +91,11 @@ public class RouterHDFSContract extends HDFSContract {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;
+    }
+    try {
+      SecurityConfUtil.destroy();
+    } catch (Exception e) {
+      throw new IOException("Cannot destroy security context", e);
     }
   }
 

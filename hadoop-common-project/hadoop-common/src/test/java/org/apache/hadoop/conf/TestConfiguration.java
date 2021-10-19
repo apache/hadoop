@@ -50,9 +50,9 @@ import static java.util.concurrent.TimeUnit.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 
 import static org.apache.hadoop.conf.StorageUnit.BYTES;
@@ -60,7 +60,6 @@ import static org.apache.hadoop.conf.StorageUnit.GB;
 import static org.apache.hadoop.conf.StorageUnit.KB;
 import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
 
 import org.apache.commons.lang3.StringUtils;
@@ -78,14 +77,10 @@ import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
-import org.hamcrest.CoreMatchers;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 public class TestConfiguration {
 
-  @Rule
-  public ExpectedException thrown= ExpectedException.none();
   private static final double DOUBLE_DELTA = 0.000000001f;
   private Configuration conf;
   final static String CONFIG = new File("./test-config-TestConfiguration.xml").getAbsolutePath();
@@ -485,6 +480,62 @@ public class TestConfiguration {
       System.out.println("p=" + p.name);
       String gotVal = mock.get(p.name);
       String gotRawVal = mock.getRaw(p.name);
+      assertEq(p.val, gotRawVal);
+      assertEq(p.expectEval, gotVal);
+    }
+  }
+
+  /**
+   * Verify that when a configuration is restricted, environment
+   * variables and system properties will be unresolved.
+   * The fallback patterns for the variables are still parsed.
+   */
+  @Test
+  public void testRestrictedEnv() throws IOException {
+    // this test relies on env.PATH being set on all platforms a
+    // test run will take place on, and the java.version sysprop
+    // set in all JVMs.
+    // Restricted configurations will not get access to these values, so
+    // will either be unresolved or, for env vars with fallbacks: the fallback
+    // values.
+
+    conf.setRestrictSystemProperties(true);
+
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    // a simple property to reference
+    declareProperty("d", "D", "D");
+
+    // system property evaluation stops working completely
+    declareProperty("system1", "${java.version}", "${java.version}");
+
+    // the env variable does not resolve
+    declareProperty("secret1", "${env.PATH}", "${env.PATH}");
+
+    // but all the fallback options do work
+    declareProperty("secret2", "${env.PATH-a}", "a");
+    declareProperty("secret3", "${env.PATH:-b}", "b");
+    declareProperty("secret4", "${env.PATH:-}", "");
+    declareProperty("secret5", "${env.PATH-}", "");
+    // special case
+    declareProperty("secret6", "${env.PATH:}", "${env.PATH:}");
+    // safety check
+    declareProperty("secret7", "${env.PATH:--}", "-");
+
+    // recursive eval of the fallback
+    declareProperty("secret8", "${env.PATH:-${d}}", "D");
+
+    // if the fallback doesn't resolve, the result is the whole variable raw.
+    declareProperty("secret9", "${env.PATH:-$d}}", "${env.PATH:-$d}}");
+
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+
+    for (Prop p : props) {
+      System.out.println("p=" + p.name);
+      String gotVal = conf.get(p.name);
+      String gotRawVal = conf.getRaw(p.name);
       assertEq(p.val, gotRawVal);
       assertEq(p.expectEval, gotVal);
     }
@@ -1063,6 +1114,38 @@ public class TestConfiguration {
   }
 
   @Test
+  public void testRelativeIncludesWithLoadingViaUri() throws Exception {
+    tearDown();
+    File configFile = new File("./tmp/test-config.xml");
+    File configFile2 = new File("./tmp/test-config2.xml");
+
+    new File(configFile.getParent()).mkdirs();
+    out = new BufferedWriter(new FileWriter(configFile2));
+    startConfig();
+    appendProperty("a", "b");
+    endConfig();
+
+    out = new BufferedWriter(new FileWriter(configFile));
+    startConfig();
+    // Add the relative path instead of the absolute one.
+    startInclude(configFile2.getName());
+    endInclude();
+    appendProperty("c", "d");
+    endConfig();
+
+    // verify that the includes file contains all properties
+    Path fileResource = new Path(configFile.toURI());
+    conf.addResource(fileResource);
+    assertEquals("b", conf.get("a"));
+    assertEquals("d", conf.get("c"));
+
+    // Cleanup
+    configFile.delete();
+    configFile2.delete();
+    new File(configFile.getParent()).delete();
+  }
+
+  @Test
   public void testIntegerRanges() {
     Configuration conf = new Configuration();
     conf.set("first", "-100");
@@ -1456,61 +1539,64 @@ public class TestConfiguration {
 
     conf.setStorageSize(key, 10, MB);
     // This call returns the value specified in the Key as a double in MBs.
-    assertThat(conf.getStorageSize(key, "1GB", MB),
-        is(10.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", MB))
+        .isEqualTo(10.0);
 
     // Since this key is missing, This call converts the default value of  1GB
     // to MBs are returns that value.
-    assertThat(conf.getStorageSize(nonKey, "1GB", MB),
-        is(1024.0));
+    Assertions.assertThat(conf.getStorageSize(nonKey, "1GB", MB))
+        .isEqualTo(1024.0);
 
 
     conf.setStorageSize(key, 1024, BYTES);
-    assertThat(conf.getStorageSize(key, 100, KB), is(1.0));
+    Assertions.assertThat(conf.getStorageSize(key, 100, KB)).isEqualTo(1.0);
 
-    assertThat(conf.getStorageSize(nonKey, 100.0, KB), is(100.0));
+    Assertions.assertThat(conf.getStorageSize(nonKey, 100.0, KB))
+        .isEqualTo(100.0);
 
     // We try out different kind of String formats to see if they work and
     // during read, we also try to read using a different Storage Units.
     conf.setStrings(key, "1TB");
-    assertThat(conf.getStorageSize(key, "1PB", GB), is(1024.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", GB))
+        .isEqualTo(1024.0);
 
     conf.setStrings(key, "1bytes");
-    assertThat(conf.getStorageSize(key, "1PB", KB), is(0.001));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", KB))
+        .isEqualTo(0.001);
 
     conf.setStrings(key, "2048b");
-    assertThat(conf.getStorageSize(key, "1PB", KB), is(2.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", KB)).isEqualTo(2.0);
 
     conf.setStrings(key, "64 GB");
-    assertThat(conf.getStorageSize(key, "1PB", GB), is(64.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1PB", GB)).isEqualTo(64.0);
 
     // Match the parsing patterns of getLongBytes, which takes single char
     // suffix.
     conf.setStrings(key, "1T");
-    assertThat(conf.getStorageSize(key, "1GB", TB), is(1.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", TB)).isEqualTo(1.0);
 
     conf.setStrings(key, "1k");
-    assertThat(conf.getStorageSize(key, "1GB", KB), is(1.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", KB)).isEqualTo(1.0);
 
     conf.setStrings(key, "10m");
-    assertThat(conf.getStorageSize(key, "1GB", MB), is(10.0));
+    Assertions.assertThat(conf.getStorageSize(key, "1GB", MB)).isEqualTo(10.0);
 
 
 
     // Missing format specification, this should throw.
     conf.setStrings(key, "100");
-    thrown.expect(IllegalArgumentException.class);
-    conf.getStorageSize(key, "1PB", GB);
+    assertThrows(IllegalArgumentException.class,
+        () -> conf.getStorageSize(key, "1PB", GB));
 
     // illegal format specification, this should throw.
     conf.setStrings(key, "1HB");
-    thrown.expect(IllegalArgumentException.class);
-    conf.getStorageSize(key, "1PB", GB);
+    assertThrows(IllegalArgumentException.class,
+        () -> conf.getStorageSize(key, "1PB", GB));
 
     // Illegal number  specification, this should throw.
     conf.setStrings(key, "HadoopGB");
-    thrown.expect(IllegalArgumentException.class);
-    conf.getStorageSize(key, "1PB", GB);
+    assertThrows(IllegalArgumentException.class,
+        () -> conf.getStorageSize(key, "1PB", GB));
   }
 
   @Test
@@ -2392,10 +2478,10 @@ public class TestConfiguration {
 
     Configuration.addDeprecation(oldKey, newKey);
 
-    assertThat(conf.getPassword(newKey),
-        CoreMatchers.is(password.toCharArray()));
-    assertThat(conf.getPassword(oldKey),
-        CoreMatchers.is(password.toCharArray()));
+    Assertions.assertThat(conf.getPassword(newKey))
+        .isEqualTo(password.toCharArray());
+    Assertions.assertThat(conf.getPassword(oldKey))
+        .isEqualTo(password.toCharArray());
 
     FileUtil.fullyDelete(tmpDir);
   }
@@ -2421,10 +2507,10 @@ public class TestConfiguration {
 
     Configuration.addDeprecation(oldKey, newKey);
 
-    assertThat(conf.getPassword(newKey),
-        CoreMatchers.is(password.toCharArray()));
-    assertThat(conf.getPassword(oldKey),
-        CoreMatchers.is(password.toCharArray()));
+    Assertions.assertThat(conf.getPassword(newKey))
+        .isEqualTo(password.toCharArray());
+    Assertions.assertThat(conf.getPassword(oldKey))
+        .isEqualTo(password.toCharArray());
 
     FileUtil.fullyDelete(tmpDir);
   }
@@ -2437,7 +2523,7 @@ public class TestConfiguration {
     }
     conf.set("different.prefix" + ".name", "value");
     Map<String, String> prefixedProps = conf.getPropsWithPrefix("prefix.");
-    assertEquals(prefixedProps.size(), 10);
+    Assertions.assertThat(prefixedProps).hasSize(10);
     for (int i = 0; i < 10; i++) {
       assertEquals("value" + i, prefixedProps.get("name" + i));
     }
@@ -2448,7 +2534,7 @@ public class TestConfiguration {
       conf.set("subprefix." + "subname" + i, "value_${foo}" + i);
     }
     prefixedProps = conf.getPropsWithPrefix("subprefix.");
-    assertEquals(prefixedProps.size(), 10);
+    Assertions.assertThat(prefixedProps).hasSize(10);
     for (int i = 0; i < 10; i++) {
       assertEquals("value_bar" + i, prefixedProps.get("subname" + i));
     }
@@ -2552,5 +2638,42 @@ public class TestConfiguration {
     confClone.get("firstParse");
     // Thread 1
     config.get("secondParse");
+  }
+
+  @Test
+  public void testCDATA() throws IOException {
+    String xml = new String(
+        "<configuration>" +
+          "<property>" +
+            "<name>cdata</name>" +
+            "<value><![CDATA[>cdata]]></value>" +
+          "</property>\n" +
+          "<property>" +
+            "<name>cdata-multiple</name>" +
+            "<value><![CDATA[>cdata1]]> and <![CDATA[>cdata2]]></value>" +
+          "</property>\n" +
+          "<property>" +
+            "<name>cdata-multiline</name>" +
+            "<value><![CDATA[>cdata\nmultiline<>]]></value>" +
+          "</property>\n" +
+          "<property>" +
+            "<name>cdata-whitespace</name>" +
+            "<value>  prefix <![CDATA[>cdata]]>\nsuffix  </value>" +
+          "</property>\n" +
+        "</configuration>");
+    Configuration conf = checkCDATA(xml.getBytes());
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    conf.writeXml(os);
+    checkCDATA(os.toByteArray());
+  }
+
+  private static Configuration checkCDATA(byte[] bytes) {
+    Configuration conf = new Configuration(false);
+    conf.addResource(new ByteArrayInputStream(bytes));
+    assertEquals(">cdata", conf.get("cdata"));
+    assertEquals(">cdata1 and >cdata2", conf.get("cdata-multiple"));
+    assertEquals(">cdata\nmultiline<>", conf.get("cdata-multiline"));
+    assertEquals("  prefix >cdata\nsuffix  ", conf.get("cdata-whitespace"));
+    return conf;
   }
 }

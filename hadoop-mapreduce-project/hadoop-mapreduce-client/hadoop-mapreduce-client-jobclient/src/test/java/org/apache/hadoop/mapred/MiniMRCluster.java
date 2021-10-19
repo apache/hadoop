@@ -271,4 +271,8 @@ public class MiniMRCluster {
     }
   }
 
+  public MiniMRClientCluster getMrClientCluster() {
+    return mrClientCluster;
+  }
+
 }

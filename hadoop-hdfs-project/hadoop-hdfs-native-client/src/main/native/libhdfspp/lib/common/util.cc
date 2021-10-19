@@ -26,11 +26,11 @@
 #include <sstream>
 #include <iomanip>
 #include <thread>
-
+#include <memory>
 
 namespace hdfs {
 
-Status ToStatus(const ::asio::error_code &ec) {
+Status ToStatus(const boost::system::error_code &ec) {
   if (ec) {
     return Status(ec.value(), ec.message().c_str());
   } else {
@@ -56,7 +56,7 @@ std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageL
 
   std::string buf;
 
-  int size = msg->ByteSize();
+  const auto size = msg->ByteSizeLong();
   buf.reserve(pbio::CodedOutputStream::VarintSize32(size) + size);
   pbio::StringOutputStream ss(&buf);
   pbio::CodedOutputStream os(&ss);
@@ -68,23 +68,25 @@ std::string SerializeDelimitedProtobufMessage(const ::google::protobuf::MessageL
   return buf;
 }
 
-int DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg) {
-  size_t size = msg->ByteSize();
-  return ::google::protobuf::io::CodedOutputStream::VarintSize32(size) + size;
+size_t DelimitedPBMessageSize(const ::google::protobuf::MessageLite *msg) {
+  const auto size = msg->ByteSizeLong();
+  return ::google::protobuf::io::CodedOutputStream::VarintSize64(size) + size;
 }
 
-std::string GetRandomClientName() {
+std::shared_ptr<std::string> GetRandomClientName() {
   std::vector<unsigned char>buf(8);
-  RAND_pseudo_bytes(&buf[0], 8);
+  if (RAND_bytes(&buf[0], static_cast<int>(buf.size())) != 1) {
+    return nullptr;
+  }
 
   std::ostringstream oss;
   oss << "DFSClient_"  << getpid() <<  "_" <<
           std::this_thread::get_id() << "_" <<
           std::setw(2) << std::hex << std::uppercase << std::setfill('0');
-  for (unsigned char b: buf)
+  for (auto b : buf) {
     oss << static_cast<unsigned>(b);
-
-  return oss.str();
+  }
+  return std::make_shared<std::string>(oss.str());
 }
 
 std::string Base64Encode(const std::string &src) {
@@ -134,7 +136,7 @@ std::string Base64Encode(const std::string &src) {
 }
 
 
-std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
+std::string SafeDisconnect(boost::asio::ip::tcp::socket *sock) {
   std::string err;
   if(sock && sock->is_open()) {
     /**
@@ -147,7 +149,7 @@ std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
      **/
 
     try {
-      sock->shutdown(asio::ip::tcp::socket::shutdown_both);
+      sock->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
     } catch (const std::exception &e) {
       err = std::string("shutdown() threw") + e.what();
     }

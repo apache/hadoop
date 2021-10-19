@@ -26,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.doNothing;
 
+import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +76,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalRMInterface;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
@@ -156,32 +157,20 @@ public abstract class BaseContainerManagerTest {
   protected NodeHealthCheckerService nodeHealthChecker;
   protected LocalDirsHandlerService dirsHandler;
   protected final long DUMMY_RM_IDENTIFIER = 1234;
-
-  protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
-      context, new AsyncDispatcher(), null, metrics) {
-    @Override
-    protected ResourceTracker getRMClient() {
-      return new LocalRMInterface();
-    };
-
-    @Override
-    protected void stopRMProxy() {
-      return;
-    }
-
-    @Override
-    protected void startStatusUpdater() {
-      return; // Don't start any updating thread.
-    }
-
-    @Override
-    public long getRMIdentifier() {
-      // There is no real RM registration, simulate and set RMIdentifier
-      return DUMMY_RM_IDENTIFIER;
-    }
-  };
-
+  private NodeResourceMonitorImpl nodeResourceMonitor = mock(
+      NodeResourceMonitorImpl.class);
+  private NodeHealthCheckerService nodeHealthCheckerService;
+  private NodeStatusUpdater nodeStatusUpdater;
   protected ContainerManagerImpl containerManager = null;
+
+  public NodeStatusUpdater getNodeStatusUpdater() {
+    return nodeStatusUpdater;
+  }
+
+  public void setNodeStatusUpdater(
+      NodeStatusUpdater nodeStatusUpdater) {
+    this.nodeStatusUpdater = nodeStatusUpdater;
+  }
 
   protected ContainerExecutor createContainerExecutor() {
     DefaultContainerExecutor exec = new DefaultContainerExecutor();
@@ -218,11 +207,36 @@ public abstract class BaseContainerManagerTest {
     delSrvc.init(conf);
 
     dirsHandler = new LocalDirsHandlerService();
-    nodeHealthChecker = new NodeHealthCheckerService(
-        NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
-    nodeHealthChecker.init(conf);
+    dirsHandler.init(conf);
+    nodeHealthCheckerService = new NodeHealthCheckerService(dirsHandler);
+    nodeStatusUpdater = new NodeStatusUpdaterImpl(
+        context, new AsyncDispatcher(), nodeHealthCheckerService, metrics) {
+      @Override
+      protected ResourceTracker getRMClient() {
+        return new LocalRMInterface();
+      };
+
+      @Override
+      protected void stopRMProxy() {
+        return;
+      }
+
+      @Override
+      protected void startStatusUpdater() {
+        return; // Don't start any updating thread.
+      }
+
+      @Override
+      public long getRMIdentifier() {
+        // There is no real RM registration, simulate and set RMIdentifier
+        return DUMMY_RM_IDENTIFIER;
+      }
+    };
+
     containerManager = createContainerManager(delSrvc);
     ((NMContext)context).setContainerManager(containerManager);
+    ((NMContext)context).setContainerExecutor(exec);
+    ((NMContext)context).setNodeResourceMonitor(nodeResourceMonitor);
     nodeStatusUpdater.init(conf);
     containerManager.init(conf);
     nodeStatusUpdater.start();

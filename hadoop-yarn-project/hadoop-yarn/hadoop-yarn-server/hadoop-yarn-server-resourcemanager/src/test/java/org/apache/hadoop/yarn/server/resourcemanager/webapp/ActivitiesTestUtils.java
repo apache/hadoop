@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.common.collect.Lists;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -98,6 +98,8 @@ public final class ActivitiesTestUtils {
   public static final String FN_SCHEDULER_ACT_CHILDREN = "children";
 
   public static final String FN_SCHEDULER_ACT_ROOT = "activities";
+
+  public static final String FN_SCHEDULER_BULK_ACT_ROOT = "bulkActivities";
 
   private ActivitiesTestUtils(){}
 

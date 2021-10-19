@@ -40,12 +40,13 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
+
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
 
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Test cases for the handling of edit logs during failover

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -47,11 +47,11 @@ public class PreemptionManager {
     try {
       PreemptableQueue parentEntity = null;
       if (parent != null) {
-        parentEntity = entities.get(parent.getQueueName());
+        parentEntity = entities.get(parent.getQueuePath());
       }
 
-      if (!entities.containsKey(current.getQueueName())) {
-        entities.put(current.getQueueName(),
+      if (!entities.containsKey(current.getQueuePath())) {
+        entities.put(current.getQueuePath(),
             new PreemptableQueue(parentEntity));
       }
 

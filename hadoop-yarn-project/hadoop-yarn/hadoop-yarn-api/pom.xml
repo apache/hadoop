@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-api</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN API</name>
 
   <properties>
@@ -35,8 +35,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.xml.bind</groupId>
@@ -48,6 +48,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -62,10 +68,21 @@
     </dependency>
 
     <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
+          <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -118,45 +135,46 @@
     </resources>
     <plugins>
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
+            <id>src-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-                <param>${basedir}/src/main/proto/server</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>yarn_protos.proto</include>
-                  <include>yarn_service_protos.proto</include>
-                  <include>applicationmaster_protocol.proto</include>
-                  <include>applicationclient_protocol.proto</include>
-                  <include>containermanagement_protocol.proto</include>
-                  <include>server/yarn_server_resourcemanager_service_protos.proto</include>
-                  <include>server/resourcemanager_administration_protocol.proto</include>
-                  <include>application_history_client.proto</include>
-                  <include>server/application_history_server.proto</include>
-                  <include>client_SCM_protocol.proto</include>
-                  <include>server/SCM_Admin_protocol.proto</include>
-                  <include>yarn_csi_adaptor.proto</include>
-                  <include>YarnCsiAdaptor.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
             </configuration>
           </execution>
         </executions>
       </plugin>
-
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>

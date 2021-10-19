@@ -43,6 +43,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.KerberosAuthException;
 import org.apache.hadoop.security.NetUtilsTestResolver;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Shell;
+
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -95,7 +99,31 @@ public class TestNetUtils {
       assertInException(se, "Invalid argument");
     }
   }
-  
+
+  @Test
+  public void testInvalidAddress() throws Throwable {
+    Configuration conf = new Configuration();
+
+    Socket socket = NetUtils.getDefaultSocketFactory(conf)
+        .createSocket();
+    socket.bind(new InetSocketAddress("127.0.0.1", 0));
+    try {
+      NetUtils.connect(socket,
+          new InetSocketAddress("invalid-test-host",
+              0), 20000);
+      socket.close();
+      fail("Should not have connected");
+    } catch (UnknownHostException uhe) {
+      LOG.info("Got exception: ", uhe);
+      if (Shell.isJavaVersionAtLeast(17)) {
+        GenericTestUtils
+            .assertExceptionContains("invalid-test-host/<unresolved>:0", uhe);
+      } else {
+        GenericTestUtils.assertExceptionContains("invalid-test-host:0", uhe);
+      }
+    }
+  }
+
   @Test
   public void testSocketReadTimeoutWithChannel() throws Exception {
     doSocketReadTimeoutTest(true);
@@ -334,8 +362,51 @@ public class TestNetUtils {
     assertEquals(1000, addr.getPort());
 
     try {
-      addr = NetUtils.createSocketAddr(
+      NetUtils.createSocketAddr(
           "127.0.0.1:blahblah", 1000, "myconfig");
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+  }
+
+  @Test
+  public void testCreateSocketAddressWithURICache() throws Throwable {
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+
+    // ----------------------------------------------------
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig", true);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    // ----------------------------------------------------
+
+    try {
+      NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig", true);
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+
+    try {
+      NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig", true);
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
       assertInException(iae, "myconfig");
@@ -700,6 +771,18 @@ public class TestNetUtils {
     InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);
     assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+  }
+
+  @Test
+  public void testGetPortFromHostPortString() throws Exception {
+
+    assertEquals(1002, NetUtils.getPortFromHostPortString("testHost:1002"));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () ->  NetUtils.getPortFromHostPortString("testHost"));
+
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () ->  NetUtils.getPortFromHostPortString("testHost:randomString"));
   }
 
   @Test

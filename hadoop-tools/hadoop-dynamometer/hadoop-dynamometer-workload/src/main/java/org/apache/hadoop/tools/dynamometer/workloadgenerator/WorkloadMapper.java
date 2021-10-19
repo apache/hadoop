@@ -21,25 +21,18 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 
 /**
  * Represents the base class for a generic workload-generating mapper. By
  * default, it will expect to use {@link VirtualInputFormat} as its
- * {@link InputFormat}. Subclasses expecting a different {@link InputFormat}
- * should override the {@link #getInputFormat(Configuration)} method.
+ * {@link InputFormat}. Subclasses requiring a reducer or expecting a different
+ * {@link InputFormat} should override the {@link #configureJob(Job)} method.
  */
-public abstract class WorkloadMapper<KEYIN, VALUEIN>
-    extends Mapper<KEYIN, VALUEIN, NullWritable, NullWritable> {
-
-  /**
-   * Return the input class to be used by this mapper.
-   * @param conf configuration.
-   * @return the {@link InputFormat} implementation for the mapper.
-   */
-  public Class<? extends InputFormat> getInputFormat(Configuration conf) {
-    return VirtualInputFormat.class;
-  }
+public abstract class WorkloadMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> extends
+    Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 
   /**
    * Get the description of the behavior of this mapper.
@@ -61,5 +54,17 @@ public abstract class WorkloadMapper<KEYIN, VALUEIN>
    * @return whether or not all configurations required are provided.
    */
   public abstract boolean verifyConfigurations(Configuration conf);
+
+  /**
+   * Setup input and output formats and optional reducer.
+   */
+  public void configureJob(Job job) {
+    job.setInputFormatClass(VirtualInputFormat.class);
+
+    job.setNumReduceTasks(0);
+    job.setOutputKeyClass(NullWritable.class);
+    job.setOutputValueClass(NullWritable.class);
+    job.setOutputFormatClass(NullOutputFormat.class);
+  }
 
 }

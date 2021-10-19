@@ -36,7 +36,8 @@ public class TimelineReaderAuthenticationFilterInitializer extends
    * <p>
    * Propagates to {@link AuthenticationFilter} configuration all
    * YARN configuration properties prefixed with
-   * {@value TimelineAuthenticationFilterInitializer#PREFIX}.
+   * {@value
+   *   org.apache.hadoop.yarn.conf.YarnConfiguration#TIMELINE_HTTP_AUTH_PREFIX}.
    *
    * @param container
    *          The filter container

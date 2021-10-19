@@ -25,12 +25,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.Lists;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -40,6 +38,9 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Evolving
@@ -85,29 +86,46 @@ public class FairSchedulerConfiguration extends Configuration {
 
   private static final String CONF_PREFIX =  "yarn.scheduler.fair.";
 
+  /**
+   * Used during FS-&gt;CS conversion. When enabled, background threads are
+   * not started. This property should NOT be used by end-users!
+   */
+  public static final String MIGRATION_MODE = CONF_PREFIX + "migration.mode";
+
+  /**
+   * Disables checking whether a placement rule is terminal or not. Only
+   * used during migration mode. This property should NOT be used by end users!
+   */
+  public static final String NO_TERMINAL_RULE_CHECK = CONF_PREFIX +
+      "no-terminal-rule.check";
+
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
   
   /** Whether pools can be created that were not specified in the FS configuration file
    */
-  protected static final String ALLOW_UNDECLARED_POOLS = CONF_PREFIX + "allow-undeclared-pools";
-  protected static final boolean DEFAULT_ALLOW_UNDECLARED_POOLS = true;
+  public static final String ALLOW_UNDECLARED_POOLS = CONF_PREFIX +
+      "allow-undeclared-pools";
+  public static final boolean DEFAULT_ALLOW_UNDECLARED_POOLS = true;
   
   /** Whether to use the user name as the queue name (instead of "default") if
    * the request does not specify a queue. */
-  protected static final String  USER_AS_DEFAULT_QUEUE = CONF_PREFIX + "user-as-default-queue";
-  protected static final boolean DEFAULT_USER_AS_DEFAULT_QUEUE = true;
+  public static final String  USER_AS_DEFAULT_QUEUE = CONF_PREFIX +
+      "user-as-default-queue";
+  public static final boolean DEFAULT_USER_AS_DEFAULT_QUEUE = true;
 
   protected static final float  DEFAULT_LOCALITY_THRESHOLD = -1.0f;
 
   /** Cluster threshold for node locality. */
-  protected static final String LOCALITY_THRESHOLD_NODE = CONF_PREFIX + "locality.threshold.node";
-  protected static final float  DEFAULT_LOCALITY_THRESHOLD_NODE =
+  public static final String LOCALITY_THRESHOLD_NODE = CONF_PREFIX +
+      "locality.threshold.node";
+  public static final float  DEFAULT_LOCALITY_THRESHOLD_NODE =
 		  DEFAULT_LOCALITY_THRESHOLD;
 
   /** Cluster threshold for rack locality. */
-  protected static final String LOCALITY_THRESHOLD_RACK = CONF_PREFIX + "locality.threshold.rack";
-  protected static final float  DEFAULT_LOCALITY_THRESHOLD_RACK =
+  public static final String LOCALITY_THRESHOLD_RACK = CONF_PREFIX +
+      "locality.threshold.rack";
+  public static final float  DEFAULT_LOCALITY_THRESHOLD_RACK =
 		  DEFAULT_LOCALITY_THRESHOLD;
 
   /**
@@ -139,10 +157,10 @@ public class FairSchedulerConfiguration extends Configuration {
    * {@link #ASSIGN_MULTIPLE} to improve  container allocation ramp up.
    */
   @Deprecated
-  protected static final String CONTINUOUS_SCHEDULING_ENABLED = CONF_PREFIX +
+  public static final String CONTINUOUS_SCHEDULING_ENABLED = CONF_PREFIX +
       "continuous-scheduling-enabled";
   @Deprecated
-  protected static final boolean DEFAULT_CONTINUOUS_SCHEDULING_ENABLED = false;
+  public static final boolean DEFAULT_CONTINUOUS_SCHEDULING_ENABLED = false;
 
   /**
    * Sleep time of each pass in continuous scheduling (5ms in default).
@@ -150,21 +168,28 @@ public class FairSchedulerConfiguration extends Configuration {
    * Only used when {@link #CONTINUOUS_SCHEDULING_ENABLED} is enabled
    */
   @Deprecated
-  protected static final String CONTINUOUS_SCHEDULING_SLEEP_MS = CONF_PREFIX +
+  public static final String CONTINUOUS_SCHEDULING_SLEEP_MS = CONF_PREFIX +
       "continuous-scheduling-sleep-ms";
   @Deprecated
-  protected static final int DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS = 5;
+  public static final int DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS = 5;
 
   /** Whether preemption is enabled. */
-  protected static final String  PREEMPTION = CONF_PREFIX + "preemption";
-  protected static final boolean DEFAULT_PREEMPTION = false;
+  public static final String  PREEMPTION = CONF_PREFIX + "preemption";
+  public static final boolean DEFAULT_PREEMPTION = false;
+
+  protected static final String AM_PREEMPTION =
+      CONF_PREFIX + "am.preemption";
+  protected static final String AM_PREEMPTION_PREFIX =
+          CONF_PREFIX + "am.preemption.";
+  protected static final boolean DEFAULT_AM_PREEMPTION = true;
 
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
   protected static final float DEFAULT_PREEMPTION_THRESHOLD = 0.8f;
 
-  protected static final String WAIT_TIME_BEFORE_KILL = CONF_PREFIX + "waitTimeBeforeKill";
-  protected static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
+  public static final String WAIT_TIME_BEFORE_KILL = CONF_PREFIX +
+      "waitTimeBeforeKill";
+  public static final int DEFAULT_WAIT_TIME_BEFORE_KILL = 15000;
 
   /**
    * Postfix for resource allocation increments in the
@@ -181,18 +206,19 @@ public class FairSchedulerConfiguration extends Configuration {
    * This is intended to be a backdoor on production clusters, and hence
    * intentionally not documented.
    */
-  protected static final String WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS =
+  public static final String WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS =
       CONF_PREFIX + "waitTimeBeforeNextStarvationCheck";
-  protected static final long
+  public static final long
       DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS = 10000;
 
   /** Whether to assign multiple containers in one check-in. */
   public static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
-  protected static final boolean DEFAULT_ASSIGN_MULTIPLE = false;
+  public static final boolean DEFAULT_ASSIGN_MULTIPLE = false;
 
   /** Whether to give more weight to apps requiring many resources. */
-  protected static final String  SIZE_BASED_WEIGHT = CONF_PREFIX + "sizebasedweight";
-  protected static final boolean DEFAULT_SIZE_BASED_WEIGHT = false;
+  public static final String  SIZE_BASED_WEIGHT = CONF_PREFIX +
+      "sizebasedweight";
+  public static final boolean DEFAULT_SIZE_BASED_WEIGHT = false;
 
   /** Maximum number of containers to assign on each check-in. */
   public static final String DYNAMIC_MAX_ASSIGN =
@@ -203,8 +229,8 @@ public class FairSchedulerConfiguration extends Configuration {
    * Specify exact number of containers to assign on each heartbeat, if dynamic
    * max assign is turned off.
    */
-  protected static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
-  protected static final int DEFAULT_MAX_ASSIGN = -1;
+  public static final String MAX_ASSIGN = CONF_PREFIX + "max.assign";
+  public static final int DEFAULT_MAX_ASSIGN = -1;
 
   /** The update interval for calculating resources in FairScheduler .*/
   public static final String UPDATE_INTERVAL_MS =
@@ -381,6 +407,20 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getPreemptionEnabled() {
     return getBoolean(PREEMPTION, DEFAULT_PREEMPTION);
+  }
+
+  public boolean getAMPreemptionEnabled(String queueName) {
+    String propertyName = AM_PREEMPTION_PREFIX + queueName;
+
+    if (get(propertyName) != null) {
+      boolean amPreemptionEnabled =
+          getBoolean(propertyName, DEFAULT_AM_PREEMPTION);
+      LOG.debug("AM preemption enabled for queue {}: {}",
+          queueName, amPreemptionEnabled);
+      return amPreemptionEnabled;
+    }
+
+    return getBoolean(AM_PREEMPTION, DEFAULT_AM_PREEMPTION);
   }
 
   public float getPreemptionUtilizationThreshold() {

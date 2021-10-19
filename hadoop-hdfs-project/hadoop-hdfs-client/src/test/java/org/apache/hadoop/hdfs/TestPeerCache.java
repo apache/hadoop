@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.collect.HashMultiset;
+import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultiset;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.net.unix.DomainSocket;

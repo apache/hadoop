@@ -59,6 +59,7 @@ public class ReplicaCachingGetSpaceUsed extends FSCachingGetSpaceUsed {
 
   public ReplicaCachingGetSpaceUsed(Builder builder) throws IOException {
     super(builder);
+    setShouldFirstRefresh(false);
     volume = builder.getVolume();
     bpid = builder.getBpid();
   }
@@ -85,7 +86,7 @@ public class ReplicaCachingGetSpaceUsed extends FSCachingGetSpaceUsed {
         for (ReplicaInfo replicaInfo : replicaInfos) {
           if (Objects.equals(replicaInfo.getVolume().getStorageID(),
               volume.getStorageID())) {
-            dfsUsed += replicaInfo.getBlockDataLength();
+            dfsUsed += replicaInfo.getBytesOnDisk();
             dfsUsed += replicaInfo.getMetadataLength();
             count++;
           }

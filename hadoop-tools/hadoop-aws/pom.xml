@@ -19,11 +19,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-aws</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop Amazon Web Services support</name>
   <description>
     This module contains code to support integration with Amazon Web Services.
@@ -35,6 +35,7 @@
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
     <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
+    <javadoc.skip.jdk11>true</javadoc.skip.jdk11>
 
     <!-- are scale tests enabled ? -->
     <fs.s3a.scale.test.enabled>unset</fs.s3a.scale.test.enabled>
@@ -51,6 +52,10 @@
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
+    <!--   should directory marker retention be audited? -->
+    <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
+    <!--    marker retention policy -->
+    <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
   </properties>
 
   <profiles>
@@ -122,6 +127,9 @@
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                 <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                <!-- Markers-->
+                <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
+                <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -162,6 +170,7 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
+                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
                   </systemPropertyVariables>
@@ -188,10 +197,12 @@
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                     <!-- Terasort MR jobs spawn enough processes that they use up all RAM -->
                     <exclude>**/ITestTerasort*.java</exclude>
-                    <!-- MR jobs spawn enough processes that they use up all RAM -->
-                    <exclude>**/ITest*CommitMRJob.java</exclude>
+                    <!-- Root marker tool tests -->
+                    <exclude>**/ITestMarkerToolRootOperations.java</exclude>
                     <!-- operations across the metastore -->
                     <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
+                    <!-- leave this until the end for better statistics -->
+                    <exclude>**/ITestAggregateIOStatistics.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -216,6 +227,9 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <!-- Markers-->
+                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
+                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -231,11 +245,15 @@
                     <!--  the local FS. Running them sequentially guarantees isolation -->
                     <!-- and that they don't conflict with the other MR jobs for RAM -->
                     <include>**/ITestTerasort*.java</include>
-                    <!-- MR jobs spawn enough processes that they use up all RAM -->
-                    <include>**/ITest*CommitMRJob.java</include>
+                    <!-- Root marker tool tests -->
+                    <!-- MUST be run before the other root ops so there's
+                     more likelihood of files in the bucket -->
+                    <include>**/ITestMarkerToolRootOperations.java</include>
                     <!-- operations across the metastore -->
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3GuardDDBRootOperations.java</include>
+                    <!-- leave this until the end for better statistics -->
+                    <include>**/ITestAggregateIOStatistics.java</include>
                   </includes>
                 </configuration>
               </execution>
@@ -272,6 +290,9 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <!-- Markers-->
+                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
+                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -335,15 +356,52 @@
       </properties>
     </profile>
 
+    <!-- Directory marker retention options, all from the -Dmarkers value-->
+    <profile>
+      <id>keep-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>keep</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker.retention>keep</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+    <profile>
+      <id>delete-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>delete</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker.retention>delete</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+    <profile>
+      <id>auth-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>authoritative</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+
   </profiles>
 
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
           </excludeFilterFile>
@@ -409,6 +467,38 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>de.skuzzle.enforcer</groupId>
+            <artifactId>restrict-imports-enforcer-rule</artifactId>
+            <version>${restrict-imports.enforcer.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -433,6 +523,11 @@
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.wildfly.openssl</groupId>
+      <artifactId>wildfly-openssl</artifactId>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

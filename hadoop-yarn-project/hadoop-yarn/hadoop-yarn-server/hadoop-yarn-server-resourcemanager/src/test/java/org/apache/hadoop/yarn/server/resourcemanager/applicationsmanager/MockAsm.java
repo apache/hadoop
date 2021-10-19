@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -55,8 +56,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.Records;
-
-import com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public abstract class MockAsm extends MockApps {
@@ -146,17 +145,6 @@ public abstract class MockAsm extends MockApps {
     public int getMaxAppAttempts() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
-
-    @Override
-    public boolean isLogAggregationEnabled() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public boolean isLogAggregationFinished() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     @Override
     public ApplicationReport createAndGetApplicationReport(
         String clientUserName,boolean allowAccess) {
@@ -209,7 +197,7 @@ public abstract class MockAsm extends MockApps {
     @Override
     public RMAppMetrics getRMAppMetrics() {
       return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<>(),
-          new HashMap<>());
+          new HashMap<>(), 0);
     }
 
     @Override

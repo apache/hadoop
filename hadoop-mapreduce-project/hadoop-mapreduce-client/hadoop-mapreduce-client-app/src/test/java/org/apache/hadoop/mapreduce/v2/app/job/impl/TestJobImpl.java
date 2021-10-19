@@ -39,6 +39,7 @@ import java.util.concurrent.CyclicBarrier;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
@@ -203,7 +204,7 @@ public class TestJobImpl {
   public void testCheckJobCompleteSuccess() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
-    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
     dispatcher.start();
     CyclicBarrier syncBarrier = new CyclicBarrier(2);
@@ -225,6 +226,11 @@ public class TestJobImpl {
         JobEventType.JOB_MAP_TASK_RESCHEDULED));
     assertJobState(job, JobStateInternal.COMMITTING);
 
+    job.handle(new JobEvent(job.getID(),
+        JobEventType.JOB_TASK_COMPLETED));
+    dispatcher.await();
+    assertJobState(job, JobStateInternal.COMMITTING);
+
     // let the committer complete and verify the job succeeds
     syncBarrier.await();
     assertJobState(job, JobStateInternal.SUCCEEDED);
@@ -235,6 +241,11 @@ public class TestJobImpl {
 
     job.handle(new JobEvent(job.getID(), 
         JobEventType.JOB_MAP_TASK_RESCHEDULED));
+    assertJobState(job, JobStateInternal.SUCCEEDED);
+
+    job.handle(new JobEvent(job.getID(),
+        JobEventType.JOB_TASK_COMPLETED));
+    dispatcher.await();
     assertJobState(job, JobStateInternal.SUCCEEDED);
     
     dispatcher.stop();
@@ -989,6 +1000,28 @@ public class TestJobImpl {
 
     // Verify whether changed priority is same as what is set in Job.
     Assert.assertEquals(updatedPriority, jobPriority);
+  }
+
+  @Test
+  public void testCleanupSharedCacheUploadPolicies() {
+    Configuration config = new Configuration();
+    Map<String, Boolean> archivePolicies = new HashMap<>();
+    archivePolicies.put("archive1", true);
+    archivePolicies.put("archive2", true);
+    Job.setArchiveSharedCacheUploadPolicies(config, archivePolicies);
+    Map<String, Boolean> filePolicies = new HashMap<>();
+    filePolicies.put("file1", true);
+    filePolicies.put("jar1", true);
+    Job.setFileSharedCacheUploadPolicies(config, filePolicies);
+    Assert.assertEquals(
+        2, Job.getArchiveSharedCacheUploadPolicies(config).size());
+    Assert.assertEquals(
+        2, Job.getFileSharedCacheUploadPolicies(config).size());
+    JobImpl.cleanupSharedCacheUploadPolicies(config);
+    Assert.assertEquals(
+        0, Job.getArchiveSharedCacheUploadPolicies(config).size());
+    Assert.assertEquals(
+        0, Job.getFileSharedCacheUploadPolicies(config).size());
   }
 
   private static CommitterEventHandler createCommitterEventHandler(

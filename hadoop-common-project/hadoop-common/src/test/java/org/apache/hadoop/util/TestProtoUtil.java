@@ -33,7 +33,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto.OperationProto;
 import org.junit.Test;
 
-import com.google.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 
 public class TestProtoUtil {
   

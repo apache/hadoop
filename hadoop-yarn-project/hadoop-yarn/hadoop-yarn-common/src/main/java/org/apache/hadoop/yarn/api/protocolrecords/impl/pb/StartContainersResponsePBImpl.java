@@ -40,8 +40,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerExceptionMapProto
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainersResponseProtoOrBuilder;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

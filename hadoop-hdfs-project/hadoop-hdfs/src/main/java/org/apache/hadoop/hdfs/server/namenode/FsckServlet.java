@@ -55,21 +55,25 @@ public class FsckServlet extends DfsServlet {
 
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
-      ugi.doAs(new PrivilegedExceptionAction<Object>() {
-        @Override
-        public Object run() throws Exception {
-          NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-          
-          final FSNamesystem namesystem = nn.getNamesystem();
-          final BlockManager bm = namesystem.getBlockManager();
-          final int totalDatanodes = 
-              namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
-          new NamenodeFsck(conf, nn,
-              bm.getDatanodeManager().getNetworkTopology(), pmap, out,
-              totalDatanodes, remoteAddress).fsck();
-          
-          return null;
+      ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+        NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
+
+        final FSNamesystem namesystem = nn.getNamesystem();
+        final BlockManager bm = namesystem.getBlockManager();
+        final int totalDatanodes =
+            namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE);
+        NamenodeFsck fsck = new NamenodeFsck(conf, nn,
+            bm.getDatanodeManager().getNetworkTopology(), pmap, out,
+            totalDatanodes, remoteAddress);
+        String auditSource = fsck.getAuditSource();
+        boolean success = false;
+        try {
+          fsck.fsck();
+          success = true;
+        } finally {
+          namesystem.logFsckEvent(success, auditSource, remoteAddress);
         }
+        return null;
       });
     } catch (InterruptedException e) {
       response.sendError(400, e.getMessage());

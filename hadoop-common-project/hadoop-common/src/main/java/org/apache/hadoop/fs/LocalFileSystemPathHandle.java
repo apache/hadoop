@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.fs;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.fs.FSProtos.LocalFileSystemPathHandleProto;
 
 import java.io.IOException;

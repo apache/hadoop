@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -454,6 +455,115 @@ public class TestSnapshot {
     rootNode = fsdir.getINode4Write(root.toString()).asDirectory();
     assertTrue(rootNode.isSnapshottable());
     assertEquals(0, rootNode.getDirectorySnapshottableFeature().getSnapshotQuota());
+  }
+
+  @Test(timeout = 60000)
+  public void testSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    cluster.restartNameNodes();
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    assertEquals(oldSnapshotStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
+  @Test(timeout = 60000)
+  public void testRenameSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    hdfs.renameSnapshot(dir, "s1", "s2");
+    Path snapshotRenamePath = new Path("/dir/.snapshot/s2");
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(snapshotRenamePath);
+    assertNotEquals(oldSnapshotStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
+  /**
+   * Test snapshot directory mtime after snapshot deletion.
+   */
+  @Test(timeout = 60000)
+  public void testDeletionSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    hdfs.deleteSnapshot(dir, "s1");
+    FileStatus dirStatus = hdfs.getFileStatus(dir);
+    assertNotEquals(dirStatus.getModificationTime(),
+        oldSnapshotStatus.getModificationTime());
+    cluster.restartNameNodes();
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(dir);
+    assertEquals(dirStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
+  /**
+   * HDFS-15446 - ensure that snapshot operations on /.reserved/raw
+   * paths work and the NN can load the resulting edits.
+   */
+  @Test(timeout = 60000)
+  public void testSnapshotOpsOnReservedPath() throws Exception {
+    Path dir = new Path("/dir");
+    Path nestedDir = new Path("/nested/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    Path nestedFile = new Path(nestedDir, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, nestedFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    hdfs.allowSnapshot(nestedDir);
+    Path reservedDir = new Path("/.reserved/raw/dir");
+    Path reservedNestedDir = new Path("/.reserved/raw/nested/dir");
+    hdfs.createSnapshot(reservedDir, "s1");
+    hdfs.createSnapshot(reservedNestedDir, "s1");
+    hdfs.renameSnapshot(reservedDir, "s1", "s2");
+    hdfs.renameSnapshot(reservedNestedDir, "s1", "s2");
+    hdfs.deleteSnapshot(reservedDir, "s2");
+    hdfs.deleteSnapshot(reservedNestedDir, "s2");
+    // The original problem with reserved path, is that the NN was unable to
+    // replay the edits, therefore restarting the NN to ensure it starts
+    // and no exceptions are raised.
+    cluster.restartNameNode(true);
+  }
+
+  /**
+   * HDFS-15446 - ensure that snapshot operations on /.reserved/raw
+   * paths work and the NN can load the resulting edits. This test if for
+   * snapshots at the root level.
+   */
+  @Test(timeout = 60000)
+  public void testSnapshotOpsOnRootReservedPath() throws Exception {
+    Path dir = new Path("/");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path reservedDir = new Path("/.reserved/raw");
+    hdfs.createSnapshot(reservedDir, "s1");
+    hdfs.renameSnapshot(reservedDir, "s1", "s2");
+    hdfs.deleteSnapshot(reservedDir, "s2");
+    // The original problem with reserved path, is that the NN was unable to
+    // replay the edits, therefore restarting the NN to ensure it starts
+    // and no exceptions are raised.
+    cluster.restartNameNode(true);
   }
 
   /**

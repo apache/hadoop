@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.logaggregationstatus;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -139,13 +140,15 @@ public class TestRMAppLogAggregationStatus {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node1 =
         new RMNodeImpl(nodeId1, rmContext, null, 0, 0, null, capability, null);
-    node1.handle(new RMNodeStartedEvent(nodeId1, null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node1.handle(new RMNodeStartedEvent(nodeId1, null, null, mockNodeStatus));
     rmApp.handle(new RMAppRunningOnNodeEvent(this.appId, nodeId1));
 
     NodeId nodeId2 = NodeId.newInstance("localhost", 2345);
     RMNodeImpl node2 =
         new RMNodeImpl(nodeId2, rmContext, null, 0, 0, null, capability, null);
-    node2.handle(new RMNodeStartedEvent(node2.getNodeID(), null, null));
+    node2.handle(new RMNodeStartedEvent(node2.getNodeID(), null, null,
+        mockNodeStatus));
     rmApp.handle(new RMAppRunningOnNodeEvent(this.appId, nodeId2));
 
     // The initial log aggregation status for these two nodes

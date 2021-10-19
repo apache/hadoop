@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-yarn-services</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-yarn-services-api</artifactId>
   <name>Apache Hadoop YARN Services API</name>
@@ -152,8 +152,8 @@
       <artifactId>commons-lang3</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>

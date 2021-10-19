@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 
 class ReadBufferWorker implements Runnable {
@@ -61,9 +63,22 @@ class ReadBufferWorker implements Runnable {
       if (buffer != null) {
         try {
           // do the actual read, from the file.
-          int bytesRead = buffer.getStream().readRemote(buffer.getOffset(), buffer.getBuffer(), 0, buffer.getRequestedLength());
+          int bytesRead = buffer.getStream().readRemote(
+              buffer.getOffset(),
+              buffer.getBuffer(),
+              0,
+              // If AbfsInputStream was created with bigger buffer size than
+              // read-ahead buffer size, make sure a valid length is passed
+              // for remote read
+              Math.min(buffer.getRequestedLength(), buffer.getBuffer().length),
+                  buffer.getTracingContext());
+
           bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE, bytesRead);  // post result back to ReadBufferManager
+        } catch (IOException ex) {
+          buffer.setErrException(ex);
+          bufferManager.doneReading(buffer, ReadBufferStatus.READ_FAILED, 0);
         } catch (Exception ex) {
+          buffer.setErrException(new PathIOException(buffer.getStream().getPath(), ex));
           bufferManager.doneReading(buffer, ReadBufferStatus.READ_FAILED, 0);
         }
       }

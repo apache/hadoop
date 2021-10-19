@@ -77,7 +77,7 @@ interface KMSAuditLogger {
         this.user = null;
         this.impersonator = null;
       } else {
-        this.user = ugi.getShortUserName();
+        this.user = ugi.getUserName();
         if (ugi.getAuthenticationMethod()
             == UserGroupInformation.AuthenticationMethod.PROXY) {
           this.impersonator = ugi.getRealUser().getUserName();

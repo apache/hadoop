@@ -28,7 +28,9 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
+
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,8 +42,7 @@ import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.test.GenericTestUtils;
 
 public class MiniJournalCluster {
@@ -196,7 +197,11 @@ public class MiniJournalCluster {
   public JournalNode getJournalNode(int i) {
     return nodes[i].node;
   }
-  
+
+  public String getJournalNodeIpcAddress(int i) {
+    return nodes[i].ipcAddr.toString();
+  }
+
   public void restartJournalNode(int i) throws InterruptedException, IOException {
     JNInfo info = nodes[i];
     JournalNode jn = info.node;

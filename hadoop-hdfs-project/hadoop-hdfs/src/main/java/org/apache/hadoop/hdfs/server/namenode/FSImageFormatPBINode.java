@@ -28,8 +28,9 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,9 +72,9 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 @InterfaceAudience.Private
 public final class FSImageFormatPBINode {
@@ -204,15 +205,20 @@ public final class FSImageFormatPBINode {
     private final FSDirectory dir;
     private final FSNamesystem fsn;
     private final FSImageFormatProtobuf.Loader parent;
-    private ReentrantLock cacheNameMapLock;
-    private ReentrantLock blockMapLock;
+
+    // Update blocks map by single thread asynchronously
+    private ExecutorService blocksMapUpdateExecutor;
+    // update name cache by single thread asynchronously.
+    private ExecutorService nameCacheUpdateExecutor;
 
     Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent) {
       this.fsn = fsn;
       this.dir = fsn.dir;
       this.parent = parent;
-      cacheNameMapLock = new ReentrantLock(true);
-      blockMapLock = new ReentrantLock(true);
+      // Note: these executors must be SingleThreadExecutor, as they
+      // are used to modify structures which are not thread safe.
+      blocksMapUpdateExecutor = Executors.newSingleThreadExecutor();
+      nameCacheUpdateExecutor = Executors.newSingleThreadExecutor();
     }
 
     void loadINodeDirectorySectionInParallel(ExecutorService service,
@@ -263,7 +269,6 @@ public final class FSImageFormatPBINode {
     void loadINodeDirectorySection(InputStream in) throws IOException {
       final List<INodeReference> refList = parent.getLoaderContext()
           .getRefList();
-      ArrayList<INode> inodeList = new ArrayList<>();
       while (true) {
         INodeDirectorySection.DirEntry e = INodeDirectorySection.DirEntry
             .parseDelimitedFrom(in);
@@ -274,15 +279,7 @@ public final class FSImageFormatPBINode {
         INodeDirectory p = dir.getInode(e.getParent()).asDirectory();
         for (long id : e.getChildrenList()) {
           INode child = dir.getInode(id);
-          if (addToParent(p, child)) {
-            if (child.isFile()) {
-              inodeList.add(child);
-            }
-            if (inodeList.size() >= DIRECTORY_ENTRY_BATCH_SIZE) {
-              addToCacheAndBlockMap(inodeList);
-              inodeList.clear();
-            }
-          } else {
+          if (!addToParent(p, child)) {
             LOG.warn("Failed to add the inode {} to the directory {}",
                 child.getId(), p.getId());
           }
@@ -290,40 +287,79 @@ public final class FSImageFormatPBINode {
 
         for (int refId : e.getRefChildrenList()) {
           INodeReference ref = refList.get(refId);
-          if (addToParent(p, ref)) {
-            if (ref.isFile()) {
-              inodeList.add(ref);
-            }
-            if (inodeList.size() >= DIRECTORY_ENTRY_BATCH_SIZE) {
-              addToCacheAndBlockMap(inodeList);
-              inodeList.clear();
-            }
-          } else {
+          if (!addToParent(p, ref)) {
             LOG.warn("Failed to add the inode reference {} to the directory {}",
                 ref.getId(), p.getId());
           }
         }
       }
-      addToCacheAndBlockMap(inodeList);
     }
 
-    private void addToCacheAndBlockMap(ArrayList<INode> inodeList) {
-      try {
-        cacheNameMapLock.lock();
-        for (INode i : inodeList) {
-          dir.cacheName(i);
-        }
-      } finally {
-        cacheNameMapLock.unlock();
+    private void fillUpInodeList(ArrayList<INode> inodeList, INode inode) {
+      if (inode.isFile()) {
+        inodeList.add(inode);
       }
+      if (inodeList.size() >= DIRECTORY_ENTRY_BATCH_SIZE) {
+        addToCacheAndBlockMap(inodeList);
+        inodeList.clear();
+      }
+    }
 
-      try {
-        blockMapLock.lock();
-        for (INode i : inodeList) {
-          updateBlocksMap(i.asFile(), fsn.getBlockManager());
+    private void addToCacheAndBlockMap(final ArrayList<INode> inodeList) {
+      final ArrayList<INode> inodes = new ArrayList<>(inodeList);
+      nameCacheUpdateExecutor.submit(
+          new Runnable() {
+            @Override
+            public void run() {
+              addToCacheInternal(inodes);
+            }
+          });
+      blocksMapUpdateExecutor.submit(
+          new Runnable() {
+            @Override
+            public void run() {
+              updateBlockMapInternal(inodes);
+            }
+          });
+    }
+
+    // update name cache with non-thread safe
+    private void addToCacheInternal(ArrayList<INode> inodeList) {
+      for (INode i : inodeList) {
+        dir.cacheName(i);
+      }
+    }
+
+     // update blocks map with non-thread safe
+    private void updateBlockMapInternal(ArrayList<INode> inodeList) {
+      for (INode i : inodeList) {
+        updateBlocksMap(i.asFile(), fsn.getBlockManager());
+      }
+    }
+
+    void waitBlocksMapAndNameCacheUpdateFinished() throws IOException {
+      long start = System.currentTimeMillis();
+      waitExecutorTerminated(blocksMapUpdateExecutor);
+      waitExecutorTerminated(nameCacheUpdateExecutor);
+      LOG.info("Completed update blocks map and name cache, total waiting "
+          + "duration {}ms.", (System.currentTimeMillis() - start));
+    }
+
+    private void waitExecutorTerminated(ExecutorService executorService)
+        throws IOException {
+      executorService.shutdown();
+      long start = System.currentTimeMillis();
+      while (!executorService.isTerminated()) {
+        try {
+          executorService.awaitTermination(1, TimeUnit.SECONDS);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Waiting to executor service terminated duration {}ms.",
+                (System.currentTimeMillis() - start));
+          }
+        } catch (InterruptedException e) {
+          LOG.error("Interrupted waiting for executor terminated.", e);
+          throw new IOException(e);
         }
-      } finally {
-        blockMapLock.unlock();
       }
     }
 
@@ -340,6 +376,7 @@ public final class FSImageFormatPBINode {
       // As the input stream is a LimitInputStream, the reading will stop when
       // EOF is encountered at the end of the stream.
       int cntr = 0;
+      ArrayList<INode> inodeList = new ArrayList<>();
       while (true) {
         INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
         if (p == null) {
@@ -354,11 +391,15 @@ public final class FSImageFormatPBINode {
           synchronized(this) {
             dir.addToInodeMap(n);
           }
+          fillUpInodeList(inodeList, n);
         }
         cntr++;
         if (counter != null) {
           counter.increment();
         }
+      }
+      if (inodeList.size() > 0){
+        addToCacheAndBlockMap(inodeList);
       }
       return cntr;
     }

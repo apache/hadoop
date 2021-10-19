@@ -74,6 +74,10 @@ The following table lists the configuration property names that are deprecated i
 | hadoop.pipes.java.reducer | mapreduce.pipes.isjavareducer |
 | hadoop.pipes.partitioner | mapreduce.pipes.partitioner |
 | heartbeat.recheck.interval | dfs.namenode.heartbeat.recheck-interval |
+| httpfs.authentication.kerberos.keytab | hadoop.http.authentication.kerberos.keytab |
+| httpfs.authentication.kerberos.principal | hadoop.http.authentication.kerberos.principal |
+| httpfs.authentication.signature.secret.file | hadoop.http.authentication.signature.secret.file |
+| httpfs.authentication.type | hadoop.http.authentication.type |
 | io.bytes.per.checksum | dfs.bytes-per-checksum |
 | io.sort.factor | mapreduce.task.io.sort.factor |
 | io.sort.mb | mapreduce.task.io.sort.mb |

@@ -77,11 +77,11 @@ class VisitedResourceRequestTracker {
 
   private class TrackerPerPriorityResource {
     private Set<String> racksWithNodesVisited = new HashSet<>();
-    private Set<String> racksVisted = new HashSet<>();
+    private Set<String> racksVisited = new HashSet<>();
     private boolean anyVisited;
 
     private boolean visitAny() {
-      if (racksVisted.isEmpty() && racksWithNodesVisited.isEmpty()) {
+      if (racksVisited.isEmpty() && racksWithNodesVisited.isEmpty()) {
         anyVisited = true;
       }
       return anyVisited;
@@ -91,13 +91,13 @@ class VisitedResourceRequestTracker {
       if (anyVisited || racksWithNodesVisited.contains(rackName)) {
         return false;
       } else {
-        racksVisted.add(rackName);
+        racksVisited.add(rackName);
         return true;
       }
     }
 
     private boolean visitNode(String rackName) {
-      if (anyVisited || racksVisted.contains(rackName)) {
+      if (anyVisited || racksVisited.contains(rackName)) {
         return false;
       } else {
         racksWithNodesVisited.add(rackName);

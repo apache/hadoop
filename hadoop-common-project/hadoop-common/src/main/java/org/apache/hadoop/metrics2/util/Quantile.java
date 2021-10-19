@@ -20,7 +20,7 @@ package org.apache.hadoop.metrics2.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
 
 /**
  * Specifies a quantile (with error bounds) to be watched by a

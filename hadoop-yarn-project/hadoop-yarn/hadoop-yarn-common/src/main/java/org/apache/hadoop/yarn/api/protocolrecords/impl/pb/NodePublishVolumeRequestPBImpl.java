@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.VolumeCapability;

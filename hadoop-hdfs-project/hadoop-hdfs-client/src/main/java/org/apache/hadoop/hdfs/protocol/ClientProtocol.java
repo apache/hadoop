@@ -698,6 +698,24 @@ public interface ClientProtocol {
       boolean needLocation) throws IOException;
 
   /**
+   * Get a partial listing of the input directories
+   *
+   * @param srcs the input directories
+   * @param startAfter the name to start listing after encoded in Java UTF8
+   * @param needLocation if the FileStatus should contain block locations
+   *
+   * @return a partial listing starting after startAfter. null if the input is
+   *   empty
+   * @throws IOException if an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  BatchedDirectoryListing getBatchedListing(
+      String[] srcs,
+      byte[] startAfter,
+      boolean needLocation) throws IOException;
+
+  /**
    * Get the list of snapshottable directories that are owned
    * by the current user. Return all the snapshottable directories if the
    * current user is a super user.
@@ -708,6 +726,18 @@ public interface ClientProtocol {
   @ReadOnly(isCoordinated = true)
   SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException;
+
+  /**
+   * Get listing of all the snapshots for a snapshottable directory.
+   *
+   * @return Information about all the snapshots for a snapshottable directory
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException;
+
 
   ///////////////////////////////////////
   // System issues and management
@@ -1742,6 +1772,18 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   void unsetErasureCodingPolicy(String src) throws IOException;
+
+  /**
+   * Verifies if the given policies are supported in the given cluster setup.
+   * If not policy is specified checks for all enabled policies.
+   * @param policyNames name of policies.
+   * @return the result if the given policies are supported in the cluster setup
+   * @throws IOException
+   */
+  @Idempotent
+  @ReadOnly
+  ECTopologyVerifierResult getECTopologyResultForPolicies(String... policyNames)
+      throws IOException;
 
   /**
    * Get {@link QuotaUsage} rooted at the specified directory.

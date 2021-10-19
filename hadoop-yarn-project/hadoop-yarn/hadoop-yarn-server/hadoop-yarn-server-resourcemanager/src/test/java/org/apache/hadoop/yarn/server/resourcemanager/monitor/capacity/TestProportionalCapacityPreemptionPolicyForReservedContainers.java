@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,10 +71,10 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
             "-b(=[50 100 10 9 9])"; // b
     String appsConfig=
         //queueName\t(priority,resource,host,expression,#repeat,reserved)
-        "a\t" // app1 in a
+        "root.a\t" // app1 in a
             + "(1,1,n1,,45,false)" // 45 in n1
             + "(1,1,n2,,45,false);" + // 45 in n2
-        "b\t" // app2 in b
+        "root.b\t" // app2 in b
             + "(1,1,n1,,1,false)" // AM container in n1
             + "(1,9,n1,,1,true)"; // 1 container with size=9 reserved at n1
 
@@ -82,13 +83,14 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
 
     // Total 5 preempted from app1 at n1, don't preempt container from other
     // app/node
-    verify(mDisp, times(5)).handle(argThat(
+    verify(eventHandler, times(5)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(5)).handle(
-        argThat(new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
+    verify(eventHandler, times(5)).handle(
+        argThat(new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1),
+            "root.a",
             NodeId.newInstance("n1", 1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -135,16 +137,16 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(15)).handle(argThat(
+    verify(eventHandler, times(15)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(10)).handle(
+    verify(eventHandler, times(10)).handle(
         argThat(new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n1", 1))));
-    verify(mDisp, times(5)).handle(
+    verify(eventHandler, times(5)).handle(
         argThat(new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n2", 1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -197,16 +199,16 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(15)).handle(argThat(
+    verify(eventHandler, times(15)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(
+    verify(eventHandler, times(0)).handle(
         argThat(new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n1", 1))));
-    verify(mDisp, times(15)).handle(
+    verify(eventHandler, times(15)).handle(
         argThat(new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n2", 1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -255,10 +257,10 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -296,10 +298,10 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
             "-b(=[50 100 9 9 9])"; // b
     String appsConfig=
         //queueName\t(priority,resource,host,expression,#repeat,reserved)
-        "a\t" // app1 in a
+        "root.a\t" // app1 in a
             + "(1,1,n1,,45,false)" // 45 in n1
             + "(1,1,n2,,45,false);" + // 45 in n2
-            "b\t" // app2 in b
+            "root.b\t" // app2 in b
             + "(1,9,n1,,1,true)"; // 1 container with size=9 reserved at n1
 
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
@@ -307,11 +309,11 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
 
     // Total 4 preempted from app1 at n1, don't preempt container from other
     // app/node
-    verify(mDisp, times(4)).handle(argThat(
-        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
+    verify(eventHandler, times(4)).handle(argThat(
+        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "root.a",
             NodeId.newInstance("n1", 1))));
-    verify(mDisp, times(0)).handle(argThat(
-        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
+    verify(eventHandler, times(0)).handle(argThat(
+        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "root.a",
             NodeId.newInstance("n2", 1))));
   }
 
@@ -349,7 +351,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
             "-b(=[50 100 9 9 9])"; // b
     String appsConfig=
         //queueName\t(priority,resource,host,expression,#repeat,reserved)
-        "a\t" // app1 in a
+        "root.a\t" // app1 in a
             + "(1,2,n1,,24,false)" // 48 in n1
             + "(1,2,n2,,23,false);" + // 46 in n2
             "b\t" // app2 in b
@@ -360,11 +362,11 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
 
     // Total 4 preempted from app1 at n1, don't preempt container from other
     // app/node
-    verify(mDisp, times(4)).handle(argThat(
-        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
+    verify(eventHandler, times(4)).handle(argThat(
+        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "root.a",
             NodeId.newInstance("n1", 1))));
-    verify(mDisp, times(0)).handle(argThat(
-        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
+    verify(eventHandler, times(0)).handle(argThat(
+        new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "root.a",
             NodeId.newInstance("n2", 1))));
   }
 
@@ -414,16 +416,16 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
     policy.editSchedule();
 
     // No preemption should happen
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n1", 1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n2", 1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n3", 1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new IsPreemptionRequestForQueueAndNode(getAppAttemptId(1), "a",
             NodeId.newInstance("n4", 1))));
   }

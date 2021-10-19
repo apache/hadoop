@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -248,6 +248,8 @@ abstract class StripeReader {
       DFSClient.LOG.warn("Found Checksum error for "
           + currentBlock + " from " + currentNode
           + " at " + ce.getPos());
+      //Clear buffer to make next decode success
+      strategy.getReadBuffer().clear();
       // we want to remember which block replicas we have tried
       corruptedBlocks.addCorruptedBlock(currentBlock, currentNode);
       throw ce;
@@ -255,6 +257,8 @@ abstract class StripeReader {
       DFSClient.LOG.warn("Exception while reading from "
           + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
           + currentNode, e);
+      //Clear buffer to make next decode success
+      strategy.getReadBuffer().clear();
       throw e;
     }
   }
@@ -349,10 +353,8 @@ abstract class StripeReader {
         StripingChunkReadResult r = StripedBlockUtil
             .getNextCompletedStripedRead(service, futures, 0);
         dfsStripedInputStream.updateReadStats(r.getReadStats());
-        if (DFSClient.LOG.isDebugEnabled()) {
-          DFSClient.LOG.debug("Read task returned: " + r + ", for stripe "
-              + alignedStripe);
-        }
+        DFSClient.LOG.debug("Read task returned: {}, for stripe {}",
+            r, alignedStripe);
         StripingChunk returnedChunk = alignedStripe.chunks[r.index];
         Preconditions.checkNotNull(returnedChunk);
         Preconditions.checkState(returnedChunk.state == StripingChunk.PENDING);

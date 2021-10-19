@@ -49,6 +49,7 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
@@ -309,7 +310,46 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, sub2.getName(),
         sub3.getName()));
   }
-  
+
+  @Test (timeout=60000)
+  public void testRenameDirectoryAndFileInSnapshot() throws Exception {
+    final Path sub2 = new Path(sub1, "sub2");
+    final Path sub3 = new Path(sub1, "sub3");
+    final Path sub2file1 = new Path(sub2, "file1");
+    final Path sub2file2 = new Path(sub2, "file2");
+    final Path sub3file2 = new Path(sub3, "file2");
+    final Path sub3file3 = new Path(sub3, "file3");
+    final String sub1snap1 = "sub1snap1";
+    final String sub1snap2 = "sub1snap2";
+    final String sub1snap3 = "sub1snap3";
+    final String sub1snap4 = "sub1snap4";
+    hdfs.mkdirs(sub1);
+    hdfs.mkdirs(sub2);
+    DFSTestUtil.createFile(hdfs, sub2file1, BLOCKSIZE, REPL, SEED);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap1);
+    hdfs.rename(sub2file1, sub2file2);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap2);
+
+    // First rename the sub-directory.
+    hdfs.rename(sub2, sub3);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap3);
+    hdfs.rename(sub3file2, sub3file3);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap4);
+    hdfs.deleteSnapshot(sub1, sub1snap1);
+    hdfs.deleteSnapshot(sub1, sub1snap2);
+    hdfs.deleteSnapshot(sub1, sub1snap3);
+    // check the internal details
+    INode sub3file3Inode = fsdir.getINode4Write(sub3file3.toString());
+    INodeReference ref = sub3file3Inode
+            .asReference();
+    INodeReference.WithCount withCount = (WithCount) ref
+            .getReferredINode();
+    Assert.assertEquals(withCount.getReferenceCount(), 1);
+    // Ensure name list is empty for the reference sub3file3Inode
+    Assert.assertNull(withCount.getLastWithName());
+    Assert.assertTrue(sub3file3Inode.isInCurrentState());
+  }
+
   /**
    * After the following steps:
    * <pre>
@@ -1115,7 +1155,45 @@ public class TestRenameWithSnapshots {
     assertEquals(bar, dirs[0].getFullPath());
     assertEquals(fooId, dirs[0].getDirStatus().getFileId());
   }
-  
+
+  /**
+   * Test rename where src has snapshottable descendant directories and
+   * dst is a descent of a snapshottable directory. Such case will cause
+   * nested snapshot which HDFS currently not fully supported.
+   */
+  @Test
+  public void testRenameWithNestedSnapshottableDirs() throws Exception {
+    final Path sdir1 = new Path("/dir1");
+    final Path sdir2 = new Path("/dir2");
+    final Path foo = new Path(sdir1, "foo");
+    final Path bar = new Path(sdir2, "bar");
+
+    hdfs.mkdirs(foo);
+    hdfs.mkdirs(bar);
+
+    hdfs.allowSnapshot(foo);
+    hdfs.allowSnapshot(sdir2);
+
+    try {
+      hdfs.rename(foo, bar, Rename.OVERWRITE);
+      fail("Except exception since " + "Unable to rename because "
+          + foo.toString() + " has snapshottable descendant directories and "
+          + sdir2.toString() + " is a descent of a snapshottable directory, "
+          + "and HDFS does not support nested snapshottable directory.");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Unable to rename because "
+            + foo.toString() + " has snapshottable descendant directories and "
+            + sdir2.toString() + " is a descent of a snapshottable directory, "
+            + "and HDFS does not support nested snapshottable directory.", e);
+    }
+
+    hdfs.disallowSnapshot(foo);
+    hdfs.rename(foo, bar, Rename.OVERWRITE);
+    SnapshottableDirectoryStatus[] dirs = fsn.getSnapshottableDirListing();
+    assertEquals(1, dirs.length);
+    assertEquals(sdir2, dirs[0].getFullPath());
+  }
+
   /**
    * After rename, delete the snapshot in src
    */
@@ -2144,24 +2222,11 @@ public class TestRenameWithSnapshots {
     INodeDirectory dir2Node = fsdir.getINode4Write(dir2.toString())
         .asDirectory();
     assertTrue("the diff list of " + dir2
-        + " should be empty after deleting s0", dir2Node.getDiffs().asList()
-        .isEmpty());
+        + " should be empty after deleting s0", !dir2Node.isWithSnapshot());
     
     assertTrue(hdfs.exists(newfoo));
     INode fooRefNode = fsdir.getINode4Write(newfoo.toString());
     assertTrue(fooRefNode instanceof INodeReference.DstReference);
-    INodeDirectory fooNode = fooRefNode.asDirectory();
-    // fooNode should be still INodeDirectory (With Snapshot) since we call
-    // recordModification before the rename
-    assertTrue(fooNode.isWithSnapshot());
-    assertTrue(fooNode.getDiffs().asList().isEmpty());
-    INodeDirectory barNode = fooNode.getChildrenList(Snapshot.CURRENT_STATE_ID)
-        .get(0).asDirectory();
-    // bar should also be INodeDirectory (With Snapshot), and both of its diff 
-    // list and children list are empty 
-    assertTrue(barNode.getDiffs().asList().isEmpty());
-    assertTrue(barNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
-    
     restartClusterAndCheckImage(true);
   }
   
@@ -2386,5 +2451,92 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "bar", "newDir"));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file2", "newDir/file2"));
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, "foo/file3", "newDir/file1"));
+  }
+
+  @Test (timeout=60000)
+  public void testDoubleRenamesWithSnapshotDelete() throws Exception {
+    hdfs.mkdirs(sub1);
+    hdfs.allowSnapshot(sub1);
+    final Path dir1 = new Path(sub1, "dir1");
+    final Path dir2 = new Path(sub1, "dir2");
+    final Path dir3 = new Path(sub1, "dir3");
+    final String snap3 = "snap3";
+    final String snap4 = "snap4";
+    final String snap5 = "snap5";
+    final String snap6 = "snap6";
+    final Path foo = new Path(dir2, "foo");
+    final Path bar = new Path(dir2, "bar");
+    hdfs.createSnapshot(sub1, snap1);
+    hdfs.mkdirs(dir1, new FsPermission((short) 0777));
+    rename(dir1, dir2);
+    hdfs.createSnapshot(sub1, snap2);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap3);
+    hdfs.delete(foo, false);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap4);
+    hdfs.delete(foo, false);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, REPL, SEED);
+    hdfs.createSnapshot(sub1, snap5);
+    rename(dir2, dir3);
+    hdfs.createSnapshot(sub1, snap6);
+    hdfs.delete(dir3, true);
+    deleteSnapshot(sub1, snap6);
+    deleteSnapshot(sub1, snap3);
+    // save namespace and restart Namenode
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNode(true);
+  }
+
+
+  void rename(Path src, Path dst) throws Exception {
+    printTree("Before rename " + src + " -> " + dst);
+    hdfs.rename(src, dst);
+    printTree("After rename " + src + " -> " + dst);
+  }
+
+  void deleteSnapshot(Path directory, String snapshotName) throws Exception {
+    hdfs.deleteSnapshot(directory, snapshotName);
+    printTree("deleted snapshot " + snapshotName);
+  }
+
+  private final PrintWriter output = new PrintWriter(System.out, true);
+  private int printTreeCount = 0;
+
+  String printTree(String label) throws Exception {
+    output.println();
+    output.println();
+    output.println("***** " + printTreeCount++ + ": " + label);
+    final String b =
+        fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
+    output.println(b);
+    return b;
+  }
+
+  /**
+   * Test getContentsummary and getQuotausage for an INodeReference.
+   */
+  @Test(timeout = 300000)
+  public void testQuotaForRenameFileInSnapshot() throws Exception {
+    final Path snapshotDir = new Path("/testRenameWithSnapshot");
+    hdfs.mkdirs(snapshotDir, new FsPermission((short) 0777));
+    final Path file = new Path(snapshotDir, "file");
+    DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPL, SEED);
+    hdfs.allowSnapshot(snapshotDir);
+    hdfs.createSnapshot(snapshotDir, "s0");
+    hdfs.mkdirs(new Path("/dir1"));
+
+    // Truncate a file which exists in snapshot , that is an
+    // INodeReference
+    hdfs.truncate(file, 10);
+    hdfs.rename(file, new Path("/dir1"));
+    assertEquals(hdfs.getContentSummary(new Path("/")).getSpaceConsumed(),
+        hdfs.getQuotaUsage(new Path("/")).getSpaceConsumed());
+    assertEquals(
+        hdfs.getContentSummary(new Path("/")).getFileAndDirectoryCount(),
+        hdfs.getQuotaUsage(new Path("/")).getFileAndDirectoryCount());
   }
 }

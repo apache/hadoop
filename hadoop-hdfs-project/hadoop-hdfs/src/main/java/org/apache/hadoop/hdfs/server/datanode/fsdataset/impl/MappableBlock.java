@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 
 import java.io.Closeable;
 
@@ -41,4 +42,10 @@ public interface MappableBlock extends Closeable {
    * Return -1 if not applicable.
    */
   long getAddress();
+
+  /**
+   * Get cached block's ExtendedBlockId.
+   * @return cached block's ExtendedBlockId..
+   */
+  ExtendedBlockId getKey();
 }

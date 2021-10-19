@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 
-import com.google.common.base.Objects;
+import org.apache.hadoop.thirdparty.com.google.common.base.Objects;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /**

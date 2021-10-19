@@ -18,11 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-mapreduce</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop MapReduce</name>
   <url>https://hadoop.apache.org/</url>
@@ -144,7 +144,7 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.leveldbjni</groupId>
+      <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
 
@@ -178,10 +178,9 @@
         </executions>
       </plugin>
       <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>findbugs-maven-plugin</artifactId>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
           <configuration>
-            <findbugsXmlOutput>true</findbugsXmlOutput>
             <xmlOutput>true</xmlOutput>
             <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
             <effort>Max</effort>
@@ -299,12 +298,9 @@
   <reporting>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <!-- until we have reporting management cf. MSITE-443 -->
-        <version>2.3.2</version>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
         </configuration>
       </plugin>

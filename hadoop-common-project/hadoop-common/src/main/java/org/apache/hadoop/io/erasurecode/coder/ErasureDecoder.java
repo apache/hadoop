@@ -172,27 +172,4 @@ public abstract class ErasureDecoder extends Configured
 
     return erasedIndexes;
   }
-
-  /**
-   * Get erased input blocks from inputBlocks
-   * @param inputBlocks
-   * @return an array of erased blocks from inputBlocks
-   */
-  protected ECBlock[] getErasedBlocks(ECBlock[] inputBlocks) {
-    int numErased = getNumErasedBlocks(inputBlocks);
-    if (numErased == 0) {
-      return new ECBlock[0];
-    }
-
-    ECBlock[] erasedBlocks = new ECBlock[numErased];
-    int i = 0, j = 0;
-    for (; i < inputBlocks.length && j < erasedBlocks.length; i++) {
-      if (inputBlocks[i].isErased()) {
-        erasedBlocks[j++] = inputBlocks[i];
-      }
-    }
-
-    return erasedBlocks;
-  }
-
 }

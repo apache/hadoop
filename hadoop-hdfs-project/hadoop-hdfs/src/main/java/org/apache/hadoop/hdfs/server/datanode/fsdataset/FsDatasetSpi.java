@@ -35,6 +35,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MountVolumeMap;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -657,9 +658,33 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
       FsVolumeSpi destination) throws IOException;
 
   /**
-   * Acquire the lock of the data set.
+   * Acquire the lock of the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode, but other changes
+   * are still possible. For example modifying the genStamp of a block instance.
    */
   AutoCloseableLock acquireDatasetLock();
 
+  /***
+   * Acquire the read lock of the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode, but other changes
+   * are still possible. For example modifying the genStamp of a block instance.
+   * @return The AutoClosable read lock instance.
+   */
+  AutoCloseableLock acquireDatasetReadLock();
+
+
+  /**
+   * Deep copy the replica info belonging to given block pool.
+   * @param bpid Specified block pool id.
+   * @return A set of replica info.
+   * @throws IOException
+   */
   Set<? extends Replica> deepCopyReplica(String bpid) throws IOException;
+
+  /**
+   * Get relationship between disk mount and FsVolume.
+   * @return Disk mount and FsVolume relationship.
+   * @throws IOException
+   */
+  MountVolumeMap getMountVolumeMap() throws IOException;
 }

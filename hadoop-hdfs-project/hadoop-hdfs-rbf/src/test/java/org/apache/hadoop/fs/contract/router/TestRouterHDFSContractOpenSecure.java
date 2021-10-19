@@ -22,9 +22,6 @@ import org.junit.BeforeClass;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
-
-
 /**
  * Test secure open operations on the Router-based FS.
  */
@@ -32,7 +29,7 @@ public class TestRouterHDFSContractOpenSecure extends AbstractContractOpenTest {
 
   @BeforeClass
   public static void createCluster() throws Exception {
-    RouterHDFSContract.createCluster(initSecurity());
+    RouterHDFSContract.createCluster(true);
   }
 
   @AfterClass

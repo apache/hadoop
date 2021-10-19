@@ -58,20 +58,20 @@ import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
-import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Test cases regarding pipeline recovery during NN failover.
  */
 public class TestPipelinesFailover {
   static {
-    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(RetryInvocationHandler
-            .class), org.slf4j.event.Level.DEBUG);
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(
+        RetryInvocationHandler.class), Level.DEBUG);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
   
   protected static final Logger LOG = LoggerFactory.getLogger(
@@ -324,7 +324,7 @@ public class TestPipelinesFailover {
    * DN running the recovery should then fail to commit the synchronization
    * and a later retry will succeed.
    */
-  @Test(timeout=30000)
+  @Test(timeout=60000)
   public void testFailoverRightBeforeCommitSynchronization() throws Exception {
     final Configuration conf = new Configuration();
     // Disable permissions so that another user can recover the lease.

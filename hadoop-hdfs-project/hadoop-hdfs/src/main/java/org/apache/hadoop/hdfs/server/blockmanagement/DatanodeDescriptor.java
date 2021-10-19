@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -237,7 +237,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
     super(nodeID);
-    updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0, null);
+    setLastUpdate(Time.now());
+    setLastUpdateMonotonic(Time.monotonicNow());
   }
 
   /**
@@ -248,7 +249,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
     super(nodeID, networkLocation);
-    updateHeartbeatState(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0, null);
+    setLastUpdate(Time.now());
+    setLastUpdateMonotonic(Time.monotonicNow());
   }
 
   public CachedBlocksList getPendingCached() {
@@ -404,6 +406,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     long totalBlockPoolUsed = 0;
     long totalDfsUsed = 0;
     long totalNonDfsUsed = 0;
+    Set<String> visitedMount = new HashSet<>();
     Set<DatanodeStorageInfo> failedStorageInfos = null;
 
     // Decide if we should check for any missing StorageReport and mark it as
@@ -472,7 +475,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
       totalRemaining += report.getRemaining();
       totalBlockPoolUsed += report.getBlockPoolUsed();
       totalDfsUsed += report.getDfsUsed();
-      totalNonDfsUsed += report.getNonDfsUsed();
+      String mount = report.getMount();
+      // For volumes on the same mount,
+      // ignore duplicated volumes for nonDfsUsed.
+      if (mount == null || mount.isEmpty()) {
+        totalNonDfsUsed += report.getNonDfsUsed();
+      } else {
+        if (!visitedMount.contains(mount)) {
+          totalNonDfsUsed += report.getNonDfsUsed();
+          visitedMount.add(mount);
+        }
+      }
     }
 
     // Update total metrics for the node.
@@ -634,18 +647,22 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(startBlock, getStorageInfos());
   }
 
-  void incrementPendingReplicationWithoutTargets() {
+  @VisibleForTesting
+  public void incrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets++;
   }
 
-  void decrementPendingReplicationWithoutTargets() {
+  @VisibleForTesting
+  public void decrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets--;
   }
 
   /**
    * Store block replication work.
    */
-  void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
+  @VisibleForTesting
+  public void addBlockToBeReplicated(Block block,
+      DatanodeStorageInfo[] targets) {
     assert(block != null && targets != null && targets.length > 0);
     replicateBlocks.offer(new BlockTargetPair(block, targets));
   }
@@ -703,7 +720,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return erasurecodeBlocks.size();
   }
 
-  int getNumberOfReplicateBlocks() {
+  @VisibleForTesting
+  public int getNumberOfReplicateBlocks() {
     return replicateBlocks.size();
   }
 

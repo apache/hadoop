@@ -30,6 +30,7 @@ import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.testutil.ResultVerifier;
 import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
+import org.apache.hadoop.util.Lists;
 import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Assume;
@@ -41,8 +42,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
 @RunWith(Parameterized.class)
 public class KVTest {

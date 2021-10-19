@@ -55,34 +55,6 @@ public class ECBlockGroup {
   }
 
   /**
-   * Any erased data block?
-   * @return true if any erased data block, false otherwise
-   */
-  public boolean anyErasedDataBlock() {
-    for (int i = 0; i < dataBlocks.length; ++i) {
-      if (dataBlocks[i].isErased()) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Any erased parity block?
-   * @return true if any erased parity block, false otherwise
-   */
-  public boolean anyErasedParityBlock() {
-    for (int i = 0; i < parityBlocks.length; ++i) {
-      if (parityBlocks[i].isErased()) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
    * Get erased blocks count
    * @return erased count of blocks
    */

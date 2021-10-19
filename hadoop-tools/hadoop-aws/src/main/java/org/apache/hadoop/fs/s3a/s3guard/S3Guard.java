@@ -23,17 +23,22 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,14 +52,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
-import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_BAD_CONFIGURATION;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -74,6 +80,16 @@ public final class S3Guard {
       S3GUARD_DDB_CLIENT_FACTORY_IMPL_DEFAULT =
       DynamoDBClientFactory.DefaultDynamoDBClientFactory.class;
   private static final S3AFileStatus[] EMPTY_LISTING = new S3AFileStatus[0];
+
+  /**
+   * Hard-coded policy : {@value}.
+   * If true, when merging an S3 LIST with S3Guard in non-auth mode,
+   * only updated entries are added; new entries are left out.
+   * This policy choice reduces the amount of data stored in Dynamo,
+   * and hence the complexity of the merge in a non-auth listing.
+   */
+  @VisibleForTesting
+  public static final boolean DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH = false;
 
   // Utility class.  All static functions.
   private S3Guard() { }
@@ -144,21 +160,51 @@ public final class S3Guard {
 
 
   /**
-   * Helper function which puts a given S3AFileStatus into the MetadataStore and
-   * returns the same S3AFileStatus. Instrumentation monitors the put operation.
-   * @param ms MetadataStore to {@code put()} into.
-   * @param status status to store
-   * @param instrumentation instrumentation of the s3a file system
+   * We update the metastore for the specific case of S3 value == S3Guard value
+   * so as to place a more recent modtime in the store.
+   * because if not, we will continue to probe S3 whenever we look for this
+   * object, even we only do this if confident the S3 status is the same
+   * as the one in the store (i.e. it is not an older version)
+   * @param metadataStore MetadataStore to {@code put()} into.
+   * @param pm current data
+   * @param s3AFileStatus status to store
    * @param timeProvider Time provider to use when writing entries
-   * @return The same status as passed in
+   * @return true if the entry was updated.
    * @throws IOException if metadata store update failed
    */
   @RetryTranslated
-  public static S3AFileStatus putAndReturn(MetadataStore ms,
-      S3AFileStatus status,
-      S3AInstrumentation instrumentation,
+  public static boolean refreshEntry(
+      MetadataStore metadataStore,
+      PathMetadata pm,
+      S3AFileStatus s3AFileStatus,
       ITtlTimeProvider timeProvider) throws IOException {
-    return putAndReturn(ms, status, instrumentation, timeProvider, null);
+    // the modtime of the data is the same as/older than the s3guard value
+    // either an old object has been found, or the existing one was retrieved
+    // in both cases -return s3guard value
+    S3AFileStatus msStatus = pm.getFileStatus();
+
+    // first check: size
+    boolean sizeMatch = msStatus.getLen() == s3AFileStatus.getLen();
+
+    // etags are expected on all objects, but handle the situation
+    // that a third party store doesn't serve them.
+    String s3Etag = s3AFileStatus.getETag();
+    String pmEtag = msStatus.getETag();
+    boolean etagsMatch = s3Etag != null && s3Etag.equals(pmEtag);
+
+    // version ID: only in some stores, and will be missing in the metastore
+    // if the entry was created through a list operation.
+    String s3VersionId = s3AFileStatus.getVersionId();
+    String pmVersionId = msStatus.getVersionId();
+    boolean versionsMatchOrMissingInMetastore =
+        pmVersionId == null || pmVersionId.equals(s3VersionId);
+    if (sizeMatch && etagsMatch && versionsMatchOrMissingInMetastore) {
+      // update the store, return the new value
+      LOG.debug("Refreshing the metastore entry/timestamp");
+      putAndReturn(metadataStore, s3AFileStatus, timeProvider);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -166,7 +212,22 @@ public final class S3Guard {
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
-   * @param instrumentation instrumentation of the s3a file system
+   * @param timeProvider Time provider to use when writing entries
+   * @return The same status as passed in
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static S3AFileStatus putAndReturn(MetadataStore ms,
+      S3AFileStatus status,
+      ITtlTimeProvider timeProvider) throws IOException {
+    return putAndReturn(ms, status, timeProvider, null);
+  }
+
+  /**
+   * Helper function which puts a given S3AFileStatus into the MetadataStore and
+   * returns the same S3AFileStatus. Instrumentation monitors the put operation.
+   * @param ms MetadataStore to {@code put()} into.
+   * @param status status to store
    * @param timeProvider Time provider to use when writing entries
    * @param operationState possibly-null metastore state tracker.
    * @return The same status as passed in
@@ -176,21 +237,39 @@ public final class S3Guard {
   public static S3AFileStatus putAndReturn(
       final MetadataStore ms,
       final S3AFileStatus status,
-      final S3AInstrumentation instrumentation,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
     long startTimeNano = System.nanoTime();
     try {
       putWithTtl(ms, new PathMetadata(status), timeProvider, operationState);
     } finally {
-      instrumentation.addValueToQuantiles(
-          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-          (System.nanoTime() - startTimeNano));
-      instrumentation.incrementCounter(
-          S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
-          1);
+      ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
     }
     return status;
+  }
+
+  /**
+   * Creates an authoritative directory marker for the store.
+   * @param ms MetadataStore to {@code put()} into.
+   * @param status status to store
+   * @param timeProvider Time provider to use when writing entries
+   * @param operationState possibly-null metastore state tracker.
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static void putAuthDirectoryMarker(
+      final MetadataStore ms,
+      final S3AFileStatus status,
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    long startTimeNano = System.nanoTime();
+    try {
+      final PathMetadata fileMeta = authoritativeEmptyDirectoryMarker(status);
+      putWithTtl(ms, fileMeta, timeProvider, operationState);
+    } finally {
+      ms.getInstrumentation().directoryMarkedAuthoritative();
+      ms.getInstrumentation().entryAdded((System.nanoTime() - startTimeNano));
+    }
   }
 
   /**
@@ -256,17 +335,22 @@ public final class S3Guard {
    * @param dirMeta  Directory listing from MetadataStore.  May be null.
    * @param isAuthoritative State of authoritative mode
    * @param timeProvider Time provider to use when updating entries
+   * @param toStatusItr function to convert array of file status to
+   *                    RemoteIterator.
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
-  public static FileStatus[] dirListingUnion(MetadataStore ms, Path path,
-      List<S3AFileStatus> backingStatuses, DirListingMetadata dirMeta,
-      boolean isAuthoritative, ITtlTimeProvider timeProvider)
-      throws IOException {
+  public static RemoteIterator<S3AFileStatus> dirListingUnion(
+          MetadataStore ms, Path path,
+          RemoteIterator<S3AFileStatus> backingStatuses,
+          DirListingMetadata dirMeta, boolean isAuthoritative,
+          ITtlTimeProvider timeProvider,
+          Function<S3AFileStatus[], RemoteIterator<S3AFileStatus>> toStatusItr)
+          throws IOException {
 
     // Fast-path for NullMetadataStore
     if (isNullMetadataStore(ms)) {
-      return backingStatuses.toArray(new FileStatus[backingStatuses.size()]);
+      return backingStatuses;
     }
 
     assertQualified(path);
@@ -277,34 +361,83 @@ public final class S3Guard {
           false);
     }
 
-    Set<Path> deleted = dirMeta.listTombstones();
-
     // Since we treat the MetadataStore as a "fresher" or "consistent" view
     // of metadata, we always use its metadata first.
 
     // Since the authoritative case is already handled outside this function,
     // we will basically start with the set of directory entries in the
     // DirListingMetadata, and add any that only exist in the backingStatuses.
-    boolean changed = false;
-    final Map<Path, FileStatus> dirMetaMap = dirMeta.getListing().stream()
-        .collect(Collectors.toMap(
-            pm -> pm.getFileStatus().getPath(), PathMetadata::getFileStatus)
-        );
+    //
+    // We try to avoid writing any more child entries than need be to :-
+    //  (a) save time and money.
+    //  (b) avoid overwriting the authoritative bit of children (HADOOP-16746).
+    // For auth mode updates, we supply the full listing and a list of which
+    // child entries have not been changed; the store gets to optimize its
+    // update however it chooses.
+    //
+    // for non-auth-mode S3Guard, we just build a list of entries to add and
+    // submit them in a batch; this is more efficient than trickling out the
+    // updates one-by-one.
 
-    for (S3AFileStatus s : backingStatuses) {
-      if (deleted.contains(s.getPath())) {
+    BulkOperationState operationState = ms.initiateBulkWrite(
+        BulkOperationState.OperationType.Listing,
+        path);
+    if (isAuthoritative) {
+      authoritativeUnion(ms, path, backingStatuses, dirMeta,
+          timeProvider, operationState);
+    } else {
+      nonAuthoritativeUnion(ms, path, backingStatuses, dirMeta,
+          timeProvider, operationState);
+    }
+    IOUtils.cleanupWithLogger(LOG, operationState);
+
+    return toStatusItr.apply(dirMetaToStatuses(dirMeta));
+  }
+
+  /**
+   * Perform the authoritative union operation.
+   * Here all updated/missing entries are added back; we take care
+   * not to overwrite unchanged entries as that will lose their
+   * isAuthoritative bit (HADOOP-16746).
+   * @param ms MetadataStore to use.
+   * @param path path to directory
+   * @param backingStatuses Directory listing from the backing store.
+   * @param dirMeta  Directory listing from MetadataStore.  May be null.
+   * @param timeProvider Time provider to use when updating entries
+   * @param operationState ongoing operation
+   * @throws IOException if metadata store update failed
+   */
+  private static void authoritativeUnion(
+      final MetadataStore ms,
+      final Path path,
+      final RemoteIterator<S3AFileStatus> backingStatuses,
+      final DirListingMetadata dirMeta,
+      final ITtlTimeProvider timeProvider,
+      final BulkOperationState operationState) throws IOException {
+    // track all unchanged entries; used so the metastore can identify entries
+    // it doesn't need to update
+    List<Path> unchangedEntries = new ArrayList<>(dirMeta.getListing().size());
+    boolean changed = !dirMeta.isAuthoritative();
+    Set<Path> deleted = dirMeta.listTombstones();
+    final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
+        .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
+    while (backingStatuses.hasNext()) {
+      S3AFileStatus s = backingStatuses.next();
+      final Path statusPath = s.getPath();
+      if (deleted.contains(statusPath)) {
         continue;
       }
 
-      final PathMetadata pathMetadata = new PathMetadata(s);
+      // this is built up to be whatever entry is to be added to the dirMeta
+      // collection
+      PathMetadata pathMetadata = dirMetaMap.get(statusPath);
 
-      if (!isAuthoritative){
-        FileStatus status = dirMetaMap.get(s.getPath());
-        if (status != null
-            && s.getModificationTime() > status.getModificationTime()) {
-          LOG.debug("Update ms with newer metadata of: {}", status);
-          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
-        }
+      if (pathMetadata == null) {
+        // there's no entry in the listing, so create one.
+        pathMetadata = new PathMetadata(s);
+      } else {
+        // no change -add the path to the list of unchangedEntries
+        unchangedEntries.add(statusPath);
       }
 
       // Minor race condition here.  Multiple threads could add to this
@@ -314,20 +447,88 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      boolean updated = dirMeta.put(pathMetadata);
-      changed = changed || updated;
+      changed |= dirMeta.put(pathMetadata);
     }
 
-    // If dirMeta is not authoritative, but isAuthoritative is true the
-    // directory metadata should be updated. Treat it as a change.
-    changed = changed || (!dirMeta.isAuthoritative() && isAuthoritative);
-
-    if (changed && isAuthoritative) {
+    if (changed) {
+      // in an authoritative update, we pass in the full list of entries,
+      // but do declare which have not changed to avoid needless and potentially
+      // destructive overwrites.
+      LOG.debug("Marking the directory {} as authoritative", path);
+      ms.getInstrumentation().directoryMarkedAuthoritative();
       dirMeta.setAuthoritative(true); // This is the full directory contents
-      S3Guard.putWithTtl(ms, dirMeta, timeProvider, null);
+      // write the updated dir entry and any changed children.
+      S3Guard.putWithTtl(ms, dirMeta, unchangedEntries, timeProvider, operationState);
+    }
+  }
+
+  /**
+   * Perform the authoritative union operation.
+   * @param ms MetadataStore to use.
+   * @param path path to directory
+   * @param backingStatuses Directory listing from the backing store.
+   * @param dirMeta  Directory listing from MetadataStore.  May be null.
+   * @param timeProvider Time provider to use when updating entries
+   * @param operationState ongoing operation
+   * @throws IOException if metadata store update failed
+   */
+  private static void nonAuthoritativeUnion(
+      final MetadataStore ms,
+      final Path path,
+      final RemoteIterator<S3AFileStatus> backingStatuses,
+      final DirListingMetadata dirMeta,
+      final ITtlTimeProvider timeProvider,
+      final BulkOperationState operationState) throws IOException {
+    List<PathMetadata> entriesToAdd = new ArrayList<>();
+    Set<Path> deleted = dirMeta.listTombstones();
+
+    final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
+        .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
+    while (backingStatuses.hasNext()) {
+      S3AFileStatus s = backingStatuses.next();
+      final Path statusPath = s.getPath();
+      if (deleted.contains(statusPath)) {
+        continue;
+      }
+
+      // this is the record in dynamo
+      PathMetadata pathMetadata = dirMetaMap.get(statusPath);
+
+      // in non-auth listings, we compare the file status of the metastore
+      // list with those in the FS, and overwrite the MS entry if
+      // either of two conditions are met
+      // - there is no entry in the metastore and
+      //   DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH is compiled to true
+      // - there is an entry in the metastore the FS entry is newer.
+      boolean shouldUpdate;
+      if (pathMetadata != null) {
+        // entry is in DDB; check modification time
+        shouldUpdate = s.getModificationTime() > (pathMetadata.getFileStatus())
+            .getModificationTime();
+        // create an updated record.
+        pathMetadata = new PathMetadata(s);
+      } else {
+        // entry is not present. Create for insertion into dirMeta
+        pathMetadata = new PathMetadata(s);
+        // use hard-coded policy about updating
+        shouldUpdate = DIR_MERGE_UPDATES_ALL_RECORDS_NONAUTH;
+      }
+      if (shouldUpdate) {
+        // we do want to update DDB and the listing with a new entry.
+        LOG.debug("Update ms with newer metadata of: {}", s);
+        // ensure it gets into the dirListing
+        // add to the list of entries to add later,
+        entriesToAdd.add(pathMetadata);
+      }
+      // add the entry to the union; no-op if it was already there.
+      dirMeta.put(pathMetadata);
     }
 
-    return dirMetaToStatuses(dirMeta);
+    if (!entriesToAdd.isEmpty()) {
+        // non-auth, just push out the updated entry list
+      LOG.debug("Adding {} entries under directory {}", entriesToAdd.size(), path);
+      putWithTtl(ms, entriesToAdd, timeProvider, operationState);
+    }
   }
 
   /**
@@ -410,7 +611,7 @@ public final class S3Guard {
             children.add(new PathMetadata(prevStatus));
           }
           dirMeta = new DirListingMetadata(f, children, authoritative);
-          S3Guard.putWithTtl(ms, dirMeta, timeProvider, null);
+          S3Guard.putWithTtl(ms, dirMeta, Collections.emptyList(), timeProvider, null);
         }
 
         pathMetas.add(new PathMetadata(status));
@@ -639,10 +840,13 @@ public final class S3Guard {
    * directory and its children.
    * @param ms metastore
    * @param dirMeta directory
+   * @param unchangedEntries list of unchanged entries from the listing
    * @param timeProvider nullable time provider
    * @throws IOException failure.
    */
-  public static void putWithTtl(MetadataStore ms, DirListingMetadata dirMeta,
+  public static void putWithTtl(MetadataStore ms,
+      DirListingMetadata dirMeta,
+      final List<Path> unchangedEntries,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState)
       throws IOException {
@@ -650,7 +854,7 @@ public final class S3Guard {
     dirMeta.setLastUpdated(now);
     dirMeta.getListing()
         .forEach(pm -> pm.setLastUpdated(now));
-    ms.put(dirMeta, operationState);
+    ms.put(dirMeta, unchangedEntries, operationState);
   }
 
   /**
@@ -711,21 +915,32 @@ public final class S3Guard {
 
   /**
    * Get a path entry provided it is not considered expired.
+   * If the allowAuthoritative flag is true, return without
+   * checking for TTL expiry.
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
    * @param needEmptyDirectoryFlag if true, implementation will
    * return known state of directory emptiness.
+   * @param allowAuthoritative if this flag is true, the ttl won't apply to the
+   * metadata - so it will be returned regardless of it's expiry.
    * @return the metadata or null if there as no entry.
    * @throws IOException failure.
    */
   public static PathMetadata getWithTtl(MetadataStore ms, Path path,
       @Nullable ITtlTimeProvider timeProvider,
-      final boolean needEmptyDirectoryFlag) throws IOException {
+      final boolean needEmptyDirectoryFlag,
+      final boolean allowAuthoritative) throws IOException {
     final PathMetadata pathMetadata = ms.get(path, needEmptyDirectoryFlag);
     // if timeProvider is null let's return with what the ms has
     if (timeProvider == null) {
       LOG.debug("timeProvider is null, returning pathMetadata as is");
+      return pathMetadata;
+    }
+
+    // authoritative mode is enabled for this directory, return what the ms has
+    if (allowAuthoritative) {
+      LOG.debug("allowAuthoritative is true, returning pathMetadata as is");
       return pathMetadata;
     }
 
@@ -743,8 +958,10 @@ public final class S3Guard {
       if (!pathMetadata.isExpired(ttl, timeProvider.getNow())) {
         return pathMetadata;
       } else {
-        LOG.debug("PathMetadata TTl for {} is expired in metadata store.",
-            path);
+        LOG.debug("PathMetadata TTl for {} is expired in metadata store"
+                + " -removing entry", path);
+        // delete the tombstone
+        ms.forgetMetadata(path);
         return null;
       }
     }
@@ -754,15 +971,23 @@ public final class S3Guard {
 
   /**
    * List children; mark the result as non-auth if the TTL has expired.
+   * If the allowAuthoritative flag is true, return without filtering or
+   * checking for TTL expiry.
+   * If false: the expiry scan takes place and the
+   * TODO: should we always purge tombstones? Even in auth?
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
+   * @param allowAuthoritative if this flag is true, the ttl won't apply to the
+   * metadata - so it will be returned regardless of it's expiry.
    * @return the listing of entries under a path, or null if there as no entry.
    * @throws IOException failure.
    */
-  @Retries.RetryTranslated
+  @RetryTranslated
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
-      Path path, @Nullable ITtlTimeProvider timeProvider)
+      Path path,
+      @Nullable ITtlTimeProvider timeProvider,
+      boolean allowAuthoritative)
       throws IOException {
     DirListingMetadata dlm = ms.listChildren(path);
 
@@ -771,23 +996,65 @@ public final class S3Guard {
       return dlm;
     }
 
-    long ttl = timeProvider.getMetadataTtl();
-
-    if (dlm != null && dlm.isAuthoritative()
-        && dlm.isExpired(ttl, timeProvider.getNow())) {
-      dlm.setAuthoritative(false);
+    if (allowAuthoritative) {
+      LOG.debug("allowAuthoritative is true, returning pathMetadata as is");
+      return dlm;
     }
+
+    // filter expired entries
+    if (dlm != null) {
+      List<PathMetadata> expired = dlm.removeExpiredEntriesFromListing(
+          timeProvider.getMetadataTtl(),
+          timeProvider.getNow());
+      // now purge the tombstones
+      for (PathMetadata metadata : expired) {
+        if (metadata.isDeleted()) {
+          ms.forgetMetadata(metadata.getFileStatus().getPath());
+        }
+      }
+    }
+
     return dlm;
   }
 
   public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
+    return getAuthoritativePaths(
+        fs.getUri(),
+        fs.getConf(),
+        p -> fs.maybeAddTrailingSlash(fs.qualify(p).toString()));
+  }
+
+  /**
+   * Get the authoritative paths of a filesystem.
+   *
+   * @param uri FS URI
+   * @param conf configuration
+   * @param qualifyToDir a qualification operation
+   * @return list of URIs valid for this FS.
+   */
+  @VisibleForTesting
+  static Collection<String> getAuthoritativePaths(
+      final URI uri,
+      final Configuration conf,
+      final Function<Path, String> qualifyToDir) {
     String[] rawAuthoritativePaths =
-        fs.getConf().getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
+        conf.getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
     Collection<String> authoritativePaths = new ArrayList<>();
     if (rawAuthoritativePaths.length > 0) {
       for (int i = 0; i < rawAuthoritativePaths.length; i++) {
-        Path qualified = fs.qualify(new Path(rawAuthoritativePaths[i]));
-        authoritativePaths.add(fs.maybeAddTrailingSlash(qualified.toString()));
+        Path path = new Path(rawAuthoritativePaths[i]);
+        URI pathURI = path.toUri();
+        if (pathURI.getAuthority() != null &&
+            !pathURI.getAuthority().equals(uri.getAuthority())) {
+          // skip on auth
+          continue;
+        }
+        if (pathURI.getScheme() != null &&
+            !pathURI.getScheme().equals(uri.getScheme())) {
+          // skip on auth
+          continue;
+        }
+        authoritativePaths.add(qualifyToDir.apply(path));
       }
     }
     return authoritativePaths;
@@ -815,5 +1082,66 @@ public final class S3Guard {
       }
     }
     return false;
+  }
+
+  /**
+   * Format string to use when warning that S3Guard is disabled.
+   */
+  @VisibleForTesting
+  public static final String DISABLED_LOG_MSG =
+      "S3Guard is disabled on this bucket: %s";
+
+  /**
+   * Error string use in exception raised on an unknown log level.
+   */
+  public static final String UNKNOWN_WARN_LEVEL =
+      "Unknown " + S3GUARD_DISABLED_WARN_LEVEL + " value: ";
+
+  /**
+   * Warning levels to use when reporting S3Guard as disabled.
+   */
+  public enum DisabledWarnLevel {
+    SILENT,
+    INFORM,
+    WARN,
+    FAIL
+  }
+
+  /**
+   * Log that S3Guard is disabled -optionally raise an exception.
+   * @param logger Log to log to
+   * @param warnLevelStr string value of warn action.
+   * @param bucket bucket to use in log/error messages
+   * @throws ExitUtil.ExitException if s3guard was disabled
+   *                                and the log level is "fail"
+   * @throws IllegalArgumentException unknown warning level.
+   */
+  public static void logS3GuardDisabled(Logger logger, String warnLevelStr,
+      String bucket)
+      throws ExitUtil.ExitException, IllegalArgumentException {
+    final DisabledWarnLevel warnLevel;
+    try {
+      warnLevel = DisabledWarnLevel.valueOf(warnLevelStr.toUpperCase(Locale.US));
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr, e);
+    }
+
+    String text = String.format(DISABLED_LOG_MSG, bucket);
+    switch (warnLevel) {
+    case SILENT:
+      logger.debug(text);
+      break;
+    case INFORM:
+      logger.info(text);
+      break;
+    case WARN:
+      logger.warn(text);
+      break;
+    case FAIL:
+      logger.error(text);
+      throw new ExitUtil.ExitException(EXIT_BAD_CONFIGURATION, text);
+    default:
+      throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr);
+    }
   }
 }

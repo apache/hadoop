@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.volume.csi;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import com.google.gson.JsonObject;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;

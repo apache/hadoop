@@ -149,6 +149,19 @@ public class TestMutableMetrics {
     assertGauge("BarAvgTime", 0.0, rb);
   }
 
+  @Test public void testMutableRatesWithAggregationInitWithArray() {
+    MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+    MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
+
+    rates.init(new String[]{"Foo", "Bar"});
+    rates.snapshot(rb, false);
+
+    assertCounter("FooNumOps", 0L, rb);
+    assertGauge("FooAvgTime", 0.0, rb);
+    assertCounter("BarNumOps", 0L, rb);
+    assertGauge("BarAvgTime", 0.0, rb);
+  }
+
   @Test public void testMutableRatesWithAggregationSingleThread() {
     MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
 

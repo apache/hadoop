@@ -23,18 +23,19 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
@@ -871,6 +872,7 @@ public abstract class Shell {
     this.interval = interval;
     this.lastTime = (interval < 0) ? 0 : -interval;
     this.redirectErrorStream = redirectErrorStream;
+    this.environment = Collections.emptyMap();
   }
 
   /**
@@ -878,7 +880,7 @@ public abstract class Shell {
    * @param env Mapping of environment variables
    */
   protected void setEnvironment(Map<String, String> env) {
-    this.environment = env;
+    this.environment = Objects.requireNonNull(env);
   }
 
   /**
@@ -915,9 +917,7 @@ public abstract class Shell {
       builder.environment().clear();
     }
 
-    if (environment != null) {
-      builder.environment().putAll(this.environment);
-    }
+    builder.environment().putAll(this.environment);
 
     if (dir != null) {
       builder.directory(this.dir);
@@ -949,11 +949,11 @@ public abstract class Shell {
       timeOutTimer.schedule(timeoutTimerTask, timeOutInterval);
     }
     final BufferedReader errReader =
-            new BufferedReader(new InputStreamReader(
-                process.getErrorStream(), Charset.defaultCharset()));
+            new BufferedReader(new InputStreamReader(process.getErrorStream(),
+                StandardCharsets.UTF_8));
     BufferedReader inReader =
-            new BufferedReader(new InputStreamReader(
-                process.getInputStream(), Charset.defaultCharset()));
+            new BufferedReader(new InputStreamReader(process.getInputStream(),
+                StandardCharsets.UTF_8));
     final StringBuffer errMsg = new StringBuffer();
 
     // read error and input streams as this would free up the buffers

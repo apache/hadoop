@@ -18,6 +18,10 @@
 package org.apache.hadoop.yarn.service.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -39,6 +43,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+
+import static org.junit.Assert.fail;
 
 /**
  * Test class for system service manager.
@@ -205,6 +211,55 @@ public class TestSystemServiceManagerImpl {
       Set<String> services = loadedServices.get(user);
       Assert.assertEquals(services.size(), serviceSet.size());
       Assert.assertTrue(services.containsAll(serviceSet));
+    }
+  }
+
+  @Test
+  public void testFileSystemCloseWhenCleanUpService() throws Exception {
+    FileSystem fs = null;
+    Path path = new Path("/tmp/servicedir");
+
+    HdfsConfiguration hdfsConfig = new HdfsConfiguration();
+    MiniDFSCluster hdfsCluster = new MiniDFSCluster.Builder(hdfsConfig)
+        .numDataNodes(1).build();
+
+    fs = hdfsCluster.getFileSystem();
+    if (!fs.exists(path)) {
+      fs.mkdirs(path);
+    }
+
+    SystemServiceManagerImpl serviceManager = new SystemServiceManagerImpl();
+
+    hdfsConfig.set(YarnServiceConf.YARN_SERVICES_SYSTEM_SERVICE_DIRECTORY,
+        path.toString());
+    serviceManager.init(hdfsConfig);
+
+    // the FileSystem object owned by SystemServiceManager must not be closed
+    // when cleanup a service
+    hdfsConfig.set("hadoop.registry.zk.connection.timeout.ms", "100");
+    hdfsConfig.set("hadoop.registry.zk.retry.times", "1");
+    ApiServiceClient asc = new ApiServiceClient();
+    asc.serviceInit(hdfsConfig);
+    asc.actionCleanUp("testapp", "testuser");
+
+    try {
+      serviceManager.start();
+    } catch (Exception e) {
+      if (e.getMessage().contains("Filesystem closed")) {
+        fail("SystemServiceManagerImpl failed to handle " +
+            "FileSystem close");
+      } else {
+        fail("Should not get any exceptions");
+      }
+    } finally {
+      serviceManager.stop();
+      fs = hdfsCluster.getFileSystem();
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      if (hdfsCluster != null) {
+        hdfsCluster.shutdown();
+      }
     }
   }
 }

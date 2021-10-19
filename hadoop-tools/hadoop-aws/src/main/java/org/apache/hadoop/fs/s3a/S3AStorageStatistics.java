@@ -20,106 +20,27 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.StorageStatistics;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.impl.StorageStatisticsFromIOStatistics;
 
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicLong;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 
 /**
- * Storage statistics for S3A.
+ * Storage statistics for S3A, dynamically generated from the IOStatistics.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AStorageStatistics extends StorageStatistics
-    implements Iterable<StorageStatistics.LongStatistic> {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(S3AStorageStatistics.class);
+public class S3AStorageStatistics
+    extends StorageStatisticsFromIOStatistics {
 
   public static final String NAME = "S3AStorageStatistics";
-  private final Map<Statistic, AtomicLong> opsCount =
-      new EnumMap<>(Statistic.class);
+
+  public S3AStorageStatistics(final IOStatistics ioStatistics) {
+    super(NAME, "s3a", ioStatistics);
+  }
 
   public S3AStorageStatistics() {
-    super(NAME);
-    for (Statistic opType : Statistic.values()) {
-      opsCount.put(opType, new AtomicLong(0));
-    }
-  }
-
-  /**
-   * Increment a specific counter.
-   * @param op operation
-   * @param count increment value
-   * @return the new value
-   */
-  public long incrementCounter(Statistic op, long count) {
-    long updated = opsCount.get(op).addAndGet(count);
-    LOG.debug("{} += {}  ->  {}", op, count, updated);
-    return updated;
-  }
-
-  private class LongIterator implements Iterator<LongStatistic> {
-    private Iterator<Map.Entry<Statistic, AtomicLong>> iterator =
-        Collections.unmodifiableSet(opsCount.entrySet()).iterator();
-
-    @Override
-    public boolean hasNext() {
-      return iterator.hasNext();
-    }
-
-    @Override
-    public LongStatistic next() {
-      if (!iterator.hasNext()) {
-        throw new NoSuchElementException();
-      }
-      final Map.Entry<Statistic, AtomicLong> entry = iterator.next();
-      return new LongStatistic(entry.getKey().getSymbol(),
-          entry.getValue().get());
-    }
-
-    @Override
-    public void remove() {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  @Override
-  public String getScheme() {
-    return "s3a";
-  }
-
-  @Override
-  public Iterator<LongStatistic> getLongStatistics() {
-    return new LongIterator();
-  }
-
-  @Override
-  public Iterator<LongStatistic> iterator() {
-    return getLongStatistics();
-  }
-
-  @Override
-  public Long getLong(String key) {
-    final Statistic type = Statistic.fromSymbol(key);
-    return type == null ? null : opsCount.get(type).get();
-  }
-
-  @Override
-  public boolean isTracked(String key) {
-    return Statistic.fromSymbol(key) != null;
-  }
-
-  @Override
-  public void reset() {
-    for (AtomicLong value : opsCount.values()) {
-      value.set(0);
-    }
+    super(NAME, "s3a", emptyStatistics());
   }
 
 }

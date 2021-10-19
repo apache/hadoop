@@ -37,8 +37,8 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Manage Incremental Block Reports (IBRs).
@@ -222,6 +222,9 @@ class IncrementalBlockReportManager {
         // blocks back onto our queue, but only in the case where we
         // didn't put something newer in the meantime.
         putMissing(reports);
+        LOG.warn("Failed to call blockReceivedAndDeleted: {}, nnId: {}"
+            + ", duration(ms): {}", Arrays.toString(reports),
+            nnRpcLatencySuffix, monotonicNow() - startTime);
       }
     }
   }

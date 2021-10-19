@@ -20,14 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -46,6 +47,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockMemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
@@ -66,6 +69,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.Records;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -84,10 +90,21 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
 
     MockRM rm1 = new MockRM(getConf());
     rm1.start();
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("name")
+        .withUser("user")
+        .withAcls(new HashMap<ApplicationAccessType, String>())
+        .withUnmanagedAM(false)
+        .withQueue("default")
+        .withMaxAppAttempts(-1)
+        .withCredentials(null)
+        .withAppType("MAPREDUCE")
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(true)
+        .build();
     RMApp app1 =
-        rm1.submitApp(200, "name", "user",
-          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
-          null, "MAPREDUCE", false, true);
+        MockRMAppSubmitter.submit(rm1, data);
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -287,10 +304,21 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
 
     MockRM rm1 = new MockRM(getConf());
     rm1.start();
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("myname")
+        .withUser("myuser")
+        .withAcls(new HashMap<ApplicationAccessType, String>())
+        .withUnmanagedAM(false)
+        .withQueue("default")
+        .withMaxAppAttempts(-1)
+        .withCredentials(null)
+        .withAppType("MAPREDUCE")
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(true)
+        .build();
     RMApp app1 =
-        rm1.submitApp(200, "myname", "myuser",
-          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
-          null, "MAPREDUCE", false, true);
+        MockRMAppSubmitter.submit(rm1, data);
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -400,7 +428,7 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
-    RMApp app1 = rm1.submitApp(200);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     AbstractYarnScheduler scheduler =
@@ -525,7 +553,7 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
-    RMApp app1 = rm1.submitApp(200);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     AbstractYarnScheduler scheduler =
@@ -566,7 +594,7 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
-    RMApp app1 = rm1.submitApp(200);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     AbstractYarnScheduler scheduler =
@@ -657,7 +685,7 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
-    RMApp app1 = rm1.submitApp(200);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     // AM should be restarted even though max-am-attempt is 1.
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -735,7 +763,13 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     // set window size to a larger number : 60s
     // we will verify the app should be failed if
     // two continuous attempts failed in 60s.
-    RMApp app = rm1.submitApp(200, 60000, false);
+    RMApp app = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("")
+            .withUser(UserGroupInformation.getCurrentUser().getShortUserName())
+            .withKeepContainers(false)
+            .withAttemptFailuresValidityInterval((long) 60000)
+            .build());
     
     MockAM am = MockRM.launchAM(app, rm1, nm1);
     // Fail current attempt normally
@@ -756,7 +790,13 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
 
     ControlledClock clock = new ControlledClock();
     // set window size to 10s
-    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000, false);
+    RMAppImpl app1 = (RMAppImpl) MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("")
+            .withUser(UserGroupInformation.getCurrentUser().getShortUserName())
+            .withKeepContainers(false)
+            .withAttemptFailuresValidityInterval((long) 10000)
+            .build());
     app1.setSystemClock(clock);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     // Fail attempt1 normally
@@ -867,10 +907,21 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
 
     MockRM rm1 = new MockRM(getConf());
     rm1.start();
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("name")
+        .withUser("user")
+        .withAcls(new HashMap<ApplicationAccessType, String>())
+        .withUnmanagedAM(false)
+        .withQueue("default")
+        .withMaxAppAttempts(-1)
+        .withCredentials(null)
+        .withAppType("MAPREDUCE")
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(true)
+        .build();
     RMApp app1 =
-        rm1.submitApp(200, "name", "user",
-            new HashMap<ApplicationAccessType, String>(), false, "default", -1,
-            null, "MAPREDUCE", false, true);
+        MockRMAppSubmitter.submit(rm1, data);
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
     nm1.registerNode();
@@ -972,7 +1023,13 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     nm1.registerNode();
 
     // set window size to 10s and enable keepContainers
-    RMAppImpl app1 = (RMAppImpl)rm1.submitApp(200, 10000, true);
+    RMAppImpl app1 = (RMAppImpl) MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAppName("")
+            .withUser(UserGroupInformation.getCurrentUser().getShortUserName())
+            .withKeepContainers(true)
+            .withAttemptFailuresValidityInterval((long) 10000)
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     int NUM_CONTAINERS = 2;
     allocateContainers(nm1, am1, NUM_CONTAINERS);
@@ -1070,9 +1127,20 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm2 = new MockNM(nm2Address, 4089, rm1.getResourceTrackerService());
     nm2.registerNode();
 
-    RMApp app1 = rm1.submitApp(200, "name", "user",
-        new HashMap<>(), false, "default", -1,
-        null, "MAPREDUCE", false, true);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("name")
+        .withUser("user")
+        .withAcls(new HashMap<>())
+        .withUnmanagedAM(false)
+        .withQueue("default")
+        .withMaxAppAttempts(-1)
+        .withCredentials(null)
+        .withAppType("MAPREDUCE")
+        .withWaitForAppAcceptedState(false)
+        .withKeepContainers(true)
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
 
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     allocateContainers(nm1, am1, 1);
@@ -1205,7 +1273,12 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 8000, rm1.getResourceTrackerService());
     nm1.registerNode();
-    RMApp app1 = rm1.submitApp(200, 0, true);
+
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+            .withAttemptFailuresValidityInterval(0)
+            .withKeepContainers(true)
+            .build());
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     allocateContainers(nm1, am1, 1);
@@ -1243,8 +1316,13 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
       Assert.assertEquals(0,
           queue.getQueueResourceUsage().getUsed().getVirtualCores());
     } else if (getSchedulerType() == SchedulerType.FAIR) {
-      FSLeafQueue queue = ((FairScheduler) scheduler).getQueueManager()
-          .getLeafQueue("root.default", false);
+      // The default queue is not auto created after YARN-7769 so
+      // user-as-default-queue option is used
+      Collection<FSLeafQueue> queues = ((FairScheduler) scheduler)
+          .getQueueManager().getLeafQueues();
+      Assert.assertEquals(1, queues.size());
+
+      FSLeafQueue queue = queues.iterator().next();
       Assert.assertEquals(0, queue.getResourceUsage().getMemorySize());
       Assert.assertEquals(0, queue.getResourceUsage().getVirtualCores());
     }

@@ -229,9 +229,14 @@ public class HostRestrictingAuthorizationFilter implements Filter {
       throws IOException, ServletException {
     final String address = interaction.getRemoteAddr();
     final String query = interaction.getQueryString();
-    final String path =
-        interaction.getRequestURI()
-            .substring(WebHdfsFileSystem.PATH_PREFIX.length());
+    final String uri = interaction.getRequestURI();
+    if (!uri.startsWith(WebHdfsFileSystem.PATH_PREFIX)) {
+      LOG.trace("Rejecting interaction; wrong URI: {}", uri);
+      interaction.sendError(HttpServletResponse.SC_NOT_FOUND,
+          "The request URI must start with " + WebHdfsFileSystem.PATH_PREFIX);
+      return;
+    }
+    final String path = uri.substring(WebHdfsFileSystem.PATH_PREFIX.length());
     String user = interaction.getRemoteUser();
 
     LOG.trace("Got request user: {}, remoteIp: {}, query: {}, path: {}",

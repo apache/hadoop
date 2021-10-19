@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import com.google.common.base.Preconditions;
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -57,8 +57,8 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
    *
    * Map the block and verify its checksum.
    *
-   * The block will be mapped to PmemDir/BlockPoolId-BlockId, in which PmemDir
-   * is a persistent memory volume chosen by PmemVolumeManager.
+   * The block will be mapped to PmemDir/BlockPoolId/subdir#/subdir#/BlockId,
+   * in which PmemDir is a persistent memory volume chosen by PmemVolumeManager.
    *
    * @param length         The current length of the block.
    * @param blockIn        The block input stream. Should be positioned at the
@@ -82,16 +82,14 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
     POSIX.PmemMappedRegion region = null;
     String filePath = null;
 
-    FileChannel blockChannel = null;
-    try {
-      blockChannel = blockIn.getChannel();
+    try (FileChannel blockChannel = blockIn.getChannel()) {
       if (blockChannel == null) {
         throw new IOException("Block InputStream has no FileChannel.");
       }
 
       assert NativeIO.isAvailable();
       filePath = PmemVolumeManager.getInstance().getCachePath(key);
-      region = POSIX.Pmem.mapBlock(filePath, length);
+      region = POSIX.Pmem.mapBlock(filePath, length, false);
       if (region == null) {
         throw new IOException("Failed to map the block " + blockFileName +
             " to persistent storage.");
@@ -101,10 +99,9 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
       mappableBlock = new NativePmemMappedBlock(region.getAddress(),
           region.getLength(), key);
       LOG.info("Successfully cached one replica:{} into persistent memory"
-          + ", [cached path={}, address={}, length={}]", key, filePath,
+              + ", [cached path={}, address={}, length={}]", key, filePath,
           region.getAddress(), length);
     } finally {
-      IOUtils.closeQuietly(blockChannel);
       if (mappableBlock == null) {
         if (region != null) {
           // unmap content from persistent memory
@@ -130,9 +127,7 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
         BlockMetadataHeader.readHeader(new DataInputStream(
             new BufferedInputStream(metaIn, BlockMetadataHeader
                 .getHeaderSize())));
-    FileChannel metaChannel = null;
-    try {
-      metaChannel = metaIn.getChannel();
+    try (FileChannel metaChannel = metaIn.getChannel()) {
       if (metaChannel == null) {
         throw new IOException("Cannot get FileChannel" +
             " from Block InputStream meta file.");
@@ -180,13 +175,35 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
       if (region != null) {
         POSIX.Pmem.memSync(region);
       }
-    } finally {
-      IOUtils.closeQuietly(metaChannel);
     }
   }
 
   @Override
   public boolean isNativeLoader() {
     return true;
+  }
+
+  @Override
+  public MappableBlock getRecoveredMappableBlock(
+      File cacheFile, String bpid, byte volumeIndex) throws IOException {
+    NativeIO.POSIX.PmemMappedRegion region =
+        NativeIO.POSIX.Pmem.mapBlock(cacheFile.getAbsolutePath(),
+            cacheFile.length(), true);
+    if (region == null) {
+      throw new IOException("Failed to recover the block "
+          + cacheFile.getName() + " in persistent storage.");
+    }
+    ExtendedBlockId key =
+        new ExtendedBlockId(super.getBlockId(cacheFile), bpid);
+    MappableBlock mappableBlock = new NativePmemMappedBlock(
+        region.getAddress(), region.getLength(), key);
+    PmemVolumeManager.getInstance().recoverBlockKeyToVolume(key, volumeIndex);
+
+    String path = PmemVolumeManager.getInstance().getCachePath(key);
+    long addr = mappableBlock.getAddress();
+    long length = mappableBlock.getLength();
+    LOG.info("Recovering persistent memory cache for block {}, " +
+        "path = {}, address = {}, length = {}", key, path, addr, length);
+    return mappableBlock;
   }
 }

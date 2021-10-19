@@ -73,23 +73,20 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       ActivitiesManager activitiesManager) {
     super(application, rc, rmContext, activitiesManager);
   }
-  
-  private boolean checkHeadroom(Resource clusterResource,
-      ResourceLimits currentResourceLimits, Resource required,
-      String nodePartition) {
+
+  private boolean checkHeadroom(ResourceLimits currentResourceLimits,
+                                Resource required, String nodePartition) {
     // If headroom + currentReservation < required, we cannot allocate this
     // require
-    Resource resourceCouldBeUnReserved = application.getCurrentReservation();
-    if (!application.getCSLeafQueue().getReservationContinueLooking()
-        || !nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
-      // If we don't allow reservation continuous looking, OR we're looking at
-      // non-default node partition, we won't allow to unreserve before
-      // allocation.
+    Resource resourceCouldBeUnReserved =
+        application.getAppAttemptResourceUsage().getReserved(nodePartition);
+    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+      // If we don't allow reservation continuous looking,
+      // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
     }
-    return Resources.greaterThanOrEqual(rc, clusterResource, Resources.add(
-        currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved),
-        required);
+    return Resources.fitsIn(rc, required,
+        Resources.add(currentResourceLimits.getHeadroom(), resourceCouldBeUnReserved));
   }
 
   /*
@@ -98,8 +95,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
    * We will consider stuffs like exclusivity, pending resource, node partition,
    * headroom, etc.
    */
-  private ContainerAllocation preCheckForNodeCandidateSet(
-      Resource clusterResource, FiCaSchedulerNode node,
+  private ContainerAllocation preCheckForNodeCandidateSet(FiCaSchedulerNode node,
       SchedulingMode schedulingMode, ResourceLimits resourceLimits,
       SchedulerRequestKey schedulerKey) {
     PendingAsk offswitchPendingAsk = application.getPendingAsk(schedulerKey,
@@ -169,8 +165,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       }
     }
 
-    if (!checkHeadroom(clusterResource, resourceLimits, required,
-        node.getPartition())) {
+    if (!checkHeadroom(resourceLimits, required, node.getPartition())) {
       LOG.debug("cannot allocate required resource={} because of headroom",
           required);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
@@ -583,13 +578,10 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Allocate...
       // We will only do continuous reservation when this is not allocated from
       // reserved container
-      if (rmContainer == null && reservationsContinueLooking
-          && node.getLabels().isEmpty()) {
+      if (rmContainer == null && reservationsContinueLooking) {
         // when reservationsContinueLooking is set, we may need to unreserve
         // some containers to meet this queue, its parents', or the users'
         // resource limits.
-        // TODO, need change here when we want to support continuous reservation
-        // looking for labeled partitions.
         if (!shouldAllocOrReserveNewContainer || needToUnreserve) {
           if (!needToUnreserve) {
             // If we shouldn't allocate/reserve new container then we should
@@ -837,6 +829,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // Do checks before determining which node to allocate
     // Directly return if this check fails.
     ContainerAllocation result;
+    ContainerAllocation lastReservation = null;
 
     AppPlacementAllocator<FiCaSchedulerNode> schedulingPS =
         application.getAppSchedulingInfo().getAppPlacementAllocator(
@@ -860,7 +853,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       FiCaSchedulerNode node = iter.next();
 
       if (reservedContainer == null) {
-        result = preCheckForNodeCandidateSet(clusterResource, node,
+        result = preCheckForNodeCandidateSet(node,
             schedulingMode, resourceLimits, schedulerKey);
         if (null != result) {
           continue;
@@ -878,10 +871,23 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       result = tryAllocateOnNode(clusterResource, node, schedulingMode,
           resourceLimits, schedulerKey, reservedContainer);
 
-      if (AllocationState.ALLOCATED == result.getAllocationState()
-          || AllocationState.RESERVED == result.getAllocationState()) {
+      if (AllocationState.ALLOCATED == result.getAllocationState()) {
         result = doAllocation(result, node, schedulerKey, reservedContainer);
         break;
+      }
+
+      // In MultiNodePlacement, Try Allocate on other Available nodes
+      // from Iterator as well before Reserving. Else there won't be any
+      // Allocate of new containers when the first node in the
+      // iterator could not fit and returns RESERVED allocation.
+      if (AllocationState.RESERVED == result.getAllocationState()) {
+        lastReservation = result;
+        if (iter.hasNext()) {
+          continue;
+        } else {
+          result = doAllocation(lastReservation, node, schedulerKey,
+              reservedContainer);
+        }
       }
     }
 

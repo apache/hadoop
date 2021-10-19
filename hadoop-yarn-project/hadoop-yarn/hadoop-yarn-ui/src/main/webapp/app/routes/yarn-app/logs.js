@@ -25,17 +25,26 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     const { app_id } = this.paramsFor('yarn-app');
     const { service } = param;
     transition.send('updateBreadcrumbs', app_id, service, [{text: 'Logs'}]);
-    return Ember.RSVP.hash({
+    let promises = {
       appId: app_id,
       serviceName: service,
       attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
         return [];
       }),
       app: this.fetchAppInfoFromRMorATS(app_id, this.store),
-      timelineHealth: this.store.queryRecord('timeline-health', {}).catch(function() {
+      jhsHealth: this.store.queryRecord('jhs-health', {}).catch(function(error) {
+        Ember.Logger.log("jhs-health querying failed");
+        Ember.Logger.log(error);
         return null;
       })
-    });
+    };
+
+    if (ENV.timelineServiceEnabled) {
+      promises.timelineHealth = this.store.queryRecord('timeline-health', {}).catch(function() {
+        return null;
+      });
+    }
+    return Ember.RSVP.hash(promises);
   },
 
   activate() {
@@ -55,6 +64,7 @@ export default AbstractRoute.extend(AppAttemptMixin, {
     this.store.unloadAll('yarn-timeline-appattempt');
     this.store.unloadAll('yarn-container');
     this.store.unloadAll('yarn-timeline-container');
+    this.store.unloadAll('yarn-jhs-container');
     this.store.unloadAll('yarn-log');
     if (this.controller) {
       this.controller.resetAfterRefresh();

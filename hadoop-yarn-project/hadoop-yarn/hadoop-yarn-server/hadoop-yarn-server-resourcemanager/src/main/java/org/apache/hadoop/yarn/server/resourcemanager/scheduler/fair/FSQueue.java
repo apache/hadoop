@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @Private
 @Unstable
@@ -184,6 +184,10 @@ public abstract class FSQueue implements Queue, Schedulable {
     return result;
   }
 
+  public ConfigurableResource getRawMaxShare() {
+    return maxShare;
+  }
+
   public Resource getReservedResource() {
     reservedResource.setMemorySize(metrics.getReservedMB());
     reservedResource.setVirtualCores(metrics.getReservedVirtualCores());
@@ -207,7 +211,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   }
 
   @VisibleForTesting
-  protected float getMaxAMShare() {
+  public float getMaxAMShare() {
     return maxAMShare;
   }
 

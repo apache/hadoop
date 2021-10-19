@@ -125,7 +125,7 @@ void IoServiceImpl::Run() {
   // from escaping this library and crashing the process.
 
   // As recommended in http://www.boost.org/doc/libs/1_39_0/doc/html/boost_asio/reference/io_service.html#boost_asio.reference.io_service.effect_of_exceptions_thrown_from_handlers
-  asio::io_service::work work(io_service_);
+  boost::asio::io_service::work work(io_service_);
   while(true)
   {
     try
@@ -145,7 +145,7 @@ void IoServiceImpl::Stop() {
   io_service_.stop();
 }
 
-asio::io_service& IoServiceImpl::GetRaw() {
+boost::asio::io_service& IoServiceImpl::GetRaw() {
   return io_service_;
 }
 

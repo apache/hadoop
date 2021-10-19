@@ -46,7 +46,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.looku
  */
 public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
 
-  protected static final String YARN_RM = "yarn-rm@EXAMPLE";
+  protected static final String YARN_RM = "yarn-rm@EXAMPLE.COM";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractDelegationIT.class);
@@ -148,6 +148,8 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
    * @param binding binding to use
    */
   protected void enableDelegationTokens(Configuration conf, String binding) {
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING);
     LOG.info("Enabling delegation token support for {}", binding);
     conf.set(DELEGATION_TOKEN_BINDING, binding);
   }
@@ -203,7 +205,10 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
       throws IOException {
     S3AFileSystem fs = getFileSystem();
     S3ADelegationTokens tokens = new S3ADelegationTokens();
-    tokens.bindToFileSystem(fs.getCanonicalUri(), fs);
+    tokens.bindToFileSystem(
+        fs.getCanonicalUri(),
+        fs.createStoreContext(),
+        fs.createDelegationOperations());
     tokens.init(conf);
     return tokens;
   }

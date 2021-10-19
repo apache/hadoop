@@ -51,7 +51,7 @@ public class TestTaskAttemptFinishingMonitor {
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.TASK_EXIT_TIMEOUT, 100);
     conf.setInt(MRJobConfig.TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS, 10);
-
+    conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD, 0.01);
     AppContext appCtx = mock(AppContext.class);
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class);
     RMHeartbeatHandler rmHeartbeatHandler =

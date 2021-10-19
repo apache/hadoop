@@ -6,11 +6,12 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
-* ProtocolBuffer 3.7.1
-* CMake 3.1 or newer (if compiling native code)
+* Boost 1.72 (if compiling native code)
+* Protocol Buffers 3.7.1 (if compiling native code)
+* CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
-* One of the compilers that support thread_local storage: GCC 4.8.1 or later, Visual Studio,
+* One of the compilers that support thread_local storage: GCC 9.3.0 or later, Visual Studio,
   Clang (community version), Clang (version for iOS 9 and later) (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
@@ -50,33 +51,47 @@ Known issues:
   and run your IDE and Docker etc inside that VM.
 
 ----------------------------------------------------------------------------------
-Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
+Installing required packages for clean install of Ubuntu 18.04 LTS Desktop.
+(For Ubuntu 20.04, gcc/g++ and cmake bundled with Ubuntu can be used.
+Refer to  dev-support/docker/Dockerfile):
 
-* Oracle JDK 1.8 (preferred)
-  $ sudo apt-get purge openjdk*
-  $ sudo apt-get install software-properties-common
-  $ sudo add-apt-repository ppa:webupd8team/java
+* Open JDK 1.8
   $ sudo apt-get update
-  $ sudo apt-get install oracle-java8-installer
+  $ sudo apt-get -y install java-8-openjdk
 * Maven
   $ sudo apt-get -y install maven
 * Native libraries
   $ sudo apt-get -y install build-essential autoconf automake libtool cmake zlib1g-dev pkg-config libssl-dev libsasl2-dev
-* ProtocolBuffer 3.7.1 (required)
-  $ mkdir -p /opt/protobuf-3.7-src \
-        && curl -L -s -S \
-          https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-          -o /opt/protobuf-3.7.1.tar.gz \
-        && tar xzf /opt/protobuf-3.7.1.tar.gz --strip-components 1 -C /opt/protobuf-3.7-src \
-        && cd /opt/protobuf-3.7-src \
-        && ./configure\
-        && make install \
-        && rm -rf /opt/protobuf-3.7-src
+* GCC 9.3.0
+  $ sudo apt-get -y install software-properties-common
+  $ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  $ sudo apt-get update
+  $ sudo apt-get -y install g++-9 gcc-9
+  $ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+* CMake 3.19
+  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
+  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
+  $ ./bootstrap
+  $ make -j$(nproc)
+  $ sudo make install
+* Protocol Buffers 3.7.1 (required to build native code)
+  $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
+  $ mkdir protobuf-3.7-src
+  $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
+  $ ./configure
+  $ make -j$(nproc)
+  $ sudo make install
+* Boost
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2
+  $ tar --bzip2 -xf boost_1_72_0.tar.bz2 && cd boost_1_72_0
+  $ ./bootstrap.sh --prefix=/usr/
+  $ ./b2 --without-python
+  $ sudo ./b2 --without-python install
 
 Optional packages:
 
-* Snappy compression
-  $ sudo apt-get install snappy libsnappy-dev
+* Snappy compression (only used for hadoop-mapreduce-client-nativetask)
+  $ sudo apt-get install libsnappy-dev
 * Intel ISA-L library for erasure coding
   Please refer to https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
   (OR https://github.com/01org/isa-l)
@@ -85,7 +100,7 @@ Optional packages:
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
 * ZStandard compression
-    $ sudo apt-get install zstd
+  $ sudo apt-get install libzstd1-dev
 * PMDK library for storage class memory(SCM) as HDFS cache backend
   Please refer to http://pmem.io/ and https://github.com/pmem/pmdk
 
@@ -96,7 +111,7 @@ Maven main modules:
          - hadoop-project               (Parent POM for all Hadoop Maven modules.             )
                                         (All plugins & dependencies versions are defined here.)
          - hadoop-project-dist          (Parent POM for modules that generate distributions.)
-         - hadoop-annotations           (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-annotations           (Generates the Hadoop doclet used to generate the Javadocs)
          - hadoop-assemblies            (Maven assemblies used by the different modules)
          - hadoop-maven-plugins         (Maven plugins used in project)
          - hadoop-build-tools           (Build tools like checkstyle, etc.)
@@ -104,8 +119,6 @@ Maven main modules:
          - hadoop-hdfs-project          (Hadoop HDFS)
          - hadoop-yarn-project          (Hadoop YARN)
          - hadoop-mapreduce-project     (Hadoop MapReduce)
-         - hadoop-ozone                 (Hadoop Ozone)
-         - hadoop-hdds                  (Hadoop Distributed Data Store)
          - hadoop-tools                 (Hadoop tools like Streaming, Distcp, etc.)
          - hadoop-dist                  (Hadoop distribution assembler)
          - hadoop-client-modules        (Hadoop client modules)
@@ -115,7 +128,7 @@ Maven main modules:
 ----------------------------------------------------------------------------------
 Where to run Maven from?
 
-  It can be run from any module. The only catch is that if not run from utrunk
+  It can be run from any module. The only catch is that if not run from trunk
   all modules that are not part of the build run must be installed in the local
   Maven cache or available in a Maven repository.
 
@@ -126,11 +139,11 @@ Maven build goals:
  * Compile                   : mvn compile [-Pnative]
  * Run tests                 : mvn test [-Pnative] [-Pshelltest]
  * Create JAR                : mvn package
- * Run findbugs              : mvn compile findbugs:findbugs
+ * Run spotbugs              : mvn compile spotbugs:spotbugs
  * Run checkstyle            : mvn compile checkstyle:checkstyle
  * Install JAR in M2 cache   : mvn install
  * Deploy JAR to Maven repo  : mvn deploy
- * Run clover                : mvn test -Pclover [-DcloverLicenseLocation=${user.name}/.clover.license]
+ * Run clover                : mvn test -Pclover
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
@@ -163,14 +176,14 @@ Maven build goals:
 
    Snappy is a compression library that can be utilized by the native code.
    It is currently an optional component, meaning that Hadoop can be built with
-   or without this dependency.
+   or without this dependency. Snappy library as optional dependency is only
+   used for hadoop-mapreduce-client-nativetask.
 
   * Use -Drequire.snappy to fail the build if libsnappy.so is not found.
     If this option is not specified and the snappy library is missing,
     we silently build a version of libhadoop.so that cannot make use of snappy.
     This option is recommended if you plan on making use of snappy and want
     to get more repeatable builds.
-
   * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
     header files and library files. You do not need this option if you have
     installed snappy using a package manager.
@@ -311,52 +324,37 @@ time out after a while, using the Maven '-nsu' will stop Maven from trying
 to update SNAPSHOTs from external repos.
 
 ----------------------------------------------------------------------------------
-Protocol Buffer compiler
-
-The version of Protocol Buffer compiler, protoc, must match the version of the
-protobuf JAR.
-
-If you have multiple versions of protoc in your system, you can set in your
-build shell the HADOOP_PROTOC_PATH environment variable to point to the one you
-want to use for the Hadoop build. If you don't define this environment variable,
-protoc is looked up in the PATH.
-----------------------------------------------------------------------------------
 Importing projects to eclipse
 
-When you import the project to eclipse, install hadoop-maven-plugins at first.
+At first, install artifacts including hadoop-maven-plugins at the top of the source tree.
 
-  $ cd hadoop-maven-plugins
-  $ mvn install
+  $ mvn clean install -DskipTests -DskipShade
 
-Then, generate eclipse project files.
-
-  $ mvn eclipse:eclipse -DskipTests
-
-At last, import to eclipse by specifying the root directory of the project via
-[File] > [Import] > [Existing Projects into Workspace].
+Then, import to eclipse by specifying the root directory of the project via
+[File] > [Import] > [Maven] > [Existing Maven Projects].
 
 ----------------------------------------------------------------------------------
 Building distributions:
 
-Create binary distribution without native code and without documentation:
+Create binary distribution without native code and without Javadocs:
 
   $ mvn package -Pdist -DskipTests -Dtar -Dmaven.javadoc.skip=true
 
-Create binary distribution with native code and with documentation:
+Create binary distribution with native code:
 
-  $ mvn package -Pdist,native,docs -DskipTests -Dtar
+  $ mvn package -Pdist,native -DskipTests -Dtar
 
 Create source distribution:
 
   $ mvn package -Psrc -DskipTests
 
-Create source and binary distributions with native code and documentation:
+Create source and binary distributions with native code:
 
-  $ mvn package -Pdist,native,docs,src -DskipTests -Dtar
+  $ mvn package -Pdist,native,src -DskipTests -Dtar
 
 Create a local staging version of the website (in /tmp/hadoop-site)
 
-  $ mvn clean site -Preleasedocs; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+  $ mvn site site:stage -Preleasedocs,docs -DstagingDirectory=/tmp/hadoop-site
 
 Note that the site needs to be built in a second pass after other artifacts.
 
@@ -405,7 +403,7 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 3.7.1 (required)
+* Protocol Buffers 3.7.1 (required to compile native code)
   $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz
   $ mkdir -p protobuf-3.7 && tar zxvf protobuf-java-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7
   $ cd protobuf-3.7
@@ -429,6 +427,69 @@ Building command example:
 Note that the command above manually specified the openssl library and include
 path. This is necessary at least for Homebrewed OpenSSL.
 
+
+----------------------------------------------------------------------------------
+
+Building on CentOS 8
+
+----------------------------------------------------------------------------------
+
+
+* Install development tools such as GCC, autotools, OpenJDK and Maven.
+  $ sudo dnf group install --with-optional 'Development Tools'
+  $ sudo dnf install java-1.8.0-openjdk-devel maven
+
+* Install python2 for building documentation.
+  $ sudo dnf install python2
+
+* Install Protocol Buffers v3.7.1.
+  $ git clone https://github.com/protocolbuffers/protobuf
+  $ cd protobuf
+  $ git checkout v3.7.1
+  $ autoreconf -i
+  $ ./configure --prefix=/usr/local
+  $ make
+  $ sudo make install
+  $ cd ..
+
+* Install libraries provided by CentOS 8.
+  $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
+
+* Install GCC 9.3.0
+  $ sudo dnf -y install gcc-toolset-9-gcc gcc-toolset-9-gcc-c++
+  $ source /opt/rh/gcc-toolset-9/enable
+
+* Install CMake 3.19
+  $ curl -L https://cmake.org/files/v3.19/cmake-3.19.0.tar.gz > cmake-3.19.0.tar.gz
+  $ tar -zxvf cmake-3.19.0.tar.gz && cd cmake-3.19.0
+  $ ./bootstrap
+  $ make -j$(nproc)
+  $ sudo make install
+
+* Install boost.
+  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+  $ tar xjf boost_1_72_0.tar.bz2
+  $ cd boost_1_72_0
+  $ ./bootstrap.sh --prefix=/usr/local
+  $ ./b2
+  $ sudo ./b2 install
+
+* Install optional dependencies (snappy-devel).
+  $ sudo dnf --enablerepo=PowerTools install snappy-devel
+
+* Install optional dependencies (libzstd-devel).
+  $ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  $ sudo dnf --enablerepo=epel install libzstd-devel
+
+* Install optional dependencies (isa-l).
+  $ sudo dnf --enablerepo=PowerTools install nasm
+  $ git clone https://github.com/intel/isa-l
+  $ cd isa-l/
+  $ ./autogen.sh
+  $ ./configure
+  $ make
+  $ sudo make install
+
 ----------------------------------------------------------------------------------
 
 Building on Windows
@@ -439,8 +500,9 @@ Requirements:
 * Windows System
 * JDK 1.8
 * Maven 3.0 or later
-* ProtocolBuffer 3.7.1
-* CMake 3.1 or newer
+* Boost 1.72
+* Protocol Buffers 3.7.1
+* CMake 3.19 or newer
 * Visual Studio 2010 Professional or Higher
 * Windows SDK 8.1 (if building CPU rate control for the container executor)
 * zlib headers (if building native code bindings for zlib)

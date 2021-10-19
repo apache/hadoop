@@ -27,9 +27,9 @@ import org.apache.hadoop.ipc.metrics.RetryCacheMetrics;
 import org.apache.hadoop.util.LightWeightCache;
 import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -290,7 +290,7 @@ public class RetryCache {
           Thread.currentThread().interrupt();
         }
       }
-      // Previous request has failed, the expectation is is that it will be
+      // Previous request has failed, the expectation is that it will be
       // retried again.
       if (mapEntry.state != CacheEntry.SUCCESS) {
         mapEntry.state = CacheEntry.INPROGRESS;

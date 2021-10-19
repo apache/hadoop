@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.security.ssl;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -29,20 +29,20 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.text.MessageFormat;
+import java.util.Timer;
 
 /**
  * {@link KeyStoresFactory} implementation that reads the certificates from
  * keystore files.
  * <p>
- * if the trust certificates keystore file changes, the {@link TrustManager}
- * is refreshed with the new trust certificate entries (using a
- * {@link ReloadingX509TrustManager} trustmanager).
+ * If either the truststore or the keystore certificates file changes, it
+ * would be refreshed under the corresponding wrapper implementation -
+ * {@link ReloadingX509KeystoreManager} or {@link ReloadingX509TrustManager}.
+ * </p>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -50,6 +50,19 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FileBasedKeyStoresFactory.class);
+
+
+  /**
+   * The name of the timer thread monitoring file changes.
+   */
+  public static final String SSL_MONITORING_THREAD_NAME = "SSL Certificates Store Monitor";
+
+  /**
+   * The refresh interval used to check if either of the truststore or keystore
+   * certificate file has changed.
+   */
+  public static final String SSL_STORES_RELOAD_INTERVAL_TPL_KEY =
+    "ssl.{0}.stores.reload.interval";
 
   public static final String SSL_KEYSTORE_LOCATION_TPL_KEY =
     "ssl.{0}.keystore.location";
@@ -77,14 +90,119 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
   public static final String DEFAULT_KEYSTORE_TYPE = "jks";
 
   /**
-   * Reload interval in milliseconds.
+   * The default time interval in milliseconds used to check if either
+   * of the truststore or keystore certificates file has changed and needs reloading.
    */
-  public static final int DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL = 10000;
+  public static final int DEFAULT_SSL_STORES_RELOAD_INTERVAL = 10000;
 
   private Configuration conf;
   private KeyManager[] keyManagers;
   private TrustManager[] trustManagers;
   private ReloadingX509TrustManager trustManager;
+  private Timer fileMonitoringTimer;
+
+
+  private void createTrustManagersFromConfiguration(SSLFactory.Mode mode,
+                                                    String truststoreType,
+                                                    String truststoreLocation,
+                                                    long storesReloadInterval)
+      throws IOException, GeneralSecurityException {
+    String passwordProperty = resolvePropertyName(mode,
+        SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
+    String truststorePassword = getPassword(conf, passwordProperty, "");
+    if (truststorePassword.isEmpty()) {
+      // An empty trust store password is legal; the trust store password
+      // is only required when writing to a trust store. Otherwise it's
+      // an optional integrity check.
+      truststorePassword = null;
+    }
+
+    // Check if obsolete truststore specific reload interval is present for backward compatible
+    long truststoreReloadInterval =
+        conf.getLong(
+            resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
+            storesReloadInterval);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation +
+          ", reloading at " + truststoreReloadInterval + " millis.");
+    }
+
+    trustManager = new ReloadingX509TrustManager(
+        truststoreType,
+        truststoreLocation,
+        truststorePassword);
+
+    if (truststoreReloadInterval > 0) {
+      fileMonitoringTimer.schedule(
+          new FileMonitoringTimerTask(
+              Paths.get(truststoreLocation),
+              path -> trustManager.loadFrom(path),
+              exception -> LOG.error(ReloadingX509TrustManager.RELOAD_ERROR_MESSAGE, exception)),
+          truststoreReloadInterval,
+          truststoreReloadInterval);
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
+    }
+    trustManagers = new TrustManager[]{trustManager};
+  }
+
+  /**
+   * Implements logic of initializing the KeyManagers with the options
+   * to reload keystores.
+   * @param mode client or server
+   * @param keystoreType The keystore type.
+   * @param storesReloadInterval The interval to check if the keystore certificates
+   *                             file has changed.
+   */
+  private void createKeyManagersFromConfiguration(SSLFactory.Mode mode,
+                                                  String keystoreType, long storesReloadInterval)
+      throws GeneralSecurityException, IOException {
+    String locationProperty =
+        resolvePropertyName(mode, SSL_KEYSTORE_LOCATION_TPL_KEY);
+    String keystoreLocation = conf.get(locationProperty, "");
+    if (keystoreLocation.isEmpty()) {
+      throw new GeneralSecurityException("The property '" + locationProperty +
+          "' has not been set in the ssl configuration file.");
+    }
+    String passwordProperty =
+        resolvePropertyName(mode, SSL_KEYSTORE_PASSWORD_TPL_KEY);
+    String keystorePassword = getPassword(conf, passwordProperty, "");
+    if (keystorePassword.isEmpty()) {
+      throw new GeneralSecurityException("The property '" + passwordProperty +
+          "' has not been set in the ssl configuration file.");
+    }
+    String keyPasswordProperty =
+        resolvePropertyName(mode, SSL_KEYSTORE_KEYPASSWORD_TPL_KEY);
+    // Key password defaults to the same value as store password for
+    // compatibility with legacy configurations that did not use a separate
+    // configuration property for key password.
+    String keystoreKeyPassword = getPassword(
+        conf, keyPasswordProperty, keystorePassword);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
+    }
+
+    ReloadingX509KeystoreManager keystoreManager =  new ReloadingX509KeystoreManager(
+        keystoreType,
+        keystoreLocation,
+        keystorePassword,
+        keystoreKeyPassword);
+
+    if (storesReloadInterval > 0) {
+      fileMonitoringTimer.schedule(
+          new FileMonitoringTimerTask(
+              Paths.get(keystoreLocation),
+              path -> keystoreManager.loadFrom(path),
+              exception -> LOG.error(ReloadingX509KeystoreManager.RELOAD_ERROR_MESSAGE, exception)),
+          storesReloadInterval,
+          storesReloadInterval);
+    }
+
+    keyManagers = new KeyManager[] { keystoreManager };
+  }
 
   /**
    * Resolves a property name to its client/server version if applicable.
@@ -139,56 +257,28 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       conf.getBoolean(SSLFactory.SSL_REQUIRE_CLIENT_CERT_KEY,
           SSLFactory.SSL_REQUIRE_CLIENT_CERT_DEFAULT);
 
+    long storesReloadInterval = conf.getLong(
+        resolvePropertyName(mode, SSL_STORES_RELOAD_INTERVAL_TPL_KEY),
+        DEFAULT_SSL_STORES_RELOAD_INTERVAL);
+
+    fileMonitoringTimer = new Timer(SSL_MONITORING_THREAD_NAME, true);
+
     // certificate store
     String keystoreType =
-      conf.get(resolvePropertyName(mode, SSL_KEYSTORE_TYPE_TPL_KEY),
-               DEFAULT_KEYSTORE_TYPE);
-    KeyStore keystore = KeyStore.getInstance(keystoreType);
-    String keystoreKeyPassword = null;
-    if (requireClientCert || mode == SSLFactory.Mode.SERVER) {
-      String locationProperty =
-        resolvePropertyName(mode, SSL_KEYSTORE_LOCATION_TPL_KEY);
-      String keystoreLocation = conf.get(locationProperty, "");
-      if (keystoreLocation.isEmpty()) {
-        throw new GeneralSecurityException("The property '" + locationProperty +
-          "' has not been set in the ssl configuration file.");
-      }
-      String passwordProperty =
-        resolvePropertyName(mode, SSL_KEYSTORE_PASSWORD_TPL_KEY);
-      String keystorePassword = getPassword(conf, passwordProperty, "");
-      if (keystorePassword.isEmpty()) {
-        throw new GeneralSecurityException("The property '" + passwordProperty +
-          "' has not been set in the ssl configuration file.");
-      }
-      String keyPasswordProperty =
-        resolvePropertyName(mode, SSL_KEYSTORE_KEYPASSWORD_TPL_KEY);
-      // Key password defaults to the same value as store password for
-      // compatibility with legacy configurations that did not use a separate
-      // configuration property for key password.
-      keystoreKeyPassword = getPassword(
-          conf, keyPasswordProperty, keystorePassword);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
-      }
+        conf.get(resolvePropertyName(mode, SSL_KEYSTORE_TYPE_TPL_KEY),
+                 DEFAULT_KEYSTORE_TYPE);
 
-      InputStream is = Files.newInputStream(Paths.get(keystoreLocation));
-      try {
-        keystore.load(is, keystorePassword.toCharArray());
-      } finally {
-        is.close();
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(mode.toString() + " Loaded KeyStore: " + keystoreLocation);
-      }
+    if (requireClientCert || mode == SSLFactory.Mode.SERVER) {
+      createKeyManagersFromConfiguration(mode, keystoreType, storesReloadInterval);
     } else {
+      KeyStore keystore = KeyStore.getInstance(keystoreType);
       keystore.load(null, null);
+      KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(
+          SSLFactory.KEY_MANAGER_SSLCERTIFICATE);
+
+      keyMgrFactory.init(keystore, null);
+      keyManagers = keyMgrFactory.getKeyManagers();
     }
-    KeyManagerFactory keyMgrFactory = KeyManagerFactory
-        .getInstance(SSLFactory.SSLCERTIFICATE);
-      
-    keyMgrFactory.init(keystore, (keystoreKeyPassword != null) ?
-                                 keystoreKeyPassword.toCharArray() : null);
-    keyManagers = keyMgrFactory.getKeyManagers();
 
     //trust store
     String truststoreType =
@@ -199,33 +289,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
       resolvePropertyName(mode, SSL_TRUSTSTORE_LOCATION_TPL_KEY);
     String truststoreLocation = conf.get(locationProperty, "");
     if (!truststoreLocation.isEmpty()) {
-      String passwordProperty = resolvePropertyName(mode,
-          SSL_TRUSTSTORE_PASSWORD_TPL_KEY);
-      String truststorePassword = getPassword(conf, passwordProperty, "");
-      if (truststorePassword.isEmpty()) {
-        // An empty trust store password is legal; the trust store password
-        // is only required when writing to a trust store. Otherwise it's
-        // an optional integrity check.
-        truststorePassword = null;
-      }
-      long truststoreReloadInterval =
-          conf.getLong(
-              resolvePropertyName(mode, SSL_TRUSTSTORE_RELOAD_INTERVAL_TPL_KEY),
-              DEFAULT_SSL_TRUSTSTORE_RELOAD_INTERVAL);
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(mode.toString() + " TrustStore: " + truststoreLocation);
-      }
-
-      trustManager = new ReloadingX509TrustManager(truststoreType,
-          truststoreLocation,
-          truststorePassword,
-          truststoreReloadInterval);
-      trustManager.init();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(mode.toString() + " Loaded TrustStore: " + truststoreLocation);
-      }
-      trustManagers = new TrustManager[]{trustManager};
+      createTrustManagersFromConfiguration(mode, truststoreType, truststoreLocation, storesReloadInterval);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("The property '" + locationProperty + "' has not been set, " +
@@ -256,7 +320,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
   @Override
   public synchronized void destroy() {
     if (trustManager != null) {
-      trustManager.destroy();
+      fileMonitoringTimer.cancel();
       trustManager = null;
       keyManagers = null;
       trustManagers = null;

@@ -29,10 +29,13 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -48,6 +51,17 @@ public class TestViewfsFileStatus {
   private static final File TEST_DIR = GenericTestUtils.getTestDir(
       TestViewfsFileStatus.class.getSimpleName());
 
+  @Before
+  public void setUp() {
+    FileUtil.fullyDelete(TEST_DIR);
+    assertTrue(TEST_DIR.mkdirs());
+  }
+
+  @After
+  public void tearDown() throws IOException {
+    FileUtil.fullyDelete(TEST_DIR);
+  }
+
   @Test
   public void testFileStatusSerialziation()
       throws IOException, URISyntaxException {
@@ -56,38 +70,92 @@ public class TestViewfsFileStatus {
     File infile = new File(TEST_DIR, testfilename);
     final byte[] content = "dingos".getBytes();
 
-    FileOutputStream fos = null;
-    try {
-      fos = new FileOutputStream(infile);
+    try (FileOutputStream fos =  new FileOutputStream(infile)) {
       fos.write(content);
-    } finally {
-      if (fos != null) {
-        fos.close();
-      }
     }
     assertEquals((long)content.length, infile.length());
 
     Configuration conf = new Configuration();
     ConfigUtil.addLink(conf, "/foo/bar/baz", TEST_DIR.toURI());
-    FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
-    assertEquals(ViewFileSystem.class, vfs.getClass());
-    Path path = new Path("/foo/bar/baz", testfilename);
-    FileStatus stat = vfs.getFileStatus(path);
-    assertEquals(content.length, stat.getLen());
-    ContractTestUtils.assertNotErasureCoded(vfs, path);
-    assertTrue(path + " should have erasure coding unset in " +
-            "FileStatus#toString(): " + stat,
-        stat.toString().contains("isErasureCoded=false"));
+    try (FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf)) {
+      assertEquals(ViewFileSystem.class, vfs.getClass());
+      Path path = new Path("/foo/bar/baz", testfilename);
+      FileStatus stat = vfs.getFileStatus(path);
+      assertEquals(content.length, stat.getLen());
+      ContractTestUtils.assertNotErasureCoded(vfs, path);
+      assertTrue(path + " should have erasure coding unset in " +
+          "FileStatus#toString(): " + stat,
+          stat.toString().contains("isErasureCoded=false"));
 
-    // check serialization/deserialization
-    DataOutputBuffer dob = new DataOutputBuffer();
-    stat.write(dob);
-    DataInputBuffer dib = new DataInputBuffer();
-    dib.reset(dob.getData(), 0, dob.getLength());
-    FileStatus deSer = new FileStatus();
-    deSer.readFields(dib);
-    assertEquals(content.length, deSer.getLen());
-    assertFalse(deSer.isErasureCoded());
+      // check serialization/deserialization
+      DataOutputBuffer dob = new DataOutputBuffer();
+      stat.write(dob);
+      DataInputBuffer dib = new DataInputBuffer();
+      dib.reset(dob.getData(), 0, dob.getLength());
+      FileStatus deSer = new FileStatus();
+      deSer.readFields(dib);
+      assertEquals(content.length, deSer.getLen());
+      assertFalse(deSer.isErasureCoded());
+    }
+  }
+
+  /**
+   * Tests the ACL returned from getFileStatus for directories and files.
+   * @throws IOException
+   */
+  @Test
+  public void testListStatusACL() throws IOException {
+    String testfilename = "testFileACL";
+    String childDirectoryName = "testDirectoryACL";
+    TEST_DIR.mkdirs();
+    File infile = new File(TEST_DIR, testfilename);
+    final byte[] content = "dingos".getBytes();
+
+    try (FileOutputStream fos =  new FileOutputStream(infile)) {
+      fos.write(content);
+    }
+    assertEquals(content.length, infile.length());
+    File childDir = new File(TEST_DIR, childDirectoryName);
+    childDir.mkdirs();
+
+    Configuration conf = new Configuration();
+    ConfigUtil.addLink(conf, "/file", infile.toURI());
+    ConfigUtil.addLink(conf, "/dir", childDir.toURI());
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
+    try (FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf)) {
+      assertEquals(ViewFileSystem.class, vfs.getClass());
+      FileStatus[] statuses = vfs.listStatus(new Path("/"));
+
+      FileSystem localFs = FileSystem.getLocal(conf);
+      FileStatus fileStat = localFs.getFileStatus(new Path(infile.getPath()));
+      FileStatus dirStat = localFs.getFileStatus(new Path(childDir.getPath()));
+
+      for (FileStatus status : statuses) {
+        if (status.getPath().getName().equals("file")) {
+          assertEquals(fileStat.getPermission(), status.getPermission());
+        } else {
+          assertEquals(dirStat.getPermission(), status.getPermission());
+        }
+      }
+
+      localFs.setPermission(new Path(infile.getPath()),
+          FsPermission.valueOf("-rwxr--r--"));
+      localFs.setPermission(new Path(childDir.getPath()),
+          FsPermission.valueOf("-r--rwxr--"));
+
+      statuses = vfs.listStatus(new Path("/"));
+      for (FileStatus status : statuses) {
+        if (status.getPath().getName().equals("file")) {
+          assertEquals(FsPermission.valueOf("-rwxr--r--"),
+              status.getPermission());
+          assertFalse(status.isDirectory());
+        } else {
+          assertEquals(FsPermission.valueOf("-r--rwxr--"),
+              status.getPermission());
+          assertTrue(status.isDirectory());
+        }
+      }
+    }
   }
 
   // Tests that ViewFileSystem.getFileChecksum calls res.targetFileSystem
@@ -97,8 +165,8 @@ public class TestViewfsFileStatus {
     final Path path = new Path("/tmp/someFile");
     FileSystem mockFS = Mockito.mock(FileSystem.class);
     InodeTree.ResolveResult<FileSystem> res =
-      new InodeTree.ResolveResult<FileSystem>(null, mockFS , null,
-        new Path("someFile"));
+        new InodeTree.ResolveResult<FileSystem>(null, mockFS, null,
+            new Path("someFile"), true);
     @SuppressWarnings("unchecked")
     InodeTree<FileSystem> fsState = Mockito.mock(InodeTree.class);
     Mockito.when(fsState.resolve(path.toString(), true)).thenReturn(res);

@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.TestRollingUpgrade;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -361,9 +362,8 @@ public class TestDataNodeRollingUpgrade {
       // Restart the DN with a new layout version to trigger layout upgrade.
       LOG.info("Shutting down the Datanode");
       MiniDFSCluster.DataNodeProperties dnprop = cluster.stopDataNode(0);
-      DFSTestUtil.addDataNodeLayoutVersion(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1,
-          "Test Layout for TestDataNodeRollingUpgrade");
+      addDataNodeLayoutVersion(
+          DataNodeLayoutVersion.getCurrentLayoutVersion() - 1);
       LOG.info("Restarting the DataNode");
       cluster.restartDataNode(dnprop, true);
       cluster.waitActive();
@@ -422,9 +422,8 @@ public class TestDataNodeRollingUpgrade {
       // Restart the DN with a new layout version to trigger layout upgrade.
       LOG.info("Shutting down the Datanode");
       MiniDFSCluster.DataNodeProperties dnprop = cluster.stopDataNode(0);
-      DFSTestUtil.addDataNodeLayoutVersion(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1,
-          "Test Layout for TestDataNodeRollingUpgrade");
+      addDataNodeLayoutVersion(
+          DataNodeLayoutVersion.getCurrentLayoutVersion() - 1);
       LOG.info("Restarting the DataNode");
       cluster.restartDataNode(dnprop, true);
       cluster.waitActive();
@@ -469,5 +468,19 @@ public class TestDataNodeRollingUpgrade {
     } finally {
       shutdownCluster();
     }
+  }
+
+  static void addDataNodeLayoutVersion(final int lv) {
+    assertTrue(lv < DataNodeLayoutVersion.getCurrentLayoutVersion());
+    DataNodeLayoutVersion.setCurrentLayoutVersionForTesting(lv);
+
+    // Inject the feature into the FEATURES map.
+    final LayoutVersion.FeatureInfo featureInfo =
+        new LayoutVersion.FeatureInfo(lv, lv + 1,
+            "Test Layout for TestDataNodeRollingUpgrade", false);
+
+    // Update the FEATURES map with the new layout version.
+    LayoutVersion.updateMap(DataNodeLayoutVersion.FEATURES,
+        new LayoutVersion.LayoutFeature[]{() -> featureInfo});
   }
 }

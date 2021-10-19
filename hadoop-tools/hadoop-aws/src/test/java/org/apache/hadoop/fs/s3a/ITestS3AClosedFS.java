@@ -19,17 +19,21 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.util.Set;
 
+import org.assertj.core.api.Assertions;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCurrentThreadNames;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.listInitialThreadsForLifecycleChecks;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
 
 /**
- * Tests of the S3A FileSystem which is closed; just make sure
- * that that basic file Ops fail meaningfully.
+ * Tests of the S3A FileSystem which is closed.
  */
 public class ITestS3AClosedFS extends AbstractS3ATestBase {
 
@@ -45,6 +49,16 @@ public class ITestS3AClosedFS extends AbstractS3ATestBase {
   @Override
   public void teardown()  {
     // no op, as the FS is closed
+  }
+
+  private static final Set<String> THREAD_SET =
+      listInitialThreadsForLifecycleChecks();
+
+  @AfterClass
+  public static void checkForThreadLeakage() {
+    Assertions.assertThat(getCurrentThreadNames())
+        .describedAs("The threads at the end of the test run")
+        .isSubsetOf(THREAD_SET);
   }
 
   @Test

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos;
 

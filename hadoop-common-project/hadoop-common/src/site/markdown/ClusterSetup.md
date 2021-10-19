@@ -27,7 +27,7 @@ This document does not cover advanced topics such as [Security](./SecureMode.htm
 Prerequisites
 -------------
 
-* Install Java. See the [Hadoop Wiki](http://wiki.apache.org/hadoop/HadoopJavaVersions) for known good versions.
+* Install Java. See the [Hadoop Wiki](https://cwiki.apache.org/confluence/display/HADOOP/Hadoop+Java+Versions) for known good versions.
 * Download a stable version of Hadoop from Apache mirrors.
 
 Installation
@@ -156,7 +156,7 @@ This section deals with important parameters to be specified in the given config
 | `yarn.nodemanager.remote-app-log-dir` | */logs* | HDFS directory where the application logs are moved on application completion. Need to set appropriate permissions. Only applicable if log-aggregation is enabled. |
 | `yarn.nodemanager.remote-app-log-dir-suffix` | *logs* | Suffix appended to the remote log dir. Logs will be aggregated to ${yarn.nodemanager.remote-app-log-dir}/${user}/${thisParam} Only applicable if log-aggregation is enabled. |
 | `yarn.nodemanager.aux-services` | mapreduce\_shuffle | Shuffle service that needs to be set for Map Reduce applications. |
-| `yarn.nodemanager.env-whitelist` | Environment properties to be inherited by containers from NodeManagers | For mapreduce application in addition to the default values HADOOP\_MAPRED_HOME should to be added. Property value should JAVA\_HOME,HADOOP\_COMMON\_HOME,HADOOP\_HDFS\_HOME,HADOOP\_CONF\_DIR,CLASSPATH\_PREPEND\_DISTCACHE,HADOOP\_YARN\_HOME,HADOOP\_MAPRED\_HOME |
+| `yarn.nodemanager.env-whitelist` | Environment properties to be inherited by containers from NodeManagers | For mapreduce application in addition to the default values HADOOP\_MAPRED_HOME should to be added. Property value should JAVA\_HOME,HADOOP\_COMMON\_HOME,HADOOP\_HDFS\_HOME,HADOOP\_CONF\_DIR,CLASSPATH\_PREPEND\_DISTCACHE,HADOOP\_YARN\_HOME,HADOOP\_HOME,PATH,LANG,TZ,HADOOP\_MAPRED\_HOME |
 
   * Configurations for History Server (Needs to be moved elsewhere):
 
@@ -237,7 +237,7 @@ To start a Hadoop cluster you will need to start both the HDFS and YARN cluster.
 
 The first time you bring up HDFS, it must be formatted. Format a new distributed filesystem as *hdfs*:
 
-    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format <cluster_name>
+    [hdfs]$ $HADOOP_HOME/bin/hdfs namenode -format
 
 Start the HDFS NameNode with the following command on the designated node as *hdfs*:
 

@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -292,12 +293,22 @@ public class TestConfiguredFailoverProxyProvider {
         MockDomainNameResolver.FQDN_2 : "/" + MockDomainNameResolver.ADDR_2;
     // Check we got the proper addresses
     assertEquals(2, proxyResults.size());
-    assertTrue(
-        "nn1 wasn't returned: " + proxyResults,
-        proxyResults.containsKey(resolvedHost1 + ":8020"));
-    assertTrue(
-        "nn2 wasn't returned: " + proxyResults,
-        proxyResults.containsKey(resolvedHost2 + ":8020"));
+    if (Shell.isJavaVersionAtLeast(14) && useFQDN) {
+      // JDK-8225499. The string format of unresolved address has been changed.
+      assertTrue(
+          "nn1 wasn't returned: " + proxyResults,
+          proxyResults.containsKey(resolvedHost1 + "/<unresolved>:8020"));
+      assertTrue(
+          "nn2 wasn't returned: " + proxyResults,
+          proxyResults.containsKey(resolvedHost2 + "/<unresolved>:8020"));
+    } else {
+      assertTrue(
+          "nn1 wasn't returned: " + proxyResults,
+          proxyResults.containsKey(resolvedHost1 + ":8020"));
+      assertTrue(
+          "nn2 wasn't returned: " + proxyResults,
+          proxyResults.containsKey(resolvedHost2 + ":8020"));
+    }
 
     // Check that the Namenodes were invoked
     assertEquals(NUM_ITERATIONS, nn1Count.get() + nn2Count.get());

@@ -75,7 +75,12 @@ public class TestHAFsck {
       
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
-      
+
+      runFsck(conf);
+      // Stop one standby namenode, FSCK should still be successful, since there
+      // is one Active namenode available
+      cluster.getNameNode(0).stop();
+
       runFsck(conf);
     } finally {
       if (fs != null) {

@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebServices.RequestInterceptorChainWrapper;
@@ -169,13 +170,20 @@ public abstract class BaseRouterWebServicesTest {
   protected AppsInfo getApps(String user)
       throws IOException, InterruptedException {
     return routerWebService.getApps(createHttpServletRequest(user), null, null,
-        null, null, null, null, null, null, null, null, null, null, null);
+        null, null, null, null, null, null, null, null, null, null, null,
+        null);
   }
 
   protected ActivitiesInfo getActivities(String user)
       throws IOException, InterruptedException {
     return routerWebService.getActivities(
         createHttpServletRequest(user), null, null);
+  }
+
+  protected BulkActivitiesInfo getBulkActivities(String user)
+      throws InterruptedException {
+    return routerWebService.getBulkActivities(
+        createHttpServletRequest(user), null, 0);
   }
 
   protected AppActivitiesInfo getAppActivities(String user)

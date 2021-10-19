@@ -127,7 +127,9 @@ Here is an example for creating a Scheduling Request object with NodeAttribute e
             .build();
 
 The above SchedulingRequest requests for 1 container on nodes that must satisfy following constraints:
+
 1. Node attribute *`rm.yarn.io/python`* doesn't exist on the node or it exist but its value is not equal to 3
+
 2. Node attribute *`rm.yarn.io/java`* must exist on the node and its value is equal to 1.8
 
 

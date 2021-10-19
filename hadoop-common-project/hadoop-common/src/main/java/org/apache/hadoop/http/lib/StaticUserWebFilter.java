@@ -19,7 +19,7 @@ package org.apache.hadoop.http.lib;
 
 import java.io.IOException;
 import java.security.Principal;
-import java.util.HashMap;
+import java.util.Collections;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -121,14 +121,10 @@ public class StaticUserWebFilter extends FilterInitializer {
 
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
-    HashMap<String, String> options = new HashMap<String, String>();
-    
     String username = getUsernameFromConf(conf);
-    options.put(HADOOP_HTTP_STATIC_USER, username);
 
-    container.addFilter("static_user_filter", 
-                        StaticUserFilter.class.getName(), 
-                        options);
+    container.addFilter("static_user_filter", StaticUserFilter.class.getName(),
+        Collections.singletonMap(HADOOP_HTTP_STATIC_USER, username));
   }
 
   /**

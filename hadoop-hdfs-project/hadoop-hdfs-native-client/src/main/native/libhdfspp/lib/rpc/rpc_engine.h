@@ -31,13 +31,14 @@
 
 #include <google/protobuf/message_lite.h>
 
-#include <asio/ip/tcp.hpp>
-#include <asio/deadline_timer.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 #include <atomic>
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <string>
 
 namespace hdfs {
 
@@ -79,8 +80,8 @@ public:
   virtual const RetryPolicy *retry_policy() = 0;
   virtual int NextCallId() = 0;
 
-  virtual const std::string &client_name() = 0;
-  virtual const std::string &client_id() = 0;
+  virtual const std::shared_ptr<std::string> &client_name() = 0;
+  virtual const std::unique_ptr<std::string> &client_id() = 0;
   virtual const std::string &user_name() = 0;
   virtual const std::string &protocol_name() = 0;
   virtual int protocol_version() = 0;
@@ -109,7 +110,7 @@ class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<
   };
 
   RpcEngine(std::shared_ptr<IoService> service, const Options &options,
-            const std::string &client_name, const std::string &user_name,
+            const std::shared_ptr<std::string> &client_name, const std::string &user_name,
             const char *protocol_name, int protocol_version);
 
   void Connect(const std::string & cluster_name,
@@ -141,8 +142,8 @@ class RpcEngine : public LockFreeRpcEngine, public std::enable_shared_from_this<
   void TEST_SetRetryPolicy(std::unique_ptr<const RetryPolicy> policy);
   std::unique_ptr<const RetryPolicy> TEST_GenerateRetryPolicyUsingOptions();
 
-  const std::string &client_name() override { return client_name_; }
-  const std::string &client_id() override { return client_id_; }
+  const std::shared_ptr<std::string> &client_name() override { return client_name_; }
+  const std::unique_ptr<std::string> &client_id() override { return client_id_; }
   const std::string &user_name() override { return auth_info_.getUser(); }
   const std::string &protocol_name() override { return protocol_name_; }
   int protocol_version() override { return protocol_version_; }
@@ -157,23 +158,23 @@ protected:
   virtual std::shared_ptr<RpcConnection> NewConnection();
   virtual std::unique_ptr<const RetryPolicy> MakeRetryPolicy(const Options &options);
 
-  static std::string getRandomClientId();
+  static std::unique_ptr<std::string> getRandomClientId();
 
   // Remember all of the last endpoints in case we need to reconnect and retry
-  std::vector<::asio::ip::tcp::endpoint> last_endpoints_;
+  std::vector<boost::asio::ip::tcp::endpoint> last_endpoints_;
 
 private:
   mutable std::shared_ptr<IoService> io_service_;
   const Options options_;
-  const std::string client_name_;
-  const std::string client_id_;
+  const std::shared_ptr<std::string> client_name_;
+  const std::unique_ptr<std::string> client_id_;
   const std::string protocol_name_;
   const int protocol_version_;
   std::unique_ptr<const RetryPolicy> retry_policy_; //null --> no retry
   AuthInfo auth_info_;
   std::string cluster_name_;
   std::atomic_int call_id_;
-  ::asio::deadline_timer retry_timer;
+  boost::asio::deadline_timer retry_timer;
 
   std::shared_ptr<LibhdfsEvents> event_handlers_;
 

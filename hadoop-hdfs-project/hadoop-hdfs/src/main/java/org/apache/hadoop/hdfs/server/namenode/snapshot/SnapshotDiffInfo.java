@@ -33,8 +33,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.SignedBytes;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 /**

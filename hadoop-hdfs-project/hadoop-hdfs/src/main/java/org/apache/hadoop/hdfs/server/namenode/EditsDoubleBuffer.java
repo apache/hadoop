@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.Writer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A double-buffer for edits. New edits are written into the first buffer
@@ -76,7 +76,7 @@ public class EditsDoubleBuffer {
           + " bytes still to be flushed and cannot be closed.");
     }
 
-    IOUtils.cleanup(null, bufCurrent, bufReady);
+    IOUtils.cleanupWithLogger(null, bufCurrent, bufReady);
     bufCurrent = bufReady = null;
   }
   

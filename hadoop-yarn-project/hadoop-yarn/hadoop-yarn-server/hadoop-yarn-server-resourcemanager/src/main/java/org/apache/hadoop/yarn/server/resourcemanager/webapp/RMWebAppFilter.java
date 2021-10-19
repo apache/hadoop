@@ -38,6 +38,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -52,7 +53,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
@@ -70,7 +70,7 @@ public class RMWebAppFilter extends GuiceContainer {
   // define a set of URIs which do not need to do redirection
   private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(
       "/conf", "/stacks", "/logLevel", "/logs", IsActiveServlet.PATH_SPEC,
-      "/jmx");
+      "/jmx", "/prom");
   private String path;
   private boolean ahsEnabled;
   private String ahsPageURLPrefix;

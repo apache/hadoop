@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @Private
 @Unstable
@@ -125,16 +125,22 @@ public class QueueCLI extends YarnCLI {
   private void printQueueInfo(PrintWriter writer, QueueInfo queueInfo) {
     writer.print("Queue Name : ");
     writer.println(queueInfo.getQueueName());
+    writer.print("Queue Path : ");
+    writer.println(queueInfo.getQueuePath());
 
     writer.print("\tState : ");
     writer.println(queueInfo.getQueueState());
-    DecimalFormat df = new DecimalFormat("#.0");
+    DecimalFormat df = new DecimalFormat("#.00");
     writer.print("\tCapacity : ");
     writer.println(df.format(queueInfo.getCapacity() * 100) + "%");
     writer.print("\tCurrent Capacity : ");
     writer.println(df.format(queueInfo.getCurrentCapacity() * 100) + "%");
     writer.print("\tMaximum Capacity : ");
     writer.println(df.format(queueInfo.getMaximumCapacity() * 100) + "%");
+    writer.print("\tWeight : ");
+    writer.println(df.format(queueInfo.getWeight()));
+    writer.print("\tMaximum Parallel Apps : ");
+    writer.println(queueInfo.getMaxParallelApps());
     writer.print("\tDefault Node Label expression : ");
     String nodeLabelExpression = queueInfo.getDefaultNodeLabelExpression();
     nodeLabelExpression =

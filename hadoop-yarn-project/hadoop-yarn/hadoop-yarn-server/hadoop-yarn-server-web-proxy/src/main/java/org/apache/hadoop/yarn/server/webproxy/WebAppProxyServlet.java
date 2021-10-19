@@ -45,7 +45,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriBuilderException;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -122,6 +122,9 @@ public class WebAppProxyServlet extends HttpServlet {
     }
   }
 
+  protected void setConf(YarnConfiguration conf){
+    this.conf = conf;
+  }
   /**
    * Default constructor
    */
@@ -230,6 +233,14 @@ public class WebAppProxyServlet extends HttpServlet {
 
     String httpsPolicy = conf.get(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY,
         YarnConfiguration.DEFAULT_RM_APPLICATION_HTTPS_POLICY);
+
+    boolean connectionTimeoutEnabled =
+        conf.getBoolean(YarnConfiguration.RM_PROXY_TIMEOUT_ENABLED,
+        YarnConfiguration.DEFALUT_RM_PROXY_TIMEOUT_ENABLED);
+    int connectionTimeout =
+        conf.getInt(YarnConfiguration.RM_PROXY_CONNECTION_TIMEOUT,
+            YarnConfiguration.DEFAULT_RM_PROXY_CONNECTION_TIMEOUT);
+
     if (httpsPolicy.equals("LENIENT") || httpsPolicy.equals("STRICT")) {
       ProxyCA proxyCA = getProxyCA();
       // ProxyCA could be null when the Proxy is run outside the RM
@@ -250,10 +261,18 @@ public class WebAppProxyServlet extends HttpServlet {
     InetAddress localAddress = InetAddress.getByName(proxyHost);
     LOG.debug("local InetAddress for proxy host: {}", localAddress);
     httpClientBuilder.setDefaultRequestConfig(
-        RequestConfig.custom()
-        .setCircularRedirectsAllowed(true)
-        .setLocalAddress(localAddress)
-        .build());
+        connectionTimeoutEnabled ?
+            RequestConfig.custom()
+                .setCircularRedirectsAllowed(true)
+                .setLocalAddress(localAddress)
+                .setConnectionRequestTimeout(connectionTimeout)
+                .setSocketTimeout(connectionTimeout)
+                .setConnectTimeout(connectionTimeout)
+                .build() :
+            RequestConfig.custom()
+                .setCircularRedirectsAllowed(true)
+                .setLocalAddress(localAddress)
+                .build());
 
     HttpRequestBase base = null;
     if (method.equals(HTTP.GET)) {
@@ -621,7 +640,6 @@ public class WebAppProxyServlet extends HttpServlet {
    * again... If this method returns true, there was a redirect, and
    * it was handled by redirecting the current request to an error page.
    *
-   * @param path the part of the request path after the app id
    * @param id the app id
    * @param req the request object
    * @param resp the response object

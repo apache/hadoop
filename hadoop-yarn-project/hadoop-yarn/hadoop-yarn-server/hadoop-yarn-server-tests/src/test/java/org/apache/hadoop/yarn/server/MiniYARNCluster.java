@@ -41,8 +41,10 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.HAUtil;
@@ -70,7 +72,6 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -80,8 +81,7 @@ import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.RequestInterceptor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
-
-
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
@@ -99,7 +99,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -173,8 +173,11 @@ public class MiniYARNCluster extends CompositeService {
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
     this.enableAHS = enableAHS;
-    String testSubDir = testName.replace("$", "");
-    File targetWorkDir = new File("target", testSubDir);
+    String yarnFolderName = String.format("yarn-%d", Time.monotonicNow());
+    File targetWorkDirRoot = GenericTestUtils.getTestDir(getName());
+    // make sure that the folder exists
+    targetWorkDirRoot.mkdirs();
+    File targetWorkDir = new File(targetWorkDirRoot, yarnFolderName);
     try {
       FileContext.getLocalFSFileContext().delete(
           new Path(targetWorkDir.getAbsolutePath()), true);
@@ -229,6 +232,7 @@ public class MiniYARNCluster extends CompositeService {
    * @param numLocalDirs the number of nm-local-dirs per nodemanager
    * @param numLogDirs the number of nm-log-dirs per nodemanager
    */
+  @SuppressWarnings("deprecation")
   public MiniYARNCluster(
       String testName, int numResourceManagers, int numNodeManagers,
       int numLocalDirs, int numLogDirs) {

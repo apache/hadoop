@@ -21,10 +21,10 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,8 +35,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.util.StopWatch;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.Test;
 
@@ -48,22 +49,23 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
-import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.IS_MARKER_AWARE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
+import static org.apache.hadoop.fs.s3a.tools.MarkerTool.MARKERS;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -82,6 +84,11 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   private S3AFileSystem rawFs;
 
   /**
+   * List of tools to close in test teardown.
+   */
+  private final List<S3GuardTool> toolsToClose = new ArrayList<>();
+
+  /**
    * The test timeout is increased in case previous tests have created
    * many tombstone markers which now need to be purged.
    * @return the test timeout.
@@ -89,6 +96,16 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Override
   protected int getTestTimeoutMillis() {
     return SCALE_TEST_TIMEOUT_SECONDS * 1000;
+  }
+
+  /**
+   * Declare that the tool is to be closed in teardown.
+   * @param tool tool to close
+   * @return the tool.
+   */
+  protected <T extends S3GuardTool> T toClose(T tool) {
+    toolsToClose.add(tool);
+    return tool;
   }
 
   protected static void expectResult(int expected,
@@ -109,7 +126,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   public static String expectSuccess(
       String message,
       S3GuardTool tool,
-      String... args) throws Exception {
+      Object... args) throws Exception {
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
     exec(SUCCESS, message, tool, buf, args);
     return buf.toString();
@@ -122,9 +139,9 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the return code
    * @throws Exception any exception
    */
-  protected int run(Configuration conf, String... args)
+  protected int run(Configuration conf, Object... args)
       throws Exception {
-    return S3GuardTool.run(conf, args);
+    return runS3GuardCommand(conf, args);
   }
 
   /**
@@ -134,8 +151,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the return code
    * @throws Exception any exception
    */
-  protected int run(String... args) throws Exception {
-    return S3GuardTool.run(getConfiguration(), args);
+  protected int run(Object... args) throws Exception {
+    return runS3GuardCommand(getConfiguration(), args);
   }
 
   /**
@@ -145,11 +162,12 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @param args argument list
    * @throws Exception any exception
    */
-  protected void runToFailure(int status, String... args)
+  protected void runToFailure(int status, Object... args)
       throws Exception {
+    final Configuration conf = getConfiguration();
     ExitUtil.ExitException ex =
-        intercept(ExitUtil.ExitException.class,
-            () -> run(args));
+        intercept(ExitUtil.ExitException.class, () ->
+            runS3GuardCommand(conf, args));
     if (ex.status != status) {
       throw ex;
     }
@@ -172,7 +190,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     URI fsUri = fs.getUri();
     S3AUtils.setBucketOption(conf,fsUri.getHost(),
-        METADATASTORE_AUTHORITATIVE,
+        S3_METADATA_STORE_IMPL,
         S3GUARD_METASTORE_NULL);
     rawFs = (S3AFileSystem) FileSystem.newInstance(fsUri, conf);
   }
@@ -180,6 +198,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Override
   public void teardown() throws Exception {
     super.teardown();
+    toolsToClose.forEach(t -> IOUtils.cleanupWithLogger(LOG, t));
     IOUtils.cleanupWithLogger(LOG, ms);
     IOUtils.closeStream(rawFs);
   }
@@ -231,7 +250,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       ContractTestUtils.touch(fs, path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(100L, System.currentTimeMillis(),
-          fs.qualify(path), 512L, "hdfs", null, null);
+          fs.makeQualified(path), 512L, "hdfs", null, null);
       putFile(ms, status);
     }
   }
@@ -264,9 +283,9 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     Path keepParent = path("prune-cli-keep");
     StopWatch timer = new StopWatch();
     final S3AFileSystem fs = getFileSystem();
+    S3GuardTool.Prune cmd = toClose(new S3GuardTool.Prune(cmdConf));
+    cmd.setMetadataStore(ms);
     try {
-      S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
-      cmd.setMetadataStore(ms);
 
       fs.mkdirs(parent);
       fs.mkdirs(keepParent);
@@ -299,6 +318,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
           Long.MAX_VALUE,
           fs.pathToKey(keepParent));
+      // reset the store before we close the tool.
+      cmd.setMetadataStore(new NullMetadataStore());
     }
   }
 
@@ -323,14 +344,20 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     Path testPath = path("testPruneCommandTombstones");
     getFileSystem().mkdirs(testPath);
     getFileSystem().delete(testPath, true);
-    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    S3GuardTool.Prune cmd = toClose(
+        new S3GuardTool.Prune(getFileSystem().getConf()));
     cmd.setMetadataStore(ms);
-    exec(cmd,
-        "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
-        "-seconds", "0",
-        testPath.toString());
-    assertNotNull("Command did not create a filesystem",
-        cmd.getFilesystem());
+    try {
+      exec(cmd,
+          "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
+          "-seconds", "0",
+          testPath.toString());
+      assertNotNull("Command did not create a filesystem",
+          cmd.getFilesystem());
+    } finally {
+      // reset the store before we close the tool.
+      cmd.setMetadataStore(new NullMetadataStore());
+    }
   }
 
   /**
@@ -339,10 +366,12 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testMaybeInitFilesystem() throws Exception {
     Path testPath = path("maybeInitFilesystem");
-    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
-    cmd.maybeInitFilesystem(Collections.singletonList(testPath.toString()));
-    assertNotNull("Command did not create a filesystem",
-        cmd.getFilesystem());
+    try (S3GuardTool.Prune cmd =
+             new S3GuardTool.Prune(getFileSystem().getConf())) {
+      cmd.maybeInitFilesystem(Collections.singletonList(testPath.toString()));
+      assertNotNull("Command did not create a filesystem",
+          cmd.getFilesystem());
+    }
   }
 
   /**
@@ -350,10 +379,12 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    */
   @Test
   public void testMaybeInitFilesystemNoPath() throws Exception {
-    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
-    cmd.maybeInitFilesystem(Collections.emptyList());
-    assertNull("Command should not have created a filesystem",
-        cmd.getFilesystem());
+    try (S3GuardTool.Prune cmd = new S3GuardTool.Prune(
+        getFileSystem().getConf())) {
+      cmd.maybeInitFilesystem(Collections.emptyList());
+      assertNull("Command should not have created a filesystem",
+          cmd.getFilesystem());
+    }
   }
 
   @Test
@@ -379,13 +410,13 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     String bucket = getFileSystem().getBucket();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, getFileSystem().getBucket());
 
-    S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
+    S3GuardTool.SetCapacity cmdR = toClose(new S3GuardTool.SetCapacity(conf));
     String[] argsR =
         new String[]{cmdR.getName(), "-read", "0", "s3a://" + bucket};
     intercept(IllegalArgumentException.class,
         S3GuardTool.SetCapacity.READ_CAP_INVALID, () -> cmdR.run(argsR));
 
-    S3GuardTool.SetCapacity cmdW = new S3GuardTool.SetCapacity(conf);
+    S3GuardTool.SetCapacity cmdW = toClose(new S3GuardTool.SetCapacity(conf));
     String[] argsW =
         new String[]{cmdW.getName(), "-write", "0", "s3a://" + bucket};
     intercept(IllegalArgumentException.class,
@@ -408,13 +439,51 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
     // run a bucket info command and look for
     // confirmation that it got the output from DDB diags
-    S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);
+    S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
     String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
         "-" + S3GuardTool.BucketInfo.UNGUARDED_FLAG,
         fsUri.toString());
 
     assertTrue("Output should contain information about S3A client " + info,
         info.contains("S3A Client"));
+  }
+
+  /**
+   * Verify that the {@code -markers aware} option works.
+   * This test case is in this class for ease of backporting.
+   */
+  @Test
+  public void testBucketInfoMarkerAware() throws Throwable {
+    final Configuration conf = getConfiguration();
+    URI fsUri = getFileSystem().getUri();
+
+    // run a bucket info command and look for
+    // confirmation that it got the output from DDB diags
+    S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
+    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+        "-" + MARKERS, S3GuardTool.BucketInfo.MARKERS_AWARE,
+        fsUri.toString());
+
+    assertTrue("Output should contain information about S3A client " + info,
+        info.contains(IS_MARKER_AWARE));
+  }
+
+  /**
+   * Verify that the {@code -markers} option fails on unknown options.
+   * This test case is in this class for ease of backporting.
+   */
+  @Test
+  public void testBucketInfoMarkerPolicyUnknown() throws Throwable {
+    final Configuration conf = getConfiguration();
+    URI fsUri = getFileSystem().getUri();
+
+    // run a bucket info command and look for
+    // confirmation that it got the output from DDB diags
+    S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
+    intercept(ExitUtil.ExitException.class, ""+ EXIT_NOT_ACCEPTABLE, () ->
+        exec(infocmd, S3GuardTool.BucketInfo.NAME,
+            "-" + MARKERS, "unknown",
+            fsUri.toString()));
   }
 
   @Test
@@ -427,7 +496,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_CREATE_KEY);
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
 
-    S3GuardTool.SetCapacity cmdR = new S3GuardTool.SetCapacity(conf);
+    S3GuardTool.SetCapacity cmdR = toClose(new S3GuardTool.SetCapacity(conf));
     String[] argsR = new String[]{
         cmdR.getName(),
         "s3a://" + getFileSystem().getBucket()
@@ -467,7 +536,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         Arrays.asList(S3GuardTool.Destroy.class, S3GuardTool.BucketInfo.class,
             S3GuardTool.Diff.class, S3GuardTool.Import.class,
             S3GuardTool.Prune.class, S3GuardTool.SetCapacity.class,
-            S3GuardTool.Uploads.class);
+            S3GuardTool.Uploads.class,
+            S3GuardTool.Authoritative.class);
 
     for (Class<? extends S3GuardTool> tool : tools) {
       S3GuardTool cmdR = makeBindedTool(tool);
@@ -476,7 +546,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
           cmdR.getName(),
           S3A_THIS_BUCKET_DOES_NOT_EXIST
       };
-      intercept(FileNotFoundException.class,
+      intercept(UnknownStoreException.class,
           () -> cmdR.run(argsR));
     }
   }
@@ -500,7 +570,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     List<Class<? extends S3GuardTool>> tools =
         Arrays.asList(S3GuardTool.BucketInfo.class, S3GuardTool.Diff.class,
             S3GuardTool.Import.class, S3GuardTool.Prune.class,
-            S3GuardTool.SetCapacity.class, S3GuardTool.Uploads.class);
+            S3GuardTool.SetCapacity.class, S3GuardTool.Uploads.class,
+            S3GuardTool.Authoritative.class);
 
     for (Class<? extends S3GuardTool> tool : tools) {
       S3GuardTool cmdR = makeBindedTool(tool);
@@ -517,16 +588,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     String name = fs.getUri().toString();
     S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
         getConfiguration());
-    if (fs.hasCapability(
-        CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER)) {
-      // if the FS is magic, expect this to work
+    // this must always work
       exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name);
-    } else {
-      // if the FS isn't magic, expect the probe to fail
-      assertExitCode(E_BAD_STATE,
-          intercept(ExitUtil.ExitException.class,
-              () -> exec(cmd, S3GuardTool.BucketInfo.MAGIC_FLAG, name)));
-    }
   }
 
   /**
@@ -589,7 +652,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     }
 
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
-    S3GuardTool.Diff cmd = new S3GuardTool.Diff(fs.getConf());
+    S3GuardTool.Diff cmd = toClose(new S3GuardTool.Diff(fs.getConf()));
     cmd.setStore(ms);
     String table = "dynamo://" + getTestTableName(DYNAMODB_TABLE);
     exec(0, "", cmd, buf, "diff", "-meta", table, testPath.toString());
@@ -624,4 +687,5 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     assertEquals("Mismatched s3 outputs: " + actualOut, filesOnS3, actualOnS3);
     assertFalse("Diff contained duplicates", duplicates);
   }
+
 }

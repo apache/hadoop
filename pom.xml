@@ -18,7 +18,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -80,7 +80,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <properties>
     <!-- required as child projects with different version can't use ${project.version} -->
-    <hadoop.version>3.3.0-SNAPSHOT</hadoop.version>
+    <hadoop.version>3.4.0-SNAPSHOT</hadoop.version>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
@@ -101,21 +101,25 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
     <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
+    <restrict-imports.enforcer.version>1.1.0</restrict-imports.enforcer.version>
     <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
     <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <wagon-ssh.version>2.4</wagon-ssh.version>
-    <maven-clover2-plugin.version>3.3.0</maven-clover2-plugin.version>
+    <clover-maven-plugin.version>4.4.1</clover-maven-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
-    <maven-checkstyle-plugin.version>3.0.0</maven-checkstyle-plugin.version>
-    <checkstyle.version>8.19</checkstyle.version>
+    <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
+    <checkstyle.version>8.29</checkstyle.version>
     <dependency-check-maven.version>1.4.3</dependency-check-maven.version>
+    <spotbugs.version>4.2.2</spotbugs.version>
+    <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
+    <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
   </properties>
 
   <modules>
@@ -157,6 +161,49 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               </requireJavaVersion>
             </rules>
           </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>de.skuzzle.enforcer</groupId>
+              <artifactId>restrict-imports-enforcer-rule</artifactId>
+              <version>${restrict-imports.enforcer.version}</version>
+            </dependency>
+          </dependencies>
+          <executions>
+            <execution>
+              <id>banned-illegal-imports</id>
+              <phase>process-sources</phase>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-thirdparty shaded instead of curator shaded</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.curator.shaded.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-common provided Sets rather than Guava provided Sets</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Sets</bannedImport>
+                      <bannedImport>com.google.common.collect.Sets</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-common provided Lists rather than Guava provided Lists</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Lists</bannedImport>
+                      <bannedImport>com.google.common.collect.Lists</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -303,9 +350,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           </configuration>
         </plugin>
         <plugin>
-          <groupId>com.atlassian.maven.plugins</groupId>
-          <artifactId>maven-clover2-plugin</artifactId>
-          <version>${maven-clover2-plugin.version}</version>
+          <groupId>org.openclover</groupId>
+          <artifactId>clover-maven-plugin</artifactId>
+          <version>${clover-maven-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>org.apache.felix</groupId>
@@ -333,8 +380,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <failOnViolation>false</failOnViolation>
-            <format>xml</format>
-            <format>html</format>
             <outputFile>${project.build.directory}/test/checkstyle-errors.xml</outputFile>
           </configuration>
         </plugin>
@@ -342,6 +387,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           <groupId>org.owasp</groupId>
           <artifactId>dependency-check-maven</artifactId>
           <version>${dependency-check-maven.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>${spotbugs-maven-plugin.version}</version>
+          <dependencies>
+            <dependency>
+              <groupId>com.github.spotbugs</groupId>
+              <artifactId>spotbugs</artifactId>
+              <version>${spotbugs.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -405,11 +462,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
-            <exclude>hadoop-hdds/**/</exclude>
-            <exclude>hadoop-ozone/**/</exclude>
-            <exclude>hadoop-submarine/**/</exclude>
             <exclude>licenses/**</exclude>
             <exclude>licenses-binary/**</exclude>
+            <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
+            <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
          </excludes>
        </configuration>
       </plugin>
@@ -446,6 +502,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         <groupId>org.owasp</groupId>
         <artifactId>dependency-check-maven</artifactId>
         <version>${dependency-check-maven.version}</version>
+      </plugin>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
@@ -587,62 +647,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         </plugins>
       </build>
     </profile>
-    <profile>
-      <id>submarine-src</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <inherited>false</inherited>
-            <executions>
-              <execution>
-                <id>src-dist</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>single</goal>
-                </goals>
-                <configuration>
-                  <appendAssemblyId>false</appendAssemblyId>
-                  <attach>false</attach>
-                  <finalName>hadoop-submarine-${project.version}-src</finalName>
-                  <outputDirectory>hadoop-dist/target</outputDirectory>
-                  <!-- Not using descriptorRef and hadoop-assembly dependency -->
-                  <!-- to avoid making hadoop-main to depend on a module      -->
-                  <descriptors>
-                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-submarine.xml</descriptor>
-                  </descriptors>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <inherited>false</inherited>
-            <executions>
-              <execution>
-                <id>src-dist-msg</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <echo/>
-                    <echo>Hadoop source tar with Submarine source is available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-submarine.tar.gz</echo>
-                    <echo/>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
 
 
     <profile>
@@ -675,7 +679,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         </property>
       </activation>
       <properties>
-        <cloverLicenseLocation>${user.home}/.clover.license</cloverLicenseLocation>
         <cloverDatabase>${project.build.directory}/clover/hadoop-coverage.db</cloverDatabase>
         <!-- NB: This additional parametrization is made in order
              to be able to re-define these properties with "-Dk=v" maven options.
@@ -693,12 +696,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <build>
         <plugins>
           <plugin>
-            <groupId>com.atlassian.maven.plugins</groupId>
-            <artifactId>maven-clover2-plugin</artifactId>
+            <groupId>org.openclover</groupId>
+            <artifactId>clover-maven-plugin</artifactId>
             <configuration>
               <includesAllSourceRoots>false</includesAllSourceRoots>
               <includesTestSourceRoots>true</includesTestSourceRoots>
-              <licenseLocation>${cloverLicenseLocation}</licenseLocation>
               <cloverDatabase>${cloverDatabase}</cloverDatabase>
               <targetPercentage>50%</targetPercentage>
               <outputDirectory>${project.build.directory}/clover</outputDirectory>
@@ -741,23 +743,16 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       </build>
     </profile>
     <profile>
-      <id>hdds</id>
+      <id>aarch64</id>
+      <properties>
+        <leveldbjni.group>org.openlabtesting.leveldbjni</leveldbjni.group>
+      </properties>
       <activation>
-        <activeByDefault>false</activeByDefault>
+        <os>
+          <family>linux</family>
+          <arch>aarch64</arch>
+        </os>
       </activation>
-      <modules>
-        <module>hadoop-hdds</module>
-        <module>hadoop-ozone</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>submarine</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <modules>
-        <module>hadoop-submarine</module>
-      </modules>
     </profile>
 
   </profiles>

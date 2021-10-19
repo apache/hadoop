@@ -27,16 +27,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Shorts;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Shorts;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
 
 import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -84,6 +82,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -114,6 +113,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryScopeProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTypeProto;
@@ -184,6 +184,8 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryP
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryStatusProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotListingProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageTypesProto;
@@ -207,11 +209,13 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.LimitInputStream;
+import org.apache.hadoop.util.Lists;
 
 /**
  * Utilities for converting protobuf classes to and from hdfs-client side
@@ -232,33 +236,8 @@ public class PBHelperClient {
   private static final FsAction[] FSACTION_VALUES =
       FsAction.values();
 
-  /**
-   * Map used to cache fixed strings to ByteStrings. Since there is no
-   * automatic expiration policy, only use this for strings from a fixed, small
-   * set.
-   * <p/>
-   * This map should not be accessed directly. Used the getFixedByteString
-   * methods instead.
-   */
-  private static ConcurrentHashMap<Object, ByteString> fixedByteStringCache =
-      new ConcurrentHashMap<>();
-
-  private static ByteString getFixedByteString(Text key) {
-    ByteString value = fixedByteStringCache.get(key);
-    if (value == null) {
-      value = ByteString.copyFromUtf8(key.toString());
-      fixedByteStringCache.put(new Text(key.copyBytes()), value);
-    }
-    return value;
-  }
-
   private static ByteString getFixedByteString(String key) {
-    ByteString value = fixedByteStringCache.get(key);
-    if (value == null) {
-      value = ByteString.copyFromUtf8(key);
-      fixedByteStringCache.put(key, value);
-    }
-    return value;
+    return ProtobufHelper.getFixedByteString(key);
   }
 
   /**
@@ -281,7 +260,7 @@ public class PBHelperClient {
 
   public static ByteString getByteString(byte[] bytes) {
     // return singleton to reduce object allocation
-    return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
+    return ProtobufHelper.getByteString(bytes);
   }
 
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
@@ -349,12 +328,7 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    TokenProto.Builder builder = TokenProto.newBuilder().
-        setIdentifier(getByteString(tok.getIdentifier())).
-        setPassword(getByteString(tok.getPassword())).
-        setKindBytes(getFixedByteString(tok.getKind())).
-        setServiceBytes(getFixedByteString(tok.getService()));
-    return builder.build();
+    return ProtobufHelper.protoFromToken(tok);
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -501,6 +475,8 @@ public class PBHelperClient {
       return StorageTypeProto.RAM_DISK;
     case PROVIDED:
       return StorageTypeProto.PROVIDED;
+    case NVDIMM:
+      return StorageTypeProto.NVDIMM;
     default:
       throw new IllegalStateException(
           "BUG: StorageType not found, type=" + type);
@@ -519,6 +495,8 @@ public class PBHelperClient {
       return StorageType.RAM_DISK;
     case PROVIDED:
       return StorageType.PROVIDED;
+    case NVDIMM:
+      return StorageType.NVDIMM;
     default:
       throw new IllegalStateException(
           "BUG: StorageTypeProto not found, type=" + type);
@@ -587,6 +565,8 @@ public class PBHelperClient {
     switch (proto) {
     case AES_CTR_NOPADDING:
       return CipherSuite.AES_CTR_NOPADDING;
+    case SM4_CTR_NOPADDING:
+      return CipherSuite.SM4_CTR_NOPADDING;
     default:
       // Set to UNKNOWN and stash the unknown enum value
       CipherSuite suite = CipherSuite.UNKNOWN;
@@ -625,6 +605,8 @@ public class PBHelperClient {
       return HdfsProtos.CipherSuiteProto.UNKNOWN;
     case AES_CTR_NOPADDING:
       return HdfsProtos.CipherSuiteProto.AES_CTR_NOPADDING;
+    case SM4_CTR_NOPADDING:
+      return HdfsProtos.CipherSuiteProto.SM4_CTR_NOPADDING;
     default:
       return null;
     }
@@ -832,11 +814,8 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    Token<BlockTokenIdentifier> token =
-        new Token<>(blockToken.getIdentifier()
-        .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
-        blockToken.getKind()), new Text(blockToken.getService()));
-    return token;
+    return (Token<BlockTokenIdentifier>) ProtobufHelper
+        .tokenFromProto(blockToken);
   }
 
   // DatanodeId
@@ -1701,6 +1680,49 @@ public class PBHelperClient {
         sdirStatusProto.getParentFullpath().toByteArray());
   }
 
+  public static SnapshotStatus[] convert(
+      HdfsProtos.SnapshotListingProto sdlp) {
+    if (sdlp == null) {
+      return null;
+    }
+    List<HdfsProtos.SnapshotStatusProto> list = sdlp
+        .getSnapshotListingList();
+    if (list.isEmpty()) {
+      return new SnapshotStatus[0];
+    } else {
+      SnapshotStatus[] result =
+          new SnapshotStatus[list.size()];
+      for (int i = 0; i < list.size(); i++) {
+        result[i] = convert(list.get(i));
+      }
+      return result;
+    }
+  }
+
+  public static SnapshotStatus convert(
+      HdfsProtos.SnapshotStatusProto sdirStatusProto) {
+    if (sdirStatusProto == null) {
+      return null;
+    }
+    final HdfsFileStatusProto status = sdirStatusProto.getDirStatus();
+    EnumSet<HdfsFileStatus.Flags> flags = status.hasFlags()
+        ? convertFlags(status.getFlags())
+        : convertFlags(status.getPermission());
+    return new SnapshotStatus(
+        status.getModificationTime(),
+        status.getAccessTime(),
+        convert(status.getPermission()),
+        flags,
+        status.getOwner(),
+        status.getGroup(),
+        status.getPath().toByteArray(),
+        status.getFileId(),
+        status.getChildrenNum(),
+        sdirStatusProto.getSnapshotID(),
+        sdirStatusProto.getIsDeleted(),
+        sdirStatusProto.getParentFullpath().toByteArray());
+  }
+
   // DataEncryptionKey
   public static DataEncryptionKey convert(DataEncryptionKeyProto bet) {
     String encryptionAlgorithm = bet.getEncryptionAlgorithm();
@@ -1939,7 +1961,7 @@ public class PBHelperClient {
     return new StorageReport(p.hasStorage() ? convert(p.getStorage())
         : new DatanodeStorage(p.getStorageUuid()), p.getFailed(),
         p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
-        p.getBlockPoolUsed(), nonDfsUsed);
+        p.getBlockPoolUsed(), nonDfsUsed, p.getMount());
   }
 
   public static DatanodeStorage convert(DatanodeStorageProto s) {
@@ -2063,6 +2085,18 @@ public class PBHelperClient {
     return result;
   }
 
+  public static List<HdfsFileStatus> convertHdfsFileStatus(
+      List<HdfsFileStatusProto> fs) {
+    if (fs == null) {
+      return null;
+    }
+    List<HdfsFileStatus> result = Lists.newArrayListWithCapacity(fs.size());
+    for (HdfsFileStatusProto proto : fs) {
+      result.add(convert(proto));
+    }
+    return result;
+  }
+
   // The creatFlag field in PB is a bitmask whose values are the same a the
   // emum values of CreateFlag
   public static int convertCreateFlag(EnumSetWritable<CreateFlag> flag) {
@@ -2098,7 +2132,8 @@ public class PBHelperClient {
         fs.getTrashInterval(),
         convert(fs.getChecksumType()),
         fs.hasKeyProviderUri() ? fs.getKeyProviderUri() : null,
-        (byte) fs.getPolicyId());
+        (byte) fs.getPolicyId(),
+        fs.getSnapshotTrashRootEnabled());
   }
 
   public static List<CryptoProtocolVersionProto> convert(
@@ -2272,7 +2307,8 @@ public class PBHelperClient {
         .setEncryptDataTransfer(fs.getEncryptDataTransfer())
         .setTrashInterval(fs.getTrashInterval())
         .setChecksumType(convert(fs.getChecksumType()))
-        .setPolicyId(fs.getDefaultStoragePolicyId());
+        .setPolicyId(fs.getDefaultStoragePolicyId())
+        .setSnapshotTrashRootEnabled(fs.getSnapshotTrashRootEnabled());
     if (fs.getKeyProviderUri() != null) {
       builder.setKeyProviderUri(fs.getKeyProviderUri());
     }
@@ -2383,6 +2419,24 @@ public class PBHelperClient {
             .setSnapshotNumber(snapshotNumber)
             .setSnapshotQuota(snapshotQuota)
             .setParentFullpath(parentFullPathBytes)
+            .setDirStatus(fs);
+    return builder.build();
+  }
+
+  public static HdfsProtos.SnapshotStatusProto convert(SnapshotStatus status) {
+    if (status == null) {
+      return null;
+    }
+    byte[] parentFullPath = status.getParentFullPath();
+    ByteString parentFullPathBytes = getByteString(
+        parentFullPath == null ? DFSUtilClient.EMPTY_BYTES : parentFullPath);
+    HdfsFileStatusProto fs = convert(status.getDirStatus());
+    HdfsProtos.SnapshotStatusProto.Builder builder =
+        HdfsProtos.SnapshotStatusProto
+            .newBuilder()
+            .setSnapshotID(status.getSnapshotID())
+            .setParentFullpath(parentFullPathBytes)
+            .setIsDeleted(status.isDeleted())
             .setDirStatus(fs);
     return builder.build();
   }
@@ -2642,7 +2696,8 @@ public class PBHelperClient {
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
         .setStorageUuid(r.getStorage().getStorageID())
         .setStorage(convert(r.getStorage()))
-        .setNonDfsUsed(r.getNonDfsUsed());
+        .setNonDfsUsed(r.getNonDfsUsed())
+        .setMount(r.getMount());
     return builder.build();
   }
 
@@ -2667,6 +2722,21 @@ public class PBHelperClient {
     List<SnapshottableDirectoryStatusProto> protoList = Arrays.asList(protos);
     return SnapshottableDirectoryListingProto.newBuilder()
         .addAllSnapshottableDirListing(protoList).build();
+  }
+
+  public static HdfsProtos.SnapshotListingProto convert(
+      SnapshotStatus[] status) {
+    if (status == null) {
+      return null;
+    }
+    HdfsProtos.SnapshotStatusProto[] protos =
+        new HdfsProtos.SnapshotStatusProto[status.length];
+    for (int i = 0; i < status.length; i++) {
+      protos[i] = convert(status[i]);
+    }
+    List<SnapshotStatusProto> protoList = Arrays.asList(protos);
+    return SnapshotListingProto.newBuilder()
+        .addAllSnapshotListing(protoList).build();
   }
 
   public static SnapshotDiffReportEntryProto convert(DiffReportEntry entry) {
@@ -3336,6 +3406,21 @@ public class PBHelperClient {
     for (DatanodeInfo datanodeInfo : datanodeInfos) {
       builder.addDatanodes(PBHelperClient.convert(datanodeInfo));
     }
+    return builder.build();
+  }
+
+  public static ECTopologyVerifierResult convertECTopologyVerifierResultProto(
+      HdfsProtos.ECTopologyVerifierResultProto resp) {
+    return new ECTopologyVerifierResult(resp.getIsSupported(),
+        resp.getResultMessage());
+  }
+
+  public static HdfsProtos.ECTopologyVerifierResultProto convertECTopologyVerifierResult(
+      ECTopologyVerifierResult resp) {
+    final HdfsProtos.ECTopologyVerifierResultProto.Builder builder =
+        HdfsProtos.ECTopologyVerifierResultProto.newBuilder()
+            .setIsSupported(resp.isSupported())
+            .setResultMessage(resp.getResultMessage());
     return builder.build();
   }
 

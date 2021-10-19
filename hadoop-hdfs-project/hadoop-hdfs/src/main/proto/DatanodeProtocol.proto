@@ -24,7 +24,7 @@
 
 // This file contains protocol buffers that are used throughout HDFS -- i.e.
 // by the client, server, and data transfer protocols.
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "DatanodeProtocolProtos";
 option java_generic_services = true;
@@ -257,8 +257,9 @@ message BlockReportContextProto  {
   // bypass rate-limiting.
   optional uint64 leaseId = 4 [ default = 0 ];
 
+  // for compatibility, field number 5 should not be reused, see HDFS-13671.
   // True if the reported blocks are sorted by increasing block IDs
-  optional bool sorted = 5 [default = false];
+  // optional bool sorted = 5 [default = false];
 }
 
 /**

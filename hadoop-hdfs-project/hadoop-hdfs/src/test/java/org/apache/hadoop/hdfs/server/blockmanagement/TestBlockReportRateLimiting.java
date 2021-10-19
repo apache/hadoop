@@ -21,9 +21,9 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_FULL_BLOCK_REPORT_LEASES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FULL_BLOCK_REPORT_LEASE_LENGTH_MS;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.Uninterruptibles;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -31,11 +31,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -60,8 +60,8 @@ public class TestBlockReportRateLimiting {
 
   @BeforeClass
   public static void raiseBlockManagerLogLevels() {
-    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockReportLeaseManager.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockReportLeaseManager.LOG, Level.TRACE);
   }
 
   @Test(timeout=180000)

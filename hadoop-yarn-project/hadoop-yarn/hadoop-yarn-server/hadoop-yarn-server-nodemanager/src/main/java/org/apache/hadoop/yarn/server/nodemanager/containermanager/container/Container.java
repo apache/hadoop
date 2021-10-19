@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceSet;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 
 import java.util.List;
 import java.util.Map;
@@ -112,6 +113,11 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   boolean isRecovering();
 
+  void setContainerRuntimeData(Object containerRuntimeData);
+
+  <T> T getContainerRuntimeData(Class<T> runtimeClazz)
+      throws ContainerExecutionException;
+
   /**
    * Get assigned resource mappings to the container.
    *
@@ -132,4 +138,14 @@ public interface Container extends EventHandler<ContainerEvent> {
    * @return localization statuses.
    */
   List<LocalizationStatus> getLocalizationStatuses();
+
+  /**
+   * Vector of localization counters to be passed from NM to application
+   * container via environment variable {@code $LOCALIZATION_COUNTERS}. See
+   * {@link org.apache.hadoop.yarn.api.ApplicationConstants.Environment#LOCALIZATION_COUNTERS}
+   *
+   * @return coma-separated counter values
+   */
+  String localizationCountersAsString();
+
 }

@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import static org.hamcrest.CoreMatchers.containsString;
-
 import java.io.IOException;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+
+import static org.hamcrest.CoreMatchers.containsString;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
@@ -39,7 +40,7 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_KEY, "");
+    conf.set(Constants.S3_ENCRYPTION_KEY, "");
     return conf;
   }
 
@@ -51,7 +52,8 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
   @Override
   protected void assertEncrypted(Path path) throws IOException {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
-    assertEquals("aws:kms", md.getSSEAlgorithm());
+    assertEquals("SSE Algorithm", EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
+            md.getSSEAlgorithm());
     assertThat(md.getSSEAwsKmsKeyId(), containsString("arn:aws:kms:"));
   }
 }

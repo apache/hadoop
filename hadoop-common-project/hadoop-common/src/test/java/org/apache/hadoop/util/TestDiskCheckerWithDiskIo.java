@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertTrue;
@@ -44,8 +45,8 @@ import static org.junit.Assert.assertTrue;
  */
 public final class TestDiskCheckerWithDiskIo {
   @Rule
-  public Timeout testTimeout = new Timeout(30_000);
-  
+  public Timeout testTimeout = new Timeout(30_000, TimeUnit.MILLISECONDS);
+
   /**
    * Verify DiskChecker ignores at least 2 transient file creation errors.
    */

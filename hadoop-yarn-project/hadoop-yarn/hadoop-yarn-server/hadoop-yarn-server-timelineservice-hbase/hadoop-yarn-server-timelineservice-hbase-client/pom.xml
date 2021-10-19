@@ -22,7 +22,7 @@
   <parent>
     <artifactId>hadoop-yarn-server-timelineservice-hbase</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-timelineservice-hbase-client</artifactId>
@@ -50,8 +50,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
 
     <dependency>
@@ -108,6 +108,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -203,19 +209,6 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <additionalDependencies>
-            <additionnalDependency>
-              <groupId>junit</groupId>
-              <artifactId>junit</artifactId>
-              <version>4.11</version>
-            </additionnalDependency>
-          </additionalDependencies>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

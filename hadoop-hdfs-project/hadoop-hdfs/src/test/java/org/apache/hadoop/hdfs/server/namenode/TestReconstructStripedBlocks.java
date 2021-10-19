@@ -277,8 +277,6 @@ public class TestReconstructStripedBlocks {
   public void testCountLiveReplicas() throws Exception {
     final HdfsConfiguration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(groupSize + 2)
         .build();
     cluster.waitActive();
@@ -366,7 +364,7 @@ public class TestReconstructStripedBlocks {
     }
   }
 
-  @Test(timeout=120000) // 1 min timeout
+  @Test(timeout=120000) // 2 min timeout
   public void testReconstructionWork() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);

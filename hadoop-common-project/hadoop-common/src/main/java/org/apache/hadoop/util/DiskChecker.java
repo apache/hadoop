@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -296,7 +296,7 @@ public class DiskChecker {
       }
       file = null;
     } finally {
-      IOUtils.cleanup(null, fos);
+      IOUtils.cleanupWithLogger(LOG, fos);
       FileUtils.deleteQuietly(file);
     }
   }

@@ -60,7 +60,7 @@ Many subcommands honor a common set of configuration options to alter their beha
 | `-files <comma separated list of files> ` | Specify comma separated files to be copied to the map reduce cluster. Applies only to job. |
 | `-fs <file:///> or <hdfs://namenode:port>` | Specify default filesystem URL to use. Overrides 'fs.defaultFS' property from configurations. |
 | `-jt <local> or <resourcemanager:port>` | Specify a ResourceManager. Applies only to job. |
-| `-libjars <comma seperated list of jars> ` | Specify comma separated jar files to include in the classpath. Applies only to job. |
+| `-libjars <comma separated list of jars> ` | Specify comma separated jar files to include in the classpath. Applies only to job. |
 
 Hadoop Common Commands
 ======================
@@ -125,6 +125,7 @@ Usage: `hadoop credential <subcommand> [options]`
 | create *alias* [-provider *provider-path*] [-strict] [-value *credential-value*] | Prompts the user for a credential to be stored as the given alias. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. The `-strict` flag will cause the command to fail if the provider uses a default password. Use `-value` flag to supply the credential value (a.k.a. the alias password) instead of being prompted. |
 | delete *alias* [-provider *provider-path*] [-strict] [-f] | Deletes the credential with the provided alias. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. The `-strict` flag will cause the command to fail if the provider uses a default password. The command asks for confirmation unless `-f` is specified |
 | list [-provider *provider-path*] [-strict] | Lists all of the credential aliases The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. The `-strict` flag will cause the command to fail if the provider uses a default password. |
+| check *alias* [-provider *provider-path*] [-strict] | Check the password for the given alias. The *hadoop.security.credential.provider.path* within the core-site.xml file will be used unless a `-provider` is indicated. The `-strict` flag will cause the command to fail if the provider uses a default password. |
 
 Command to manage credentials, passwords and secrets within credential providers.
 
@@ -221,6 +222,8 @@ Usage: `hadoop key <subcommand> [options]`
 | roll *keyname* [-provider *provider*] [-strict] [-help] | Creates a new version for the specified key within the provider indicated using the `-provider` argument. The `-strict` flag will cause the command to fail if the provider uses a default password. |
 | delete *keyname* [-provider *provider*] [-strict] [-f] [-help] | Deletes all versions of the key specified by the *keyname* argument from within the provider specified by `-provider`. The `-strict` flag will cause the command to fail if the provider uses a default password. The command asks for user confirmation unless `-f` is specified. |
 | list [-provider *provider*] [-strict] [-metadata] [-help] | Displays the keynames contained within a particular provider as configured in core-site.xml or specified with the `-provider` argument. The `-strict` flag will cause the command to fail if the provider uses a default password. `-metadata` displays the metadata. |
+| check *keyname* [-provider *provider*] [-strict] [-help] | Check password of the *keyname* contained within a particular provider as configured in core-site.xml or specified with the `-provider` argument. The `-strict` flag will cause the command to fail if the provider uses a default password. |
+
 | -help | Prints usage of this command |
 
 Manage keys via the KeyProvider. For details on KeyProviders, see the [Transparent Encryption Guide](../hadoop-hdfs/TransparentEncryption.html).
@@ -236,10 +239,6 @@ NOTE: Some KeyProviders do not directly execute a key deletion (e.g. performs a 
 Usage: `hadoop kms`
 
 Run KMS, the Key Management Server.
-
-### `trace`
-
-View and modify Hadoop tracing settings. See the [Tracing Guide](./Tracing.html).
 
 ### `version`
 
@@ -282,7 +281,7 @@ By default, the command sends a HTTP request, but this can be overridden by usin
 Example:
 
     $ bin/hadoop daemonlog -setlevel 127.0.0.1:9870 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
-    $ bin/hadoop daemonlog -getlevel 127.0.0.1:9871 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG -protocol https
+    $ bin/hadoop daemonlog -getlevel 127.0.0.1:9871 org.apache.hadoop.hdfs.server.namenode.NameNode -protocol https
 
 Note that the setting is not permanent and will be reset when the daemon is restarted.
 This command works by sending a HTTP/HTTPS request to the daemon's internal Jetty servlet, so it supports the following daemons:

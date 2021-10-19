@@ -29,6 +29,7 @@ import java.util.stream.IntStream;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,12 +45,13 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
+import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -60,6 +62,9 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -103,7 +108,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
-    S3AUtils.closeAll(LOG, roleFS);
+    cleanupWithLogger(LOG, roleFS);
     super.teardown();
   }
 
@@ -389,11 +394,17 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         // when S3Guard is enabled, the restricted policy still
         // permits S3Guard record lookup, so getFileStatus calls
         // will work iff the record is in the database.
+        // probe the store using a path other than /, so a HEAD
+        // request is issued.
         forbidden("getFileStatus",
-            () -> fs.getFileStatus(ROOT));
+            () -> fs.getFileStatus(methodPath()));
       }
       forbidden("",
           () -> fs.listStatus(ROOT));
+      forbidden("",
+          () -> fs.listFiles(ROOT, true));
+      forbidden("",
+          () -> fs.listLocatedStatus(ROOT));
       forbidden("",
           () -> fs.mkdirs(path("testAssumeRoleFS")));
     }
@@ -544,9 +555,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testRestrictedCommitActions() throws Throwable {
     describe("Attempt commit operations against a path with restricted rights");
     Configuration conf = createAssumedRoleConfig();
-    conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
     final int uploadPartSize = 5 * 1024 * 1024;
 
+    ProgressCounter progress = new ProgressCounter();
+    progress.assertCount("Progress counter should be zero", 0);
     Path basePath = methodPath();
     Path readOnlyDir = new Path(basePath, "readOnlyDir");
     Path writeableDir = new Path(basePath, "writeableDir");
@@ -564,8 +576,11 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
             .addResources(directory(writeableDir))
     );
     roleFS = (S3AFileSystem) writeableDir.getFileSystem(conf);
-    CommitOperations fullOperations = new CommitOperations(fs);
-    CommitOperations operations = new CommitOperations(roleFS);
+    CommitterStatistics committerStatistics = fs.newCommitterStatistics();
+    CommitOperations fullOperations = new CommitOperations(fs,
+        committerStatistics);
+    CommitOperations operations = new CommitOperations(roleFS,
+        committerStatistics);
 
     File localSrc = File.createTempFile("source", "");
     writeCSVData(localSrc);
@@ -574,8 +589,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     forbidden("initiate MultiPartUpload",
         () -> {
           return operations.uploadFileToPendingCommit(localSrc,
-              uploadDest, "", uploadPartSize);
+              uploadDest, "", uploadPartSize, progress);
         });
+    progress.assertCount("progress counter not expected.", 0);
     // delete the file
     localSrc.delete();
     // create a directory there
@@ -593,11 +609,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           writeCSVData(src);
           SinglePendingCommit pending =
               fullOperations.uploadFileToPendingCommit(src, dest, "",
-                  uploadPartSize);
+                  uploadPartSize, progress);
           pending.save(fs, new Path(readOnlyDir,
               name + CommitConstants.PENDING_SUFFIX), true);
           assertTrue(src.delete());
         }));
+    progress.assertCount("progress counter is not expected",
+        range);
 
     try {
       // we expect to be able to list all the files here
@@ -640,6 +658,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     } finally {
       LOG.info("Cleanup");
       fullOperations.abortPendingUploadsUnderPath(readOnlyDir);
+      LOG.info("Committer statistics {}",
+          ioStatisticsSourceToString(committerStatistics));
     }
   }
 
@@ -722,4 +742,59 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
         roleFS.delete(pathWhichDoesntExist, true));
   }
 
+  /**
+   * Block access to bucket locations and verify that {@code getBucketLocation}
+   * fails -but that the bucket-info command recovers from this.
+   */
+  @Test
+  public void testBucketLocationForbidden() throws Throwable {
+
+    describe("Restrict role to read only");
+    Configuration conf = createAssumedRoleConfig();
+
+    // S3Guard is turned off so that it isn't trying to work out
+    // where any table is.
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+        S3_METADATA_STORE_IMPL);
+
+    bindRolePolicyStatements(conf,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
+        statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
+    Path path = methodPath();
+    roleFS = (S3AFileSystem) path.getFileSystem(conf);
+    forbidden("",
+        () -> roleFS.getBucketLocation());
+    S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);
+    URI fsUri = getFileSystem().getUri();
+    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+        fsUri.toString());
+    Assertions.assertThat(info)
+        .contains(S3GuardTool.BucketInfo.LOCATION_UNKNOWN);
+  }
+  /**
+   * Turn off access to dynamo DB Tags and see how DDB table init copes.
+   * There's no testing of the codepath other than checking the logs
+   * - this test does make sure that no regression stops the tag permission
+   * failures from halting the client
+   */
+  @Test
+  public void testRestrictDDBTagAccess() throws Throwable {
+
+    describe("extra policies in assumed roles need;"
+        + " all required policies stated");
+    Configuration conf = createAssumedRoleConfig();
+
+    bindRolePolicyStatements(conf,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_S3,
+        new Statement(Effects.Deny)
+            .addActions(S3_PATH_RW_OPERATIONS)
+            .addResources(ALL_DDB_TABLES));
+    Path path = path("testRestrictDDBTagAccess");
+
+    roleFS = (S3AFileSystem) path.getFileSystem(conf);
+  }
 }

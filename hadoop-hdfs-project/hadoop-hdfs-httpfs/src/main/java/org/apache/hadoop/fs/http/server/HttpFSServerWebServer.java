@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.VisibleForTesting;
+
+import static org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter.CONF_PREFIX;
+import static org.apache.hadoop.fs.http.server.HttpFSAuthenticationFilter.HADOOP_HTTP_CONF_PREFIX;
+import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.AUTH_TYPE;
+import static org.apache.hadoop.security.authentication.server.AuthenticationFilter.SIGNATURE_SECRET_FILE;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.KEYTAB;
+import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.PRINCIPAL;
 import static org.apache.hadoop.util.StringUtils.startupShutdownMessage;
 
 import java.io.IOException;
@@ -24,11 +32,15 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.ConfigurationWithLogging;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.slf4j.Logger;
@@ -61,6 +73,7 @@ public class HttpFSServerWebServer {
   private static final String SERVLET_PATH = "/webhdfs";
 
   static {
+    addDeprecatedKeys();
     Configuration.addDefaultResource(HTTPFS_DEFAULT_XML);
     Configuration.addDefaultResource(HTTPFS_SITE_XML);
   }
@@ -98,11 +111,30 @@ public class HttpFSServerWebServer {
     int port = conf.getInt(HTTP_PORT_KEY, HTTP_PORT_DEFAULT);
     URI endpoint = new URI(scheme, null, host, port, null, null, null);
 
+    // Allow the default authFilter HttpFSAuthenticationFilter
+    String configuredInitializers = conf.get(HttpServer2.
+        FILTER_INITIALIZER_PROPERTY);
+    if (configuredInitializers != null) {
+      Set<String> target = new LinkedHashSet<String>();
+      String[] parts = configuredInitializers.split(",");
+      for (String filterInitializer : parts) {
+        if (!filterInitializer.equals(AuthenticationFilterInitializer.class.
+            getName()) && !filterInitializer.equals(
+            ProxyUserAuthenticationFilterInitializer.class.getName())) {
+          target.add(filterInitializer);
+        }
+      }
+      String actualInitializers =
+          org.apache.commons.lang3.StringUtils.join(target, ",");
+      conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY, actualInitializers);
+    }
+
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
         .setConf(conf)
         .setSSLConf(sslConf)
-        .authFilterConfigurationPrefix(HttpFSAuthenticationFilter.CONF_PREFIX)
+        .setAuthFilterConfigurationPrefixes(
+            HttpFSAuthenticationFilter.CONF_PREFIXES)
         .setACL(new AccessControlList(conf.get(HTTP_ADMINS_KEY, " ")))
         .addEndpoint(endpoint)
         .build();
@@ -129,6 +161,7 @@ public class HttpFSServerWebServer {
   }
 
   public void start() throws IOException {
+    DefaultMetricsSystem.initialize("httpfs");
     httpServer.start();
   }
 
@@ -138,6 +171,7 @@ public class HttpFSServerWebServer {
 
   public void stop() throws Exception {
     httpServer.stop();
+    DefaultMetricsSystem.shutdown();
   }
 
   public URL getUrl() {
@@ -154,15 +188,31 @@ public class HttpFSServerWebServer {
     }
   }
 
+  @VisibleForTesting
+  HttpServer2 getHttpServer() {
+    return httpServer;
+  }
+
   public static void main(String[] args) throws Exception {
     startupShutdownMessage(HttpFSServerWebServer.class, args, LOG);
-    Configuration conf = new ConfigurationWithLogging(
-        new Configuration(true));
-    Configuration sslConf = new ConfigurationWithLogging(
-        SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER));
+    Configuration conf = new Configuration(true);
+    Configuration sslConf = SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER);
     HttpFSServerWebServer webServer =
         new HttpFSServerWebServer(conf, sslConf);
     webServer.start();
     webServer.join();
+  }
+
+  public static void addDeprecatedKeys() {
+    Configuration.addDeprecations(new Configuration.DeprecationDelta[]{
+        new Configuration.DeprecationDelta(CONF_PREFIX + KEYTAB,
+            HADOOP_HTTP_CONF_PREFIX + KEYTAB),
+        new Configuration.DeprecationDelta(CONF_PREFIX + PRINCIPAL,
+            HADOOP_HTTP_CONF_PREFIX + PRINCIPAL),
+        new Configuration.DeprecationDelta(CONF_PREFIX + SIGNATURE_SECRET_FILE,
+            HADOOP_HTTP_CONF_PREFIX + SIGNATURE_SECRET_FILE),
+        new Configuration.DeprecationDelta(CONF_PREFIX + AUTH_TYPE,
+            HADOOP_HTTP_CONF_PREFIX + AUTH_TYPE)
+    });
   }
 }

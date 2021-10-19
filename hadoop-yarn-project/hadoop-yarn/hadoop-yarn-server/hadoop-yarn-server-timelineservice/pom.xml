@@ -22,11 +22,11 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-timelineservice</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Timeline Service</name>
 
   <properties>
@@ -67,8 +67,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
 
     <dependency>
@@ -156,19 +156,6 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <additionnalDependencies>
-            <additionnalDependency>
-              <groupId>junit</groupId>
-              <artifactId>junit</artifactId>
-              <version>4.11</version>
-            </additionnalDependency>
-          </additionnalDependencies>
-        </configuration>
       </plugin>
     </plugins>
   </build>

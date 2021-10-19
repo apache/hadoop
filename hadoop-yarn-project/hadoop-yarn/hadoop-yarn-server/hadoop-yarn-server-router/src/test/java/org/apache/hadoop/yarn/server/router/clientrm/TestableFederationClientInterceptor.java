@@ -18,14 +18,28 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.mockito.Mockito.mock;
+
+import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.junit.Assert;
 
 /**
  * Extends the FederationClientInterceptor and overrides methods to provide a
@@ -34,7 +48,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 public class TestableFederationClientInterceptor
     extends FederationClientInterceptor {
 
-  private ConcurrentHashMap<SubClusterId, MockResourceManagerFacade> mockRMs =
+  private ConcurrentHashMap<SubClusterId, MockRM> mockRMs =
       new ConcurrentHashMap<>();
 
   private List<SubClusterId> badSubCluster = new ArrayList<SubClusterId>();
@@ -43,19 +57,47 @@ public class TestableFederationClientInterceptor
   protected ApplicationClientProtocol getClientRMProxyForSubCluster(
       SubClusterId subClusterId) throws YarnException {
 
-    MockResourceManagerFacade mockRM = null;
+    MockRM mockRM = null;
     synchronized (this) {
       if (mockRMs.containsKey(subClusterId)) {
         mockRM = mockRMs.get(subClusterId);
       } else {
-        mockRM = new MockResourceManagerFacade(super.getConf(), 0,
-            Integer.parseInt(subClusterId.getId()),
-            !badSubCluster.contains(subClusterId));
+        mockRM = new MockRM();
+        if (badSubCluster.contains(subClusterId)) {
+          RMContext rmContext = mock(RMContext.class);
+          return new MockClientRMService(rmContext, null, null, null, null,
+              null);
+        }
+        mockRM.init(super.getConf());
+        mockRM.start();
+        try {
+          mockRM.registerNode("h1:1234", 1024);
+        } catch (Exception e) {
+          Assert.fail(e.getMessage());
+        }
         mockRMs.put(subClusterId, mockRM);
-
       }
-      return mockRM;
+      return mockRM.getClientRMService();
     }
+  }
+
+  private static class MockClientRMService extends ClientRMService {
+
+    MockClientRMService(RMContext rmContext, YarnScheduler scheduler,
+        RMAppManager rmAppManager,
+        ApplicationACLsManager applicationACLsManager,
+        QueueACLsManager queueACLsManager,
+        RMDelegationTokenSecretManager rmDTSecretManager) {
+      super(rmContext, scheduler, rmAppManager, applicationACLsManager,
+          queueACLsManager, rmDTSecretManager);
+    }
+
+    @Override
+    public SubmitApplicationResponse submitApplication(
+        SubmitApplicationRequest request) throws YarnException, IOException {
+      throw new ConnectException("RM is stopped");
+    }
+
   }
 
   /**
@@ -64,11 +106,12 @@ public class TestableFederationClientInterceptor
    * these bad subclusters. This method make the subcluster unusable.
    *
    * @param badSC the subcluster to make unusable
+   * @throws IOException
    */
-  protected void registerBadSubCluster(SubClusterId badSC) {
+  protected void registerBadSubCluster(SubClusterId badSC) throws IOException {
     badSubCluster.add(badSC);
     if (mockRMs.contains(badSC)) {
-      mockRMs.get(badSC).setRunningMode(false);
+      mockRMs.get(badSC).close();
     }
   }
 

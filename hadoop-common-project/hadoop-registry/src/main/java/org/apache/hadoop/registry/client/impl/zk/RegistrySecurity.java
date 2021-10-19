@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.registry.client.impl.zk;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,9 +28,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.Environment;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -769,19 +770,19 @@ public class RegistrySecurity extends AbstractService {
             JaasConfiguration jconf =
                 new JaasConfiguration(jaasClientEntry, principal, keytab);
             javax.security.auth.login.Configuration.setConfiguration(jconf);
-            setSystemPropertyIfUnset(ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY,
-                "true");
-            setSystemPropertyIfUnset(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-                jaasClientEntry);
+            setSystemPropertyIfUnset(ZKClientConfig.ENABLE_CLIENT_SASL_KEY,
+                                     "true");
+            setSystemPropertyIfUnset(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
+                                     jaasClientEntry);
           } else {
             // in this case, jaas config is specified so we will not change it
             LOG.info("Using existing ZK sasl configuration: " +
-                "jaasClientEntry = " + System.getProperty(
-                    ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY, "Client") +
-                ", sasl client = " + System.getProperty(
-                    ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY,
-                    ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) +
-                ", jaas = " + existingJaasConf);
+              "jaasClientEntry = " + System.getProperty(
+              ZKClientConfig.LOGIN_CONTEXT_NAME_KEY, "Client") +
+              ", sasl client = " + System.getProperty(
+              ZKClientConfig.ENABLE_CLIENT_SASL_KEY,
+              ZKClientConfig.ENABLE_CLIENT_SASL_DEFAULT) +
+              ", jaas = " + existingJaasConf);
           }
           break;
 

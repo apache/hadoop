@@ -43,9 +43,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -444,6 +444,7 @@ public class TopCLI extends YarnCLI {
 
   public static void main(String[] args) throws Exception {
     TopCLI topImp = new TopCLI();
+    topImp.addShutdownHook();
     topImp.setSysOutPrintStream(System.out);
     topImp.setSysErrPrintStream(System.err);
     int res = ToolRunner.run(topImp, args);
@@ -492,7 +493,6 @@ public class TopCLI extends YarnCLI {
         rmStartTime = getRMStartTime();
       }
     }
-    clearScreen();
     return 0;
   }
 
@@ -1219,5 +1219,12 @@ public class TopCLI extends YarnCLI {
     p.waitFor();
     byte[] output = IOUtils.toByteArray(p.getInputStream());
     return new String(output, "ASCII");
+  }
+
+  private void addShutdownHook() {
+    //clear screen when the program exits
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      clearScreen();
+    }));
   }
 }

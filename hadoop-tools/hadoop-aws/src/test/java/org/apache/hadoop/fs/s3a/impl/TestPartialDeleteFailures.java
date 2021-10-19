@@ -18,51 +18,34 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Constants;
-import org.apache.hadoop.fs.s3a.Invoker;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
-import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
-import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
-import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
-import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
+import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -80,36 +63,42 @@ public class TestPartialDeleteFailures {
     return new Path("s3a://bucket/" + k);
   }
 
+  private static String toKey(Path path) {
+    return path.toUri().getPath();
+  }
+
   @Before
   public void setUp() throws Exception {
-    context = createMockStoreContext(true,
-        new OperationTrackingStore());
+    context = S3ATestUtils.createMockStoreContext(true,
+        new OperationTrackingStore(), CONTEXT_ACCESSORS);
   }
 
   @Test
   public void testDeleteExtraction() {
-    List<Path> src = pathList("a", "a/b", "a/c");
-    List<Path> rejected = pathList("a/b");
+    List<MultiObjectDeleteSupport.KeyPath> src = pathList("a", "a/b", "a/c");
+    List<MultiObjectDeleteSupport.KeyPath> rejected = pathList("a/b");
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
-    List<Path> undeleted = removeUndeletedPaths(ex, src,
-        TestPartialDeleteFailures::qualifyKey);
+    List<MultiObjectDeleteSupport.KeyPath> undeleted =
+        removeUndeletedPaths(ex, src,
+            TestPartialDeleteFailures::qualifyKey);
     assertEquals("mismatch of rejected and undeleted entries",
         rejected, undeleted);
   }
 
   @Test
   public void testSplitKeysFromResults() throws Throwable {
-    List<Path> src = pathList("a", "a/b", "a/c");
-    List<Path> rejected = pathList("a/b");
-    List<DeleteObjectsRequest.KeyVersion> keys = keysToDelete(src);
+    List<MultiObjectDeleteSupport.KeyPath> src = pathList("a", "a/b", "a/c");
+    List<MultiObjectDeleteSupport.KeyPath> rejected = pathList("a/b");
+    List<DeleteObjectsRequest.KeyVersion> keys = keysToDelete(toPathList(src));
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
-    Pair<List<Path>, List<Path>> pair =
+    Pair<List<MultiObjectDeleteSupport.KeyPath>,
+        List<MultiObjectDeleteSupport.KeyPath>> pair =
         new MultiObjectDeleteSupport(context, null)
           .splitUndeletedKeys(ex, keys);
-    List<Path> undeleted = pair.getLeft();
-    List<Path> deleted = pair.getRight();
+    List<MultiObjectDeleteSupport.KeyPath> undeleted = pair.getLeft();
+    List<MultiObjectDeleteSupport.KeyPath> deleted = pair.getRight();
     assertEquals(rejected, undeleted);
     // now check the deleted list to verify that it is valid
     src.remove(rejected.get(0));
@@ -121,9 +110,12 @@ public class TestPartialDeleteFailures {
    * @param paths paths to qualify and then convert to a lst.
    * @return same paths as a list.
    */
-  private List<Path> pathList(String... paths) {
+  private List<MultiObjectDeleteSupport.KeyPath> pathList(String... paths) {
     return Arrays.stream(paths)
-        .map(TestPartialDeleteFailures::qualifyKey)
+        .map(k->
+            new MultiObjectDeleteSupport.KeyPath(k,
+                qualifyKey(k),
+                k.endsWith("/")))
         .collect(Collectors.toList());
   }
 
@@ -135,12 +127,13 @@ public class TestPartialDeleteFailures {
    */
   private MultiObjectDeleteException createDeleteException(
       final String code,
-      final List<Path> rejected) {
+      final List<MultiObjectDeleteSupport.KeyPath> rejected) {
     List<MultiObjectDeleteException.DeleteError> errors = rejected.stream()
-        .map((p) -> {
+        .map((kp) -> {
+          Path p = kp.getPath();
           MultiObjectDeleteException.DeleteError e
               = new MultiObjectDeleteException.DeleteError();
-          e.setKey(p.toUri().getPath());
+          e.setKey(kp.getKey());
           e.setCode(code);
           e.setMessage("forbidden");
           return e;
@@ -149,14 +142,33 @@ public class TestPartialDeleteFailures {
   }
 
   /**
-   * From a list of paths, build up the list of keys for a delete request.
+   * From a list of paths, build up the list of KeyVersion records
+   * for a delete request.
+   * All the entries will be files (i.e. no trailing /)
    * @param paths path list
    * @return a key list suitable for a delete request.
    */
   public static List<DeleteObjectsRequest.KeyVersion> keysToDelete(
       List<Path> paths) {
     return paths.stream()
-        .map((p) -> p.toUri().getPath())
+        .map(p -> {
+          String uripath = p.toUri().getPath();
+          return uripath.substring(1);
+        })
+        .map(DeleteObjectsRequest.KeyVersion::new)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * From a list of keys, build up the list of keys for a delete request.
+   * If a key has a trailing /, that will be retained, so it will be
+   * considered a directory during multi-object delete failure handling
+   * @param keys key list
+   * @return a key list suitable for a delete request.
+   */
+  public static List<DeleteObjectsRequest.KeyVersion> toDeleteRequests(
+      List<String> keys) {
+    return keys.stream()
         .map(DeleteObjectsRequest.KeyVersion::new)
         .collect(Collectors.toList());
   }
@@ -167,22 +179,33 @@ public class TestPartialDeleteFailures {
    */
   @Test
   public void testProcessDeleteFailure() throws Throwable {
-    Path pathA = qualifyKey("/a");
-    Path pathAB = qualifyKey("/a/b");
-    Path pathAC = qualifyKey("/a/c");
+    String keyA = "/a/";
+    String keyAB = "/a/b";
+    String keyAC = "/a/c";
+    Path pathA = qualifyKey(keyA);
+    Path pathAB = qualifyKey(keyAB);
+    Path pathAC = qualifyKey(keyAC);
+    List<String> srcKeys = Lists.newArrayList(keyA, keyAB, keyAC);
     List<Path> src = Lists.newArrayList(pathA, pathAB, pathAC);
-    List<DeleteObjectsRequest.KeyVersion> keyList = keysToDelete(src);
+    List<DeleteObjectsRequest.KeyVersion> keyList = toDeleteRequests(srcKeys);
     List<Path> deleteForbidden = Lists.newArrayList(pathAB);
     final List<Path> deleteAllowed = Lists.newArrayList(pathA, pathAC);
+    List<MultiObjectDeleteSupport.KeyPath> forbiddenKP =
+        Lists.newArrayList(
+            new MultiObjectDeleteSupport.KeyPath(keyAB, pathAB, true));
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
-        deleteForbidden);
+        forbiddenKP);
     OperationTrackingStore store
         = new OperationTrackingStore();
-    StoreContext storeContext = createMockStoreContext(true, store);
+    StoreContext storeContext = S3ATestUtils
+            .createMockStoreContext(true, store, CONTEXT_ACCESSORS);
     MultiObjectDeleteSupport deleteSupport
         = new MultiObjectDeleteSupport(storeContext, null);
+    List<Path> retainedMarkers = new ArrayList<>();
     Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
-        triple = deleteSupport.processDeleteFailure(ex, keyList);
+        triple = deleteSupport.processDeleteFailure(ex,
+        keyList,
+        retainedMarkers);
     Assertions.assertThat(triple.getRight())
         .as("failure list")
         .isEmpty();
@@ -196,39 +219,19 @@ public class TestPartialDeleteFailures {
         as("undeleted store entries")
         .containsAll(deleteForbidden)
         .doesNotContainAnyElementsOf(deleteAllowed);
+    // because dir marker retention is on, we expect at least one retained
+    // marker
+    Assertions.assertThat(retainedMarkers).
+        as("Retained Markers")
+        .containsExactly(pathA);
+    Assertions.assertThat(store.getDeleted()).
+        as("List of tombstoned records")
+        .doesNotContain(pathA);
   }
 
 
-  private StoreContext createMockStoreContext(boolean multiDelete,
-      OperationTrackingStore store) throws URISyntaxException, IOException {
-    URI name = new URI("s3a://bucket");
-    Configuration conf = new Configuration();
-    return new StoreContext(
-        name,
-        "bucket",
-        conf,
-        "alice",
-        UserGroupInformation.getCurrentUser(),
-        BlockingThreadPoolExecutorService.newInstance(
-            4,
-            4,
-            10, TimeUnit.SECONDS,
-            "s3a-transfer-shared"),
-        Constants.DEFAULT_EXECUTOR_CAPACITY,
-        new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT),
-        new S3AInstrumentation(name),
-        new S3AStorageStatistics(),
-        S3AInputPolicy.Normal,
-        ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
-            ChangeDetectionPolicy.Source.ETag, false),
-        multiDelete,
-        store,
-        false,
-        CONTEXT_ACCESSORS,
-        new S3Guard.TtlTimeProvider(conf));
-  }
-
-  private static class MinimalContextAccessor implements ContextAccessors {
+  private static final class MinimalContextAccessor
+      implements ContextAccessors {
 
     @Override
     public Path keyToPath(final String key) {
@@ -250,154 +253,22 @@ public class TestPartialDeleteFailures {
     public String getBucketLocation() throws IOException {
       return null;
     }
-  }
-  /**
-   * MetadataStore which tracks what is deleted and added.
-   */
-  private static class OperationTrackingStore implements MetadataStore {
-
-    private final List<Path> deleted = new ArrayList<>();
-
-    private final List<Path> created = new ArrayList<>();
 
     @Override
-    public void initialize(final FileSystem fs,
-        ITtlTimeProvider ttlTimeProvider) {
+    public Path makeQualified(final Path path) {
+      return path;
     }
 
     @Override
-    public void initialize(final Configuration conf,
-        ITtlTimeProvider ttlTimeProvider) {
+    public AuditSpan getActiveAuditSpan() {
+      return AuditTestSupport.NOOP_SPAN;
     }
 
     @Override
-    public void forgetMetadata(final Path path) {
+    public RequestFactory getRequestFactory() {
+      return MockS3AFileSystem.REQUEST_FACTORY;
     }
 
-    @Override
-    public PathMetadata get(final Path path) {
-      return null;
-    }
-
-    @Override
-    public PathMetadata get(final Path path,
-        final boolean wantEmptyDirectoryFlag) {
-      return null;
-    }
-
-    @Override
-    public DirListingMetadata listChildren(final Path path) {
-      return null;
-    }
-
-    @Override
-    public void put(final PathMetadata meta) {
-      put(meta, null);
-    }
-
-    @Override
-    public void put(final PathMetadata meta,
-        final BulkOperationState operationState) {
-      created.add(meta.getFileStatus().getPath());
-    }
-
-    @Override
-    public void put(final Collection<? extends PathMetadata> metas,
-        final BulkOperationState operationState) {
-      metas.stream().forEach(meta -> put(meta, null));
-    }
-
-    @Override
-    public void put(final DirListingMetadata meta,
-        final BulkOperationState operationState) {
-      created.add(meta.getPath());
-    }
-
-    @Override
-    public void destroy() {
-    }
-
-    @Override
-    public void delete(final Path path,
-        final BulkOperationState operationState) {
-      deleted.add(path);
-    }
-
-    @Override
-    public void deletePaths(final Collection<Path> paths,
-        @Nullable final BulkOperationState operationState) throws IOException {
-      deleted.addAll(paths);
-    }
-
-    @Override
-    public void deleteSubtree(final Path path,
-        final BulkOperationState operationState) {
-
-    }
-
-    @Override
-    public void move(@Nullable final Collection<Path> pathsToDelete,
-        @Nullable final Collection<PathMetadata> pathsToCreate,
-        @Nullable final BulkOperationState operationState) {
-    }
-
-    @Override
-    public void prune(final PruneMode pruneMode, final long cutoff) {
-    }
-
-    @Override
-    public void prune(final PruneMode pruneMode,
-        final long cutoff,
-        final String keyPrefix) {
-
-    }
-
-    @Override
-    public BulkOperationState initiateBulkWrite(
-        final BulkOperationState.OperationType operation,
-        final Path dest) {
-      return null;
-    }
-
-    @Override
-    public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
-    }
-
-    @Override
-    public Map<String, String> getDiagnostics() {
-      return null;
-    }
-
-    @Override
-    public void updateParameters(final Map<String, String> parameters) {
-    }
-
-    @Override
-    public void close() {
-    }
-
-    public List<Path> getDeleted() {
-      return deleted;
-    }
-
-    public List<Path> getCreated() {
-      return created;
-    }
-
-    @Override
-    public RenameTracker initiateRenameOperation(
-        final StoreContext storeContext,
-        final Path source,
-        final S3AFileStatus sourceStatus,
-        final Path dest) {
-      throw new UnsupportedOperationException("unsupported");
-    }
-
-    @Override
-    public void addAncestors(final Path qualifiedPath,
-        @Nullable final BulkOperationState operationState) {
-
-    }
   }
 
 }

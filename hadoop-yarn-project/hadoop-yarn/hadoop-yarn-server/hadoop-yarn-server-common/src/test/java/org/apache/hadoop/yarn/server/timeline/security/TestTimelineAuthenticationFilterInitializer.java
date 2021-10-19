@@ -23,7 +23,7 @@ import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import static org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer.PREFIX;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -46,9 +46,9 @@ public class TestTimelineAuthenticationFilterInitializer {
         break;
       case 1:
         // yarn.timeline-service.http-authentication.proxyuser prefix
-        conf.set(PREFIX + "proxyuser.foo.hosts", "*");
-        conf.set(PREFIX + "proxyuser.foo.users", "*");
-        conf.set(PREFIX + "proxyuser.foo.groups", "*");
+        conf.set(TIMELINE_HTTP_AUTH_PREFIX + "proxyuser.foo.hosts", "*");
+        conf.set(TIMELINE_HTTP_AUTH_PREFIX + "proxyuser.foo.users", "*");
+        conf.set(TIMELINE_HTTP_AUTH_PREFIX + "proxyuser.foo.groups", "*");
         break;
       case 2:
         // hadoop.proxyuser prefix has been overwritten by
@@ -56,9 +56,9 @@ public class TestTimelineAuthenticationFilterInitializer {
         conf.set("hadoop.proxyuser.foo.hosts", "bar");
         conf.set("hadoop.proxyuser.foo.users", "bar");
         conf.set("hadoop.proxyuser.foo.groups", "bar");
-        conf.set(PREFIX + "proxyuser.foo.hosts", "*");
-        conf.set(PREFIX + "proxyuser.foo.users", "*");
-        conf.set(PREFIX + "proxyuser.foo.groups", "*");
+        conf.set(TIMELINE_HTTP_AUTH_PREFIX + "proxyuser.foo.hosts", "*");
+        conf.set(TIMELINE_HTTP_AUTH_PREFIX + "proxyuser.foo.users", "*");
+        conf.set(TIMELINE_HTTP_AUTH_PREFIX + "proxyuser.foo.groups", "*");
         break;
       default:
         break;

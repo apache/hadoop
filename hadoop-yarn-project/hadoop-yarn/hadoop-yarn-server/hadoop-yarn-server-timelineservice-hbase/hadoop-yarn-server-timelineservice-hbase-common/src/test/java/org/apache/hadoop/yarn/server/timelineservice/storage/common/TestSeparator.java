@@ -28,7 +28,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 public class TestSeparator {
 

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.volume.csi;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.CsiAdaptorProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.NodePublishVolumeRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.NodeUnpublishVolumeRequest;
@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime;
 import org.apache.hadoop.yarn.server.volume.csi.CsiConstants;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeMetaData;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
@@ -51,10 +51,10 @@ public class ContainerVolumePublisher {
 
   private final Container container;
   private final String localMountRoot;
-  private final DockerLinuxContainerRuntime runtime;
+  private final OCIContainerRuntime runtime;
 
   public ContainerVolumePublisher(Container container, String localMountRoot,
-      DockerLinuxContainerRuntime runtime) {
+      OCIContainerRuntime runtime) {
     LOG.info("Initiate container volume publisher, containerID={},"
             + " volume local mount rootDir={}",
         container.getContainerId().toString(), localMountRoot);

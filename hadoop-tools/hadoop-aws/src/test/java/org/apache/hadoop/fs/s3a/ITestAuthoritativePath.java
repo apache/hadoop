@@ -84,14 +84,18 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
 
   private void cleanUpFS(S3AFileSystem fs) {
     // detach from the (shared) metadata store.
-    fs.setMetadataStore(new NullMetadataStore());
+    if (fs != null) {
+      fs.setMetadataStore(new NullMetadataStore());
+    }
 
     IOUtils.cleanupWithLogger(LOG, fs);
   }
 
   @Override
   public void teardown() throws Exception {
-    fullyAuthFS.delete(testRoot, true);
+    if (fullyAuthFS != null) {
+      fullyAuthFS.delete(testRoot, true);
+    }
 
     cleanUpFS(fullyAuthFS);
     cleanUpFS(rawFS);
@@ -105,7 +109,8 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, true);
     final S3AFileSystem newFS = createFS(uri, config);
     // set back the same metadata store instance
@@ -120,7 +125,8 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     config.set(AUTHORITATIVE_PATH, authPath.toString());
     final S3AFileSystem newFS = createFS(uri, config);
     // set back the same metadata store instance
@@ -135,7 +141,8 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
-          METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     config.set(AUTHORITATIVE_PATH, first + "," + middle + "," + last);
     final S3AFileSystem newFS = createFS(uri, config);
     // set back the same metadata store instance
@@ -151,7 +158,8 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(uri.getHost(), config,
         S3_METADATA_STORE_IMPL);
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     return createFS(uri, config);
   }
 
@@ -221,6 +229,28 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     try {
       assertTrue("No S3Guard store for partially authoritative FS",
             fs.hasMetadataStore());
+
+      runTestInsidePath(fs, authPath);
+      runTestOutsidePath(fs, nonAuthPath);
+    } finally {
+      cleanUpFS(fs);
+    }
+  }
+
+  @Test
+  public void testAuthPathWithOtherBucket() throws Exception {
+    Path authPath;
+    Path nonAuthPath;
+    S3AFileSystem fs = null;
+    String landsat = "s3a://landsat-pds/data";
+    String decoy2 = "/decoy2";
+
+    try {
+      authPath = new Path(testRoot, "testMultiAuthPath-first");
+      nonAuthPath = new Path(testRoot, "nonAuth-1");
+      fs = createMultiPathAuthFS(authPath.toString(), landsat, decoy2);
+      assertTrue("No S3Guard store for partially authoritative FS",
+          fs.hasMetadataStore());
 
       runTestInsidePath(fs, authPath);
       runTestOutsidePath(fs, nonAuthPath);

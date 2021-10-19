@@ -54,7 +54,7 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class is used for block maps stored as text files,

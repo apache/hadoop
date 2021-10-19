@@ -31,8 +31,8 @@ import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Preconditions;
 
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,17 +137,9 @@ public class HealthMonitor {
   public void addCallback(Callback cb) {
     this.callbacks.add(cb);
   }
-  
-  public void removeCallback(Callback cb) {
-    callbacks.remove(cb);
-  }
 
   public synchronized void addServiceStateCallback(ServiceStateCallback cb) {
     this.serviceStateCallbacks.add(cb);
-  }
-
-  public synchronized void removeServiceStateCallback(ServiceStateCallback cb) {
-    serviceStateCallbacks.remove(cb);
   }
 
   public void shutdown() {
@@ -261,11 +253,7 @@ public class HealthMonitor {
   synchronized State getHealthState() {
     return state;
   }
-  
-  synchronized HAServiceStatus getLastServiceStatus() {
-    return lastServiceState;
-  }
-  
+
   boolean isAlive() {
     return daemon.isAlive();
   }

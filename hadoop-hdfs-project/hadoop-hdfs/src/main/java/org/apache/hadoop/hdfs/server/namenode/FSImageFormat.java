@@ -75,8 +75,8 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Contains inner classes for reading or writing the on-disk format for
@@ -242,6 +242,7 @@ public class FSImageFormat {
    * the layout version.
    */
   public static LoaderDelegator newLoader(Configuration conf, FSNamesystem fsn) {
+
     return new LoaderDelegator(conf, fsn);
   }
 

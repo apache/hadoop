@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -38,6 +39,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -128,7 +131,7 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -159,6 +162,7 @@ public class FederationClientInterceptor
   private RouterMetrics routerMetrics;
   private ThreadPoolExecutor executorService;
   private final Clock clock = new MonotonicClock();
+  private boolean returnPartialReport;
 
   @Override
   public void init(String userName) {
@@ -194,6 +198,10 @@ public class FederationClientInterceptor
     clientRMProxies =
         new ConcurrentHashMap<SubClusterId, ApplicationClientProtocol>();
     routerMetrics = RouterMetrics.getMetrics();
+
+    returnPartialReport = conf.getBoolean(
+        YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
   }
 
   @Override
@@ -214,8 +222,15 @@ public class FederationClientInterceptor
 
     ApplicationClientProtocol clientRMProxy = null;
     try {
+      boolean serviceAuthEnabled = getConf().getBoolean(
+              CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+      UserGroupInformation realUser = user;
+      if (serviceAuthEnabled) {
+        realUser = UserGroupInformation.createProxyUser(
+                user.getShortUserName(), UserGroupInformation.getLoginUser());
+      }
       clientRMProxy = FederationProxyProviderUtil.createRMProxy(getConf(),
-          ApplicationClientProtocol.class, subClusterId, user);
+          ApplicationClientProtocol.class, subClusterId, realUser);
     } catch (Exception e) {
       RouterServerUtil.logAndThrowException(
           "Unable to create the interface to reach the SubCluster "
@@ -590,23 +605,79 @@ public class FederationClientInterceptor
     return response;
   }
 
+  /**
+   * The Yarn Router will forward the request to all the Yarn RMs in parallel,
+   * after that it will group all the ApplicationReports by the ApplicationId.
+   *
+   * Possible failure:
+   *
+   * Client: identical behavior as {@code ClientRMService}.
+   *
+   * Router: the Client will timeout and resubmit the request.
+   *
+   * ResourceManager: the Router calls each Yarn RM in parallel. In case a
+   * Yarn RM fails, a single call will timeout. However the Router will
+   * merge the ApplicationReports it got, and provides a partial list to
+   * the client.
+   *
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
   @Override
   public GetApplicationsResponse getApplications(GetApplicationsRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null) {
+      routerMetrics.incrMultipleAppsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getApplications request.",
+          null);
+    }
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subclusters =
+        federationFacade.getSubClusters(true);
+    ClientMethod remoteMethod = new ClientMethod("getApplications",
+        new Class[] {GetApplicationsRequest.class}, new Object[] {request});
+    Map<SubClusterId, GetApplicationsResponse> applications;
+
+    try {
+      applications = invokeConcurrent(subclusters.keySet(), remoteMethod,
+          GetApplicationsResponse.class);
+
+    } catch (Exception ex) {
+      routerMetrics.incrMultipleAppsFailedRetrieved();
+      LOG.error("Unable to get applications due to exception.", ex);
+      throw ex;
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededMultipleAppsRetrieved(stopTime - startTime);
+    // Merge the Application Reports
+    return RouterYarnClientUtils.mergeApplications(applications.values(),
+        returnPartialReport);
   }
 
   @Override
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) throws YarnException, IOException {
+    long startTime = clock.getTime();
     Map<SubClusterId, SubClusterInfo> subclusters =
         federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class}, new Object[] {request});
-    ArrayList<SubClusterId> clusterList = new ArrayList<>(subclusters.keySet());
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics =
-        invokeConcurrent(clusterList, remoteMethod,
-            GetClusterMetricsResponse.class);
+    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics;
+
+    try {
+      clusterMetrics = invokeConcurrent(subclusters.keySet(), remoteMethod,
+          GetClusterMetricsResponse.class);
+
+    } catch (Exception ex) {
+      routerMetrics.incrGetClusterMetricsFailedRetrieved();
+      LOG.error("Unable to get cluster metrics due to exception.", ex);
+      throw ex;
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetClusterMetricsRetrieved(stopTime - startTime);
     return RouterYarnClientUtils.merge(clusterMetrics.values());
   }
 
@@ -665,6 +736,12 @@ public class FederationClientInterceptor
       throw new YarnException(e);
     }
     return results;
+  }
+
+  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
+      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
+    ArrayList<SubClusterId> clusterIdList = new ArrayList<>(clusterIds);
+    return invokeConcurrent(clusterIdList, request, clazz);
   }
 
   @Override
@@ -740,11 +817,79 @@ public class FederationClientInterceptor
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * The YARN Router will forward to the respective YARN RM in which the AM is
+   * running.
+   *
+   * Possible failure:
+   *
+   * Client: identical behavior as {@code ClientRMService}.
+   *
+   * Router: the Client will timeout and resubmit the request.
+   *
+   * ResourceManager: the Router will timeout and the call will fail.
+   *
+   * State Store: the Router will timeout and it will retry depending on the
+   * FederationFacade settings - if the failure happened before the select
+   * operation.
+   */
   @Override
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
       GetApplicationAttemptReportRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    long startTime = clock.getTime();
+
+    if (request == null || request.getApplicationAttemptId() == null
+            || request.getApplicationAttemptId().getApplicationId() == null) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+              "Missing getApplicationAttemptReport " +
+                      "request or applicationId " +
+                      "or applicationAttemptId information.",
+              null);
+    }
+
+    SubClusterId subClusterId = null;
+
+    try {
+      subClusterId = federationFacade
+              .getApplicationHomeSubCluster(
+                      request.getApplicationAttemptId().getApplicationId());
+    } catch (YarnException e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil
+              .logAndThrowException("ApplicationAttempt " +
+                      request.getApplicationAttemptId() +
+                      "belongs to Application " +
+                      request.getApplicationAttemptId().getApplicationId() +
+                      " does not exist in FederationStateStore", e);
+    }
+
+    ApplicationClientProtocol clientRMProxy =
+            getClientRMProxyForSubCluster(subClusterId);
+
+    GetApplicationAttemptReportResponse response = null;
+    try {
+      response = clientRMProxy.getApplicationAttemptReport(request);
+    } catch (Exception e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      LOG.error("Unable to get the applicationAttempt report for "
+              + request.getApplicationAttemptId() + "to SubCluster "
+              + subClusterId.getId(), e);
+      throw e;
+    }
+
+    if (response == null) {
+      LOG.error("No response when attempting to retrieve the report of "
+              + "the applicationAttempt "
+              + request.getApplicationAttemptId() + " to SubCluster "
+              + subClusterId.getId());
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override

@@ -25,7 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -262,7 +262,7 @@ public class TestRPC {
             new DummyContainerManager(), addr, conf, null, 1);
     server.start();
     RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     ContainerManagementProtocol proxy = (ContainerManagementProtocol)
         rpc.getProxy(ContainerManagementProtocol.class,
             NetUtils.getConnectAddress(server), conf);

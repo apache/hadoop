@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+find_package(Boost REQUIRED COMPONENTS date_time)
+
 # Delegate some functionality to libhdfs, until libhdfspp is complete.
 set (LIBHDFS_SRC_DIR ../../libhdfs)
 set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)
@@ -63,6 +65,10 @@ endfunction(add_memcheck_test)
 #
 #
 
+add_subdirectory(x-platform)
+add_subdirectory(utils)
+add_subdirectory(tools)
+
 add_executable(uri_test uri_test.cc)
 target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(uri uri_test)
@@ -81,7 +87,7 @@ add_memcheck_test(retry_policy retry_policy_test)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_executable(rpc_engine_test rpc_engine_test.cc ${PROTO_TEST_SRCS} ${PROTO_TEST_HDRS})
-target_link_libraries(rpc_engine_test test_common rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(rpc_engine_test test_common rpc proto common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 add_memcheck_test(rpc_engine rpc_engine_test)
 
 add_executable(bad_datanode_test bad_datanode_test.cc)
@@ -92,11 +98,13 @@ add_executable(node_exclusion_test node_exclusion_test.cc)
 target_link_libraries(node_exclusion_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(node_exclusion node_exclusion_test)
 
-add_executable(configuration_test configuration_test.cc)
+add_executable(configuration_test $<TARGET_OBJECTS:test_utils> configuration_test.cc)
+target_include_directories(configuration_test PRIVATE ../lib)
 target_link_libraries(configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(configuration configuration_test)
 
-add_executable(hdfs_configuration_test hdfs_configuration_test.cc)
+add_executable(hdfs_configuration_test $<TARGET_OBJECTS:test_utils> hdfs_configuration_test.cc)
+target_include_directories(hdfs_configuration_test PRIVATE ../lib)
 target_link_libraries(hdfs_configuration_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfs_configuration hdfs_configuration_test)
 
@@ -104,11 +112,13 @@ add_executable(hdfspp_errors_test hdfspp_errors.cc)
 target_link_libraries(hdfspp_errors_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfspp_errors hdfspp_errors_test)
 
-add_executable(hdfs_builder_test hdfs_builder_test.cc)
+add_executable(hdfs_builder_test $<TARGET_OBJECTS:test_utils> hdfs_builder_test.cc)
+target_include_directories(hdfs_builder_test PRIVATE ../lib)
 target_link_libraries(hdfs_builder_test test_common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfs_builder_test hdfs_builder_test)
 
-add_executable(logging_test logging_test.cc)
+add_executable(logging_test logging_test.cc $<TARGET_OBJECTS:x_platform_obj>)
+target_include_directories(logging_test PRIVATE ../lib)
 target_link_libraries(logging_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(logging_test logging_test)
 
@@ -120,7 +130,8 @@ add_executable(user_lock_test user_lock_test.cc)
 target_link_libraries(user_lock_test fs gmock_main common ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(user_lock user_lock_test)
 
-add_executable(hdfs_config_connect_bugs_test hdfs_config_connect_bugs.cc)
+add_executable(hdfs_config_connect_bugs_test $<TARGET_OBJECTS:test_utils> hdfs_config_connect_bugs.cc)
+target_include_directories(hdfs_config_connect_bugs_test PRIVATE ../lib)
 target_link_libraries(hdfs_config_connect_bugs_test common gmock_main bindings_c fs rpc proto common reader connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} ${SASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(hdfs_config_connect_bugs hdfs_config_connect_bugs_test)
 
@@ -140,11 +151,10 @@ include_directories (
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libhdfs-tests/
 )
 
-add_library(hdfspp_test_shim_static STATIC hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
-add_library(hdfspp_test_static STATIC ${LIBHDFSPP_BINDING_C}/hdfs.cc)
-
-# Add dependencies
+add_library(hdfspp_test_shim_static STATIC $<TARGET_OBJECTS:x_platform_obj> hdfs_shim.c libhdfs_wrapper.c libhdfspp_wrapper.cc ${LIBHDFSPP_BINDING_C}/hdfs.cc)
 add_dependencies(hdfspp_test_shim_static proto)
+
+add_library(hdfspp_test_static STATIC $<TARGET_OBJECTS:x_platform_obj> ${LIBHDFSPP_BINDING_C}/hdfs.cc)
 add_dependencies(hdfspp_test_static proto)
 
 # TODO: get all of the mini dfs library bits here in one place

@@ -19,10 +19,10 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-yarn-server-tests</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Server Tests</name>
 
   <properties>
@@ -118,8 +118,8 @@
       <artifactId>hadoop-yarn-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
@@ -137,28 +137,39 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-test-protoc</id>
-            <goals>
-              <goal>test-protoc</goal>
-            </goals>
+            <id>src-test-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/src/test/proto</param>
-                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/test/proto</directory>
-                <includes>
-                  <include>test_token.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
             </configuration>
           </execution>
         </executions>

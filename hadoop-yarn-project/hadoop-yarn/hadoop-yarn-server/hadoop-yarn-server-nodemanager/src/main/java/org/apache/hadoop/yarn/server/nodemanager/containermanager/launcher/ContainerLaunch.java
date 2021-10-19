@@ -46,6 +46,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -96,7 +98,7 @@ import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,15 +181,36 @@ public class ContainerLaunch implements Callable<Integer> {
     return var;
   }
 
-  private Map<String, String> expandAllEnvironmentVars(
-      ContainerLaunchContext launchContext, Path containerLogDir) {
-    Map<String, String> environment = launchContext.getEnvironment();
+  private void expandAllEnvironmentVars(
+      Map<String, String> environment, Path containerLogDir) {
     for (Entry<String, String> entry : environment.entrySet()) {
       String value = entry.getValue();
       value = expandEnvironment(value, containerLogDir);
       entry.setValue(value);
     }
-    return environment;
+  }
+
+  private void addKeystoreVars(Map<String, String> environment,
+      Path containerWorkDir) {
+    environment.put(ApplicationConstants.KEYSTORE_FILE_LOCATION_ENV_NAME,
+        new Path(containerWorkDir,
+            ContainerLaunch.KEYSTORE_FILE).toUri().getPath());
+    environment.put(ApplicationConstants.KEYSTORE_PASSWORD_ENV_NAME,
+        new String(container.getCredentials().getSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD),
+            StandardCharsets.UTF_8));
+  }
+
+  private void addTruststoreVars(Map<String, String> environment,
+                               Path containerWorkDir) {
+    environment.put(
+        ApplicationConstants.TRUSTSTORE_FILE_LOCATION_ENV_NAME,
+        new Path(containerWorkDir,
+            ContainerLaunch.TRUSTSTORE_FILE).toUri().getPath());
+    environment.put(ApplicationConstants.TRUSTSTORE_PASSWORD_ENV_NAME,
+        new String(container.getCredentials().getSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD),
+            StandardCharsets.UTF_8));
   }
 
   @Override
@@ -222,8 +245,10 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       launchContext.setCommands(newCmds);
 
-      Map<String, String> environment = expandAllEnvironmentVars(
-          launchContext, containerLogDir);
+      // The actual expansion of environment variables happens after calling
+      // sanitizeEnv.  This allows variables specified in NM_ADMIN_USER_ENV
+      // to reference user or container-defined variables.
+      Map<String, String> environment = launchContext.getEnvironment();
       // /////////////////////////// End of variable expansion
 
       // Use this to track variables that are added to the environment by nm.
@@ -289,13 +314,6 @@ public class ContainerLaunch implements Callable<Integer> {
                  lfs.create(nmPrivateKeystorePath,
                      EnumSet.of(CREATE, OVERWRITE))) {
           keystoreOutStream.write(keystore);
-          environment.put(ApplicationConstants.KEYSTORE_FILE_LOCATION_ENV_NAME,
-              new Path(containerWorkDir,
-                  ContainerLaunch.KEYSTORE_FILE).toUri().getPath());
-          environment.put(ApplicationConstants.KEYSTORE_PASSWORD_ENV_NAME,
-              new String(container.getCredentials().getSecretKey(
-                  AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD),
-                  StandardCharsets.UTF_8));
         }
       } else {
         nmPrivateKeystorePath = null;
@@ -307,14 +325,6 @@ public class ContainerLaunch implements Callable<Integer> {
                  lfs.create(nmPrivateTruststorePath,
                      EnumSet.of(CREATE, OVERWRITE))) {
           truststoreOutStream.write(truststore);
-          environment.put(
-              ApplicationConstants.TRUSTSTORE_FILE_LOCATION_ENV_NAME,
-              new Path(containerWorkDir,
-                  ContainerLaunch.TRUSTSTORE_FILE).toUri().getPath());
-          environment.put(ApplicationConstants.TRUSTSTORE_PASSWORD_ENV_NAME,
-              new String(container.getCredentials().getSecretKey(
-                  AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD),
-                  StandardCharsets.UTF_8));
         }
       } else {
         nmPrivateTruststorePath = null;
@@ -334,6 +344,16 @@ public class ContainerLaunch implements Callable<Integer> {
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
             containerLogDirs, localResources, nmPrivateClasspathJarDir,
             nmEnvVars);
+
+        expandAllEnvironmentVars(environment, containerLogDir);
+
+        // Add these if needed after expanding so we don't expand key values.
+        if (keystore != null) {
+          addKeystoreVars(environment, containerWorkDir);
+        }
+        if (truststore != null) {
+          addTruststoreVars(environment, containerWorkDir);
+        }
 
         prepareContainer(localResources, containerLocalDirs);
 
@@ -1431,6 +1451,9 @@ public class ContainerLaunch implements Callable<Integer> {
   private static final class WindowsShellScriptBuilder
       extends ShellScriptBuilder {
 
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("%(.*?)%");
+    private static final Pattern SPLIT_PATTERN = Pattern.compile(":");
+
     private void errorCheck() {
       line("@if %errorlevel% neq 0 exit /b %errorlevel%");
     }
@@ -1521,34 +1544,25 @@ public class ContainerLaunch implements Callable<Integer> {
       if (envVal == null || envVal.isEmpty()) {
         return Collections.emptySet();
       }
+
+      // Example inputs: %var%, %%, %a:b%
+      Matcher matcher = VARIABLE_PATTERN.matcher(envVal);
       final Set<String> deps = new HashSet<>();
-      final int len = envVal.length();
-      int i = 0;
-      while (i < len) {
-        i = envVal.indexOf('%', i); // find beginning of variable
-        if (i < 0 || i == (len - 1)) {
-          break;
+      while (matcher.find()) {
+        String match = matcher.group(1);
+        if (!match.isEmpty()) {
+          if (match.equals(":")) {
+            // Special case, variable name can be a single : character
+            deps.add(match);
+          } else {
+            // Either store the variable name before the : string manipulation
+            // character or the whole match. (%var% -> var, %a:b% -> a)
+            String[] split = SPLIT_PATTERN.split(match, 2);
+            if (!split[0].isEmpty()) {
+              deps.add(split[0]);
+            }
+          }
         }
-        i++;
-        // 3 cases: %var%, %var:...% or %%
-        final int j = envVal.indexOf('%', i); // find end of variable
-        if (j == i) {
-          // %% case, just skip it
-          i++;
-          continue;
-        }
-        if (j < 0) {
-          break; // even %var:...% syntax ends with a %, so j cannot be negative
-        }
-        final int k = envVal.indexOf(':', i);
-        if (k >= 0 && k < j) {
-          // %var:...% syntax
-          deps.add(envVal.substring(i, k));
-        } else {
-          // %var% syntax
-          deps.add(envVal.substring(i, j));
-        }
-        i = j + 1;
       }
       return deps;
     }
@@ -1620,18 +1634,42 @@ public class ContainerLaunch implements Callable<Integer> {
 
     addToEnvMap(environment, nmVars, Environment.PWD.name(), pwd.toString());
 
+    addToEnvMap(environment, nmVars, Environment.LOCALIZATION_COUNTERS.name(),
+        container.localizationCountersAsString());
+
     if (!Shell.WINDOWS) {
       addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }
 
     // variables here will be forced in, even if the container has
-    // specified them.
+    // specified them.  Note: we do not track these in nmVars, to
+    // allow them to be ordered properly if they reference variables
+    // defined by the user.
     String defEnvStr = conf.get(YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
     Apps.setEnvFromInputProperty(environment,
         YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf,
         File.pathSeparator);
-    nmVars.addAll(Apps.getEnvVarsFromInputProperty(
-        YarnConfiguration.NM_ADMIN_USER_ENV, defEnvStr, conf));
+
+    if (!Shell.WINDOWS) {
+      // maybe force path components
+      String forcePath = conf.get(YarnConfiguration.NM_ADMIN_FORCE_PATH,
+          YarnConfiguration.DEFAULT_NM_ADMIN_FORCE_PATH);
+      if (!forcePath.isEmpty()) {
+        String userPath = environment.get(Environment.PATH.name());
+        environment.remove(Environment.PATH.name());
+        if (userPath == null || userPath.isEmpty()) {
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              forcePath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              "$PATH", File.pathSeparator);
+        } else {
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              forcePath, File.pathSeparator);
+          Apps.addToEnvironment(environment, Environment.PATH.name(),
+              userPath, File.pathSeparator);
+        }
+      }
+    }
 
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.

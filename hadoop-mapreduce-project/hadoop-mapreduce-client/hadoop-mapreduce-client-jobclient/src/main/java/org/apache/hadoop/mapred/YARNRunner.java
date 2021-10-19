@@ -94,13 +94,14 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class enables the current JobClient (0.22 hadoop) to run on YARN.
@@ -899,9 +900,7 @@ public class YARNRunner implements ClientProtocol {
     } catch (YarnException e) {
       throw new IOException(e);
     }
-    if (application.getYarnApplicationState() == YarnApplicationState.FINISHED
-        || application.getYarnApplicationState() == YarnApplicationState.FAILED
-        || application.getYarnApplicationState() == YarnApplicationState.KILLED) {
+    if (Apps.isApplicationFinalState(application.getYarnApplicationState())) {
       return;
     }
     killApplication(appId);

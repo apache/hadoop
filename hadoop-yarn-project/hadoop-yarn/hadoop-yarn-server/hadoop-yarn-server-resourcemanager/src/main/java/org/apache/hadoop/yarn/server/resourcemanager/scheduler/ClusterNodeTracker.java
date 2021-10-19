@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -33,12 +34,12 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -106,6 +107,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       // Update cluster capacity
       Resources.addTo(clusterCapacity, node.getTotalResource());
       staleClusterCapacity = Resources.clone(clusterCapacity);
+      ClusterMetrics.getMetrics().incrCapability(node.getTotalResource());
 
       // Update maximumAllocation
       updateMaxResources(node, true);
@@ -201,6 +203,7 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       // Update cluster capacity
       Resources.subtractFrom(clusterCapacity, node.getTotalResource());
       staleClusterCapacity = Resources.clone(clusterCapacity);
+      ClusterMetrics.getMetrics().decrCapability(node.getTotalResource());
 
       // Update maximumAllocation
       updateMaxResources(node, false);
@@ -386,21 +389,21 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
 
   /**
    * Convenience method to sort nodes.
+   * Nodes can change while being sorted. Using a standard sort will fail
+   * without locking each node, the TreeSet handles this without locks.
    *
-   * Note that the sort is performed without holding a lock. We are sorting
-   * here instead of on the caller to allow for future optimizations (e.g.
-   * sort once every x milliseconds).
+   * @param comparator the comparator to sort the nodes with
+   * @return sorted set of nodes in the form of a TreeSet
    */
-  public List<N> sortedNodeList(Comparator<N> comparator) {
-    List<N> sortedList = null;
+  public TreeSet<N> sortedNodeSet(Comparator<N> comparator) {
+    TreeSet<N> sortedSet = new TreeSet<>(comparator);
     readLock.lock();
     try {
-      sortedList = new ArrayList(nodes.values());
+      sortedSet.addAll(nodes.values());
     } finally {
       readLock.unlock();
     }
-    Collections.sort(sortedList, comparator);
-    return sortedList;
+    return sortedSet;
   }
 
   /**
@@ -492,5 +495,16 @@ public class ClusterNodeTracker<N extends SchedulerNode> {
       readLock.unlock();
     }
     return nodesPerPartition;
+  }
+
+  public List<String> getPartitions() {
+    List<String> partitions = null;
+    readLock.lock();
+    try {
+      partitions = new ArrayList(nodesPerLabel.keySet());
+    } finally {
+      readLock.unlock();
+    }
+    return partitions;
   }
 }

@@ -28,9 +28,11 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
-import com.google.common.collect.Lists;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -68,13 +70,17 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     invoker = new Invoker(new S3ARetryPolicy(getConfiguration()),
         Invoker.NO_OP
     );
+    skipIfClientSideEncryption();
     Assume.assumeTrue("No metadata store in test filesystem",
         getFileSystem().hasMetadataStore());
   }
 
   @Override
   public void teardown() throws Exception {
-    clearInconsistency(getFileSystem());
+    if (getFileSystem() != null && getFileSystem()
+        .getAmazonS3Client() instanceof InconsistentAmazonS3Client) {
+      clearInconsistency(getFileSystem());
+    }
     super.teardown();
   }
 
@@ -194,7 +200,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
       }
 
       S3AFileSystem fs = getFileSystem();
-      assertFalse("Renaming deleted file should have failed",
+      intercept(FileNotFoundException.class, () ->
           fs.rename(dir2[0], dir1[0]));
       assertTrue("Renaming over existing file should have succeeded",
           fs.rename(dir1[0], dir0[0]));
@@ -271,7 +277,10 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assertTrue(fs.delete(testDirs[1], false));
     assertTrue(fs.delete(testDirs[2], false));
 
-    fs.rename(path("a"), path("a3"));
+    ContractTestUtils.rename(fs, path("a"), path("a3"));
+    ContractTestUtils.assertPathsDoNotExist(fs,
+            "Source paths shouldn't exist post rename operation",
+            testDirs[0], testDirs[1], testDirs[2]);
     FileStatus[] paths = fs.listStatus(path("a3/b"));
     List<Path> list = new ArrayList<>();
     for (FileStatus fileState : paths) {
@@ -556,30 +565,47 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         + " paths");
 
     ListObjectsV2Result postDeleteDelimited = listObjectsV2(fs, key, "/");
-    assertListSizeEqual(
+    boolean stripTombstones = false;
+    assertObjectSummariesEqual(
         "InconsistentAmazonS3Client added back objects incorrectly " +
             "in a non-recursive listing",
-        preDeleteDelimited.getObjectSummaries(),
-        postDeleteDelimited.getObjectSummaries());
+        preDeleteDelimited, postDeleteDelimited,
+        stripTombstones);
 
     assertListSizeEqual("InconsistentAmazonS3Client added back prefixes incorrectly " +
             "in a non-recursive listing",
         preDeleteDelimited.getCommonPrefixes(),
-        postDeleteDelimited.getCommonPrefixes()
-    );
+        postDeleteDelimited.getCommonPrefixes());
     LOG.info("Executing Deep listing");
     ListObjectsV2Result postDeleteUndelimited = listObjectsV2(fs, key, null);
-    assertListSizeEqual("InconsistentAmazonS3Client added back objects incorrectly " +
-            "in a recursive listing",
-        preDeleteUndelimited.getObjectSummaries(),
-        postDeleteUndelimited.getObjectSummaries()
-    );
+    assertObjectSummariesEqual("InconsistentAmazonS3Client added back objects"
+            + " incorrectly in a recursive listing",
+        preDeleteUndelimited, postDeleteUndelimited,
+        stripTombstones);
 
     assertListSizeEqual("InconsistentAmazonS3Client added back prefixes incorrectly " +
             "in a recursive listing",
         preDeleteUndelimited.getCommonPrefixes(),
         postDeleteUndelimited.getCommonPrefixes()
     );
+  }
+
+  private void assertObjectSummariesEqual(final String message,
+      final ListObjectsV2Result expected,
+      final ListObjectsV2Result actual,
+      final boolean stripTombstones) {
+    assertCollectionsEqual(
+        message,
+        stringify(expected.getObjectSummaries(), stripTombstones),
+        stringify(actual.getObjectSummaries(), stripTombstones));
+  }
+
+  List<String> stringify(List<S3ObjectSummary> objects,
+      boolean stripTombstones) {
+    return objects.stream()
+        .filter(s -> !stripTombstones || !(s.getKey().endsWith("/")))
+        .map(s -> s.getKey())
+        .collect(Collectors.toList());
   }
 
   /**
@@ -676,6 +702,22 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         eTag, locatedFileStatus.getETag());
     assertEquals("versionID of " + locatedFileStatus,
         versionId, locatedFileStatus.getVersionId());
+  }
+
+  /**
+   * Assert that the two collections match using
+   * object equality of the elements within.
+   * @param message text for the assertion
+   * @param expected expected list
+   * @param actual actual list
+   * @param <T> type of list
+   */
+  private <T> void assertCollectionsEqual(String message,
+      Collection<T> expected,
+      Collection<T> actual) {
+    Assertions.assertThat(actual)
+        .describedAs(message)
+        .containsExactlyInAnyOrderElementsOf(expected);
   }
 
   /**

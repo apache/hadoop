@@ -28,20 +28,25 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.SSEDescription;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.dynamodbv2.model.Tag;
-import com.google.common.collect.Lists;
+import com.amazonaws.services.dynamodbv2.model.TagResourceRequest;
+import com.amazonaws.services.dynamodbv2.model.UntagResourceRequest;
+import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -70,10 +75,15 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.valueOf;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.E_INCOMPATIBLE_ITEM_VERSION;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.E_INCOMPATIBLE_TAG_VERSION;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.E_NO_VERSION_MARKER_AND_NOT_EMPTY;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.getVersionMarkerFromTags;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -110,18 +120,23 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       LoggerFactory.getLogger(ITestDynamoDBMetadataStore.class);
   public static final PrimaryKey
       VERSION_MARKER_PRIMARY_KEY = createVersionMarkerPrimaryKey(
-      DynamoDBMetadataStore.VERSION_MARKER);
+      DynamoDBMetadataStore.VERSION_MARKER_ITEM_NAME);
 
   private S3AFileSystem fileSystem;
   private S3AContract s3AContract;
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   private URI fsUri;
 
   private String bucket;
 
+  @SuppressWarnings("StaticNonFinalField")
   private static DynamoDBMetadataStore ddbmsStatic;
 
+  @SuppressWarnings("StaticNonFinalField")
   private static String testDynamoDBTableName;
+
+  private static final List<Path> UNCHANGED_ENTRIES = Collections.emptyList();
 
   /**
    * Create a path under the test path provided by
@@ -155,10 +170,15 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       super.setUp();
     } catch (FileNotFoundException e){
       LOG.warn("MetadataStoreTestBase setup failed. Waiting for table to be "
-          + "deleted before trying again.");
-      ddbmsStatic.getTable().waitForDelete();
+          + "deleted before trying again.", e);
+      try {
+        ddbmsStatic.getTable().waitForDelete();
+      } catch (IllegalArgumentException | InterruptedException ex) {
+        LOG.warn("When awaiting a table to be cleaned up", e);
+      }
       super.setUp();
     }
+    tableHandler = getDynamoMetadataStore().getTableHandler();
   }
 
   @BeforeClass
@@ -417,9 +437,11 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(s3afs, new S3Guard.TtlTimeProvider(conf));
-      verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      verifyTableSse(conf, table.getDescription());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
+
       String expectedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
           s3afs.getBucketLocation(bucket));
       assertEquals("DynamoDB table should be in configured region or the same" +
@@ -449,6 +471,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config table name
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
@@ -456,12 +479,26 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
+
     // config region
     conf.set(S3GUARD_DDB_REGION_KEY, savedRegion);
+    doTestInitializeWithConfiguration(conf, tableName);
+
+    // config table server side encryption (SSE)
+    conf.setBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, true);
+    doTestInitializeWithConfiguration(conf, tableName);
+  }
+
+  /**
+   * Test initialize() using a Configuration object successfully.
+   */
+  private void doTestInitializeWithConfiguration(Configuration conf,
+      String tableName) throws IOException {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
-      verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      verifyTableSse(conf, table.getDescription());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
       assertEquals("Unexpected key schema found!",
@@ -565,7 +602,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Collection<Path> pathsToDelete = null;
     if (oldMetas != null) {
       // put all metadata of old paths and verify
-      ms.put(new DirListingMetadata(oldDir, oldMetas, false), putState);
+      ms.put(new DirListingMetadata(oldDir, oldMetas, false), UNCHANGED_ENTRIES,
+          putState);
       assertEquals("Child count",
           0, ms.listChildren(newDir).withoutTombstones().numEntries());
       Assertions.assertThat(ms.listChildren(oldDir).getListing())
@@ -613,29 +651,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = ddbms.getTable().getTableName();
     verifyTableInitialized(tableName, ddbms.getDynamoDB());
     // create existing table
-    ddbms.initTable();
+    tableHandler.initTable();
     verifyTableInitialized(tableName, ddbms.getDynamoDB());
-  }
-
-  /**
-   * Test the low level version check code.
-   */
-  @Test
-  public void testItemVersionCompatibility() throws Throwable {
-    verifyVersionCompatibility("table",
-        createVersionMarker(VERSION_MARKER, VERSION, 0));
-  }
-
-  /**
-   * Test that a version marker entry without the version number field
-   * is rejected as incompatible with a meaningful error message.
-   */
-  @Test
-  public void testItemLacksVersion() throws Throwable {
-    intercept(IOException.class, E_NOT_VERSION_MARKER,
-        () -> verifyVersionCompatibility("table",
-            new Item().withPrimaryKey(
-                createVersionMarkerPrimaryKey(VERSION_MARKER))));
   }
 
   /**
@@ -663,41 +680,122 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
+      DynamoDBMetadataStoreTableManager localTableHandler =
+          ddbms.getTableHandler();
+
       Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
-      // check the tagging too
+      // check the tagging
       verifyStoreTags(createTagMap(), ddbms);
+      // check version compatibility
+      checkVerifyVersionMarkerCompatibility(localTableHandler, table);
 
-      Item originalVersionMarker = table.getItem(VERSION_MARKER_PRIMARY_KEY);
-      table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
-
-      // create existing table
-      intercept(IOException.class, E_NO_VERSION_MARKER,
-          () -> ddbms.initTable());
-
-      // now add a different version marker
-      Item v200 = createVersionMarker(VERSION_MARKER, VERSION * 2, 0);
-      table.putItem(v200);
-
-      // create existing table
-      intercept(IOException.class, E_INCOMPATIBLE_VERSION,
-          () -> ddbms.initTable());
-
-      // create a marker with no version and expect failure
-      final Item invalidMarker = new Item().withPrimaryKey(
-          createVersionMarkerPrimaryKey(VERSION_MARKER))
-          .withLong(TABLE_CREATED, 0);
-      table.putItem(invalidMarker);
-
-      intercept(IOException.class, E_NOT_VERSION_MARKER,
-          () -> ddbms.initTable());
-
-      // reinstate the version marker
-      table.putItem(originalVersionMarker);
-      ddbms.initTable();
       conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
     } finally {
       destroy(ddbms);
     }
+  }
+
+  private void checkVerifyVersionMarkerCompatibility(
+      DynamoDBMetadataStoreTableManager localTableHandler, Table table)
+      throws Exception {
+    final AmazonDynamoDB addb
+        = getDynamoMetadataStore().getAmazonDynamoDB();
+    Item originalVersionMarker = table.getItem(VERSION_MARKER_PRIMARY_KEY);
+
+    LOG.info("1/6: remove version marker and tags from table " +
+        "the table is empty, so it should be initialized after the call");
+    deleteVersionMarkerItem(table);
+    removeVersionMarkerTag(table, addb);
+    localTableHandler.initTable();
+
+    final int versionFromItem = extractVersionFromMarker(
+        localTableHandler.getVersionMarkerItem());
+    final int versionFromTag = extractVersionFromMarker(
+        getVersionMarkerFromTags(table, addb));
+    assertEquals("Table should be tagged with the right version.",
+        VERSION, versionFromTag);
+    assertEquals("Table should have the right version marker.",
+        VERSION, versionFromItem);
+
+    LOG.info("2/6: if the table is not empty and there's no version marker " +
+        "it should fail");
+    deleteVersionMarkerItem(table);
+    removeVersionMarkerTag(table, addb);
+    String testKey = "coffee";
+    Item wrongItem =
+        createVersionMarker(testKey, VERSION * 2, 0);
+    table.putItem(wrongItem);
+    intercept(IOException.class, E_NO_VERSION_MARKER_AND_NOT_EMPTY,
+        () -> localTableHandler.initTable());
+
+    LOG.info("3/6: table has only version marker item then it will be tagged");
+    table.putItem(originalVersionMarker);
+    localTableHandler.initTable();
+    final int versionFromTag2 = extractVersionFromMarker(
+        getVersionMarkerFromTags(table, addb));
+    assertEquals("Table should have the right version marker tag " +
+        "if there was a version item.", VERSION, versionFromTag2);
+
+    LOG.info("4/6: table has only version marker tag then the version marker " +
+        "item will be created.");
+    deleteVersionMarkerItem(table);
+    removeVersionMarkerTag(table, addb);
+    localTableHandler.tagTableWithVersionMarker();
+    localTableHandler.initTable();
+    final int versionFromItem2 = extractVersionFromMarker(
+        localTableHandler.getVersionMarkerItem());
+    assertEquals("Table should have the right version marker item " +
+        "if there was a version tag.", VERSION, versionFromItem2);
+
+    LOG.info("5/6: add a different marker tag to the table: init should fail");
+    deleteVersionMarkerItem(table);
+    removeVersionMarkerTag(table, addb);
+    Item v200 = createVersionMarker(VERSION_MARKER_ITEM_NAME, VERSION * 2, 0);
+    table.putItem(v200);
+    intercept(IOException.class, E_INCOMPATIBLE_ITEM_VERSION,
+        () -> localTableHandler.initTable());
+
+    LOG.info("6/6: add a different marker item to the table: init should fail");
+    deleteVersionMarkerItem(table);
+    removeVersionMarkerTag(table, addb);
+    int wrongVersion = VERSION + 3;
+    tagTableWithCustomVersion(table, addb, wrongVersion);
+    intercept(IOException.class, E_INCOMPATIBLE_TAG_VERSION,
+        () -> localTableHandler.initTable());
+
+    // CLEANUP
+    table.putItem(originalVersionMarker);
+    localTableHandler.tagTableWithVersionMarker();
+    localTableHandler.initTable();
+  }
+
+  private void tagTableWithCustomVersion(Table table,
+      AmazonDynamoDB addb,
+      int wrongVersion) {
+    final Tag vmTag = new Tag().withKey(VERSION_MARKER_TAG_NAME)
+        .withValue(valueOf(wrongVersion));
+    TagResourceRequest tagResourceRequest = new TagResourceRequest()
+        .withResourceArn(table.getDescription().getTableArn())
+        .withTags(vmTag);
+    addb.tagResource(tagResourceRequest);
+  }
+
+  private void removeVersionMarkerTag(Table table, AmazonDynamoDB addb) {
+    addb.untagResource(new UntagResourceRequest()
+        .withResourceArn(table.describe().getTableArn())
+        .withTagKeys(VERSION_MARKER_TAG_NAME));
+  }
+
+  /**
+   * Deletes a version marker; spins briefly to await it disappearing.
+   * @param table table to delete the key
+   * @throws Exception failure
+   */
+  private void deleteVersionMarkerItem(Table table) throws Exception {
+    table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
+    eventually(30_000, 1_0, () ->
+        assertNull("Version marker should be null after deleting it " +
+            "from the table.", table.getItem(VERSION_MARKER_PRIMARY_KEY)));
   }
 
   /**
@@ -878,13 +976,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         grandchildPath,
         new ArrayList<>(), false);
     intercept(PathIOException.class, E_INCONSISTENT_UPDATE,
-        () -> ddbms.put(grandchildListing, bulkWrite));
+        () -> ddbms.put(grandchildListing, UNCHANGED_ENTRIES, bulkWrite));
 
     // but a directory update under another path is fine
     DirListingMetadata grandchild2Listing = new DirListingMetadata(
         grandchild2Path,
         new ArrayList<>(), false);
-    ddbms.put(grandchild2Listing, bulkWrite);
+    ddbms.put(grandchild2Listing, UNCHANGED_ENTRIES, bulkWrite);
     // and it creates a new entry for its parent
     verifyInAncestor(bulkWrite, child2, true);
   }
@@ -917,7 +1015,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = getTestTableName("testDeleteTable");
     Path testPath = new Path(new Path(fsUri), "/" + tableName);
     final S3AFileSystem s3afs = getFileSystem();
-    final Configuration conf = getTableCreationConfig();
+    // patch the filesystem config as this is one read in initialize()
+    final Configuration conf =  s3afs.getConf();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
@@ -952,8 +1051,11 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     tags.forEach(t -> actual.put(t.getKey(), t.getValue()));
     Assertions.assertThat(actual)
         .describedAs("Tags from DDB table")
-        .containsExactlyEntriesOf(tagMap);
-    assertEquals(tagMap.size(), tags.size());
+        .containsAllEntriesOf(tagMap);
+
+    // The version marker is always there in the tags.
+    // We have a plus one in tags we expect.
+    assertEquals(tagMap.size() + 1, tags.size());
   }
 
   protected List<Tag> listTagsOfStore(final DynamoDBMetadataStore store) {
@@ -1012,7 +1114,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertEquals(auth, dlm.isAuthoritative());
 
     // Test with non-authoritative listing, empty dir
-    ms.put(dlm, null);
+    ms.put(dlm, UNCHANGED_ENTRIES, null);
     final PathMetadata pmdResultEmpty = ms.get(dirToPut, true);
     if(auth){
       assertEquals(Tristate.TRUE, pmdResultEmpty.isEmptyDirectory());
@@ -1022,7 +1124,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // Test with non-authoritative listing, non-empty dir
     dlm.put(new PathMetadata(basicFileStatus(fileToPut, 1, false)));
-    ms.put(dlm, null);
+    ms.put(dlm, UNCHANGED_ENTRIES, null);
     final PathMetadata pmdResultNotEmpty = ms.get(dirToPut, true);
     assertEquals(Tristate.FALSE, pmdResultNotEmpty.isEmptyDirectory());
   }
@@ -1039,6 +1141,25 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     assertEquals(tableName, td.getTableName());
     assertEquals("ACTIVE", td.getTableStatus());
     return table;
+  }
+
+  /**
+   * Verify the table is created with correct server side encryption (SSE).
+   */
+  private void verifyTableSse(Configuration conf, TableDescription td) {
+    SSEDescription sseDescription = td.getSSEDescription();
+    if (conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false)) {
+      assertNotNull(sseDescription);
+      assertEquals("ENABLED", sseDescription.getStatus());
+      assertEquals("KMS", sseDescription.getSSEType());
+      // We do not test key ARN is the same as configured value,
+      // because in configuration, the ARN can be specified by alias.
+      assertNotNull(sseDescription.getKMSMasterKeyArn());
+    } else {
+      if (sseDescription != null) {
+        assertEquals("DISABLED", sseDescription.getStatus());
+      }
+    }
   }
 
   /**
@@ -1206,6 +1327,84 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // *AND* the parent dir has not been created
     assertNotFound(dir);
+  }
+
+
+  @Test
+  public void testPruneFilesNotDirs() throws Throwable {
+    describe("HADOOP-16725: directories cannot be pruned");
+    String base = "/" + getMethodName();
+    final long now = getTime();
+    // round it off for ease of interpreting results
+    final long t0 = now - (now % 100_000);
+    long interval = 1_000;
+    long t1 = t0 + interval;
+    long t2 = t1 + interval;
+    String dir = base + "/dir";
+    String dir2 = base + "/dir2";
+    String child1 = dir + "/file1";
+    String child2 = dir + "/file2";
+    final Path basePath = strToPath(base);
+    // put the dir at age t0
+    final DynamoDBMetadataStore ms = getDynamoMetadataStore();
+    final AncestorState ancestorState
+        = ms.initiateBulkWrite(
+            BulkOperationState.OperationType.Put,
+            basePath);
+    putDir(base, t0, ancestorState);
+    assertLastUpdated(base, t0);
+
+    putDir(dir, t0, ancestorState);
+    assertLastUpdated(dir, t0);
+    // base dir is unchanged
+    assertLastUpdated(base, t0);
+
+    // this directory will not have any children, so
+    // will be excluded from any ancestor re-creation
+    putDir(dir2, t0, ancestorState);
+
+    // child1 has age t0 and so will be pruned
+    putFile(child1, t0, ancestorState);
+
+    // child2 has age t2
+    putFile(child2, t2, ancestorState);
+
+    // close the ancestor state
+    ancestorState.close();
+
+    // make some assertions about state before the prune
+    assertLastUpdated(base, t0);
+    assertLastUpdated(dir, t0);
+    assertLastUpdated(dir2, t0);
+    assertLastUpdated(child1, t0);
+    assertLastUpdated(child2, t2);
+
+    // prune all entries older than t1 must delete child1 but
+    // not the directory, even though it is of the same age
+    LOG.info("Starting prune of all entries older than {}", t1);
+    ms.prune(PruneMode.ALL_BY_MODTIME, t1);
+    // child1 is gone
+    assertNotFound(child1);
+
+    // *AND* the parent dir has not been created
+    assertCached(dir);
+    assertCached(child2);
+    assertCached(dir2);
+
+  }
+
+  /**
+   * A cert that there is an entry for the given key and that its
+   * last updated timestamp matches that passed in.
+   * @param key Key to look up.
+   * @param lastUpdated Timestamp to expect.
+   * @throws IOException I/O failure.
+   */
+  protected void assertLastUpdated(final String key, final long lastUpdated)
+      throws IOException {
+    PathMetadata dirMD = verifyCached(key);
+    assertEquals("Last updated timestamp in MD " + dirMD,
+        lastUpdated, dirMD.getLastUpdated());
   }
 
   /**

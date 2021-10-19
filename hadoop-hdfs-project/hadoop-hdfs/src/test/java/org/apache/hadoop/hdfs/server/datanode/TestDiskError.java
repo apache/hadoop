@@ -28,7 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -165,7 +165,7 @@ public class TestDiskError {
         DataChecksum.Type.CRC32, 512);
     new Sender(out).writeBlock(block.getBlock(), StorageType.DEFAULT,
         BlockTokenSecretManager.DUMMY_TOKEN, "",
-        new DatanodeInfo[0], new StorageType[0], null,
+        DatanodeInfo.EMPTY_ARRAY, StorageType.EMPTY_ARRAY, null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
         checksum, CachingStrategy.newDefaultStrategy(), false, false,
         null, null, new String[0]);

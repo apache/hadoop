@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-common</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Common</name>
 
   <properties>
@@ -44,7 +44,6 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs-client</artifactId>
     </dependency>
-
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
@@ -86,8 +85,8 @@
       <artifactId>jersey-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>
@@ -242,7 +241,7 @@
             <exclude>src/main/resources/webapps/static/dt-1.10.18/js/jquery.dataTables.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.12.1.custom.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-3.4.1.min.js</exclude>
+            <exclude>src/main/resources/webapps/static/jquery/jquery-3.5.1.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>
@@ -254,6 +253,50 @@
             <exclude>src/test/resources/application_123456_0001.har/_SUCCESS</exclude>
           </excludes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>src-compile-protoc</id>
+            <configuration>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.hadoop</groupId>
@@ -271,27 +314,6 @@
                 <includes>
                   <include>java/**/*.java</include>
                   <include>proto/**/*.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>yarn_security_token.proto</include>
                 </includes>
               </source>
             </configuration>
@@ -356,34 +378,4 @@
       </plugin>
     </plugins>
   </build>
-  <!-- TODO: Remove this profile when hamlet was removed. -->
-  <profiles>
-    <profile>
-      <id>java9</id>
-      <activation>
-        <jdk>[9,)</jdk>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <configuration>
-              <excludes>
-                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
-              </excludes>
-              <testExcludes>
-                <exclude>org/apache/hadoop/yarn/webapp/hamlet/**</exclude>
-              </testExcludes>
-            </configuration>
-          </plugin>
-          <plugin>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <excludePackageNames>org.apache.hadoop.yarn.webapp.hamlet</excludePackageNames>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

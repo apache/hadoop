@@ -37,8 +37,6 @@ import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
@@ -51,9 +49,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.apache.hadoop.util.Sets;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -61,9 +59,11 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 
 public class TestQJMWithFaults {
@@ -225,7 +225,7 @@ public class TestQJMWithFaults {
       // If the user specifies a seed, then we should gather all the
       // IPC trace information so that debugging is easier. This makes
       // the test run about 25% slower otherwise.
-      GenericTestUtils.setLogLevel(ProtobufRpcEngine.LOG, Level.ALL);
+      GenericTestUtils.setLogLevel(ProtobufRpcEngine2.LOG, Level.TRACE);
     } else {
       seed = new Random().nextLong();
     }

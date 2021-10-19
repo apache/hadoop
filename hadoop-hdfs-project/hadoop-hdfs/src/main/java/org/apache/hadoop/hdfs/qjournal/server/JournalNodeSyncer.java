@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
@@ -35,11 +33,13 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,7 +175,7 @@ public class JournalNodeSyncer {
       }
       if (!createEditsSyncDir()) {
         LOG.error("Failed to create directory for downloading log " +
-                "segments: %s. Stopping Journal Node Sync.",
+                "segments: {}. Stopping Journal Node Sync.",
             journal.getStorage().getEditsSyncDir());
         return;
       }
@@ -251,7 +251,7 @@ public class JournalNodeSyncer {
       editLogManifest = jnProxy.getEditLogManifestFromJournal(jid,
           nameServiceId, 0, false);
     } catch (IOException e) {
-      LOG.error("Could not sync with Journal at " +
+      LOG.debug("Could not sync with Journal at {}.",
           otherJNProxies.get(journalNodeIndexForSync), e);
       return;
     }
@@ -315,7 +315,7 @@ public class JournalNodeSyncer {
       IOException {
     URI uri = new URI(uriStr);
     return Util.getLoggerAddresses(uri,
-        Sets.newHashSet(jn.getBoundIpcAddress()));
+        Sets.newHashSet(jn.getBoundIpcAddress()), conf);
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,
@@ -467,7 +467,7 @@ public class JournalNodeSyncer {
       moveSuccess = journal.moveTmpSegmentToCurrent(tmpEditsFile,
           finalEditsFile, log.getEndTxId());
     } catch (IOException e) {
-      LOG.info("Could not move %s to current directory.", tmpEditsFile);
+      LOG.info("Could not move {} to current directory.", tmpEditsFile);
     } finally {
       if (tmpEditsFile.exists() && !tmpEditsFile.delete()) {
         LOG.warn("Deleting " + tmpEditsFile + " has failed");
@@ -505,7 +505,7 @@ public class JournalNodeSyncer {
             @Override
             public InterQJournalProtocol run() throws IOException {
               RPC.setProtocolEngine(confCopy, InterQJournalProtocolPB.class,
-                  ProtobufRpcEngine.class);
+                  ProtobufRpcEngine2.class);
               InterQJournalProtocolPB interQJournalProtocolPB = RPC.getProxy(
                   InterQJournalProtocolPB.class,
                   RPC.getProtocolVersion(InterQJournalProtocolPB.class),

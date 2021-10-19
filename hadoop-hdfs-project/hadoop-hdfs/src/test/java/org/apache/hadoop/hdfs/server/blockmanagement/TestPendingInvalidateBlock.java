@@ -32,22 +32,22 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Test if we can correctly delay the deletion of blocks.
  */
 public class TestPendingInvalidateBlock {
   {
-    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.DEBUG);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
   }
 
   private static final int BLOCKSIZE = 1024;

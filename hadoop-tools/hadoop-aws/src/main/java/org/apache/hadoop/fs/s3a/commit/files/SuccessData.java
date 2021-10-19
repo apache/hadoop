@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +35,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -52,24 +55,39 @@ import org.apache.hadoop.util.JsonSerialization;
  * Applications reading this data should use/check the {@link #name} field
  * to differentiate from any other JSON-based manifest and to identify
  * changes in the output format.
+ *
+ * Note: to deal with scale issues, the S3A committers do not include any
+ * more than the number of objects listed in
+ * {@link org.apache.hadoop.fs.s3a.commit.CommitConstants#SUCCESS_MARKER_FILE_LIMIT}.
+ * This is intended to suffice for basic integration tests.
+ * Larger tests should examine the generated files themselves.
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SuccessData extends PersistentCommitData {
+public class SuccessData extends PersistentCommitData
+    implements IOStatisticsSource {
+
   private static final Logger LOG = LoggerFactory.getLogger(SuccessData.class);
+
+  /**
+   * Supported version value: {@value}.
+   * If this is changed the value of {@link #serialVersionUID} will change,
+   * to avoid deserialization problems.
+   */
+  public static final int VERSION = 1;
 
   /**
    * Serialization ID: {@value}.
    */
-  private static final long serialVersionUID = 507133045258460084L;
+  private static final long serialVersionUID = 507133045258460083L + VERSION;
 
   /**
    * Name to include in persisted data, so as to differentiate from
    * any other manifests: {@value}.
    */
   public static final String NAME
-      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/1";
+      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/" + VERSION;
 
   /**
    * Name of file; includes version marker.
@@ -97,6 +115,14 @@ public class SuccessData extends PersistentCommitData {
    */
   private String description;
 
+  /** Job ID, if known. */
+  private String jobId = "";
+
+  /**
+   * Source of the job ID.
+   */
+  private String jobIdSource = "";
+
   /**
    * Metrics.
    */
@@ -111,6 +137,12 @@ public class SuccessData extends PersistentCommitData {
    * Filenames in the commit.
    */
   private List<String> filenames = new ArrayList<>(0);
+
+  /**
+   * IOStatistics.
+   */
+  @JsonProperty("iostatistics")
+  private IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
 
   @Override
   public void validate() throws ValidationFailure {
@@ -318,5 +350,31 @@ public class SuccessData extends PersistentCommitData {
    */
   public void addDiagnostic(String key, String value) {
     diagnostics.put(key, value);
+  }
+
+  /** @return Job ID, if known. */
+  public String getJobId() {
+    return jobId;
+  }
+
+  public void setJobId(String jobId) {
+    this.jobId = jobId;
+  }
+
+  public String getJobIdSource() {
+    return jobIdSource;
+  }
+
+  public void setJobIdSource(final String jobIdSource) {
+    this.jobIdSource = jobIdSource;
+  }
+
+  @Override
+  public IOStatisticsSnapshot getIOStatistics() {
+    return iostats;
+  }
+
+  public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
+    this.iostats = ioStatistics;
   }
 }

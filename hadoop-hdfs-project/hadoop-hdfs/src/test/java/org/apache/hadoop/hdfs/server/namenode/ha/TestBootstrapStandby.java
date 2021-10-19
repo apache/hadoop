@@ -27,7 +27,7 @@ import java.net.URI;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +48,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 public class TestBootstrapStandby {
   private static final Logger LOG =
@@ -241,7 +241,7 @@ public class TestBootstrapStandby {
    * {@link DFSConfigKeys#DFS_IMAGE_TRANSFER_BOOTSTRAP_STANDBY_RATE_KEY}
    * created by HDFS-8808.
    */
-  @Test(timeout=30000)
+  @Test(timeout=180000)
   public void testRateThrottling() throws Exception {
     cluster.getConfiguration(0).setLong(
         DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 1);

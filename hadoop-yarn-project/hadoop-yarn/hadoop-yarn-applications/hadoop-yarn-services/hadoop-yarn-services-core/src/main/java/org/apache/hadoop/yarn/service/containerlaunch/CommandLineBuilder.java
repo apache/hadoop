@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.containerlaunch;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 

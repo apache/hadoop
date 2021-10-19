@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.*;
@@ -166,7 +166,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       this.isSnapshotRoot = true;
     }
     
-    boolean isSnapshotRoot() {
+    public boolean isSnapshotRoot() {
       return isSnapshotRoot;
     }
 
@@ -175,6 +175,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         final INode.ReclaimContext reclaimContext,
         final INodeDirectory currentDir,
         final DirectoryDiff posterior) {
+      // DeletionOrdered: must not combine posterior
+      assert !SnapshotManager.isDeletionOrdered();
       diff.combinePosterior(posterior.diff, new Diff.Processor<INode>() {
         /** Collect blocks for deleted files. */
         @Override
@@ -739,15 +741,22 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           // were created before "prior" will be covered by the later 
           // cleanSubtreeRecursively call.
           if (priorCreated != null) {
-            if (currentINode.isLastReference()) {
-              // if this is the last reference, the created list can be
-              // destroyed.
-              priorDiff.getChildrenDiff().destroyCreatedList(
-                  reclaimContext, currentINode);
-            } else {
-              // we only check the node originally in prior's created list
-              for (INode cNode : priorDiff.diff.getCreatedUnmodifiable()) {
-                if (priorCreated.containsKey(cNode)) {
+            // The nodes in priorCreated must be destroyed if
+            //   (1) this is the last reference, and
+            //   (2) prior is the last snapshot, and
+            //   (3) currentINode is not in the current state.
+            final boolean destroy = currentINode.isLastReference()
+                && currentINode.getDiffs().getLastSnapshotId() == prior
+                && !currentINode.isInCurrentState();
+            // we only check the node originally in prior's created list
+            for (INode cNode : new ArrayList<>(priorDiff.
+                    diff.getCreatedUnmodifiable())) {
+              if (priorCreated.containsKey(cNode)) {
+                if (destroy) {
+                  cNode.destroyAndCollectBlocks(reclaimContext);
+                  currentINode.removeChild(cNode);
+                  priorDiff.diff.removeCreated(cNode);
+                } else {
                   cNode.cleanSubtree(reclaimContext, snapshot, NO_SNAPSHOT_ID);
                 }
               }

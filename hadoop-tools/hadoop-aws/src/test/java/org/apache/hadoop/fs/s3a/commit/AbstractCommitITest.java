@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
-import org.junit.Assert;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.FailureInjectionPolicy;
 import org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -52,6 +53,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.listMultipartUploads;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
 /**
  * Base test suite for committer operations.
@@ -111,9 +113,11 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         MAGIC_COMMITTER_ENABLED,
         S3A_COMMITTER_FACTORY_KEY,
         FS_S3A_COMMITTER_NAME,
-        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
+        FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
+        FAST_UPLOAD_BUFFER);
 
-    conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+    conf.setBoolean(MAGIC_COMMITTER_ENABLED, DEFAULT_MAGIC_COMMITTER_ENABLED);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
     conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
     conf.set(FAST_UPLOAD_BUFFER, FAST_UPLOAD_BUFFER_ARRAY);
@@ -174,11 +178,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     if (useInconsistentClient()) {
       AmazonS3 client = getFileSystem()
           .getAmazonS3ClientForTesting("fault injection");
-      Assert.assertTrue(
-          "AWS client is not inconsistent, even though the test requirees it "
-          + client,
-          client instanceof InconsistentAmazonS3Client);
-      inconsistentClient = (InconsistentAmazonS3Client) client;
+      if (client instanceof InconsistentAmazonS3Client) {
+        inconsistentClient = (InconsistentAmazonS3Client) client;
+      }
     }
   }
 
@@ -209,6 +211,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.info("AbstractCommitITest::teardown");
     waitForConsistency();
     // make sure there are no failures any more
@@ -284,10 +287,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs != null && path != null) {
       String key = fs.pathToKey(path);
-      WriteOperationHelper writeOps = fs.getWriteOperationHelper();
-      int count = writeOps.abortMultipartUploadsUnderPath(key);
-      if (count > 0) {
-        log().info("Multipart uploads deleted: {}", count);
+      int count = 0;
+      try (AuditSpan span = span()) {
+        WriteOperationHelper writeOps = fs.getWriteOperationHelper();
+        count = writeOps.abortMultipartUploadsUnderPath(key);
+        if (count > 0) {
+          log().info("Multipart uploads deleted: {}", count);
+        }
       }
       return count;
     } else {
@@ -355,11 +361,13 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * and that it can be loaded.
    * The contents will be logged and returned.
    * @param dir directory to scan
+   * @param jobId job ID, only verified if non-empty
    * @return the loaded success data
    * @throws IOException IO Failure
    */
-  protected SuccessData verifySuccessMarker(Path dir) throws IOException {
-    return validateSuccessFile(dir, "", getFileSystem(), "query");
+  protected SuccessData verifySuccessMarker(Path dir, String jobId)
+      throws IOException {
+    return validateSuccessFile(dir, "", getFileSystem(), "query", 0, jobId);
   }
 
   /**
@@ -437,24 +445,38 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param committerName name of committer to match, or ""
    * @param fs filesystem
    * @param origin origin (e.g. "teragen" for messages)
+   * @param minimumFileCount minimum number of files to have been created
+   * @param jobId job ID, only verified if non-empty
    * @return the success data
    * @throws IOException IO failure
    */
   public static SuccessData validateSuccessFile(final Path outputPath,
       final String committerName,
       final S3AFileSystem fs,
-      final String origin) throws IOException {
+      final String origin,
+      final int minimumFileCount,
+      final String jobId) throws IOException {
     SuccessData successData = loadSuccessFile(fs, outputPath, origin);
     String commitDetails = successData.toString();
     LOG.info("Committer name " + committerName + "\n{}",
         commitDetails);
     LOG.info("Committer statistics: \n{}",
         successData.dumpMetrics("  ", " = ", "\n"));
+    LOG.info("Job IOStatistics: \n{}",
+        ioStatisticsToString(successData.getIOStatistics()));
     LOG.info("Diagnostics\n{}",
         successData.dumpDiagnostics("  ", " = ", "\n"));
     if (!committerName.isEmpty()) {
       assertEquals("Wrong committer in " + commitDetails,
           committerName, successData.getCommitter());
+    }
+    Assertions.assertThat(successData.getFilenames())
+        .describedAs("Files committed in " + commitDetails)
+        .hasSizeGreaterThanOrEqualTo(minimumFileCount);
+    if (StringUtils.isNotEmpty(jobId)) {
+      Assertions.assertThat(successData.getJobId())
+          .describedAs("JobID in " + commitDetails)
+          .isEqualTo(jobId);
     }
     return successData;
   }
@@ -468,7 +490,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException failure to find/load the file
    * @throws AssertionError file is 0-bytes long,
    */
-  public static SuccessData loadSuccessFile(final S3AFileSystem fs,
+  public static SuccessData loadSuccessFile(final FileSystem fs,
       final Path outputPath, final String origin) throws IOException {
     ContractTestUtils.assertPathExists(fs,
         "Output directory " + outputPath
@@ -485,8 +507,11 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         status.isFile());
     assertTrue("0 byte success file "
             + success + " from " + origin
-            + "; a s3guard committer was not used",
+            + "; an S3A committer was not used",
         status.getLen() > 0);
+    String body = ContractTestUtils.readUTF8(fs, success, -1);
+    LOG.info("Loading committer success file {}. Actual contents=\n{}", success,
+        body);
     return SuccessData.load(fs, success);
   }
 }

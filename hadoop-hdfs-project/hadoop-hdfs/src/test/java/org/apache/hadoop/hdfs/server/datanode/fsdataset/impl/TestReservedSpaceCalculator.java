@@ -61,6 +61,7 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.DISK, 10000, 900);
     checkReserved(StorageType.SSD, 10000, 900);
     checkReserved(StorageType.ARCHIVE, 10000, 900);
+    checkReserved(StorageType.NVDIMM, 10000, 900);
   }
 
   @Test
@@ -76,6 +77,10 @@ public class TestReservedSpaceCalculator {
     // Test SSD
     conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + ".ssd", 750);
     checkReserved(StorageType.SSD, 1550, 750);
+
+    // Test NVDIMM
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + ".nvdimm", 300);
+    checkReserved(StorageType.NVDIMM, 1000, 300);
   }
 
   @Test
@@ -89,11 +94,13 @@ public class TestReservedSpaceCalculator {
     checkReserved(StorageType.DISK, 10000, 1000);
     checkReserved(StorageType.SSD, 10000, 1000);
     checkReserved(StorageType.ARCHIVE, 10000, 1000);
+    checkReserved(StorageType.NVDIMM, 10000, 1000);
 
     conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY, 50);
     checkReserved(StorageType.DISK, 4000, 2000);
     checkReserved(StorageType.SSD, 4000, 2000);
     checkReserved(StorageType.ARCHIVE, 4000, 2000);
+    checkReserved(StorageType.NVDIMM, 4000, 2000);
   }
 
   @Test
@@ -109,6 +116,10 @@ public class TestReservedSpaceCalculator {
     // Test SSD
     conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + ".ssd", 50);
     checkReserved(StorageType.SSD, 8001, 4000);
+
+    // Test NVDIMM
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + ".nvdimm", 30);
+    checkReserved(StorageType.NVDIMM, 1000, 300);
   }
 
   @Test
@@ -129,6 +140,12 @@ public class TestReservedSpaceCalculator {
     conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + ".archive", 1300);
     conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + ".archive", 50);
     checkReserved(StorageType.ARCHIVE, 6200, 3100);
+
+    // Test NVDIMM + taking reserved space based on the percentage,
+    // as that gives more reserved space
+    conf.setLong(DFS_DATANODE_DU_RESERVED_KEY + ".nvdimm", 500);
+    conf.setLong(DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + ".nvdimm", 20);
+    checkReserved(StorageType.NVDIMM, 3000, 600);
   }
 
   @Test

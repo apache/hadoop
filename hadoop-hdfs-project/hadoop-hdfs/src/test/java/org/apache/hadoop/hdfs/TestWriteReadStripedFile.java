@@ -75,8 +75,6 @@ public class TestWriteReadStripedFile {
   @Before
   public void setup() throws IOException {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     fs = cluster.getFileSystem();
     fs.enableErasureCodingPolicy(ecPolicy.getName());

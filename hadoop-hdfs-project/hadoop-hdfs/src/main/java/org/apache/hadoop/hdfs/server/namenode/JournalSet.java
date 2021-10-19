@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.INVALID_TXID;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.IOException;
@@ -24,8 +25,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -38,14 +41,11 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is
@@ -188,9 +188,11 @@ public class JournalSet implements JournalManager {
   final int minimumRedundantJournals;
 
   private boolean closed;
-  
+  private long lastJournalledTxId;
+
   JournalSet(int minimumRedundantResources) {
     this.minimumRedundantJournals = minimumRedundantResources;
+    lastJournalledTxId = INVALID_TXID;
   }
   
   @Override
@@ -440,6 +442,16 @@ public class JournalSet implements JournalManager {
       super();
     }
 
+    /**
+     * Get the last txId journalled in the stream.
+     * The txId is recorded when FSEditLogOp is written to the journal.
+     * JournalSet tracks the txId uniformly for all underlying streams.
+     */
+    @Override
+    public long getLastJournalledTxId() {
+      return lastJournalledTxId;
+    }
+
     @Override
     public void write(final FSEditLogOp op)
         throws IOException {
@@ -451,6 +463,10 @@ public class JournalSet implements JournalManager {
           }
         }
       }, "write op");
+
+      assert lastJournalledTxId < op.txid : "TxId order violation for op=" +
+        op + ", lastJournalledTxId=" + lastJournalledTxId;
+      lastJournalledTxId = op.txid;
     }
 
     @Override
@@ -634,7 +650,7 @@ public class JournalSet implements JournalManager {
    */
   public synchronized RemoteEditLogManifest getEditLogManifest(long fromTxId) {
     // Collect RemoteEditLogs available from each FileJournalManager
-    List<RemoteEditLog> allLogs = Lists.newArrayList();
+    List<RemoteEditLog> allLogs = new ArrayList<>();
     for (JournalAndStream j : journals) {
       if (j.getManager() instanceof FileJournalManager) {
         FileJournalManager fjm = (FileJournalManager)j.getManager();
@@ -645,15 +661,17 @@ public class JournalSet implements JournalManager {
         }
       }
     }
-    
     // Group logs by their starting txid
-    ImmutableListMultimap<Long, RemoteEditLog> logsByStartTxId =
-      Multimaps.index(allLogs, RemoteEditLog.GET_START_TXID);
+    final Map<Long, List<RemoteEditLog>> logsByStartTxId = new HashMap<>();
+    allLogs.forEach(input -> {
+      long key = RemoteEditLog.GET_START_TXID.apply(input);
+      logsByStartTxId.computeIfAbsent(key, k-> new ArrayList<>()).add(input);
+    });
     long curStartTxId = fromTxId;
-
-    List<RemoteEditLog> logs = Lists.newArrayList();
+    List<RemoteEditLog> logs = new ArrayList<>();
     while (true) {
-      ImmutableList<RemoteEditLog> logGroup = logsByStartTxId.get(curStartTxId);
+      List<RemoteEditLog> logGroup =
+          logsByStartTxId.getOrDefault(curStartTxId, Collections.emptyList());
       if (logGroup.isEmpty()) {
         // we have a gap in logs - for example because we recovered some old
         // storage directory with ancient logs. Clear out any logs we've

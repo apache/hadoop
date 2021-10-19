@@ -21,7 +21,10 @@
 #include "continuation.h"
 #include "common/util.h"
 #include "hdfspp/status.h"
-#include <asio/write.hpp>
+
+#include <boost/asio/write.hpp>
+#include <boost/system/error_code.hpp>
+
 #include <memory>
 
 namespace hdfs {
@@ -37,8 +40,8 @@ public:
 
   virtual void Run(const Next &next) override {
     auto handler =
-        [next](const asio::error_code &ec, size_t) { next(ToStatus(ec)); };
-    asio::async_write(*stream_, buffer_, handler);
+        [next](const boost::system::error_code &ec, size_t) { next(ToStatus(ec)); };
+    boost::asio::async_write(*stream_, buffer_, handler);
   }
 
 private:

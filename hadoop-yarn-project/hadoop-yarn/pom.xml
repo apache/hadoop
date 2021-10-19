@@ -11,16 +11,17 @@
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
---><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-yarn</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Hadoop YARN</name>
 
@@ -39,10 +40,9 @@
   <build>
     <plugins>
        <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
          <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${yarn.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
           <effort>Max</effort>
@@ -77,6 +77,38 @@
         <configuration>
           <excludePackageNames>org.apache.hadoop.yarn.proto:org.apache.hadoop.yarn.federation.proto:org.apache.hadoop.yarn.service</excludePackageNames>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>de.skuzzle.enforcer</groupId>
+            <artifactId>restrict-imports-enforcer-rule</artifactId>
+            <version>${restrict-imports.enforcer.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
@@ -128,7 +160,7 @@
             <executions>
               <execution>
                 <goals>
-                  <goal>javadoc</goal>
+                  <goal>javadoc-no-fork</goal>
                 </goals>
                 <phase>prepare-package</phase>
               </execution>
@@ -246,4 +278,5 @@
     <module>hadoop-yarn-ui</module>
     <module>hadoop-yarn-csi</module>
   </modules>
+  <!--  -->
 </project>

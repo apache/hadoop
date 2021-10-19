@@ -66,7 +66,7 @@ public class TestAppPage {
 
     RMAppMetrics appMetrics =
         new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<>(),
-            new HashMap<>());
+            new HashMap<>(), 0);
     when(app.getRMAppMetrics()).thenReturn(appMetrics);
     
     // initialize RM Context, and create RMApp, without creating RMAppAttempt

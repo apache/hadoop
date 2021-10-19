@@ -32,12 +32,14 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.resolver.RouterGenericManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.NameserviceManager;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
@@ -69,12 +71,14 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshResponse;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -82,6 +86,9 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.hdfs.server.federation.router.Quota.eachByStorageType;
+import static org.apache.hadoop.hdfs.server.federation.router.Quota.orByStorageType;
+import static org.apache.hadoop.hdfs.server.federation.router.Quota.andByStorageType;
 
 /**
  * This class provides some Federation administrative access shell commands.
@@ -124,10 +131,11 @@ public class RouterAdmin extends Configured implements Tool {
   private String getUsage(String cmd) {
     if (cmd == null) {
       String[] commands =
-          {"-add", "-update", "-rm", "-ls", "-getDestination",
-              "-setQuota", "-clrQuota",
+          {"-add", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
+              "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices",
-              "-refresh", "-refreshRouterArgs"};
+              "-refresh", "-refreshRouterArgs",
+              "-refreshSuperUserGroupsConfiguration", "-refreshCallQueue"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
@@ -158,8 +166,13 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (cmd.equals("-setQuota")) {
       return "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
           + "<quota in bytes or quota size string>]";
+    } else if (cmd.equals("-setStorageTypeQuota")) {
+      return "\t[-setStorageTypeQuota <path> -storageType <storage type> "
+          + "<quota in bytes or quota size string>]";
     } else if (cmd.equals("-clrQuota")) {
       return "\t[-clrQuota <path>]";
+    } else if (cmd.equals("-clrStorageTypeQuota")) {
+      return "\t[-clrStorageTypeQuota <path>]";
     } else if (cmd.equals("-safemode")) {
       return "\t[-safemode enter | leave | get]";
     } else if (cmd.equals("-nameservice")) {
@@ -170,6 +183,10 @@ public class RouterAdmin extends Configured implements Tool {
       return "\t[-refresh]";
     } else if (cmd.equals("-refreshRouterArgs")) {
       return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
+    } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
+      return "\t[-refreshSuperUserGroupsConfiguration]";
+    } else if (cmd.equals("-refreshCallQueue")) {
+      return "\t[-refreshCallQueue]";
     }
     return getUsage(null);
   }
@@ -203,6 +220,14 @@ public class RouterAdmin extends Configured implements Tool {
       if (arg.length > 1) {
         throw new IllegalArgumentException("No arguments allowed");
       }
+    } else if (arg[0].equals("-refreshSuperUserGroupsConfiguration")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
+    } else if (arg[0].equals("-refreshCallQueue")) {
+      if (arg.length > 1) {
+        throw new IllegalArgumentException("No arguments allowed");
+      }
     }
   }
 
@@ -233,7 +258,15 @@ public class RouterAdmin extends Configured implements Tool {
       if (argv.length < 4) {
         return false;
       }
+    } else if ("-setStorageTypeQuota".equals(cmd)) {
+      if (argv.length < 5) {
+        return false;
+      }
     } else if ("-clrQuota".equals(cmd)) {
+      if (argv.length < 2) {
+        return false;
+      }
+    } else if ("-clrStorageTypeQuota".equals(cmd)) {
       if (argv.length < 2) {
         return false;
       }
@@ -328,11 +361,24 @@ public class RouterAdmin extends Configured implements Tool {
           System.out.println(
               "Successfully set quota for mount point " + argv[i]);
         }
+      } else if ("-setStorageTypeQuota".equals(cmd)) {
+        if (setStorageTypeQuota(argv, i)) {
+          System.out.println(
+              "Successfully set storage type quota for mount point " + argv[i]);
+        }
       } else if ("-clrQuota".equals(cmd)) {
         while (i < argv.length) {
           if (clrQuota(argv[i])) {
             System.out
                 .println("Successfully clear quota for mount point " + argv[i]);
+            i++;
+          }
+        }
+      } else if ("-clrStorageTypeQuota".equals(cmd)) {
+        while (i < argv.length) {
+          if (clrStorageTypeQuota(argv[i])) {
+            System.out.println("Successfully clear storage type quota for mount"
+                + " point " + argv[i]);
             i++;
           }
         }
@@ -348,6 +394,10 @@ public class RouterAdmin extends Configured implements Tool {
         refresh(address);
       } else if ("-refreshRouterArgs".equals(cmd)) {
         exitCode = genericRefresh(argv, i);
+      } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
+        exitCode = refreshSuperUserGroupsConfiguration();
+      } else if ("-refreshCallQueue".equals(cmd)) {
+        exitCode = refreshCallQueue();
       } else {
         throw new IllegalArgumentException("Unknown Command: " + cmd);
       }
@@ -385,6 +435,25 @@ public class RouterAdmin extends Configured implements Tool {
       LOG.debug("Exception encountered", debugException);
     }
     return exitCode;
+  }
+
+  /**
+   * Refresh superuser proxy groups mappings on Router.
+   *
+   * @throws IOException if the operation was not successful.
+   */
+  private int refreshSuperUserGroupsConfiguration()
+      throws IOException{
+    RouterGenericManager proxy = client.getRouterGenericManager();
+    String address =  getConf().getTrimmed(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+    if(proxy.refreshSuperUserGroupsConfiguration()){
+      System.out.println(
+          "Successfully updated superuser proxy groups on router " + address);
+      return 0;
+    }
+    return -1;
   }
 
   private void refresh(String address) throws IOException {
@@ -530,6 +599,7 @@ public class RouterAdmin extends Configured implements Tool {
       for (String nsId : nss) {
         if (!existingEntry.addDestination(nsId, dest)) {
           System.err.println("Cannot add destination at " + nsId + " " + dest);
+          return false;
         }
       }
       if (readonly) {
@@ -725,7 +795,8 @@ public class RouterAdmin extends Configured implements Tool {
   /**
    * List mount points.
    *
-   * @param path Path to list.
+   * @param argv Parameters of the path.
+   * @param i Index in the parameters.
    * @throws IOException If it cannot be listed.
    */
   public void listMounts(String[] argv, int i) throws IOException {
@@ -788,9 +859,10 @@ public class RouterAdmin extends Configured implements Tool {
         System.out.print(
             String.format(" %-10s", entry.isReadOnly() ? "Read-Only" : ""));
 
-        System.out.println(String.format(" %-15s",
+        System.out.print(String.format(" %-15s",
             entry.isFaultTolerant() ? "Fault-Tolerant" : ""));
       }
+      System.out.println();
     }
   }
 
@@ -856,6 +928,41 @@ public class RouterAdmin extends Configured implements Tool {
   }
 
   /**
+   * Set storage type quota for a mount table entry.
+   *
+   * @param parameters Parameters of the quota.
+   * @param i Index in the parameters.
+   */
+  private boolean setStorageTypeQuota(String[] parameters, int i)
+      throws IOException {
+    long[] typeQuota = new long[StorageType.values().length];
+    eachByStorageType(
+        t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_DONT_SET);
+
+    String mount = parameters[i++];
+    if (parameters[i].equals("-storageType")) {
+      i++;
+      StorageType type = StorageType.parseStorageType(parameters[i++]);
+      typeQuota[type.ordinal()] = Long.parseLong(parameters[i]);
+    } else {
+      throw new IllegalArgumentException("Invalid argument : " + parameters[i]);
+    }
+
+    if (orByStorageType(t -> typeQuota[t.ordinal()] <= 0)) {
+      throw new IllegalArgumentException(
+          "Input quota value should be a positive number.");
+    }
+
+    if (andByStorageType(
+        t -> typeQuota[t.ordinal()] == HdfsConstants.QUOTA_DONT_SET)) {
+      throw new IllegalArgumentException(
+          "Must specify at least one of -nsQuota and -ssQuota.");
+    }
+
+    return updateStorageTypeQuota(mount, typeQuota);
+  }
+
+  /**
    * Clear quota of the mount point.
    *
    * @param mount Mount table to clear
@@ -865,6 +972,19 @@ public class RouterAdmin extends Configured implements Tool {
   private boolean clrQuota(String mount) throws IOException {
     return updateQuota(mount, HdfsConstants.QUOTA_RESET,
         HdfsConstants.QUOTA_RESET);
+  }
+
+  /**
+   * Clear storage type quota of the mount point.
+   *
+   * @param mount Mount table to clear
+   * @return If the quota was cleared.
+   * @throws IOException Error clearing the mount point.
+   */
+  private boolean clrStorageTypeQuota(String mount) throws IOException {
+    long[] typeQuota = new long[StorageType.values().length];
+    eachByStorageType(t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_RESET);
+    return updateStorageTypeQuota(mount, typeQuota);
   }
 
   /**
@@ -898,7 +1018,7 @@ public class RouterAdmin extends Configured implements Tool {
     } else {
       long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
       long ssCount = existingEntry.getQuota().getSpaceConsumed();
-      // If nsQuota and ssQuota were unset, clear nsQuota and ssQuota.
+      // If nsQuota and ssQuota were reset, clear nsQuota and ssQuota.
       if (nsQuota == HdfsConstants.QUOTA_RESET &&
           ssQuota == HdfsConstants.QUOTA_RESET) {
         nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
@@ -916,6 +1036,64 @@ public class RouterAdmin extends Configured implements Tool {
       RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
           .fileAndDirectoryCount(nsCount).quota(nsQuota)
           .spaceConsumed(ssCount).spaceQuota(ssQuota).build();
+      existingEntry.setQuota(updatedQuota);
+    }
+
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(existingEntry);
+    UpdateMountTableEntryResponse updateResponse = mountTable
+        .updateMountTableEntry(updateRequest);
+    return updateResponse.getStatus();
+  }
+
+  /**
+   * Update storage type quota of specified mount table.
+   *
+   * @param mount Specified mount table to update.
+   * @param typeQuota Storage type quota.
+   * @return If the quota was updated.
+   * @throws IOException Error updating quota.
+   */
+  private boolean updateStorageTypeQuota(String mount, long[] typeQuota)
+      throws IOException {
+    // Get existing entry
+    MountTableManager mountTable = client.getMountTableManager();
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(mount);
+    GetMountTableEntriesResponse getResponse = mountTable
+        .getMountTableEntries(getRequest);
+    List<MountTable> results = getResponse.getEntries();
+    MountTable existingEntry = null;
+    for (MountTable result : results) {
+      if (mount.equals(result.getSourcePath())) {
+        existingEntry = result;
+        break;
+      }
+    }
+
+    if (existingEntry == null) {
+      throw new IOException(mount + " doesn't exist in mount table.");
+    } else {
+      final RouterQuotaUsage quotaUsage = existingEntry.getQuota();
+      long[] typeCount = new long[StorageType.values().length];
+      eachByStorageType(
+          t -> typeCount[t.ordinal()] = quotaUsage.getTypeQuota(t));
+      // If all storage type quota were reset, clear the storage type quota.
+      if (andByStorageType(
+          t -> typeQuota[t.ordinal()] == HdfsConstants.QUOTA_RESET)) {
+        eachByStorageType(t -> typeCount[t.ordinal()] =
+            RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT);
+      } else {
+        // If nsQuota or ssQuota was unset, use the value in mount table.
+        eachByStorageType(t -> {
+          if (typeQuota[t.ordinal()] == HdfsConstants.QUOTA_DONT_SET) {
+            typeQuota[t.ordinal()] = quotaUsage.getTypeQuota(t);
+          }
+        });
+      }
+
+      RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
+          .typeQuota(typeQuota).typeConsumed(typeCount).build();
       existingEntry.setQuota(updatedQuota);
     }
 
@@ -1054,7 +1232,7 @@ public class RouterAdmin extends Configured implements Tool {
     InetSocketAddress address = NetUtils.createSocketAddr(hostport);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
     GenericRefreshProtocolPB proxy = (GenericRefreshProtocolPB)RPC.getProxy(
         xface, RPC.getProtocolVersion(xface), address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf), 0);
@@ -1088,6 +1266,39 @@ public class RouterAdmin extends Configured implements Tool {
         return -1;
       }
     }
+  }
+
+  /**
+   * Refresh Router's call Queue.
+   *
+   * @throws IOException if the operation was not successful.
+   */
+  private int refreshCallQueue() throws IOException {
+    Configuration conf = getConf();
+    String hostport =  getConf().getTrimmed(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+
+    // Create the client
+    Class<?> xface = RefreshCallQueueProtocolPB.class;
+    InetSocketAddress address = NetUtils.createSocketAddr(hostport);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
+    RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB)RPC.getProxy(
+        xface, RPC.getProtocolVersion(xface), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), 0);
+
+    int returnCode = -1;
+    try (RefreshCallQueueProtocolClientSideTranslatorPB xlator =
+        new RefreshCallQueueProtocolClientSideTranslatorPB(proxy)) {
+      xlator.refreshCallQueue();
+      System.out.println("Refresh call queue successfully for " + hostport);
+      returnCode = 0;
+    } catch (IOException ioe){
+      System.out.println("Refresh call queue unsuccessfully for " + hostport);
+    }
+    return returnCode;
   }
 
   /**

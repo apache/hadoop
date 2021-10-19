@@ -22,8 +22,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -39,6 +42,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import static org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME;
 import org.apache.hadoop.test.TestGenericTestUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -241,6 +245,7 @@ public class TestTimelineClient {
     // use kerberos to bypass the issue in HADOOP-11215
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
+    conf.set(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
     TimelineClientImpl client = createTimelineClient(conf);
@@ -309,6 +314,44 @@ public class TestTimelineClient {
       client.stop();
       clientFake.stop();
       dtManager.stopThreads();
+    }
+  }
+
+  /**
+   * Test actual delegation token operations are not carried out when
+   * simple auth is configured for timeline.
+   * @throws Exception
+   */
+  @Test
+  public void testDelegationTokenDisabledOnSimpleAuth() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.set(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE, "simple");
+    UserGroupInformation.setConfiguration(conf);
+
+    TimelineClientImpl tClient = createTimelineClient(conf);
+    TimelineConnector spyConnector = spy(tClient.connector);
+    tClient.connector = spyConnector;
+    try {
+      // try getting a delegation token
+      Token<TimelineDelegationTokenIdentifier> identifierToken =
+          tClient.getDelegationToken(
+          UserGroupInformation.getCurrentUser().getShortUserName());
+      // Get a null token when using simple auth
+      Assert.assertNull(identifierToken);
+
+      // try renew a delegation token
+      Token<TimelineDelegationTokenIdentifier> dummyToken = new Token<>();
+      long renewTime = tClient.renewDelegationToken(dummyToken);
+      // Get invalid expiration time so that RM skips renewal
+      Assert.assertEquals(renewTime, -1);
+
+      // try cancel a delegation token
+      tClient.cancelDelegationToken(dummyToken);
+      // Shouldn't try to cancel and connect to authURL
+      verify(spyConnector, never()).getDelegationTokenAuthenticatedURL();
+    } finally {
+      tClient.stop();
     }
   }
 
@@ -473,7 +516,7 @@ public class TestTimelineClient {
     Thread reloaderThread = null;
     for (Thread thread : threads) {
       if ((thread.getName() != null)
-          && (thread.getName().contains("Truststore reloader thread"))) {
+          && (thread.getName().contains(SSL_MONITORING_THREAD_NAME))) {
         reloaderThread = thread;
       }
     }
@@ -490,6 +533,17 @@ public class TestTimelineClient {
       Thread.sleep(1000);
     }
     Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
+  }
+
+  @Test
+  public void testTimelineConnectorDestroy() {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    TimelineClientImpl client = createTimelineClient(conf);
+    Client mockJerseyClient = mock(Client.class);
+    client.connector.client = mockJerseyClient;
+    client.stop();
+    verify(mockJerseyClient, times(1)).destroy();
   }
 
   private void setupSSLConfig(YarnConfiguration conf) throws Exception {

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -71,11 +71,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * A JournalNode can manage journals for several clusters at once.
@@ -264,9 +264,9 @@ public class Journal implements Closeable {
    */
   @Override // Closeable
   public void close() throws IOException {
-    storage.close();
     IOUtils.closeStream(committedTxnId);
     IOUtils.closeStream(curSegment);
+    storage.close();
   }
   
   JNStorage getStorage() {
@@ -773,7 +773,7 @@ public class Journal implements Closeable {
           .setEditLog(output.toByteString())
           .build();
     } catch (JournaledEditsCache.CacheMissException cme) {
-      metrics.rpcRequestCacheMissAmount.add(cme.getCacheMissAmount());
+      metrics.addRpcRequestCacheMissAmount(cme.getCacheMissAmount());
       throw cme;
     }
   }
@@ -1178,6 +1178,8 @@ public class Journal implements Closeable {
     // directory will be renamed.  It will be reopened lazily on next access.
     IOUtils.cleanupWithLogger(LOG, committedTxnId);
     storage.getJournalManager().doRollback();
+    // HADOOP-17142: refresh properties after rollback performed.
+    storage.refreshStorage();
   }
 
   synchronized void discardSegments(long startTxId) throws IOException {

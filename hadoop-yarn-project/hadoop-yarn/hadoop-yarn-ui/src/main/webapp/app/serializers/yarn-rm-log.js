@@ -19,8 +19,8 @@
 import DS from 'ember-data';
 
 export default DS.JSONAPISerializer.extend({
-  normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    const pattern = new RegExp('<A HREF="/logs/.+">', 'g');
+  normalizeResponse(store, primaryModelClass, payload) {
+    const pattern = new RegExp('<A HREF="/logs/.+">|<a href="/logs/.+">', 'g');
     let fileNames = payload.match(pattern);
 
     if (fileNames == null) {
@@ -29,16 +29,20 @@ export default DS.JSONAPISerializer.extend({
 
     let logfileNames = [];
     for (var i = 0; i < fileNames.length; i++) {
-      var fileName = fileNames[i].match(/<A HREF="(\/logs\/.+)">/);
-        if (fileName.length != null) {
-          logfileNames.push({
-            id: i,
-            type: primaryModelClass.modelName,
-            attributes: {
-              logfileName: fileName[1]
-            }
-          });
-        }
+      var fileNameMatch = fileNames[i].match(/<A HREF="(\/logs\/.+)">.+<\/A>|<a href="(\/logs\/.+)">.+<\/a>/);
+      var logFileUrl = fileNameMatch[1] || fileNameMatch[2];
+      var logFileName = logFileUrl.replace('logs', '').replace(/\//g, '');
+
+      if (fileNameMatch.length != null) {
+        logfileNames.push({
+          id: i,
+          type: primaryModelClass.modelName,
+          attributes: {
+            logFileUrl: logFileUrl,
+            logFileName: logFileName
+          }
+        });
+      }
     }
     return { data : logfileNames };
   },

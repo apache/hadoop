@@ -30,7 +30,7 @@ import java.util.EnumSet;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ByteBufferPositionedReadable;
@@ -46,8 +46,12 @@ import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.StreamCapabilitiesPolicy;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * CryptoInputStream decrypts data. It is not thread-safe. AES CTR mode is
@@ -66,7 +70,7 @@ public class CryptoInputStream extends FilterInputStream implements
     Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
     CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess, 
     ReadableByteChannel, CanUnbuffer, StreamCapabilities,
-    ByteBufferPositionedReadable {
+    ByteBufferPositionedReadable, IOStatisticsSource {
   private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Decryptor decryptor;
@@ -313,7 +317,7 @@ public class CryptoInputStream extends FilterInputStream implements
   }
   
   @Override
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
     if (closed) {
       return;
     }
@@ -330,8 +334,8 @@ public class CryptoInputStream extends FilterInputStream implements
       throws IOException {
     checkStream();
     if (!(in instanceof PositionedReadable)) {
-      throw new UnsupportedOperationException("This stream does not support " +
-          "positioned read.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support positioned read.");
     }
     final int n = ((PositionedReadable) in).read(position, buffer, offset,
         length);
@@ -351,8 +355,8 @@ public class CryptoInputStream extends FilterInputStream implements
       throws IOException {
     checkStream();
     if (!(in instanceof ByteBufferPositionedReadable)) {
-      throw new UnsupportedOperationException("This stream does not support " +
-          "positioned reads with byte buffers.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support positioned reads with byte buffers.");
     }
     int bufPos = buf.position();
     final int n = ((ByteBufferPositionedReadable) in).read(position, buf);
@@ -363,7 +367,27 @@ public class CryptoInputStream extends FilterInputStream implements
 
     return n;
   }
-  
+
+  /**
+   * Positioned readFully using {@link ByteBuffer}s. This method is thread-safe.
+   */
+  @Override
+  public void readFully(long position, final ByteBuffer buf)
+      throws IOException {
+    checkStream();
+    if (!(in instanceof ByteBufferPositionedReadable)) {
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support positioned reads with byte buffers.");
+    }
+    int bufPos = buf.position();
+    ((ByteBufferPositionedReadable) in).readFully(position, buf);
+    final int n = buf.position() - bufPos;
+    if (n > 0) {
+      // This operation does not change the current offset of the file
+      decrypt(position, buf, n, bufPos);
+    }
+  }
+
   /**
    * Decrypt length bytes in buffer starting at offset. Output is also put 
    * into buffer starting at offset. It is thread-safe.
@@ -480,8 +504,8 @@ public class CryptoInputStream extends FilterInputStream implements
       throws IOException {
     checkStream();
     if (!(in instanceof PositionedReadable)) {
-      throw new UnsupportedOperationException("This stream does not support " +
-          "positioned readFully.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support positioned readFully.");
     }
     ((PositionedReadable) in).readFully(position, buffer, offset, length);
     if (length > 0) {
@@ -513,8 +537,8 @@ public class CryptoInputStream extends FilterInputStream implements
       }
     } else {
       if (!(in instanceof Seekable)) {
-        throw new UnsupportedOperationException("This stream does not " +
-                "support seek.");
+        throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+            + " does not support seek.");
       }
       ((Seekable) in).seek(pos);
       resetStreamOffset(pos);
@@ -672,8 +696,8 @@ public class CryptoInputStream extends FilterInputStream implements
         "Cannot seek to negative offset.");
     checkStream();
     if (!(in instanceof Seekable)) {
-      throw new UnsupportedOperationException("This stream does not support " +
-          "seekToNewSource.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support seekToNewSource.");
     }
     boolean result = ((Seekable) in).seekToNewSource(targetPos);
     resetStreamOffset(targetPos);
@@ -687,16 +711,16 @@ public class CryptoInputStream extends FilterInputStream implements
     checkStream();
     if (outBuffer.remaining() > 0) {
       if (!(in instanceof Seekable)) {
-        throw new UnsupportedOperationException("This stream does not " +
-                "support seek.");
+        throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+            + " does not support seek.");
       }
       // Have some decrypted data unread, need to reset.
       ((Seekable) in).seek(getPos());
       resetStreamOffset(getPos());
     }
     if (!(in instanceof HasEnhancedByteBufferAccess)) {
-      throw new UnsupportedOperationException("This stream does not support " +
-          "enhanced byte buffer access.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support enhanced byte buffer access.");
     }
     final ByteBuffer buffer = ((HasEnhancedByteBufferAccess) in).
         read(bufferPool, maxLength, opts);
@@ -714,8 +738,8 @@ public class CryptoInputStream extends FilterInputStream implements
   @Override
   public void releaseBuffer(ByteBuffer buffer) {
     if (!(in instanceof HasEnhancedByteBufferAccess)) {
-      throw new UnsupportedOperationException("This stream does not support " + 
-          "release buffer.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support release buffer.");
     }
     ((HasEnhancedByteBufferAccess) in).releaseBuffer(buffer);
   }
@@ -724,8 +748,8 @@ public class CryptoInputStream extends FilterInputStream implements
   public void setReadahead(Long readahead) throws IOException,
       UnsupportedOperationException {
     if (!(in instanceof CanSetReadahead)) {
-      throw new UnsupportedOperationException("This stream does not support " +
-          "setting the readahead caching strategy.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not support setting the readahead caching strategy.");
     }
     ((CanSetReadahead) in).setReadahead(readahead);
   }
@@ -734,8 +758,9 @@ public class CryptoInputStream extends FilterInputStream implements
   public void setDropBehind(Boolean dropCache) throws IOException,
       UnsupportedOperationException {
     if (!(in instanceof CanSetReadahead)) {
-      throw new UnsupportedOperationException("This stream does not " +
-          "support setting the drop-behind caching setting.");
+      throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " stream does not support setting the drop-behind caching"
+          + " setting.");
     }
     ((CanSetDropBehind) in).setDropBehind(dropCache);
   }
@@ -842,12 +867,20 @@ public class CryptoInputStream extends FilterInputStream implements
     case StreamCapabilities.READBYTEBUFFER:
     case StreamCapabilities.PREADBYTEBUFFER:
       if (!(in instanceof StreamCapabilities)) {
-        throw new UnsupportedOperationException("This stream does not expose " +
-          "its stream capabilities.");
+        throw new UnsupportedOperationException(in.getClass().getCanonicalName()
+          + " does not expose its stream capabilities.");
       }
       return ((StreamCapabilities) in).hasCapability(capability);
+    case StreamCapabilities.IOSTATISTICS:
+      return (in instanceof StreamCapabilities)
+          && ((StreamCapabilities) in).hasCapability(capability);
     default:
       return false;
     }
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return retrieveIOStatistics(in);
   }
 }

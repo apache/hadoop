@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service.registry;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -143,7 +143,10 @@ public class YarnRegistryViewForProviders {
       ServiceRecord record) throws IOException {
     String path = RegistryUtils.componentPath(
         user, serviceClass, serviceName, componentName);
-    registryOperations.mknode(RegistryPathUtils.parentOf(path), true);
+    String parentPath = RegistryPathUtils.parentOf(path);
+    if (!registryOperations.exists(parentPath)) {
+      registryOperations.mknode(parentPath, true);
+    }
     registryOperations.bind(path, record, BindFlags.OVERWRITE);
   }
 

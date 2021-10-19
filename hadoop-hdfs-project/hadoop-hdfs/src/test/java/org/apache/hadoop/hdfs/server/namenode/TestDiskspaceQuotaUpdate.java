@@ -380,14 +380,24 @@ public class TestDiskspaceQuotaUpdate {
     HashMap<String, Long> dsMap = new HashMap<String, Long>();
     scanDirsWithQuota(root, nsMap, dsMap, false);
 
-    getFSDirectory().updateCountForQuota(1);
+    updateCountForQuota(1);
     scanDirsWithQuota(root, nsMap, dsMap, true);
 
-    getFSDirectory().updateCountForQuota(2);
+    updateCountForQuota(2);
     scanDirsWithQuota(root, nsMap, dsMap, true);
 
-    getFSDirectory().updateCountForQuota(4);
+    updateCountForQuota(4);
     scanDirsWithQuota(root, nsMap, dsMap, true);
+  }
+
+  private void updateCountForQuota(int i) {
+    FSNamesystem fsn = cluster.getNamesystem();
+    fsn.writeLock();
+    try {
+      getFSDirectory().updateCountForQuota(1);
+    } finally {
+      fsn.writeUnlock();
+    }
   }
 
   private void scanDirsWithQuota(INodeDirectory dir,

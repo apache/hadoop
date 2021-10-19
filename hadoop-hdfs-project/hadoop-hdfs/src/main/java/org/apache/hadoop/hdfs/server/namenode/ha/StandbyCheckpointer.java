@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 
-import com.google.common.collect.Lists;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -47,10 +46,12 @@ import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Lists;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -292,10 +293,20 @@ public class StandbyCheckpointer {
         // TODO should there be some smarts here about retries nodes that
         //  are not the active NN?
         CheckpointReceiverEntry receiverEntry = checkpointReceivers.get(url);
-        if (upload.get() == TransferFsImage.TransferResult.SUCCESS) {
+        TransferFsImage.TransferResult uploadResult = upload.get();
+        if (uploadResult == TransferFsImage.TransferResult.SUCCESS) {
           receiverEntry.setLastUploadTime(monotonicNow());
           receiverEntry.setIsPrimary(true);
         } else {
+          // Getting here means image upload is explicitly rejected
+          // by the other node. This could happen if:
+          // 1. the other is also a standby, or
+          // 2. the other is active, but already accepted another
+          // newer image, or
+          // 3. the other is active but has a recent enough image.
+          // All these are valid cases, just log for information.
+          LOG.info("Image upload rejected by the other NameNode: {}",
+              uploadResult);
           receiverEntry.setIsPrimary(false);
         }
       } catch (ExecutionException e) {

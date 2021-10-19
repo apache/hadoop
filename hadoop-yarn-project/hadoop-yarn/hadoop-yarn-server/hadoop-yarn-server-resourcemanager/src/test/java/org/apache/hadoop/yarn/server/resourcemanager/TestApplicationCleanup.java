@@ -81,7 +81,7 @@ public class TestApplicationCleanup {
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5000);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     //kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -159,7 +159,7 @@ public class TestApplicationCleanup {
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5000);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     //kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -296,7 +296,7 @@ public class TestApplicationCleanup {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
@@ -333,7 +333,7 @@ public class TestApplicationCleanup {
     nm2.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // alloc another container on nm2
@@ -387,7 +387,7 @@ public class TestApplicationCleanup {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.RUNNING);
     rm1.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
@@ -423,7 +423,7 @@ public class TestApplicationCleanup {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
@@ -463,7 +463,7 @@ public class TestApplicationCleanup {
         new MockNM("127.0.0.1:1234", nmMemory, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    RMApp app0 = rm1.submitApp(amMemory);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(amMemory, rm1);
     MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
 
     // 2. AM sends ResourceRequest for 1 container with memory 2048MB.

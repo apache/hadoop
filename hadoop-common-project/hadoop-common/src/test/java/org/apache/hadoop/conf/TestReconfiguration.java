@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.conf;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.junit.Test;

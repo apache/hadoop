@@ -127,7 +127,7 @@ public class TestLocalResolver {
   private MembershipState newMembershipState(String addr, String nsId) {
     return MembershipState.newInstance(
         "routerId", nsId, "nn0", "cluster0", "blockPool0",
-        addr + ":8001", addr + ":8002", addr + ":8003", addr + ":8004",
+        addr + ":8001", addr + ":8002", addr + ":8003", "http", addr + ":8004",
         FederationNamenodeServiceState.ACTIVE, false);
   }
 

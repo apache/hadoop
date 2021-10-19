@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.google.common.collect.Sets;
+
+import org.apache.hadoop.util.Sets;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.StringStartsWith;
 import org.junit.After;
 import org.junit.Before;
@@ -53,6 +55,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
+import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.mapred.JobConf;
@@ -83,8 +87,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
 public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private static final JobID JOB_ID = new JobID("job", 1);
+
+  public static final TaskID TASK_ID = new TaskID(JOB_ID, TaskType.REDUCE, 2);
+
   private static final TaskAttemptID AID = new TaskAttemptID(
-      new TaskID(JOB_ID, TaskType.REDUCE, 2), 3);
+      TASK_ID, 1);
+  private static final TaskAttemptID AID2 = new TaskAttemptID(
+      TASK_ID, 2);
   private static final Logger LOG =
       LoggerFactory.getLogger(TestStagingCommitter.class);
 
@@ -140,8 +149,8 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     jobConf.setInt(FS_S3A_COMMITTER_THREADS, numThreads);
     jobConf.setBoolean(FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
         uniqueFilenames);
-    jobConf.set(FS_S3A_COMMITTER_STAGING_UUID,
-        UUID.randomUUID().toString());
+    jobConf.set(FS_S3A_COMMITTER_UUID,
+        uuid());
     jobConf.set(RETRY_INTERVAL, "100ms");
     jobConf.setInt(RETRY_LIMIT, 1);
 
@@ -189,36 +198,137 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     }
   }
 
-  @Test
-  public void testUUIDPropagation() throws Exception {
-    Configuration config = new Configuration();
-    String jobUUID = addUUID(config);
-    assertEquals("Upload UUID", jobUUID,
-        StagingCommitter.getUploadUUID(config, JOB_ID));
+  private Configuration newConfig() {
+    return new Configuration(false);
   }
 
+  @Test
+  public void testUUIDPropagation() throws Exception {
+    Configuration config = newConfig();
+    String uuid = uuid();
+    config.set(SPARK_WRITE_UUID, uuid);
+    config.setBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, true);
+    Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
+        .buildJobUUID(config, JOB_ID);
+    assertEquals("Job UUID", uuid, t3.getLeft());
+    assertEquals("Job UUID source: " + t3,
+        AbstractS3ACommitter.JobUUIDSource.SparkWriteUUID,
+        t3.getRight());
+  }
+
+  /**
+   * If the Spark UUID is required, then binding will fail
+   * if a UUID did not get passed in.
+   */
+  @Test
+  public void testUUIDValidation() throws Exception {
+    Configuration config = newConfig();
+    config.setBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, true);
+    intercept(PathCommitException.class, E_NO_SPARK_UUID, () ->
+        AbstractS3ACommitter.buildJobUUID(config, JOB_ID));
+  }
+
+  /**
+   * Validate ordering of UUID retrieval.
+   */
+  @Test
+  public void testUUIDLoadOrdering() throws Exception {
+    Configuration config = newConfig();
+    config.setBoolean(FS_S3A_COMMITTER_REQUIRE_UUID, true);
+    String uuid = uuid();
+    // MUST be picked up
+    config.set(FS_S3A_COMMITTER_UUID, uuid);
+    config.set(SPARK_WRITE_UUID, "something");
+    Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
+        .buildJobUUID(config, JOB_ID);
+    assertEquals("Job UUID", uuid, t3.getLeft());
+    assertEquals("Job UUID source: " + t3,
+        AbstractS3ACommitter.JobUUIDSource.CommitterUUIDProperty,
+        t3.getRight());
+  }
+
+  /**
+   * Verify that unless the config enables self-generation, JobIDs
+   * are used.
+   */
+  @Test
+  public void testJobIDIsUUID() throws Exception {
+    Configuration config = newConfig();
+    Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
+        .buildJobUUID(config, JOB_ID);
+    assertEquals("Job UUID source: " + t3,
+        AbstractS3ACommitter.JobUUIDSource.JobID,
+        t3.getRight());
+    // parse it as a JobID
+    JobID.forName(t3.getLeft());
+  }
+
+  /**
+   * Verify self-generated UUIDs are supported when enabled,
+   * and come before JobID.
+   */
+  @Test
+  public void testSelfGeneratedUUID() throws Exception {
+    Configuration config = newConfig();
+    config.setBoolean(FS_S3A_COMMITTER_GENERATE_UUID, true);
+    Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
+        .buildJobUUID(config, JOB_ID);
+    assertEquals("Job UUID source: " + t3,
+        AbstractS3ACommitter.JobUUIDSource.GeneratedLocally,
+        t3.getRight());
+    // parse it
+    UUID.fromString(t3.getLeft());
+  }
+
+  /**
+   * Create a UUID and add it as the staging UUID.
+   * @param config config to patch
+   * @return the UUID
+   */
   private String addUUID(Configuration config) {
-    String jobUUID = UUID.randomUUID().toString();
-    config.set(FS_S3A_COMMITTER_STAGING_UUID, jobUUID);
+    String jobUUID = uuid();
+    config.set(FS_S3A_COMMITTER_UUID, jobUUID);
     return jobUUID;
+  }
+
+  /**
+   * Create a new UUID.
+   * @return a uuid as a string.
+   */
+  private String uuid() {
+    return UUID.randomUUID().toString();
   }
 
   @Test
   public void testAttemptPathConstructionNoSchema() throws Exception {
-    Configuration config = new Configuration();
+    Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     config.set(BUFFER_DIR, "/tmp/mr-local-0,/tmp/mr-local-1");
     String commonPath = "file:/tmp/mr-local-";
+    Assertions.assertThat(getLocalTaskAttemptTempDir(config,
+        jobUUID, tac.getTaskAttemptID()).toString())
+        .describedAs("Missing scheme should produce local file paths")
+        .startsWith(commonPath)
+        .contains(jobUUID);
+  }
 
-    assertThat("Missing scheme should produce local file paths",
-        getLocalTaskAttemptTempDir(config,
-            jobUUID, tac.getTaskAttemptID()).toString(),
-        StringStartsWith.startsWith(commonPath));
+  @Test
+  public void testAttemptPathsDifferentByTaskAttempt() throws Exception {
+    Configuration config = newConfig();
+    final String jobUUID = addUUID(config);
+    config.set(BUFFER_DIR, "file:/tmp/mr-local-0");
+    String attempt1Path = getLocalTaskAttemptTempDir(config,
+        jobUUID, AID).toString();
+    String attempt2Path = getLocalTaskAttemptTempDir(config,
+        jobUUID, AID2).toString();
+    Assertions.assertThat(attempt2Path)
+        .describedAs("local task attempt dir of TA1 must not match that of TA2")
+        .isNotEqualTo(attempt1Path);
   }
 
   @Test
   public void testAttemptPathConstructionWithSchema() throws Exception {
-    Configuration config = new Configuration();
+    Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     String commonPath = "file:/tmp/mr-local-";
 
@@ -233,7 +343,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   @Test
   public void testAttemptPathConstructionWrongSchema() throws Exception {
-    Configuration config = new Configuration();
+    Configuration config = newConfig();
     final String jobUUID = addUUID(config);
     config.set(BUFFER_DIR,
         "hdfs://nn:8020/tmp/mr-local-0,hdfs://nn:8020/tmp/mr-local-1");
@@ -269,7 +379,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should name the commits file with the task ID: " + results,
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
-    PendingSet pending = PendingSet.load(dfs, stats[0].getPath());
+    PendingSet pending = PendingSet.load(dfs, stats[0]);
     assertEquals("Should have one pending commit", 1, pending.size());
     SinglePendingCommit commit = pending.getCommits().get(0);
     assertEquals("Should write to the correct bucket:" + results,
@@ -309,8 +419,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     assertEquals("Should name the commits file with the task ID",
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
-    PendingSet pending = PendingSet.load(dfs,
-        stats[0].getPath());
+    PendingSet pending = PendingSet.load(dfs, stats[0]);
     assertEquals("Should have one pending commit", 1, pending.size());
   }
 
@@ -333,7 +442,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
         "task_job_0001_r_000002", stats[0].getPath().getName());
 
     List<SinglePendingCommit> pending =
-        PendingSet.load(dfs, stats[0].getPath()).getCommits();
+        PendingSet.load(dfs, stats[0]).getCommits();
     assertEquals("Should have correct number of pending commits",
         files.size(), pending.size());
 
@@ -535,33 +644,31 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return jobCommitter.toString();
         });
 
-    assertEquals("Should have succeeded to commit some uploads",
-        5, results.getCommits().size());
-
-    assertEquals("Should have deleted the files that succeeded",
-        5, results.getDeletes().size());
 
     Set<String> commits = results.getCommits()
         .stream()
-        .map((commit) -> commit.getBucketName() + commit.getKey())
+        .map(commit ->
+            "s3a://" + commit.getBucketName() + "/" + commit.getKey())
         .collect(Collectors.toSet());
 
     Set<String> deletes = results.getDeletes()
         .stream()
-        .map((delete) -> delete.getBucketName() + delete.getKey())
+        .map(delete ->
+            "s3a://" + delete.getBucketName() + "/" + delete.getKey())
         .collect(Collectors.toSet());
 
-    assertEquals("Committed and deleted objects should match",
-        commits, deletes);
+    Assertions.assertThat(commits)
+        .describedAs("Committed objects compared to deleted paths %s", results)
+        .containsExactlyInAnyOrderElementsOf(deletes);
 
-    assertEquals("Mismatch in aborted upload count",
-        7, results.getAborts().size());
-
+    Assertions.assertThat(results.getAborts())
+        .describedAs("aborted count in %s", results)
+        .hasSize(7);
     Set<String> uploadIds = getCommittedIds(results.getCommits());
     uploadIds.addAll(getAbortedIds(results.getAborts()));
-
-    assertEquals("Should have committed/deleted or aborted all uploads",
-        uploads, uploadIds);
+    Assertions.assertThat(uploadIds)
+        .describedAs("Combined commit/delete and aborted upload IDs")
+        .containsExactlyInAnyOrderElementsOf(uploads);
 
     assertPathDoesNotExist(fs, "jobAttemptPath not deleted", jobAttemptPath);
   }

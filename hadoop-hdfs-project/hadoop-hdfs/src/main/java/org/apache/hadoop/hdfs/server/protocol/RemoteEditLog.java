@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import com.google.common.base.Function;
-import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
+import java.util.function.Function;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 public class RemoteEditLog implements Comparable<RemoteEditLog> {
@@ -82,16 +82,13 @@ public class RemoteEditLog implements Comparable<RemoteEditLog> {
   }
   
   /**
-   * Guava <code>Function</code> which applies {@link #getStartTxId()} 
+   * Java <code>Function</code> which applies {@link #getStartTxId()}
    */
   public static final Function<RemoteEditLog, Long> GET_START_TXID =
-    new Function<RemoteEditLog, Long>() {
-      @Override
-      public Long apply(RemoteEditLog log) {
+      log -> {
         if (null == log) {
           return HdfsServerConstants.INVALID_TXID;
         }
         return log.getStartTxId();
-      }
-    };
+      };
 }

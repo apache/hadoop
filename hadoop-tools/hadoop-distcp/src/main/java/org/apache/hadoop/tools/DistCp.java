@@ -21,7 +21,7 @@ package org.apache.hadoop.tools;
 import java.io.IOException;
 import java.util.Random;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,7 +44,7 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * DistCp is the main driver-class for DistCpV2.
@@ -84,7 +84,7 @@ public class DistCp extends Configured implements Tool {
     if (context.shouldUseSnapshotDiff()) {
       // When "-diff" or "-rdiff" is passed, do sync() first, then
       // create copyListing based on snapshot diff.
-      DistCpSync distCpSync = new DistCpSync(context, getConf());
+      DistCpSync distCpSync = new DistCpSync(context, job.getConfiguration());
       if (distCpSync.sync()) {
         createInputFileListingWithDiff(job, distCpSync);
       } else {
@@ -127,6 +127,7 @@ public class DistCp extends Configured implements Tool {
    * to target location, by:
    *  1. Creating a list of files to be copied to target.
    *  2. Launching a Map-only job to copy the files. (Delegates to execute().)
+   *  The MR job is not closed as part of run if its a blocking call to run
    * @param argv List of arguments passed to DistCp, from the ToolRunner.
    * @return On success, it returns 0. Else, -1.
    */
@@ -148,9 +149,10 @@ public class DistCp extends Configured implements Tool {
       OptionsParser.usage();      
       return DistCpConstants.INVALID_ARGUMENT;
     }
-    
+
+    Job job = null;
     try {
-      execute();
+      job = execute();
     } catch (InvalidInputException e) {
       LOG.error("Invalid input: ", e);
       return DistCpConstants.INVALID_ARGUMENT;
@@ -166,6 +168,15 @@ public class DistCp extends Configured implements Tool {
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       return DistCpConstants.UNKNOWN_ERROR;
+    } finally {
+      //Blocking distcp so close the job after its done
+      if (job != null && context.shouldBlock()) {
+        try {
+          job.close();
+        } catch (IOException e) {
+          LOG.error("Exception encountered while closing distcp job", e);
+        }
+      }
     }
     return DistCpConstants.SUCCESS;
   }
@@ -214,6 +225,8 @@ public class DistCp extends Configured implements Tool {
     String jobID = job.getJobID().toString();
     job.getConfiguration().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID,
         jobID);
+    // Set the jobId for the applications running through run method.
+    getConf().set(DistCpConstants.CONF_LABEL_DISTCP_JOB_ID, jobID);
     LOG.info("DistCp job-id: " + jobID);
 
     return job;
@@ -434,9 +447,9 @@ public class DistCp extends Configured implements Tool {
     int exitCode;
     try {
       DistCp distCp = new DistCp();
-      Cleanup CLEANUP = new Cleanup(distCp);
+      Cleanup cleanup = new Cleanup(distCp);
 
-      ShutdownHookManager.get().addShutdownHook(CLEANUP,
+      ShutdownHookManager.get().addShutdownHook(cleanup,
         SHUTDOWN_HOOK_PRIORITY);
       exitCode = ToolRunner.run(getDefaultConf(), distCp, argv);
     }

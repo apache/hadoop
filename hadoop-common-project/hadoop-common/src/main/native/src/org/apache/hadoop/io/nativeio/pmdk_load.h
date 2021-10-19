@@ -80,11 +80,6 @@ void *myDlsym(void *handle, const char *symbol) {
 #endif
 
 /**
- * Return 0 if not support, 1 otherwise.
- */
-int build_support_pmdk();
-
-/**
  * Initialize and load PMDK library, returning error message if any.
  *
  * @param err     The err message buffer.

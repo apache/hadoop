@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import com.google.common.base.Preconditions;
-import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
@@ -29,6 +28,7 @@ import org.apache.hadoop.util.DataChecksum;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -112,6 +112,12 @@ public abstract class MappableBlockLoader {
   abstract boolean isNativeLoader();
 
   /**
+   * Get mappableBlock recovered from persistent memory.
+   */
+  abstract MappableBlock getRecoveredMappableBlock(
+      File cacheFile, String bpid, byte volumeIndex) throws IOException;
+
+  /**
    * Clean up cache, can be used during DataNode shutdown.
    */
   void shutdown() {
@@ -129,9 +135,7 @@ public abstract class MappableBlockLoader {
         BlockMetadataHeader.readHeader(new DataInputStream(
             new BufferedInputStream(metaIn, BlockMetadataHeader
                 .getHeaderSize())));
-    FileChannel metaChannel = null;
-    try {
-      metaChannel = metaIn.getChannel();
+    try (FileChannel metaChannel = metaIn.getChannel()) {
       if (metaChannel == null) {
         throw new IOException(
             "Block InputStream meta file has no FileChannel.");
@@ -165,8 +169,6 @@ public abstract class MappableBlockLoader {
         blockBuf.clear();
         checksumBuf.clear();
       }
-    } finally {
-      IOUtils.closeQuietly(metaChannel);
     }
   }
 

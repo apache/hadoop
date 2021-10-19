@@ -54,6 +54,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.Timer;
 
@@ -61,7 +63,6 @@ import com.codahale.metrics.Timer;
 @Unstable
 public class SLSCapacityScheduler extends CapacityScheduler implements
         SchedulerWrapper,Configurable {
-
   private Configuration conf;
  
   private Map<ApplicationAttemptId, String> appQueueMap =
@@ -74,6 +75,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   private SchedulerMetrics schedulerMetrics;
   private boolean metricsON;
   private Tracker tracker;
+
+  // logger
+  private static final Logger LOG = LoggerFactory.getLogger(SLSCapacityScheduler.class);
 
   public Tracker getTracker() {
     return tracker;
@@ -94,7 +98,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
             CapacityScheduler.class);
         schedulerMetrics.init(this, conf);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOG.error("Caught exception while initializing schedulerMetrics", e);
       }
     }
   }
@@ -114,6 +118,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
                 containerIds, strings,
                 strings2, updateRequests);
         return allocation;
+      } catch (Exception e) {
+        LOG.error("Caught exception from allocate", e);
+        throw e;
       } finally {
         context.stop();
         schedulerMetrics.increaseSchedulerAllocationCounter();
@@ -121,7 +128,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
           updateQueueWithAllocateRequest(allocation, attemptId,
                   resourceRequests, containerIds);
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.error("Caught exception while executing finally block", e);
         }
       }
     } else {
@@ -218,6 +225,14 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         AppAttemptRemovedSchedulerEvent appRemoveEvent =
             (AppAttemptRemovedSchedulerEvent) schedulerEvent;
         appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
+        if (SLSRunner.getRemainingApps() == 0) {
+          try {
+            getSchedulerMetrics().tearDown();
+            SLSRunner.exitSLSRunner();
+          } catch (Exception e) {
+            LOG.error("Scheduler Metrics failed to tear down.", e);
+          }
+        }
       } else if (schedulerEvent.getType() ==
           SchedulerEventType.APP_ATTEMPT_ADDED
           && schedulerEvent instanceof AppAttemptAddedSchedulerEvent) {
@@ -360,7 +375,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
         schedulerMetrics.tearDown();
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Caught exception while stopping service", e);
     }
     super.serviceStop();
   }
@@ -380,6 +395,6 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       throw new YarnException("Can't find the queue by the given name: " + queue
           + "! Please check if queue " + queue + " is in the allocation file.");
     }
-    return getQueue(queue).getQueueName();
+    return getQueue(queue).getQueuePath();
   }
 }

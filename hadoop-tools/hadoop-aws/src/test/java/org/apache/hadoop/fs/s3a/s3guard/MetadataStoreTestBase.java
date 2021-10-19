@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +32,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,12 +42,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
 /**
@@ -71,6 +74,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   static final String GROUP = null;
   private final long accessTime = 0;
   private static ITtlTimeProvider ttlTimeProvider;
+
+  private static final List<Path> EMPTY_LIST = Collections.emptyList();
 
   /**
    * Each test should override this.  Will use a new Configuration instance.
@@ -556,7 +561,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     dirMeta.setAuthoritative(true);
     dirMeta.put(new PathMetadata(
         makeFileStatus("/a1/b1/file_new", 100)));
-    ms.put(dirMeta, null);
+    ms.put(dirMeta, EMPTY_LIST, null);
 
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
     assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
@@ -757,7 +762,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if (!allowMissing()) {
       DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
       parentDirMd.setAuthoritative(true);
-      ms.put(parentDirMd, null);
+      ms.put(parentDirMd, EMPTY_LIST, null);
     }
 
     ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, time);
@@ -796,7 +801,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       // set parent dir as authoritative
       DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
       parentDirMd.setAuthoritative(true);
-      ms.put(parentDirMd, null);
+      ms.put(parentDirMd, EMPTY_LIST, null);
 
       // prune the ms
       ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, time);
@@ -828,7 +833,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
-    ms.put(dirMeta, null);
+    ms.put(dirMeta, EMPTY_LIST, null);
 
     if (!allowMissing()) {
       assertDirectorySize(dirPath, filenames.length);
@@ -1009,7 +1014,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
-    ms.put(dirMeta, null);
+    ms.put(dirMeta, EMPTY_LIST, null);
   }
 
   protected void createNewDirs(String... dirs)
@@ -1275,8 +1280,27 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       final long time,
       BulkOperationState operationState) throws IOException {
     PathMetadata meta = new PathMetadata(makeFileStatus(key, 1, time));
-    ms.put(meta,
-        operationState);
+    meta.setLastUpdated(time);
+    ms.put(meta, operationState);
+    return meta;
+  }
+
+  /**
+   * Put a dir to the shared DDB table.
+   * @param key key
+   * @param time timestamp.
+   * @param operationState ongoing state
+   * @return the entry
+   * @throws IOException IO failure
+   */
+  protected PathMetadata putDir(
+      final String key,
+      final long time,
+      BulkOperationState operationState) throws IOException {
+    PathMetadata meta = new PathMetadata(
+        basicFileStatus(strToPath(key), 0, true, time));
+    meta.setLastUpdated(time);
+    ms.put(meta, operationState);
     return meta;
   }
 
@@ -1309,4 +1333,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         null, null);
     return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
   }
+
+  @Override
+  protected Timeout retrieveTestTimeout() {
+    return Timeout.millis(S3ATestConstants.S3A_TEST_TIMEOUT);
+  }
+
 }

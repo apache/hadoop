@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.Time;
@@ -180,12 +180,8 @@ class BlockReportLeaseManager {
   /**
    * Get the next block report lease ID.  Any number is valid except 0.
    */
-  private synchronized long getNextId() {
-    long id;
-    do {
-      id = nextId++;
-    } while (id == 0);
-    return id;
+  private long getNextId() {
+    return ++nextId == 0L ? ++nextId : nextId;
   }
 
   public synchronized void register(DatanodeDescriptor dn) {

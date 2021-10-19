@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import java.util.Collections;
 import java.util.Set;
 
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -35,8 +36,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * Test the {@link FairScheduler} queue manager correct queue hierarchies
@@ -116,10 +116,11 @@ public class TestQueueManager {
     assertNotNull(queueManager.getLeafQueue("queue1.queue2", false));
     assertNull(queueManager.getLeafQueue("queue1", false));
     
-    // Should never to be able to create a queue under the default queue
+    // Since YARN-7769 FS doesn't create the default queue during init, so
+    // it should be possible to create a queue under the root.default queue
     updateConfiguredLeafQueues(queueManager, "default.queue3");
-    assertNull(queueManager.getLeafQueue("default.queue3", false));
-    assertNotNull(queueManager.getLeafQueue("default", false));
+    assertNotNull(queueManager.getLeafQueue("default.queue3", false));
+    assertNull(queueManager.getLeafQueue("default", false));
   }
 
   /**
@@ -571,6 +572,7 @@ public class TestQueueManager {
     ActiveUsersManager activeUsersManager =
         Mockito.mock(ActiveUsersManager.class);
     RMContext rmContext = Mockito.mock(RMContext.class);
+    doReturn(scheduler.getConfig()).when(rmContext).getYarnConfiguration();
 
     // the appAttempt is created
     // removeEmptyDynamicQueues() should not remove the queue

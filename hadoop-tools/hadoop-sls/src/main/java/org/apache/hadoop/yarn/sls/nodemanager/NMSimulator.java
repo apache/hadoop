@@ -27,7 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -250,7 +250,8 @@ public class NMSimulator extends TaskRunner.Task {
   /**
    * launch a new container with the given life time
    */
-  public void addNewContainer(Container container, long lifeTimeMS) {
+  public void addNewContainer(Container container, long lifeTimeMS,
+      ApplicationId applicationId) {
     LOG.debug("NodeManager {} launches a new container ({}).",
         node.getNodeID(), container.getId());
     if (lifeTimeMS != -1) {
@@ -267,6 +268,15 @@ public class NMSimulator extends TaskRunner.Task {
         amContainerList.add(container.getId());
       }
     }
+
+    // update runningApplications on the node
+    if (applicationId != null
+        && !getNode().getRunningApps().contains(applicationId)) {
+      getNode().getRunningApps().add(applicationId);
+    }
+    LOG.debug("Adding running app: {} on node: {}. " +
+            "Updated runningApps on this node are: {}",
+        applicationId, getNode().getNodeID(), getNode().getRunningApps());
   }
 
   /**
@@ -295,5 +305,14 @@ public class NMSimulator extends TaskRunner.Task {
   @VisibleForTesting
   List<ContainerId> getCompletedContainers() {
     return completedContainerList;
+  }
+
+  public void finishApplication(ApplicationId applicationId) {
+    if (getNode().getRunningApps().contains(applicationId)) {
+      getNode().getRunningApps().remove(applicationId);
+      LOG.debug("Removed running app: {} from node: {}. " +
+              "Updated runningApps on this node are: {}",
+          applicationId, getNode().getNodeID(), getNode().getRunningApps());
+    }
   }
 }

@@ -93,6 +93,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +105,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * WebHDFS Router implementation. This is an extension of
@@ -115,20 +118,18 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterWebHdfsMethods.class);
 
-  private static final ThreadLocal<String> REMOTE_ADDRESS =
-      new ThreadLocal<String>();
-
   private @Context HttpServletRequest request;
   private String method;
   private String query;
   private String reqPath;
+  private String remoteAddr;
 
   public RouterWebHdfsMethods(@Context HttpServletRequest request) {
     super(request);
     this.method = request.getMethod();
     this.query = request.getQueryString();
     this.reqPath = request.getServletPath();
-    REMOTE_ADDRESS.set(JspHelper.getRemoteAddr(request));
+    this.remoteAddr = JspHelper.getRemoteAddr(request);
   }
 
   @Override
@@ -139,7 +140,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
                       final Param<?, ?>... parameters) {
     super.init(ugi, delegation, username, doAsUser, path, op, parameters);
 
-    REMOTE_ADDRESS.set(JspHelper.getRemoteAddr(request));
+    remoteAddr = JspHelper.getRemoteAddr(request);
   }
 
   @Override
@@ -153,12 +154,12 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   }
 
   private void reset() {
-    REMOTE_ADDRESS.set(null);
+    remoteAddr = null;
   }
 
   @Override
   protected String getRemoteAddr() {
-    return REMOTE_ADDRESS.get();
+    return remoteAddr;
   }
 
   @Override
@@ -454,29 +455,34 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private DatanodeInfo chooseDatanode(final Router router,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
-    // We need to get the DNs as a privileged user
     final RouterRpcServer rpcServer = getRPCServer(router);
-    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-    RouterRpcServer.setCurrentUser(loginUser);
-
-    DatanodeInfo[] dns = null;
+    DatanodeInfo[] dns = {};
+    String resolvedNs = "";
     try {
-      dns = rpcServer.getDatanodeReport(DatanodeReportType.LIVE);
+      dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
-    } finally {
-      // Reset ugi to remote user for remaining operations.
-      RouterRpcServer.resetCurrentUser();
+    }
+
+    if (op == PutOpParam.Op.CREATE) {
+      try {
+        resolvedNs = rpcServer.getCreateLocation(path).getNameserviceId();
+      } catch (IOException e) {
+        LOG.error("Cannot get the name service " +
+            "to create file for path {} ", path, e);
+      }
     }
 
     HashSet<Node> excludes = new HashSet<Node>();
-    if (excludeDatanodes != null) {
-      Collection<String> collection =
-          getTrimmedStringCollection(excludeDatanodes);
-      for (DatanodeInfo dn : dns) {
-        if (collection.contains(dn.getName())) {
-          excludes.add(dn);
-        }
+    Collection<String> collection =
+        getTrimmedStringCollection(excludeDatanodes);
+    for (DatanodeInfo dn : dns) {
+      String ns = getNsFromDataNodeNetworkLocation(dn.getNetworkLocation());
+      if (collection.contains(dn.getName())) {
+        excludes.add(dn);
+      } else if (op == PutOpParam.Op.CREATE && !ns.equals(resolvedNs)) {
+        // for CREATE, the dest dn should be in the resolved ns
+        excludes.add(dn);
       }
     }
 
@@ -509,6 +515,22 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     }
 
     return getRandomDatanode(dns, excludes);
+  }
+
+  /**
+   * Get the nameservice info from datanode network location.
+   * @param location network location with format `/ns0/rack1`
+   * @return nameservice this datanode is in
+   */
+  @VisibleForTesting
+  public static String getNsFromDataNodeNetworkLocation(String location) {
+    // network location should be in the format of /ns/rack
+    Pattern pattern = Pattern.compile("^/([^/]*)/");
+    Matcher matcher = pattern.matcher(location);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return "";
   }
 
   /**

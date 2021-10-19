@@ -54,6 +54,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
+import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
 /**
  * Provides: argument processing to ensure the destination is valid
@@ -415,7 +416,6 @@ abstract class CommandWithDestination extends FsCommand {
       targetFs.setWriteChecksum(writeChecksum);
       targetFs.writeStreamToFile(in, tempTarget, lazyPersist, direct);
       if (!direct) {
-        targetFs.deleteOnExit(tempTarget.path);
         targetFs.rename(tempTarget, target);
       }
     } finally {
@@ -491,25 +491,18 @@ abstract class CommandWithDestination extends FsCommand {
         throws IOException {
       FSDataOutputStream out = null;
       try {
-        out = create(target, lazyPersist, direct);
+        out = create(target, lazyPersist);
         IOUtils.copyBytes(in, out, getConf(), true);
-      } catch (IOException e) {
-        // failure: clean up if we got as far as creating the file
-        if (!direct && out != null) {
-          try {
-            fs.delete(target.path, false);
-          } catch (IOException ignored) {
-          }
-        }
-        throw e;
       } finally {
+        if (!direct) {
+          deleteOnExit(target.path);
+        }
         IOUtils.closeStream(out); // just in case copyBytes didn't
       }
     }
     
     // tag created files as temp files
-    FSDataOutputStream create(PathData item, boolean lazyPersist,
-        boolean direct)
+    FSDataOutputStream create(PathData item, boolean lazyPersist)
         throws IOException {
       if (lazyPersist) {
         long defaultBlockSize;
@@ -523,7 +516,8 @@ abstract class CommandWithDestination extends FsCommand {
           defaultBlockSize = getDefaultBlockSize(item.path);
         }
 
-        EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE, LAZY_PERSIST);
+        EnumSet<CreateFlag> createFlags =
+            EnumSet.of(CREATE, LAZY_PERSIST, OVERWRITE);
         return create(item.path,
                       FsPermission.getFileDefault().applyUMask(
                           FsPermission.getUMask(getConf())),

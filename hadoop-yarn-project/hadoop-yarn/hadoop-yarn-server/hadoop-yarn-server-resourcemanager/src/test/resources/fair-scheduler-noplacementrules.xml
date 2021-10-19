@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<allocations>
+    <queue name="root">
+        <weight>1.0</weight>
+        <schedulingPolicy>drf</schedulingPolicy>
+        <aclSubmitApps>alice,bob,joe,john hadoop_users</aclSubmitApps>
+        <aclAdministerApps>alice,bob,joe,john hadoop_users</aclAdministerApps>
+        <queue name="default">
+            <weight>1.0</weight>
+            <schedulingPolicy>drf</schedulingPolicy>
+        </queue>
+        <queue name="users" type="parent">
+            <weight>1.0</weight>
+            <schedulingPolicy>drf</schedulingPolicy>
+            <queue name="john">
+                <weight>1.0</weight>
+                <schedulingPolicy>drf</schedulingPolicy>
+                <aclSubmitApps>john </aclSubmitApps>
+                <aclAdministerApps>john </aclAdministerApps>
+                <maxContainerAllocation>vcores=2,memory-mb=8192</maxContainerAllocation>
+            </queue>
+            <queue name="joe">
+                <maxResources>memory-mb=50.0%, vcores=50.0%</maxResources>
+                <weight>3.0</weight>
+                <allowPreemptionFrom>false</allowPreemptionFrom>
+                <schedulingPolicy>drf</schedulingPolicy>
+                <aclSubmitApps>joe </aclSubmitApps>
+                <aclAdministerApps>joe </aclAdministerApps>
+            </queue>
+        </queue>
+        <queue name="admins" type="parent">
+            <maxChildResources>memory-mb=8192, vcores=1</maxChildResources>
+            <weight>1.0</weight>
+            <schedulingPolicy>drf</schedulingPolicy>
+            <maxContainerAllocation>vcores=3,memory-mb=4096</maxContainerAllocation>
+            <queue name="alice">
+                <maxResources>memory-mb=16384, vcores=4</maxResources>
+                <maxRunningApps>2</maxRunningApps>
+                <weight>3.0</weight>
+                <allowPreemptionFrom>false</allowPreemptionFrom>
+                <schedulingPolicy>drf</schedulingPolicy>
+                <aclSubmitApps>alice </aclSubmitApps>
+                <aclAdministerApps>alice </aclAdministerApps>
+                <maxAMShare>0.15</maxAMShare>
+                <reservation>memory-mb=16384, vcores=4</reservation>
+            </queue>
+            <queue name="bob">
+                <maxResources>memory-mb=8192, vcores=2</maxResources>
+                <weight>1.0</weight>
+                <schedulingPolicy>drf</schedulingPolicy>
+                <aclSubmitApps>bob </aclSubmitApps>
+                <aclAdministerApps>bob </aclAdministerApps>
+                <maxAMShare>-1.0</maxAMShare>
+            </queue>
+        </queue>
+    </queue>
+    <user name="alice">
+      <maxRunningApps>30</maxRunningApps>
+    </user>
+    <userMaxAppsDefault>10</userMaxAppsDefault>
+    <defaultFairSharePreemptionTimeout>23</defaultFairSharePreemptionTimeout>
+    <defaultMinSharePreemptionTimeout>24</defaultMinSharePreemptionTimeout>
+    <defaultFairSharePreemptionThreshold>0.12</defaultFairSharePreemptionThreshold>
+    <queueMaxAppsDefault>15</queueMaxAppsDefault>
+    <defaultQueueSchedulingPolicy>fair</defaultQueueSchedulingPolicy>
+    <queueMaxAMShareDefault>0.16</queueMaxAMShareDefault>
+</allocations>

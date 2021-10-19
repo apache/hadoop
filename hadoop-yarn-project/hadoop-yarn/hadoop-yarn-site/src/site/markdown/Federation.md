@@ -133,7 +133,7 @@ AMRMProxy, Global Policy Generator (GPG) and Router work together to make this h
 
 The figure shows a sequence diagram for the following job execution flow:
 
-1. The Router receives an application submission request that is complaint to the YARN Application Client Protocol.
+1. The Router receives an application submission request that is compliant with the YARN Application Client Protocol.
 2. The router interrogates a routing table / policy to choose the “home RM” for the job (the policy configuration is received from the state-store on heartbeat).
 3. The router queries the membership state to determine the endpoint of the home RM.
 4. The router then redirects the application submission request to the home RM.
@@ -256,7 +256,7 @@ Optional:
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
-|`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-seperated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
+|`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
 
 ###ON NMs:
 

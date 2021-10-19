@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -444,7 +445,7 @@ public class TestRMApplicationHistoryWriter {
     rm.start();
     MockNM nm = rm.registerNode("127.0.0.1:1234", 1024 * 10100);
 
-    RMApp app = rm.submitApp(1024);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
     //Wait to make sure the attempt has the right state
     //TODO explore a better way than sleeping for a while (YARN-4929)
     Thread.sleep(1000);

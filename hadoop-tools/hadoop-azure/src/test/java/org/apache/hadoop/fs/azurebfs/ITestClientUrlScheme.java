@@ -29,6 +29,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
@@ -81,8 +83,25 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
     Configuration config = getRawConfiguration();
     config.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsUrl.toString());
     config.setBoolean(FS_AZURE_ALWAYS_USE_HTTPS, alwaysUseHttps);
+    // HTTP is enabled only when "abfs://XXX" is used and FS_AZURE_ALWAYS_USE_HTTPS
+    // is set as false, otherwise HTTPS should be used.
+    boolean expectHttpConnection = !useSecureScheme && !alwaysUseHttps;
 
-    AbfsClient client = this.getFileSystem(config).getAbfsClient();
+    AbfsClient client = null;
+    try {
+      client = this.getFileSystem(config).getAbfsClient();
+    } catch (AbfsRestOperationException e) {
+      if (AzureServiceErrorCode.ACCOUNT_REQUIRES_HTTPS.equals(e.getErrorCode())
+          && expectHttpConnection) {
+        // if we get here, the error message was the account supports HTTPS only
+        // and this parameterized test is trying to create an HTTP one.
+        // we can implicitly infer that the scheme setup went through,
+        // otherwise it would not have been rejected at the far end
+        return;
+      } else {
+        throw e;
+      }
+    }
 
     Field baseUrlField = AbfsClient.class.
             getDeclaredField("baseUrl");
@@ -90,9 +109,7 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
 
     String url = ((URL) baseUrlField.get(client)).toString();
 
-    // HTTP is enabled only when "abfs://XXX" is used and FS_AZURE_ALWAYS_USE_HTTPS
-    // is set as false, otherwise HTTPS should be used.
-    if (!useSecureScheme && !alwaysUseHttps) {
+    if (expectHttpConnection) {
       Assert.assertTrue(url.startsWith(FileSystemUriSchemes.HTTP_SCHEME));
     } else {
       Assert.assertTrue(url.startsWith(FileSystemUriSchemes.HTTPS_SCHEME));

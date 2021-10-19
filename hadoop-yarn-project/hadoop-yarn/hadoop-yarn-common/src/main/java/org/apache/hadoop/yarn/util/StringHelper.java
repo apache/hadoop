@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.util;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
 import java.util.ArrayList;
 import java.util.List;

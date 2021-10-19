@@ -18,6 +18,11 @@
 package org.apache.hadoop.mapreduce.v2.app.speculate;
 
 public class DataStatistics {
+
+  /**
+   * factor used to calculate confidence interval within 95%.
+   */
+  private static final double DEFAULT_CI_FACTOR = 1.96;
   private int count = 0;
   private double sum = 0;
   private double sumSquares = 0;
@@ -25,25 +30,26 @@ public class DataStatistics {
   public DataStatistics() {
   }
 
-  public DataStatistics(double initNum) {
+  public DataStatistics(final double initNum) {
     this.count = 1;
     this.sum = initNum;
     this.sumSquares = initNum * initNum;
   }
 
-  public synchronized void add(double newNum) {
+  public synchronized void add(final double newNum) {
     this.count++;
     this.sum += newNum;
     this.sumSquares += newNum * newNum;
   }
 
-  public synchronized void updateStatistics(double old, double update) {
-	this.sum += update - old;
-	this.sumSquares += (update * update) - (old * old);
+  public synchronized void updateStatistics(final double old,
+      final double update) {
+    this.sum += update - old;
+    this.sumSquares += (update * update) - (old * old);
   }
 
   public synchronized double mean() {
-    return count == 0 ? 0.0 : sum/count;
+    return count == 0 ? 0.0 : sum / count;
   }
 
   public synchronized double var() {
@@ -52,14 +58,14 @@ public class DataStatistics {
       return 0.0;
     }
     double mean = mean();
-    return Math.max((sumSquares/count) - mean * mean, 0.0d);
+    return Math.max((sumSquares / count) - mean * mean, 0.0d);
   }
 
   public synchronized double std() {
     return Math.sqrt(this.var());
   }
 
-  public synchronized double outlier(float sigma) {
+  public synchronized double outlier(final float sigma) {
     if (count != 0.0) {
       return mean() + std() * sigma;
     }
@@ -71,8 +77,24 @@ public class DataStatistics {
     return count;
   }
 
+  /**
+   * calculates the mean value within 95% ConfidenceInterval.
+   * 1.96 is standard for 95 %
+   *
+   * @return the mean value adding 95% confidence interval
+   */
+  public synchronized double meanCI() {
+    if (count <= 1) {
+      return 0.0;
+    }
+    double currMean = mean();
+    double currStd = std();
+    return currMean + (DEFAULT_CI_FACTOR * currStd / Math.sqrt(count));
+  }
+
   public String toString() {
-    return "DataStatistics: count is " + count + ", sum is " + sum +
-    ", sumSquares is " + sumSquares + " mean is " + mean() + " std() is " + std();
+    return "DataStatistics: count is " + count + ", sum is " + sum
+        + ", sumSquares is " + sumSquares + " mean is " + mean()
+        + " std() is " + std() + ", meanCI() is " + meanCI();
   }
 }

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -62,6 +62,8 @@ public class TestRpcBase {
 
   protected final static String SERVER_PRINCIPAL_KEY =
       "test.ipc.server.principal";
+  protected final static String CLIENT_PRINCIPAL_KEY =
+      "test.ipc.client.principal";
   protected final static String ADDRESS = "0.0.0.0";
   protected final static int PORT = 0;
   protected static InetSocketAddress addr;
@@ -70,7 +72,7 @@ public class TestRpcBase {
   protected void setupConf() {
     conf = new Configuration();
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
   }
 
@@ -271,7 +273,8 @@ public class TestRpcBase {
     }
   }
 
-  @KerberosInfo(serverPrincipal = SERVER_PRINCIPAL_KEY)
+  @KerberosInfo(serverPrincipal = SERVER_PRINCIPAL_KEY,
+                clientPrincipal = CLIENT_PRINCIPAL_KEY)
   @TokenInfo(TestTokenSelector.class)
   @ProtocolInfo(protocolName = "org.apache.hadoop.ipc.TestRpcBase$TestRpcService",
       protocolVersion = 1)

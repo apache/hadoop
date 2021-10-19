@@ -53,32 +53,28 @@ public class TestLongLong {
     verifyMultiplication(max, max);
   }
 
-  static void verifyRightShift(long a, long b) {
-    final LongLong ll = new LongLong().set(a, b);
-    final BigInteger bi = ll.toBigInteger();
-
-    for (int i = 0; i < LongLong.SIZE >> 1; i++) {
-      final long result = ll.shiftRight(i) & MASK;
-      final long expected = bi.shiftRight(i).longValue() & MASK;
-      final String s = String.format(
-          "\na = %x\nb = %x\nll= " + ll + "\nbi= " + bi.toString(16) + "\n", a,
-          b);
-      Assert.assertEquals(s, expected, result);
-    }
-
-    final String s = String.format(
-        "\na = %x\nb = %x\nll= " + ll + "\nbi= " + bi.toString(16) + "\n", a,
-        b);
-    //System.out.println(s);
-    Assert.assertEquals(s, bi, ll.toBigInteger());
-  }
-
   @Test
   public void testRightShift() {
     for(int i = 0; i < 1000; i++) {
       final long a = nextPositiveLong();
       final long b = nextPositiveLong();
-      verifyMultiplication(a, b);
+      verifyRightShift(a, b);
+    }
+  }
+
+  private static void verifyRightShift(long a, long b) {
+    final LongLong ll = new LongLong().set(a, b);
+    final BigInteger bi = ll.toBigInteger();
+
+    final String s = String.format(
+        "\na = %x\nb = %x\nll= " + ll + "\nbi= " + bi.toString(16) + "\n", a,
+        b);
+    Assert.assertEquals(s, bi, ll.toBigInteger());
+
+    for (int i = 0; i < LongLong.SIZE >> 1; i++) {
+      final long result = ll.shiftRight(i) & MASK;
+      final long expected = bi.shiftRight(i).longValue() & MASK;
+      Assert.assertEquals(s, expected, result);
     }
   }
 }

@@ -22,6 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 
+import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -32,21 +34,26 @@ import java.util.Map;
 public class InMemoryConfigurationStore extends YarnConfigurationStore {
 
   private Configuration schedConf;
-  private LogMutation pendingMutation;
+  private long configVersion;
 
   @Override
   public void initialize(Configuration conf, Configuration schedConf,
       RMContext rmContext) {
     this.schedConf = schedConf;
+    this.configVersion = 1L;
   }
 
+  /**
+   * This method does not log as it does not support backing store.
+   * The mutation to be applied on top of schedConf will be directly passed
+   * in confirmMutation.
+   */
   @Override
   public void logMutation(LogMutation logMutation) {
-    pendingMutation = logMutation;
   }
 
   @Override
-  public void confirmMutation(boolean isValid) {
+  public void confirmMutation(LogMutation pendingMutation, boolean isValid) {
     if (isValid) {
       for (Map.Entry<String, String> kv : pendingMutation.getUpdates()
           .entrySet()) {
@@ -56,8 +63,13 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
           schedConf.set(kv.getKey(), kv.getValue());
         }
       }
+      this.configVersion = this.configVersion + 1L;
     }
-    pendingMutation = null;
+  }
+
+  @Override
+  public void format() {
+    this.schedConf = null;
   }
 
   @Override
@@ -66,30 +78,82 @@ public class InMemoryConfigurationStore extends YarnConfigurationStore {
   }
 
   @Override
+  public long getConfigVersion() {
+    return configVersion;
+  }
+
+  /**
+   * Configuration mutations not logged (i.e. not persisted) but directly
+   * confirmed. As such, a list of persisted configuration mutations does not
+   * exist.
+   * @return null Configuration mutation list not applicable for this store.
+   */
+  @Override
   public List<LogMutation> getConfirmedConfHistory(long fromId) {
     // Unimplemented.
     return null;
   }
 
+  /**
+   * Configuration mutations not logged (i.e. not persisted) but directly
+   * confirmed. As such, a list of persisted configuration mutations does not
+   * exist.
+   * @return null Configuration mutation list not applicable for this store.
+   */
+  @Override
+  protected LinkedList<LogMutation> getLogs() {
+    // Unimplemented.
+    return null;
+  }
+
+  /**
+   * Configuration mutations applied directly in-memory. As such, there is no
+   * persistent configuration store.
+   * As there is no configuration store for versioning purposes,
+   * a conf store version is not applicable.
+   * @return null Conf store version not applicable for this store.
+   * @throws Exception
+   */
   @Override
   public Version getConfStoreVersion() throws Exception {
     // Does nothing.
     return null;
   }
 
+  /**
+   * Configuration mutations not logged (i.e. not persisted). As such, they are
+   * not persisted and not versioned. Hence, no version information to store.
+   * @throws Exception
+   */
   @Override
   public void storeVersion() throws Exception {
     // Does nothing.
   }
 
+  /**
+   * Configuration mutations not logged (i.e. not persisted). As such, they are
+   * not persisted and not versioned. Hence, a current version is not
+   * applicable.
+   * @return null A current version not applicable for this store.
+   */
   @Override
   public Version getCurrentVersion() {
     // Does nothing.
     return null;
   }
 
+  /**
+   * Configuration mutations not logged (i.e. not persisted). As such, they are
+   * not persisted and not versioned. Hence, version is always compatible,
+   * since it is in-memory.
+   */
   @Override
   public void checkVersion() {
     // Does nothing. (Version is always compatible since it's in memory)
+  }
+
+  @Override
+  public void close() throws IOException {
+    // Does nothing.
   }
 }

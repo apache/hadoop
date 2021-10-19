@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.junit.Test;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
@@ -174,6 +175,8 @@ public class TestHdfsHelper extends TestDirHelper {
       conf.set("hadoop.security.authentication", "simple");
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
       conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+      conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+          StoragePolicySatisfierMode.EXTERNAL.toString());
       // For BaseTestHttpFSWith#testFileAclsCustomizedUserAndGroupNames
       conf.set(HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
           "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$");

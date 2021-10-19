@@ -153,13 +153,18 @@ mvn -T 1C clean verify
 ```
 
 It's also possible to execute multiple test suites in parallel by passing the
-`parallel-tests` property on the command line.  The tests spend most of their
+`parallel-tests=wasb|abfs|both` property on the command line.  The tests spend most of their
 time blocked on network I/O, so running in parallel tends to
 complete full test runs faster.
 
 ```bash
-mvn -T 1C -Dparallel-tests clean verify
+mvn -T 1C -Dparallel-tests=both clean verify
+mvn -T 1C -Dparallel-tests=wasb clean verify
+mvn -T 1C -Dparallel-tests=abfs clean verify
 ```
+`-Dparallel-tests=wasb` runs the WASB related integration tests from azure directory<br/>
+`-Dparallel-tests=abfs` runs the ABFS related integration tests from azurebfs directory<br/>
+`-Dparallel-tests=both` runs all the integration tests from both azure and azurebfs directory<br/>
 
 Some tests must run with exclusive access to the storage container, so even with the
 `parallel-tests` property, several test suites will run in serial in a separate
@@ -443,7 +448,7 @@ use requires the presence of secret credentials, where tests may be slow,
 and where finding out why something failed from nothing but the test output
 is critical.
 
-#### Subclasses Existing Shared Base Blasses
+#### Subclasses Existing Shared Base Classes
 
 There are a set of base classes which should be extended for Azure tests and
 integration tests.
@@ -587,6 +592,61 @@ with the Hadoop Distributed File System permissions model when hierarchical
 namespace is enabled for the storage account.  Furthermore, the metadata and data
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
+## Generating test run configurations and test triggers over various config combinations
+
+To simplify the testing across various authentication and features combinations
+that are mandatory for a PR, script `dev-support/testrun-scripts/runtests.sh`
+should be used. Once the script is updated with relevant config settings for
+various test combinations, it will:
+1. Auto-generate configs specific to each test combinations
+2. Run tests for all combinations
+3. Summarize results across all the test combination runs.
+
+As a pre-requisite step, fill config values for test accounts and credentials
+needed for authentication in `src/test/resources/azure-auth-keys.xml.template`
+and rename as `src/test/resources/azure-auth-keys.xml`.
+
+**To add a new test combination:** Templates for mandatory test combinations
+for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
+If a new one needs to be added, add a combination set within
+`dev-support/testrun-scripts/runtests.sh` similar to the ones already defined
+and
+1. Provide a new combination name
+2. Update properties and values array which need to be effective for the test
+combination
+3. Call generateconfigs
+
+**To run PR validation:** Running command
+* `dev-support/testrun-scripts/runtests.sh` will generate configurations for
+each of the combinations defined and run tests for all the combinations.
+* `dev-support/testrun-scripts/runtests.sh -c {combinationname}` Specific
+combinations can be provided with -c option. If combinations are provided
+with -c option, tests for only those combinations will be run.
+
+**Test logs:** Test runs will create a folder within dev-support/testlogs to
+save the test logs. Folder name will be the test start timestamp. The mvn verify
+command line logs for each combination will be saved into a file as
+Test-Logs-$combination.txt into this folder. In case of any failures, this file
+will have the failure exception stack. At the end of the test run, the
+consolidated results of all the combination runs will be saved into a file as
+Test-Results.log in the same folder. When run for PR validation, the
+consolidated test results needs to be pasted into the PR comment section.
+
+**To generate config for use in IDE:** Running command with -a (activate) option
+`dev-support/testrun-scripts/runtests.sh -a {combination name}` will update
+the effective config relevant for the specific test combination. Hence the same
+config files used by the mvn test runs can be used for IDE without any manual
+updates needed within config file.
+
+**Other command line options:**
+* -a <COMBINATION_NAME> Specify the combination name which needs to be
+activated. This is to be used to generate config for use in IDE.
+* -c <COMBINATION_NAME> Specify the combination name for test runs. If this
+config is specified, tests for only the specified combinations will run. All
+combinations of tests will be running if this config is not specified.
+* -t <THREAD_COUNT> ABFS mvn tests are run in parallel mode. Tests by default
+are run with 8 thread count. It can be changed by providing -t <THREAD_COUNT>
+
 In order to test ABFS, please add the following configuration to your
 `src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
 compatibility tests which require WASB credentials, in addition to the ABFS
@@ -641,7 +701,7 @@ hierarchical namespace enabled, and set the following configuration settings:
 <property>
   <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
   <value>{AUTH TYPE}</value>
-  <description>The authorization type can be SharedKey, OAuth, or Custom. The
+  <description>The authorization type can be SharedKey, OAuth, Custom or SAS. The
   default is SharedKey.</description>
 </property>
 
@@ -787,6 +847,136 @@ hierarchical namespace enabled, and set the following configuration settings:
         </description>
     </property>
    -->
+
+```
+To run Delegation SAS test cases you must use a storage account with the
+hierarchical namespace enabled and set the following configuration settings:
+
+```xml
+<!--=========================== AUTHENTICATION  OPTIONS ===================-->
+<!--=============================   FOR SAS   ===========================-->
+<!-- To run ABFS Delegation SAS tests, you must register an app, create the
+     necessary role assignments, and set the configuration discussed below:
+
+    1) Register an app:
+      a) Login to https://portal.azure.com, select your AAD directory and search for app registrations.
+      b) Click "New registration".
+      c) Provide a display name, such as "abfs-app".
+      d) Set the account type to "Accounts in this organizational directory only ({YOUR_Tenant} only - Single tenant)".
+      e) For Redirect URI select Web and enter "http://localhost".
+      f) Click Register.
+
+    2)  Create necessary role assignments:
+      a) Login to https://portal.azure.com and find the Storage account with hierarchical namespace enabled
+         that you plan to run the tests against.
+      b) Select "Access Control (IAM)".
+      c) Select Role Assignments
+      d) Click Add and select "Add role assignments"
+      e) For Role and enter "Storage Blob Data Owner".
+      f) Under Select enter the name of the app you registered in step 1 and select it.
+      g) Click Save.
+      h) Repeat above steps to create a second role assignment for the app but this time for
+         the "Storage Blob Delegator" role.
+
+    3) Generate a new client secret for the application:
+      a) Login to https://portal.azure.com and find the app registered in step 1.
+      b) Select "Certificates and secrets".
+      c) Click "New client secret".
+      d) Enter a description (eg. Secret1)
+      e) Set expiration period.  Expires in 1 year is good.
+      f) Click Add
+      g) Copy the secret and expiration to a safe location.
+
+    4) Set the following configuration values:
+-->
+
+  <property>
+    <name>fs.azure.sas.token.provider.type</name>
+    <value>org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider</value>
+    <description>The fully qualified class name of the SAS token provider implementation.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.service.principal.tenant.id</name>
+    <value>{TID}</value>
+    <description>Tenant ID for the application's service principal.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.service.principal.object.id</name>
+    <value>{OID}</value>
+    <description>Object ID for the application's service principal.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.id</name>
+    <value>{app id}</value>
+    <description>The application's ID, also known as the client id.</description>
+  </property>
+
+   <property>
+     <name>fs.azure.test.app.secret</name>
+     <value>{client secret}</value>
+     <description>The application's secret, also known as the client secret.</description>
+   </property>
+
+
+```
+
+To run CheckAccess test cases you must register an app with no RBAC and set
+the following configurations.
+```xml
+<!--===========================   FOR CheckAccess =========================-->
+<!-- To run ABFS CheckAccess SAS tests, you must register an app, with no role
+ assignments, and set the configuration discussed below:
+
+    1) Register a new app with no RBAC
+    2) As part of the test configs you need to provide the guid for the above
+created app. Please follow the below steps to fetch the guid.
+      a) Get an access token with the above created app. Please refer the
+ following documentation for the same. https://docs.microsoft
+.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow#get-a-token
+      b) Decode the token fetched with the above step. You may use https
+://jwt.ms/ to decode the token
+      d) The oid field in the decoded string is the guid.
+    3) Set the following configurations:
+-->
+
+  <property>
+    <name>fs.azure.enable.check.access</name>
+    <value>true</value>
+    <description>By default the check access will be on. Checkaccess can
+    be turned off by changing this flag to false.</description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.id</name>
+    <value>{client id}</value>
+    <description>The client id(app id) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.secret</name>
+    <value>{client secret}</value>
+    <description>
+The client secret(application's secret) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.check.access.testuser.guid</name>
+    <value>{guid}</value>
+    <description>The guid fetched on step 2</description>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{account name}.dfs.core
+.windows.net</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>
+Token end point. This can be found through Azure portal. As part of CheckAccess
+test cases. The access will be tested for an FS instance created with the
+above mentioned client credentials. So this configuration is necessary to
+create the test FS instance.
+    </description>
+  </property>
 
 ```
 

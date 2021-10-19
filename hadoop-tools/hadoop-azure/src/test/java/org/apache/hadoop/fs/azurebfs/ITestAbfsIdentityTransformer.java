@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.junit.Test;
@@ -62,7 +62,6 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
   public ITestAbfsIdentityTransformer() throws Exception {
     super();
-    UserGroupInformation.reset();
     userGroupInfo = UserGroupInformation.getCurrentUser();
     localUser = userGroupInfo.getShortUserName();
     localGroup = userGroupInfo.getPrimaryGroupName();

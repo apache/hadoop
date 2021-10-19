@@ -77,6 +77,8 @@ public class NameNodeMetrics {
   MutableCounterLong renameSnapshotOps;
   @Metric("Number of listSnapshottableDirectory operations")
   MutableCounterLong listSnapshottableDirOps;
+  @Metric("Number of listSnapshots operations")
+  MutableCounterLong listSnapshotOps;
   @Metric("Number of snapshotDiffReport operations")
   MutableCounterLong snapshotDiffReportOps;
   @Metric("Number of blockReceivedAndDeleted calls")
@@ -85,6 +87,8 @@ public class NameNodeMetrics {
   MutableGaugeInt blockOpsQueued;
   @Metric("Number of blockReports and blockReceivedAndDeleted batch processed")
   MutableCounterLong blockOpsBatched;
+  @Metric("Number of pending edits")
+  MutableGaugeInt pendingEditsCount;
 
   @Metric("Number of file system operations")
   public long totalFileOps(){
@@ -106,6 +110,7 @@ public class NameNodeMetrics {
       disallowSnapshotOps.value() +
       renameSnapshotOps.value() +
       listSnapshottableDirOps.value() +
+      listSnapshotOps.value() +
       createSymlinkOps.value() +
       snapshotDiffReportOps.value();
   }
@@ -319,6 +324,10 @@ public class NameNodeMetrics {
   public void incrListSnapshottableDirOps() {
     listSnapshottableDirOps.incr();
   }
+
+  public void incrListSnapshotsOps() {
+    listSnapshotOps.incr();
+  }
   
   public void incrSnapshotDiffReportOps() {
     snapshotDiffReportOps.incr();
@@ -334,6 +343,10 @@ public class NameNodeMetrics {
 
   public void addBlockOpsBatched(int count) {
     blockOpsBatched.incr(count);
+  }
+
+  public void setPendingEditsCount(int size) {
+    pendingEditsCount.set(size);
   }
 
   public void addTransaction(long latency) {

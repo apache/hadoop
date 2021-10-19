@@ -28,6 +28,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -176,6 +177,27 @@ public class ErasureCoding {
     } else {
       rpcClient.invokeSequential(locations, remoteMethod);
     }
+  }
+
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String[] policyNames) throws IOException {
+    RemoteMethod method = new RemoteMethod("getECTopologyResultForPolicies",
+        new Class<?>[] {String[].class}, new Object[] {policyNames});
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    if (nss.isEmpty()) {
+      throw new IOException("No namespace availaible.");
+    }
+    Map<FederationNamespaceInfo, ECTopologyVerifierResult> ret = rpcClient
+        .invokeConcurrent(nss, method, true, false,
+            ECTopologyVerifierResult.class);
+    for (Map.Entry<FederationNamespaceInfo, ECTopologyVerifierResult> entry : ret
+        .entrySet()) {
+      if (!entry.getValue().isSupported()) {
+        return entry.getValue();
+      }
+    }
+    // If no negative result, return the result from the first namespace.
+    return ret.get(nss.iterator().next());
   }
 
   public ECBlockGroupStats getECBlockGroupStats() throws IOException {

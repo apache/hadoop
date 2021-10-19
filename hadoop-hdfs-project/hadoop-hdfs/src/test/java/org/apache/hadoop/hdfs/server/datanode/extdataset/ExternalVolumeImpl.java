@@ -68,6 +68,11 @@ public class ExternalVolumeImpl implements FsVolumeSpi {
   }
 
   @Override
+  public boolean isRAMStorage() {
+    return false;
+  }
+
+  @Override
   public void reserveSpaceForReplica(long bytesToReserve) {
   }
 

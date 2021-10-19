@@ -30,8 +30,8 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,11 +83,6 @@ public class TestHAAdmin {
     assertOutputContains("transitionToActive: incorrect number of arguments");
     assertEquals(-1, runTool("-transitionToActive", "x", "y"));
     assertOutputContains("transitionToActive: incorrect number of arguments");
-    assertEquals(-1, runTool("-failover"));
-    assertOutputContains("failover: incorrect arguments");
-    assertOutputContains("failover: incorrect arguments");    
-    assertEquals(-1, runTool("-failover", "foo:1234"));
-    assertOutputContains("failover: incorrect arguments");
   }
 
   @Test

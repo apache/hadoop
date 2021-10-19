@@ -56,11 +56,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
@@ -187,8 +186,9 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestClientRMService {
 
@@ -594,6 +594,51 @@ public class TestClientRMService {
   }
 
   @Test
+  public void testApplicationTagsValidation() throws IOException {
+    YarnConfiguration conf = new YarnConfiguration();
+    int maxtags = 3, appMaxTagLength = 5;
+    conf.setInt(YarnConfiguration.RM_APPLICATION_MAX_TAGS, maxtags);
+    conf.setInt(YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+        appMaxTagLength);
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    ClientRMService rmService = rm.getClientRMService();
+
+    List<String> tags = Arrays.asList("Tag1", "Tag2", "Tag3", "Tag4");
+    validateApplicationTag(rmService, tags,
+        "Too many applicationTags, a maximum of only " + maxtags
+            + " are allowed!");
+
+    tags = Arrays.asList("ApplicationTag1", "ApplicationTag2",
+        "ApplicationTag3");
+    // tags are converted to lowercase in
+    // ApplicationSubmissionContext#setApplicationTags
+    validateApplicationTag(rmService, tags,
+        "Tag applicationtag1 is too long, maximum allowed length of a tag is "
+            + appMaxTagLength);
+
+    tags = Arrays.asList("tãg1", "tag2#");
+    validateApplicationTag(rmService, tags,
+        "A tag can only have ASCII characters! Invalid tag - tãg1");
+    rm.close();
+  }
+
+  private void validateApplicationTag(ClientRMService rmService,
+      List<String> tags, String errorMsg) {
+    SubmitApplicationRequest submitRequest = mockSubmitAppRequest(
+        getApplicationId(101), MockApps.newAppName(), QUEUE_1,
+        new HashSet<String>(tags));
+    try {
+      rmService.submitApplication(submitRequest);
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex.getMessage().contains(errorMsg));
+    }
+  }
+
+  @Test
   public void testForceKillApplication() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(MockRM.ENABLE_WEBAPP, true);
@@ -605,8 +650,12 @@ public class TestClientRMService {
     GetApplicationsRequest getRequest = GetApplicationsRequest.newInstance(
         EnumSet.of(YarnApplicationState.KILLED));
 
-    RMApp app1 = rm.submitApp(1024);
-    RMApp app2 = rm.submitApp(1024, true);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withUnmanagedAM(true)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
 
     assertEquals("Incorrect number of apps in the RM", 0,
         rmService.getApplications(getRequest).getApplicationList().size());
@@ -2437,7 +2486,11 @@ public class TestClientRMService {
     MockRM rm = new MockRM(conf);
     rm.init(conf);
     rm.start();
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(1024, rm)
+        .withAppPriority(Priority.newInstance(appPriority))
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     ClientRMService rmService = rm.getClientRMService();
     testApplicationPriorityUpdation(rmService, app1, appPriority, appPriority);
     rm.killApp(app1.getApplicationId());
@@ -2460,7 +2513,11 @@ public class TestClientRMService {
     rm.start();
     rm.registerNode("host1:1234", 1024);
     // Start app1 with appPriority 5
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(1024, rm)
+        .withAppPriority(Priority.newInstance(appPriority))
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     Assert.assertEquals("Incorrect priority has been set to application",
         appPriority, app1.getApplicationPriority().getPriority());

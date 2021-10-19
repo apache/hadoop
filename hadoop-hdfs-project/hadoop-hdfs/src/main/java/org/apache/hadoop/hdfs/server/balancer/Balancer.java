@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 
 import java.io.IOException;
@@ -29,14 +29,21 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -68,7 +75,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /** <p>The balancer is a tool that balances disk space usage on an HDFS cluster
  * when some datanodes become full or when new empty nodes join the cluster.
@@ -198,13 +205,19 @@ public class Balancer {
       + "\tWhether to run the balancer during an ongoing HDFS upgrade."
       + "This is usually not desired since it will not affect used space "
       + "on over-utilized machines."
-      + "\n\t[-asService]\tRun as a long running service.";
+      + "\n\t[-asService]\tRun as a long running service."
+      + "\n\t[-sortTopNodes]"
+      + "\n\t[-hotBlockTimeInterval]\tprefer to move cold blocks."
+      + "\tSort datanodes based on the utilization so "
+      + "that highly utilized datanodes get scheduled first.";
 
   @VisibleForTesting
   private static volatile boolean serviceRunning = false;
 
-  private static volatile int exceptionsSinceLastBalance = 0;
-  private static volatile int failedTimesSinceLastSuccessfulBalance = 0;
+  private static final AtomicInteger EXCEPTIONS_SINCE_LAST_BALANCE =
+      new AtomicInteger(0);
+  private static final AtomicInteger
+      FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE = new AtomicInteger(0);
 
   private final Dispatcher dispatcher;
   private final NameNodeConnector nnc;
@@ -214,6 +227,8 @@ public class Balancer {
   private final double threshold;
   private final long maxSizeToMove;
   private final long defaultBlockSize;
+  private final boolean sortTopNodes;
+  private final BalancerMetrics metrics;
 
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
@@ -265,11 +280,11 @@ public class Balancer {
   }
 
   static int getExceptionsSinceLastBalance() {
-    return exceptionsSinceLastBalance;
+    return EXCEPTIONS_SINCE_LAST_BALANCE.get();
   }
 
   static int getFailedTimesSinceLastSuccessfulBalance() {
-    return failedTimesSinceLastSuccessfulBalance;
+    return FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.get();
   }
 
   /**
@@ -281,6 +296,9 @@ public class Balancer {
    */
   Balancer(NameNodeConnector theblockpool, BalancerParameters p,
       Configuration conf) {
+    // NameNode configuration parameters for balancing
+    getInt(conf, DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT);
     final long movedWinWidth = getLong(conf,
         DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY,
         DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_DEFAULT);
@@ -290,10 +308,6 @@ public class Balancer {
     final int dispatcherThreads = getInt(conf,
         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY,
         DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_DEFAULT);
-    final int maxConcurrentMovesPerNode = getInt(conf,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
-
     final long getBlocksSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_SIZE_KEY,
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_SIZE_DEFAULT);
@@ -309,6 +323,23 @@ public class Balancer {
     final long maxIterationTime = conf.getLong(
         DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY,
         DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_DEFAULT);
+    /**
+     * Balancer prefer to get blocks which are belong to the cold files
+     * created before this time period.
+     */
+    final long hotBlockTimeInterval =
+        p.getHotBlockTimeInterval() != 0L ? p.getHotBlockTimeInterval() :
+            conf.getTimeDuration(
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_KEY,
+            DFSConfigKeys.DFS_BALANCER_GETBLOCKS_HOT_TIME_INTERVAL_DEFAULT,
+            TimeUnit.MILLISECONDS);
+
+    // DataNode configuration parameters for balancing
+    final int maxConcurrentMovesPerNode = getInt(conf,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
+    getLongBytes(conf, DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY,
+        DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_DEFAULT);
 
     this.nnc = theblockpool;
     this.dispatcher =
@@ -316,11 +347,12 @@ public class Balancer {
             p.getExcludedNodes(), movedWinWidth, moverThreads,
             dispatcherThreads, maxConcurrentMovesPerNode, getBlocksSize,
             getBlocksMinBlockSize, blockMoveTimeout, maxNoMoveInterval,
-            maxIterationTime, conf);
+            maxIterationTime, hotBlockTimeInterval, conf);
     this.threshold = p.getThreshold();
     this.policy = p.getBalancingPolicy();
     this.sourceNodes = p.getSourceNodes();
     this.runDuringUpgrade = p.getRunDuringUpgrade();
+    this.sortTopNodes = p.getSortTopNodes();
 
     this.maxSizeToMove = getLongBytes(conf,
         DFSConfigKeys.DFS_BALANCER_MAX_SIZE_TO_MOVE_KEY,
@@ -328,6 +360,7 @@ public class Balancer {
     this.defaultBlockSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+    this.metrics = BalancerMetrics.create(this);
   }
   
   private static long getCapacity(DatanodeStorageReport report, StorageType t) {
@@ -367,6 +400,8 @@ public class Balancer {
       policy.accumulateSpaces(r);
     }
     policy.initAvgUtilization();
+    // Store the capacity % of over utilized nodes for sorting, if needed.
+    Map<Source, Double> overUtilizedPercentage = new HashMap<>();
 
     // create network topology and classify utilization collections: 
     //   over-utilized, above-average, below-average and under-utilized.
@@ -376,7 +411,7 @@ public class Balancer {
       final boolean isSource = Util.isIncluded(sourceNodes, dn.getDatanodeInfo());
       for(StorageType t : StorageType.getMovableTypes()) {
         final Double utilization = policy.getUtilization(r, t);
-        if (utilization == null) { // datanode does not have such storage type 
+        if (utilization == null) { // datanode does not have such storage type
           continue;
         }
         
@@ -402,6 +437,7 @@ public class Balancer {
           } else {
             overLoadedBytes += percentage2bytes(thresholdDiff, capacity);
             overUtilized.add(s);
+            overUtilizedPercentage.put(s, utilization);
           }
           g = s;
         } else {
@@ -417,7 +453,13 @@ public class Balancer {
       }
     }
 
+    if (sortTopNodes) {
+      sortOverUtilized(overUtilizedPercentage);
+    }
+
     logUtilizationCollections();
+    metrics.setNumOfOverUtilizedNodes(overUtilized.size());
+    metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
     
     Preconditions.checkState(dispatcher.getStorageGroupMap().size()
         == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
@@ -426,6 +468,21 @@ public class Balancer {
     
     // return number of bytes to be moved in order to make the cluster balanced
     return Math.max(overLoadedBytes, underLoadedBytes);
+  }
+
+  private void sortOverUtilized(Map<Source, Double> overUtilizedPercentage) {
+    Preconditions.checkState(overUtilized instanceof List,
+        "Collection overUtilized is not a List.");
+
+    LOG.info("Sorting over-utilized nodes by capacity" +
+        " to bring down top used datanode capacity faster");
+
+    List<Source> list = (List<Source>) overUtilized;
+    list.sort(
+        (Source source1, Source source2) ->
+            (Double.compare(overUtilizedPercentage.get(source2),
+                overUtilizedPercentage.get(source1)))
+    );
   }
 
   private static long computeMaxSize2Move(final long capacity, final long remaining,
@@ -585,48 +642,89 @@ public class Balancer {
     this.belowAvgUtilized.clear();
     this.underUtilized.clear();
     this.policy.reset();
-    dispatcher.reset(conf);;
+    dispatcher.reset(conf);
+  }
+
+  NameNodeConnector getNnc() {
+    return nnc;
   }
 
   static class Result {
-    final ExitStatus exitStatus;
-    final long bytesLeftToMove;
-    final long bytesBeingMoved;
-    final long bytesAlreadyMoved;
+    private final ExitStatus exitStatus;
+    private final long bytesLeftToMove;
+    private final long bytesBeingMoved;
+    private final long bytesAlreadyMoved;
+    private final long blocksMoved;
 
     Result(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved,
-        long bytesAlreadyMoved) {
+           long bytesAlreadyMoved, long blocksMoved) {
       this.exitStatus = exitStatus;
       this.bytesLeftToMove = bytesLeftToMove;
       this.bytesBeingMoved = bytesBeingMoved;
       this.bytesAlreadyMoved = bytesAlreadyMoved;
+      this.blocksMoved = blocksMoved;
     }
 
-    void print(int iteration, PrintStream out) {
-      out.printf("%-24s %10d  %19s  %18s  %17s%n",
+    public ExitStatus getExitStatus() {
+      return exitStatus;
+    }
+
+    public long getBytesLeftToMove() {
+      return bytesLeftToMove;
+    }
+
+    public long getBytesBeingMoved() {
+      return bytesBeingMoved;
+    }
+
+    public long getBytesAlreadyMoved() {
+      return bytesAlreadyMoved;
+    }
+
+    public long getBlocksMoved() {
+      return blocksMoved;
+    }
+
+    void print(int iteration, NameNodeConnector nnc, PrintStream out) {
+      out.printf("%-24s %10d  %19s  %18s  %17s  %17s  %s%n",
           DateFormat.getDateTimeInstance().format(new Date()), iteration,
           StringUtils.byteDesc(bytesAlreadyMoved),
           StringUtils.byteDesc(bytesLeftToMove),
-          StringUtils.byteDesc(bytesBeingMoved));
+          StringUtils.byteDesc(bytesBeingMoved),
+          blocksMoved,
+          nnc.getNameNodeUri());
+    }
+
+    @Override
+    public String toString() {
+      return new ToStringBuilder(this)
+          .append("exitStatus", exitStatus)
+          .append("bytesLeftToMove", bytesLeftToMove)
+          .append("bytesBeingMoved", bytesBeingMoved)
+          .append("bytesAlreadyMoved", bytesAlreadyMoved)
+          .append("blocksMoved", blocksMoved)
+          .toString();
     }
   }
 
   Result newResult(ExitStatus exitStatus, long bytesLeftToMove, long bytesBeingMoved) {
     return new Result(exitStatus, bytesLeftToMove, bytesBeingMoved,
-        dispatcher.getBytesMoved());
+        dispatcher.getBytesMoved(), dispatcher.getBblocksMoved());
   }
 
   Result newResult(ExitStatus exitStatus) {
-    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved());
+    return new Result(exitStatus, -1, -1, dispatcher.getBytesMoved(),
+        dispatcher.getBblocksMoved());
   }
 
   /** Run an iteration for all datanodes. */
   Result runOneIteration() {
     try {
+      metrics.setIterateRunning(true);
       final List<DatanodeStorageReport> reports = dispatcher.init();
       final long bytesLeftToMove = init(reports);
+      metrics.setBytesLeftToMove(bytesLeftToMove);
       if (bytesLeftToMove == 0) {
-        System.out.println("The cluster is balanced. Exiting...");
         return newResult(ExitStatus.SUCCESS, bytesLeftToMove, 0);
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
@@ -653,8 +751,10 @@ public class Balancer {
         System.out.println("No block can be moved. Exiting...");
         return newResult(ExitStatus.NO_MOVE_BLOCK, bytesLeftToMove, bytesBeingMoved);
       } else {
-        LOG.info( "Will move " + StringUtils.byteDesc(bytesBeingMoved) +
-            " in this iteration");
+        LOG.info("Will move {}  in this iteration for {}",
+            StringUtils.byteDesc(bytesBeingMoved), nnc.toString());
+        LOG.info("Total target DataNodes in this iteration: {}",
+            dispatcher.moveTasksTotal());
       }
 
       /* For each pair of <source, target>, start a thread that repeatedly 
@@ -678,6 +778,7 @@ public class Balancer {
       System.out.println(e + ".  Exiting ...");
       return newResult(ExitStatus.INTERRUPTED);
     } finally {
+      metrics.setIterateRunning(false);
       dispatcher.shutdownNow();
     }
   }
@@ -689,7 +790,7 @@ public class Balancer {
    * execute a {@link Balancer} to work through all datanodes once.  
    */
   static private int doBalance(Collection<URI> namenodes,
-      final BalancerParameters p, Configuration conf)
+      Collection<String> nsIds, final BalancerParameters p, Configuration conf)
       throws IOException, InterruptedException {
     final long sleeptime =
         conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
@@ -705,14 +806,15 @@ public class Balancer {
     LOG.info("excluded nodes = " + p.getExcludedNodes());
     LOG.info("source nodes = " + p.getSourceNodes());
     checkKeytabAndInit(conf);
-    System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
+    System.out.println("Time Stamp               Iteration#"
+        + "  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved"
+        + "  NameNode");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
     try {
-      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
-              Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
-              p.getMaxIdleIteration());
-
+      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
+          Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
+          p.getMaxIdleIteration());
       boolean done = false;
       for(int iteration = 0; !done; iteration++) {
         done = true;
@@ -722,7 +824,7 @@ public class Balancer {
               || p.getBlockPools().contains(nnc.getBlockpoolID())) {
             final Balancer b = new Balancer(nnc, p, conf);
             final Result r = b.runOneIteration();
-            r.print(iteration, System.out);
+            r.print(iteration, nnc, System.out);
 
             // clean all lists
             b.resetData(conf);
@@ -734,6 +836,9 @@ public class Balancer {
             }
           } else {
             LOG.info("Skipping blockpool " + nnc.getBlockpoolID());
+          }
+          if (done) {
+            System.out.println("The cluster is balanced. Exiting...");
           }
         }
         if (!done) {
@@ -749,9 +854,19 @@ public class Balancer {
   }
 
   static int run(Collection<URI> namenodes, final BalancerParameters p,
-      Configuration conf) throws IOException, InterruptedException {
+                 Configuration conf) throws IOException, InterruptedException {
+    return run(namenodes, null, p, conf);
+  }
+
+  static int run(Collection<URI> namenodes, Collection<String> nsIds,
+      final BalancerParameters p, Configuration conf)
+      throws IOException, InterruptedException {
+    DefaultMetricsSystem.initialize("Balancer");
+    JvmMetrics.create("Balancer",
+        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+        DefaultMetricsSystem.instance());
     if (!p.getRunAsService()) {
-      return doBalance(namenodes, p, conf);
+      return doBalance(namenodes, nsIds, p, conf);
     }
     if (!serviceRunning) {
       serviceRunning = true;
@@ -770,23 +885,24 @@ public class Balancer {
 
     while (serviceRunning) {
       try {
-        int retCode = doBalance(namenodes, p, conf);
+        int retCode = doBalance(namenodes, nsIds, p, conf);
         if (retCode < 0) {
           LOG.info("Balance failed, error code: " + retCode);
-          failedTimesSinceLastSuccessfulBalance++;
+          FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.incrementAndGet();
         } else {
           LOG.info("Balance succeed!");
-          failedTimesSinceLastSuccessfulBalance = 0;
+          FAILED_TIMES_SINCE_LAST_SUCCESSFUL_BALANCE.set(0);
         }
-        exceptionsSinceLastBalance = 0;
+        EXCEPTIONS_SINCE_LAST_BALANCE.set(0);
       } catch (Exception e) {
-        if (++exceptionsSinceLastBalance > retryOnException) {
+        if (EXCEPTIONS_SINCE_LAST_BALANCE.incrementAndGet()
+            > retryOnException) {
           // The caller will process and log the exception
           throw e;
         }
         LOG.warn(
             "Encounter exception while do balance work. Already tried {} times",
-            exceptionsSinceLastBalance, e);
+            EXCEPTIONS_SINCE_LAST_BALANCE, e);
       }
 
       // sleep for next round, will retry for next round when it's interrupted
@@ -794,6 +910,8 @@ public class Balancer {
           time2Str(scheduleInterval));
       Thread.sleep(scheduleInterval);
     }
+    DefaultMetricsSystem.shutdown();
+
     // normal stop
     return 0;
   }
@@ -854,7 +972,8 @@ public class Balancer {
         checkReplicationPolicyCompatibility(conf);
 
         final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-        return Balancer.run(namenodes, parse(args), conf);
+        final Collection<String> nsIds = DFSUtilClient.getNameServiceIds(conf);
+        return Balancer.run(namenodes, nsIds, parse(args), conf);
       } catch (IOException e) {
         System.out.println(e + ".  Exiting ...");
         return ExitStatus.IO_EXCEPTION.getExitCode();
@@ -941,6 +1060,18 @@ public class Balancer {
             } else if ("-asService".equalsIgnoreCase(args[i])) {
               b.setRunAsService(true);
               LOG.info("Balancer will run as a long running service");
+            } else if ("-hotBlockTimeInterval".equalsIgnoreCase(args[i])) {
+              checkArgument(++i < args.length,
+                  "hotBlockTimeInterval value is missing: args = "
+                  + Arrays.toString(args));
+              long hotBlockTimeInterval = Long.parseLong(args[i]);
+              LOG.info("Using a hotBlockTimeInterval of "
+                  + hotBlockTimeInterval);
+              b.setHotBlockTimeInterval(hotBlockTimeInterval);
+            } else if ("-sortTopNodes".equalsIgnoreCase(args[i])) {
+              b.setSortTopNodes(true);
+              LOG.info("Balancer will sort nodes by" +
+                  " capacity usage percentage to prioritize top used nodes");
             } else {
               throw new IllegalArgumentException("args = "
                   + Arrays.toString(args));

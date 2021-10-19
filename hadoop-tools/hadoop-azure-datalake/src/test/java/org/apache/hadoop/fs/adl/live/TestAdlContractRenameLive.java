@@ -32,4 +32,5 @@ public class TestAdlContractRenameLive extends AbstractContractRenameTest {
   protected AbstractFSContract createContract(Configuration configuration) {
     return new AdlStorageContract(configuration);
   }
+
 }

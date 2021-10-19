@@ -28,8 +28,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +38,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -71,10 +71,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class AppLogAggregatorImpl implements AppLogAggregator {
@@ -663,16 +662,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         .getCurrentUpLoadedFileMeta());
       // if any of the previous uploaded logs have been deleted,
       // we need to remove them from alreadyUploadedLogs
-      Iterable<String> mask =
-          Iterables.filter(uploadedFileMeta, new Predicate<String>() {
-            @Override
-            public boolean apply(String next) {
-              return logValue.getAllExistingFilesMeta().contains(next);
-            }
-          });
-
-      this.uploadedFileMeta = Sets.newHashSet(mask);
-
+      this.uploadedFileMeta = uploadedFileMeta.stream().filter(
+          next -> logValue.getAllExistingFilesMeta().contains(next)).collect(
+          Collectors.toSet());
       // need to return files uploaded or older-than-retention clean up.
       return Sets.union(logValue.getCurrentUpLoadedFilesPath(),
           logValue.getObsoleteRetentionLogFiles());

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -53,9 +54,11 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 
 /**
  * Verify open files listing.
@@ -157,13 +160,22 @@ public class TestListOpenFiles {
         remainingFiles.size() == 0);
   }
 
+  /**
+   * Verify all open files.
+   */
   private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles)
       throws IOException {
-    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
-        OpenFilesIterator.FILTER_PATH_DEFAULT);
+    verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
+  /**
+   * Verify open files with specified filter path.
+   */
+  private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles,
+      String path) throws IOException {
+    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES), path);
     verifyOpenFiles(new HashMap<>(),
-        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION),
-        OpenFilesIterator.FILTER_PATH_DEFAULT);
+        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION), path);
   }
 
   private Set<Path> createFiles(FileSystem fileSystem, String fileNamePrefix,
@@ -253,6 +265,91 @@ public class TestListOpenFiles {
       if (haCluster != null) {
         haCluster.shutdown();
       }
+    }
+  }
+
+  @Test(timeout = 120000)
+  public void testListOpenFilesWithFilterPath() throws IOException {
+    HashMap<Path, FSDataOutputStream> openFiles = new HashMap<>();
+    createFiles(fs, "closed", 10);
+    verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
+
+    BatchedEntries<OpenFileEntry> openFileEntryBatchedEntries = nnRpc
+        .listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
+    assertTrue("Open files list should be empty!",
+        openFileEntryBatchedEntries.size() == 0);
+    BatchedEntries<OpenFileEntry> openFilesBlockingDecomEntries = nnRpc
+        .listOpenFiles(0, EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
+    assertTrue("Open files list blocking decommission should be empty!",
+        openFilesBlockingDecomEntries.size() == 0);
+
+    openFiles.putAll(
+        DFSTestUtil.createOpenFiles(fs, new Path("/base"), "open-1", 1));
+    Map<Path, FSDataOutputStream> baseOpen =
+        DFSTestUtil.createOpenFiles(fs, new Path("/base-open"), "open-1", 1);
+    verifyOpenFiles(openFiles, "/base");
+    verifyOpenFiles(openFiles, "/base/");
+
+    openFiles.putAll(baseOpen);
+    while (openFiles.size() > 0) {
+      DFSTestUtil.closeOpenFiles(openFiles, 1);
+      verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
+    }
+  }
+
+  @Test
+  public void testListOpenFilesWithInvalidPathServerSide() throws Exception {
+    HashMap<Path, FSDataOutputStream> openFiles = new HashMap<>();
+    openFiles.putAll(
+        DFSTestUtil.createOpenFiles(fs, new Path("/base"), "open-1", 1));
+    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+        "/base");
+    intercept(AssertionError.class, "Absolute path required",
+        "Expect InvalidPathException", () -> verifyOpenFiles(new HashMap<>(),
+            EnumSet.of(OpenFilesType.ALL_OPEN_FILES), "hdfs://cluster/base"));
+    while(openFiles.size() > 0) {
+      DFSTestUtil.closeOpenFiles(openFiles, 1);
+      verifyOpenFiles(openFiles);
+    }
+  }
+
+  @Test
+  public void testListOpenFilesWithInvalidPathClientSide() throws Exception {
+    intercept(IllegalArgumentException.class, "Wrong FS",
+        "Expect IllegalArgumentException", () -> fs
+            .listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+                "hdfs://non-cluster/"));
+    fs.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES), "/path");
+  }
+
+  @Test
+  public void testListOpenFilesWithDeletedPath() throws Exception {
+    HashMap<Path, FSDataOutputStream> openFiles = new HashMap<>();
+    openFiles.putAll(
+        DFSTestUtil.createOpenFiles(fs, new Path("/"), "open-1", 1));
+    BatchedEntries<OpenFileEntry> openFileEntryBatchedEntries = nnRpc
+        .listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+        OpenFilesIterator.FILTER_PATH_DEFAULT);
+    assertEquals(1, openFileEntryBatchedEntries.size());
+    String path = openFileEntryBatchedEntries.get(0).getFilePath();
+    FSNamesystem fsNamesystem = cluster.getNamesystem();
+    FSDirectory dir = fsNamesystem.getFSDirectory();
+    List<INode> removedINodes = new ChunkedArrayList<>();
+    removedINodes.add(dir.getINode(path));
+    fsNamesystem.writeLock();
+    try {
+      dir.removeFromInodeMap(removedINodes);
+      openFileEntryBatchedEntries = nnRpc
+          .listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+          OpenFilesIterator.FILTER_PATH_DEFAULT);
+      assertEquals(0, openFileEntryBatchedEntries.size());
+      fsNamesystem.leaseManager.removeLease(dir.getINode(path).getId());
+    } catch (NullPointerException e) {
+      Assert.fail("Should not throw NPE when the file is deleted but has lease!");
+    } finally {
+      fsNamesystem.writeUnlock();
     }
   }
 }

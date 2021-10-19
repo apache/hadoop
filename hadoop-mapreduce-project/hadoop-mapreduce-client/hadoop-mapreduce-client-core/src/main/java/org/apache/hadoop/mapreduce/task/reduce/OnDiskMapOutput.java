@@ -37,10 +37,10 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapOutputFile;
 
 import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.CryptoUtils;
+import org.apache.hadoop.mapreduce.security.IntermediateEncryptedStream;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -84,7 +84,8 @@ class OnDiskMapOutput<K, V> extends IFileWrappedMapOutput<K, V> {
     this.fs = fs;
     this.outputPath = outputPath;
     tmpOutputPath = getTempPath(outputPath, fetcher);
-    disk = CryptoUtils.wrapIfNecessary(conf, fs.create(tmpOutputPath));
+    disk = IntermediateEncryptedStream.wrapIfNecessary(conf,
+        fs.create(tmpOutputPath), tmpOutputPath);
   }
 
   @VisibleForTesting

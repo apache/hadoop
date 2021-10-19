@@ -30,11 +30,11 @@ That's because its a very different system, as you can see:
 | communication | RPC | HTTP GET/PUT/HEAD/LIST/COPY requests |
 | data locality | local storage | remote S3 servers |
 | replication | multiple datanodes | asynchronous after upload |
-| consistency | consistent data and listings | eventual consistent for listings, deletes and updates |
+| consistency | consistent data and listings | consistent since November 2020|
 | bandwidth | best: local IO, worst: datacenter network | bandwidth between servers and S3 |
 | latency | low | high, especially for "low cost" directory operations |
-| rename | fast, atomic | slow faked rename through COPY & DELETE|
-| delete | fast, atomic | fast for a file, slow & non-atomic for directories |
+| rename | fast, atomic | slow faked rename through COPY and DELETE|
+| delete | fast, atomic | fast for a file, slow and non-atomic for directories |
 | writing| incremental | in blocks; not visible until the writer is closed |
 | reading | seek() is fast | seek() is slow and expensive |
 | IOPs | limited only by hardware | callers are throttled to shards in an s3 bucket |
@@ -535,10 +535,41 @@ GCM cipher is only disabled on Java 8. GCM performance has been improved
 in Java 9, so if `default_jsse` is specified and applications run on Java
 9, they should see no difference compared to running with the vanilla JSSE.
 
-Other options for `fs.s3a.ssl.channel.mode` include `default_jsse_with_gcm`.
-This option includes GCM in the list of cipher suites on Java 8, so it is
-equivalent to running with the vanilla JSSE. The naming convention is setup
-in order to preserve backwards compatibility with HADOOP-15669.
+`fs.s3a.ssl.channel.mode` can be set to `default_jsse_with_gcm`. This option
+includes GCM in the list of cipher suites on Java 8, so it is equivalent to
+running with the vanilla JSSE.
+
+### <a name="openssl"></a> OpenSSL Acceleration
+
+**Experimental Feature**
+
+As of HADOOP-16050 and HADOOP-16346, `fs.s3a.ssl.channel.mode` can be set to
+either `default` or `openssl` to enable native OpenSSL acceleration of HTTPS
+requests. OpenSSL implements the SSL and TLS protocols using native code. For
+users reading a large amount of data over HTTPS, OpenSSL can provide a
+significant performance benefit over the JSSE.
+
+S3A uses the
+[WildFly OpenSSL](https://github.com/wildfly-security/wildfly-openssl) library
+to bind OpenSSL to the Java JSSE APIs. This library allows S3A to
+transparently read data using OpenSSL. The `wildfly-openssl` library is an
+optional runtime dependency of S3A and contains native libraries for binding the Java
+JSSE to OpenSSL.
+
+WildFly OpenSSL must load OpenSSL itself. This can be done using the system
+property `org.wildfly.openssl.path`. For example,
+`HADOOP_OPTS="-Dorg.wildfly.openssl.path=<path to OpenSSL libraries>
+${HADOOP_OPTS}"`. See WildFly OpenSSL documentation for more details.
+
+When `fs.s3a.ssl.channel.mode` is set to `default`, S3A will attempt to load
+the OpenSSL libraries using the WildFly library. If it is unsuccessful, it
+will fall back to the `default_jsse` behavior.
+
+When `fs.s3a.ssl.channel.mode` is set to `openssl`, S3A will attempt to load
+the OpenSSL libraries using WildFly. If it is unsuccessful, it will throw an
+exception and S3A initialization will fail.
+
+### `fs.s3a.ssl.channel.mode` Configuration
 
 `fs.s3a.ssl.channel.mode` can be configured as follows:
 
@@ -549,21 +580,116 @@ in order to preserve backwards compatibility with HADOOP-15669.
   <description>
     If secure connections to S3 are enabled, configures the SSL
     implementation used to encrypt connections to S3. Supported values are:
-    "default_jsse" and "default_jsse_with_gcm". "default_jsse" uses the Java
-    Secure Socket Extension package (JSSE). However, when running on Java 8,
-    the GCM cipher is removed from the list of enabled ciphers. This is due
-    to performance issues with GCM in Java 8. "default_jsse_with_gcm" uses
-    the JSSE with the default list of cipher suites.
+    "default_jsse", "default_jsse_with_gcm", "default", and "openssl".
+    "default_jsse" uses the Java Secure Socket Extension package (JSSE).
+    However, when running on Java 8, the GCM cipher is removed from the list
+    of enabled ciphers. This is due to performance issues with GCM in Java 8.
+    "default_jsse_with_gcm" uses the JSSE with the default list of cipher
+    suites. "default_jsse_with_gcm" is equivalent to the behavior prior to
+    this feature being introduced. "default" attempts to use OpenSSL rather
+    than the JSSE for SSL encryption, if OpenSSL libraries cannot be loaded,
+    it falls back to the "default_jsse" behavior. "openssl" attempts to use
+    OpenSSL as well, but fails if OpenSSL libraries cannot be loaded.
   </description>
 </property>
 ```
 
 Supported values for `fs.s3a.ssl.channel.mode`:
 
-| fs.s3a.ssl.channel.mode Value | Description |
+| `fs.s3a.ssl.channel.mode` Value | Description |
 |-------------------------------|-------------|
-| default_jsse | Uses Java JSSE without GCM on Java 8 |
-| default_jsse_with_gcm | Uses Java JSSE |
+| `default_jsse` | Uses Java JSSE without GCM on Java 8 |
+| `default_jsse_with_gcm` | Uses Java JSSE |
+| `default` | Uses OpenSSL, falls back to `default_jsse` if OpenSSL cannot be loaded |
+| `openssl` | Uses OpenSSL, fails if OpenSSL cannot be loaded |
+
+The naming convention is setup in order to preserve backwards compatibility
+with the ABFS support of [HADOOP-15669](https://issues.apache.org/jira/browse/HADOOP-15669).
 
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
+
+### WildFly classpath requirements
+
+For OpenSSL acceleration to work, a compatible version of the
+wildfly JAR must be on the classpath. This is not explicitly declared
+in the dependencies of the published `hadoop-aws` module, as it is
+optional.
+
+If the wildfly JAR is not found, the network acceleration will fall back
+to the JVM, always.
+
+Note: there have been compatibility problems with wildfly JARs and openSSL
+releases in the past: version 1.0.4.Final is not compatible with openssl 1.1.1.
+An extra complication was older versions of the `azure-data-lake-store-sdk`
+JAR used in `hadoop-azure-datalake` contained an unshaded copy of the 1.0.4.Final
+classes, causing binding problems even when a later version was explicitly
+being placed on the classpath.
+
+
+## Tuning FileSystem Initialization.
+
+### Disabling bucket existence checks
+
+When an S3A Filesystem instance is created and initialized, the client
+checks if the bucket provided is valid. This can be slow.
+You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>0</value>
+</property>
+```
+
+Note: if the bucket does not exist, this issue will surface when operations are performed
+on the filesystem; you will see `UnknownStoreException` stack traces.
+
+### Rate limiting parallel FileSystem creation operations
+
+Applications normally ask for filesystems from the shared cache,
+via `FileSystem.get()` or `Path.getFileSystem()`.
+The cache, `FileSystem.CACHE` will, for each user, cachec one instance of a filesystem
+for a given URI.
+All calls to `FileSystem.get` for a cached FS for a URI such
+as `s3a://landsat-pds/` will return that singe single instance.
+
+FileSystem instances are created on-demand for the cache,
+and will be done in each thread which requests an instance.
+This is done outside of any synchronisation block.
+Once a task has an initialized FileSystem instance, it will, in a synchronized block
+add it to the cache.
+If it turns out that the cache now already has an instance for that URI, it will
+revert the cached copy to it, and close the FS instance it has just created.
+
+If a FileSystem takes time to be initialized, and many threads are trying to
+retrieve a FileSystem instance for the same S3 bucket in parallel,
+All but one of the threads will be doing useless work, and may unintentionally
+be creating lock contention on shared objects.
+
+There is an option, `fs.creation.parallel.count`, which uses a semaphore
+to limit the number of FS instances which may be created in parallel.
+
+Setting this to a low number will reduce the amount of wasted work,
+at the expense of limiting the number of FileSystem clients which
+can be created simultaneously for different object stores/distributed
+filesystems.
+
+For example, a value of four would put an upper limit on the number
+of wasted instantiations of a connector for the `s3a://landsat-pds/`
+bucket.
+
+```xml
+<property>
+  <name>fs.creation.parallel.count</name>
+  <value>4</value>
+</property>
+```
+
+It would also mean that if four threads were in the process
+of creating such connectors, all threads trying to create
+connectors for other buckets, would end up blocking too.
+
+Consider experimenting with this when running applications
+where many threads may try to simultaneously interact
+with the same slow-to-initialize object stores.

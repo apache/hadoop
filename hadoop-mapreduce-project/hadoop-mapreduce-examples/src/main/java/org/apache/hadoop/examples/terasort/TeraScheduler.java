@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 class TeraScheduler {
   private static final Logger LOG =

@@ -128,8 +128,8 @@ public class TestSnapshotCommands {
     DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn2", 0,
         "Created snapshot /sub3/.snapshot/sn2", conf);
     DFSTestUtil.FsShellRun("-createSnapshot /sub3 sn3", 1,
-        "Failed to add snapshot: there are already 3 snapshot(s) and "
-            + "the max snapshot limit is 3", conf);
+        "Failed to create snapshot: there are already 3 snapshot(s) and "
+            + "the per directory snapshot limit is 3", conf);
   }
 
   @Test

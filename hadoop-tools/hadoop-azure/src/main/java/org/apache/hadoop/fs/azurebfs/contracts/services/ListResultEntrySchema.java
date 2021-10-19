@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 import org.apache.hadoop.classification.InterfaceStability;
@@ -26,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * The ListResultEntrySchema model.
  */
 @InterfaceStability.Evolving
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ListResultEntrySchema {
   /**
    * The name property.

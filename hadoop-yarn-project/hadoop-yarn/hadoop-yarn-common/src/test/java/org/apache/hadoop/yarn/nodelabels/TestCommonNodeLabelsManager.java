@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,9 +38,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   DummyCommonNodeLabelsManager mgr = null;
@@ -615,5 +615,23 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     assertLabelInfoMapEquals(mgr.getNodeLabelsInfo(), ImmutableMap.of(
         toNodeId("n1"), toSet(NodeLabel.newInstance("p2", true)),
         toNodeId("n2"), toSet(NodeLabel.newInstance("p3", false))));
+  }
+
+  @Test(timeout = 5000)
+  public void testRemoveNodeLabelsInfo() throws IOException {
+    mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p1", true)));
+    mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("p2", true)));
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1")));
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p2")));
+
+    Map<String, Set<NodeId>> labelsToNodes = mgr.getLabelsToNodes();
+    assertLabelsToNodesEquals(
+        labelsToNodes,
+        ImmutableMap.of(
+        "p2", toSet(toNodeId("n1:1"), toNodeId("n1:0"))));
+
+    mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), new HashSet()));
+    Map<String, Set<NodeId>> labelsToNodes2 = mgr.getLabelsToNodes();
+    Assert.assertEquals(labelsToNodes2.get("p2"), null);
   }
 }

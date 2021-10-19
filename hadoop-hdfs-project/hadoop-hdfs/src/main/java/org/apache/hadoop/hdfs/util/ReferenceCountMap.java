@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hdfs.util;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * Class for de-duplication of instances. <br>
@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableList;
 @InterfaceStability.Evolving
 public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
 
-  private Map<E, E> referenceMap = new HashMap<E, E>();
+  private Map<E, E> referenceMap = new ConcurrentHashMap<>();
 
   /**
    * Add the reference. If the instance already present, just increase the
@@ -47,10 +47,9 @@ public class ReferenceCountMap<E extends ReferenceCountMap.ReferenceCounter> {
    * @return Referenced instance
    */
   public E put(E key) {
-    E value = referenceMap.get(key);
+    E value = referenceMap.putIfAbsent(key, key);
     if (value == null) {
       value = key;
-      referenceMap.put(key, value);
     }
     value.incrementAndGetRefCount();
     return value;

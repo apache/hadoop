@@ -37,7 +37,6 @@ import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.GenericRefreshProtocol;
-import org.apache.hadoop.tracing.TraceAdminProtocol;
 
 /**
  * {@link PolicyProvider} for HDFS protocols.
@@ -80,9 +79,6 @@ public class HDFSPolicyProvider extends PolicyProvider {
     new Service(
         CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_GENERIC_REFRESH,
         GenericRefreshProtocol.class),
-    new Service(
-        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_TRACING,
-        TraceAdminProtocol.class),
     new Service(
         CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_DATANODE_LIFELINE,
         DatanodeLifelineProtocol.class),

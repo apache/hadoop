@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;

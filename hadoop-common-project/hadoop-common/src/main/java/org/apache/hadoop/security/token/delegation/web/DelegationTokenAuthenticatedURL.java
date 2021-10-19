@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.security.token.delegation.web;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
@@ -295,10 +295,8 @@ public class DelegationTokenAuthenticatedURL extends AuthenticatedURL {
       // delegation token
       Credentials creds = UserGroupInformation.getCurrentUser().
           getCredentials();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Token not set, looking for delegation token. Creds:{},"
-                + " size:{}", creds.getAllTokens(), creds.numberOfTokens());
-      }
+      LOG.debug("Token not set, looking for delegation token. Creds:{},"
+          + " size:{}", creds.getAllTokens(), creds.numberOfTokens());
       if (!creds.getAllTokens().isEmpty()) {
         dToken = selectDelegationToken(url, creds);
         if (dToken != null) {

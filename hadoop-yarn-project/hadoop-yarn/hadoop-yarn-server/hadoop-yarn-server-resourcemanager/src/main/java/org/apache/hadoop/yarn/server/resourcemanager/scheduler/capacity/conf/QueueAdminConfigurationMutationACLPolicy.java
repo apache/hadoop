@@ -75,36 +75,68 @@ public class QueueAdminConfigurationMutationACLPolicy implements
     for (QueueConfigInfo updateQueueInfo : confUpdate.getUpdateQueueInfo()) {
       queues.add(updateQueueInfo.getQueue());
     }
+
+    // Loop through all the queues.
     for (String queuePath : queues) {
-      String queueName = queuePath.lastIndexOf('.') != -1 ?
-          queuePath.substring(queuePath.lastIndexOf('.') + 1) : queuePath;
       QueueInfo queueInfo = null;
-      try {
-        queueInfo = rmContext.getScheduler()
-            .getQueueInfo(queueName, false, false);
-      } catch (IOException e) {
-        // Queue is not found, do nothing.
-      }
       String parentPath = queuePath;
+
+      // For this queue, check if queue information exists for its children
+      // starting at the end of the queue.
+      // Keep this check going by moving up in the queue hierarchy until
+      // queue information has been found for one of its children.
+      String queueName;
       while (queueInfo == null) {
-        // We are adding a queue (whose parent we are possibly also adding).
-        // Check ACL of lowest parent queue which already exists.
-        parentPath = parentPath.substring(0, parentPath.lastIndexOf('.'));
-        String parentName = parentPath.lastIndexOf('.') != -1 ?
-            parentPath.substring(parentPath.lastIndexOf('.') + 1) : parentPath;
+        queueName = queueHasAChild(parentPath) ?
+            getLastChildForQueue(parentPath) : parentPath;
         try {
           queueInfo = rmContext.getScheduler()
-              .getQueueInfo(parentName, false, false);
+              .getQueueInfo(queueName, false, false);
         } catch (IOException e) {
           // Queue is not found, do nothing.
         }
+
+        // Keep going up in the queue hierarchy.
+        parentPath = queueHasAChild(parentPath) ?
+            getQueueBeforeLastChild(parentPath) : parentPath;
       }
+
+      // check if user has Admin access to this queue.
       Queue queue = ((MutableConfScheduler) rmContext.getScheduler())
           .getQueue(queueInfo.getQueueName());
       if (queue != null && !queue.hasAccess(QueueACL.ADMINISTER_QUEUE, user)) {
         return false;
       }
     }
+
     return true;
   }
+
+  /**
+   * Does the queue have a child?
+   * @param queue The queue that needs to be checked for a child.
+   * @return True if a "." exists in the queue name, signalling hierarchy.
+   */
+  private boolean queueHasAChild(String queue) {
+    return queue.lastIndexOf('.') != -1;
+  }
+
+  /**
+   * Get the last child name from a queue name.
+   * @param queue The queue that is checked for the last child.
+   * @return The last child of the queue.
+   */
+  private String getLastChildForQueue(String queue) {
+    return queue.substring(queue.lastIndexOf('.') + 1);
+  }
+
+  /**
+   * Get a queue name minus the last child.
+   * @param queue The queue that needs to be trimmed of its last child.
+   * @return Remaining queue name after its last child has been taken out.
+   */
+  private String getQueueBeforeLastChild(String queue) {
+    return queue.substring(0, queue.lastIndexOf('.'));
+  }
+
 }

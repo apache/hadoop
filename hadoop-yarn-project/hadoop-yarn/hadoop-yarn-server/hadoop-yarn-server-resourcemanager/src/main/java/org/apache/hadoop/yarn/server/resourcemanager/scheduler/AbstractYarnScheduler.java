@@ -34,6 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -96,6 +97,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntit
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -106,8 +108,8 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 
 @SuppressWarnings("unchecked")
@@ -157,6 +159,7 @@ public abstract class AbstractYarnScheduler
   protected ConcurrentMap<ApplicationId, SchedulerApplication<T>> applications;
   protected int nmExpireInterval;
   protected long nmHeartbeatInterval;
+  private long skipNodeInterval;
 
   private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
@@ -182,6 +185,8 @@ public abstract class AbstractYarnScheduler
   protected SchedulingMonitorManager schedulingMonitorManager =
       new SchedulingMonitorManager();
 
+  private boolean migration;
+
   /**
    * Construct the service.
    *
@@ -197,19 +202,26 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
+    migration =
+        conf.getBoolean(FairSchedulerConfiguration.MIGRATION_MODE, false);
+
     nmExpireInterval =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
           YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
     nmHeartbeatInterval =
         conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+    skipNodeInterval = YarnConfiguration.getSkipNodeInterval(conf);
     long configuredMaximumAllocationWaitTime =
         conf.getLong(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS,
           YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_SCHEDULING_WAIT_MS);
     nodeTracker.setConfiguredMaxAllocationWaitTime(
         configuredMaximumAllocationWaitTime);
     maxClusterLevelAppPriority = getMaxPriorityFromConf(conf);
-    this.releaseCache = new Timer("Pending Container Clear Timer");
+    if (!migration) {
+      this.releaseCache = new Timer("Pending Container Clear Timer");
+    }
+
     autoUpdateContainers =
         conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,
             YarnConfiguration.DEFAULT_RM_AUTO_UPDATE_CONTAINERS);
@@ -227,11 +239,14 @@ public abstract class AbstractYarnScheduler
 
   @Override
   protected void serviceStart() throws Exception {
-    if (updateThread != null) {
-      updateThread.start();
+    if (!migration) {
+      if (updateThread != null) {
+        updateThread.start();
+      }
+      schedulingMonitorManager.startAll();
+      createReleaseCache();
     }
-    schedulingMonitorManager.startAll();
-    createReleaseCache();
+
     super.serviceStart();
   }
 
@@ -353,6 +368,10 @@ public abstract class AbstractYarnScheduler
 
   public long getLastNodeUpdateTime() {
     return lastNodeUpdateTime;
+  }
+
+  public long getSkipNodeInterval(){
+    return skipNodeInterval;
   }
 
   protected void containerLaunchedOnNode(
@@ -541,9 +560,15 @@ public abstract class AbstractYarnScheduler
           }
         }
 
+        Queue queue = schedulerApp.getQueue();
+        //To make sure we don't face ambiguity, CS queues should be referenced
+        //by their full queue names
+        String queueName =  queue instanceof CSQueue ?
+            ((CSQueue)queue).getQueuePath() : queue.getQueueName();
+
         // create container
         RMContainer rmContainer = recoverAndCreateContainer(container, nm,
-            schedulerApp.getQueue().getQueueName());
+            queueName);
 
         // recover RMContainer
         rmContainer.handle(
@@ -554,8 +579,8 @@ public abstract class AbstractYarnScheduler
         schedulerNode.recoverContainer(rmContainer);
 
         // recover queue: update headroom etc.
-        Queue queue = schedulerAttempt.getQueue();
-        queue.recoverContainer(getClusterResource(), schedulerAttempt,
+        Queue queueToRecover = schedulerAttempt.getQueue();
+        queueToRecover.recoverContainer(getClusterResource(), schedulerAttempt,
             rmContainer);
 
         // recover scheduler attempt
@@ -823,6 +848,11 @@ public abstract class AbstractYarnScheduler
     writeLock.lock();
     try {
       SchedulerNode node = getSchedulerNode(nm.getNodeID());
+      if (node == null) {
+        LOG.info("Node: " + nm.getNodeID() + " has already been taken out of " +
+            "scheduling. Skip updating its resource");
+        return;
+      }
       Resource newResource = resourceOption.getResource();
       final int timeout = resourceOption.getOverCommitTimeout();
       Resource oldResource = node.getTotalResource();
@@ -865,6 +895,15 @@ public abstract class AbstractYarnScheduler
         + " does not support reservations");
   }
 
+  /**
+   * By default placement constraint is disabled. Schedulers which support
+   * placement constraint can override this value.
+   * @return enabled or not
+   */
+  public boolean placementConstraintEnabled() {
+    return false;
+  }
+
   protected void refreshMaximumAllocation(Resource newMaxAlloc) {
     nodeTracker.setConfiguredMaxAllocation(newMaxAlloc);
   }
@@ -891,8 +930,8 @@ public abstract class AbstractYarnScheduler
 
   @Override
   public Priority checkAndGetApplicationPriority(
-      Priority priorityRequestedByApp, UserGroupInformation user,
-      String queueName, ApplicationId applicationId) throws YarnException {
+          Priority priorityRequestedByApp, UserGroupInformation user,
+          String queuePath, ApplicationId applicationId) throws YarnException {
     // Dummy Implementation till Application Priority changes are done in
     // specific scheduler.
     return Priority.newInstance(0);
@@ -1169,7 +1208,9 @@ public abstract class AbstractYarnScheduler
     // If the node is decommissioning, send an update to have the total
     // resource equal to the used resource, so no available resource to
     // schedule.
-    if (nm.getState() == NodeState.DECOMMISSIONING && schedulerNode != null) {
+    if (nm.getState() == NodeState.DECOMMISSIONING && schedulerNode != null
+        && schedulerNode.getTotalResource().compareTo(
+            schedulerNode.getAllocatedResource()) != 0) {
       this.rmContext
           .getDispatcher()
           .getEventHandler()

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.federation.router.security;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -58,7 +58,7 @@ public class RouterSecurityManager {
         AuthenticationMethod.KERBEROS;
     if (authMethodConfigured.equals(authMethodToInit)) {
       this.dtSecretManager = FederationUtil.newSecretManager(conf);
-      if (this.dtSecretManager == null) {
+      if (this.dtSecretManager == null || !this.dtSecretManager.isRunning()) {
         throw new IOException("Failed to create SecretManager");
       }
     }

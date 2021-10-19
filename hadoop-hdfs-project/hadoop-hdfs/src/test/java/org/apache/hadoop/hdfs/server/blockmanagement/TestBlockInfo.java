@@ -19,12 +19,22 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Random;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Assert;
 import org.junit.Test;
@@ -65,6 +75,39 @@ public class TestBlockInfo {
   }
 
   @Test
+  public void testAddProvidedStorage() throws Exception {
+    // block with only provided storage
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
+    DatanodeStorageInfo providedStorage = mock(DatanodeStorageInfo.class);
+    when(providedStorage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    boolean added = blockInfo.addStorage(providedStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertEquals(providedStorage, blockInfo.getStorageInfo(0));
+    Assert.assertTrue(blockInfo.isProvided());
+  }
+
+  @Test
+  public void testAddTwoStorageTypes() throws Exception {
+    // block with only disk storage
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
+    DatanodeStorageInfo diskStorage = mock(DatanodeStorageInfo.class);
+    DatanodeDescriptor mockDN = mock(DatanodeDescriptor.class);
+    when(diskStorage.getDatanodeDescriptor()).thenReturn(mockDN);
+    when(diskStorage.getStorageType()).thenReturn(StorageType.DISK);
+    boolean added = blockInfo.addStorage(diskStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertEquals(diskStorage, blockInfo.getStorageInfo(0));
+    Assert.assertFalse(blockInfo.isProvided());
+
+    // now add provided storage
+    DatanodeStorageInfo providedStorage = mock(DatanodeStorageInfo.class);
+    when(providedStorage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    added = blockInfo.addStorage(providedStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertTrue(blockInfo.isProvided());
+  }
+
+  @Test
   public void testReplaceStorage() throws Exception {
 
     // Create two dummy storages.
@@ -96,5 +139,86 @@ public class TestBlockInfo {
     final DatanodeStorageInfo storage = DFSTestUtil.createDatanodeStorageInfo(
         "storageID", "127.0.0.1");
     blockInfo1.addStorage(storage, blockInfo2);
+  }
+
+  @Test
+  public void testBlockListMoveToHead() throws Exception {
+    LOG.info("BlockInfo moveToHead tests...");
+
+    final int maxBlocks = 10;
+
+    DatanodeStorageInfo dd =
+        DFSTestUtil.createDatanodeStorageInfo("s1", "1.1.1.1");
+    ArrayList<Block> blockList = new ArrayList<Block>(maxBlocks);
+    ArrayList<BlockInfo> blockInfoList = new ArrayList<BlockInfo>();
+    int headIndex;
+    int curIndex;
+
+    LOG.info("Building block list...");
+    for (int i = 0; i < maxBlocks; i++) {
+      blockList.add(new Block(i, 0, GenerationStamp.LAST_RESERVED_STAMP));
+      blockInfoList.add(new BlockInfoContiguous(blockList.get(i), (short) 3));
+      dd.addBlock(blockInfoList.get(i));
+
+      // index of the datanode should be 0
+      assertEquals("Find datanode should be 0", 0, blockInfoList.get(i)
+          .findStorageInfo(dd));
+    }
+
+    // list length should be equal to the number of blocks we inserted
+    LOG.info("Checking list length...");
+    assertEquals("Length should be MAX_BLOCK", maxBlocks, dd.numBlocks());
+    Iterator<BlockInfo> it = dd.getBlockIterator();
+    int len = 0;
+    while (it.hasNext()) {
+      it.next();
+      len++;
+    }
+    assertEquals("There should be MAX_BLOCK blockInfo's", maxBlocks, len);
+
+    headIndex = dd.getBlockListHeadForTesting().findStorageInfo(dd);
+
+    LOG.info("Moving each block to the head of the list...");
+    for (int i = 0; i < maxBlocks; i++) {
+      curIndex = blockInfoList.get(i).findStorageInfo(dd);
+      headIndex = dd.moveBlockToHead(blockInfoList.get(i), curIndex, headIndex);
+      // the moved element must be at the head of the list
+      assertEquals("Block should be at the head of the list now.",
+          blockInfoList.get(i), dd.getBlockListHeadForTesting());
+    }
+
+    // move head of the list to the head - this should not change the list
+    LOG.info("Moving head to the head...");
+
+    BlockInfo temp = dd.getBlockListHeadForTesting();
+    curIndex = 0;
+    headIndex = 0;
+    dd.moveBlockToHead(temp, curIndex, headIndex);
+    assertEquals(
+        "Moving head to the head of the list shopuld not change the list",
+        temp, dd.getBlockListHeadForTesting());
+
+    // check all elements of the list against the original blockInfoList
+    LOG.info("Checking elements of the list...");
+    temp = dd.getBlockListHeadForTesting();
+    assertNotNull("Head should not be null", temp);
+    int c = maxBlocks - 1;
+    while (temp != null) {
+      assertEquals("Expected element is not on the list",
+          blockInfoList.get(c--), temp);
+      temp = temp.getNext(0);
+    }
+
+    LOG.info("Moving random blocks to the head of the list...");
+    headIndex = dd.getBlockListHeadForTesting().findStorageInfo(dd);
+    Random rand = new Random();
+    for (int i = 0; i < maxBlocks; i++) {
+      int j = rand.nextInt(maxBlocks);
+      curIndex = blockInfoList.get(j).findStorageInfo(dd);
+      headIndex = dd.moveBlockToHead(blockInfoList.get(j), curIndex, headIndex);
+      // the moved element must be at the head of the list
+      assertEquals("Block should be at the head of the list now.",
+          blockInfoList.get(j), dd.getBlockListHeadForTesting());
+    }
   }
 }

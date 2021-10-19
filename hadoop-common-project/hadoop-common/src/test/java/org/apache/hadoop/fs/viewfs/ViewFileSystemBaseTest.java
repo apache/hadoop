@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -32,6 +34,8 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -56,10 +60,14 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import org.junit.After;
@@ -68,9 +76,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
-
 
 /**
  * <p>
@@ -108,6 +114,9 @@ abstract public class ViewFileSystemBaseTest {
   protected FileSystemTestHelper createFileSystemHelper() {
     return new FileSystemTestHelper();
   }
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
   public void setUp() throws Exception {
@@ -477,11 +486,13 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertEquals(targetBL.length, viewBL.length);
     int i = 0;
     for (BlockLocation vbl : viewBL) {
-      Assert.assertEquals(vbl.toString(), targetBL[i].toString());
-      Assert.assertEquals(targetBL[i].getOffset(), vbl.getOffset());
-      Assert.assertEquals(targetBL[i].getLength(), vbl.getLength());
-      i++;     
-    } 
+      Assertions.assertThat(vbl.toString()).isEqualTo(targetBL[i].toString());
+      Assertions.assertThat(vbl.getOffset())
+          .isEqualTo(targetBL[i].getOffset());
+      Assertions.assertThat(vbl.getLength())
+          .isEqualTo(targetBL[i].getLength());
+      i++;
+    }
   }
 
   @Test
@@ -1016,7 +1027,7 @@ abstract public class ViewFileSystemBaseTest {
       if (e instanceof UnsupportedFileSystemException) {
         String msg = " Use " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
             " instead";
-        assertThat(e.getMessage(), containsString(msg));
+        GenericTestUtils.assertExceptionContains(msg, e);
       } else {
         fail("Unexpected exception: " + e.getMessage());
       }
@@ -1253,8 +1264,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a ViewFs mount link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("not a symbolic link"));
+      GenericTestUtils.assertExceptionContains("not a symbolic link", e);
     }
 
     try {
@@ -1263,8 +1273,7 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a non sym link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("not a symbolic link"));
+      GenericTestUtils.assertExceptionContains("not a symbolic link", e);
     }
 
     try {
@@ -1272,14 +1281,14 @@ abstract public class ViewFileSystemBaseTest {
       fail("Resolving link target for a non existing link should fail!");
     } catch (Exception e) {
       LOG.info("Expected exception: " + e);
-      assertThat(e.getMessage(),
-          containsString("File does not exist:"));
+      GenericTestUtils.assertExceptionContains("File does not exist:", e);
     }
   }
 
   @Test
   public void testViewFileSystemInnerCache() throws Exception {
-    ViewFileSystem.InnerCache cache = new ViewFileSystem.InnerCache();
+    ViewFileSystem.InnerCache cache =
+        new ViewFileSystem.InnerCache(new FsGetter());
     FileSystem fs = cache.get(fsTarget.getUri(), conf);
 
     // InnerCache caches filesystem.
@@ -1344,6 +1353,8 @@ abstract public class ViewFileSystemBaseTest {
     final int cacheSize = TestFileUtil.getCacheSize();
     ViewFileSystem viewFs = (ViewFileSystem) FileSystem
         .get(new URI("viewfs://" + clusterName + "/"), config);
+    viewFs.resolvePath(
+        new Path(String.format("viewfs://%s/%s", clusterName, "/user")));
     assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
     viewFs.close();
     assertEquals(cacheSize, TestFileUtil.getCacheSize());
@@ -1367,5 +1378,98 @@ abstract public class ViewFileSystemBaseTest {
     viewFs.deleteOnExit(testDir);
     viewFs.close();
     assertFalse(fsTarget.exists(realTestPath));
+  }
+
+  @Test
+  public void testGetContentSummary() throws IOException {
+    ContentSummary summaryBefore =
+        fsView.getContentSummary(new Path("/internalDir"));
+    String expected = "GET CONTENT SUMMARY";
+    Path filePath =
+        new Path("/internalDir/internalDir2/linkToDir3", "foo");
+
+    try (FSDataOutputStream outputStream = fsView.create(filePath)) {
+      outputStream.write(expected.getBytes());
+    }
+
+    Path newDirPath = new Path("/internalDir/linkToDir2", "bar");
+    fsView.mkdirs(newDirPath);
+
+    ContentSummary summaryAfter =
+        fsView.getContentSummary(new Path("/internalDir"));
+    assertEquals("The file count didn't match",
+        summaryBefore.getFileCount() + 1,
+        summaryAfter.getFileCount());
+    assertEquals("The size didn't match",
+        summaryBefore.getLength() + expected.length(),
+        summaryAfter.getLength());
+    assertEquals("The directory count didn't match",
+        summaryBefore.getDirectoryCount() + 1,
+        summaryAfter.getDirectoryCount());
+  }
+
+  @Test
+  public void testGetContentSummaryWithFileInLocalFS() throws Exception {
+    ContentSummary summaryBefore =
+        fsView.getContentSummary(new Path("/internalDir"));
+    String expected = "GET CONTENT SUMMARY";
+    File localFile = temporaryFolder.newFile("localFile");
+    try (FileOutputStream fos = new FileOutputStream(localFile)) {
+      fos.write(expected.getBytes());
+    }
+    ConfigUtil.addLink(conf,
+        "/internalDir/internalDir2/linkToLocalFile", localFile.toURI());
+
+    try (FileSystem fs = FileSystem.get(FsConstants.VIEWFS_URI, conf)) {
+      ContentSummary summaryAfter =
+          fs.getContentSummary(new Path("/internalDir"));
+      assertEquals("The file count didn't match",
+          summaryBefore.getFileCount() + 1,
+          summaryAfter.getFileCount());
+      assertEquals("The directory count didn't match",
+          summaryBefore.getLength() + expected.length(),
+          summaryAfter.getLength());
+    }
+  }
+
+  @Test
+  public void testTargetFileSystemLazyInitialization() throws Exception {
+    final String clusterName = "cluster" + new Random().nextInt();
+    Configuration config = new Configuration(conf);
+    config.setBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    config.setClass("fs.mockfs.impl",
+        TestChRootedFileSystem.MockFileSystem.class, FileSystem.class);
+    ConfigUtil.addLink(config, clusterName, "/user",
+        URI.create("mockfs://mockauth1/mockpath"));
+    ConfigUtil.addLink(config, clusterName,
+        "/mock", URI.create("mockfs://mockauth/mockpath"));
+
+    final int cacheSize = TestFileUtil.getCacheSize();
+    ViewFileSystem viewFs = (ViewFileSystem) FileSystem
+        .get(new URI("viewfs://" + clusterName + "/"), config);
+
+    // As no inner file system instance has been initialized,
+    // cache size will remain the same
+    // cache is disabled for viewfs scheme, so the viewfs:// instance won't
+    // go in the cache even after the initialization
+    assertEquals(cacheSize, TestFileUtil.getCacheSize());
+
+    // This resolve path will initialize the file system corresponding
+    // to the mount table entry of the path "/user"
+    viewFs.resolvePath(
+        new Path(String.format("viewfs://%s/%s", clusterName, "/user")));
+
+    // Cache size will increase by 1.
+    assertEquals(cacheSize + 1, TestFileUtil.getCacheSize());
+    // This resolve path will initialize the file system corresponding
+    // to the mount table entry of the path "/mock"
+    viewFs.resolvePath(new Path(String.format("viewfs://%s/%s", clusterName,
+        "/mock")));
+    // One more file system instance will get initialized.
+    assertEquals(cacheSize + 2, TestFileUtil.getCacheSize());
+    viewFs.close();
+    // Initialized FileSystem instances will not be removed from cache as
+    // viewfs inner cache is disabled
+    assertEquals(cacheSize + 2, TestFileUtil.getCacheSize());
   }
 }

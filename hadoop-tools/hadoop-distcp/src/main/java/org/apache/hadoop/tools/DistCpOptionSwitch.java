@@ -46,14 +46,18 @@ public enum DistCpOptionSwitch {
    * only the corresponding file attribute is preserved.
    */
   PRESERVE_STATUS(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
-      new Option("p", true, "preserve status (rbugpcaxt)(replication, " +
+      new Option("p", true, "preserve status (rbugpcaxte)(replication, " +
           "block-size, user, group, permission, checksum-type, ACL, XATTR, " +
-          "timestamps). If -p is specified with no <arg>, then preserves " +
+          "timestamps, erasure coding policy). If -p is specified with no "
+          + "<arg>, then "
+          + "preserves " +
           "replication, block size, user, group, permission, checksum type " +
           "and timestamps. " +
           "raw.* xattrs are preserved when both the source and destination " +
           "paths are in the /.reserved/raw hierarchy (HDFS only). raw.* xattr" +
           "preservation is independent of the -p flag. " +
+          "Erasure coding policy is only preserved when both source and "
+          + "destination are of HDFS"+
           "Refer to the DistCp documentation for more details.")),
 
   /**
@@ -235,7 +239,12 @@ public enum DistCpOptionSwitch {
    */
   DIRECT_WRITE(DistCpConstants.CONF_LABEL_DIRECT_WRITE,
       new Option("direct", false, "Write files directly to the"
-          + " target location, avoiding temporary file rename."));
+          + " target location, avoiding temporary file rename.")),
+
+  USE_ITERATOR(DistCpConstants.CONF_LABEL_USE_ITERATOR,
+      new Option("useiterator", false,
+          "Use single threaded list status iterator to build "
+              + "the listing to save the memory utilisation at the client"));
 
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";

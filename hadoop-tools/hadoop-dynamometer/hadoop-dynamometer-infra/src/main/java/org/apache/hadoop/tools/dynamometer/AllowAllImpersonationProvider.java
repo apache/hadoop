@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
+import java.net.InetAddress;
+
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ImpersonationProvider;
@@ -32,8 +34,13 @@ public class AllowAllImpersonationProvider extends Configured
     // Do nothing
   }
 
-  public void authorize(UserGroupInformation user, String remoteAddress) {
+  public void authorize(UserGroupInformation user, InetAddress remoteAddress) {
     // Do nothing
   }
 
+  // Although this API was removed from the interface by HADOOP-17367, we need
+  // to keep it here because TestDynamometerInfra uses an old hadoop binary.
+  public void authorize(UserGroupInformation user, String remoteAddress) {
+    // Do nothing
+  }
 }

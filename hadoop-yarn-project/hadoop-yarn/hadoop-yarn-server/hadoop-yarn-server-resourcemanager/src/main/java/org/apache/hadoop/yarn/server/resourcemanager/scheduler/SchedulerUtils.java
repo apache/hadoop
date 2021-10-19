@@ -23,12 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -61,6 +58,12 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.exceptions
         .InvalidResourceRequestException
@@ -299,6 +302,29 @@ public class SchedulerUtils {
           throws InvalidResourceRequestException {
     normalizeAndValidateRequest(resReq, maximumAllocation, queueName, false,
         rmContext, queueInfo, nodeLabelsEnabled);
+  }
+
+  /**
+   * If RM should enforce partition exclusivity for enforced partition "x":
+   * 1) If request is "x" and app label is not "x",
+   *    override request to app's label.
+   * 2) If app label is "x", ensure request is "x".
+   * @param resReq resource request
+   * @param enforcedPartitions list of exclusive enforced partitions
+   * @param appLabel app's node label expression
+   */
+  public static void enforcePartitionExclusivity(ResourceRequest resReq,
+      Set<String> enforcedPartitions, String appLabel) {
+    if (enforcedPartitions == null || enforcedPartitions.isEmpty()) {
+      return;
+    }
+    if (!enforcedPartitions.contains(appLabel)
+        && enforcedPartitions.contains(resReq.getNodeLabelExpression())) {
+      resReq.setNodeLabelExpression(appLabel);
+    }
+    if (enforcedPartitions.contains(appLabel)) {
+      resReq.setNodeLabelExpression(appLabel);
+    }
   }
 
   /**
@@ -578,5 +604,12 @@ public class SchedulerUtils {
     appAttempt.addRMContainer(container.getId(), rmContainer);
     node.allocateContainer(rmContainer);
     return rmContainer;
+  }
+
+  public static boolean isNodeHeartbeated(SchedulerNode node,
+      long skipNodeInterval) {
+    long timeElapsedFromLastHeartbeat =
+        Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
+    return timeElapsedFromLastHeartbeat <= skipNodeInterval;
   }
 }

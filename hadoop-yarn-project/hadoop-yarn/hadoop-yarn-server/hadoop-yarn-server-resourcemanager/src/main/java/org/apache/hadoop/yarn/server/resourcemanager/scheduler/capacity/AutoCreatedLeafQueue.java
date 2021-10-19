@@ -27,6 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Leaf queues which are auto created by an underlying implementation of
@@ -56,7 +58,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parent;
 
       super.reinitialize(newlyParsedQueue, clusterResource, managedParentQueue
-          .getLeafQueueConfigs(newlyParsedQueue.getQueueName()));
+          .getLeafQueueConfigs(newlyParsedQueue.getQueueShortName()));
 
       //Reset capacities to 0 since reinitialize above
       // queueCapacities to initialize to configured capacity which might
@@ -73,34 +75,21 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
     writeLock.lock();
     try {
-
-      // TODO:
       // reinitialize only capacities for now since 0 capacity updates
       // can cause
       // abs capacity related config computations to be incorrect if we go
       // through reinitialize
       QueueCapacities capacities = leafQueueTemplate.getQueueCapacities();
 
-      //update abs capacities
-      setupConfigurableCapacities(capacities);
-
       //reset capacities for the leaf queue
       mergeCapacities(capacities);
-
-      //update queue used capacity for all the node labels
-      CSQueueUtils.updateQueueStatistics(resourceCalculator,
-          csContext.getClusterResource(),
-          this, labelManager, null);
-
-      //activate applications if any are pending
-      activateApplications();
 
     } finally {
       writeLock.unlock();
     }
   }
 
-  private void mergeCapacities(QueueCapacities capacities) {
+  public void mergeCapacities(QueueCapacities capacities) {
     for ( String nodeLabel : capacities.getExistingNodeLabels()) {
       queueCapacities.setCapacity(nodeLabel,
           capacities.getCapacity(nodeLabel));
@@ -131,6 +120,23 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
         throw new SchedulerDynamicEditException(
             "Capacity demand is not in the [0,1] range: " + capacity);
       }
+    }
+  }
+
+  @Override
+  protected void setDynamicQueueProperties(
+      CapacitySchedulerConfiguration configuration) {
+    String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
+        CapacitySchedulerConfiguration
+            .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
+    Set<String> parentNodeLabels = csContext
+        .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+        .getLabelsByQueue(parentTemplate);
+
+    if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
+      csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+          .setLabelsByQueue(getQueuePath(),
+              new HashSet<>(parentNodeLabels));
     }
   }
 

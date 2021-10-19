@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.mapreduce.v2.util;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;

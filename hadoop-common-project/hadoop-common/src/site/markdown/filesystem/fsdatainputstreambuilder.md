@@ -43,6 +43,31 @@ path validation.
 
 Set the size of the buffer to be used.
 
+### <a name="Builder.withFileStatus"></a> `FSDataInputStreamBuilder withFileStatus(FileStatus status)`
+
+A `FileStatus` instance which refers to the file being opened.
+
+This MAY be used by implementations to short-circuit checks for the file,
+So potentially saving on remote calls especially to object stores.
+
+Requirements:
+
+* `status != null`
+* `status.getPath()` == the resolved path of the file being opened.
+
+The path validation MUST take place if the store uses the `FileStatus` when
+it opens files, and MAY be performed otherwise. The validation
+SHOULD be postponed until the `build()` operation.
+
+This operation should be considered a hint to the filesystem.
+
+If a filesystem implementation extends the `FileStatus` returned in its
+implementation MAY use this information when opening the file.
+
+This is relevant with those stores which return version/etag information,
+including the S3A and ABFS connectors -they MAY use this to guarantee that
+the file they opened is exactly the one returned in the listing.
+
 ### Set optional or mandatory parameters
 
     FSDataInputStreamBuilder opt(String key, ...)
@@ -56,6 +81,7 @@ of `FileSystem`.
 out = fs.openFile(path)
     .opt("fs.s3a.experimental.input.fadvise", "random")
     .must("fs.s3a.readahead.range", 256 * 1024)
+    .withFileStatus(statusFromListing)
     .build()
     .get();
 ```
@@ -76,6 +102,21 @@ builder methods (i.e., `bufferSize()`) and `opt()`/`must()` is as follows:
 
 > The last option specified defines the value and its optional/mandatory state.
 
+If the `FileStatus` option passed in `withFileStatus()` is used, implementations
+MUST accept all subclasses of `FileStatus`, including `LocatedFileStatus`,
+rather than just any FS-specific subclass implemented by the implementation
+(e.g `S3AFileStatus`). They MAY simply ignore those which are not the 
+custom subclasses.
+
+This is critical to ensure safe use of the feature: directory listing/
+status serialization/deserialization can result result in the `withFileStatus()`
+argumennt not being the custom subclass returned by the Filesystem instance's
+own `getFileStatus()`, `listFiles()`, `listLocatedStatus()` calls, etc.
+
+In such a situation the implementations must:
+
+1. Validate the path (always).
+1. Use the status/convert to the custom type, *or* simply discard it.
 
 ## Builder interface
 

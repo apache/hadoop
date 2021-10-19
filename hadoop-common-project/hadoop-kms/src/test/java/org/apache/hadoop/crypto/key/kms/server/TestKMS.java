@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import com.google.common.base.Supplier;
-import com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
@@ -38,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -91,7 +91,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -111,9 +110,6 @@ import static org.mockito.Mockito.when;
 
 public class TestKMS {
   private static final Logger LOG = LoggerFactory.getLogger(TestKMS.class);
-
-  private static final String SSL_RELOADER_THREAD_NAME =
-      "Truststore reloader thread";
 
   private SSLFactory sslFactory;
 
@@ -539,34 +535,6 @@ public class TestKMS {
             url.getProtocol().equals("https"));
         final URI uri = createKMSUri(getKMSUrl());
 
-        if (ssl) {
-          KeyProvider testKp = createProvider(uri, conf);
-          ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
-          while (threadGroup.getParent() != null) {
-            threadGroup = threadGroup.getParent();
-          }
-          Thread[] threads = new Thread[threadGroup.activeCount()];
-          threadGroup.enumerate(threads);
-          Thread reloaderThread = null;
-          for (Thread thread : threads) {
-            if ((thread.getName() != null)
-                && (thread.getName().contains(SSL_RELOADER_THREAD_NAME))) {
-              reloaderThread = thread;
-            }
-          }
-          Assert.assertTrue("Reloader is not alive", reloaderThread.isAlive());
-          // Explicitly close the provider so we can verify the internal thread
-          // is shutdown
-          testKp.close();
-          boolean reloaderStillAlive = true;
-          for (int i = 0; i < 10; i++) {
-            reloaderStillAlive = reloaderThread.isAlive();
-            if (!reloaderStillAlive) break;
-            Thread.sleep(1000);
-          }
-          Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
-        }
-
         if (kerberos) {
           for (String user : new String[]{"client", "client/host"}) {
             doAs(user, new PrivilegedExceptionAction<Void>() {
@@ -614,7 +582,18 @@ public class TestKMS {
 
   @Test
   public void testStartStopHttpPseudo() throws Exception {
-    testStartStop(false, false);
+    // Make sure bogus errors don't get emitted.
+    GenericTestUtils.LogCapturer logs =
+        GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
+            "com.sun.jersey.server.wadl.generators.AbstractWadlGeneratorGrammarGenerator"));
+    try {
+      testStartStop(false, false);
+    } finally {
+      logs.stopCapturing();
+    }
+    assertFalse(logs.getOutput().contains(
+        "Couldn't find grammar element for class"));
+
   }
 
   @Test
@@ -2351,8 +2330,7 @@ public class TestKMS {
                   return null;
                 }
               });
-              // Close the client provider. We will verify all providers'
-              // Truststore reloader threads are closed later.
+              // Close the client provider.
               kp.close();
               return null;
             } finally {
@@ -2363,22 +2341,6 @@ public class TestKMS {
         return null;
       }
     });
-
-    // verify that providers created by KMSTokenRenewer are closed.
-    if (ssl) {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          final Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-          for (Thread t : threadSet) {
-            if (t.getName().contains(SSL_RELOADER_THREAD_NAME)) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }, 1000, 10000);
-    }
   }
 
   @Test
@@ -3064,6 +3026,47 @@ public class TestKMS {
         }
         LOG.info("jmx returned: " + sb.toString());
         assertTrue(sb.toString().contains("JvmMetrics"));
+        return null;
+      }
+    });
+  }
+
+  @Test
+  public void testFilterInitializer() throws Exception {
+    Configuration conf = new Configuration();
+    File testDir = getTestDir();
+    conf = createBaseKMSConf(testDir, conf);
+    conf.set("hadoop.security.authentication", "kerberos");
+    conf.set("hadoop.kms.authentication.token.validity", "1");
+    conf.set("hadoop.kms.authentication.type", "kerberos");
+    conf.set("hadoop.kms.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+    conf.set("hadoop.kms.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.kms.authentication.kerberos.name.rules", "DEFAULT");
+    conf.set("hadoop.http.filter.initializers",
+        AuthenticationFilterInitializer.class.getName());
+    conf.set("hadoop.http.authentication.type", "kerberos");
+    conf.set("hadoop.http.authentication.kerberos.principal", "HTTP/localhost");
+    conf.set("hadoop.http.authentication.kerberos.keytab",
+        keytab.getAbsolutePath());
+
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        URL url = getKMSUrl();
+        final URI uri = createKMSUri(getKMSUrl());
+
+        doAs("client", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            final KeyProvider kp = createProvider(uri, conf);
+            Assert.assertTrue(kp.getKeys().isEmpty());
+            return null;
+          }
+        });
         return null;
       }
     });

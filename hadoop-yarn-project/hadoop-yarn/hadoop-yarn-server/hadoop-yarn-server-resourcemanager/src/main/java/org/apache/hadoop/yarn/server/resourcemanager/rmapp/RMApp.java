@@ -243,10 +243,6 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    */
   int getMaxAppAttempts();
 
-  boolean isLogAggregationEnabled();
-
-  boolean isLogAggregationFinished();
-
   /**
    * Returns the application type
    * @return the application type.

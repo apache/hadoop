@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.junit.Assert;
 
 /**
  * This class mocks the ClientRequestInterceptor.
@@ -28,9 +32,40 @@ public class MockClientRequestInterceptor
     extends DefaultClientRequestInterceptor {
 
   public void init(String user) {
-    MockResourceManagerFacade mockRM = new MockResourceManagerFacade(
-        new YarnConfiguration(super.getConf()), 0);
-    super.setRMClient(mockRM);
+    MockRM mockRM = new MockRM(super.getConf()) {
+      @Override
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(getRMContext(), getResourceScheduler(),
+            rmAppManager, applicationACLsManager, queueACLsManager,
+            getRMContext().getRMDelegationTokenSecretManager()) {
+          @Override
+          protected void serviceStart() {
+            // override to not start rpc handler
+          }
+
+          @Override
+          protected void serviceStop() {
+            // don't do anything
+          }
+
+          @Override
+          public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
+              MoveApplicationAcrossQueuesRequest request) throws YarnException {
+            return MoveApplicationAcrossQueuesResponse.newInstance();
+          }
+        };
+      }
+    };
+    mockRM.init(super.getConf());
+    mockRM.start();
+    try {
+      mockRM.registerNode("127.0.0.1:1", 102400, 100);
+      // allow plan follower to synchronize
+      Thread.sleep(1050);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    }
+    super.setRMClient(mockRM.getClientRMService());
   }
 
 }

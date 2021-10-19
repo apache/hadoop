@@ -38,7 +38,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 public class TestAtomicFileOutputStream {
 
@@ -142,7 +142,7 @@ public class TestAtomicFileOutputStream {
         fos = null;
       }
     } finally {
-      IOUtils.cleanup(null, fos);
+      IOUtils.cleanupWithLogger(null, fos);
       FileUtil.setWritable(TEST_DIR, true);
     }
   }

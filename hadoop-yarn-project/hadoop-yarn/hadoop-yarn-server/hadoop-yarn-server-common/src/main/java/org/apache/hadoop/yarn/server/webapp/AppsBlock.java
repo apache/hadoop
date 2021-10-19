@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
@@ -135,8 +136,7 @@ public class AppsBlock extends HtmlBlock {
 
     try {
       fetchData();
-    }
-    catch( Exception e) {
+    } catch (YarnException | IOException | InterruptedException e) {
       String message = "Failed to read the applications.";
       LOG.error(message, e);
       html.p().__(message).__();
@@ -149,7 +149,8 @@ public class AppsBlock extends HtmlBlock {
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
           .th(".name", "Name").th(".type", "Application Type")
-          .th(".queue", "Queue").th(".priority", "Application Priority")
+          .th(".apptag", "Application Tags").th(".queue", "Queue")
+          .th(".priority", "Application Priority")
           .th(".starttime", "StartTime")
           .th(".launchtime", "LaunchTime")
           .th(".finishtime", "FinishTime")
@@ -184,6 +185,10 @@ public class AppsBlock extends HtmlBlock {
         .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
             .getType())))
+          .append("\",\"")
+          .append(
+              StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
+                  app.getApplicationTags() == null ? "" : app.getApplicationTags())))
         .append("\",\"")
         .append(
           StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(app
@@ -211,10 +216,8 @@ public class AppsBlock extends HtmlBlock {
 
       String trackingUI =
           app.getTrackingUrl() == null || app.getTrackingUrl().equals(UNAVAILABLE)
-              ? "Unassigned"
-              : app.getAppState() == YarnApplicationState.FINISHED
-                  || app.getAppState() == YarnApplicationState.FAILED
-                  || app.getAppState() == YarnApplicationState.KILLED
+              ? "Unassigned" :
+              Apps.isApplicationFinalState(app.getAppState())
                   ? "History" : "ApplicationMaster";
       appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
         .append("'>").append(trackingUI).append("</a>\"],\n");

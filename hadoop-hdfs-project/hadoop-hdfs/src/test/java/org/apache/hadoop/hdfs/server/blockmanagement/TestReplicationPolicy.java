@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.AddBlockFlag;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -82,7 +85,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   // The interval for marking a datanode as stale,
   private static final long staleInterval =
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
-
+  private static AtomicLong mockINodeId = new AtomicLong(0);
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
@@ -825,7 +828,15 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   }
 
   private BlockInfo genBlockInfo(long id) {
-    return new BlockInfoContiguous(new Block(id), (short) 3);
+    return genBlockInfo(id, false);
+  }
+
+  private BlockInfo genBlockInfo(long id, boolean isBlockCorrupted) {
+    BlockInfo bInfo = new BlockInfoContiguous(new Block(id), (short) 3);
+    if (!isBlockCorrupted) {
+      bInfo.setBlockCollectionId(mockINodeId.incrementAndGet());
+    }
+    return bInfo;
   }
 
   /**
@@ -848,7 +859,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
         // Adding the blocks directly to normal priority
 
         neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
-            nextLong()), 2, 0, 0, 3);
+            nextLong(), true), 2, 0, 0, 3);
       }
       // Lets wait for the replication interval, to start process normal
       // priority blocks
@@ -856,7 +867,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
       
       // Adding the block directly to high priority list
       neededReconstruction.add(genBlockInfo(ThreadLocalRandom.current().
-          nextLong()), 1, 0, 0, 3);
+          nextLong(), true), 1, 0, 0, 3);
 
       // Lets wait for the replication interval
       Thread.sleep(DFS_NAMENODE_REPLICATION_INTERVAL);
@@ -1519,6 +1530,29 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     }
   }
 
+  @Test
+  public void testChooseFromFavoredNodesWhenPreferLocalSetToFalse() {
+    ((BlockPlacementPolicyDefault) replicator).setPreferLocalNode(false);
+    try {
+      DatanodeStorageInfo[] targets;
+      List<DatanodeDescriptor> expectedTargets = new ArrayList<>();
+      expectedTargets.add(dataNodes[0]);
+      expectedTargets.add(dataNodes[2]);
+      List<DatanodeDescriptor> favouredNodes = new ArrayList<>();
+      favouredNodes.add(dataNodes[0]);
+      favouredNodes.add(dataNodes[2]);
+      targets = chooseTarget(2, dataNodes[3], null,
+          favouredNodes);
+      assertEquals(targets.length, 2);
+      for (int i = 0; i < targets.length; i++) {
+        assertTrue("Target should be a part of Expected Targets",
+            expectedTargets.contains(targets[i].getDatanodeDescriptor()));
+      }
+    } finally {
+      ((BlockPlacementPolicyDefault) replicator).setPreferLocalNode(true);
+    }
+  }
+
   private DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
       DatanodeDescriptor writer, Set<Node> excludedNodes,
       List<DatanodeDescriptor> favoredNodes) {
@@ -1586,5 +1620,60 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(node.getXceiverCount()).thenReturn(10);
     assertTrue(bppd.excludeNodeByLoad(node));
 
+    // Enable load check per storage type.
+    conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY,
+        true);
+    bppd.initialize(conf, statistics, null, null);
+    Map<StorageType, StorageTypeStats> storageStats = new HashMap<>();
+    StorageTypeStats diskStorageTypeStats =
+        new StorageTypeStats(StorageType.DISK);
+
+    // Set xceiver count as 500 for DISK.
+    diskStorageTypeStats.setDataNodesInServiceXceiverCount(50, 10);
+    storageStats.put(StorageType.DISK, diskStorageTypeStats);
+
+    //Set xceiver count as 900 for ARCHIVE
+    StorageTypeStats archiveStorageTypeStats =
+        new StorageTypeStats(StorageType.ARCHIVE);
+    archiveStorageTypeStats.setDataNodesInServiceXceiverCount(10, 90);
+    storageStats.put(StorageType.ARCHIVE, diskStorageTypeStats);
+
+    when(statistics.getStorageTypeStats()).thenReturn(storageStats);
+    when(node.getXceiverCount()).thenReturn(29);
+    when(node.getStorageTypes()).thenReturn(EnumSet.of(StorageType.DISK));
+    when(statistics.getInServiceXceiverAverage()).thenReturn(0.0);
+    //Added for sanity, the number of datanodes are 100, the average xceiver
+    // shall be (50*100+90*100)/100 = 14
+    when(statistics.getInServiceXceiverAverage()).thenReturn(14.0);
+    when(node.getXceiverCount()).thenReturn(100);
+
+    assertFalse(bppd.excludeNodeByLoad(node));
+  }
+
+  @Test
+  public void testChosenFailureForStorageType() {
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    DatanodeStorageInfo[] targets = replicator.chooseTarget(filename, 1,
+        dataNodes[0], new ArrayList<DatanodeStorageInfo>(), false, null,
+        BLOCK_SIZE, TestBlockStoragePolicy.POLICY_SUITE.getPolicy(
+            HdfsConstants.StoragePolicy.COLD.value()), null);
+    assertEquals(0, targets.length);
+    assertNotEquals(0,
+        appender.countLinesWithMessage("NO_REQUIRED_STORAGE_TYPE"));
+  }
+
+  @Test
+  public void testReduceChooseTimesIfNOStaleNode() {
+    for(int i = 0; i < 6; i++) {
+      updateHeartbeatWithUsage(dataNodes[i],
+          2 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, 0L,
+          (HdfsServerConstants.MIN_BLOCKS_FOR_WRITE - 1) * BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0);
+    }
+    assertFalse(dnManager.shouldAvoidStaleDataNodesForWrite());
+    resetHeartbeatForStorages();
   }
 }

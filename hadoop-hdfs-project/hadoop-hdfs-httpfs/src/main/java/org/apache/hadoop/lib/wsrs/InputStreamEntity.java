@@ -19,6 +19,9 @@
 package org.apache.hadoop.lib.wsrs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.http.server.FSOperations;
+import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
+import org.apache.hadoop.fs.http.server.metrics.HttpFSServerMetrics;
 import org.apache.hadoop.io.IOUtils;
 
 import javax.ws.rs.core.StreamingOutput;
@@ -45,10 +48,17 @@ public class InputStreamEntity implements StreamingOutput {
   @Override
   public void write(OutputStream os) throws IOException {
     IOUtils.skipFully(is, offset);
+    long bytes = 0L;
     if (len == -1) {
-      IOUtils.copyBytes(is, os, 4096, true);
+      // Use the configured buffer size instead of hardcoding to 4k
+      bytes = FSOperations.copyBytes(is, os);
     } else {
-      IOUtils.copyBytes(is, os, len, true);
+      bytes = FSOperations.copyBytes(is, os, len);
+    }
+    // Update metrics.
+    HttpFSServerMetrics metrics = HttpFSServerWebApp.get().getMetrics();
+    if (metrics != null) {
+      metrics.incrBytesRead(bytes);
     }
   }
 }

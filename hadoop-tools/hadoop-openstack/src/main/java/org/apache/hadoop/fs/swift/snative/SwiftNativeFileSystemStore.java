@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.exceptions.SwiftConfigurationException;
 import org.apache.hadoop.fs.swift.exceptions.SwiftException;
@@ -562,12 +563,16 @@ public class SwiftNativeFileSystemStore {
     //parent dir (in which case the dest dir exists), or the destination
     //directory is root, in which case it must also exist
     if (dstParent != null && !dstParent.equals(srcParent)) {
+      SwiftFileStatus fileStatus;
       try {
-        getObjectMetadata(dstParent);
+        fileStatus = getObjectMetadata(dstParent);
       } catch (FileNotFoundException e) {
         //destination parent doesn't exist; bail out
         LOG.debug("destination parent directory " + dstParent + " doesn't exist");
         throw e;
+      }
+      if (!fileStatus.isDir()) {
+        throw new ParentNotDirectoryException(dstParent.toString());
       }
     }
 

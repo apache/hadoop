@@ -25,6 +25,11 @@ public class ContainerResourceLocalizedEvent extends ContainerResourceEvent {
 
   private final Path loc;
 
+  // > 0: downloaded
+  // < 0: cached
+  //
+  private long size;
+
   public ContainerResourceLocalizedEvent(ContainerId container, LocalResourceRequest rsrc,
       Path loc) {
     super(container, ContainerEventType.RESOURCE_LOCALIZED, rsrc);
@@ -33,6 +38,14 @@ public class ContainerResourceLocalizedEvent extends ContainerResourceEvent {
 
   public Path getLocation() {
     return loc;
+  }
+
+  public long getSize() {
+    return size;
+  }
+
+  public void setSize(long size) {
+    this.size = size;
   }
 
 }

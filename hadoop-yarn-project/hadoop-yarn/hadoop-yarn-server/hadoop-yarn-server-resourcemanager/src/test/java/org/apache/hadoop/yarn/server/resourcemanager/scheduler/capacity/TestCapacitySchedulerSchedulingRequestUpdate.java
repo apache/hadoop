@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.checkPendingResource;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.toSet;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -30,6 +34,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -43,8 +49,7 @@ import java.util.Arrays;
 /**
  * Test class for verifying Scheduling requests in CS.
  */
-public class TestCapacitySchedulerSchedulingRequestUpdate
-    extends CapacitySchedulerTestBase {
+public class TestCapacitySchedulerSchedulingRequestUpdate {
   @Test
   public void testBasicPendingResourceUpdate() throws Exception {
     Configuration conf = TestUtils.getConfigurationWithQueueLabels(
@@ -75,11 +80,27 @@ public class TestCapacitySchedulerSchedulingRequestUpdate
     nm2.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
 
     // Launch app2 in queue=b1
-    RMApp app2 = rm.submitApp(8 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
     // am1 asks for 8 * 1GB container for no label
     am1.allocateIntraAppAntiAffinity(
@@ -193,11 +214,27 @@ public class TestCapacitySchedulerSchedulingRequestUpdate
     nm2.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
 
     // Launch app2 in queue=b1
-    RMApp app2 = rm.submitApp(8 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
     // am1 asks for 8 * 1GB container for "x"
     am1.allocateIntraAppAntiAffinity("x",

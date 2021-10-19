@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -48,6 +47,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
@@ -89,6 +90,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -99,12 +101,14 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /** Unit tests for IPC. */
 public class TestIPC {
@@ -788,6 +792,55 @@ public class TestIPC {
     }
   }
 
+  @Test(timeout=60000)
+  public void testIpcHostResolutionTimeout() throws Exception {
+    final InetSocketAddress addr = new InetSocketAddress("host.invalid", 80);
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    final Client client = new Client(LongWritable.class, conf);
+    // set the rpc timeout to twice the MIN_SLEEP_TIME
+    try {
+      LambdaTestUtils.intercept(UnknownHostException.class,
+          new Callable<Void>() {
+            @Override
+            public Void call() throws IOException {
+              TestIPC.this.call(client, new LongWritable(RANDOM.nextLong()),
+                  addr, MIN_SLEEP_TIME * 2, conf);
+              return null;
+            }
+          });
+    } finally {
+      client.stop();
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testIpcFlakyHostResolution() throws IOException {
+    // start server
+    Server server = new TestServer(5, false);
+    server.start();
+
+    // Leave host unresolved to start. Use "localhost" as opposed
+    // to local IP from NetUtils.getConnectAddress(server) to force
+    // resolution later
+    InetSocketAddress unresolvedAddr = InetSocketAddress.createUnresolved(
+        "localhost", NetUtils.getConnectAddress(server).getPort());
+
+    // start client
+    Client.setConnectTimeout(conf, 100);
+    Client client = new Client(LongWritable.class, conf);
+
+    try {
+      // Should re-resolve host and succeed
+      call(client, new LongWritable(RANDOM.nextLong()), unresolvedAddr,
+          MIN_SLEEP_TIME * 2, conf);
+    } finally {
+      client.stop();
+      server.stop();
+    }
+  }
+
   /**
    * Check that reader queueing works
    * @throws BrokenBarrierException 
@@ -1274,7 +1327,7 @@ public class TestIPC {
       retryProxy.dummyRun();
     } finally {
       // Check if dummyRun called only once
-      Assert.assertEquals(handler.invocations, 1);
+      assertThat(handler.invocations).isOne();
       Client.setCallIdAndRetryCount(0, 0, null);
       client.stop();
       server.stop();
@@ -1455,7 +1508,8 @@ public class TestIPC {
   @Test
   public void testClientGetTimeout() throws IOException {
     Configuration config = new Configuration();
-    assertEquals(Client.getTimeout(config), -1);
+    config.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 0);
+    assertThat(Client.getTimeout(config)).isEqualTo(-1);
   }
 
   @Test(timeout=60000)
@@ -1584,8 +1638,8 @@ public class TestIPC {
     } catch (IOException ioe) {
       Assert.assertNotNull(ioe);
       Assert.assertEquals(RpcException.class, ioe.getClass());
-      Assert.assertEquals("RPC response exceeds maximum data length",
-          ioe.getMessage());
+      Assert.assertTrue(ioe.getMessage().contains(
+          "exceeds maximum data length"));
       return;
     }
     Assert.fail("didn't get limit exceeded");

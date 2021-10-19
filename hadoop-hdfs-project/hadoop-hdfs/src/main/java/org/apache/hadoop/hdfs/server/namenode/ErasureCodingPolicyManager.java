@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -343,6 +343,7 @@ public final class ErasureCodingPolicyManager {
         policiesByName.values().toArray(new ErasureCodingPolicyInfo[0]);
     allPersistedPolicies.put(policy.getId(),
         new ErasureCodingPolicyInfo(policy));
+    LOG.info("Added erasure coding policy " + policy);
     return policy;
   }
 
@@ -414,7 +415,7 @@ public final class ErasureCodingPolicyManager {
       enabledPolicies =
           enabledPoliciesByName.values().toArray(new ErasureCodingPolicy[0]);
       info.setState(ErasureCodingPolicyState.DISABLED);
-      LOG.info("Disable the erasure coding policy " + name);
+      LOG.info("Disabled the erasure coding policy " + name);
       allPersistedPolicies.put(info.getPolicy().getId(),
           createPolicyInfo(info.getPolicy(),
               ErasureCodingPolicyState.DISABLED));
@@ -448,7 +449,7 @@ public final class ErasureCodingPolicyManager {
         enabledPoliciesByName.values().toArray(new ErasureCodingPolicy[0]);
     allPersistedPolicies.put(ecPolicy.getId(),
         createPolicyInfo(info.getPolicy(), ErasureCodingPolicyState.ENABLED));
-    LOG.info("Enable the erasure coding policy " + name);
+    LOG.info("Enabled the erasure coding policy " + name);
     return true;
   }
 

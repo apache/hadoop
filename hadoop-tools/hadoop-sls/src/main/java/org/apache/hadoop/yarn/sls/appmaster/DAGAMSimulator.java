@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.yarn.sls.appmaster;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -189,7 +189,8 @@ public class DAGAMSimulator extends AMSimulator {
               appId, container.getId());
           assignedContainers.put(container.getId(), cs);
           se.getNmMap().get(container.getNodeId())
-              .addNewContainer(container, cs.getLifeTime());
+              .addNewContainer(container, cs.getLifeTime(), appId);
+          getRanNodes().add(container.getNodeId());
         }
       }
     }

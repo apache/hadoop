@@ -48,7 +48,7 @@ export default BaseUsageDonutChart.extend({
 
     usageByApps.push({
       label: "Available",
-      value: avail.toFixed(4)
+      value: avail.toFixed(2)
     });
 
     this.colors = ColorUtils.getColors(usageByApps.length, ["others", "good"], true);

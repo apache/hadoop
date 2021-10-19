@@ -30,6 +30,7 @@ public class NodeLabelInfo {
 
   private String name;
   private boolean exclusivity;
+  private PartitionInfo partitionInfo;
 
   public NodeLabelInfo() {
     // JAXB needs this
@@ -50,12 +51,21 @@ public class NodeLabelInfo {
     this.exclusivity = label.isExclusive();
   }
 
+  public NodeLabelInfo(NodeLabel label, PartitionInfo partitionInfo) {
+    this(label);
+    this.partitionInfo = partitionInfo;
+  }
+
   public String getName() {
     return name;
   }
 
   public boolean getExclusivity() {
     return exclusivity;
+  }
+
+  public PartitionInfo getPartitionInfo() {
+    return partitionInfo;
   }
 
   @Override

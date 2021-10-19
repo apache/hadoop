@@ -14,41 +14,52 @@
 
 # S3Guard: Consistency and Metadata Caching for S3A
 
-**Experimental Feature**
-
 <!-- MACRO{toc|fromDepth=0|toDepth=5} -->
 
 ## Overview
 
-*S3Guard* is an experimental feature for the S3A client of the S3 object store,
+*S3Guard* is a feature for the S3A client of the S3 object store,
 which can use a (consistent) database as the store of metadata about objects
 in an S3 bucket.
 
+It was written been 2016 and 2020, *when Amazon S3 was eventually consistent.*
+It compensated for the following S3 inconsistencies: 
+* Newly created objects excluded from directory listings.
+* Newly deleted objects retained in directory listings.
+* Deleted objects still visible in existence probes and opening for reading.
+* S3 Load balancer 404 caching when a probe is made for an object before its creation.
+
+It did not compensate for update inconsistency, though by storing the etag
+values of objects in the database, it could detect and report problems.
+
+Now that S3 is consistent, there is no need for S3Guard at all.
+
 S3Guard
 
-1. May improve performance on directory listing/scanning operations,
+1. Permitted a consistent view of the object store.
+
+1. Could improve performance on directory listing/scanning operations.
 including those which take place during the partitioning period of query
 execution, the process where files are listed and the work divided up amongst
 processes.
 
-1. Permits a consistent view of the object store. Without this, changes in
-objects may not be immediately visible, especially in listing operations.
 
-1. Offers a platform for future performance improvements for running Hadoop
-workloads on top of object stores
 
-The basic idea is that, for each operation in the Hadoop S3 client (s3a) that
+The basic idea was that, for each operation in the Hadoop S3 client (s3a) that
 reads or modifies metadata, a shadow copy of that metadata is stored in a
-separate MetadataStore implementation.  Each MetadataStore implementation
-offers HDFS-like consistency for the metadata, and may also provide faster
-lookups for things like file status or directory listings.
+separate MetadataStore implementation. The store was 
+1. Updated after mutating operations on the store
+1. Updated after list operations against S3 discovered changes
+1. Looked up whenever a probe was made for a file/directory existing.
+1. Queried for all objects under a path when a directory listing was made; the results were
+   merged with the S3 listing in a non-authoritative path, used exclusively in
+   authoritative mode.
+ 
 
 For links to early design documents and related patches, see
 [HADOOP-13345](https://issues.apache.org/jira/browse/HADOOP-13345).
 
 *Important*
-
-* S3Guard is experimental and should be considered unstable.
 
 * While all underlying data is persisted in S3, if, for some reason,
 the S3Guard-cached metadata becomes inconsistent with that in S3,
@@ -59,9 +70,38 @@ It is essential for all clients writing to an S3Guard-enabled
 S3 Repository to use the feature. Clients reading the data may work directly
 with the S3A data, in which case the normal S3 consistency guarantees apply.
 
+## Moving off S3Guard
+
+How to move off S3Guard, given it is no longer needed.
+
+1. Unset the option `fs.s3a.metadatastore.impl` globally/for all buckets for which it
+   was selected.
+1. If the option `org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level` has been changed from
+the default (`SILENT`), change it back. You no longer need to be warned that S3Guard is disabled.
+1. Restart all applications.
+
+Once you are confident that all applications have been restarted, _Delete the DynamoDB table_.
+This is to avoid paying for a database you no longer need.
+This is best done from the AWS GUI.
 
 ## Setting up S3Guard
 
+### S3A to warn or fail if S3Guard is disabled
+A seemingly recurrent problem with S3Guard is that people think S3Guard is
+turned on but it isn't.
+You can set `org.apache.hadoop.fs.s3a.s3guard.disabled.warn.level`
+to avoid this. The property sets what to do when an S3A FS is instantiated
+without S3Guard. The following values are available:
+
+* `SILENT`: Do nothing.
+* `INFORM`: Log at info level that FS is instantiated without S3Guard.
+* `WARN`: Warn that data may be at risk in workflows.
+* `FAIL`: S3AFileSystem instantiation will fail.
+
+The default setting is `SILENT`. The setting is case insensitive.
+The required level can be set in the `core-site.xml`.
+
+---
 The latest configuration parameters are defined in `core-default.xml`.  You
 should consult that file for full information, but a summary is provided here.
 
@@ -101,7 +141,19 @@ Currently the only Metadata Store-independent setting, besides the
 implementation class above, are the *allow authoritative* and *fail-on-error*
 flags.
 
-#### Allow Authoritative
+#### <a name="authoritative"></a>  Authoritative S3Guard
+
+Authoritative S3Guard is a complicated configuration which delivers performance
+at the expense of being unsafe for other applications to use the same directory
+tree/bucket unless configured consistently.
+
+It can also be used to support [directory marker retention](directory_markers.html)
+in higher-performance but non-backwards-compatible modes.
+
+Most deployments do not use this setting -it is ony used in deployments where
+specific parts of a bucket (e.g. Apache Hive managed tables) are known to
+have exclusive access by a single application (Hive) and other tools/applications
+from exactly the same Hadoop release.
 
 The _authoritative_ expression in S3Guard is present in two different layers, for
 two different reasons:
@@ -119,6 +171,8 @@ two different reasons:
     * All interactions with the S3 bucket(s) must be through S3A clients sharing
     the same metadata store.
     * This is independent from which metadata store implementation is used.
+    * In authoritative mode the metadata TTL metadata expiry is not effective.
+    This means that the metadata entries won't expire on authoritative paths.
 
 * Authoritative directory listings (isAuthoritative bit)
     * Tells if the stored directory listing metadata is complete.
@@ -165,7 +219,6 @@ recommended that you leave the default setting here:
 </property>
 ```
 
-Setting this to `true` is currently an experimental feature.
 Note that a MetadataStore MAY persist this bit in the directory listings. (Not
 MUST).
 
@@ -177,10 +230,14 @@ In particular: **If the Metadata Store is declared as authoritative,
 all interactions with the S3 bucket(s) must be through S3A clients sharing
 the same Metadata Store**
 
-It can be configured how long a directory listing in the MetadataStore is
-considered as authoritative. If `((lastUpdated + ttl) <= now)` is false, the
-directory  listing is no longer considered authoritative, so the flag will be
-removed on `S3AFileSystem` level.
+#### TTL metadata expiry
+
+It can be configured how long an entry is valid in the MetadataStore
+**if the authoritative mode is turned off**, or the path is not
+configured to be authoritative.
+If `((lastUpdated + ttl) <= now)` is false for an entry, the entry will
+be expired, so the S3 bucket will be queried for fresh metadata.
+The time for expiry of metadata can be set as the following:
 
 ```xml
 <property>
@@ -205,7 +262,7 @@ hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
 ```
 
 Programmatic retries of the original operation would require overwrite=true.
-Suppose the original operation was FileSystem.create(myFile, overwrite=false).
+Suppose the original operation was `FileSystem.create(myFile, overwrite=false)`.
 If this operation failed with `MetadataPersistenceException` a repeat of the
 same operation would result in `FileAlreadyExistsException` since the original
 operation successfully created the file in S3 and only failed in writing the
@@ -222,7 +279,7 @@ by setting the following configuration:
 ```
 
 Setting this false is dangerous as it could result in the type of issue S3Guard
-is designed to avoid.  For example, a reader may see an inconsistent listing
+is designed to avoid. For example, a reader may see an inconsistent listing
 after a recent write since S3Guard may not contain metadata about the recently
 written file due to a metadata write error.
 
@@ -401,6 +458,39 @@ This is the default, as configured in the default configuration options.
 </property>
 ```
 
+### 8.  If creating a table: Enable server side encryption (SSE)
+
+Encryption at rest can help you protect sensitive data in your DynamoDB table.
+When creating a new table, you can set server side encryption on the table
+using the default AWS owned customer master key (CMK), AWS managed CMK, or
+customer managed CMK. S3Guard code accessing the table is all the same whether
+SSE is enabled or not. For more details on DynamoDB table server side
+encryption, see the AWS page on [Encryption at Rest: How It Works](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/encryption.howitworks.html).
+
+These are the default configuration options, as configured in `core-default.xml`.
+
+```xml
+<property>
+  <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
+  <value>false</value>
+  <description>
+    Whether server-side encryption (SSE) is enabled or disabled on the table.
+    By default it's disabled, meaning SSE is set to AWS owned CMK.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
+  <value/>
+  <description>
+    The KMS Customer Master Key (CMK) used for the KMS encryption on the table.
+    To specify a CMK, this config value can be its key ID, Amazon Resource Name
+    (ARN), alias name, or alias ARN. Users only need to provide this config if
+    the key is different from the default DynamoDB KMS Master Key, which is
+    alias/aws/dynamodb.
+  </description>
+</property>
+```
 
 ## Authenticating with S3Guard
 
@@ -561,12 +651,23 @@ of the table.
 [-write PROVISIONED_WRITES] [-read PROVISIONED_READS]
 ```
 
+Server side encryption (SSE) can be enabled with AWS managed customer master key
+(CMK), or customer managed CMK. By default the DynamoDB table will be encrypted
+with AWS owned CMK. To use a customer managed CMK, you can specify its KMS key
+ID, ARN, alias name, or alias ARN. If not specified, the default AWS managed CMK
+for DynamoDB "alias/aws/dynamodb" will be used.
+
+```bash
+[-sse [-cmk KMS_CMK_ID]]
+```
+
 Tag argument can be added with a key=value list of tags. The table for the
 metadata store will be created with these tags in DynamoDB.
 
 ```bash
 [-tag key=value;]
 ```
+
 
 Example 1
 
@@ -586,6 +687,7 @@ hadoop s3guard init -meta dynamodb://ireland-team -region eu-west-1 --read 0 --w
 
 Creates a table "ireland-team" in the region "eu-west-1.amazonaws.com"
 
+
 Example 3
 
 ```bash
@@ -597,23 +699,78 @@ write capacity will be those of the site configuration's values of
 `fs.s3a.s3guard.ddb.table.capacity.read` and `fs.s3a.s3guard.ddb.table.capacity.write`;
 if these are both zero then it will be an on-demand table.
 
+
+Example 4
+
+```bash
+hadoop s3guard init -meta dynamodb://ireland-team -sse
+```
+
+Creates a table "ireland-team" with server side encryption enabled. The CMK will
+be using the default AWS managed "alias/aws/dynamodb".
+
+
 ### Import a bucket: `s3guard import`
 
 ```bash
-hadoop s3guard import [-meta URI] s3a://BUCKET
+hadoop s3guard import [-meta URI] [-authoritative] [-verbose] s3a://PATH
 ```
 
 Pre-populates a metadata store according to the current contents of an S3
-bucket. If the `-meta` option is omitted, the binding information is taken
+bucket/path. If the `-meta` option is omitted, the binding information is taken
 from the `core-site.xml` configuration.
 
+Usage
+
+```
+hadoop s3guard import
+
+import [OPTIONS] [s3a://PATH]
+    import metadata from existing S3 data
+
+Common options:
+  -authoritative - Mark imported directory data as authoritative.
+  -verbose - Verbose Output.
+  -meta URL - Metadata repository details (implementation-specific)
+
+Amazon DynamoDB-specific options:
+  -region REGION - Service region for connections
+
+  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.
+  Specifying both the -region option and an S3A path
+  is not supported.
+```
+
 Example
+
+Import all files and directories in a bucket into the S3Guard table.
 
 ```bash
 hadoop s3guard import s3a://ireland-1
 ```
 
-### Audit a table: `s3guard diff`
+Import a directory tree, marking directories as authoritative.
+
+```bash
+hadoop s3guard import -authoritative -verbose s3a://ireland-1/fork-0008
+
+2020-01-03 12:05:18,321 [main] INFO - Metadata store DynamoDBMetadataStore{region=eu-west-1,
+ tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+2020-01-03 12:05:18,324 [main] INFO - Starting: Importing s3a://ireland-1/fork-0008
+2020-01-03 12:05:18,324 [main] INFO - Importing directory s3a://ireland-1/fork-0008
+2020-01-03 12:05:18,537 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-false
+2020-01-03 12:05:18,630 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-true
+2020-01-03 12:05:19,142 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-0
+2020-01-03 12:05:19,191 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-1
+2020-01-03 12:05:19,240 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-0
+2020-01-03 12:05:19,289 [main] INFO - Dir  s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-1
+2020-01-03 12:05:19,314 [main] INFO - Updated S3Guard with 0 files and 6 directory entries
+2020-01-03 12:05:19,315 [main] INFO - Marking directory tree s3a://ireland-1/fork-0008 as authoritative
+2020-01-03 12:05:19,342 [main] INFO - Importing s3a://ireland-1/fork-0008: duration 0:01.018s
+Inserted 6 items into Metadata Store
+```
+
+### Compare a S3Guard table and the S3 Store: `s3guard diff`
 
 ```bash
 hadoop s3guard diff [-meta URI] s3a://BUCKET
@@ -834,9 +991,147 @@ the table associated with `s3a://ireland-1` and with the prefix `path_prefix`
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Delete all entries more than 90 minutes old from the table "`ireland-team"` in
+Delete all file entries more than 90 minutes old from the table "`ireland-team"` in
 the region `eu-west-1`.
 
+
+### Audit the "authoritative state of a DynamoDB Table, `s3guard authoritative`
+
+This recursively checks a S3Guard table to verify that all directories
+underneath are marked as "authoritative", and/or that the configuration
+is set for the S3A client to treat files and directories urnder the path
+as authoritative.
+
+```
+hadoop s3guard authoritative
+
+authoritative [OPTIONS] [s3a://PATH]
+    Audits a DynamoDB S3Guard repository for all the entries being 'authoritative'
+
+Options:
+  -required Require directories under the path to be authoritative.
+  -check-config Check the configuration for the path to be authoritative
+  -verbose Verbose Output.
+```
+
+Verify that a path under an object store is declared to be authoritative
+in the cluster configuration -and therefore that file entries will not be
+validated against S3, and that directories marked as "authoritative" in the
+S3Guard table will be treated as complete.
+
+```bash
+hadoop s3guard authoritative -check-config s3a:///ireland-1/fork-0003/test/
+
+2020-01-03 11:42:29,147 [main] INFO  Metadata store DynamoDBMetadataStore{
+  region=eu-west-1, tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+Path /fork-0003/test is not configured to be authoritative
+```
+
+Scan a store and report which directories are not marked as authoritative.
+
+```bash
+hadoop s3guard authoritative s3a://ireland-1/
+
+2020-01-03 11:51:58,416 [main] INFO  - Metadata store DynamoDBMetadataStore{region=eu-west-1, tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+2020-01-03 11:51:58,419 [main] INFO  - Starting: audit s3a://ireland-1/
+2020-01-03 11:51:58,422 [main] INFO  - Root directory s3a://ireland-1/
+2020-01-03 11:51:58,469 [main] INFO  -   files 4; directories 12
+2020-01-03 11:51:58,469 [main] INFO  - Directory s3a://ireland-1/Users
+2020-01-03 11:51:58,521 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,522 [main] INFO  - Directory s3a://ireland-1/fork-0007
+2020-01-03 11:51:58,573 [main] INFO  - Directory s3a://ireland-1/fork-0001
+2020-01-03 11:51:58,626 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,626 [main] INFO  - Directory s3a://ireland-1/fork-0006
+2020-01-03 11:51:58,676 [main] INFO  - Directory s3a://ireland-1/path
+2020-01-03 11:51:58,734 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,735 [main] INFO  - Directory s3a://ireland-1/fork-0008
+2020-01-03 11:51:58,802 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,802 [main] INFO  - Directory s3a://ireland-1/fork-0004
+2020-01-03 11:51:58,854 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,855 [main] WARN   - Directory s3a://ireland-1/fork-0003 is not authoritative
+2020-01-03 11:51:58,905 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:58,906 [main] INFO  - Directory s3a://ireland-1/fork-0005
+2020-01-03 11:51:58,955 [main] INFO  - Directory s3a://ireland-1/customsignerpath2
+2020-01-03 11:51:59,006 [main] INFO  - Directory s3a://ireland-1/fork-0002
+2020-01-03 11:51:59,063 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,064 [main] INFO  - Directory s3a://ireland-1/customsignerpath1
+2020-01-03 11:51:59,121 [main] INFO  - Directory s3a://ireland-1/Users/stevel
+2020-01-03 11:51:59,170 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,171 [main] INFO  - Directory s3a://ireland-1/fork-0001/test
+2020-01-03 11:51:59,233 [main] INFO  - Directory s3a://ireland-1/path/style
+2020-01-03 11:51:59,282 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,282 [main] INFO  - Directory s3a://ireland-1/fork-0008/test
+2020-01-03 11:51:59,338 [main] INFO  -   files 15; directories 10
+2020-01-03 11:51:59,339 [main] INFO  - Directory s3a://ireland-1/fork-0004/test
+2020-01-03 11:51:59,394 [main] WARN   - Directory s3a://ireland-1/fork-0003/test is not authoritative
+2020-01-03 11:51:59,451 [main] INFO  -   files 35; directories 1
+2020-01-03 11:51:59,451 [main] INFO  - Directory s3a://ireland-1/fork-0002/test
+2020-01-03 11:51:59,508 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects
+2020-01-03 11:51:59,558 [main] INFO  -   files 0; directories 1
+2020-01-03 11:51:59,559 [main] INFO  - Directory s3a://ireland-1/path/style/access
+2020-01-03 11:51:59,610 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-0-false
+2020-01-03 11:51:59,660 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-1-false
+2020-01-03 11:51:59,719 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-true
+2020-01-03 11:51:59,773 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true
+2020-01-03 11:51:59,824 [main] INFO  -   files 0; directories 2
+2020-01-03 11:51:59,824 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-1-true
+2020-01-03 11:51:59,879 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-1-false
+2020-01-03 11:51:59,939 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-0-false
+2020-01-03 11:51:59,990 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-2-0-true
+2020-01-03 11:52:00,042 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false
+2020-01-03 11:52:00,094 [main] INFO  -   files 0; directories 2
+2020-01-03 11:52:00,094 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-0-0-1-true
+2020-01-03 11:52:00,144 [main] WARN   - Directory s3a://ireland-1/fork-0003/test/ancestor is not authoritative
+2020-01-03 11:52:00,197 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk
+2020-01-03 11:52:00,245 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,245 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-0
+2020-01-03 11:52:00,296 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-true/dir-1
+2020-01-03 11:52:00,346 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-0
+2020-01-03 11:52:00,397 [main] INFO  - Directory s3a://ireland-1/fork-0008/test/doTestListFiles-2-0-0-false/dir-1
+2020-01-03 11:52:00,479 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools
+2020-01-03 11:52:00,530 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,530 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws
+2020-01-03 11:52:00,582 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,582 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target
+2020-01-03 11:52:00,636 [main] INFO  -   files 0; directories 1
+2020-01-03 11:52:00,637 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir
+2020-01-03 11:52:00,691 [main] INFO  -   files 0; directories 3
+2020-01-03 11:52:00,691 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/2
+2020-01-03 11:52:00,752 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/5
+2020-01-03 11:52:00,807 [main] INFO  - Directory s3a://ireland-1/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/8
+2020-01-03 11:52:00,862 [main] INFO   - Scanned 45 directories - 3 were not marked as authoritative
+2020-01-03 11:52:00,863 [main] INFO  - audit s3a://ireland-1/: duration 0:02.444s
+```
+
+Scan the path/bucket and fail if any entry is non-authoritative.
+
+```bash
+hadoop s3guard authoritative -verbose -required s3a://ireland-1/
+
+2020-01-03 11:47:40,288 [main] INFO  - Metadata store DynamoDBMetadataStore{region=eu-west-1, tableName=s3guard-metadata, tableArn=arn:aws:dynamodb:eu-west-1:980678866538:table/s3guard-metadata} is initialized.
+2020-01-03 11:47:40,291 [main] INFO  - Starting: audit s3a://ireland-1/
+2020-01-03 11:47:40,295 [main] INFO  - Root directory s3a://ireland-1/
+2020-01-03 11:47:40,336 [main] INFO  -  files 4; directories 12
+2020-01-03 11:47:40,336 [main] INFO  - Directory s3a://ireland-1/Users
+2020-01-03 11:47:40,386 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,386 [main] INFO  - Directory s3a://ireland-1/fork-0007
+2020-01-03 11:47:40,435 [main] INFO  -  files 1; directories 0
+2020-01-03 11:47:40,435 [main] INFO  - Directory s3a://ireland-1/fork-0001
+2020-01-03 11:47:40,486 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,486 [main] INFO  - Directory s3a://ireland-1/fork-0006
+2020-01-03 11:47:40,534 [main] INFO  -  files 1; directories 0
+2020-01-03 11:47:40,535 [main] INFO  - Directory s3a://ireland-1/path
+2020-01-03 11:47:40,587 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,588 [main] INFO  - Directory s3a://ireland-1/fork-0008
+2020-01-03 11:47:40,641 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,642 [main] INFO  - Directory s3a://ireland-1/fork-0004
+2020-01-03 11:47:40,692 [main] INFO  -  files 0; directories 1
+2020-01-03 11:47:40,693 [main] WARN  - Directory s3a://ireland-1/fork-0003 is not authoritative
+2020-01-03 11:47:40,693 [main] INFO  - audit s3a://ireland-1/: duration 0:00.402s
+2020-01-03 11:47:40,698 [main] INFO  - Exiting with status 46: `s3a://ireland-1/fork-0003': Directory is not marked as authoritative in the S3Guard store
+```
+
+This command is primarily for testing.
 
 ### Tune the I/O capacity of the DynamoDB Table, `s3guard set-capacity`
 
@@ -901,9 +1196,52 @@ Metadata Store Diagnostics:
   table={ ... }
   write-capacity=20
 ```
-
 *Note*: There is a limit to how many times in a 24 hour period the capacity
 of a bucket can be changed, either through this command or the AWS console.
+
+### Check the consistency of the metadata store, `s3guard fsck`
+
+Compares S3 with MetadataStore, and returns a failure status if any
+rules or invariants are violated. Only works with DynamoDB metadata stores.
+
+```bash
+hadoop s3guard fsck [-check | -internal] [-fix] (s3a://BUCKET | s3a://PATH_PREFIX)
+```
+
+`-check` operation checks the metadata store from the S3 perspective, but
+does not fix any issues.
+The consistency issues will be logged in ERROR loglevel.
+
+`-internal` operation checks the internal consistency of the metadata store,
+but does not fix any issues.
+
+`-fix` operation fixes consistency issues between the metadatastore and the S3
+bucket. This parameter is optional, and can be used together with check or
+internal parameters, but not alone.
+The following fix is implemented:
+- Remove orphan entries from DDB
+
+The errors found will be logged at the ERROR log level.
+
+*Note*: `-check` and `-internal` operations can be used only as separate
+commands. Running `fsck` with both will result in an error.
+
+Example
+
+```bash
+hadoop s3guard fsck -check s3a://ireland-1/path_prefix/
+```
+
+Checks the metadata store while iterating through the S3 bucket.
+The path_prefix will be used as the root element of the check.
+
+```bash
+hadoop s3guard fsck -internal s3a://ireland-1/path_prefix/
+```
+
+Checks the metadata store internal consistency.
+The path_prefix will be used as the root element of the check.
+
 
 ## Debugging and Error Handling
 
@@ -938,6 +1276,35 @@ Deleting the metadata store table will simply result in a period of eventual
 consistency for any file modifications that were made right before the table
 was deleted.
 
+### Enabling a log message whenever S3Guard is *disabled*
+
+When dealing with support calls related to the S3A connector, "is S3Guard on?"
+is the usual opening question. This can be determined by looking at the application logs for
+messages about S3Guard starting -the absence of S3Guard can only be inferred by the absence
+of such messages.
+
+There is a another strategy: have the S3A Connector log whenever *S3Guard is not enabled*
+
+This can be done in the configuration option `fs.s3a.s3guard.disabled.warn.level`
+
+```xml
+<property>
+ <name>fs.s3a.s3guard.disabled.warn.level</name>
+ <value>silent</value>
+ <description>
+   Level to print a message when S3Guard is disabled.
+   Values: 
+   "warn": log at WARN level
+   "inform": log at INFO level
+   "silent": log at DEBUG level
+   "fail": raise an exception
+ </description>
+</property>
+```
+
+The `fail` option is clearly more than logging; it exists as an extreme debugging
+tool. Use with care.
+
 ### Failure Semantics
 
 Operations which modify metadata will make changes to S3 first. If, and only
@@ -951,9 +1318,33 @@ logged.
 
 ### Versioning
 
-S3Guard tables are created with a version marker, an entry with the primary
-key and child entry of `../VERSION`; the use of a relative path guarantees
-that it will not be resolved.
+S3Guard tables are created with a version marker entry and table tag.
+The entry is created with the primary key and child entry of `../VERSION`; 
+the use of a relative path guarantees that it will not be resolved.
+Table tag key is named `s3guard_version`.
+
+When the table is initialized by S3Guard, the table will be tagged during the 
+creating and the version marker entry will be created in the table.
+If the table lacks the version marker entry or tag, S3Guard will try to create
+it according to the following rules:
+
+1. If the table lacks both version markers AND it's empty, both markers will be added. 
+If the table is not empty the check throws IOException
+1. If there's no version marker ITEM, the compatibility with the TAG
+will be checked, and the version marker ITEM will be added if the
+TAG version is compatible.
+If the TAG version is not compatible, the check throws OException
+1. If there's no version marker TAG, the compatibility with the ITEM
+version marker will be checked, and the version marker ITEM will be
+added if the ITEM version is compatible.
+If the ITEM version is not compatible, the check throws IOException
+1. If the TAG and ITEM versions are both present then both will be checked
+for compatibility. If the ITEM or TAG version marker is not compatible,
+the check throws IOException
+
+*Note*: If the user does not have sufficient rights to tag the table the 
+initialization of S3Guard will not fail, but there will be no version marker tag
+on the dynamo table.
 
 *Versioning policy*
 

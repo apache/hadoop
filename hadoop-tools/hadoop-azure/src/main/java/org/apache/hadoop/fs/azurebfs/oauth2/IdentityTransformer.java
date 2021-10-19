@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 /**
  * Perform transformation for Azure Active Directory identities used in owner, group and acls.
  */
-public class IdentityTransformer {
+public class IdentityTransformer implements IdentityTransformerInterface {
   private static final Logger LOG = LoggerFactory.getLogger(IdentityTransformer.class);
 
   private boolean isSecure;
@@ -100,7 +100,8 @@ public class IdentityTransformer {
    * @param localIdentity the local user or group, should be parsed from UserGroupInformation.
    * @return owner or group after transformation.
    * */
-  public String transformIdentityForGetRequest(String originalIdentity, boolean isUserName, String localIdentity) {
+  public String transformIdentityForGetRequest(String originalIdentity, boolean isUserName, String localIdentity)
+      throws IOException {
     if (originalIdentity == null) {
       originalIdentity = localIdentity;
       // localIdentity might be a full name, so continue the transformation.
@@ -198,7 +199,7 @@ public class IdentityTransformer {
       if (isInSubstitutionList(name)) {
         transformedName = servicePrincipalId;
       } else if (aclEntry.getType().equals(AclEntryType.USER) // case 2: when the owner is a short name
-              && shouldUseFullyQualifiedUserName(name)) {     //         of the user principal name (UPN).
+          && shouldUseFullyQualifiedUserName(name)) {     //         of the user principal name (UPN).
         // Notice: for group type ACL entry, if name is shortName.
         //         It won't be converted to Full Name. This is
         //         to make the behavior consistent with HDI.
@@ -242,7 +243,8 @@ public class IdentityTransformer {
    * @param localUser local user name
    * @param localGroup local primary group
    * */
-  public void transformAclEntriesForGetRequest(final List<AclEntry> aclEntries, String localUser, String localGroup) {
+  public void transformAclEntriesForGetRequest(final List<AclEntry> aclEntries, String localUser, String localGroup)
+      throws IOException {
     if (skipUserIdentityReplacement) {
       return;
     }

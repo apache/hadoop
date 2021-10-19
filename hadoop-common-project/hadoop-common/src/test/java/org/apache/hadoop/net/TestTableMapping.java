@@ -21,8 +21,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_TA
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.IOException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;

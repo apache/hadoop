@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStoreTableManager.translateTableWaitFailure;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.translateTableWaitFailure;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**

@@ -29,7 +29,9 @@
 #include "bad_datanode_tracker.h"
 #include "ClientNamenodeProtocol.pb.h"
 
+#include <memory>
 #include <mutex>
+#include <string>
 
 namespace hdfs {
 
@@ -51,10 +53,11 @@ public:
   MEMCHECKED_CLASS(FileHandleImpl)
   FileHandleImpl(const std::string & cluster_name,
                  const std::string & path,
-                 std::shared_ptr<IoService> io_service, const std::string &client_name,
-                  const std::shared_ptr<const struct FileInfo> file_info,
-                  std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
-                  std::shared_ptr<LibhdfsEvents> event_handlers);
+                 std::shared_ptr<IoService> io_service,
+                 const std::shared_ptr<std::string> &client_name,
+                 const std::shared_ptr<const struct FileInfo> file_info,
+                 std::shared_ptr<BadDataNodeTracker> bad_data_nodes,
+                 std::shared_ptr<LibhdfsEvents> event_handlers);
 
   /*
    * Reads the file at the specified offset into the buffer.
@@ -129,7 +132,7 @@ private:
   const std::string cluster_name_;
   const std::string path_;
   std::shared_ptr<IoService> io_service_;
-  const std::string client_name_;
+  const std::shared_ptr<std::string> client_name_;
   const std::shared_ptr<const struct FileInfo> file_info_;
   std::shared_ptr<BadDataNodeTracker> bad_node_tracker_;
   bool CheckSeekBounds(ssize_t desired_position);

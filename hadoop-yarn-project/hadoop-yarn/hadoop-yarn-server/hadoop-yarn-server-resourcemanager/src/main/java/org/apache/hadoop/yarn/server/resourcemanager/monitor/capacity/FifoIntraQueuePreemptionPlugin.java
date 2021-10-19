@@ -288,8 +288,9 @@ public class FifoIntraQueuePreemptionPlugin
 
       // Once unallocated resource is 0, we can stop assigning ideal per app.
       if (Resources.lessThanOrEqual(rc, clusterResource,
-          queueReassignableResource, Resources.none()) || rc
-          .isAnyMajorResourceZeroOrNegative(queueReassignableResource)) {
+          queueReassignableResource, Resources.none()) ||
+          (rc.isAnyMajorResourceZeroOrNegative(queueReassignableResource)
+              && context.getInQueuePreemptionConservativeDRF())) {
         continue;
       }
 
@@ -607,8 +608,10 @@ public class FifoIntraQueuePreemptionPlugin
     // might be due to high priority apps running in same user.
     String partition = context.getScheduler()
         .getSchedulerNode(c.getAllocatedNode()).getPartition();
-    TempQueuePerPartition tq = context.getQueueByPartition(app.getQueueName(),
-        partition);
+    String queuePath =
+        context.getScheduler().getQueue(app.getQueueName()).getQueuePath();
+    TempQueuePerPartition tq =
+        context.getQueueByPartition(queuePath, partition);
     TempUserPerPartition tmpUser = tq.getUsersPerPartition().get(app.getUser());
 
     // Given user is not present, skip the check.

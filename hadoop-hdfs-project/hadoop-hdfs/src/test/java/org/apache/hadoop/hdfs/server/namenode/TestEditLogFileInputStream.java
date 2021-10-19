@@ -33,7 +33,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.EnumMap;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;

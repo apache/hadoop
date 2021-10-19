@@ -23,8 +23,8 @@
 #include "common/continuation/asio.h"
 #include "common/continuation/protobuf.h"
 
-#include <asio/read.hpp>
-#include <asio/buffer.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/buffer.hpp>
 
 namespace hdfs {
 
@@ -101,7 +101,7 @@ void DataTransferSaslStream<Stream>::Handshake(const Handler &next) {
   using ::hdfs::continuation::WriteDelimitedPBMessage;
 
   static const int kMagicNumber = htonl(kDataTransferSasl);
-  static const asio::const_buffers_1 kMagicNumberBuffer = asio::buffer(
+  static const boost::asio::const_buffers_1 kMagicNumberBuffer = boost::asio::buffer(
       reinterpret_cast<const char *>(kMagicNumber), sizeof(kMagicNumber));
 
   struct State {

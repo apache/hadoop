@@ -19,12 +19,12 @@ package org.apache.hadoop.fs.sftp;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.SftpATTRS;
@@ -51,6 +51,7 @@ public class SFTPFileSystem extends FileSystem {
 
   private SFTPConnectionPool connectionPool;
   private URI uri;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private static final int DEFAULT_SFTP_PORT = 22;
   private static final int DEFAULT_MAX_CONNECTION = 5;
@@ -84,6 +85,7 @@ public class SFTPFileSystem extends FileSystem {
       "Destination path %s already exist, cannot rename!";
   public static final String E_FAILED_GETHOME = "Failed to get home directory";
   public static final String E_FAILED_DISCONNECT = "Failed to disconnect";
+  public static final String E_FS_CLOSED = "FileSystem is closed!";
 
   /**
    * Set configuration from UI.
@@ -139,8 +141,9 @@ public class SFTPFileSystem extends FileSystem {
    * @throws IOException
    */
   private ChannelSftp connect() throws IOException {
-    Configuration conf = getConf();
+    checkNotClosed();
 
+    Configuration conf = getConf();
     String host = conf.get(FS_SFTP_HOST, null);
     int port = conf.getInt(FS_SFTP_HOST_PORT, DEFAULT_SFTP_PORT);
     String user = conf.get(FS_SFTP_USER_PREFIX + host, null);
@@ -516,20 +519,21 @@ public class SFTPFileSystem extends FileSystem {
       disconnect(channel);
       throw new IOException(String.format(E_PATH_DIR, f));
     }
-    InputStream is;
     try {
       // the path could be a symbolic link, so get the real path
       absolute = new Path("/", channel.realpath(absolute.toUri().getPath()));
-
-      is = channel.get(absolute.toUri().getPath());
     } catch (SftpException e) {
       throw new IOException(e);
     }
-    return new FSDataInputStream(new SFTPInputStream(is, statistics)){
+    return new FSDataInputStream(
+        new SFTPInputStream(channel, absolute, statistics)){
       @Override
       public void close() throws IOException {
-        super.close();
-        disconnect(channel);
+        try {
+          super.close();
+        } finally {
+          disconnect(channel);
+        }
       }
     };
   }
@@ -700,6 +704,31 @@ public class SFTPFileSystem extends FileSystem {
       return status;
     } finally {
       disconnect(channel);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (closed.getAndSet(true)) {
+      return;
+    }
+    try {
+      super.close();
+    } finally {
+      if (connectionPool != null) {
+        connectionPool.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Verify that the input stream is open. Non blocking; this gives
+   * the last state of the volatile {@link #closed} field.
+   * @throws IOException if the connection is closed.
+   */
+  private void checkNotClosed() throws IOException {
+    if (closed.get()) {
+      throw new IOException(uri + ": " + E_FS_CLOSED);
     }
   }
 

@@ -28,14 +28,14 @@ import org.apache.hadoop.ha.ZKFCProtocol;
 import org.apache.hadoop.ha.proto.ZKFCProtocolProtos.CedeActiveRequestProto;
 import org.apache.hadoop.ha.proto.ZKFCProtocolProtos.GracefulFailoverRequestProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 
 public class ZKFCProtocolClientSideTranslatorPB implements
@@ -48,7 +48,7 @@ public class ZKFCProtocolClientSideTranslatorPB implements
       InetSocketAddress addr, Configuration conf,
       SocketFactory socketFactory, int timeout) throws IOException {
     RPC.setProtocolEngine(conf, ZKFCProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     rpcProxy = RPC.getProxy(ZKFCProtocolPB.class,
         RPC.getProtocolVersion(ZKFCProtocolPB.class), addr,
         UserGroupInformation.getCurrentUser(), conf, socketFactory, timeout);

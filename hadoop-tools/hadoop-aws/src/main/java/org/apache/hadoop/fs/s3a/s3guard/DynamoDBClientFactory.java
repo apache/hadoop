@@ -25,7 +25,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
@@ -80,7 +81,8 @@ public interface DynamoDBClientFactory extends Configurable {
           "Should have been configured before usage");
 
       final Configuration conf = getConf();
-      final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket);
+      final ClientConfiguration awsConf = S3AUtils
+          .createAwsConf(conf, bucket, Constants.AWS_SERVICE_IDENTIFIER_DDB);
 
       final String region = getRegion(conf, defaultRegion);
       LOG.debug("Creating DynamoDB client in region {}", region);

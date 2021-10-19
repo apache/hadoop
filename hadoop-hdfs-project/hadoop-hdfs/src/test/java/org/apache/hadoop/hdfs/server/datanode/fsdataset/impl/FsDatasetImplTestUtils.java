@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.io.FileExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeRef
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -434,7 +434,7 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
   @Override
   public Iterator<Replica> getStoredReplicas(String bpid) throws IOException {
     // Reload replicas from the disk.
-    ReplicaMap replicaMap = new ReplicaMap(dataset.datasetLock);
+    ReplicaMap replicaMap = new ReplicaMap(dataset.datasetRWLock);
     try (FsVolumeReferences refs = dataset.getFsVolumeReferences()) {
       for (FsVolumeSpi vol : refs) {
         FsVolumeImpl volume = (FsVolumeImpl) vol;
@@ -500,7 +500,6 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
    * @param level the level to set
    */
   public static void setFsDatasetImplLogLevel(Level level) {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG,
-        org.slf4j.event.Level.valueOf(level.toString()));
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, level);
   }
 }

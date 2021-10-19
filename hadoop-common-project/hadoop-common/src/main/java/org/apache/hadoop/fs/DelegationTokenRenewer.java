@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -97,7 +97,7 @@ public class DelegationTokenRenewer
     public boolean equals(final Object that) {
       if (this == that) {
         return true;
-      } else if (that == null || !(that instanceof RenewAction)) {
+      } else if (!(that instanceof RenewAction)) {
         return false;
       }
       return token.equals(((RenewAction<?>)that).token);
@@ -107,7 +107,7 @@ public class DelegationTokenRenewer
      * Set a new time for the renewal.
      * It can only be called when the action is not in the queue or any
      * collection because the hashCode may change
-     * @param newTime the new time
+     * @param delay the renewal time
      */
     private void updateRenewalTime(long delay) {
       renewalTime = Time.now() + delay - delay/10;
@@ -223,7 +223,7 @@ public class DelegationTokenRenewer
     if (action.token != null) {
       queue.add(action);
     } else {
-      fs.LOG.error("does not have a token for renewal");
+      FileSystem.LOG.error("does not have a token for renewal");
     }
     return action;
   }
@@ -247,7 +247,6 @@ public class DelegationTokenRenewer
     }
   }
 
-  @SuppressWarnings("static-access")
   @Override
   public void run() {
     for(;;) {
@@ -260,8 +259,7 @@ public class DelegationTokenRenewer
       } catch (InterruptedException ie) {
         return;
       } catch (Exception ie) {
-        action.weakFs.get().LOG.warn("Failed to renew token, action=" + action,
-            ie);
+        FileSystem.LOG.warn("Failed to renew token, action=" + action, ie);
       }
     }
   }

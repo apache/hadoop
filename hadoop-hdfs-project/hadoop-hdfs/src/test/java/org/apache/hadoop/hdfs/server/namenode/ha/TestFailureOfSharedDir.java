@@ -45,7 +45,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 public class TestFailureOfSharedDir {
 

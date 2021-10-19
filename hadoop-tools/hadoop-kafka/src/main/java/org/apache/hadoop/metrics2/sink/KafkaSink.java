@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.sink;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.commons.configuration2.SubsetConfiguration;

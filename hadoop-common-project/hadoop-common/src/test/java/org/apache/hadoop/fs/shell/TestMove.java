@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.shell.CommandFormat.UnknownOptionException;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -92,6 +93,12 @@ public class TestMove {
     // make sure command failed with the proper exception
     assertTrue("Rename should have failed with path exists exception",
                          cmd.error instanceof PathExistsException);
+  }
+
+  @Test(expected = UnknownOptionException.class)
+  public void testMoveFromLocalDoesNotAllowTOption() {
+    new MoveCommands.MoveFromLocal().run("-t", "2",
+        null, null);
   }
     
   static class MockFileSystem extends FilterFileSystem {

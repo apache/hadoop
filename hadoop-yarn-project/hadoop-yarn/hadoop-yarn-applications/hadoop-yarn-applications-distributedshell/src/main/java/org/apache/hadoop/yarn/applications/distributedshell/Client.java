@@ -32,8 +32,9 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -41,7 +42,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,7 +97,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,6 +143,9 @@ public class Client {
   private static final int DEFAULT_AM_VCORES = 1;
   private static final int DEFAULT_CONTAINER_MEMORY = 10;
   private static final int DEFAULT_CONTAINER_VCORES = 1;
+
+  // check the application once per second.
+  private static final int APP_MONITOR_INTERVAL = 1000;
   
   // Configuration
   private Configuration conf;
@@ -209,7 +212,7 @@ public class Client {
   private String rollingFilesPattern = "";
 
   // Start time for client
-  private final long clientStartTime = System.currentTimeMillis();
+  private long clientStartTime = System.currentTimeMillis();
   // Timeout threshold for client. Kill app after time interval expires.
   private long clientTimeout = 600000;
 
@@ -249,6 +252,10 @@ public class Client {
 
   // Command line options
   private Options opts;
+
+  private final AtomicBoolean stopSignalReceived;
+  private final AtomicBoolean isRunning;
+  private final Object objectLock = new Object();
 
   private static final String shellCommandPath = "shellCommands";
   private static final String shellArgsPath = "shellArgs";
@@ -410,6 +417,8 @@ public class Client {
     opts.addOption("application_tags", true, "Application tags.");
     opts.addOption("localize_files", true, "List of files, separated by comma"
         + " to be localized for the command");
+    stopSignalReceived = new AtomicBoolean(false);
+    isRunning = new AtomicBoolean(false);
   }
 
   /**
@@ -667,9 +676,11 @@ public class Client {
    * @throws YarnException
    */
   public boolean run() throws IOException, YarnException {
-
     LOG.info("Running Client");
+    isRunning.set(true);
     yarnClient.start();
+    // set the client start time.
+    clientStartTime = System.currentTimeMillis();
 
     YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
     LOG.info("Got Cluster metric info from ASM" 
@@ -983,7 +994,6 @@ public class Client {
     if (keepContainers) {
       vargs.add("--keep_containers_across_application_attempts");
     }
-
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
       vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
     }
@@ -1110,13 +1120,24 @@ public class Client {
   private boolean monitorApplication(ApplicationId appId)
       throws YarnException, IOException {
 
-    while (true) {
-
+    boolean res = false;
+    boolean needForceKill = false;
+    while (isRunning.get()) {
       // Check app status every 1 second.
       try {
-        Thread.sleep(1000);
+        synchronized (objectLock) {
+          objectLock.wait(APP_MONITOR_INTERVAL);
+        }
+        needForceKill = stopSignalReceived.get();
       } catch (InterruptedException e) {
-        LOG.debug("Thread sleep in monitoring loop interrupted");
+        LOG.warn("Thread sleep in monitoring loop interrupted");
+        // if the application is to be killed when client times out;
+        // then set needForceKill to true
+        break;
+      } finally {
+        if (needForceKill) {
+          break;
+        }
       }
 
       // Get application report for the appId we are interested in 
@@ -1139,22 +1160,20 @@ public class Client {
       FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
       if (YarnApplicationState.FINISHED == state) {
         if (FinalApplicationStatus.SUCCEEDED == dsStatus) {
-          LOG.info("Application has completed successfully. Breaking monitoring loop");
-          return true;        
+          LOG.info("Application has completed successfully. "
+                  + "Breaking monitoring loop");
+          res = true;
+        } else {
+          LOG.info("Application did finished unsuccessfully. "
+                  + "YarnState={}, DSFinalStatus={}. Breaking monitoring loop",
+              state, dsStatus);
         }
-        else {
-          LOG.info("Application did finished unsuccessfully."
-              + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
-              + ". Breaking monitoring loop");
-          return false;
-        }
-      }
-      else if (YarnApplicationState.KILLED == state
+        break;
+      } else if (YarnApplicationState.KILLED == state
           || YarnApplicationState.FAILED == state) {
-        LOG.info("Application did not finish."
-            + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
-            + ". Breaking monitoring loop");
-        return false;
+        LOG.info("Application did not finish. YarnState={}, DSFinalStatus={}. "
+                + "Breaking monitoring loop", state, dsStatus);
+        break;
       }
 
       // The value equal or less than 0 means no timeout
@@ -1162,11 +1181,18 @@ public class Client {
           && System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
         LOG.info("Reached client specified timeout for application. " +
             "Killing application");
-        forceKillApplication(appId);
-        return false;
+        needForceKill = true;
+        break;
       }
     }
 
+    if (needForceKill) {
+      forceKillApplication(appId);
+    }
+
+    isRunning.set(false);
+
+    return res;
   }
 
   /**
@@ -1194,13 +1220,9 @@ public class Client {
     Path dst =
         new Path(fs.getHomeDirectory(), suffix);
     if (fileSrcPath == null) {
-      FSDataOutputStream ostream = null;
-      try {
-        ostream = FileSystem
-            .create(fs, dst, new FsPermission((short) 0710));
+      try (FSDataOutputStream ostream = FileSystem.create(fs, dst,
+          new FsPermission((short) 0710))) {
         ostream.writeUTF(resources);
-      } finally {
-        IOUtils.closeQuietly(ostream);
       }
     } else {
       fs.copyFromLocalFile(new Path(fileSrcPath), dst);
@@ -1376,5 +1398,30 @@ public class Client {
       resources.put(key, resourceValue);
     }
     return resources;
+  }
+
+  @VisibleForTesting
+  protected void sendStopSignal() {
+    LOG.info("Sending stop Signal to Client");
+    stopSignalReceived.set(true);
+    synchronized (objectLock) {
+      objectLock.notifyAll();
+    }
+    int waitCount = 0;
+    LOG.info("Waiting for Client to exit loop");
+    while (isRunning.get()) {
+      try {
+        Thread.sleep(50);
+      } catch (InterruptedException ie) {
+        // do nothing
+      } finally {
+        if (++waitCount > 2000) {
+          break;
+        }
+      }
+    }
+    LOG.info("Stopping yarnClient within the DS Client");
+    yarnClient.stop();
+    LOG.info("done stopping Client");
   }
 }

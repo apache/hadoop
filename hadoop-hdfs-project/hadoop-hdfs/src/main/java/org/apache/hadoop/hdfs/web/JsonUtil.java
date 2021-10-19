@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -37,10 +36,12 @@ import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.*;
@@ -157,7 +158,7 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> getEcPolicyAsMap(
+  public static Map<String, Object> getEcPolicyAsMap(
       final ErasureCodingPolicy ecPolicy) {
     /** Convert an ErasureCodingPolicy to a map. */
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -358,6 +359,11 @@ public class JsonUtil {
     // For ContentSummary we don't need this since we already have
     // separate count for file and directory.
     m.putAll(toJsonMap(contentsummary, false));
+    m.put("snapshotLength", contentsummary.getSnapshotLength());
+    m.put("snapshotFileCount", contentsummary.getSnapshotFileCount());
+    m.put("snapshotDirectoryCount",
+        contentsummary.getSnapshotDirectoryCount());
+    m.put("snapshotSpaceConsumed", contentsummary.getSnapshotSpaceConsumed());
     return toJsonString(ContentSummary.class, m);
   }
 
@@ -583,6 +589,17 @@ public class JsonUtil {
     return toJsonString("SnapshottableDirectoryList", a);
   }
 
+  public static String toJsonString(SnapshotStatus[] snapshotList) {
+    if (snapshotList == null) {
+      return toJsonString("SnapshotList", null);
+    }
+    Object[] a = new Object[snapshotList.length];
+    for (int i = 0; i < snapshotList.length; i++) {
+      a[i] = toJsonMap(snapshotList[i]);
+    }
+    return toJsonString("SnapshotList", a);
+  }
+
   private static Object toJsonMap(
       SnapshottableDirectoryStatus snapshottableDirectoryStatus) {
     final Map<String, Object> m = new TreeMap<String, Object>();
@@ -591,6 +608,19 @@ public class JsonUtil {
     m.put("parentFullPath", DFSUtilClient
         .bytes2String(snapshottableDirectoryStatus.getParentFullPath()));
     m.put("dirStatus", toJsonMap(snapshottableDirectoryStatus.getDirStatus()));
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotStatus snapshotStatus) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    HdfsFileStatus status = snapshotStatus.getDirStatus();
+    m.put("snapshotID", snapshotStatus.getSnapshotID());
+    m.put("deletionStatus", snapshotStatus.isDeleted() ? "DELETED" : "ACTIVE");
+    m.put("fullPath", SnapshotStatus.getSnapshotPath(
+            DFSUtilClient.bytes2String(snapshotStatus.getParentFullPath()),
+        status.getLocalName()));
+    m.put("dirStatus", toJsonMap(snapshotStatus.getDirStatus()));
     return m;
   }
 

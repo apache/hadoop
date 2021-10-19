@@ -23,14 +23,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.Abortable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AWSServiceIOException;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
@@ -134,5 +137,45 @@ public final class ExtraAssertions {
         "Inner cause is of wrong type : expected " + expected,
         thrown);
     return (T)cause;
+  }
+
+  /**
+   * Assert that an exception failed with a specific status code.
+   * @param e exception
+   * @param code expected status code
+   * @throws AWSServiceIOException rethrown if the status code does not match.
+   */
+  protected void assertStatusCode(AWSServiceIOException e, int code)
+          throws AWSServiceIOException {
+    if (e.getStatusCode() != code) {
+      throw e;
+    }
+  }
+
+
+  /**
+   * Assert that an abort was completely successful in that it
+   * was not a no-op and no exception was raised during
+   * cleanup.
+   * @param result result to assert over
+   */
+  public static void assertCompleteAbort(
+      Abortable.AbortableResult result) {
+    Assertions.assertThat(result)
+        .describedAs("Abort operation result %s", result)
+        .matches(r -> !r.alreadyClosed())
+        .matches(r -> r.anyCleanupException() == null);
+  }
+
+  /**
+   * Assert that an abort was a no-op as the
+   * stream had already closed/aborted.
+   * @param result result to assert over
+   */
+  public static void assertNoopAbort(
+      Abortable.AbortableResult result) {
+    Assertions.assertThat(result)
+        .describedAs("Abort operation result %s", result)
+        .matches(r -> r.alreadyClosed());
   }
 }

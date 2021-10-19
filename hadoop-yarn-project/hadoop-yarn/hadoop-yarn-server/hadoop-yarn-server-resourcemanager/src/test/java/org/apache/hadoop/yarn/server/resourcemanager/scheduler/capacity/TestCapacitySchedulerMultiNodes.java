@@ -18,10 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -33,6 +40,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -47,7 +56,7 @@ import org.junit.Test;
 /**
  * Test class for Multi Node scheduling related tests.
  */
-public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
+public class TestCapacitySchedulerMultiNodes {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCapacitySchedulerMultiNodes.class);
@@ -120,7 +129,15 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
         .getNodesPerPartition("");
     Assert.assertEquals(4, nodes.size());
 
-    RMApp app1 = rm.submitApp(2048, "app-1", "user1", null, "default");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2048, rm)
+            .withAppName("app-1")
+            .withUser("user1")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     SchedulerNodeReport reportNm1 =
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
@@ -134,7 +151,15 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
     // Hence forcefully recompute nodes.
     sorter.reSortClusterNodes();
 
-    RMApp app2 = rm.submitApp(1024, "app-2", "user2", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("app-2")
+            .withUser("user2")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
     SchedulerNodeReport reportNm2 =
         rm.getResourceScheduler().getNodeReport(nm2.getNodeId());
@@ -184,15 +209,28 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(5 * GB, "app", "user", null, "default");
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(5 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // launch another app to queue, AM container should be launched in nm2
-    RMApp app2 = rm1.submitApp(5 * GB, "app", "user", null, "default");
+    RMApp app2 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(5 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
     RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
     LeafQueue leafQueue = (LeafQueue) cs.getQueue("default");
     FiCaSchedulerApp schedulerApp1 =
         cs.getApplicationAttempt(am1.getApplicationAttemptId());
@@ -204,12 +242,13 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
      * after its ask has been cancelled when used capacity of root queue is 1.
      */
     // Ask a container with 6GB memory size for app1,
-    // nm1 will reserve a container for app1
+    // nm2 will reserve a container for app1
+    // Last Node from Node Iterator will be RESERVED
     am1.allocate("*", 6 * GB, 1, new ArrayList<>());
-    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // Check containers of app1 and app2.
-    Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    Assert.assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
     Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
     Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
     Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
@@ -221,13 +260,6 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
 
     // Trigger scheduling to release reserved container
     // whose ask has been cancelled.
-    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
-
-    // Trigger scheduling to allocate a container on nm1 for app2.
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
     Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
@@ -263,11 +295,23 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
     MockNM nm2 = rm1.registerNode("h2:1234", 8 * GB);
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(5 * GB, "app", "user", null, "default");
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(5 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     // launch another app to queue, AM container should be launched in nm2
-    RMApp app2 = rm1.submitApp(5 * GB, "app", "user", null, "default");
+    RMApp app2 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(5 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
@@ -282,12 +326,13 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
      * after node has sufficient resource.
      */
     // Ask a container with 6GB memory size for app2,
-    // nm1 will reserve a container for app2
+    // nm2 will reserve a container for app2
+    // Last Node from Node Iterator will be RESERVED
     am2.allocate("*", 6 * GB, 1, new ArrayList<>());
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
     // Check containers of app1 and app2.
-    Assert.assertNotNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
+    Assert.assertNotNull(cs.getNode(nm2.getNodeId()).getReservedContainer());
     Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
     Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
     Assert.assertEquals(1, schedulerApp2.getReservedContainers().size());
@@ -302,4 +347,135 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
 
     rm1.close();
   }
+
+  @Test(timeout=30000)
+  public void testAllocateOfReservedContainerFromAnotherNode()
+      throws Exception {
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+    newConf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
+    newConf.setInt(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+        + ".resource-based.sorting-interval.ms", 0);
+    newConf.setMaximumApplicationMasterResourcePerQueuePercent("root.default",
+        1.0f);
+    MockRM rm1 = new MockRM(newConf);
+
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 12 * GB, 2);
+    MockNM nm2 = rm1.registerNode("h2:1234", 12 * GB, 2);
+
+    // launch an app1 to queue, AM container will be launched in nm1
+    RMApp app1 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch another app2 to queue, AM container will be launched in nm2
+    RMApp app2 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    // Reserve a Container for app3
+    RMApp app3 = MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
+
+    final AtomicBoolean result = new AtomicBoolean(false);
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
+          result.set(true);
+        } catch (Exception e) {
+          Assert.fail("Failed to allocate the reserved container");
+        }
+      }
+    };
+    t.start();
+    Thread.sleep(1000);
+
+    // Validate if app3 has got RESERVED container
+    FiCaSchedulerApp schedulerApp =
+        cs.getApplicationAttempt(app3.getCurrentAppAttempt().getAppAttemptId());
+    Assert.assertEquals("App3 failed to get reserved container", 1,
+        schedulerApp.getReservedContainers().size());
+
+    // Free the Space on other node where Reservation has not happened
+    if (cs.getNode(rmNode1.getNodeID()).getReservedContainer() != null) {
+      rm1.killApp(app2.getApplicationId());
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    } else {
+      rm1.killApp(app1.getApplicationId());
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+
+    // Check if Reserved AM of app3 gets allocated in
+    // node where space available
+    while (!result.get()) {
+      Thread.sleep(100);
+    }
+
+    // Validate release of reserved containers
+    schedulerApp =
+        cs.getApplicationAttempt(app3.getCurrentAppAttempt().getAppAttemptId());
+    Assert.assertEquals("App3 failed to release Reserved container", 0,
+        schedulerApp.getReservedContainers().size());
+    Assert.assertNull(cs.getNode(rmNode1.getNodeID()).getReservedContainer());
+    Assert.assertNull(cs.getNode(rmNode2.getNodeID()).getReservedContainer());
+
+    rm1.close();
+  }
+
+  @Test
+  public void testMultiNodeSorterAfterHeartbeatInterval() throws Exception {
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    rm.registerNode("127.0.0.1:1234", 10 * GB);
+    rm.registerNode("127.0.0.2:1234", 10 * GB);
+    rm.registerNode("127.0.0.3:1234", 10 * GB);
+    rm.registerNode("127.0.0.4:1234", 10 * GB);
+
+    Set<SchedulerNode> nodes = new HashSet<>();
+    String partition = "";
+
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    waitforNMRegistered(scheduler, 4, 5);
+    MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
+        .getMultiNodeSortingManager();
+    MultiNodeSorter<SchedulerNode> sorter = mns
+        .getMultiNodePolicy(POLICY_CLASS_NAME);
+    sorter.reSortClusterNodes();
+
+    Iterator<SchedulerNode> nodeIterator = mns.getMultiNodeSortIterator(
+        nodes, partition, POLICY_CLASS_NAME);
+    Assert.assertEquals(4, Iterators.size(nodeIterator));
+
+    // Validate the count after missing 3 node heartbeats
+    Thread.sleep(YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS * 3);
+
+    nodeIterator = mns.getMultiNodeSortIterator(
+        nodes, partition, POLICY_CLASS_NAME);
+    Assert.assertEquals(0, Iterators.size(nodeIterator));
+
+    rm.stop();
+  }
+
 }

@@ -51,21 +51,21 @@ Usage: `yarn app [options] `
 | -changeQueue \<Queue Name\> | Moves application to a new queue. ApplicationId can be passed using 'appId' option. 'movetoqueue' command is deprecated, this new command 'changeQueue' performs same functionality. |
 | -component \<Component Name\> \<Count\> | Works with -flex option to change the number of components/containers running for an application / long-running service. Supports absolute or relative changes, such as +1, 2, or -3. |
 | -components \<Components\> | Works with -upgrade option to trigger the upgrade of specified components of the application. Multiple components should be separated by commas. |
-| -decommission \<Application Name\> | Decommissions component instances for an application / long-running service. Requires -instances option. Supports -appTypes option to specify which client implementation to use. |
-| -destroy \<Application Name\> | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. |
-| -enableFastLaunch | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. |
-| -flex \<Application Name or ID\> | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
+| -decommission \<Application Name\> | Decommissions component instances for an application / long-running service. Requires -instances option. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
+| -destroy \<Application Name\> | Destroys a saved application specification and removes all application data permanently. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
+| -enableFastLaunch | Uploads AM dependencies to HDFS to make future launches faster. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
+| -flex \<Application Name or ID\> | Changes number of running containers for a component of an application / long-running service. Requires -component option. If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
 | -help | Displays help for all commands. |
 | -instances \<Component Instances\> | Works with -upgrade option to trigger the upgrade of specified component instances of the application. Also works with -decommission option to decommission specified component instances. Multiple instances should be separated by commas. |
 | -kill \<Application ID\> | Kills the application. Set of applications can be provided separated with space |
-| -launch \<Application Name\> \<File Name\> | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
+| -launch \<Application Name\> \<File Name\> | Launches application from specification file (saves specification and starts application). Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
 | -list | List applications. Supports optional use of -appTypes to filter applications based on application type, -appStates to filter applications based on application state and -appTags to filter applications based on application tag. |
 | -movetoqueue \<Application ID\> | Moves the application to a different queue. Deprecated command. Use 'changeQueue' instead. |
 | -queue \<Queue Name\> | Works with the movetoqueue command to specify which queue to move an application to. |
-| -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. |
-| -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. |
-| -status \<ApplicationId or ApplicationName\> | Prints the status of the application. If app ID is provided, it prints the generic YARN application status. If name is provided, it prints the application specific status based on app's own implementation, and -appTypes option must be specified unless it is the default `yarn-service` type.|
-| -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. |
+| -save \<Application Name\> \<File Name\> | Saves specification file for an application. Options -updateLifetime and -changeQueue can be specified to alter the values provided in the file. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
+| -start \<Application Name\> | Starts a previously saved application. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
+| -status \<ApplicationId or ApplicationName\> | Prints the status of the application. If app ID is provided, it prints the generic YARN application status. If name is provided, it prints the application specific status based on app's own implementation, and -appTypes option must be specified unless it is the default `yarn-service` type. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality.|
+| -stop \<Application Name or ID\> | Stops application gracefully (may be started again later). If name is provided, appType must be provided unless it is the default yarn-service. If ID is provided, the appType will be looked up. Supports -appTypes option to specify which client implementation to use. Please ensure the framework corresponding to appType has provided the appropriate client implementation to handle this specific functionality. |
 | -updateLifetime \<Timeout\> | Update timeout of an application from NOW. ApplicationId can be passed using 'appId' option. Timeout value is in seconds. |
 | -updatePriority \<Priority\> | Update priority of an application. ApplicationId can be passed using 'appId' option. |
 
@@ -119,11 +119,23 @@ Usage: `yarn logs -applicationId <application ID> [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
+| -am \<AM Containers\> | Prints the AM Container logs, specify comma-separated value to get logs for related AM Container |
 | -applicationId \<application ID\> | Specifies an application id |
 | -appOwner \<AppOwner\> | AppOwner (assumed to be current user if not specified) |
 | -containerId \<ContainerId\> | ContainerId (must be specified if node address is specified) |
+| -client_max_retries \<Max Retries\> | Max number of retry for a client to get the container logs for the running applications |
+| -client_retry_interval_ms \<Retry Interval\> | Retry Interval (work with client_max_retries) |
+| -clusterId \<Cluster ID\> | ClusterId |
 | -help | Help |
+| -list_nodes | Show the list of nodes that successfully aggregated logs (can only be used with finished applications) |
+| -log_files \<Log File Name\> | View a specific log type |
+| -log_files_pattern \<Log File Pattern\> | Get matched log files by using java regex |
 | -nodeAddress \<NodeAddress\> | NodeAddress in the format nodename:port (must be specified if container id is specified) |
+| -out \<Local Directory\> | Download logs to specified local folder |
+| -show_application_log_info | List all container IDs (combine this with --nodeAddress to get containerIds for all the containers on the specific NodeManager) |
+| -show_container_log_info | Show the container log metadata |
+| -size \<size\> | Prints the log file's first 'n' bytes or the last 'n' bytes (use negative values as bytes to read from the end) |
+| -size_limit_mb \<Size Limit\> | Limit the size(in megabytes) of the total logs which could be fetched (specify -1 to ignore the size limit) |
 
 Dump the container logs
 
@@ -193,6 +205,8 @@ Usage: `yarn resourcemanager [-format-state-store]`
 |:---- |:---- |
 | -format-state-store | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running. |
 | -remove-application-from-state-store \<appId\> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
+| -format-conf-store | Formats the YarnConfigurationStore. This will clear the persisted scheduler configuration under YarnConfigurationStore. This should be run only when the ResourceManager is not running. |
+| -convert-fs-configuration [-y&#124;yarnsiteconfig] [-f&#124;fsconfig] [-r&#124;rulesconfig] [-o&#124;output-directory] [-p&#124;print] [-c&#124;cluster-resource] | WARNING: This feature is experimental and not intended for production use! Development is still in progress so the converter should not be considered complete! <br/> Converts the specified Fair Scheduler configuration to Capacity Scheduler configuration. Requires two mandatory input files. First, the yarn-site.xml with the following format: [-y&#124;yarnsiteconfig [\<Path to the yarn-site.xml file\>]. Secondly, the fair-scheduler.xml with the following format: [-f&#124;fsconfig [\<Path to the fair-scheduler.xml file\>]. This config is not mandatory if there is a reference in yarn-site.xml to the fair-scheduler.xml with the property 'yarn.scheduler.fair.allocation.file'. If both are defined, the -f option has precedence. The output directory of the config files should be specified as well, with: \[-o&#124;output-directory\ \<directory\>]. An optional rules config file could be also specified with the following format: [-r&#124;rulesconfig \<Path to the conversion rules file\>]. The rule config file's format is a property file. There's an additional \[-p&#124;print\] parameter, which is optional. If defined, the configuration will be emitted to the console instead. In its normal operation, the output files (yarn-site.xml and capacity-scheduler.xml) of this command is generated to the specified output directory. The cluster resource parameter (\[-c&#124;cluster-resource\] \<resource\>\]) needs to be specified if any queue has a maxResources setting with value as percentage. The format of the resource string is the same as in fair-scheduler.xml.) ] |
 
 Start the ResourceManager
 
@@ -212,13 +226,12 @@ Usage:
      -getGroups [username]
      -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3">
      -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",")
-     -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]
+     -replaceLabelsOnNode <"node1[:port]=label1 node2[:port]=label2"> [-failOnUnknownNodes]
      -directlyAccessNodeLabelStore
      -refreshClusterMaxPriority
      -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) or -updateNodeResource [NodeID] [ResourceTypes] ([OvercommitTimeout])
      -transitionToActive [--forceactive] <serviceId>
      -transitionToStandby <serviceId>
-     -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
      -getServiceState <serviceId>
      -getAllServiceState
      -checkHealth <serviceId>
@@ -237,14 +250,13 @@ Usage:
 | -getGroups [username] | Get groups the specified user belongs to. |
 | -addToClusterNodeLabels <"label1(exclusive=true),label2(exclusive=false),label3"> | Add to cluster node labels. Default exclusivity is true. |
 | -removeFromClusterNodeLabels <label1,label2,label3> (label splitted by ",") | Remove from cluster node labels. |
-| -replaceLabelsOnNode <"node1[:port]=label1,label2 node2[:port]=label1,label2"> [-failOnUnknownNodes]| Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) -failOnUnknownNodes is optional, when we set this option, it will fail if specified nodes are unknown.|
+| -replaceLabelsOnNode <"node1[:port]=label1 node2[:port]=label2"> [-failOnUnknownNodes]| Replace labels on nodes (please note that we do not support specifying multiple labels on a single host for now.) -failOnUnknownNodes is optional, when we set this option, it will fail if specified nodes are unknown.|
 | -directlyAccessNodeLabelStore | This is DEPRECATED, will be removed in future releases. Directly access node label store, with this option, all node label related operations will not connect RM. Instead, they will access/modify stored node labels directly. By default, it is false (access via RM). AND PLEASE NOTE: if you configured yarn.node-labels.fs-store.root-dir to a local directory (instead of NFS or HDFS), this option will only work when the command run on the machine where RM is running. |
 | -refreshClusterMaxPriority | Refresh cluster max priority |
 | -updateNodeResource [NodeID] [MemSize] [vCores] \([OvercommitTimeout]\) | Update resource on specific node. |
 | -updateNodeResource [NodeID] [ResourceTypes] \([OvercommitTimeout]\) | Update resource types on specific node. Resource Types is comma-delimited key value pairs of any resources availale at Resource Manager. For example, memory-mb=1024Mi,vcores=1,resource1=2G,resource2=4m|
 | -transitionToActive [--forceactive] [--forcemanual] \<serviceId\> | Transitions the service into Active state. Try to make the target active without checking that there is no active node if the --forceactive option is used. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. This command can not be used if automatic failover is enabled.|
 | -transitionToStandby [--forcemanual] \<serviceId\> | Transitions the service into Standby state. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
-| -failover [--forceactive] \<serviceId1\> \<serviceId2\> | Initiate a failover from serviceId1 to serviceId2. Try to failover to the target service even if it is not ready if the --forceactive option is used. This command can not be used if automatic failover is enabled. |
 | -getServiceState \<serviceId\> | Returns the state of the service. |
 | -getAllServiceState | Returns the state of all the services. |
 | -checkHealth \<serviceId\> | Requests that the service perform a health check. The RMAdmin tool will exit with a non-zero exit code if the check fails. |

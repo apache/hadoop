@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.SignedBytes;
 import java.net.URISyntaxException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -71,6 +73,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -403,6 +406,78 @@ public class DFSUtilClient {
       Configuration conf, String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
     return getAddressesForNsIds(conf, nameserviceIds, defaultAddress, keys);
+  }
+
+  /**
+   * Use DNS record to resolve NN and return resolved FQDN.
+   *
+   * @param conf Configuration
+   * @param nsId Nameservice Id to resolve
+   * @param dnr  Class used to resolve DNS
+   * @param defaultValue default address to return in case key is not found.
+   * @param keys Set of keys to look for in the order of preference
+   * @return a map(namenodeId to InetSocketAddress),
+   *         where namenodeId is combination of nsId,
+   *         resolved hostname and port.
+   */
+  static Map<String, InetSocketAddress> getResolvedAddressesForNsId(
+      Configuration conf, String nsId, DomainNameResolver dnr,
+      String defaultValue, String... keys) {
+    Collection<String> nnIds = getNameNodeIds(conf, nsId);
+    Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
+    for (String nnId : emptyAsSingletonNull(nnIds)) {
+      Map<String, InetSocketAddress> resolvedAddressesForNnId =
+          getResolvedAddressesForNnId(conf, nsId, nnId, dnr, defaultValue, keys);
+      ret.putAll(resolvedAddressesForNnId);
+    }
+    return ret;
+  }
+
+  public static Map<String, InetSocketAddress> getResolvedAddressesForNnId(
+      Configuration conf, String nsId, String nnId,
+      DomainNameResolver dnr, String defaultValue,
+      String... keys) {
+    String suffix = concatSuffixes(nsId, nnId);
+    String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
+    Map<String, InetSocketAddress> ret = Maps.newLinkedHashMap();
+    if (address != null) {
+      InetSocketAddress isa = NetUtils.createSocketAddr(address);
+      try {
+        String[] resolvedHostNames = dnr
+            .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
+        int port = isa.getPort();
+        for (String hostname : resolvedHostNames) {
+          InetSocketAddress inetSocketAddress = new InetSocketAddress(
+              hostname, port);
+          // Concat nn info with host info to make uniq ID
+          String concatId = getConcatNnId(nsId, nnId, hostname, port);
+          ret.put(concatId, inetSocketAddress);
+        }
+      } catch (UnknownHostException e) {
+        LOG.error("Failed to resolve address: {}", address);
+      }
+    }
+    return ret;
+  }
+
+  /**
+   * Concat nn info with host info to make uniq ID.
+   * This is mainly used when configured nn is
+   * a domain record that has multiple hosts behind it.
+   *
+   * @param nsId      nsId to be concatenated to a uniq ID.
+   * @param nnId      nnId to be concatenated to a uniq ID.
+   * @param hostname  hostname to be concatenated to a uniq ID.
+   * @param port      port to be concatenated to a uniq ID.
+   * @return          Concatenated uniq id.
+   */
+  private static String getConcatNnId(String nsId, String nnId, String hostname, int port) {
+    if (nnId == null || nnId.isEmpty()) {
+      return String
+          .join("-", nsId, hostname, String.valueOf(port));
+    }
+    return String
+          .join("-", nsId, nnId, hostname, String.valueOf(port));
   }
 
   /**
@@ -1003,7 +1078,7 @@ public class DFSUtilClient {
    * @param ugi {@link UserGroupInformation} of current user.
    * @return the home directory of current user.
    */
-  public static Path getHomeDirectory(Configuration conf,
+  public static String getHomeDirectory(Configuration conf,
       UserGroupInformation ugi) {
     String userHomePrefix = HdfsClientConfigKeys
         .DFS_USER_HOME_DIR_PREFIX_DEFAULT;
@@ -1012,6 +1087,43 @@ public class DFSUtilClient {
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_KEY,
           HdfsClientConfigKeys.DFS_USER_HOME_DIR_PREFIX_DEFAULT);
     }
-    return new Path(userHomePrefix + "/" + ugi.getShortUserName());
+    return userHomePrefix + Path.SEPARATOR + ugi.getShortUserName();
+  }
+
+  /**
+   * Returns trash root in non-encryption zone.
+   * @param conf configuration.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getTrashRoot(Configuration conf,
+      UserGroupInformation ugi) {
+    return getHomeDirectory(conf, ugi)
+        + Path.SEPARATOR + FileSystem.TRASH_PREFIX;
+  }
+
+  /**
+   * Returns trash root in encryption zone.
+   * @param ez encryption zone.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getEZTrashRoot(EncryptionZone ez,
+      UserGroupInformation ugi) {
+    String ezpath = ez.getPath();
+    return (ezpath.equals("/") ? ezpath : ezpath + Path.SEPARATOR)
+        + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
+  }
+
+  /**
+   * Returns trash root in a snapshottable directory.
+   * @param ssRoot String of path to a snapshottable directory root.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getSnapshotTrashRoot(String ssRoot,
+      UserGroupInformation ugi) {
+    return (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
+        + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
   }
 }

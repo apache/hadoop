@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.util.Comparator;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * OffsetRange is the range of read/write request. A single point (e.g.,[5,5])

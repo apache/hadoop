@@ -52,7 +52,9 @@ enum operations {
   REMOVE_DOCKER_CONTAINER = 13,
   INSPECT_DOCKER_CONTAINER = 14,
   RUN_AS_USER_SYNC_YARN_SYSFS = 15,
-  EXEC_CONTAINER = 16
+  EXEC_CONTAINER = 16,
+  RUN_RUNC_CONTAINER = 17,
+  REAP_RUNC_LAYER_MOUNTS = 18
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -72,10 +74,14 @@ enum operations {
 #define TC_SUPPORT_ENABLED_KEY "feature.tc.enabled"
 #define MOUNT_CGROUP_SUPPORT_ENABLED_KEY "feature.mount-cgroup.enabled"
 #define YARN_SYSFS_SUPPORT_ENABLED_KEY "feature.yarn.sysfs.enabled"
+#define RUNC_SUPPORT_ENABLED_KEY "feature.runc.enabled"
 #define TMP_DIR "tmp"
+#define ROOT_TMP_DIR "private_slash_tmp"
+#define ROOT_VAR_TMP_DIR "private_var_slash_tmp"
 #define COMMAND_FILE_SECTION "command-execution"
 
 extern struct passwd *user_detail;
+extern struct section executor_cfg;
 
 //function used to load the configurations present in the secure config
 void read_executor_config(const char* file_name);
@@ -175,6 +181,9 @@ int delete_as_user(const char *user,
 // assumed to be an absolute path.
 int list_as_user(const char *target_dir);
 
+// Check the pidfile as the node manager. File should not exist.
+int check_pidfile_as_nm(const char* filename);
+
 // set the uid and gid of the node manager.  This is used when doing some
 // priviledged operations for setting the effective uid and gid.
 void set_nm_uid(uid_t user, gid_t group);
@@ -244,6 +253,10 @@ int create_directory_for_user(const char* path);
 
 int change_user(uid_t user, gid_t group);
 
+int change_effective_user(uid_t user, gid_t group);
+
+int change_effective_user_to_nm();
+
 int mount_cgroup(const char *pair, const char *hierarchy);
 
 int check_dir(const char* npath, mode_t st_mode, mode_t desired,
@@ -255,6 +268,14 @@ int create_validate_dir(const char* npath, mode_t perm, const char* path,
 /** Check if a feature is enabled in the specified configuration. */
 int is_feature_enabled(const char* feature_key, int default_value,
                               struct section *cfg);
+char* get_exit_code_file(const char* pid_file);
+
+int wait_and_write_exit_code(pid_t pid, const char* exit_code_file);
+
+int setup_container_paths(const char* user, const char* app_id,
+    const char *container_id, const char* work_dir, const char* script_path,
+    const char *cred_path, int https, const char *keystore_file, const char *truststore_file,
+    char * const* local_dirs, char* const* log_dirs);
 
 /** Check if tc (traffic control) support is enabled in configuration. */
 int is_tc_support_enabled();
@@ -325,12 +346,6 @@ int sync_yarn_sysfs(char* const* local_dirs, const char *running_user,
  */
 int execute_regex_match(const char *regex_str, const char *input);
 
-/**
- * Validate the docker image name matches the expected input.
- * Return 0 on success.
- */
-int validate_docker_image_name(const char *image_name);
-
 struct configuration* get_cfg();
 
 /**
@@ -347,3 +362,9 @@ int remove_docker_container(char **argv, int argc);
  * Check if terminal feature is enabled
  */
 int is_terminal_support_enabled();
+
+
+/**
+ * Check if runC feature is enabled
+ */
+int is_runc_support_enabled();

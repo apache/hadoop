@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.ipc;
 
-import com.google.common.base.Joiner;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -66,7 +66,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     public int secondsToRun = 15;
     private int msgSize = 1024;
     public Class<? extends RpcEngine> rpcEngine =
-        ProtobufRpcEngine.class;
+        ProtobufRpcEngine2.class;
     
     private MyOptions(String args[]) {
       try {
@@ -181,7 +181,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
       if (line.hasOption('e')) {
         String eng = line.getOptionValue('e');
         if ("protobuf".equals(eng)) {
-          rpcEngine = ProtobufRpcEngine.class;
+          rpcEngine = ProtobufRpcEngine2.class;
         } else {
           throw new ParseException("invalid engine: " + eng);
         }
@@ -224,7 +224,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     
     RPC.Server server;
     // Get RPC server for server side implementation
-    if (opts.rpcEngine == ProtobufRpcEngine.class) {
+    if (opts.rpcEngine == ProtobufRpcEngine2.class) {
       // Create server side implementation
       PBServerImpl serverImpl = new PBServerImpl();
       BlockingService service = TestProtobufRpcProto
@@ -378,7 +378,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
   private RpcServiceWrapper createRpcClient(MyOptions opts) throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(opts.host, opts.getPort());
     
-    if (opts.rpcEngine == ProtobufRpcEngine.class) {
+    if (opts.rpcEngine == ProtobufRpcEngine2.class) {
       final TestRpcService proxy = RPC.getProxy(TestRpcService.class, 0, addr, conf);
       return new RpcServiceWrapper() {
         @Override

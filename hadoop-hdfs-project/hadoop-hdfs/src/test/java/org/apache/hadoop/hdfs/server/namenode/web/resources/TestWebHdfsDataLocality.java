@@ -45,11 +45,11 @@ import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
-import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.slf4j.event.Level;
 
 /**
  * Test WebHDFS which provides data locality using HTTP redirection.
@@ -58,7 +58,7 @@ public class TestWebHdfsDataLocality {
   static final Logger LOG =
       LoggerFactory.getLogger(TestWebHdfsDataLocality.class);
   {
-    DFSTestUtil.setNameNodeLogLevel(Level.ALL);
+    DFSTestUtil.setNameNodeLogLevel(Level.TRACE);
   }
   
   private static final String RACK0 = "/rack0";

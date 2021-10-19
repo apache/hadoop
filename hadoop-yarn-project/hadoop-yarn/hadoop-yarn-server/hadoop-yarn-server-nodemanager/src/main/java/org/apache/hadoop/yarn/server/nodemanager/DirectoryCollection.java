@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -47,8 +47,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * Manages a list of local storage directories.
@@ -59,6 +59,9 @@ public class DirectoryCollection {
 
   private final Configuration conf;
   private final DiskValidator diskValidator;
+
+  private boolean diskUtilizationThresholdEnabled;
+  private boolean diskFreeSpaceThresholdEnabled;
   /**
    * The enum defines disk failure type.
    */
@@ -110,7 +113,8 @@ public class DirectoryCollection {
 
   private float diskUtilizationPercentageCutoffHigh;
   private float diskUtilizationPercentageCutoffLow;
-  private long diskUtilizationSpaceCutoff;
+  private long diskFreeSpaceCutoffLow;
+  private long diskFreeSpaceCutoffHigh;
 
   private int goodDirsDiskUtilizationPercentage;
 
@@ -123,7 +127,7 @@ public class DirectoryCollection {
    *          directories to be monitored
    */
   public DirectoryCollection(String[] dirs) {
-    this(dirs, 100.0F, 100.0F, 0);
+    this(dirs, 100.0F, 100.0F, 0, 0);
   }
 
   /**
@@ -139,7 +143,7 @@ public class DirectoryCollection {
    * 
    */
   public DirectoryCollection(String[] dirs, float utilizationPercentageCutOff) {
-    this(dirs, utilizationPercentageCutOff, utilizationPercentageCutOff, 0);
+    this(dirs, utilizationPercentageCutOff, utilizationPercentageCutOff, 0, 0);
   }
 
   /**
@@ -154,7 +158,26 @@ public class DirectoryCollection {
    * 
    */
   public DirectoryCollection(String[] dirs, long utilizationSpaceCutOff) {
-    this(dirs, 100.0F, 100.0F, utilizationSpaceCutOff);
+    this(dirs, 100.0F, 100.0F, utilizationSpaceCutOff, utilizationSpaceCutOff);
+  }
+
+  /**
+   * Create collection for the directories specified. Users must specify the
+   * minimum amount of free space that must be available for the dir to be used.
+   *
+   * @param dirs
+   *          directories to be monitored
+   * @param utilizationSpaceCutOffLow
+   *          minimum space, in MB, that must be available on the disk for the
+   *          dir to be taken out of the good dirs list
+   * @param utilizationSpaceCutOffHigh
+   *          minimum space, in MB, that must be available on the disk for the
+   *          dir to be moved from the bad dirs list to the good dirs list
+   */
+  public DirectoryCollection(String[] dirs, long utilizationSpaceCutOffLow,
+      long utilizationSpaceCutOffHigh) {
+    this(dirs, 100.0F, 100.0F, utilizationSpaceCutOffLow,
+        utilizationSpaceCutOffHigh);
   }
 
   /**
@@ -162,7 +185,7 @@ public class DirectoryCollection {
    * maximum percentage of disk utilization allowed and the minimum amount of
    * free space that must be available for the dir to be used. If either check
    * fails the dir is removed from the good dirs list.
-   * 
+   *
    * @param dirs
    *          directories to be monitored
    * @param utilizationPercentageCutOffHigh
@@ -174,12 +197,41 @@ public class DirectoryCollection {
    * @param utilizationSpaceCutOff
    *          minimum space, in MB, that must be available on the disk for the
    *          dir to be marked as good
-   * 
+   */
+  public DirectoryCollection(String[] dirs,
+      float utilizationPercentageCutOffHigh,
+      float utilizationPercentageCutOffLow, long utilizationSpaceCutOff) {
+    this(dirs, utilizationPercentageCutOffHigh,
+        utilizationPercentageCutOffLow, utilizationSpaceCutOff,
+        utilizationSpaceCutOff);
+  }
+
+  /**
+   * Create collection for the directories specified. Users must specify the
+   * maximum percentage of disk utilization allowed and the minimum amount of
+   * free space that must be available for the dir to be used. If either check
+   * fails the dir is removed from the good dirs list.
+   *
+   * @param dirs
+   *          directories to be monitored
+   * @param utilizationPercentageCutOffHigh
+   *          percentage of disk that can be used before the dir is taken out
+   *          of the good dirs list
+   * @param utilizationPercentageCutOffLow
+   *          percentage of disk that can be used when the dir is moved from
+   *          the bad dirs list to the good dirs list
+   * @param utilizationSpaceCutOffLow
+   *          minimum space, in MB, that must be available on the disk for the
+   *          dir to be taken out of the good dirs list
+   * @param utilizationSpaceCutOffHigh
+   *          minimum space, in MB, that must be available on the disk for the
+   *          dir to be moved from the bad dirs list to the good dirs list
    */
   public DirectoryCollection(String[] dirs,
       float utilizationPercentageCutOffHigh,
       float utilizationPercentageCutOffLow,
-      long utilizationSpaceCutOff) {
+      long utilizationSpaceCutOffLow,
+      long utilizationSpaceCutOffHigh) {
     conf = new YarnConfiguration();
     try {
       String diskValidatorName = conf.get(YarnConfiguration.DISK_VALIDATOR,
@@ -190,21 +242,30 @@ public class DirectoryCollection {
       throw new YarnRuntimeException(e);
     }
 
-    localDirs = new CopyOnWriteArrayList<>(dirs);
-    errorDirs = new CopyOnWriteArrayList<>();
-    fullDirs = new CopyOnWriteArrayList<>();
+    diskUtilizationThresholdEnabled = conf.
+        getBoolean(YarnConfiguration.
+                NM_DISK_UTILIZATION_THRESHOLD_ENABLED,
+            YarnConfiguration.
+                DEFAULT_NM_DISK_UTILIZATION_THRESHOLD_ENABLED);
+    diskFreeSpaceThresholdEnabled = conf.
+        getBoolean(YarnConfiguration.
+                NM_DISK_FREE_SPACE_THRESHOLD_ENABLED,
+            YarnConfiguration.
+                DEFAULT_NM_DISK_FREE_SPACE_THRESHOLD_ENABLED);
+
+    localDirs = new ArrayList<>(Arrays.asList(dirs));
+    errorDirs = new ArrayList<>();
+    fullDirs = new ArrayList<>();
     directoryErrorInfo = new ConcurrentHashMap<>();
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
-    diskUtilizationPercentageCutoffHigh = Math.max(0.0F, Math.min(100.0F,
-        utilizationPercentageCutOffHigh));
-    diskUtilizationPercentageCutoffLow = Math.max(0.0F, Math.min(
-        diskUtilizationPercentageCutoffHigh, utilizationPercentageCutOffLow));
-    diskUtilizationSpaceCutoff =
-        utilizationSpaceCutOff < 0 ? 0 : utilizationSpaceCutOff;
+    setDiskUtilizationPercentageCutoff(utilizationPercentageCutOffHigh,
+        utilizationPercentageCutOffLow);
+    setDiskUtilizationSpaceCutoff(utilizationSpaceCutOffLow,
+        utilizationSpaceCutOffHigh);
 
     dirsChangeListeners = Collections.newSetFromMap(
         new ConcurrentHashMap<DirsChangeListener, Boolean>());
@@ -240,7 +301,7 @@ public class DirectoryCollection {
   List<String> getFailedDirs() {
     this.readLock.lock();
     try {
-      return ImmutableList.copyOf(
+      return Collections.unmodifiableList(
           DirectoryCollection.concat(errorDirs, fullDirs));
     } finally {
       this.readLock.unlock();
@@ -268,7 +329,7 @@ public class DirectoryCollection {
   List<String> getErroredDirs() {
     this.readLock.lock();
     try {
-      return Collections.unmodifiableList(errorDirs);
+      return ImmutableList.copyOf(errorDirs);
     } finally {
       this.readLock.unlock();
     }
@@ -471,7 +532,11 @@ public class DirectoryCollection {
         diskValidator.checkStatus(testDir);
         float diskUtilizationPercentageCutoff = goodDirs.contains(dir) ?
             diskUtilizationPercentageCutoffHigh : diskUtilizationPercentageCutoffLow;
-        if (isDiskUsageOverPercentageLimit(testDir,
+        long diskFreeSpaceCutoff = goodDirs.contains(dir) ?
+            diskFreeSpaceCutoffLow : diskFreeSpaceCutoffHigh;
+
+        if (diskUtilizationThresholdEnabled
+            && isDiskUsageOverPercentageLimit(testDir,
             diskUtilizationPercentageCutoff)) {
           msg =
               "used space above threshold of "
@@ -480,9 +545,10 @@ public class DirectoryCollection {
           ret.put(dir,
             new DiskErrorInformation(DiskErrorCause.DISK_FULL, msg));
           continue;
-        } else if (isDiskFreeSpaceUnderLimit(testDir)) {
+        } else if (diskFreeSpaceThresholdEnabled
+            && isDiskFreeSpaceUnderLimit(testDir, diskFreeSpaceCutoff)) {
           msg =
-              "free space below limit of " + diskUtilizationSpaceCutoff
+              "free space below limit of " + diskFreeSpaceCutoff
                   + "MB";
           ret.put(dir,
             new DiskErrorInformation(DiskErrorCause.DISK_FULL, msg));
@@ -505,9 +571,10 @@ public class DirectoryCollection {
         || usedPercentage >= 100.0F);
   }
 
-  private boolean isDiskFreeSpaceUnderLimit(File dir) {
+  private boolean isDiskFreeSpaceUnderLimit(File dir,
+      long freeSpaceCutoff) {
     long freeSpace = dir.getUsableSpace() / (1024 * 1024);
-    return freeSpace < this.diskUtilizationSpaceCutoff;
+    return freeSpace < freeSpaceCutoff;
   }
 
   private void createDir(FileContext localFs, Path dir, FsPermission perm)
@@ -550,13 +617,51 @@ public class DirectoryCollection {
   }
 
   public long getDiskUtilizationSpaceCutoff() {
-    return diskUtilizationSpaceCutoff;
+    return getDiskUtilizationSpaceCutoffLow();
   }
 
-  public void setDiskUtilizationSpaceCutoff(long diskUtilizationSpaceCutoff) {
-    diskUtilizationSpaceCutoff =
-        diskUtilizationSpaceCutoff < 0 ? 0 : diskUtilizationSpaceCutoff;
-    this.diskUtilizationSpaceCutoff = diskUtilizationSpaceCutoff;
+  @VisibleForTesting
+  long getDiskUtilizationSpaceCutoffLow() {
+    return diskFreeSpaceCutoffLow;
+  }
+
+  @VisibleForTesting
+  long getDiskUtilizationSpaceCutoffHigh() {
+    return diskFreeSpaceCutoffHigh;
+  }
+
+  @VisibleForTesting
+  boolean getDiskUtilizationThresholdEnabled() {
+    return diskUtilizationThresholdEnabled;
+  }
+
+  @VisibleForTesting
+  boolean getDiskFreeSpaceThresholdEnabled() {
+    return diskFreeSpaceThresholdEnabled;
+  }
+
+  @VisibleForTesting
+  void setDiskUtilizationThresholdEnabled(boolean
+      utilizationEnabled) {
+    diskUtilizationThresholdEnabled = utilizationEnabled;
+  }
+
+  @VisibleForTesting
+  void setDiskFreeSpaceThresholdEnabled(boolean
+      freeSpaceEnabled) {
+    diskFreeSpaceThresholdEnabled = freeSpaceEnabled;
+  }
+
+  public void setDiskUtilizationSpaceCutoff(long freeSpaceCutoff) {
+    setDiskUtilizationSpaceCutoff(freeSpaceCutoff,
+        freeSpaceCutoff);
+  }
+
+  public void setDiskUtilizationSpaceCutoff(long freeSpaceCutoffLow,
+      long freeSpaceCutoffHigh) {
+    diskFreeSpaceCutoffLow = Math.max(0, freeSpaceCutoffLow);
+    diskFreeSpaceCutoffHigh = Math.max(diskFreeSpaceCutoffLow,
+        Math.max(0, freeSpaceCutoffHigh));
   }
 
   private void setGoodDirsDiskUtilizationPercentage() {

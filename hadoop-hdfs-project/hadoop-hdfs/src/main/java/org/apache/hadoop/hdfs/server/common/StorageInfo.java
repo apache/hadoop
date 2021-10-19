@@ -34,7 +34,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
  * Common class for storage information.
@@ -224,7 +224,8 @@ public class StorageInfo {
   }
 
   public int getServiceLayoutVersion() {
-    return storageType == NodeType.DATA_NODE ? HdfsServerConstants.DATANODE_LAYOUT_VERSION
+    return storageType == NodeType.DATA_NODE
+        ? DataNodeLayoutVersion.getCurrentLayoutVersion()
         : HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
   }
 

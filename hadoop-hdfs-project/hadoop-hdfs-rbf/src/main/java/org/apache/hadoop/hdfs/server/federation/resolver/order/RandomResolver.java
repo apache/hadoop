@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Order the destinations randomly.

@@ -48,10 +48,9 @@ public class TestViewFsWithAuthorityLocalFs extends ViewFsBaseTest {
     fcTarget = FileContext.getLocalFSFileContext();
     super.setUp(); // this sets up conf (and fcView which we replace)
     
-    // Now create a viewfs using a mount table called "default"
-    // hence viewfs://default/
+    // Now create a viewfs using a mount table using the {MOUNT_TABLE_NAME}
     schemeWithAuthority = 
-      new URI(FsConstants.VIEWFS_SCHEME, "default", "/", null, null);
+      new URI(FsConstants.VIEWFS_SCHEME, MOUNT_TABLE_NAME, "/", null, null);
     fcView = FileContext.getFileContext(schemeWithAuthority, conf);  
   }
 

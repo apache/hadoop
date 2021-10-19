@@ -46,6 +46,11 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   public void initialize(Configuration conf,  FSClusterStats stats,
           NetworkTopology clusterMap, 
           Host2NodesMap host2datanodeMap) {
+    if (!(clusterMap instanceof NetworkTopologyWithNodeGroup)) {
+      throw new IllegalArgumentException(
+          "Configured cluster topology should be "
+              + NetworkTopologyWithNodeGroup.class.getName());
+    }
     super.initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 

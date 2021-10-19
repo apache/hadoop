@@ -73,11 +73,11 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -172,6 +172,7 @@ public class FSImage implements Closeable {
 
     this.editLog = FSEditLog.newInstance(conf, storage, editsDirs);
     archivalManager = new NNStorageRetentionManager(conf, storage, editLog);
+    FSImageFormatProtobuf.initParallelLoad(conf);
   }
  
   void format(FSNamesystem fsn, String clusterId, boolean force)
@@ -757,8 +758,10 @@ public class FSImage implements Closeable {
     prog.endPhase(Phase.LOADING_FSIMAGE);
     
     if (!rollingRollback) {
+      prog.beginPhase(Phase.LOADING_EDITS);
       long txnsAdvanced = loadEdits(editStreams, target, Long.MAX_VALUE,
           startOpt, recovery);
+      prog.endPhase(Phase.LOADING_EDITS);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
     } else {
@@ -890,8 +893,6 @@ public class FSImage implements Closeable {
       StartupOption startOpt, MetaRecoveryContext recovery)
       throws IOException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
-    StartupProgress prog = NameNode.getStartupProgress();
-    prog.beginPhase(Phase.LOADING_EDITS);
     
     long prevLastAppliedTxId = lastAppliedTxId;
     long remainingReadTxns = maxTxnsToRead;
@@ -930,7 +931,6 @@ public class FSImage implements Closeable {
     } finally {
       FSEditLog.closeAllStreams(editStreams);
     }
-    prog.endPhase(Phase.LOADING_EDITS);
     return lastAppliedTxId - prevLastAppliedTxId;
   }
 

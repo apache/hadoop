@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.tools;
 
+import java.lang.reflect.Constructor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -25,6 +30,8 @@ import org.apache.hadoop.fs.Path;
  *
  */
 public abstract class CopyFilter {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CopyFilter.class);
 
   /**
    * Default initialize method does nothing.
@@ -47,6 +54,30 @@ public abstract class CopyFilter {
    * @return An instance of the appropriate CopyFilter
    */
   public static CopyFilter getCopyFilter(Configuration conf) {
+    String filtersClassName = conf
+            .get(DistCpConstants.CONF_LABEL_FILTERS_CLASS);
+    if (filtersClassName != null) {
+      try {
+        Class<? extends CopyFilter> filtersClass = conf
+                .getClassByName(filtersClassName)
+                .asSubclass(CopyFilter.class);
+        filtersClassName = filtersClass.getName();
+        Constructor<? extends CopyFilter> constructor = filtersClass
+                .getDeclaredConstructor(Configuration.class);
+        return constructor.newInstance(conf);
+      } catch (Exception e) {
+        LOG.error(DistCpConstants.CLASS_INSTANTIATION_ERROR_MSG +
+                filtersClassName, e);
+        throw new RuntimeException(
+                DistCpConstants.CLASS_INSTANTIATION_ERROR_MSG +
+                        filtersClassName, e);
+      }
+    } else {
+      return getDefaultCopyFilter(conf);
+    }
+  }
+
+  private static CopyFilter getDefaultCopyFilter(Configuration conf) {
     String filtersFilename = conf.get(DistCpConstants.CONF_LABEL_FILTERS_FILE);
 
     if (filtersFilename == null) {

@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -35,7 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -43,17 +42,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
+import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.webapp.View.ViewContext;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 import org.slf4j.Logger;
@@ -98,11 +102,6 @@ public abstract class LogAggregationFileController {
    */
   protected static final FsPermission APP_LOG_FILE_UMASK = FsPermission
       .createImmutable((short) (0640 ^ 0777));
-
-  // This is temporary solution. The configuration will be deleted once we have
-  // the FileSystem API to check whether append operation is supported or not.
-  public static final String LOG_AGGREGATION_FS_SUPPORT_APPEND
-      = YarnConfiguration.YARN_PREFIX+ "log-aggregation.fs-support-append";
 
   protected Configuration conf;
   protected Path remoteRootLogDir;
@@ -163,6 +162,14 @@ public abstract class LogAggregationFileController {
   }
 
   /**
+   * Get the name of the file controller.
+   * @return name of the file controller.
+   */
+  public String getFileControllerName() {
+    return this.fileControllerName;
+  }
+
+  /**
    * Initialize the writer.
    * @param context the {@link LogAggregationFileControllerContext}
    * @throws IOException if fails to initialize the writer
@@ -220,6 +227,49 @@ public abstract class LogAggregationFileController {
    */
   public abstract List<ContainerLogMeta> readAggregatedLogsMeta(
       ContainerLogsRequest logRequest) throws IOException;
+
+  /**
+   * Returns log file metadata for a node grouped by containers.
+   *
+   * @param logRequest extended query information holder
+   * @param currentNodeFile file status of a node in an application directory
+   * @param appId id of the application, which is the same as in node path
+   * @return log file metadata
+   * @throws IOException if there is no node file
+   */
+  public Map<String, List<ContainerLogFileInfo>> getLogMetaFilesOfNode(
+      ExtendedLogMetaRequest logRequest, FileStatus currentNodeFile,
+      ApplicationId appId) throws IOException {
+    LOG.info("User aggregated complex log queries " +
+        "are not implemented for this file controller");
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Gets all application directories of a user.
+   *
+   * @param user name of the user
+   * @return a lazy iterator of directories
+   * @throws IOException if user directory does not exist
+   */
+  public RemoteIterator<FileStatus> getApplicationDirectoriesOfUser(
+      String user) throws IOException {
+    return LogAggregationUtils.getUserRemoteLogDir(
+        conf, user, getRemoteRootLogDir(), getRemoteRootLogDirSuffix());
+  }
+
+  /**
+   * Gets all node files in an application directory.
+   *
+   * @param appDir application directory
+   * @return a lazy iterator of files
+   * @throws IOException if file context is not reachable
+   */
+  public RemoteIterator<FileStatus> getNodeFilesOfApplicationDirectory(
+      FileStatus appDir) throws IOException {
+    return LogAggregationUtils
+        .getRemoteFiles(conf, appDir.getPath());
+  }
 
   /**
    * Render Aggregated Logs block.
@@ -340,7 +390,7 @@ public abstract class LogAggregationFileController {
           remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
         } catch ( UnsupportedOperationException use) {
           LOG.info("Unable to set permissions for configured filesystem since"
-              + " it does not support this", remoteFS.getScheme());
+              + " it does not support this {}", remoteFS.getScheme());
           fsSupportsChmod = false;
         }
 
@@ -378,17 +428,25 @@ public abstract class LogAggregationFileController {
         throw new YarnRuntimeException("Failed to create remoteLogDir ["
             + remoteRootLogDir + "]", e);
       }
-    } else{
+    } else {
       //Check if FS has capability to set/modify permissions
+      Path permissionCheckFile = new Path(qualified, String.format("%s.permission_check",
+          RandomStringUtils.randomAlphanumeric(8)));
       try {
-        remoteFS.setPermission(qualified, new FsPermission(TLDIR_PERMISSIONS));
+        remoteFS.createNewFile(permissionCheckFile);
+        remoteFS.setPermission(permissionCheckFile, new FsPermission(TLDIR_PERMISSIONS));
       } catch (UnsupportedOperationException use) {
         LOG.info("Unable to set permissions for configured filesystem since"
-            + " it does not support this", remoteFS.getScheme());
+            + " it does not support this {}", remoteFS.getScheme());
         fsSupportsChmod = false;
       } catch (IOException e) {
-        LOG.warn("Failed to check if FileSystem suppports permissions on "
+        LOG.warn("Failed to check if FileSystem supports permissions on "
             + "remoteLogDir [" + remoteRootLogDir + "]", e);
+      } finally {
+        try {
+          remoteFS.delete(permissionCheckFile, false);
+        } catch (IOException ignored) {
+        }
       }
     }
   }
@@ -535,17 +593,12 @@ public abstract class LogAggregationFileController {
       Set<FileStatus> status =
           new HashSet<FileStatus>(Arrays.asList(remoteFS.listStatus(appDir)));
 
-      Iterable<FileStatus> mask =
-          Iterables.filter(status, new Predicate<FileStatus>() {
-            @Override
-            public boolean apply(FileStatus next) {
-              return next.getPath().getName()
-                .contains(LogAggregationUtils.getNodeString(nodeId))
-                && !next.getPath().getName().endsWith(
-                    LogAggregationUtils.TMP_FILE_SUFFIX);
-            }
-          });
-      status = Sets.newHashSet(mask);
+      status = status.stream().filter(
+          next -> next.getPath().getName()
+              .contains(LogAggregationUtils.getNodeString(nodeId))
+              && !next.getPath().getName().endsWith(
+              LogAggregationUtils.TMP_FILE_SUFFIX)).collect(
+          Collectors.toSet());
       // Normally, we just need to delete one oldest log
       // before we upload a new log.
       // If we can not delete the older logs in this cycle,
@@ -598,5 +651,19 @@ public abstract class LogAggregationFileController {
 
   public boolean isFsSupportsChmod() {
     return fsSupportsChmod;
+  }
+
+  protected boolean belongsToAppAttempt(ApplicationAttemptId appAttemptId,
+      String containerIdStr) {
+    ContainerId containerId = null;
+    try {
+      containerId = ContainerId.fromString(containerIdStr);
+    } catch (IllegalArgumentException exc) {
+      LOG.warn("Could not parse container id from aggregated log.", exc);
+    }
+    if (containerId != null && containerId.getApplicationAttemptId() != null) {
+      return containerId.getApplicationAttemptId().equals(appAttemptId);
+    }
+    return false;
   }
 }

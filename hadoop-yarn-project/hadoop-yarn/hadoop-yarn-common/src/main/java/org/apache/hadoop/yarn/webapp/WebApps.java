@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -41,7 +41,7 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
-import org.apache.hadoop.security.http.XFrameOptionsFilter;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -104,6 +104,7 @@ public class WebApps {
     private String xfsConfigPrefix;
     private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
+    private ApplicationClientProtocol appClientProtocol;
 
     Builder(String name, Class<T> api, T application, String wsName) {
       this.name = name;
@@ -232,6 +233,12 @@ public class WebApps {
       return this;
     }
 
+    public Builder<T> withAppClientProtocol(
+        ApplicationClientProtocol appClientProto) {
+      this.appClientProtocol = appClientProto;
+      return this;
+    }
+
     public WebApp build(WebApp webapp) {
       if (webapp == null) {
         webapp = new WebApp() {
@@ -317,6 +324,19 @@ public class WebApps {
                 YarnConfiguration.YARN_ADMIN_ACL,
                 YarnConfiguration.DEFAULT_YARN_ADMIN_ACL)))
             .setPathSpec(pathList.toArray(new String[0]));
+
+        // Set the X-FRAME-OPTIONS header, use the HttpServer2 default if
+        // the header value is not specified
+        Map<String, String> xfsParameters =
+            getConfigParameters(xfsConfigPrefix);
+
+        if (xfsParameters != null) {
+          String xFrameOptions = xfsParameters.get("xframe-options");
+          if (xFrameOptions != null) {
+            builder.configureXFrame(hasXFSEnabled())
+                .setXFrameOption(xFrameOptions);
+          }
+        }
         // Get port ranges from config.
         IntegerRanges ranges = null;
         if (portRangeConfigKey != null) {
@@ -387,21 +407,11 @@ public class WebApps {
                                    new String[] {"/*"});
         }
 
-        params = getConfigParameters(xfsConfigPrefix);
-
-        if (hasXFSEnabled()) {
-          String xfsClassName = XFrameOptionsFilter.class.getName();
-          HttpServer2.defineFilter(server.getWebAppContext(), xfsClassName,
-              xfsClassName, params,
-              new String[] {"/*"});
-        }
-
         HttpServer2.defineFilter(server.getWebAppContext(), "guice",
           GuiceFilter.class.getName(), null, new String[] { "/*" });
 
         webapp.setConf(conf);
         webapp.setHttpServer(server);
-
       } catch (ClassNotFoundException e) {
         throw new WebAppException("Error starting http server", e);
       } catch (IOException e) {
@@ -412,6 +422,9 @@ public class WebApps {
         protected void configure() {
           if (api != null) {
             bind(api).toInstance(application);
+          }
+          if (appClientProtocol != null) {
+            bind(ApplicationClientProtocol.class).toInstance(appClientProtocol);
           }
         }
       });
@@ -478,14 +491,6 @@ public class WebApps {
         String restCsrfClassName = RestCsrfPreventionFilter.class.getName();
         HttpServer2.defineFilter(ui2Context, restCsrfClassName,
             restCsrfClassName, params, new String[]{"/*"});
-      }
-
-      params = getConfigParameters(xfsConfigPrefix);
-
-      if (hasXFSEnabled()) {
-        String xfsClassName = XFrameOptionsFilter.class.getName();
-        HttpServer2.defineFilter(ui2Context, xfsClassName, xfsClassName, params,
-            new String[]{"/*"});
       }
     }
 

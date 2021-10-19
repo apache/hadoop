@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax = "proto2";
 /**
  * These are the messages used by Hadoop RPC for the Rpc Engine Protocol Buffer
  * to marshal the request and response in the RPC layer.
@@ -64,4 +64,7 @@ message RequestHeaderProto {
   
   /** protocol version of class declaring the called method */
   required uint64 clientProtocolVersion = 3;
+
+  /** protocol extensions */
+  extensions 1000 to max;
 }

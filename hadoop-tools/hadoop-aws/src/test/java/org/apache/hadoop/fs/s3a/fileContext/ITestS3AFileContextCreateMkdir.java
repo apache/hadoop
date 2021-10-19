@@ -32,4 +32,10 @@ public class ITestS3AFileContextCreateMkdir
     super.setUp();
   }
 
+  @Override
+  public void tearDown() throws Exception {
+    if (fc != null) {
+      super.tearDown();
+    }
+  }
 }

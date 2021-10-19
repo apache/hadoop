@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.hdfs.util;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.StripedFileTestUtil;
+import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -171,6 +172,13 @@ public class TestStripedBlockUtil {
     }
 
     return bufs;
+  }
+
+  @Test
+  public void testLocatedStripedBlockType() {
+    LocatedStripedBlock lsb =
+        new LocatedStripedBlock(null, null, null, null, null, 0, false, null);
+    assertEquals(BlockType.STRIPED, lsb.getBlockType());
   }
 
   @Test

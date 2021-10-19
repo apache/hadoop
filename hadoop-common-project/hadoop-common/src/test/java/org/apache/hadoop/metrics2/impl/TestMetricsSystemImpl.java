@@ -23,9 +23,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
-
-import javax.annotation.Nullable;
-
+import java.util.stream.StreamSupport;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -38,9 +36,8 @@ import org.mockito.stubbing.Answer;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
-import com.google.common.collect.Iterables;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.MetricsException;
@@ -59,7 +56,6 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -246,13 +242,9 @@ public class TestMetricsSystemImpl {
     for (Thread t : threads)
       t.join();
     assertEquals(0L, ms.droppedPubAll.value());
-    assertTrue(StringUtils.join("\n", Arrays.asList(results)),
-      Iterables.all(Arrays.asList(results), new Predicate<String>() {
-        @Override
-        public boolean apply(@Nullable String input) {
-          return input.equalsIgnoreCase("Passed");
-        }
-      }));
+    assertTrue(String.join("\n", Arrays.asList(results)),
+        Arrays.asList(results).stream().allMatch(
+            input -> input.equalsIgnoreCase("Passed")));
     ms.stop();
     ms.shutdown();
   }
@@ -482,14 +474,12 @@ public class TestMetricsSystemImpl {
       ms.onTimerEvent();
       verify(dataSink, timeout(500).times(2)).putMetrics(r1.capture());
       List<MetricsRecord> mr = r1.getAllValues();
-      Number qSize = Iterables.find(mr.get(1).metrics(),
-          new Predicate<AbstractMetric>() {
-            @Override
-            public boolean apply(@Nullable AbstractMetric input) {
-              assert input != null;
-              return input.name().equals("Sink_slowSinkQsize");
-            }
-      }).value();
+      Number qSize = StreamSupport.stream(mr.get(1).metrics().spliterator(),
+          false).filter(
+              input -> {
+                assert input != null;
+                return input.name().equals("Sink_slowSinkQsize");
+              }).findFirst().get().value();
       assertEquals(1, qSize);
     } finally {
       proceedSignal.countDown();
@@ -638,5 +628,26 @@ public class TestMetricsSystemImpl {
 
   private static String getPluginUrlsAsString() {
     return "file:metrics2-test-plugin.jar";
+  }
+
+  @Test
+  public void testMetricSystemRestart() {
+    MetricsSystemImpl ms = new MetricsSystemImpl("msRestartTestSystem");
+    TestSink ts = new TestSink();
+    String sinkName = "restartTestSink";
+
+    try {
+      ms.start();
+      ms.register(sinkName, "", ts);
+      assertNotNull("no adapter exists for " + sinkName,
+              ms.getSinkAdapter(sinkName));
+      ms.stop();
+
+      ms.start();
+      assertNotNull("no adapter exists for " + sinkName,
+              ms.getSinkAdapter(sinkName));
+    } finally {
+      ms.stop();
+    }
   }
 }

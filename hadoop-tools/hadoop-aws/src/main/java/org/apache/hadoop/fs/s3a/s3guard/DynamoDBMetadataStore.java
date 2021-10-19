@@ -19,16 +19,15 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import javax.annotation.Nullable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,9 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.BatchWriteItemOutcome;
@@ -58,29 +55,26 @@ import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.ScanOutcome;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
+import com.amazonaws.services.dynamodbv2.document.internal.IteratorSupport;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
-import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
-import com.amazonaws.services.dynamodbv2.model.Tag;
-import com.amazonaws.services.dynamodbv2.model.TagResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.WriteRequest;
-import com.amazonaws.waiters.WaiterTimedOutException;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListeningExecutorService;
+
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -89,7 +83,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.s3a.AWSClientIOException;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -97,7 +92,6 @@ import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
@@ -118,6 +112,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3GuardClientOpera
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
+import static org.apache.hadoop.fs.s3a.s3guard.PathOrderComparators.TOPMOST_PM_LAST;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
 /**
@@ -212,6 +207,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * same region. The region may also be set explicitly by setting the config
  * parameter {@code fs.s3a.s3guard.ddb.region} to the corresponding region.
  */
+@SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DynamoDBMetadataStore implements MetadataStore,
@@ -233,18 +229,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
       OPERATIONS_LOG_NAME);
 
   /** parent/child name to use in the version marker. */
-  public static final String VERSION_MARKER = "../VERSION";
+  public static final String VERSION_MARKER_ITEM_NAME = "../VERSION";
+
+  /** parent/child name to use in the version marker. */
+  public static final String VERSION_MARKER_TAG_NAME = "s3guard_version";
 
   /** Current version number. */
   public static final int VERSION = 100;
-
-  /** Error: version marker not found in table. */
-  public static final String E_NO_VERSION_MARKER
-      = "S3Guard table lacks version marker.";
-
-  /** Error: version mismatch. */
-  public static final String E_INCOMPATIBLE_VERSION
-      = "Database table is from an incompatible S3Guard version.";
 
   @VisibleForTesting
   static final String BILLING_MODE
@@ -305,19 +296,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private String region;
   private Table table;
   private String tableName;
-  private String tableArn;
   private Configuration conf;
   private String username;
 
   /**
    * This policy is mostly for batched writes, not for processing
    * exceptions in invoke() calls.
-   * It also has a role purpose in {@link #getVersionMarkerItem()};
+   * It also has a role purpose in
+   * {@link DynamoDBMetadataStoreTableManager#getVersionMarkerItem()};
    * look at that method for the details.
    */
   private RetryPolicy batchWriteRetryPolicy;
 
-  private S3AInstrumentation.S3GuardInstrumentation instrumentation;
+  /**
+   * The instrumentation is never null -if/when bound to an owner file system
+   * That filesystem statistics will be updated as appropriate.
+   */
+  private MetastoreInstrumentation instrumentation
+      = new MetastoreInstrumentationImpl();
 
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;
@@ -333,8 +329,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /** Invoker for write operations. */
   private Invoker writeOp;
 
+  /** Invoker for scan operations. */
+  private Invoker scanOp;
+
   private final AtomicLong readThrottleEvents = new AtomicLong(0);
   private final AtomicLong writeThrottleEvents = new AtomicLong(0);
+  private final AtomicLong scanThrottleEvents = new AtomicLong(0);
   private final AtomicLong batchWriteCapacityExceededEvents = new AtomicLong(0);
 
   /**
@@ -358,6 +358,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * entries need to be created.
    */
   private ITtlTimeProvider ttlTimeProvider;
+
+  private DynamoDBMetadataStoreTableManager tableHandler;
 
   /**
    * A utility function to create DynamoDB instance.
@@ -401,7 +403,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       throws IOException {
     Preconditions.checkNotNull(fs, "Null filesystem");
     Preconditions.checkArgument(fs instanceof S3AFileSystem,
-        "DynamoDBMetadataStore only supports S3A filesystem.");
+        "DynamoDBMetadataStore only supports S3A filesystem - not %s",
+        fs);
     bindToOwnerFilesystem((S3AFileSystem) fs);
     final String bucket = owner.getBucket();
     String confRegion = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
@@ -415,12 +418,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
       } catch (AccessDeniedException e) {
         // access denied here == can't call getBucket. Report meaningfully
         URI uri = owner.getUri();
-        LOG.error("Failed to get bucket location from S3 bucket {}",
-            uri);
-        throw (IOException)new AccessDeniedException(
-            "S3 client role lacks permission "
-                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri)
-            .initCause(e);
+        String message =
+            "Failed to get bucket location as client lacks permission "
+                + RolePolicies.S3_GET_BUCKET_LOCATION + " for " + uri;
+        LOG.error(message);
+        throw (IOException)new AccessDeniedException(message).initCause(e);
       }
       LOG.debug("Inferring DynamoDB region from S3 bucket: {}", region);
     }
@@ -431,13 +433,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY, bucket);
     initDataAccessRetries(conf);
 
-    // set up a full retry policy
-    invoker = new Invoker(new S3GuardDataAccessRetryPolicy(conf),
-        this::retryEvent
-    );
-
     this.ttlTimeProvider = ttlTp;
-    initTable();
+
+    tableHandler = new DynamoDBMetadataStoreTableManager(
+        dynamoDB, tableName, region, amazonDynamoDB, conf, readOp,
+        batchWriteRetryPolicy);
+    this.table = tableHandler.initTable();
 
     instrumentation.initialized();
   }
@@ -453,9 +454,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
     owner = fs;
     conf = owner.getConf();
     StoreContext context = owner.createStoreContext();
-    instrumentation = context.getInstrumentation().getS3GuardInstrumentation();
+    instrumentation = context.getInstrumentation()
+        .getS3GuardInstrumentation();
     username = context.getUsername();
-    executor = context.createThrottledExecutor();
+    executor = MoreExecutors.listeningDecorator(
+        context.createThrottledExecutor());
     ttlTimeProvider = Preconditions.checkNotNull(
         context.getTimeProvider(),
         "ttlTimeProvider must not be null");
@@ -494,6 +497,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     conf = config;
     // use the bucket as the DynamoDB table name if not specified in config
     tableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
+
     Preconditions.checkArgument(!StringUtils.isEmpty(tableName),
         "No DynamoDB table name configured");
     region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
@@ -509,16 +513,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // the executor capacity for work.
     int executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    executor = BlockingThreadPoolExecutorService.newInstance(
-        executorCapacity,
-        executorCapacity * 2,
-        longOption(conf, KEEPALIVE_TIME,
-            DEFAULT_KEEPALIVE_TIME, 0),
-        TimeUnit.SECONDS,
-        "s3a-ddb-" + tableName);
+    executor = MoreExecutors.listeningDecorator(
+        BlockingThreadPoolExecutorService.newInstance(
+            executorCapacity,
+            executorCapacity * 2,
+              longOption(conf, KEEPALIVE_TIME,
+                  DEFAULT_KEEPALIVE_TIME, 0),
+                  TimeUnit.SECONDS,
+                  "s3a-ddb-" + tableName));
     initDataAccessRetries(conf);
     this.ttlTimeProvider = ttlTp;
-    initTable();
+
+    tableHandler = new DynamoDBMetadataStoreTableManager(
+        dynamoDB, tableName, region, amazonDynamoDB, conf, readOp,
+        batchWriteRetryPolicy);
+    this.table = tableHandler.initTable();
   }
 
   /**
@@ -541,6 +550,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         = new S3GuardDataAccessRetryPolicy(config);
     readOp = new Invoker(throttledRetryRetryPolicy, this::readRetryEvent);
     writeOp = new Invoker(throttledRetryRetryPolicy, this::writeRetryEvent);
+    scanOp = new Invoker(throttledRetryRetryPolicy, this::scanRetryEvent);
   }
 
   @Override
@@ -585,7 +595,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     // the policy on whether repeating delete operations is based
     // on that of S3A itself
-    boolean idempotent = S3AFileSystem.DELETE_CONSIDERED_IDEMPOTENT;
+    boolean idempotent = InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
     if (tombstone) {
       Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider "
           + "must not be null");
@@ -635,8 +645,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Subtree path {} is deleted; this will be a no-op", path);
       return;
     }
-    deleteEntries(new InternalIterators.PathFromRemoteStatusIterator(
-        new DescendantsIterator(this, meta)),
+    deleteEntries(RemoteIterators.mappingRemoteIterator(
+        new DescendantsIterator(this, meta),
+        FileStatus::getPath),
         operationState);
   }
 
@@ -645,8 +656,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void deletePaths(Collection<Path> paths,
       final BulkOperationState operationState)
       throws IOException {
-    deleteEntries(
-        new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()),
+    deleteEntries(RemoteIterators.remoteIteratorFromIterable(paths),
         operationState);
   }
 
@@ -714,7 +724,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public DDBPathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
     checkPath(path);
-    LOG.debug("Get from table {} in region {}: {}. wantEmptyDirectory={}",
+    LOG.debug("Get from table {} in region {}: {} ; wantEmptyDirectory={}",
         tableName, region, path, wantEmptyDirectoryFlag);
     DDBPathMetadata result = innerGet(path, wantEmptyDirectoryFlag);
     LOG.debug("result of get {} is: {}", path, result);
@@ -744,9 +754,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
           tableName, region, path, meta);
     }
 
-    if (wantEmptyDirectoryFlag && meta != null) {
+    if (wantEmptyDirectoryFlag && meta != null && !meta.isDeleted()) {
       final FileStatus status = meta.getFileStatus();
-      // for directory, we query its direct children to determine isEmpty bit
+      // for a non-deleted directory, we query its direct undeleted children
+      // to determine the isEmpty bit. There's no TTL checking going on here.
       if (status.isDirectory()) {
         final QuerySpec spec = new QuerySpec()
             .withHashKey(pathToParentKeyAttribute(path))
@@ -756,11 +767,27 @@ public class DynamoDBMetadataStore implements MetadataStore,
         boolean hasChildren = readOp.retry("get/hasChildren",
             path.toString(),
             true,
-            () -> table.query(spec).iterator().hasNext());
+            () -> {
+              // issue the query
+              final IteratorSupport<Item, QueryOutcome> it = table.query(
+                  spec).iterator();
+              // if non empty, log the result to aid with some debugging
+              if (it.hasNext()) {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Dir {} is non-empty", status.getPath());
+                  while(it.hasNext()) {
+                    LOG.debug("{}", itemToPathMetadata(it.next(), username));
+                  }
+                }
+                return true;
+              } else {
+                return false;
+              }
+          });
 
         // If directory is authoritative, we can set the empty directory flag
         // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.
-        if(meta.isAuthoritativeDir()) {
+        if (meta.isAuthoritativeDir()) {
           meta.setIsEmptyDirectory(
               hasChildren ? Tristate.FALSE : Tristate.TRUE);
         } else {
@@ -791,39 +818,31 @@ public class DynamoDBMetadataStore implements MetadataStore,
     checkPath(path);
     LOG.debug("Listing table {} in region {}: {}", tableName, region, path);
 
+    final QuerySpec spec = new QuerySpec()
+        .withHashKey(pathToParentKeyAttribute(path))
+        .withConsistentRead(true); // strictly consistent read
+    final List<PathMetadata> metas = new ArrayList<>();
     // find the children in the table
-    return readOp.retry(
+    final ItemCollection<QueryOutcome> items = scanOp.retry(
         "listChildren",
         path.toString(),
         true,
-        () -> {
-          final QuerySpec spec = new QuerySpec()
-              .withHashKey(pathToParentKeyAttribute(path))
-              .withConsistentRead(true); // strictly consistent read
-          final ItemCollection<QueryOutcome> items = table.query(spec);
+        () -> table.query(spec));
+    // now wrap the result with retry logic
+    try {
+      for (Item item : wrapWithRetries(items)) {
+        metas.add(itemToPathMetadata(item, username));
+      }
+    } catch (UncheckedIOException e) {
+      // failure in the iterators; unwrap.
+      throw e.getCause();
+    }
 
-          final List<PathMetadata> metas = new ArrayList<>();
-          for (Item item : items) {
-            DDBPathMetadata meta = itemToPathMetadata(item, username);
-            metas.add(meta);
-          }
-
-          // Minor race condition here - if the path is deleted between
-          // getting the list of items and the directory metadata we might
-          // get a null in DDBPathMetadata.
-          DDBPathMetadata dirPathMeta = get(path);
-
-          // Filter expired entries.
-          final DirListingMetadata dirListing =
-              getDirListingMetadataFromDirMetaAndList(path, metas,
-                  dirPathMeta);
-          if(dirListing != null) {
-            dirListing.removeExpiredEntriesFromListing(
-                ttlTimeProvider.getMetadataTtl(),
-                ttlTimeProvider.getNow());
-          }
-          return dirListing;
-        });
+    // Minor race condition here - if the path is deleted between
+    // getting the list of items and the directory metadata we might
+    // get a null in DDBPathMetadata.
+    return getDirListingMetadataFromDirMetaAndList(path, metas,
+        get(path));
   }
 
   DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
@@ -853,6 +872,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Origin of entries in the ancestor map built up in
+   * {@link #completeAncestry(Collection, AncestorState)}.
+   * This is done to stop generated ancestor entries to overwriting those
+   * in the store, while allowing those requested in the API call to do this.
+   */
+  private enum EntryOrigin {
+    Requested,  // requested in method call
+    Retrieved,  // retrieved from DDB: do not resubmit
+    Generated   // generated ancestor.
+  }
+
+  /**
    * Build the list of all parent entries.
    * <p>
    * <b>Thread safety:</b> none. Callers must synchronize access.
@@ -864,9 +895,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private Collection<DDBPathMetadata> completeAncestry(
       final Collection<DDBPathMetadata> pathsToCreate,
-      final AncestorState ancestorState) throws PathIOException {
+      final AncestorState ancestorState) throws IOException {
     // Key on path to allow fast lookup
-    Map<Path, DDBPathMetadata> ancestry = new HashMap<>();
+    Map<Path, Pair<EntryOrigin, DDBPathMetadata>> ancestry = new HashMap<>();
     LOG.debug("Completing ancestry for {} paths", pathsToCreate.size());
     // we sort the inputs to guarantee that the topmost entries come first.
     // that way if the put request contains both parents and children
@@ -875,54 +906,97 @@ public class DynamoDBMetadataStore implements MetadataStore,
     List<DDBPathMetadata> sortedPaths = new ArrayList<>(pathsToCreate);
     sortedPaths.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     // iterate through the paths.
-    for (DDBPathMetadata meta : sortedPaths) {
-      Preconditions.checkArgument(meta != null);
-      Path path = meta.getFileStatus().getPath();
+    for (DDBPathMetadata entry : sortedPaths) {
+      Preconditions.checkArgument(entry != null);
+      Path path = entry.getFileStatus().getPath();
       LOG.debug("Adding entry {}", path);
       if (path.isRoot()) {
         // this is a root entry: do not add it.
         break;
       }
-      // create the new entry
-      DDBPathMetadata entry = new DDBPathMetadata(meta);
       // add it to the ancestor state, failing if it is already there and
       // of a different type.
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
+      boolean addAncestors = true;
       if (oldEntry != null) {
-        if (!oldEntry.getFileStatus().isDirectory()
-            || !entry.getFileStatus().isDirectory()) {
-          // check for and warn if the existing bulk operation overwrote it.
-          // this should never occur outside tests explicitly creating it
+        // check for and warn if the existing bulk operation has an inconsistent
+        // entry.
+        // two directories or two files are both allowed.
+        // file-over-file can happen in multipart uploaders when the same
+        // uploader is overwriting file entries to the same destination as
+        // part of its bulk operation.
+        boolean oldWasDir = oldEntry.getFileStatus().isDirectory();
+        boolean newIsDir = entry.getFileStatus().isDirectory();
+        if ((oldWasDir && !newIsDir)
+            || (!oldWasDir && newIsDir)) {
           LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);
           LOG.warn("With new entry: {}", entry);
           // restore the old state
           ancestorState.put(path, oldEntry);
           // then raise an exception
-          throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
+          throw new PathIOException(path.toString(),
+              String.format("%s old %s new %s",
+                  E_INCONSISTENT_UPDATE,
+                  oldEntry,
+                  entry));
         } else {
           // a directory is already present. Log and continue.
           LOG.debug("Directory at {} being updated with value {}",
               path, entry);
+          // and we skip the the subsequent parent scan as we've already been
+          // here
+          addAncestors = false;
         }
       }
-      ancestry.put(path, entry);
+      // add the entry to the ancestry map as an explicitly requested entry.
+      ancestry.put(path, Pair.of(EntryOrigin.Requested, entry));
+      // now scan up the ancestor tree to see if there are any
+      // immediately missing entries.
       Path parent = path.getParent();
-      while (!parent.isRoot() && !ancestry.containsKey(parent)) {
+      while (addAncestors
+          && !parent.isRoot() && !ancestry.containsKey(parent)) {
         if (!ancestorState.findEntry(parent, true)) {
-          // don't add this entry, but carry on with the parents
-          LOG.debug("auto-create ancestor path {} for child path {}",
-              parent, path);
-          final S3AFileStatus status = makeDirStatus(parent, username);
-          DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
-              false, false, ttlTimeProvider.getNow());
+          // there is no entry in the ancestor state.
+          // look in the store
+          DDBPathMetadata md;
+          Pair<EntryOrigin, DDBPathMetadata> newEntry;
+          final Item item = getConsistentItem(parent);
+          if (item != null && !itemToPathMetadata(item, username).isDeleted()) {
+            // This is an undeleted entry found in the database.
+            // register it in ancestor state and in the map of entries to create
+            // as a retrieved entry
+            md = itemToPathMetadata(item, username);
+            LOG.debug("Found existing entry for parent: {}", md);
+            newEntry = Pair.of(EntryOrigin.Retrieved, md);
+            // and we break, assuming that if there is an entry, its parents
+            // are valid too.
+            addAncestors = false;
+          } else {
+            // A directory entry was not found in the DB. Create one.
+            LOG.debug("auto-create ancestor path {} for child path {}",
+                parent, path);
+            final S3AFileStatus status = makeDirStatus(parent, username);
+            md = new DDBPathMetadata(status, Tristate.FALSE,
+                false, false, ttlTimeProvider.getNow());
+            // declare to be a generated entry
+            newEntry =  Pair.of(EntryOrigin.Generated, md);
+          }
+          // insert into the ancestor state to avoid further checks
           ancestorState.put(parent, md);
-          ancestry.put(parent, md);
+          ancestry.put(parent, newEntry);
         }
         parent = parent.getParent();
       }
     }
-    return ancestry.values();
+    // we now have a list of entries which were not in the operation state.
+    // Filter out those which were retrieved, to produce a list of those
+    // which must be written to the database.
+    // TODO sort in reverse order of existence
+    return ancestry.values().stream()
+        .filter(p -> p.getLeft() != EntryOrigin.Retrieved)
+        .map(Pair::getRight)
+        .collect(Collectors.toList());
   }
 
   /**
@@ -953,7 +1027,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     Collection<DDBPathMetadata> newDirs = new ArrayList<>();
     final AncestorState ancestorState = extractOrCreate(operationState,
-        BulkOperationState.OperationType.Rename);
+        BulkOperationState.OperationType.Put);
     Path parent = qualifiedPath.getParent();
     boolean entryFound = false;
 
@@ -1009,7 +1083,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (!newDirs.isEmpty()) {
       // patch up the time.
       patchLastUpdated(newDirs, ttlTimeProvider);
-      innerPut(newDirs, operationState, ttlTimeProvider);
+      innerPut(newDirs, operationState);
     }
   }
 
@@ -1080,7 +1154,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         tombstones.add(new DDBPathMetadata(pmTombstone));
       }
       // sort all the tombstones lowest first.
-      tombstones.sort(PathOrderComparators.TOPMOST_PM_LAST);
+      tombstones.sort(TOPMOST_PM_LAST);
       newItems.addAll(tombstones);
     }
 
@@ -1252,7 +1326,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void put(
       final Collection<? extends PathMetadata> metas,
       @Nullable final BulkOperationState operationState) throws IOException {
-    innerPut(pathMetaToDDBPathMeta(metas), operationState, ttlTimeProvider);
+    innerPut(pathMetaToDDBPathMeta(metas), operationState);
   }
 
   /**
@@ -1266,15 +1340,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * create entries in the table without parents.
    * @param metas metadata entries to write.
    * @param operationState (nullable) operational state for a bulk update
-   * @param ttlTp The time provider for metadata expiry
    * @throws IOException failure.
    */
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Retries.RetryTranslated
   private void innerPut(
       final Collection<DDBPathMetadata> metas,
-      @Nullable final BulkOperationState operationState,
-      final ITtlTimeProvider ttlTp) throws IOException {
+      @Nullable final BulkOperationState operationState) throws IOException {
     if (metas.isEmpty()) {
       // Happens when someone calls put() with an empty list.
       LOG.debug("Ignoring empty list of entries to put");
@@ -1366,6 +1438,20 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return true;
   }
 
+  /**
+   * Get the value of an optional boolean attribute, falling back to the
+   * default value if the attribute is absent.
+   * @param item Item
+   * @param attrName Attribute name
+   * @param defVal Default value
+   * @return The value or the default
+   */
+  private static boolean getBoolAttribute(Item item,
+      String attrName,
+      boolean defVal) {
+    return item.hasAttribute(attrName) ? item.getBoolean(attrName) : defVal;
+  }
+
   /** Create a directory FileStatus using 0 for the lastUpdated time. */
   static S3AFileStatus makeDirStatus(Path f, String owner) {
     return new S3AFileStatus(Tristate.UNKNOWN, f, owner);
@@ -1378,6 +1464,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * {@link #processBatchWriteRequest(DynamoDBMetadataStore.AncestorState, PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
+   * @param unchangedEntries unchanged child entry paths
    * @param operationState operational state for a bulk update
    * @throws IOException IO problem
    */
@@ -1385,9 +1472,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void put(
       final DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving {} dir meta for {} to table {} in region {}: {}",
-        tableName,
         meta.isAuthoritative() ? "auth" : "nonauth",
         meta.getPath(),
         tableName, region, meta);
@@ -1403,8 +1490,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta,
         ancestorState);
 
-    // next add all children of the directory
-    metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));
+    // next add all changed children of the directory
+    // ones that came from the previous listing are left as-is
+    final Collection<PathMetadata> children = meta.getListing()
+        .stream()
+        .filter(e -> !unchangedEntries.contains(e.getFileStatus().getPath()))
+        .collect(Collectors.toList());
+
+    metasToPut.addAll(pathMetaToDDBPathMeta(children));
 
     // sort so highest-level entries are written to the store first.
     // if a sequence fails, no orphan entries will have been written.
@@ -1420,9 +1513,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   public synchronized void close() {
-    if (instrumentation != null) {
-      instrumentation.storeClosed();
-    }
+    instrumentation.storeClosed();
     try {
       if (dynamoDB != null) {
         LOG.debug("Shutting down {}", this);
@@ -1438,32 +1529,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void destroy() throws IOException {
-    if (table == null) {
-      LOG.info("In destroy(): no table to delete");
-      return;
-    }
-    LOG.info("Deleting DynamoDB table {} in region {}", tableName, region);
-    Preconditions.checkNotNull(dynamoDB, "Not connected to DynamoDB");
-    try {
-      invoker.retry("delete", null, true,
-          () -> table.delete());
-      table.waitForDelete();
-    } catch (IllegalArgumentException ex) {
-      throw new TableDeleteTimeoutException(tableName,
-          "Timeout waiting for the table " + tableArn + " to be deleted",
-          ex);
-    } catch (FileNotFoundException rnfe) {
-      LOG.info("FileNotFoundException while deleting DynamoDB table {} in "
-              + "region {}.  This may indicate that the table does not exist, "
-              + "or has been deleted by another concurrent thread or process.",
-          tableName, region);
-    } catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-      LOG.warn("Interrupted while waiting for DynamoDB table {} being deleted",
-          tableName, ie);
-      throw new InterruptedIOException("Table " + tableName
-          + " in region " + region + " has not been deleted");
-    }
+    tableHandler.destroy();
   }
 
   @Retries.RetryTranslated
@@ -1476,18 +1542,27 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     switch (pruneMode) {
     case ALL_BY_MODTIME:
+      // filter all files under the given parent older than the modtime.
+      // this implicitly skips directories, because they lack a modtime field.
+      // however we explicitly exclude directories to make clear that
+      // directories are to be excluded and avoid any confusion
+      // see: HADOOP-16725.
+      // note: files lack the is_dir field entirely, so we use a `not` to
+      // filter out the directories.
       filterExpression =
-          "mod_time < :mod_time and begins_with(parent, :parent)";
+          "mod_time < :mod_time and begins_with(parent, :parent)"
+              + " and not is_dir = :is_dir";
       projectionExpression = "parent,child";
       map = new ValueMap()
           .withLong(":mod_time", cutoff)
-          .withString(":parent", keyPrefix);
+          .withString(":parent", keyPrefix)
+          .withBoolean(":is_dir", true);
       break;
     case TOMBSTONES_BY_LASTUPDATED:
       filterExpression =
           "last_updated < :last_updated and begins_with(parent, :parent) "
               + "and is_deleted = :is_deleted";
-      projectionExpression = "parent,child";
+      projectionExpression = "parent,child,is_deleted";
       map = new ValueMap()
           .withLong(":last_updated", cutoff)
           .withString(":parent", keyPrefix)
@@ -1512,7 +1587,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Prune files, in batches. There's a sleep between each batch.
+   * Prune files, in batches. There's optionally a sleep between each batch.
    *
    * @param pruneMode The mode of operation for the prune For details see
    *                  {@link MetadataStore#prune(PruneMode, long)}
@@ -1520,10 +1595,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException Any IO/DDB failure.
    * @throws InterruptedIOException if the prune was interrupted
+   * @return count of pruned items.
    */
   @Override
   @Retries.RetryTranslated
-  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+  public long prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException {
     LOG.debug("Prune {} under {} with age {}",
         pruneMode == PruneMode.ALL_BY_MODTIME
@@ -1531,10 +1607,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
         keyPrefix, cutoff);
     final ItemCollection<ScanOutcome> items =
         expiredFiles(pruneMode, cutoff, keyPrefix);
-    innerPrune(keyPrefix, items);
+    return innerPrune(pruneMode, cutoff, keyPrefix, items);
   }
 
-  private void innerPrune(String keyPrefix, ItemCollection<ScanOutcome> items)
+  /**
+   * Prune files, in batches. There's optionally a sleep between each batch.
+   *
+   * @param pruneMode The mode of operation for the prune For details see
+   *                  {@link MetadataStore#prune(PruneMode, long)}
+   * @param cutoff Oldest modification time to allow
+   * @param keyPrefix The prefix for the keys that should be removed
+   * @param items expired items
+   * @return count of pruned items.
+   * @throws IOException Any IO/DDB failure.
+   * @throws InterruptedIOException if the prune was interrupted
+   */
+  private int innerPrune(
+      final PruneMode pruneMode, final long cutoff, final String keyPrefix,
+      final ItemCollection<ScanOutcome> items)
       throws IOException {
     int itemCount = 0;
     try (AncestorState state = initiateBulkWrite(
@@ -1549,6 +1639,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
           TimeUnit.MILLISECONDS);
       Set<Path> parentPathSet = new HashSet<>();
       Set<Path> clearedParentPathSet = new HashSet<>();
+      // declare the operation to delete a batch as a function so
+      // as to keep the code consistent across multiple uses.
+      CallableRaisingIOE<Void> deleteBatchOperation =
+          () -> {
+            // lowest path entries get deleted first.
+            deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);
+            processBatchWriteRequest(state, pathToKey(deletionBatch), null);
+
+            // set authoritative false for each pruned dir listing
+            // if at least one entry was not a tombstone
+            removeAuthoritativeDirFlag(parentPathSet, state);
+            // already cleared parent paths.
+            clearedParentPathSet.addAll(parentPathSet);
+            parentPathSet.clear();
+            return null;
+          };
       for (Item item : items) {
         DDBPathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
@@ -1565,22 +1671,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
         Path parentPath = path.getParent();
         if (!tombstone
             && parentPath != null
+            && !parentPath.isRoot()
             && !clearedParentPathSet.contains(parentPath)) {
           parentPathSet.add(parentPath);
         }
 
         itemCount++;
         if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
-          // lowest path entries get deleted first.
-          deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);
-          processBatchWriteRequest(state, pathToKey(deletionBatch), null);
-
-          // set authoritative false for each pruned dir listing
-          removeAuthoritativeDirFlag(parentPathSet, state);
-          // already cleared parent paths.
-          clearedParentPathSet.addAll(parentPathSet);
-          parentPathSet.clear();
-
+          deleteBatchOperation.apply();
           deletionBatch.clear();
           if (delay > 0) {
             Thread.sleep(delay);
@@ -1589,11 +1687,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
       // final batch of deletes
       if (!deletionBatch.isEmpty()) {
-        processBatchWriteRequest(state, pathToKey(deletionBatch), null);
-
-        // set authoritative false for each pruned dir listing
-        removeAuthoritativeDirFlag(parentPathSet, state);
-        parentPathSet.clear();
+        deleteBatchOperation.apply();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -1604,6 +1698,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     LOG.info("Finished pruning {} items in batches of {}", itemCount,
         S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
+    return itemCount;
   }
 
   /**
@@ -1638,6 +1733,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     Set<DDBPathMetadata> metas = pathSet.stream().map(path -> {
       try {
+        if (path.isRoot()) {
+          LOG.debug("ignoring root path");
+          return null;
+        }
         if (state != null && state.get(path) != null) {
           // there's already an entry for this path
           LOG.debug("Ignoring update of entry already in the state map");
@@ -1661,6 +1760,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         }
         LOG.debug("Setting isAuthoritativeDir==false on {}", ddbPathMetadata);
         ddbPathMetadata.setAuthoritativeDir(false);
+        ddbPathMetadata.setLastUpdated(ttlTimeProvider.getNow());
         return ddbPathMetadata;
       } catch (IOException e) {
         String msg = String.format("IOException while getting PathMetadata "
@@ -1674,7 +1774,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     try {
       LOG.debug("innerPut on metas: {}", metas);
       if (!metas.isEmpty()) {
-        innerPut(metas, state, ttlTimeProvider);
+        innerPut(metas, state);
       }
     } catch (IOException e) {
       String msg = String.format("IOException while setting false "
@@ -1688,29 +1788,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
   }
 
-  /**
-   *  Add tags from configuration to the existing DynamoDB table.
-   */
-  @Retries.OnceRaw
-  public void tagTable() {
-    List<Tag> tags = new ArrayList<>();
-    Map <String, String> tagProperties =
-        conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG);
-    for (Map.Entry<String, String> tagMapEntry : tagProperties.entrySet()) {
-      Tag tag = new Tag().withKey(tagMapEntry.getKey())
-          .withValue(tagMapEntry.getValue());
-      tags.add(tag);
-    }
-    if (tags.isEmpty()) {
-      return;
-    }
-
-    TagResourceRequest tagResourceRequest = new TagResourceRequest()
-        .withResourceArn(table.getDescription().getTableArn())
-        .withTags(tags);
-    getAmazonDynamoDB().tagResource(tagResourceRequest);
-  }
-
   @VisibleForTesting
   public AmazonDynamoDB getAmazonDynamoDB() {
     return amazonDynamoDB;
@@ -1721,7 +1798,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return getClass().getSimpleName() + '{'
         + "region=" + region
         + ", tableName=" + tableName
-        + ", tableArn=" + tableArn
+        + ", tableArn=" + tableHandler.getTableArn()
         + '}';
   }
 
@@ -1735,273 +1812,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   public List<RoleModel.Statement> listAWSPolicyRules(
       final Set<AccessLevel> access) {
-    Preconditions.checkState(tableArn != null, "TableARN not known");
+    Preconditions.checkState(tableHandler.getTableArn() != null,
+        "TableARN not known");
     if (access.isEmpty()) {
       return Collections.emptyList();
     }
     RoleModel.Statement stat;
     if (access.contains(AccessLevel.ADMIN)) {
-      stat = allowAllDynamoDBOperations(tableArn);
+      stat = allowAllDynamoDBOperations(tableHandler.getTableArn());
     } else {
-      stat = allowS3GuardClientOperations(tableArn);
+      stat = allowS3GuardClientOperations(tableHandler.getTableArn());
     }
     return Lists.newArrayList(stat);
-  }
-
-  /**
-   * Create a table if it does not exist and wait for it to become active.
-   *
-   * If a table with the intended name already exists, then it uses that table.
-   * Otherwise, it will automatically create the table if the config
-   * {@link org.apache.hadoop.fs.s3a.Constants#S3GUARD_DDB_TABLE_CREATE_KEY} is
-   * enabled. The DynamoDB table creation API is asynchronous.  This method wait
-   * for the table to become active after sending the creation request, so
-   * overall, this method is synchronous, and the table is guaranteed to exist
-   * after this method returns successfully.
-   *
-   * The wait for a table becoming active is Retry+Translated; it can fail
-   * while a table is not yet ready.
-   *
-   * @throws IOException if table does not exist and auto-creation is disabled;
-   * or table is being deleted, or any other I/O exception occurred.
-   */
-  @VisibleForTesting
-  @Retries.OnceRaw
-  void initTable() throws IOException {
-    table = dynamoDB.getTable(tableName);
-    try {
-      try {
-        LOG.debug("Binding to table {}", tableName);
-        TableDescription description = table.describe();
-        LOG.debug("Table state: {}", description);
-        tableArn = description.getTableArn();
-        final String status = description.getTableStatus();
-        switch (status) {
-        case "CREATING":
-          LOG.debug("Table {} in region {} is being created/updated. This may"
-                  + " indicate that the table is being operated by another "
-                  + "concurrent thread or process. Waiting for active...",
-              tableName, region);
-          waitForTableActive(table);
-          break;
-        case "DELETING":
-          throw new FileNotFoundException("DynamoDB table "
-              + "'" + tableName + "' is being "
-              + "deleted in region " + region);
-        case "UPDATING":
-          // table being updated; it can still be used.
-          LOG.debug("Table is being updated.");
-          break;
-        case "ACTIVE":
-          break;
-        default:
-          throw new IOException("Unknown DynamoDB table status " + status
-              + ": tableName='" + tableName + "', region=" + region);
-        }
-
-        final Item versionMarker = getVersionMarkerItem();
-        verifyVersionCompatibility(tableName, versionMarker);
-        Long created = extractCreationTimeFromMarker(versionMarker);
-        LOG.debug("Using existing DynamoDB table {} in region {} created {}",
-            tableName, region, (created != null) ? new Date(created) : null);
-      } catch (ResourceNotFoundException rnfe) {
-        if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
-          long readCapacity = conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
-              S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT);
-          long writeCapacity = conf.getLong(
-              S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
-              S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT);
-          ProvisionedThroughput capacity;
-          if (readCapacity > 0 && writeCapacity > 0) {
-            capacity = new ProvisionedThroughput(
-                readCapacity,
-                writeCapacity);
-          } else {
-            // at least one capacity value is <= 0
-            // verify they are both exactly zero
-            Preconditions.checkArgument(
-                readCapacity == 0 && writeCapacity == 0,
-                "S3Guard table read capacity %d and and write capacity %d"
-                    + " are inconsistent", readCapacity, writeCapacity);
-            // and set the capacity to null for per-request billing.
-            capacity = null;
-          }
-
-          createTable(capacity);
-        } else {
-          throw (FileNotFoundException)new FileNotFoundException(
-              "DynamoDB table '" + tableName + "' does not "
-              + "exist in region " + region + "; auto-creation is turned off")
-              .initCause(rnfe);
-        }
-      }
-
-    } catch (AmazonClientException e) {
-      throw translateException("initTable", tableName, e);
-    }
-  }
-
-  /**
-   * Get the version mark item in the existing DynamoDB table.
-   *
-   * As the version marker item may be created by another concurrent thread or
-   * process, we sleep and retry a limited number times if the lookup returns
-   * with a null value.
-   * DDB throttling is always retried.
-   */
-  @VisibleForTesting
-  @Retries.RetryTranslated
-  Item getVersionMarkerItem() throws IOException {
-    final PrimaryKey versionMarkerKey =
-        createVersionMarkerPrimaryKey(VERSION_MARKER);
-    int retryCount = 0;
-    // look for a version marker, with usual throttling/failure retries.
-    Item versionMarker = queryVersionMarker(versionMarkerKey);
-    while (versionMarker == null) {
-      // The marker was null.
-      // Two possibilities
-      // 1. This isn't a S3Guard table.
-      // 2. This is a S3Guard table in construction; another thread/process
-      //    is about to write/actively writing the version marker.
-      // So that state #2 is handled, batchWriteRetryPolicy is used to manage
-      // retries.
-      // This will mean that if the cause is actually #1, failure will not
-      // be immediate. As this will ultimately result in a failure to
-      // init S3Guard and the S3A FS, this isn't going to be a performance
-      // bottleneck -simply a slightly slower failure report than would otherwise
-      // be seen.
-      // "if your settings are broken, performance is not your main issue"
-      try {
-        RetryPolicy.RetryAction action = batchWriteRetryPolicy.shouldRetry(null,
-            retryCount, 0, true);
-        if (action.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
-          break;
-        } else {
-          LOG.debug("Sleeping {} ms before next retry", action.delayMillis);
-          Thread.sleep(action.delayMillis);
-        }
-      } catch (Exception e) {
-        throw new IOException("initTable: Unexpected exception " + e, e);
-      }
-      retryCount++;
-      versionMarker = queryVersionMarker(versionMarkerKey);
-    }
-    return versionMarker;
-  }
-
-  /**
-   * Issue the query to get the version marker, with throttling for overloaded
-   * DDB tables.
-   * @param versionMarkerKey key to look up
-   * @return the marker
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  private Item queryVersionMarker(final PrimaryKey versionMarkerKey)
-      throws IOException {
-    return readOp.retry("getVersionMarkerItem",
-        VERSION_MARKER, true,
-        () -> table.getItem(versionMarkerKey));
-  }
-
-  /**
-   * Verify that a table version is compatible with this S3Guard client.
-   * @param tableName name of the table (for error messages)
-   * @param versionMarker the version marker retrieved from the table
-   * @throws IOException on any incompatibility
-   */
-  @VisibleForTesting
-  static void verifyVersionCompatibility(String tableName,
-      Item versionMarker) throws IOException {
-    if (versionMarker == null) {
-      LOG.warn("Table {} contains no version marker", tableName);
-      throw new IOException(E_NO_VERSION_MARKER
-      + " Table: " + tableName);
-    } else {
-      final int version = extractVersionFromMarker(versionMarker);
-      if (VERSION != version) {
-        // version mismatch. Unless/until there is support for
-        // upgrading versions, treat this as an incompatible change
-        // and fail.
-        throw new IOException(E_INCOMPATIBLE_VERSION
-            + " Table "+  tableName
-            + " Expected version " + VERSION + " actual " + version);
-      }
-    }
-  }
-
-  /**
-   * Wait for table being active.
-   * @param t table to block on.
-   * @throws IOException IO problems
-   * @throws InterruptedIOException if the wait was interrupted
-   * @throws IllegalArgumentException if an exception was raised in the waiter
-   */
-  @Retries.RetryTranslated
-  private void waitForTableActive(Table t) throws IOException {
-    invoker.retry("Waiting for active state of table " + tableName,
-        null,
-        true,
-        () -> {
-          try {
-            t.waitForActive();
-          } catch (IllegalArgumentException ex) {
-            throw translateTableWaitFailure(tableName, ex);
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while waiting for table {} in region {}"
-                    + " active",
-                tableName, region, e);
-            Thread.currentThread().interrupt();
-            throw (InterruptedIOException)
-                new InterruptedIOException("DynamoDB table '"
-                    + tableName + "' is not active yet in region " + region)
-                    .initCause(e);
-          }
-        });
-  }
-
-  /**
-   * Create a table, wait for it to become active, then add the version
-   * marker.
-   * Creating an setting up the table isn't wrapped by any retry operations;
-   * the wait for a table to become available is RetryTranslated.
-   * @param capacity capacity to provision. If null: create a per-request
-   * table.
-   * @throws IOException on any failure.
-   * @throws InterruptedIOException if the wait was interrupted
-   */
-  @Retries.OnceRaw
-  private void createTable(ProvisionedThroughput capacity) throws IOException {
-    try {
-      String mode;
-      CreateTableRequest request = new CreateTableRequest()
-          .withTableName(tableName)
-          .withKeySchema(keySchema())
-          .withAttributeDefinitions(attributeDefinitions());
-      if (capacity != null) {
-        mode = String.format("with provisioned read capacity %d and"
-                + " write capacity %s",
-            capacity.getReadCapacityUnits(), capacity.getWriteCapacityUnits());
-        request.withProvisionedThroughput(capacity);
-      } else {
-        mode = "with pay-per-request billing";
-        request.withBillingMode(BillingMode.PAY_PER_REQUEST);
-      }
-      LOG.info("Creating non-existent DynamoDB table {} in region {} {}",
-          tableName, region, mode);
-      table = dynamoDB.createTable(request);
-      LOG.debug("Awaiting table becoming active");
-    } catch (ResourceInUseException e) {
-      LOG.warn("ResourceInUseException while creating DynamoDB table {} "
-              + "in region {}.  This may indicate that the table was "
-              + "created by another concurrent thread or process.",
-          tableName, region);
-    }
-    waitForTableActive(table);
-    final Item marker = createVersionMarker(VERSION_MARKER, VERSION,
-        System.currentTimeMillis());
-    putItem(marker);
-    tagTable();
   }
 
   /**
@@ -2013,47 +1835,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private PutItemOutcome putItem(Item item) {
     LOG.debug("Putting item {}", item);
     return table.putItem(item);
-  }
-
-  /**
-   * Provision the table with given read and write capacity units.
-   * Call will fail if the table is busy, or the new values match the current
-   * ones.
-   * <p>
-   * Until the AWS SDK lets us switch a table to on-demand, an attempt to
-   * set the I/O capacity to zero will fail.
-   * @param readCapacity read units: must be greater than zero
-   * @param writeCapacity write units: must be greater than zero
-   * @throws IOException on a failure
-   */
-  @Retries.RetryTranslated
-  void provisionTable(Long readCapacity, Long writeCapacity)
-      throws IOException {
-
-    if (readCapacity == 0 || writeCapacity == 0) {
-      // table is pay on demand
-      throw new IOException(E_ON_DEMAND_NO_SET_CAPACITY);
-    }
-    final ProvisionedThroughput toProvision = new ProvisionedThroughput()
-        .withReadCapacityUnits(readCapacity)
-        .withWriteCapacityUnits(writeCapacity);
-    invoker.retry("ProvisionTable", tableName, true,
-        () -> {
-          final ProvisionedThroughputDescription p =
-              table.updateTable(toProvision).getProvisionedThroughput();
-          LOG.info("Provision table {} in region {}: readCapacityUnits={}, "
-                  + "writeCapacityUnits={}",
-              tableName, region, p.getReadCapacityUnits(),
-              p.getWriteCapacityUnits());
-        });
-  }
-
-  @Retries.RetryTranslated
-  @VisibleForTesting
-  void provisionTableBlocking(Long readCapacity, Long writeCapacity)
-      throws IOException {
-    provisionTable(readCapacity, writeCapacity);
-    waitForTableActive(table);
   }
 
   @VisibleForTesting
@@ -2122,7 +1903,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           throughput.getWriteCapacityUnits() == 0
               ? BILLING_MODE_PER_REQUEST
               : BILLING_MODE_PROVISIONED);
-      map.put(TABLE, desc.toString());
+      map.put("sse", desc.getSSEDescription() == null
+          ? "DISABLED"
+          : desc.getSSEDescription().toString());
       map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
           Boolean.toString(true));
     } else {
@@ -2175,7 +1958,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
           currentRead, currentWrite);
       LOG.info("Changing capacity of table to read: {}, write: {}",
           newRead, newWrite);
-      provisionTableBlocking(newRead, newWrite);
+      tableHandler.provisionTableBlocking(newRead, newWrite);
     } else {
       LOG.info("Table capacity unchanged at read: {}, write: {}",
           newRead, newWrite);
@@ -2226,6 +2009,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Callback on a scan operation retried.
+   * @param text text of the operation
+   * @param ex exception
+   * @param attempts number of attempts
+   * @param idempotent is the method idempotent (this is assumed to be true)
+   */
+  void scanRetryEvent(
+      String text,
+      IOException ex,
+      int attempts,
+      boolean idempotent) {
+    scanThrottleEvents.incrementAndGet();
+    retryEvent(text, ex, attempts, idempotent);
+  }
+
+  /**
    * Callback from {@link Invoker} when an operation is retried.
    * @param text text of the operation
    * @param ex exception
@@ -2239,9 +2038,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       boolean idempotent) {
     if (S3AUtils.isThrottleException(ex)) {
       // throttled
-      if (instrumentation != null) {
-        instrumentation.throttled();
-      }
+      instrumentation.throttled();
       int eventCount = throttleEventCount.addAndGet(1);
       if (attempts == 1 && eventCount < THROTTLE_EVENT_LOG_LIMIT) {
         LOG.warn("DynamoDB IO limits reached in {};"
@@ -2258,10 +2055,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Retrying {}", text, ex);
     }
 
-    if (instrumentation != null) {
-      // note a retry
-      instrumentation.retrying();
-    }
+    // note a retry
+    instrumentation.retrying();
     if (owner != null) {
       owner.metastoreOperationRetried(ex, attempts, idempotent);
     }
@@ -2285,14 +2080,38 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return writeThrottleEvents.get();
   }
 
+  /**
+   * Get the count of scan throttle events.
+   * @return the current count of scan throttle events.
+   */
+  @VisibleForTesting
+  public long getScanThrottleEventCount() {
+    return scanThrottleEvents.get();
+  }
+
   @VisibleForTesting
   public long getBatchWriteCapacityExceededCount() {
     return batchWriteCapacityExceededEvents.get();
   }
 
-  @VisibleForTesting
+  /**
+   * Get the operation invoker for write operations.
+   * @return an invoker for retrying mutating operations on a store.
+   */
   public Invoker getInvoker() {
-    return invoker;
+    return writeOp;
+  }
+
+  /**
+   * Wrap an iterator returned from any scan with a retrying one.
+   * This includes throttle handling.
+   * Retries will update the relevant counters/metrics for scan operations.
+   * @param source source iterator
+   * @return a retrying iterator.
+   */
+  public <T> Iterable<T> wrapWithRetries(
+      final Iterable<T> source) {
+    return new RetryingCollection<>("scan dynamoDB table", scanOp, source);
   }
 
   /**
@@ -2300,9 +2119,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param count count of records.
    */
   private void recordsWritten(final int count) {
-    if (instrumentation != null) {
-      instrumentation.recordsWritten(count);
-    }
+    instrumentation.recordsWritten(count);
   }
 
   /**
@@ -2310,18 +2127,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param count count of records.
    */
   private void recordsRead(final int count) {
-    if (instrumentation != null) {
-      instrumentation.recordsRead(count);
-    }
+    instrumentation.recordsRead(count);
   }
   /**
    * Record the number of records deleted.
    * @param count count of records.
    */
   private void recordsDeleted(final int count) {
-    if (instrumentation != null) {
-      instrumentation.recordsDeleted(count);
-    }
+    instrumentation.recordsDeleted(count);
   }
 
   /**
@@ -2343,6 +2156,62 @@ public class DynamoDBMetadataStore implements MetadataStore,
         new AncestorState(this, BulkOperationState.OperationType.Rename, dest));
   }
 
+  /**
+   * Mark the directories instantiated under the destination path
+   * as authoritative. That is: all entries in the
+   * operationState (which must be an AncestorState instance),
+   * that are under the destination path.
+   *
+   * The database update synchronized on the operationState, so all other
+   * threads trying to update that state will be blocked until completion.
+   *
+   * This operation is only used in import and at the end of a rename,
+   * so this is not considered an issue.
+   * @param dest destination path.
+   * @param operationState active state.
+   * @throws IOException failure.
+   * @return the number of directories marked.
+   */
+  @Override
+  public int markAsAuthoritative(
+      final Path dest,
+      final BulkOperationState operationState) throws IOException {
+    if (operationState == null) {
+      return 0;
+    }
+    Preconditions.checkArgument(operationState instanceof AncestorState,
+        "Not an AncestorState %s", operationState);
+    final AncestorState state = (AncestorState)operationState;
+    // only mark paths under the dest as auth
+    final String simpleDestKey = pathToParentKey(dest);
+    final String destPathKey = simpleDestKey + "/";
+    final String opId = AncestorState.stateAsString(state);
+    LOG.debug("{}: marking directories under {} as authoritative",
+        opId, destPathKey);
+
+    // the list of dirs to build up.
+    final List<DDBPathMetadata> dirsToUpdate = new ArrayList<>();
+    synchronized (state) {
+      for (Map.Entry<Path, DDBPathMetadata> entry :
+          state.getAncestry().entrySet()) {
+        final Path path = entry.getKey();
+        final DDBPathMetadata md = entry.getValue();
+        final String key = pathToParentKey(path);
+        if (md.getFileStatus().isDirectory()
+            && (key.equals(simpleDestKey) || key.startsWith(destPathKey))) {
+          // the updated entry is under the destination.
+          md.setAuthoritativeDir(true);
+          md.setLastUpdated(ttlTimeProvider.getNow());
+          LOG.debug("{}: added {}", opId, key);
+          dirsToUpdate.add(md);
+        }
+      }
+      processBatchWriteRequest(state,
+          null, pathMetadataToItem(dirsToUpdate));
+    }
+    return dirsToUpdate.size();
+  }
+
   @Override
   public AncestorState initiateBulkWrite(
       final BulkOperationState.OperationType operation,
@@ -2356,64 +2225,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Extract a time provider from the argument or fall back to the
-   * one in the constructor.
-   * @param ttlTp nullable time source passed in as an argument.
-   * @return a non-null time source.
-   */
-  private ITtlTimeProvider extractTimeProvider(
-      @Nullable ITtlTimeProvider ttlTp) {
-    return ttlTp != null ? ttlTp : this.ttlTimeProvider;
-  }
-
-  /**
    * Username.
    * @return the current username
    */
   String getUsername() {
     return username;
-  }
-
-  /**
-   * Take an {@code IllegalArgumentException} raised by a DDB operation
-   * and if it contains an inner SDK exception, unwrap it.
-   * @param ex exception.
-   * @return the inner AWS exception or null.
-   */
-  public static SdkBaseException extractInnerException(
-      IllegalArgumentException ex) {
-    if (ex.getCause() instanceof  SdkBaseException) {
-      return (SdkBaseException) ex.getCause();
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Handle a table wait failure by extracting any inner cause and
-   * converting it, or, if unconvertable by wrapping
-   * the IllegalArgumentException in an IOE.
-   *
-   * @param name name of the table
-   * @param e exception
-   * @return an IOE to raise.
-   */
-  @VisibleForTesting
-  static IOException translateTableWaitFailure(
-      final String name, IllegalArgumentException e) {
-    final SdkBaseException ex = extractInnerException(e);
-    if (ex != null) {
-      if (ex instanceof WaiterTimedOutException) {
-        // a timeout waiting for state change: extract the
-        // message from the outer exception, but translate
-        // the inner one for the throttle policy.
-        return new AWSClientIOException(e.getMessage(), ex);
-      } else {
-        return translateException(e.getMessage(), name, ex);
-      }
-    } else {
-      return new IOException(e);
-    }
   }
 
   /**
@@ -2429,10 +2245,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
         boolean tombstone = !itemExists(item);
-        OPERATIONS_LOG.debug("{} {} {}",
+        boolean isDir = getBoolAttribute(item, IS_DIR, false);
+        boolean auth = getBoolAttribute(item, IS_AUTHORITATIVE, false);
+        OPERATIONS_LOG.debug("{} {} {}{}{}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",
-            itemPrimaryKeyToString(item));
+            itemPrimaryKeyToString(item),
+            auth ? " [auth]" : "",
+            isDir ? " directory" : "");
       }
     }
   }
@@ -2497,11 +2317,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
   }
 
+  @Override
+  public MetastoreInstrumentation getInstrumentation() {
+    return instrumentation;
+  }
+
   /**
    * This tracks all the ancestors created,
    * across multiple move/write operations.
    * This is to avoid duplicate creation of ancestors during bulk commits
    * and rename operations managed by a rename tracker.
+   *
+   * There is no thread safety: callers must synchronize as appropriate.
    */
   @VisibleForTesting
   static final class AncestorState extends BulkOperationState {
@@ -2546,6 +2373,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     int size() {
       return ancestry.size();
+    }
+
+    /**
+     * Get the ancestry. Not thread safe.
+     * @return the map of ancestors.
+     */
+    Map<Path, DDBPathMetadata> getAncestry() {
+      return ancestry;
     }
 
     public Path getDest() {
@@ -2690,5 +2525,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
       return stateStr;
     }
+  }
+
+  protected DynamoDBMetadataStoreTableManager getTableHandler() {
+    Preconditions.checkNotNull(tableHandler, "Not initialized");
+    return tableHandler;
   }
 }

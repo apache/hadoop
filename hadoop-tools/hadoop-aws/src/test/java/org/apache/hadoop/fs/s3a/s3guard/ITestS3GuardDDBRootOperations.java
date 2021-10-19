@@ -37,10 +37,13 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
@@ -52,6 +55,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
  * integration tests.
  * <p>
  * The tests only run if DynamoDB is the metastore.
+ * <p></p>
+ * The marker policy is fixed to "delete"
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
@@ -82,9 +87,15 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
+    disableFilesystemCaching(conf);
 
+    removeBucketOverrides(bucketName, conf,
+        S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
+        ENABLE_MULTI_DELETE,
+        DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY,
+        DIRECTORY_MARKER_POLICY_DELETE);
     // set a sleep time of 0 on pruning, for speedier test runs.
-    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE);
     conf.setTimeDuration(
         S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
         0,
@@ -153,6 +164,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
         S3GuardTool.Prune.NAME,
+        "-seconds", "1",
         fsUriStr);
     Assertions.assertThat(result)
         .describedAs("Result of prune %s", fsUriStr)

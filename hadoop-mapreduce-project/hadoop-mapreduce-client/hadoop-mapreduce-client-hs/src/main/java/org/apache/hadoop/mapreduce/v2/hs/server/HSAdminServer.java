@@ -25,7 +25,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.AccessControlException;
@@ -50,8 +50,8 @@ import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.mapreduce.v2.hs.proto.HSAdminRefreshProtocolProtos.HSAdminRefreshProtocolService;
 import org.apache.hadoop.mapreduce.v2.hs.protocolPB.HSAdminRefreshProtocolServerSideTranslatorPB;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +81,7 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     RPC.setProtocolEngine(conf, RefreshUserMappingsProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     RefreshUserMappingsProtocolServerSideTranslatorPB refreshUserMappingXlator = new RefreshUserMappingsProtocolServerSideTranslatorPB(
         this);
@@ -154,7 +154,7 @@ public class HSAdminServer extends AbstractService implements HSAdminProtocol {
 
   private void addProtocol(Configuration conf, Class<?> protocol,
       BlockingService blockingService) throws IOException {
-    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
     clientRpcServer.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol,
         blockingService);
   }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 import org.slf4j.Logger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolServerSideTran
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -85,7 +85,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
     LOG.info("RPC server is binding to " + bindHost + ":" + addr.getPort());
 
     RPC.setProtocolEngine(confCopy, QJournalProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     QJournalProtocolServerSideTranslatorPB translator =
         new QJournalProtocolServerSideTranslatorPB(this);
     BlockingService service = QJournalProtocolService

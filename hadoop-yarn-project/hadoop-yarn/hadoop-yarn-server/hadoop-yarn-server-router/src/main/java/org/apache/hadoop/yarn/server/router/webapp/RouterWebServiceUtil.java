@@ -22,6 +22,7 @@ import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
@@ -37,8 +39,11 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
@@ -87,13 +92,14 @@ public final class RouterWebServiceUtil {
    * @param formParam the form parameters as input for a specific REST call
    * @param additionalParam the query parameters as input for a specific REST
    *          call in case the call has no servlet request
+   * @param client same client used to reduce number of clients created
    * @return the retrieved entity from the REST call
    */
-  protected static <T> T genericForward(
-      final String webApp, final HttpServletRequest hsr,
-      final Class<T> returnType, final HTTPMethods method,
-      final String targetPath, final Object formParam,
-      final Map<String, String[]> additionalParam) {
+  protected static <T> T genericForward(final String webApp,
+      final HttpServletRequest hsr, final Class<T> returnType,
+      final HTTPMethods method, final String targetPath, final Object formParam,
+      final Map<String, String[]> additionalParam, Configuration conf,
+      Client client) {
 
     UserGroupInformation callerUGI = null;
 
@@ -125,26 +131,34 @@ public final class RouterWebServiceUtil {
             paramMap = additionalParam;
           }
 
-          ClientResponse response = RouterWebServiceUtil.invokeRMWebService(
-              webApp, targetPath, method,
-              (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam,
-              getMediaTypeFromHttpServletRequest(hsr, returnType));
+          ClientResponse response = RouterWebServiceUtil
+              .invokeRMWebService(webApp, targetPath, method,
+                  (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam,
+                  getMediaTypeFromHttpServletRequest(hsr, returnType), conf,
+                  client);
           if (Response.class.equals(returnType)) {
             return (T) RouterWebServiceUtil.clientResponseToResponse(response);
           }
-          // YARN RM can answer with Status.OK or it throws an exception
-          if (response.getStatus() == SC_OK) {
-            return response.getEntity(returnType);
-          }
-          if (response.getStatus() == SC_NO_CONTENT) {
-            try {
-              return returnType.getConstructor().newInstance();
-            } catch (RuntimeException | ReflectiveOperationException e) {
-              LOG.error("Cannot create empty entity for {}", returnType, e);
+
+          try {
+            // YARN RM can answer with Status.OK or it throws an exception
+            if (response.getStatus() == SC_OK) {
+              return response.getEntity(returnType);
+            }
+            if (response.getStatus() == SC_NO_CONTENT) {
+              try {
+                return returnType.getConstructor().newInstance();
+              } catch (RuntimeException | ReflectiveOperationException e) {
+                LOG.error("Cannot create empty entity for {}", returnType, e);
+              }
+            }
+            RouterWebServiceUtil.retrieveException(response);
+            return null;
+          } finally {
+            if (response != null) {
+              response.close();
             }
           }
-          RouterWebServiceUtil.retrieveException(response);
-          return null;
         }
       });
     } catch (InterruptedException e) {
@@ -156,15 +170,27 @@ public final class RouterWebServiceUtil {
 
   /**
    * Performs an invocation of a REST call on a remote RMWebService.
-   *
-   * @param additionalParam
+   * @param webApp the address of the remote webap
+   * @param path  to add to the webapp address
+   * @param method the HTTP method of the REST call
+   * @param additionalPath the servlet request path
+   * @param queryParams hsr of additional Param
+   * @param formParam the form parameters as input for a specific REST call
+   * @param mediaType Media type for Servlet request call
+   * @param conf to support http and https
+   * @param client same client used to reduce number of clients created
+   * @return Client response to REST call
    */
   private static ClientResponse invokeRMWebService(String webApp, String path,
       HTTPMethods method, String additionalPath,
-      Map<String, String[]> queryParams, Object formParam, String mediaType) {
-    Client client = Client.create();
-
-    WebResource webResource = client.resource(webApp).path(path);
+      Map<String, String[]> queryParams, Object formParam, String mediaType,
+      Configuration conf, Client client) {
+    InetSocketAddress socketAddress = NetUtils
+        .getConnectAddress(NetUtils.createSocketAddr(webApp));
+    String scheme = YarnConfiguration.useHttps(conf) ? "https://" : "http://";
+    String webAddress = scheme + socketAddress.getHostName() + ":"
+        + socketAddress.getPort();
+    WebResource webResource = client.resource(webAddress).path(path);
 
     if (additionalPath != null && !additionalPath.isEmpty()) {
       webResource = webResource.path(additionalPath);
@@ -192,21 +218,25 @@ public final class RouterWebServiceUtil {
 
     ClientResponse response = null;
 
-    switch (method) {
-    case DELETE:
-      response = builder.delete(ClientResponse.class);
-      break;
-    case GET:
-      response = builder.get(ClientResponse.class);
-      break;
-    case POST:
-      response = builder.post(ClientResponse.class);
-      break;
-    case PUT:
-      response = builder.put(ClientResponse.class);
-      break;
-    default:
-      break;
+    try {
+      switch (method) {
+      case DELETE:
+        response = builder.delete(ClientResponse.class);
+        break;
+      case GET:
+        response = builder.get(ClientResponse.class);
+        break;
+      case POST:
+        response = builder.post(ClientResponse.class);
+        break;
+      case PUT:
+        response = builder.put(ClientResponse.class);
+        break;
+      default:
+        break;
+      }
+    } finally {
+      client.destroy();
     }
 
     return response;
@@ -304,6 +334,24 @@ public final class RouterWebServiceUtil {
 
     allApps.addAll(new ArrayList<AppInfo>(federationAM.values()));
     return allApps;
+  }
+
+  /**
+   * Create a Jersey client instance.
+   * @param conf Configuration
+   * @return a jersey client
+   */
+  protected static Client createJerseyClient(Configuration conf) {
+    Client client = Client.create();
+    client.setConnectTimeout((int) conf
+        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
+            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT,
+            TimeUnit.MILLISECONDS));
+    client.setReadTimeout((int) conf
+        .getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
+            YarnConfiguration.DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT,
+            TimeUnit.MILLISECONDS));
+    return client;
   }
 
   private static AppInfo mergeUAMWithUAM(AppInfo uam1, AppInfo uam2) {

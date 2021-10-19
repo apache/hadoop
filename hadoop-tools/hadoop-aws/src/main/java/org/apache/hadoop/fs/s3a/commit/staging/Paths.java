@@ -19,16 +19,16 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.UncheckedExecutionException;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.UncheckedExecutionException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.JAVA_IO_TMPDIR;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.*;
 
 /**
@@ -141,14 +142,18 @@ public final class Paths {
   }
 
   /**
-   * A cache of temporary folders. There's a risk here that the cache
-   * gets too big
+   * A cache of temporary folders, using a generated ID which must be unique for
+   * each active task attempt.
    */
-  private static Cache<TaskAttemptID, Path> tempFolders = CacheBuilder
+  private static Cache<String, Path> tempFolders = CacheBuilder
       .newBuilder().build();
 
   /**
    * Get the task attempt temporary directory in the local filesystem.
+   * This must be unique to all tasks on all jobs running on all processes
+   * on this host.
+   * It's constructed as uuid+task-attempt-ID, relying on UUID to be unique
+   * for each job.
    * @param conf configuration
    * @param uuid some UUID, such as a job UUID
    * @param attemptID attempt ID
@@ -162,10 +167,11 @@ public final class Paths {
     try {
       final LocalDirAllocator allocator =
           new LocalDirAllocator(Constants.BUFFER_DIR);
-      return tempFolders.get(attemptID,
+      String name = uuid + "-" + attemptID;
+      return tempFolders.get(name,
           () -> {
             return FileSystem.getLocal(conf).makeQualified(
-                allocator.getLocalPathForWrite(uuid, conf));
+                allocator.getLocalPathForWrite(name, conf));
           });
     } catch (ExecutionException | UncheckedExecutionException e) {
       Throwable cause = e.getCause();
@@ -284,7 +290,7 @@ public final class Paths {
       List<? extends FileStatus> taskOutput)
       throws IOException {
     // get a list of partition directories
-    Set<String> partitions = Sets.newLinkedHashSet();
+    Set<String> partitions = new LinkedHashSet<>();
     for (FileStatus fileStatus : taskOutput) {
       // sanity check the output paths
       Path outputFile = fileStatus.getPath();

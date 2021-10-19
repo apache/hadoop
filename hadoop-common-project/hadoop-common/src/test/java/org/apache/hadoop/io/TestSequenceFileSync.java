@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.io;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.Random;
 
@@ -30,6 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /** Tests sync based seek reads/write intervals inside SequenceFiles. */
 public class TestSequenceFileSync {
@@ -46,12 +46,10 @@ public class TestSequenceFileSync {
     val.clear();
     reader.sync(off);
     reader.next(key, val);
-    assertEquals(key.get(), expectedRecord);
+    assertThat(key.get()).isEqualTo(expectedRecord);
     final String test = String.format(REC_FMT, expectedRecord, expectedRecord);
-    assertEquals(
-        "Invalid value in iter " + iter + ": " + val,
-        0,
-        val.find(test, 0));
+    assertThat(val.find(test, 0)).withFailMessage(
+        "Invalid value in iter " + iter + ": " + val).isZero();
   }
 
   @Test
@@ -124,7 +122,7 @@ public class TestSequenceFileSync {
         SequenceFile.Writer.syncInterval(20*100)
     );
     // Ensure the custom sync interval value is set
-    assertEquals(writer.syncInterval, 20*100);
+    assertThat(writer.syncInterval).isEqualTo(20*100);
     try {
       writeSequenceFile(writer, NUMRECORDS);
       for (int i = 0; i < 5; i++) {

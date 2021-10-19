@@ -486,6 +486,14 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
+          <expected-output>Add ErasureCodingPolicy RS-12-4-128k succeed</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Add ErasureCodingPolicy RS-LEGACY-12-4-128k succeed</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
           <expected-output>Add ErasureCodingPolicy RS-6-3-1024k failed</expected-output>
         </comparator>
       </comparators>
@@ -975,7 +983,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>( |\t)*1( |\t)*2( |\t)*0 EC:[A-Za-z0-9-]{1,}( )*/dir1</expected-output>
+          <expected-output>( |\t)*1( |\t)*2( |\t)*0( )*EC:[A-Za-z0-9-]{1,}( )*/dir1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -996,7 +1004,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>( |\t)*0( |\t)*1( |\t)*0 [A-Za-z0-9-]{1,}( )*/file1</expected-output>
+          <expected-output>( |\t)*0( |\t)*1( |\t)*0( )*[A-Za-z0-9-]{1,}( )*/file1</expected-output>
         </comparator>
       </comparators>
     </test>

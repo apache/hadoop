@@ -123,6 +123,8 @@ public class MiniRouterDFSCluster {
   private int numDatanodesPerNameservice = 2;
   /** Custom storage type for each datanode. */
   private StorageType[][] storageTypes = null;
+  /** Racks for datanodes. */
+  private String[] racks = null;
 
   /** Mini cluster. */
   private MiniDFSCluster cluster;
@@ -150,7 +152,7 @@ public class MiniRouterDFSCluster {
   /**
    * Router context.
    */
-  public class RouterContext {
+  public static class RouterContext {
     private Router router;
     private FileContext fileContext;
     private String nameserviceId;
@@ -639,6 +641,14 @@ public class MiniRouterDFSCluster {
   }
 
   /**
+   * Set racks for each datanode. If racks is uninitialized or passed null then
+   * default is used.
+   */
+  public void setRacks(String[] racks) {
+    this.racks = racks;
+  }
+
+  /**
    * Set the DNs to belong to only one subcluster.
    */
   public void setIndependentDNs() {
@@ -764,6 +774,15 @@ public class MiniRouterDFSCluster {
       }
       topology.setFederation(true);
 
+      // Generate conf for namenodes and datanodes
+      String ns0 = nameservices.get(0);
+      Configuration nnConf = generateNamenodeConfiguration(ns0);
+      if (overrideConf != null) {
+        nnConf.addResource(overrideConf);
+        // Router also uses this configurations as initial values.
+        routerConf = new Configuration(overrideConf);
+      }
+
       // Set independent DNs across subclusters
       int numDNs = nameservices.size() * numDatanodesPerNameservice;
       Configuration[] dnConfs = null;
@@ -771,7 +790,7 @@ public class MiniRouterDFSCluster {
         dnConfs = new Configuration[numDNs];
         int dnId = 0;
         for (String nsId : nameservices) {
-          Configuration subclusterConf = new Configuration();
+          Configuration subclusterConf = new Configuration(nnConf);
           subclusterConf.set(DFS_INTERNAL_NAMESERVICES_KEY, nsId);
           for (int i = 0; i < numDatanodesPerNameservice; i++) {
             dnConfs[dnId] = subclusterConf;
@@ -781,19 +800,12 @@ public class MiniRouterDFSCluster {
       }
 
       // Start mini DFS cluster
-      String ns0 = nameservices.get(0);
-      Configuration nnConf = generateNamenodeConfiguration(ns0);
-      if (overrideConf != null) {
-        nnConf.addResource(overrideConf);
-        // Router also uses this configurations as initial values.
-        routerConf = new Configuration(overrideConf);
-      }
-
       cluster = new MiniDFSCluster.Builder(nnConf)
           .numDataNodes(numDNs)
           .nnTopology(topology)
           .dataNodeConfOverlays(dnConfs)
           .storageTypes(storageTypes)
+          .racks(racks)
           .build();
       cluster.waitActive();
 
@@ -859,7 +871,7 @@ public class MiniRouterDFSCluster {
         NamenodeStatusReport report = new NamenodeStatusReport(
             nn.nameserviceId, nn.namenodeId,
             nn.getRpcAddress(), nn.getServiceAddress(),
-            nn.getLifelineAddress(), nn.getWebAddress());
+            nn.getLifelineAddress(), "http", nn.getWebAddress());
         FSImage fsImage = nn.namenode.getNamesystem().getFSImage();
         NamespaceInfo nsInfo = fsImage.getStorage().getNamespaceInfo();
         report.setNamespaceInfo(nsInfo);

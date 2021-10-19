@@ -23,6 +23,7 @@ import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -34,6 +35,12 @@ import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.datanode.erasurecode.ErasureCodingTestHelper;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,11 +66,11 @@ import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestReconstructStripedFile {
   public static final Logger LOG =
@@ -78,9 +85,9 @@ public class TestReconstructStripedFile {
   private int dnNum;
 
   static {
-    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.ALL);
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(BlockManager.blockLog, Level.TRACE);
   }
 
   enum ReconstructionType {
@@ -100,6 +107,23 @@ public class TestReconstructStripedFile {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
 
+  public boolean isValidationEnabled() {
+    return false;
+  }
+
+  public int getPendingTimeout() {
+    return DFSConfigKeys
+        .DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
+  }
+
+  public int getBlockSize() {
+    return blockSize;
+  }
+
+  public MiniDFSCluster getCluster() {
+    return cluster;
+  }
+
   @Before
   public void setup() throws IOException {
     ecPolicy = getEcPolicy();
@@ -116,13 +140,16 @@ public class TestReconstructStripedFile {
         DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
         cellSize - 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     if (ErasureCodeNative.isNativeCodeLoaded()) {
       conf.set(
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+        getPendingTimeout());
+    conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
+        isValidationEnabled());
     File basedir = new File(GenericTestUtils.getRandomizedTempPath());
     cluster = new MiniDFSCluster.Builder(conf, basedir).numDataNodes(dnNum)
         .build();
@@ -298,7 +325,7 @@ public class TestReconstructStripedFile {
    *    and verify the block replica length, generationStamp and content.
    * 2. Read the file and verify content.
    */
-  private void assertFileBlocksReconstruction(String fileName, int fileLen,
+  void assertFileBlocksReconstruction(String fileName, int fileLen,
       ReconstructionType type, int toRecoverBlockNum) throws Exception {
     if (toRecoverBlockNum < 1 || toRecoverBlockNum > parityBlkNum) {
       Assert.fail("toRecoverBlockNum should be between 1 ~ " + parityBlkNum);
@@ -463,7 +490,7 @@ public class TestReconstructStripedFile {
 
     final int numDataNodes = dnNum  + 1;
     conf.setInt(
-        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 10);
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 20);
     conf.setInt(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_THREADS_KEY,
         2);
@@ -499,8 +526,9 @@ public class TestReconstructStripedFile {
     // Make sure that all pending reconstruction tasks can be processed.
     while (ns.getPendingReconstructionBlocks() > 0) {
       long timeoutPending = ns.getNumTimedOutPendingReconstructions();
-      assertTrue(String.format("Found %d timeout pending reconstruction tasks",
-          timeoutPending), timeoutPending == 0);
+      assertEquals(String
+          .format("Found %d timeout pending reconstruction tasks",
+              timeoutPending), 0, timeoutPending);
       Thread.sleep(1000);
     }
 
@@ -514,6 +542,8 @@ public class TestReconstructStripedFile {
 
   @Test(timeout = 180000)
   public void testErasureCodingWorkerXmitsWeight() throws Exception {
+    testErasureCodingWorkerXmitsWeight(0.5f,
+        (int) (ecPolicy.getNumDataUnits() * 0.5f));
     testErasureCodingWorkerXmitsWeight(1f, ecPolicy.getNumDataUnits());
     testErasureCodingWorkerXmitsWeight(0f, 1);
     testErasureCodingWorkerXmitsWeight(10f, 10 * ecPolicy.getNumDataUnits());
@@ -567,6 +597,244 @@ public class TestReconstructStripedFile {
     } finally {
       barrier.await();
       DataNodeFaultInjector.set(oldInjector);
+      for (final DataNode curDn : cluster.getDataNodes()) {
+        GenericTestUtils.waitFor(() -> curDn.getXceiverCount() <= 1, 10, 60000);
+        GenericTestUtils.waitFor(() -> curDn.getXmitsInProgress() == 0, 10,
+            2500);
+      }
+    }
+  }
+
+  /**
+   * When the StripedBlockReader timeout, the outdated future should be ignored.
+   * Or the NPE will be thrown, which will stop reading the remaining data, and
+   * the reconstruction task will fail.
+   */
+  @Test(timeout = 120000)
+  public void testTimeoutReadBlockInReconstruction() throws Exception {
+    assumeTrue("Ignore case where num parity units <= 1",
+        ecPolicy.getNumParityUnits() > 1);
+    int stripedBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
+        cellSize);
+    ErasureCodingPolicy policy = ecPolicy;
+    fs.enableErasureCodingPolicy(policy.getName());
+    fs.getClient().setErasureCodingPolicy("/", policy.getName());
+
+    // StripedBlockReconstructor#reconstruct will loop 2 times
+    final int fileLen = stripedBufferSize * 2 * ecPolicy.getNumDataUnits();
+    String fileName = "/timeout-read-block";
+    Path file = new Path(fileName);
+    writeFile(fs, fileName, fileLen);
+    fs.getFileBlockLocations(file, 0, fileLen);
+
+    LocatedBlocks locatedBlocks =
+        StripedFileTestUtil.getLocatedBlocks(file, fs);
+    Assert.assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+    // The file only has one block group
+    LocatedBlock lblock = locatedBlocks.get(0);
+    DatanodeInfo[] datanodeinfos = lblock.getLocations();
+
+    // to reconstruct first block
+    DataNode dataNode = cluster.getDataNode(datanodeinfos[0].getIpcPort());
+
+    int stripedReadTimeoutInMills = conf.getInt(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY,
+        DFSConfigKeys.
+            DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
+    Assert.assertTrue(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY
+            + " must be greater than 2000",
+        stripedReadTimeoutInMills > 2000);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector timeoutInjector = new DataNodeFaultInjector() {
+      private AtomicInteger numDelayReader = new AtomicInteger(0);
+
+      @Override
+      public void delayBlockReader() {
+        int index = numDelayReader.incrementAndGet();
+        LOG.info("Delay the {}th read block", index);
+
+        // the file's first StripedBlockReconstructor#reconstruct,
+        // and the first reader will timeout
+        if (index == 1) {
+          try {
+            GenericTestUtils.waitFor(() -> numDelayReader.get() >=
+                    ecPolicy.getNumDataUnits() + 1, 50,
+                stripedReadTimeoutInMills * 3
+            );
+          } catch (TimeoutException e) {
+            Assert.fail("Can't reconstruct the file's first part.");
+          } catch (InterruptedException e) {
+          }
+        }
+        // stop all the following re-reconstruction tasks
+        if (index > 3 * ecPolicy.getNumDataUnits() + 1) {
+          while (true) {
+            try {
+              Thread.sleep(1000);
+            } catch (InterruptedException e) {
+            }
+          }
+        }
+      }
+    };
+    DataNodeFaultInjector.set(timeoutInjector);
+
+    try {
+      shutdownDataNode(dataNode);
+      // before HDFS-15240, NPE will cause reconstruction fail(test timeout)
+      StripedFileTestUtil
+          .waitForReconstructionFinished(file, fs, groupSize);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  /**
+   * When block reader timeout, the outdated future should be ignored.
+   * Or the ByteBuffer would be wrote after giving back to the BufferPool.
+   * This UT is used to ensure that we should close block reader
+   * before freeing the buffer.
+   */
+  @Test(timeout = 120000)
+  public void testAbnormallyCloseDoesNotWriteBufferAgain() throws Exception {
+    assumeTrue("Ignore case where num parity units <= 1",
+        ecPolicy.getNumParityUnits() > 1);
+    int stripedBufferSize = conf.getInt(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_BUFFER_SIZE_KEY,
+        cellSize);
+    // StripedBlockReconstructor#reconstruct will loop 2 times
+    final int fileLen = stripedBufferSize * 2 * ecPolicy.getNumDataUnits();
+    String fileName = "/no-dirty-buffer";
+    Path file = new Path(fileName);
+    writeFile(fs, fileName, fileLen);
+    fs.getFileBlockLocations(file, 0, fileLen);
+
+    LocatedBlocks locatedBlocks =
+        StripedFileTestUtil.getLocatedBlocks(file, fs);
+    Assert.assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+    // The file only has one block group
+    LocatedBlock lblock = locatedBlocks.get(0);
+    DatanodeInfo[] datanodeinfos = lblock.getLocations();
+
+    // to reconstruct first block
+    DataNode dataNode = cluster.getDataNode(datanodeinfos[0].getIpcPort());
+
+    int stripedReadTimeoutInMills = conf.getInt(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY,
+        DFSConfigKeys.
+            DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_DEFAULT);
+    Assert.assertTrue(
+        DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_STRIPED_READ_TIMEOUT_MILLIS_KEY
+            + " must be greater than 2000",
+        stripedReadTimeoutInMills > 2000);
+
+    ElasticByteBufferPool bufferPool =
+        (ElasticByteBufferPool) ErasureCodingTestHelper.getBufferPool();
+    emptyBufferPool(bufferPool, true);
+    emptyBufferPool(bufferPool, false);
+
+    AtomicInteger finishedReadBlock = new AtomicInteger(0);
+
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+    DataNodeFaultInjector timeoutInjector = new DataNodeFaultInjector() {
+      private AtomicInteger numDelayReader = new AtomicInteger(0);
+      private AtomicBoolean continueRead = new AtomicBoolean(false);
+      private AtomicBoolean closeByNPE = new AtomicBoolean(false);
+
+      @Override
+      public void delayBlockReader() {
+        int index = numDelayReader.incrementAndGet();
+        LOG.info("Delay the {}th read block", index);
+
+        // the file's first StripedBlockReconstructor#reconstruct,
+        // and the first reader will timeout
+        if (index == 1) {
+          try {
+            GenericTestUtils.waitFor(() -> numDelayReader.get() >=
+                    ecPolicy.getNumDataUnits() + 1, 50,
+                stripedReadTimeoutInMills * 3
+            );
+          } catch (TimeoutException e) {
+            Assert.fail("Can't reconstruct the file's first part.");
+          } catch (InterruptedException e) {
+          }
+        }
+        if (index > ecPolicy.getNumDataUnits() + 1) {
+          try {
+            GenericTestUtils.waitFor(
+                () -> {
+                  LOG.info("Close by NPE: {}, continue read: {}",
+                      closeByNPE, continueRead);
+                  return closeByNPE.get() ? continueRead.get()
+                    : index == finishedReadBlock.get() + 1; }, 5,
+                stripedReadTimeoutInMills * 3
+            );
+          } catch (TimeoutException e) {
+            Assert.fail("Can't reconstruct the file's remaining part.");
+          } catch (InterruptedException e) {
+          }
+        }
+      }
+
+      @Override
+      public void interceptBlockReader() {
+        int n = finishedReadBlock.incrementAndGet();
+        LOG.info("Intercept the end of {}th read block.", n);
+      }
+
+      private AtomicInteger numFreeBuffer = new AtomicInteger(0);
+      @Override
+      public void interceptFreeBlockReaderBuffer() {
+        closeByNPE.compareAndSet(false, true);
+        int num = numFreeBuffer.incrementAndGet();
+        LOG.info("Intercept the {} free block buffer.", num);
+        if (num >= ecPolicy.getNumDataUnits() + 1) {
+          continueRead.compareAndSet(false, true);
+          try {
+            GenericTestUtils.waitFor(() -> finishedReadBlock.get() >=
+                    2 * ecPolicy.getNumDataUnits() + 1, 50,
+                stripedReadTimeoutInMills * 3
+            );
+          } catch (TimeoutException e) {
+            Assert.fail("Can't finish the file's reconstruction.");
+          } catch (InterruptedException e) {
+          }
+        }
+      }
+    };
+    DataNodeFaultInjector.set(timeoutInjector);
+    try {
+      shutdownDataNode(dataNode);
+      // at least one timeout reader
+      GenericTestUtils.waitFor(() -> finishedReadBlock.get() >=
+              2 * ecPolicy.getNumDataUnits() + 1, 50,
+          stripedReadTimeoutInMills * 3
+      );
+
+      assertBufferPoolIsEmpty(bufferPool, false);
+      assertBufferPoolIsEmpty(bufferPool, true);
+      StripedFileTestUtil.waitForReconstructionFinished(file, fs, groupSize);
+    } finally {
+      DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  private void assertBufferPoolIsEmpty(ElasticByteBufferPool bufferPool,
+      boolean direct) {
+    while (bufferPool.size(direct) != 0) {
+      // iterate all ByteBuffers in ElasticByteBufferPool
+      ByteBuffer byteBuffer =  bufferPool.getBuffer(direct, 0);
+      Assert.assertEquals(0, byteBuffer.position());
+    }
+  }
+
+  private void emptyBufferPool(ElasticByteBufferPool bufferPool,
+      boolean direct) {
+    while (bufferPool.size(direct) != 0) {
+      bufferPool.getBuffer(direct, 0);
     }
   }
 }

@@ -45,11 +45,11 @@ import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A directory with this feature is a snapshottable directory, where snapshots
@@ -112,12 +112,14 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    *          Old name of the snapshot
    * @param newName
    *          New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
    * @throws SnapshotException
    *           Throw SnapshotException when either the snapshot with the old
    *           name does not exist or a snapshot with the new name already
    *           exists
    */
-  public void renameSnapshot(String path, String oldName, String newName)
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime)
       throws SnapshotException {
     final int indexOfOld = searchSnapshot(DFSUtil.string2Bytes(oldName));
     if (indexOfOld < 0) {
@@ -137,6 +139,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
       final INodeDirectory ssRoot = snapshot.getRoot();
       ssRoot.setLocalName(newNameBytes);
+      ssRoot.setModificationTime(mtime, Snapshot.CURRENT_STATE_ID);
       indexOfNew = -indexOfNew - 1;
       if (indexOfNew <= indexOfOld) {
         snapshotsByNames.add(indexOfNew, snapshot);
@@ -166,23 +169,28 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     this.snapshotsByNames.add(snapshot);
   }
 
-  /** Add a snapshot. */
-  public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
+  /**
+   * Add a snapshot.
+   * @param snapshotRoot Root of the snapshot.
+   * @param snapshotManager SnapshotManager Instance.
+   * @param name Name of the snapshot.
+   * @param leaseManager
+   * @throws SnapshotException Throw SnapshotException when there is a snapshot
+   *           with the same name already exists or snapshot quota exceeds
+   */
+  public Snapshot addSnapshot(INodeDirectory snapshotRoot,
+                              SnapshotManager snapshotManager, String name,
+                              final LeaseManager leaseManager, long now)
       throws SnapshotException {
+    int id = snapshotManager.getSnapshotCounter();
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
       throw new SnapshotException("Failed to add snapshot: there are already "
           + n + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
-    } else if (n + 1 > maxSnapshotLimit) {
-      throw new SnapshotException(
-          "Failed to add snapshot: there are already " + n
-              + " snapshot(s) and the max snapshot limit is "
-              + maxSnapshotLimit);
     }
+    snapshotManager.checkPerDirectorySnapshotLimit(n);
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
     final int i = searchSnapshot(nameBytes);
@@ -195,12 +203,11 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     d.setSnapshotRoot(s.getRoot());
     snapshotsByNames.add(-i - 1, s);
 
-    // set modification time
-    final long now = Time.now();
+    // modification time is the snapshot creation time
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
-    if (captureOpenFiles) {
+    if (snapshotManager.captureOpenFiles()) {
       try {
         Set<INodesInPath> openFilesIIP =
             leaseManager.getINodeWithLeases(snapshotRoot);
@@ -224,23 +231,45 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @param reclaimContext records blocks and inodes that need to be reclaimed
    * @param snapshotRoot The directory where we take snapshots
    * @param snapshotName The name of the snapshot to be removed
+   * @param now The snapshot deletion time set by Time.now().
    * @return The removed snapshot. Null if no snapshot with the given name
    *         exists.
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName) throws SnapshotException {
+      String snapshotName, long now, SnapshotManager snapshotManager)
+      throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
+      // considering a sequence like this with snapshots S1 and s2
+      // 1. Ordered snapshot deletion feature is turned on
+      // 2. Delete S2 creating edit log entry for S2 deletion
+      // 3. Delete S1
+      // 4. S2 gets deleted by snapshot gc thread creating edit log record for
+      //    S2 deletion again
+      // 5. Disable Ordered snapshot deletion feature
+      // 6. Restarting Namenode
+      // In this case, when edit log replay happens actual deletion of S2
+      // will happen when first edit log for S2 deletion gets replayed and
+      // the second edit log record replay for S2 deletion will fail as snapshot
+      // won't exist thereby failing the Namenode start
+      // The idea here is to check during edit log replay, if a certain snapshot
+      // is not found and the ordered snapshot deletion is off, ignore the error
+      if (!snapshotManager.isSnapshotDeletionOrdered() &&
+          !snapshotManager.isImageLoaded()) {
+        return null;
+      }
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
           + " from path " + snapshotRoot.getFullPathName()
           + ": the snapshot does not exist.");
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
+      snapshotManager.assertPrior(snapshotRoot, snapshotName, prior);
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);
+      snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
       return snapshot;
     }
   }
@@ -347,7 +376,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @throws SnapshotException If snapshotName is not null or empty, but there
    *           is no snapshot matching the name.
    */
-  private Snapshot getSnapshotByName(INodeDirectory snapshotRoot,
+  public Snapshot getSnapshotByName(INodeDirectory snapshotRoot,
       String snapshotName) throws SnapshotException {
     Snapshot s = null;
     if (snapshotName != null && !snapshotName.isEmpty()) {

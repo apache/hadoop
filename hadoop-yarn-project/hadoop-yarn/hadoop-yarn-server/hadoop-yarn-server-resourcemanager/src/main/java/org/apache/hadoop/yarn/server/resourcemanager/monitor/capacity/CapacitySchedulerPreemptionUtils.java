@@ -83,7 +83,8 @@ public class CapacitySchedulerPreemptionUtils {
 
         String partition = schedulerNode.getPartition();
         String queue = c.getQueueName();
-        TempQueuePerPartition tq = context.getQueueByPartition(queue,
+        TempQueuePerPartition tq = context.getQueueByPartition(
+            context.getScheduler().normalizeQueueName(queue),
             partition);
 
         Resource res = c.getReservedResource();

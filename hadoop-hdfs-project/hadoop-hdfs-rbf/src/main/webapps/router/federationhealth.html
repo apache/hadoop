@@ -19,10 +19,15 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap.min.css" />
-<link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
-<link rel="stylesheet" type="text/css" href="/static/rbf.css" />
+<link rel="stylesheet" type="text/css" href="static/bootstrap-3.4.1/css/bootstrap.min.css" />
+<link rel="stylesheet" type="text/css" href="static/dataTables.bootstrap.css" />
+<link rel="stylesheet" type="text/css" href="static/rbf.css" />
 <title>Router Information</title>
+<style>
+  .col-sm-6 {
+    width: 30%;
+  }
+</style>
 </head>
 <body>
 
@@ -41,9 +46,13 @@
     <li class="dropdown">
       <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
       <ul class="dropdown-menu">
+        <li><a href="explorer.html">Browse the file system</a></li>
+        <li><a href="logs">Logs</a></li>
+        <li><a href="logLevel">Log Level</a></li>
         <li><a href="jmx">Metrics</a></li>
         <li><a href="conf">Configuration</a></li>
-        <li><a href="logs">Logs</a></li>
+        <li><a href="stacks">Process Thread Dump</a></li>
+        <li><a href="topology">Network Topology</a></li>
       </ul>
     </li>
   </ul>
@@ -75,7 +84,7 @@
 
 <!-- Overview -->
 <script type="text/x-dust-template" id="tmpl-federationhealth">
-<div class="page-header"><h1>Router {#router}<small>'{HostAndPort}'</small>{/router}</h1></div>
+<div class="page-header"><h1>Router {#router}<small>'{HostAndPort}' (<span class="dfshealth-namenode-icon dfshealth-namenode-{selfState}">{selfState}</span>)</small>{/router}</h1></div>
 {#router}
 <table class="table table-bordered table-striped">
   <tr><th>Started:</th><td>{RouterStarted}</td></tr>
@@ -105,9 +114,9 @@
 <p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {@eq key=max value="-1" type="number"}&ltunbounded&gt{:else}{max|fmt_bytes}{/eq}.</p>
 {/mem.NonHeapMemoryUsage}
 <table class="table table-bordered table-striped">
-  <tr><th>Total capacity</th><td>{TotalCapacity|fmt_bytes}</td></tr>
-  <tr><th>Used capacity</th><td>{UsedCapacity|fmt_bytes}</td></tr>
-  <tr><th>Remaining capacity</th><td>{RemainingCapacity|fmt_bytes}</td></tr>
+  <tr><th>Total capacity</th><td>{TotalCapacityBigInt|fmt_bytes}</td></tr>
+  <tr><th>Used capacity</th><td>{UsedCapacityBigInt|fmt_bytes}</td></tr>
+  <tr><th>Remaining capacity</th><td>{RemainingCapacityBigInt|fmt_bytes}</td></tr>
   <tr><th>Nameservices</th><td>{NumNameservices}</td></tr>
   <tr><th>Namenodes</th><td>{NumNamenodes}</td></tr>
   <tr>
@@ -128,11 +137,12 @@
 <div class="page-header"><h1>Nameservice Information</h1></div>
 <div>
   <ul class="federationhealth-namenode-legend">
-    <li class="federationhealth-namenode-icon federationhealth-namenode-active">Active</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-standby">Standby</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-safemode">Safe mode</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-disabled">Disabled</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-unavailable">Unavailable</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-active">Active</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-observer">Observer</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-standby">Standby</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-safemode">Safe mode</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-disabled">Disabled</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-unavailable">Unavailable</li>
   </ul>
 </div>
 <small>
@@ -164,9 +174,9 @@
   <tbody>
     {#Nameservices}
     <tr>
-      <td class="federationhealth-namenode-icon federationhealth-namenode-{iconState}" title="{title}"></td>
-      <td><a href="http://{webAddress}">{nameserviceId}</a></td>
-      <td><a href="http://{webAddress}">{namenodeId}</a></td>
+      <td class="dfshealth-namenode-icon dfshealth-namenode-{iconState}" title="{title}"></td>
+      <td><a href="{webScheme}://{webAddress}">{nameserviceId}</a></td>
+      <td><a href="{webScheme}://{webAddress}">{namenodeId}</a></td>
       <td>{lastHeartbeat}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
@@ -195,10 +205,11 @@
 <div class="page-header"><h1>Namenode Information</h1></div>
 <div>
   <ul class="federationhealth-namenode-legend">
-    <li class="federationhealth-namenode-icon federationhealth-namenode-active">Active</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-standby">Standby</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-safemode">Safe mode</li>
-    <li class="federationhealth-namenode-icon federationhealth-namenode-unavailable">Unavailable</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-active">Active</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-observer">Observer</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-standby">Standby</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-safemode">Safe mode</li>
+    <li class="dfshealth-namenode-icon dfshealth-namenode-unavailable">Unavailable</li>
   </ul>
 </div>
 <small>
@@ -230,10 +241,10 @@
   <tbody>
     {#Namenodes}
     <tr>
-      <td class="federationhealth-namenode-icon federationhealth-namenode-{iconState}" title="{title}"></td>
+      <td class="dfshealth-namenode-icon dfshealth-namenode-{iconState}" title="{title}"></td>
       <td>{nameserviceId}</td>
       <td>{namenodeId}</td>
-      <td><a href="http://{webAddress}">{webAddress}</a></td>
+      <td><a href="{webScheme}://{webAddress}">{webScheme}://{webAddress}</a></td>
       <td>{lastHeartbeat}</td>
       <td ng-value="{usedPercentage}" style="width:210px">
         <div>
@@ -310,27 +321,47 @@
   <ul class="dfshealth-node-legend">
     <li class="dfshealth-node-icon dfshealth-node-alive">In service</li>
     <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommissioning">Decommissioning</li>
     <li class="dfshealth-node-icon dfshealth-node-decommissioned">Decommissioned</li>
     <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Decommissioned &amp; dead</li>
   </ul>
+  <ul class="dfshealth-node-legend">
+    <li class="dfshealth-node-icon dfshealth-node-entering-maintenance">Entering Maintenance</li>
+    <li class="dfshealth-node-icon dfshealth-node-in-maintenance">In Maintenance</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-maintenance">In Maintenance &amp; dead</li>
+  </ul>
 </div>
+<div class="page-header"><h1><small>Datanode usage histogram</small></h1></div>
+<small><div id="datanode-usage-histogram"></div></small>
 <div class="page-header"><h1><small>In operation</small></h1></div>
 <small>
+<p id="datanodefilter" class="col-sm-6">DataNode State </p>
 <table class="table" id="table-datanodes">
   <thead>
     <tr>
+      <th>State</th>
       <th>Node</th>
+      <th>Http Address</th>
       <th>Last contact</th>
+      <th>Last Block Report</th>
+      <th>Used</th>
+      <th>Non DFS Used</th>
       <th style="width:180px; text-align:center">Capacity</th>
-      <!--th>Blocks</th-->
+      <th>Blocks</th-->
       <th>Block pool used</th>
-      <!--th>Version</th-->
+      <th>Block pool usage StdDev</th>
+      <th>Version</th>
     </tr>
   </thead>
   {#LiveNodes}
   <tr>
+    <td ng-value="{state}">{state}</td>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
-    <td ng-value="{lastContact}">{#helper_relative_time value="{lastContact}"/}</td>
+    <td ng-value="{state}-{name}"><a href='{dnWebAddress}'>{dnWebAddress}</a></td>
+    <td ng-value="{lastContact}">{lastContact}s</td>
+    <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
+    <td ng-value="{used}">{used|fmt_bytes}</td>
+    <td ng-value="{nonDfsUsedSpace}">{nonDfsUsedSpace|fmt_bytes}</td>
     <td ng-value="{usedPercentage}" style="width:210px">
       <div>
         <div style="display:inline-block; float: left; padding-right: 10px; width:60px;">{capacity|fmt_bytes}</div>
@@ -340,26 +371,59 @@
         </div>
       </div>
     </td>
-    <!--td>{numBlocks}</td-->
+    <td>{numBlocks}</td>
     <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
-    <!--td>{version}</td-->
+    <td ng-value="{blockPoolUsedPercentStdDev}">{blockPoolUsedPercentStdDev|fmt_percentage}</td>
+    <td>{version}</td>
   </tr>
   {/LiveNodes}
   {#DeadNodes}
   <tr class="danger">
+    <td ng-value="{state}">{state}</td>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
+    <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
     <td></td>
-    <!--td></td-->
     <td></td>
-    <!--td></td-->
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
   </tr>
   {/DeadNodes}
 </table>
 </small>
 
+<div class="page-header"><h1><small>Entering Maintenance</small></h1></div>
+<small>
+  {?EnteringMaintenanceNodes}
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Node</th>
+      <th>Under replicated blocks</th>
+      <th>Blocks with no live replicas</th>
+      <th>Under Replicated Blocks <br/>In files under construction</th>
+    </tr>
+    </thead>
+    {#EnteringMaintenanceNodes}
+    <tr>
+      <td>{location}/{name} ({xferaddr})</td>
+      <td>{underReplicatedBlocks}</td>
+      <td>{maintenanceOnlyReplicas}</td>
+      <td>{underReplicateInOpenFiles}</td>
+    </tr>
+    {/EnteringMaintenanceNodes}
+  </table>
+  {:else}
+  No nodes are entering maintenance.
+  {/EnteringMaintenanceNodes}
+</small>
+
 <div class="page-header"><h1><small>Decommissioning</small></h1></div>
 <small>
+{?DecomNodes}
 <table class="table">
   <thead>
     <tr>
@@ -378,12 +442,21 @@
   </tr>
   {/DecomNodes}
 </table>
+{:else}
+No nodes are decommissioning.
+{/DecomNodes}
 </small>
 </script>
 
 <!-- Mount table -->
 <script type="text/x-dust-template" id="tmpl-mounttable">
 <div class="page-header"><h1>Mount Table</h1></div>
+<div>
+  <ul class="federationhealth-mounttable-legend">
+    <li class="federationhealth-mounttable-icon federationhealth-mounttable-readonly">Read Only</li>
+    <li class="federationhealth-mounttable-icon federationhealth-mounttable-readwrite">Read Write</li>
+  </ul>
+</div>
 <small>
 <table class="table">
   <thead>
@@ -392,7 +465,7 @@
       <th>Target nameservice</th>
       <th>Target path</th>
       <th>Order</th>
-      <th>Read only</th>
+      <th>Mount option</th>
       <th>Fault tolerant</th>
       <th>Owner</th>
       <th>Group</th>
@@ -409,7 +482,7 @@
       <td>{nameserviceId}</td>
       <td>{path}</td>
       <td>{order}</td>
-      <td align="center" class="mount-table-icon mount-table-read-only-{readonly}" title="{status}"/>
+      <td align="center" class="federationhealth-mounttable-icon federationhealth-mounttable-{readonly}" title="{status}"/>
       <td align="center" class="mount-table-icon mount-table-fault-tolerant-{faulttolerant}" title="{ftStatus}"></td>
       <td>{ownerName}</td>
       <td>{groupName}</td>
@@ -426,14 +499,15 @@
 
 
 
-<script type="text/javascript" src="/static/jquery-3.4.1.min.js"></script>
-<script type="text/javascript" src="/static/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="/static/dataTables.bootstrap.js"></script>
-<script type="text/javascript" src="/static/moment.min.js"></script>
-<script type="text/javascript" src="/static/dust-full-2.0.0.min.js"></script>
-<script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js"></script>
-<script type="text/javascript" src="/static/dfs-dust.js"></script>
+<script type="text/javascript" src="static/jquery-3.5.1.min.js"></script>
+<script type="text/javascript" src="static/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="static/dataTables.bootstrap.js"></script>
+<script type="text/javascript" src="static/moment.min.js"></script>
+<script type="text/javascript" src="static/dust-full-2.0.0.min.js"></script>
+<script type="text/javascript" src="static/dust-helpers-1.1.1.min.js"></script>
+<script type="text/javascript" src="static/dfs-dust.js"></script>
+<script type="text/javascript" src="/static/d3-v4.1.1.min.js"></script>
 <script type="text/javascript" src="federationhealth.js"></script>
 </body>
 </html>

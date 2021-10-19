@@ -24,7 +24,6 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
@@ -61,7 +60,7 @@ public class ContainerLogsInfo {
   public ContainerLogsInfo() {}
 
   public ContainerLogsInfo(ContainerLogMeta logMeta,
-      ContainerLogAggregationType logType) throws YarnException {
+      ContainerLogAggregationType logType) {
     this.containerLogsInfo = new ArrayList<ContainerLogFileInfo>(
         logMeta.getContainerLogMeta());
     this.logType = logType.toString();

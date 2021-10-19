@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtilClient;
@@ -480,8 +480,9 @@ final class BlockChecksumHelper {
         // Before populating the blockChecksum at this index, record the byte
         // offset where it will begin.
         blockChecksumPositions[idx] = blockChecksumBuf.getLength();
+        ExtendedBlock block = null;
         try {
-          ExtendedBlock block = getInternalBlock(numDataUnits, idx);
+          block = getInternalBlock(numDataUnits, idx);
 
           LiveBlockInfo liveBlkInfo = liveDns.get((byte) idx);
           if (liveBlkInfo == null) {
@@ -502,7 +503,9 @@ final class BlockChecksumHelper {
             break; // done with the computation, simply return.
           }
         } catch (IOException e) {
-          LOG.warn("Failed to get the checksum", e);
+          LOG.warn("Failed to get the checksum for block {} at index {} "
+              + "in blockGroup {}", block, idx, blockGroup, e);
+          throw e;
         }
       }
 
@@ -594,7 +597,7 @@ final class BlockChecksumHelper {
     private void checksumBlock(ExtendedBlock block, int blockIdx,
                                Token<BlockTokenIdentifier> blockToken,
                                DatanodeInfo targetDatanode) throws IOException {
-      int timeout = 3000;
+      int timeout = getDatanode().getDnConf().getEcChecksumSocketTimeout();
       try (IOStreamPair pair = getDatanode().connectToDN(targetDatanode,
           timeout, block, blockToken)) {
 
@@ -700,24 +703,25 @@ final class BlockChecksumHelper {
               blockGroup, ecPolicy, blockIndices, datanodes, errIndices);
       BlockChecksumType groupChecksumType =
           getBlockChecksumOptions().getBlockChecksumType();
-      final StripedBlockChecksumReconstructor checksumRecon =
+      try (StripedBlockChecksumReconstructor checksumRecon =
           groupChecksumType == BlockChecksumType.COMPOSITE_CRC ?
           new StripedBlockChecksumCompositeCrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
               blockChecksumBuf, blockLength) :
           new StripedBlockChecksumMd5CrcReconstructor(
               getDatanode().getErasureCodingWorker(), stripedReconInfo,
-              blockChecksumBuf, blockLength);
-      checksumRecon.reconstruct();
+              blockChecksumBuf, blockLength)) {
+        checksumRecon.reconstruct();
 
-      DataChecksum checksum = checksumRecon.getChecksum();
-      long crcPerBlock = checksum.getChecksumSize() <= 0 ? 0
-          : checksumRecon.getChecksumDataLen() / checksum.getChecksumSize();
-      setOrVerifyChecksumProperties(errBlkIndex,
-          checksum.getBytesPerChecksum(), crcPerBlock,
-          checksum.getChecksumType());
-      LOG.debug("Recalculated checksum for the block index:{}, checksum={}",
-          errBlkIndex, checksumRecon.getDigestObject());
+        DataChecksum checksum = checksumRecon.getChecksum();
+        long crcPerBlock = checksum.getChecksumSize() <= 0 ? 0
+            : checksumRecon.getChecksumDataLen() / checksum.getChecksumSize();
+        setOrVerifyChecksumProperties(errBlkIndex,
+            checksum.getBytesPerChecksum(), crcPerBlock,
+            checksum.getChecksumType());
+        LOG.debug("Recalculated checksum for the block index:{}, checksum={}",
+            errBlkIndex, checksumRecon.getDigestObject());
+      }
     }
 
     private void setOrVerifyChecksumProperties(int blockIdx, int bpc,

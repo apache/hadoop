@@ -49,6 +49,11 @@ export default Ember.Controller.extend({
           contentPath: 'applicationType',
           facetType: null,
       }, {
+          id: 'appTag',
+          headerTitle: 'Application Tag',
+          contentPath: 'applicationTags',
+          facetType: null,
+      }, {
           id: 'appName',
           headerTitle: 'Application Name',
           cellComponentName: 'em-table-tooltip-text',
@@ -134,11 +139,16 @@ export default Ember.Controller.extend({
       }
     }, {
       id: 'appId',
-      headerTitle: 'Application ID',
+      headerTitle: 'Application Tag',
       contentPath: 'id',
       facetType: null,
       cellComponentName: 'em-table-tooltip-text',
       minWidth: "250px"
+    }, {
+      id: 'appTag',
+      headerTitle: 'Application ID',
+      contentPath: 'applicationTags',
+      facetType: null,
     }, {
       id: 'state',
       headerTitle: 'State',

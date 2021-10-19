@@ -173,6 +173,14 @@ public class TestShuffleHandler {
         throws IOException {
       return new Path(ABS_LOG_DIR.getAbsolutePath());
     }
+
+    @Override
+    public Iterable<Path> getAllLocalPathsForRead(String path)
+        throws IOException {
+      ArrayList<Path> paths = new ArrayList<>();
+      paths.add(new Path(ABS_LOG_DIR.getAbsolutePath()));
+      return paths;
+    }
   }
 
   private static class MockShuffleHandler2 extends

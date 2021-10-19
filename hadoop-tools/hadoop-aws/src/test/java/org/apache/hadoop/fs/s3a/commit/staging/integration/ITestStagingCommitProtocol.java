@@ -19,8 +19,11 @@
 package org.apache.hadoop.fs.s3a.commit.staging.integration;
 
 import java.io.IOException;
+import java.util.UUID;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -34,6 +37,7 @@ import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.staging.Paths;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitter;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -68,8 +72,15 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
 
     // identify working dir for staging and delete
     Configuration conf = getConfiguration();
-    String uuid = StagingCommitter.getUploadUUID(conf,
-        getTaskAttempt0().getJobID());
+    String uuid = UUID.randomUUID().toString();
+    conf.set(InternalCommitterConstants.SPARK_WRITE_UUID,
+        uuid);
+    Pair<String, AbstractS3ACommitter.JobUUIDSource> t3 = AbstractS3ACommitter
+        .buildJobUUID(conf, JobID.forName("job_" + getJobId()));
+    assertEquals("Job UUID", uuid, t3.getLeft());
+    assertEquals("Job UUID source: " + t3,
+        AbstractS3ACommitter.JobUUIDSource.SparkWriteUUID,
+        t3.getRight());
     Path tempDir = Paths.getLocalTaskAttemptTempDir(conf, uuid,
         getTaskAttempt0());
     rmdir(tempDir, conf);
@@ -103,14 +114,20 @@ public class ITestStagingCommitProtocol extends AbstractITCommitProtocol {
         IOException.class);
   }
 
-  protected void validateTaskAttemptPathDuringWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathDuringWrite(Path p,
+      final long expectedLength) throws IOException {
     // this is expected to be local FS
     ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
   }
 
-  protected void validateTaskAttemptPathAfterWrite(Path p) throws IOException {
+  protected void validateTaskAttemptPathAfterWrite(Path p,
+      final long expectedLength) throws IOException {
     // this is expected to be local FS
-    ContractTestUtils.assertPathExists(getLocalFS(), "task attempt", p);
+    // this is expected to be local FS
+    FileSystem localFS = getLocalFS();
+    ContractTestUtils.assertPathExists(localFS, "task attempt", p);
+    FileStatus st = localFS.getFileStatus(p);
+    assertEquals("file length in " + st, expectedLength, st.getLen());
   }
 
   protected FileSystem getLocalFS() throws IOException {

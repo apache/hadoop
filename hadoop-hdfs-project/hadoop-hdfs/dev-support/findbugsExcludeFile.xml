@@ -305,4 +305,9 @@
       <Method name="setInteractiveFormat" />
       <Bug pattern="ME_ENUM_FIELD_SETTER" />
     </Match>
- </FindBugsFilter>
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.datanode.DirectoryScanner" />
+      <Method name="reconcile" />
+      <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD" />
+    </Match>
+</FindBugsFilter>

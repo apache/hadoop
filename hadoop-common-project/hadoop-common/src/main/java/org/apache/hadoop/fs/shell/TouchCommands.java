@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Unix touch like commands
@@ -102,8 +102,8 @@ public class TouchCommands extends FsCommand {
     public static final String NAME = "touch";
     public static final String USAGE = "[-" + OPTION_CHANGE_ONLY_ACCESS_TIME
         + "] [-" + OPTION_CHANGE_ONLY_MODIFICATION_TIME + "] [-"
-        + OPTION_USE_TIMESTAMP + " TIMESTAMP ] [-" + OPTION_DO_NOT_CREATE_FILE
-        + "] <path> ...";
+        + OPTION_USE_TIMESTAMP + " TIMESTAMP (yyyyMMdd:HHmmss) ] "
+        + "[-" + OPTION_DO_NOT_CREATE_FILE + "] <path> ...";
     public static final String DESCRIPTION =
         "Updates the access and modification times of the file specified by the"
             + " <path> to the current time. If the file does not exist, then a zero"
@@ -114,7 +114,8 @@ public class TouchCommands extends FsCommand {
             + OPTION_CHANGE_ONLY_MODIFICATION_TIME
             + " Change only the modification time \n" + "-"
             + OPTION_USE_TIMESTAMP + " TIMESTAMP"
-            + " Use specified timestamp (in format yyyyMMddHHmmss) instead of current time \n"
+            + " Use specified timestamp instead of current time\n"
+            + " TIMESTAMP format yyyyMMdd:HHmmss\n"
             + "-" + OPTION_DO_NOT_CREATE_FILE + " Do not create any files";
 
     private boolean changeModTime = false;
@@ -137,7 +138,7 @@ public class TouchCommands extends FsCommand {
 
       CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE,
           OPTION_USE_TIMESTAMP, OPTION_CHANGE_ONLY_ACCESS_TIME,
-          OPTION_CHANGE_ONLY_MODIFICATION_TIME);
+          OPTION_CHANGE_ONLY_MODIFICATION_TIME, OPTION_DO_NOT_CREATE_FILE);
       cf.parse(args);
       this.changeModTime = cf.getOpt(OPTION_CHANGE_ONLY_MODIFICATION_TIME);
       this.changeAccessTime = cf.getOpt(OPTION_CHANGE_ONLY_ACCESS_TIME);
@@ -183,7 +184,8 @@ public class TouchCommands extends FsCommand {
           time = dateFormat.parse(timestamp).getTime();
         } catch (ParseException e) {
           throw new IllegalArgumentException(
-              "Unable to parse the specified timestamp " + timestamp, e);
+              "Unable to parse the specified timestamp "+ timestamp
+              + ". The expected format is " + dateFormat.toPattern(), e);
         }
       }
       if (changeModTime ^ changeAccessTime) {

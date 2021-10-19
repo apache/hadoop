@@ -60,6 +60,7 @@ public class FairSchedulerQueueInfo {
   private ResourceInfo reservedResources;
   private ResourceInfo maxContainerAllocation;
 
+  private long pendingContainers;
   private long allocatedContainers;
   private long reservedContainers;
 
@@ -108,6 +109,7 @@ public class FairSchedulerQueueInfo {
 
     allocatedContainers = queue.getMetrics().getAllocatedContainers();
     reservedContainers = queue.getMetrics().getReservedContainers();
+    pendingContainers = queue.getMetrics().getPendingContainers();
 
     if (allocConf.isReservable(queueName) &&
         !allocConf.getShowReservationAsQueues(queueName)) {
@@ -121,6 +123,8 @@ public class FairSchedulerQueueInfo {
   public long getAllocatedContainers() {
     return allocatedContainers;
   }
+
+  public long getPendingContainers() { return pendingContainers; }
 
   public long getReservedContainers() {
     return reservedContainers;

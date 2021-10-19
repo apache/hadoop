@@ -32,15 +32,16 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.util.DirectBufferPool;
 
 import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.closeAll;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Set of classes to support output streaming into blocks which are then
@@ -155,7 +156,7 @@ final class S3ADataBlocks {
      */
     @Override
     public void close() throws IOException {
-      closeAll(LOG, uploadStream);
+      cleanupWithLogger(LOG, uploadStream);
     }
   }
 
@@ -180,7 +181,7 @@ final class S3ADataBlocks {
      * @return a new block.
      */
     abstract DataBlock create(long index, int limit,
-        S3AInstrumentation.OutputStreamStatistics statistics)
+        BlockOutputStreamStatistics statistics)
         throws IOException;
 
     /**
@@ -210,10 +211,10 @@ final class S3ADataBlocks {
 
     private volatile DestState state = Writing;
     protected final long index;
-    protected final S3AInstrumentation.OutputStreamStatistics statistics;
+    private final BlockOutputStreamStatistics statistics;
 
     protected DataBlock(long index,
-        S3AInstrumentation.OutputStreamStatistics statistics) {
+        BlockOutputStreamStatistics statistics) {
       this.index = index;
       this.statistics = statistics;
     }
@@ -372,6 +373,10 @@ final class S3ADataBlocks {
         statistics.blockReleased();
       }
     }
+
+    protected BlockOutputStreamStatistics getStatistics() {
+      return statistics;
+    }
   }
 
   // ====================================================================
@@ -387,7 +392,7 @@ final class S3ADataBlocks {
 
     @Override
     DataBlock create(long index, int limit,
-        S3AInstrumentation.OutputStreamStatistics statistics)
+        BlockOutputStreamStatistics statistics)
         throws IOException {
       return new ByteArrayBlock(0, limit, statistics);
     }
@@ -432,7 +437,7 @@ final class S3ADataBlocks {
 
     ByteArrayBlock(long index,
         int limit,
-        S3AInstrumentation.OutputStreamStatistics statistics) {
+        BlockOutputStreamStatistics statistics) {
       super(index, statistics);
       this.limit = limit;
       buffer = new S3AByteArrayOutputStream(limit);
@@ -510,7 +515,7 @@ final class S3ADataBlocks {
 
     @Override
     ByteBufferBlock create(long index, int limit,
-        S3AInstrumentation.OutputStreamStatistics statistics)
+        BlockOutputStreamStatistics statistics)
         throws IOException {
       return new ByteBufferBlock(index, limit, statistics);
     }
@@ -560,7 +565,7 @@ final class S3ADataBlocks {
        */
       ByteBufferBlock(long index,
           int bufferSize,
-          S3AInstrumentation.OutputStreamStatistics statistics) {
+          BlockOutputStreamStatistics statistics) {
         super(index, statistics);
         this.bufferSize = bufferSize;
         blockBuffer = requestBuffer(bufferSize);
@@ -805,7 +810,7 @@ final class S3ADataBlocks {
     @Override
     DataBlock create(long index,
         int limit,
-        S3AInstrumentation.OutputStreamStatistics statistics)
+        BlockOutputStreamStatistics statistics)
         throws IOException {
       File destFile = getOwner()
           .createTmpFileForWrite(String.format("s3ablock-%04d-", index),
@@ -829,7 +834,7 @@ final class S3ADataBlocks {
     DiskBlock(File bufferFile,
         int limit,
         long index,
-        S3AInstrumentation.OutputStreamStatistics statistics)
+        BlockOutputStreamStatistics statistics)
         throws FileNotFoundException {
       super(index, statistics);
       this.limit = limit;

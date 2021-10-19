@@ -104,7 +104,7 @@ public class DFSck extends Configured implements Tool {
           "every block\n"
       + "\t-storagepolicies\tprint out storage policy summary for the blocks\n"
       + "\t-maintenance\tprint out maintenance state node details\n"
-      + "\t-showprogress\tshow progress in output. Default is OFF (no progress)\n"
+      + "\t-showprogress\tDeprecated. Progress is now shown by default\n"
       + "\t-blockId\tprint out which file this blockId belongs to, locations"
       + " (nodes, racks) of this block, and other diagnostics info"
       + " (under replicated, corrupted or not, etc)\n"
@@ -227,7 +227,7 @@ public class DFSck extends Configured implements Tool {
             continue;
           numCorrupt++;
           if (numCorrupt == 1) {
-            out.println("The list of corrupt files under path '"
+            out.println("The list of corrupt blocks under path '"
                 + dir + "' are:");
           }
           out.println(line);
@@ -237,7 +237,7 @@ public class DFSck extends Configured implements Tool {
       }
     }
     out.println("The filesystem under path '" + dir + "' has " 
-        + numCorrupt + " CORRUPT files");
+        + numCorrupt + " CORRUPT blocks");
     if (numCorrupt == 0)
       errCode = 0;
     return errCode;

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource.Builder;
 
@@ -97,6 +97,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.HashMap;
@@ -548,7 +549,7 @@ public class ServiceScheduler extends CompositeService {
                 case TEMPLATE:
                   try (FSDataInputStream fileInput = fileSystem
                       .open(new Path(key.getSrcFile()))) {
-                    return IOUtils.toString(fileInput);
+                    return IOUtils.toString(fileInput, StandardCharsets.UTF_8);
                   }
                 default:
                   return null;
@@ -737,7 +738,7 @@ public class ServiceScheduler extends CompositeService {
           LOG.warn(
               "Container {} Completed. No component instance exists. exitStatus={}. diagnostics={} ",
               containerId, status.getExitStatus(), status.getDiagnostics());
-          return;
+          continue;
         }
         ComponentEvent event =
             new ComponentEvent(instance.getCompName(), CONTAINER_COMPLETED)

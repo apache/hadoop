@@ -25,12 +25,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * A <code>FilterFileSystem</code> contains
@@ -461,6 +463,11 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    fs.msync();
+  }
+
+  @Override
   public void access(Path path, FsAction mode) throws AccessControlException,
       FileNotFoundException, IOException {
     fs.access(path, mode);
@@ -714,19 +721,30 @@ public class FilterFileSystem extends FileSystem {
   @Override
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final Path path,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    return fs.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
+      final OpenFileParameters parameters) throws IOException {
+    return fs.openFileWithOptions(path, parameters);
   }
 
   @Override
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final PathHandle pathHandle,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    return fs.openFileWithOptions(pathHandle, mandatoryKeys, options,
-        bufferSize);
+      final OpenFileParameters parameters) throws IOException {
+    return fs.openFileWithOptions(pathHandle, parameters);
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+    case CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING:
+      // operations known to be unsupported, irrespective of what
+      // the wrapped class implements.
+      return false;
+    default:
+      // the feature is not implemented.
+      return fs.hasPathCapability(path, capability);
+    }
+  }
+
 }

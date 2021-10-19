@@ -23,7 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class is used for handling the duplicate <em>non-idempotenty</em> Rpc
@@ -93,7 +93,7 @@ public class RpcCallCache {
       if (this == obj) {
         return true;
       }
-      if (obj == null || !(obj instanceof ClientRequest)) {
+      if (!(obj instanceof ClientRequest)) {
         return false;
       }
       ClientRequest other = (ClientRequest) obj;

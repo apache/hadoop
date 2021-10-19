@@ -32,11 +32,11 @@
             <img src="assets/images/spinner.gif" alt="Loading...">
           </div>
         {{/if}}
-        {{#if isTimelineUnHealthy}}
+        {{#if areJHSandATSUnhealthy}}
           <div class="row">
             <div class="col-md-8 col-md-offset-2 alert alert-warning text-center">
               <span class="glyphicon glyphicon-warning-sign" style="padding-right: 10px"></span>
-              <span>Logs are unavailable because Application Timeline Service seems unhealthy.</span>
+              <span>Logs are unavailable because Application Timeline Service seems unhealthy and could not connect to the JobHistory server.</span>
             </div>
           </div>
         {{else}}

@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.http.HttpRequestLog;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2.Server;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;

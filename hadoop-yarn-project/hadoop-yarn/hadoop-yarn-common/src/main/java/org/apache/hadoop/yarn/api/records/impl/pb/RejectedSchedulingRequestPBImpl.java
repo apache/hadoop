@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.RejectionReason;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;

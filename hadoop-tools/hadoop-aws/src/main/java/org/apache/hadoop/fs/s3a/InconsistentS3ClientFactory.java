@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,22 +29,25 @@ import org.apache.hadoop.classification.InterfaceStability;
  * This client is for testing <i>only</i>; it is in the production
  * {@code hadoop-aws} module to enable integration tests to use this
  * just by editing the Hadoop configuration used to bring up the client.
+ *
+ * The factory uses the older constructor-based instantiation/configuration
+ * of the client, so does not wire up metrics, handlers etc.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
-  /**
-   * Create the inconsistent client.
-   * Logs a warning that this is being done.
-   * @param credentials credentials to use
-   * @param awsConf  AWS configuration
-   * @return an inconsistent client.
-   */
   @Override
-  protected AmazonS3 newAmazonS3Client(AWSCredentialsProvider credentials,
-      ClientConfiguration awsConf) {
+  protected AmazonS3 buildAmazonS3Client(
+      final ClientConfiguration awsConf,
+      final S3ClientCreationParameters parameters) {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
-    return new InconsistentAmazonS3Client(credentials, awsConf, getConf());
+    InconsistentAmazonS3Client s3
+        = new InconsistentAmazonS3Client(
+            parameters.getCredentialSet(), awsConf, getConf());
+    configureAmazonS3Client(s3,
+        parameters.getEndpoint(),
+        parameters.isPathStyleAccess());
+    return s3;
   }
 }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.util.constraint;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;

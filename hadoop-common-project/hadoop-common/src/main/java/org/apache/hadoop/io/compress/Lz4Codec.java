@@ -27,16 +27,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
  * This class creates lz4 compressors/decompressors.
  */
 public class Lz4Codec implements Configurable, CompressionCodec {
-
-  static {
-    NativeCodeLoader.isNativeCodeLoaded();
-  }
 
   Configuration conf;
 
@@ -58,19 +53,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   @Override
   public Configuration getConf() {
     return conf;
-  }
-
-  /**
-   * Are the native lz4 libraries loaded &amp; initialized?
-   *
-   * @return true if loaded &amp; initialized, otherwise false
-   */
-  public static boolean isNativeCodeLoaded() {
-    return NativeCodeLoader.isNativeCodeLoaded();
-  }
-
-  public static String getLibraryName() {
-    return Lz4Compressor.getLibraryName();
   }
 
   /**
@@ -101,9 +83,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   public CompressionOutputStream createOutputStream(OutputStream out,
                                                     Compressor compressor)
       throws IOException {
-    if (!isNativeCodeLoaded()) {
-      throw new RuntimeException("native lz4 library not available");
-    }
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_DEFAULT);
@@ -121,10 +100,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
    */
   @Override
   public Class<? extends Compressor> getCompressorType() {
-    if (!isNativeCodeLoaded()) {
-      throw new RuntimeException("native lz4 library not available");
-    }
-
     return Lz4Compressor.class;
   }
 
@@ -135,9 +110,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
    */
   @Override
   public Compressor createCompressor() {
-    if (!isNativeCodeLoaded()) {
-      throw new RuntimeException("native lz4 library not available");
-    }
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_DEFAULT);
@@ -175,10 +147,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
   public CompressionInputStream createInputStream(InputStream in,
                                                   Decompressor decompressor)
       throws IOException {
-    if (!isNativeCodeLoaded()) {
-      throw new RuntimeException("native lz4 library not available");
-    }
-
     return new BlockDecompressorStream(in, decompressor, conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_DEFAULT));
@@ -191,10 +159,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
    */
   @Override
   public Class<? extends Decompressor> getDecompressorType() {
-    if (!isNativeCodeLoaded()) {
-      throw new RuntimeException("native lz4 library not available");
-    }
-
     return Lz4Decompressor.class;
   }
 
@@ -205,9 +169,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
    */
   @Override
   public Decompressor createDecompressor() {
-    if (!isNativeCodeLoaded()) {
-      throw new RuntimeException("native lz4 library not available");
-    }
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_DEFAULT);
@@ -221,6 +182,6 @@ public class Lz4Codec implements Configurable, CompressionCodec {
    */
   @Override
   public String getDefaultExtension() {
-    return ".lz4";
+    return CodecConstants.LZ4_CODEC_EXTENSION;
   }
 }

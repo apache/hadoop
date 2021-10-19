@@ -22,6 +22,7 @@
 #include "hdfspp/hdfs_ext.h"
 #include "native_mini_dfs.h"
 #include "os/thread.h"
+#include "x-platform/c-api/syscall.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -126,7 +127,8 @@ static int hdfsCurlData(const char *host, const tPort port, const char *dirNm,
   EXPECT_NONNULL(pw = getpwuid(uid));
 
   int fd = -1;
-  EXPECT_NONNEGATIVE(fd = mkstemp(tmpFile));
+  EXPECT_NONNEGATIVE(fd = x_platform_syscall_create_and_open_temp_file(
+                         tmpFile, sizeof tmpFile));
 
   tSize sz = 0;
   while (sz < fileSz) {
@@ -279,7 +281,7 @@ static int testHdfsMiniStressImpl(struct tlhThreadInfo *ti)
   EXPECT_NONNULL(ti->hdfs);
   // Error injection on, some failures are expected in the read path.
   // The expectation is that any memory stomps will cascade and cause
-  // the following test to fail.  Ideally RPC errors would be seperated
+  // the following test to fail.  Ideally RPC errors would be separated
   // from BlockReader errors (RPC is expected to recover from disconnects).
   doTestHdfsMiniStress(ti, 1);
   // No error injection

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred.uploader;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.io.FileUtils;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -44,6 +44,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -436,7 +437,7 @@ public class TestFrameworkUploader {
       // Create a target file
       File targetFile = new File(parent, "a.txt");
       try(FileOutputStream os = new FileOutputStream(targetFile)) {
-        IOUtils.writeLines(Lists.newArrayList("a", "b"), null, os);
+        IOUtils.writeLines(Lists.newArrayList("a", "b"), null, os, StandardCharsets.UTF_8);
       }
       Assert.assertFalse(uploader.checkSymlink(targetFile));
 
@@ -477,7 +478,7 @@ public class TestFrameworkUploader {
       }
       Assert.assertFalse(uploader.checkSymlink(symlinkOutside));
     } finally {
-      FileUtils.deleteDirectory(parent);
+      FileUtils.forceDelete(parent);
     }
 
   }

@@ -21,24 +21,42 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 
 public class SimpleGroupsMapping implements GroupMappingServiceProvider {
-  
+
   @Override
   public List<String> getGroups(String user) {
-    return Arrays.asList(user + "group", user + "subgroup1", user + "subgroup2");
+    if ("admins".equals(user)) {
+      return Arrays.asList("root");
+    } else if ("nosecondarygroupuser".equals(user)) {
+      return Arrays.asList("primarygrouponly");
+    } else {
+      return Arrays.asList(
+          user + "group", user + "subgroup1", user + "subgroup2");
+    }
   }
 
   @Override
   public void cacheGroupsRefresh() throws IOException {
-    throw new UnsupportedOperationException();
   }
 
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
-    throw new UnsupportedOperationException();
   }
 
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    if ("admins".equals(user)) {
+      return ImmutableSet.of("root");
+    } else if ("nosecondarygroupuser".equals(user)) {
+      return ImmutableSet.of("primarygrouponly");
+    } else {
+      return ImmutableSet.of(user + "group", user + "subgroup1",
+          user + "subgroup2");
+    }
+  }
 }

@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-common</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -37,13 +37,21 @@
     <wsce.config.file>wsce-site.xml</wsce.config.file>
   </properties>
 
-
   <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
+    </dependency>
+    <!--Guava is required during runtime for curator-->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
@@ -90,8 +98,8 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>javax.activation</groupId>
-      <artifactId>javax.activation-api</artifactId>
+      <groupId>jakarta.activation</groupId>
+      <artifactId>jakarta.activation-api</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -272,11 +280,12 @@
       <artifactId>sshd-core</artifactId>
       <scope>test</scope>
     </dependency>
-
     <dependency>
-      <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core4</artifactId>
+      <groupId>org.apache.ftpserver</groupId>
+      <artifactId>ftpserver-core</artifactId>
+      <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
@@ -301,6 +310,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
       <type>test-jar</type>
@@ -313,7 +326,6 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.kerby</groupId>
@@ -346,12 +358,22 @@
     <dependency>
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.wildfly.openssl</groupId>
+      <artifactId>wildfly-openssl-java</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 
@@ -381,6 +403,79 @@
     </resources>
     <plugins>
       <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>src-compile-protoc</id>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>ProtobufRpcEngine.proto</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>src-test-compile-protoc</id>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>*legacy.proto</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>**/ProtobufRpcEngineProtos.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-generated-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>**/TestProtosLegacy.java</exclude>
+                <exclude>**/TestRpcServiceProtosLegacy.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+              <!--These classes have direct Protobuf references for backward compatibility reasons-->
+              <excludes>
+                <exclude>**/ProtobufHelper.java</exclude>
+                <exclude>**/RpcWritable.java</exclude>
+                <exclude>**/ProtobufRpcEngineCallback.java</exclude>
+                <exclude>**/ProtobufRpcEngine.java</exclude>
+                <exclude>**/ProtobufRpcEngine2.java</exclude>
+                <exclude>**/ProtobufRpcEngineProtos.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>**/TestProtoBufRpc.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
@@ -396,58 +491,6 @@
                 <includes>
                   <include>java/**/*.java</include>
                   <include>proto/**/*.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>HAServiceProtocol.proto</include>
-                  <include>IpcConnectionContext.proto</include>
-                  <include>ProtocolInfo.proto</include>
-                  <include>RpcHeader.proto</include>
-                  <include>ZKFCProtocol.proto</include>
-                  <include>ProtobufRpcEngine.proto</include>
-                  <include>Security.proto</include>
-                  <include>GetUserMappingsProtocol.proto</include>
-                  <include>TraceAdmin.proto</include>
-                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
-                  <include>RefreshUserMappingsProtocol.proto</include>
-                  <include>RefreshCallQueueProtocol.proto</include>
-                  <include>GenericRefreshProtocol.proto</include>
-                  <include>FSProtos.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-test-protoc</id>
-            <goals>
-              <goal>test-protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/src/test/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/test/proto</directory>
-                <includes>
-                  <include>test.proto</include>
-                  <include>test_rpc_service.proto</include>
                 </includes>
               </source>
             </configuration>
@@ -551,11 +594,6 @@
             <exclude>src/main/native/m4/*</exclude>
             <exclude>src/test/empty-file</exclude>
             <exclude>src/test/all-tests</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.h</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.h</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.c</exclude>
-            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc_encoder.h</exclude>
             <exclude>src/main/native/gtest/**/*</exclude>
             <exclude>src/test/resources/test-untar.tgz</exclude>
             <exclude>src/test/resources/test.har/_SUCCESS</exclude>
@@ -613,6 +651,40 @@
           </filesets>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>de.skuzzle.enforcer</groupId>
+            <artifactId>restrict-imports-enforcer-rule</artifactId>
+            <version>${restrict-imports.enforcer.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <reason>Use hadoop-common provided implementations rather than the one provided by Guava</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
+                    <bannedImport>com.google.common.base.Preconditions</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -624,10 +696,6 @@
       </activation>
       <properties>
         <require.bzip2>false</require.bzip2>
-        <snappy.prefix></snappy.prefix>
-        <snappy.lib></snappy.lib>
-        <snappy.include></snappy.include>
-        <require.snappy>false</require.snappy>
         <zstd.prefix></zstd.prefix>
         <zstd.lib></zstd.lib>
         <zstd.include></zstd.include>
@@ -681,11 +749,7 @@
                     <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
                     <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
                     <REQUIRE_BZIP2>${require.bzip2}</REQUIRE_BZIP2>
-                    <REQUIRE_SNAPPY>${require.snappy}</REQUIRE_SNAPPY>
                     <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
-                    <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
-                    <CUSTOM_SNAPPY_LIB>${snappy.lib} </CUSTOM_SNAPPY_LIB>
-                    <CUSTOM_SNAPPY_INCLUDE>${snappy.include} </CUSTOM_SNAPPY_INCLUDE>
                     <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
                     <CUSTOM_ZSTD_LIB>${zstd.lib} </CUSTOM_ZSTD_LIB>
                     <CUSTOM_ZSTD_INCLUDE>${zstd.include} </CUSTOM_ZSTD_INCLUDE>
@@ -740,14 +804,9 @@
         </os>
       </activation>
       <properties>
-        <snappy.prefix></snappy.prefix>
-        <snappy.lib></snappy.lib>
-        <snappy.include></snappy.include>
         <require.isal>false</require.isal>
         <isal.prefix></isal.prefix>
         <isal.lib></isal.lib>
-        <require.snappy>false</require.snappy>
-        <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
         <zstd.prefix></zstd.prefix>
         <zstd.lib></zstd.lib>
         <zstd.include></zstd.include>
@@ -847,10 +906,6 @@
                     <argument>/nologo</argument>
                     <argument>/p:Configuration=Release</argument>
                     <argument>/p:OutDir=${project.build.directory}/bin/</argument>
-                    <argument>/p:CustomSnappyPrefix=${snappy.prefix}</argument>
-                    <argument>/p:CustomSnappyLib=${snappy.lib}</argument>
-                    <argument>/p:CustomSnappyInclude=${snappy.include}</argument>
-                    <argument>/p:RequireSnappy=${require.snappy}</argument>
                     <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
                     <argument>/p:CustomZstdLib=${zstd.lib}</argument>
                     <argument>/p:CustomZstdInclude=${zstd.include}</argument>
@@ -880,9 +935,13 @@
             <executions>
               <execution>
                 <id>parallel-tests-createdir</id>
+                <phase>process-test-resources</phase>
                 <goals>
                   <goal>parallel-tests-createdir</goal>
                 </goals>
+                <configuration>
+                  <testBuildData>${test.build.data}</testBuildData>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -890,6 +949,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
+              <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
@@ -1009,7 +1069,113 @@
         </plugins>
       </build>
     </profile>
-
+    <!-- profile to use already generated protobuf code using 2.5.0 for aarch64-->
+    <profile>
+      <id>aarch64</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-source-legacy-protobuf</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${basedir}/src/main/arm-java</source>
+                  </sources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>add-test-source-legacy-protobuf</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${basedir}/src/test/arm-java</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to generate protobuf code using 2.5.0-->
+    <profile>
+      <id>x86_64</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <arch>!aarch64</arch>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.xolstice.maven.plugins</groupId>
+            <artifactId>protobuf-maven-plugin</artifactId>
+            <executions>
+               <execution>
+                <id>src-compile-protoc-legacy</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <skip>false</skip>
+                  <!--Generating with old protobuf version for backward compatibility-->
+                  <protocArtifact>
+                    com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                  </protocArtifact>
+                  <includeDependenciesInDescriptorSet>false</includeDependenciesInDescriptorSet>
+                  <protoSourceRoot>${basedir}/src/main/proto</protoSourceRoot>
+                  <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
+                  <clearOutputDirectory>false</clearOutputDirectory>
+                  <includes>
+                    <include>ProtobufRpcEngine.proto</include>
+                  </includes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>src-test-compile-protoc-legacy</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <skip>false</skip>
+                  <!--Generating with old protobuf version for backward compatibility-->
+                  <protocArtifact>
+                    com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                  </protocArtifact>
+                  <includeDependenciesInDescriptorSet>false</includeDependenciesInDescriptorSet>
+                  <protoSourceRoot>${basedir}/src/test/proto</protoSourceRoot>
+                  <outputDirectory>${project.build.directory}/generated-test-sources/java</outputDirectory>
+                  <clearOutputDirectory>false</clearOutputDirectory>
+                  <includes>
+                    <include>test_legacy.proto</include>
+                    <include>test_rpc_service_legacy.proto</include>
+                  </includes>
+                </configuration>
+              </execution>
+             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>
 

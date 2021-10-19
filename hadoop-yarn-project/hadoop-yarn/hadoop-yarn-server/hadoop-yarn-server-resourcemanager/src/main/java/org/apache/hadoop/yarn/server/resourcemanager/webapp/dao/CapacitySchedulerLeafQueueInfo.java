@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuot
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .AutoCreatedLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
@@ -42,26 +43,28 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected int numContainers;
   protected int maxApplications;
   protected int maxApplicationsPerUser;
-  protected int userLimit;
+  protected float userLimit;
   protected UsersInfo users; // To add another level in the XML
   protected float userLimitFactor;
+  protected float configuredMaxAMResourceLimit;
   protected ResourceInfo AMResourceLimit;
   protected ResourceInfo usedAMResource;
   protected ResourceInfo userAMResourceLimit;
   protected boolean preemptionDisabled;
   protected boolean intraQueuePreemptionDisabled;
-  protected String defaultNodeLabelExpression;
   protected int defaultPriority;
   protected boolean isAutoCreatedLeafQueue;
+  protected long maxApplicationLifetime;
+  protected long defaultApplicationLifetime;
 
   @XmlTransient
-  protected String orderingPolicyInfo;
+  protected String orderingPolicyDisplayName;
 
   CapacitySchedulerLeafQueueInfo() {
   };
 
-  CapacitySchedulerLeafQueueInfo(LeafQueue q) {
-    super(q);
+  CapacitySchedulerLeafQueueInfo(CapacityScheduler cs, LeafQueue q) {
+    super(cs, q);
     numActiveApplications = q.getNumActiveApplications();
     numPendingApplications = q.getNumPendingApplications();
     numContainers = q.getNumContainers();
@@ -70,12 +73,13 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     userLimit = q.getUserLimit();
     users = new UsersInfo(q.getUsersManager().getUsersInfo());
     userLimitFactor = q.getUserLimitFactor();
+    configuredMaxAMResourceLimit = q.getMaxAMResourcePerQueuePercent();
     AMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());
     preemptionDisabled = q.getPreemptionDisabled();
     intraQueuePreemptionDisabled = q.getIntraQueuePreemptionDisabled();
-    orderingPolicyInfo = q.getOrderingPolicy().getInfo();
-    defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
+    orderingPolicyDisplayName = q.getOrderingPolicy().getInfo();
+    orderingPolicyInfo = q.getOrderingPolicy().getConfigName();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
     ArrayList<UserInfo> usersList = users.getUsersList();
     if (usersList.isEmpty()) {
@@ -91,6 +95,8 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     if ( q instanceof AutoCreatedLeafQueue) {
       isAutoCreatedLeafQueue = true;
     }
+    defaultApplicationLifetime = q.getDefaultApplicationLifetime();
+    maxApplicationLifetime = q.getMaximumApplicationLifetime();
   }
 
   @Override
@@ -124,7 +130,7 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     return maxApplicationsPerUser;
   }
 
-  public int getUserLimit() {
+  public float getUserLimit() {
     return userLimit;
   }
 
@@ -136,17 +142,21 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   public float getUserLimitFactor() {
     return userLimitFactor;
   }
-  
+
+  public float getConfiguredMaxAMResourceLimit() {
+    return configuredMaxAMResourceLimit;
+  }
+
   public ResourceInfo getAMResourceLimit() {
     return AMResourceLimit;
   }
-  
+
   public ResourceInfo getUsedAMResource() {
     return usedAMResource;
   }
 
   public ResourceInfo getUserAMResourceLimit() {
-    return userAMResourceLimit; 
+    return userAMResourceLimit;
   }
 
   public boolean getPreemptionDisabled() {
@@ -156,13 +166,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   public boolean getIntraQueuePreemptionDisabled() {
     return intraQueuePreemptionDisabled;
   }
-  
-  public String getOrderingPolicyInfo() {
-    return orderingPolicyInfo;
-  }
 
-  public String getDefaultNodeLabelExpression() {
-    return defaultNodeLabelExpression;
+  public String getOrderingPolicyDisplayName() {
+    return orderingPolicyDisplayName;
   }
 
   public int getDefaultApplicationPriority() {
@@ -172,4 +178,13 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   public boolean isAutoCreatedLeafQueue() {
     return isAutoCreatedLeafQueue;
   }
+
+  public long getDefaultApplicationLifetime() {
+    return defaultApplicationLifetime;
+  }
+
+  public long getMaxApplicationLifetime() {
+    return maxApplicationLifetime;
+  }
+
 }

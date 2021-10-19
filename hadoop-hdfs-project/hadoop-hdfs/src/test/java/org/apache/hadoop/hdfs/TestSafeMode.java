@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,8 +60,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import java.util.function.Supplier;
 
 /**
  * Tests to verify safe mode correctness.

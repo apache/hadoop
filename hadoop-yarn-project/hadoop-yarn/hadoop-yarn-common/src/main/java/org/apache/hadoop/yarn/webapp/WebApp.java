@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -30,12 +30,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.webapp.view.RobotsTextPage;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+
 import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;

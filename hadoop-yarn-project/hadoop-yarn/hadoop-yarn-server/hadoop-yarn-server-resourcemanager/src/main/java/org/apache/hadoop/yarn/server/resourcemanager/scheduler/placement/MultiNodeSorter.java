@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Common node sorting class which will do sorting based on policy spec.
@@ -135,7 +135,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
       Map<NodeId, SchedulerNode> nodesByPartition = new HashMap<>();
       List<SchedulerNode> nodes = ((AbstractYarnScheduler) rmContext
           .getScheduler()).getNodeTracker().getNodesPerPartition(label);
-      if (nodes != null && !nodes.isEmpty()) {
+      if (nodes != null) {
         nodes.forEach(n -> nodesByPartition.put(n.getNodeID(), n));
         multiNodePolicy.addAndRefreshNodesSet(
             (Collection<N>) nodesByPartition.values(), label);

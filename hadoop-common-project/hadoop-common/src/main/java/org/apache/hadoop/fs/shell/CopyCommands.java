@@ -30,7 +30,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -38,6 +38,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsDirectoryException;
 import org.apache.hadoop.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Various commands for copy files */
 @InterfaceAudience.Private
@@ -239,26 +241,44 @@ class CopyCommands {
    *  Copy local files to a remote filesystem
    */
   public static class Put extends CommandWithDestination {
+
+    public static final Logger LOG = LoggerFactory.getLogger(Put.class);
+
+    private ThreadPoolExecutor executor = null;
+    private int threadPoolQueueSize = 1024;
+    private int numThreads = 1;
+
+    private static final int MAX_THREADS =
+        Runtime.getRuntime().availableProcessors() * 2;
+
     public static final String NAME = "put";
     public static final String USAGE =
-        "[-f] [-p] [-l] [-d] <localsrc> ... <dst>";
+        "[-f] [-p] [-l] [-d] [-t <thread count>] [-q <threadPool queue size>] " +
+        "<localsrc> ... <dst>";
     public static final String DESCRIPTION =
-      "Copy files from the local file system " +
-      "into fs. Copying fails if the file already " +
-      "exists, unless the -f flag is given.\n" +
-      "Flags:\n" +
-      "  -p : Preserves access and modification times, ownership and the mode.\n" +
-      "  -f : Overwrites the destination if it already exists.\n" +
-      "  -l : Allow DataNode to lazily persist the file to disk. Forces\n" +
-      "       replication factor of 1. This flag will result in reduced\n" +
-      "       durability. Use with care.\n" +
+        "Copy files from the local file system " +
+        "into fs. Copying fails if the file already " +
+        "exists, unless the -f flag is given.\n" +
+        "Flags:\n" +
+        "  -p : Preserves timestamps, ownership and the mode.\n" +
+        "  -f : Overwrites the destination if it already exists.\n" +
+        "  -t <thread count> : Number of threads to be used, default is 1.\n" +
+        "  -q <threadPool size> : ThreadPool queue size to be used, " +
+        "default is 1024.\n" +
+        "  -l : Allow DataNode to lazily persist the file to disk. Forces" +
+        "  replication factor of 1. This flag will result in reduced" +
+        "  durability. Use with care.\n" +
         "  -d : Skip creation of temporary file(<dst>._COPYING_).\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf =
           new CommandFormat(1, Integer.MAX_VALUE, "f", "p", "l", "d");
+      cf.addOptionWithValue("t");
+      cf.addOptionWithValue("q");
       cf.parse(args);
+      setNumberThreads(cf.getOptValue("t"));
+      setThreadPoolQueueSize(cf.getOptValue("q"));
       setOverwrite(cf.getOpt("f"));
       setPreserve(cf.getOpt("p"));
       setLazyPersist(cf.getOpt("l"));
@@ -288,32 +308,22 @@ class CopyCommands {
         copyStreamToTarget(System.in, getTargetPath(args.get(0)));
         return;
       }
+
+      executor = new ThreadPoolExecutor(numThreads, numThreads, 1,
+          TimeUnit.SECONDS, new ArrayBlockingQueue<>(threadPoolQueueSize),
+          new ThreadPoolExecutor.CallerRunsPolicy());
       super.processArguments(args);
+
+      // issue the command and then wait for it to finish
+      executor.shutdown();
+      try {
+        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MINUTES);
+      } catch (InterruptedException e) {
+        executor.shutdownNow();
+        displayError(e);
+        Thread.currentThread().interrupt();
+      }
     }
-  }
-
-  public static class CopyFromLocal extends Put {
-    private ThreadPoolExecutor executor = null;
-    private int numThreads = 1;
-
-    private static final int MAX_THREADS =
-        Runtime.getRuntime().availableProcessors() * 2;
-    public static final String NAME = "copyFromLocal";
-    public static final String USAGE =
-        "[-f] [-p] [-l] [-d] [-t <thread count>] <localsrc> ... <dst>";
-    public static final String DESCRIPTION =
-        "Copy files from the local file system " +
-        "into fs. Copying fails if the file already " +
-        "exists, unless the -f flag is given.\n" +
-        "Flags:\n" +
-        "  -p : Preserves access and modification times, ownership and the" +
-        " mode.\n" +
-        "  -f : Overwrites the destination if it already exists.\n" +
-        "  -t <thread count> : Number of threads to be used, default is 1.\n" +
-        "  -l : Allow DataNode to lazily persist the file to disk. Forces" +
-        " replication factor of 1. This flag will result in reduced" +
-        " durability. Use with care.\n" +
-        "  -d : Skip creation of temporary file(<dst>._COPYING_).\n";
 
     private void setNumberThreads(String numberThreadsString) {
       if (numberThreadsString == null) {
@@ -330,20 +340,23 @@ class CopyCommands {
       }
     }
 
-    @Override
-    protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf =
-          new CommandFormat(1, Integer.MAX_VALUE, "f", "p", "l", "d");
-      cf.addOptionWithValue("t");
-      cf.parse(args);
-      setNumberThreads(cf.getOptValue("t"));
-      setOverwrite(cf.getOpt("f"));
-      setPreserve(cf.getOpt("p"));
-      setLazyPersist(cf.getOpt("l"));
-      setDirectWrite(cf.getOpt("d"));
-      getRemoteDestination(args);
-      // should have a -r option
-      setRecursive(true);
+    private void setThreadPoolQueueSize(String numThreadPoolQueueSize) {
+      if (numThreadPoolQueueSize != null) {
+        int parsedValue = Integer.parseInt(numThreadPoolQueueSize);
+        if (parsedValue < 1) {
+          LOG.warn("The value of the thread pool queue size cannot be " +
+              "less than 1, and the default value is used here. " +
+              "The default size is 1024.");
+          threadPoolQueueSize = 1024;
+        } else {
+          threadPoolQueueSize = parsedValue;
+        }
+      }
+    }
+
+    @VisibleForTesting
+    protected int getThreadPoolQueueSize() {
+      return threadPoolQueueSize;
     }
 
     private void copyFile(PathData src, PathData target) throws IOException {
@@ -372,25 +385,6 @@ class CopyCommands {
       executor.submit(task);
     }
 
-    @Override
-    protected void processArguments(LinkedList<PathData> args)
-        throws IOException {
-      executor = new ThreadPoolExecutor(numThreads, numThreads, 1,
-          TimeUnit.SECONDS, new ArrayBlockingQueue<>(1024),
-          new ThreadPoolExecutor.CallerRunsPolicy());
-      super.processArguments(args);
-
-      // issue the command and then wait for it to finish
-      executor.shutdown();
-      try {
-        executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MINUTES);
-      } catch (InterruptedException e) {
-        executor.shutdownNow();
-        displayError(e);
-        Thread.currentThread().interrupt();
-      }
-    }
-
     @VisibleForTesting
     public int getNumThreads() {
       return numThreads;
@@ -400,6 +394,12 @@ class CopyCommands {
     public ThreadPoolExecutor getExecutor() {
       return executor;
     }
+  }
+
+  public static class CopyFromLocal extends Put {
+    public static final String NAME = "copyFromLocal";
+    public static final String USAGE = Put.USAGE;
+    public static final String DESCRIPTION = "Identical to the -put command.";
   }
  
   public static class CopyToLocal extends Get {

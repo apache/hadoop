@@ -22,12 +22,11 @@ import java.util.List;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 
-import com.google.common.collect.Lists;
-
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.MetricsVisitor;
+import org.apache.hadoop.util.Lists;
 
 /**
  * Helper class to build MBeanInfo from metrics records
@@ -106,7 +105,7 @@ class MBeanInfoBuilder implements MetricsVisitor {
       }
       ++curRecNo;
     }
-    MetricsSystemImpl.LOG.debug(attrs.toString());
+    MetricsSystemImpl.LOG.debug("{}", attrs);
     MBeanAttributeInfo[] attrsArray = new MBeanAttributeInfo[attrs.size()];
     return new MBeanInfo(name, description, attrs.toArray(attrsArray),
                          null, null, null); // no ops/ctors/notifications

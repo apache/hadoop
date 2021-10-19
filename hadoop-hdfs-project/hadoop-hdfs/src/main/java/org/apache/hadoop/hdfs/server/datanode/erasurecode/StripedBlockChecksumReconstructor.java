@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.io.DataOutputBuffer;
 
 /**
@@ -32,7 +34,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
  */
 @InterfaceAudience.Private
 public abstract class StripedBlockChecksumReconstructor
-    extends StripedReconstructor {
+    extends StripedReconstructor implements Closeable {
   private ByteBuffer targetBuffer;
   private final byte[] targetIndices;
 
@@ -55,6 +57,7 @@ public abstract class StripedBlockChecksumReconstructor
 
   private void init() throws IOException {
     initDecoderIfNecessary();
+    initDecodingValidatorIfNecessary();
     getStripedReader().init();
     // allocate buffer to keep the reconstructed block data
     targetBuffer = allocateBuffer(getBufferSize());
@@ -73,31 +76,28 @@ public abstract class StripedBlockChecksumReconstructor
   public void reconstruct() throws IOException {
     prepareDigester();
     long maxTargetLength = getMaxTargetLength();
-    try {
-      while (requestedLen > 0 && getPositionInBlock() < maxTargetLength) {
-        long remaining = maxTargetLength - getPositionInBlock();
-        final int toReconstructLen = (int) Math
-            .min(getStripedReader().getBufferSize(), remaining);
-        // step1: read from minimum source DNs required for reconstruction.
-        // The returned success list is the source DNs we do real read from
-        getStripedReader().readMinimumSources(toReconstructLen);
+    while (requestedLen > 0 && getPositionInBlock() < maxTargetLength) {
+      DataNodeFaultInjector.get().stripedBlockChecksumReconstruction();
+      long remaining = maxTargetLength - getPositionInBlock();
+      final int toReconstructLen = (int) Math
+          .min(getStripedReader().getBufferSize(), remaining);
+      // step1: read from minimum source DNs required for reconstruction.
+      // The returned success list is the source DNs we do real read from
+      getStripedReader().readMinimumSources(toReconstructLen);
 
-        // step2: decode to reconstruct targets
-        reconstructTargets(toReconstructLen);
+      // step2: decode to reconstruct targets
+      reconstructTargets(toReconstructLen);
 
-        // step3: calculate checksum
-        checksumDataLen += checksumWithTargetOutput(
-            targetBuffer.array(), toReconstructLen);
+      // step3: calculate checksum
+      checksumDataLen += checksumWithTargetOutput(
+          getBufferArray(targetBuffer), toReconstructLen);
 
-        updatePositionInBlock(toReconstructLen);
-        requestedLen -= toReconstructLen;
-        clearBuffers();
-      }
-
-      commitDigest();
-    } finally {
-      cleanup();
+      updatePositionInBlock(toReconstructLen);
+      requestedLen -= toReconstructLen;
+      clearBuffers();
     }
+
+    commitDigest();
   }
 
   /**
@@ -140,7 +140,7 @@ public abstract class StripedBlockChecksumReconstructor
     // case-2) length of data bytes which is less than bytesPerCRC
     if (requestedLen <= toReconstructLen) {
       int remainingLen = Math.toIntExact(requestedLen);
-      outputData = Arrays.copyOf(targetBuffer.array(), remainingLen);
+      outputData = Arrays.copyOf(outputData, remainingLen);
 
       int partialLength = remainingLen % getChecksum().getBytesPerChecksum();
 
@@ -193,7 +193,16 @@ public abstract class StripedBlockChecksumReconstructor
     for (int i = 0; i < targetIndices.length; i++) {
       tarIndices[i] = targetIndices[i];
     }
-    getDecoder().decode(inputs, tarIndices, outputs);
+
+    if (isValidationEnabled()) {
+      markBuffers(inputs);
+      getDecoder().decode(inputs, tarIndices, outputs);
+      resetBuffers(inputs);
+
+      getValidator().validate(inputs, tarIndices, outputs);
+    } else {
+      getDecoder().decode(inputs, tarIndices, outputs);
+    }
   }
 
   /**
@@ -206,5 +215,26 @@ public abstract class StripedBlockChecksumReconstructor
 
   public long getChecksumDataLen() {
     return checksumDataLen;
+  }
+
+  /**
+   * Gets an array corresponding the buffer.
+   * @param buffer the input buffer.
+   * @return the array with content of the buffer.
+   */
+  private static byte[] getBufferArray(ByteBuffer buffer) {
+    byte[] buff = new byte[buffer.remaining()];
+    if (buffer.hasArray()) {
+      buff = buffer.array();
+    } else {
+      buffer.slice().get(buff);
+    }
+    return buff;
+  }
+
+  @Override
+  public void close() throws IOException {
+    getStripedReader().close();
+    cleanup();
   }
 }

@@ -27,17 +27,20 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
-import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assume.*;
 
@@ -45,12 +48,7 @@ public class TestLz4CompressorDecompressor {
   
   private static final Random rnd = new Random(12345l);
 
-  @Before
-  public void before() {
-    assumeTrue(Lz4Codec.isNativeCodeLoaded());
-  }
-
-  //test on NullPointerException in {@code compressor.setInput()} 
+  //test on NullPointerException in {@code compressor.setInput()}
   @Test
   public void testCompressorSetInputNullPointerException() {
     try {
@@ -329,5 +327,37 @@ public class TestLz4CompressorDecompressor {
     ctx.startThreads();
 
     ctx.waitFor(60000);
+  }
+
+  @Test
+  public void testLz4Compatibility() throws Exception {
+    // The sequence file was created using native Lz4 codec before HADOOP-17292.
+    // After we use lz4-java for lz4 compression, this test makes sure we can
+    // decompress the sequence file correctly.
+    Path filePath = new Path(TestLz4CompressorDecompressor.class
+        .getResource("/lz4/sequencefile").toURI());
+
+    Configuration conf = new Configuration();
+    conf.setInt("io.seqfile.compress.blocksize", 1000);
+    FileSystem fs = FileSystem.get(conf);
+
+    int lines = 2000;
+
+    SequenceFile.Reader reader = new SequenceFile.Reader(fs, filePath, conf);
+
+    Writable key = (Writable)reader.getKeyClass().newInstance();
+    Writable value = (Writable)reader.getValueClass().newInstance();
+
+    int lc = 0;
+    try {
+      while (reader.next(key, value)) {
+        assertEquals("key" + lc, key.toString());
+        assertEquals("value" + lc, value.toString());
+        lc++;
+      }
+    } finally {
+      reader.close();
+    }
+    assertEquals(lines, lc);
   }
 }

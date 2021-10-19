@@ -280,7 +280,12 @@ public class FileIoProvider {
       profilingEventHook.afterFileIo(volume, TRANSFER, begin, count);
     } catch (Exception e) {
       String em = e.getMessage();
-      if (!em.startsWith("Broken pipe") && !em.startsWith("Connection reset")) {
+      if (em != null) {
+        if (!em.startsWith("Broken pipe")
+            && !em.startsWith("Connection reset")) {
+          onFailure(volume, begin);
+        }
+      } else {
         onFailure(volume, begin);
       }
       throw e;
@@ -331,7 +336,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       onFailure(volume, begin);
       throw e;
     }
@@ -362,7 +367,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fos;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fos);
+      IOUtils.closeStream(fos);
       onFailure(volume, begin);
       throw e;
     }
@@ -427,7 +432,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       onFailure(volume, begin);
       throw e;
     }
@@ -459,7 +464,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return fis;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(fis);
+      IOUtils.closeStream(fis);
       onFailure(volume, begin);
       throw e;
     }
@@ -490,7 +495,7 @@ public class FileIoProvider {
       profilingEventHook.afterMetadataOp(volume, OPEN, begin);
       return raf;
     } catch(Exception e) {
-      org.apache.commons.io.IOUtils.closeQuietly(raf);
+      IOUtils.closeStream(raf);
       onFailure(volume, begin);
       throw e;
     }
@@ -508,6 +513,7 @@ public class FileIoProvider {
     try {
       faultInjectorEventHook.beforeMetadataOp(volume, DELETE);
       boolean deleted = FileUtil.fullyDelete(dir);
+      LOG.trace("Deletion of dir {} {}", dir, deleted ? "succeeded" : "failed");
       profilingEventHook.afterMetadataOp(volume, DELETE, begin);
       return deleted;
     } catch(Exception e) {

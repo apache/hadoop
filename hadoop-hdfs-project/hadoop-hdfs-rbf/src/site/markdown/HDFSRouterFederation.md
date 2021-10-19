@@ -184,6 +184,18 @@ Router relies on a state store to distribute tokens across all routers. Apart fr
 See the Apache JIRA ticket [HDFS-13532](https://issues.apache.org/jira/browse/HDFS-13532) for more information on this feature.
 
 
+### Isolation
+Router supports assignment of the dedicated number of RPC handlers to achieve isolation for all downstream nameservices it is configured to proxy. Since large or busy clusters may have relatively higher RPC traffic to the namenode compared to other clusters namenodes, this feature if enabled allows admins to configure higher number of RPC handlers for busy clusters. If dedicated handlers are not assigned for specific nameservices, equal distribution of RPC handlers is done for all configured nameservices. **Note** Fanout calls are treated as targeting a special nameservice, thus can be configured with handlers as well.
+
+If a downstream namenode is slow/busy enough that permits are unavailable, routers would throw StandByException exception to the client. This would in turn trigger a failover behavior at the client side and clients would connect to a different router in the cluster. This offers a positive effect of automatically load balancing RPCs across all routers nodes. This is important to ensure that a single router does not become a bottleneck in case of unhealthy namenodes and all handlers available in the entire router cluster are utilized.
+
+Users can configure handlers based on steady state load that individual downstream namenodes expect and can introduce more routers to the cluster to handle more RPCs overall. Because of the bouncing behavior that clients automatically get in this feature in an event where certain namenodes are overloaded, good clients connecting to good namenodes will always continue to use Rpc lanes dedicated to them. For bad behaving namenodes or backfill jobs that put spiky loads on namenodes, more routers could potentially be added with a higher than usual handler count to deal with the surge in traffic for specific nameservices if needed.
+
+Overall the isolation feature is exposed via a configuration dfs.federation.router.handler.isolation.enable. The default value of this feature will be “false”. Users can also introduce their own fairness policy controller for custom allocation of handlers to various nameservices.
+
+See the Apache JIRA ticket [HDFS-14090](https://issues.apache.org/jira/browse/HDFS-14090) for more information on this feature.
+
+
 Deployment
 ----------
 
@@ -201,7 +213,8 @@ And to stop it:
 
 ### Mount table management
 
-The mount table entries are pretty much the same as in [ViewFs](../hadoop-hdfs/ViewFs.html).
+The mount table entries are pretty much the same as in [ViewFs](../hadoop-hdfs/ViewFs.html). Please make sure the downstream namespace path
+exists before creating mount table entry pointing to it.
 A good practice for simplifying the management is to name the federated namespace with the same names as the destination namespaces.
 For example, if we to mount `/data/app1` in the federated namespace, it is recommended to have that same name as in the destination namespace.
 
@@ -238,6 +251,18 @@ The federation admin tool supports setting quotas for specified mount table entr
 
 The above command means that we allow the path to have a maximum of 100 file/directories and use at most 1024 bytes storage space. The parameter for *ssQuota*
 supports multiple size-unit suffix (e.g. 1k is 1KB, 5m is 5MB). If no suffix is specified then bytes is assumed.
+
+Set storage type quota for specified mount table entry:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -setStorageTypeQuota <path> -storageType <storage type>
+
+Remove quota for specified mount table entry:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -clrQuota <path>
+
+Remove storage type quota for specified mount table entry:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -clrStorageTypeQuota <path>
 
 Ls command will show below information for each mount table entry:
 
@@ -469,8 +494,36 @@ Kerberos and Delegation token supported in federation.
 | dfs.federation.router.kerberos.internal.spnego.principal | `${dfs.web.authentication.kerberos.principal}` | The server principal used by the Router for web UI SPNEGO authentication when Kerberos security is enabled. This is typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix HTTP/ by convention. If the value is '*', the web server will attempt to login with every principal specified in the keytab file 'dfs.web.authentication.kerberos.keytab'. |
 | dfs.federation.router.secret.manager.class | `org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl` |  Class to implement state store to delegation tokens. Default implementation uses zookeeper as the backend to store delegation tokens. |
 
+### Isolation
+
+Isolation and dedicated assignment of RPC handlers across all configured downstream nameservices. The sum of these numbers must be strictly smaller than the total number of router handlers (configed by dfs.federation.router.handler.count).
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.fairness.policy.controller.class | `org.apache.hadoop.hdfs.server.federation.fairness.NoRouterRpcFairnessPolicyController` | Default handler allocation model to be used if isolation feature is enabled. Recommend to use `org.apache.hadoop.hdfs.server.federation.fairness.StaticRouterRpcFairnessPolicyController` to fully use the feature. |
+| dfs.federation.router.fairness.handler.count.*EXAMPLENAMESERVICE* | | Dedicated handler assigned to a specific nameservice. If none is specified equal allocation is done across all nameservices. |
+| dfs.federation.router.fairness.handler.count.concurrent | | Dedicated handler assigned to fan out calls such as `renewLease`. |
+
 Metrics
 -------
 
 The Router and State Store statistics are exposed in metrics/JMX. These info will be very useful for monitoring.
 More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RBFMetrics), [Router RPC Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#RouterRPCMetrics) and [State Store Metrics](../../hadoop-project-dist/hadoop-common/Metrics.html#StateStoreMetrics).
+
+Router Federation Rename
+-------
+
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
+2. It doesn't support snapshot path.
+3. It doesn't support to rename path with multiple destinations.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.federation.rename.option | NONE | Specify the action when rename across namespaces. The option can be NONE(reject rename across namespaces) and DISTCP(rename across namespaces with distcp). |
+| dfs.federation.router.federation.rename.force.close.open.file | true | Force close all open files when there is no diff in the DIFF_DISTCP stage.|
+| dfs.federation.router.federation.rename.map |  | Max number of concurrent maps to use for copy.|
+| dfs.federation.router.federation.rename.bandwidth |  | Specify bandwidth per map in MB.|
+| dfs.federation.router.federation.rename.delay | 1000 | Specify the delayed duration(millie seconds) when the job needs to retry.|
+| dfs.federation.router.federation.rename.diff | 0 | Specify the threshold of the diff entries that used in incremental copy stage.|
+| dfs.federation.router.federation.rename.trash | trash | This options has 3 values: trash (move the source path to trash), delete (delete the source path directly) and skip (skip both trash and deletion).|

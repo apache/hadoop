@@ -26,7 +26,8 @@
 #include "common/util.h"
 #include "common/new_delete.h"
 
-#include "asio.hpp"
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace hdfs {
 
@@ -43,7 +44,7 @@ public:
 
 
 struct SocketDeleter {
-  inline void operator()(asio::ip::tcp::socket *sock) {
+inline void operator()(boost::asio::ip::tcp::socket* sock) {
     // Cancel may have already closed the socket.
     std::string err = SafeDisconnect(sock);
     if(!err.empty()) {
@@ -59,8 +60,8 @@ private:
   std::mutex state_lock_;
 public:
   MEMCHECKED_CLASS(DataNodeConnectionImpl)
-  std::unique_ptr<asio::ip::tcp::socket, SocketDeleter> conn_;
-  std::array<asio::ip::tcp::endpoint, 1> endpoints_;
+  std::unique_ptr<boost::asio::ip::tcp::socket, SocketDeleter> conn_;
+  std::array<boost::asio::ip::tcp::endpoint, 1> endpoints_;
   std::string uuid_;
   LibhdfsEvents *event_handlers_;
 
@@ -74,10 +75,10 @@ public:
   void Cancel() override;
 
   void async_read_some(const MutableBuffer &buf,
-                       std::function<void (const asio::error_code & error, std::size_t bytes_transferred) > handler) override;
+                       std::function<void (const boost::system::error_code & error, std::size_t bytes_transferred) > handler) override;
 
   void async_write_some(const ConstBuffer &buf,
-                        std::function<void (const asio::error_code & error, std::size_t bytes_transferred) > handler) override;
+                        std::function<void (const boost::system::error_code & error, std::size_t bytes_transferred) > handler) override;
 };
 
 }

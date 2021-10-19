@@ -35,6 +35,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -65,17 +69,13 @@ import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ResourceSizing;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.AppNameMappingPlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 
@@ -143,9 +143,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsU
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .QueueManagementChangeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AutoCreatedQueueDeletionEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ReleaseContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -162,9 +162,9 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 
@@ -183,6 +183,8 @@ public class CapacityScheduler extends
 
   private CapacitySchedulerQueueManager queueManager;
 
+  private WorkflowPriorityMappingsManager workflowPriorityMappingsMgr;
+
   // timeout to join when we stop this service
   protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
 
@@ -198,6 +200,8 @@ public class CapacityScheduler extends
 
   private CSConfigurationProvider csConfProvider;
 
+  private int threadNum = 0;
+
   @Override
   public void setConf(Configuration conf) {
       yarnConf = conf;
@@ -205,40 +209,9 @@ public class CapacityScheduler extends
 
   private void validateConf(Configuration conf) {
     // validate scheduler memory allocation setting
-    int minMem = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
-    int maxMem = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
-
-    if (minMem <= 0 || minMem > maxMem) {
-      throw new YarnRuntimeException("Invalid resource scheduler memory"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB
-        + "=" + minMem
-        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB
-        + "=" + maxMem + ", min and max should be greater than 0"
-        + ", max should be no smaller than min.");
-    }
-
+    CapacitySchedulerConfigValidator.validateMemoryAllocation(conf);
     // validate scheduler vcores allocation setting
-    int minVcores = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    int maxVcores = conf.getInt(
-      YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
-
-    if (minVcores <= 0 || minVcores > maxVcores) {
-      throw new YarnRuntimeException("Invalid resource scheduler vcores"
-        + " allocation configuration"
-        + ", " + YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES
-        + "=" + minVcores
-        + ", " + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES
-        + "=" + maxVcores + ", min and max should be greater than 0"
-        + ", max should be no smaller than min.");
-    }
+    CapacitySchedulerConfigValidator.validateVCores(conf);
   }
 
   @Override
@@ -253,13 +226,15 @@ public class CapacityScheduler extends
   private boolean usePortForNodeName;
 
   private boolean scheduleAsynchronously;
-  private List<AsyncScheduleThread> asyncSchedulerThreads;
+  @VisibleForTesting
+  protected List<AsyncScheduleThread> asyncSchedulerThreads;
   private ResourceCommitterService resourceCommitterService;
   private RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
   private boolean multiNodePlacementEnabled;
 
-  private static boolean printedVerboseLoggingForAsyncScheduling = false;
+  private boolean printedVerboseLoggingForAsyncScheduling;
+  private boolean appShouldFailFast;
 
   /**
    * EXPERT
@@ -271,8 +246,11 @@ public class CapacityScheduler extends
   private static final long DEFAULT_ASYNC_SCHEDULER_INTERVAL = 5;
   private long asyncMaxPendingBacklogs;
 
+  private CSMaxRunningAppsEnforcer maxRunningEnforcer;
+
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
+    this.maxRunningEnforcer = new CSMaxRunningAppsEnforcer(this);
   }
 
   @Override
@@ -321,7 +299,7 @@ public class CapacityScheduler extends
 
   @VisibleForTesting
   void initScheduler(Configuration configuration) throws
-      IOException {
+      IOException, YarnException {
     writeLock.lock();
     try {
       String confProviderStr = configuration.get(
@@ -364,6 +342,8 @@ public class CapacityScheduler extends
           this.labelManager, this.appPriorityACLManager);
       this.queueManager.setCapacitySchedulerContext(this);
 
+      this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
+
       this.activitiesManager = new ActivitiesManager(rmContext);
       activitiesManager.init(conf);
       initializeQueues(this.conf);
@@ -375,6 +355,9 @@ public class CapacityScheduler extends
 
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
       this.maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
+
+      this.appShouldFailFast = CapacitySchedulerConfiguration.shouldAppFailFast(
+          getConfig());
 
       // number of threads for async scheduling
       int maxAsyncSchedulingThreads = this.conf.getInt(
@@ -409,12 +392,15 @@ public class CapacityScheduler extends
       }
 
       LOG.info("Initialized CapacityScheduler with " + "calculator="
-          + getResourceCalculator().getClass() + ", " + "minimumAllocation=<"
-          + getMinimumResourceCapability() + ">, " + "maximumAllocation=<"
-          + getMaximumResourceCapability() + ">, " + "asynchronousScheduling="
+          + getResourceCalculator().getClass() + ", " + "minimumAllocation="
+          + getMinimumResourceCapability() + ", " + "maximumAllocation="
+          + getMaximumResourceCapability() + ", " + "asynchronousScheduling="
           + scheduleAsynchronously + ", " + "asyncScheduleInterval="
           + asyncScheduleInterval + "ms" + ",multiNodePlacementEnabled="
-          + multiNodePlacementEnabled);
+          + multiNodePlacementEnabled + ", " + "assignMultipleEnabled="
+          + assignMultipleEnabled + ", " + "maxAssignPerHeartbeat="
+          + maxAssignPerHeartbeat + ", " + "offswitchPerHeartbeatLimit="
+          + offswitchPerHeartbeatLimit);
     } finally {
       writeLock.unlock();
     }
@@ -476,14 +462,17 @@ public class CapacityScheduler extends
     super.serviceStop();
   }
 
-  @Override
-  public void reinitialize(Configuration newConf, RMContext rmContext)
-      throws IOException {
+  public void reinitialize(Configuration newConf, RMContext rmContext,
+         boolean validation) throws IOException {
     writeLock.lock();
     try {
       Configuration configuration = new Configuration(newConf);
       CapacitySchedulerConfiguration oldConf = this.conf;
-      this.conf = csConfProvider.loadConfiguration(configuration);
+      if (validation) {
+        this.conf = new CapacitySchedulerConfiguration(newConf, false);
+      } else {
+        this.conf = csConfProvider.loadConfiguration(configuration);
+      }
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
@@ -497,17 +486,35 @@ public class CapacityScheduler extends
         throw new IOException("Failed to re-init queues : " + t.getMessage(),
             t);
       }
+      if (!validation) {
 
-      // update lazy preemption
-      this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
+        // update lazy preemption
+        this.isLazyPreemptionEnabled = this.conf.getLazyPreemptionEnabled();
 
-      // Setup how many containers we can allocate for each round
-      offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+        // Setup how many containers we can allocate for each round
+        assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
+        maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
+        offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+        appShouldFailFast = CapacitySchedulerConfiguration.shouldAppFailFast(
+            getConfig());
 
-      super.reinitialize(newConf, rmContext);
+        LOG.info("assignMultipleEnabled = " + assignMultipleEnabled + "\n" +
+            "maxAssignPerHeartbeat = " + maxAssignPerHeartbeat + "\n" +
+            "offswitchPerHeartbeatLimit = " + offswitchPerHeartbeatLimit);
+
+        super.reinitialize(newConf, rmContext);
+      }
+      maxRunningEnforcer.updateRunnabilityOnReload();
     } finally {
       writeLock.unlock();
     }
+
+  }
+
+  @Override
+  public void reinitialize(Configuration newConf, RMContext rmContext)
+      throws IOException {
+    reinitialize(newConf, rmContext, false);
   }
 
   long getAsyncScheduleInterval() {
@@ -516,24 +523,51 @@ public class CapacityScheduler extends
 
   private final static Random random = new Random(System.currentTimeMillis());
 
-  private static boolean shouldSkipNodeSchedule(FiCaSchedulerNode node,
+  @VisibleForTesting
+  public static boolean shouldSkipNodeSchedule(FiCaSchedulerNode node,
       CapacityScheduler cs, boolean printVerboseLog) {
-    // Skip node which missed 2 heartbeats since the node might be dead and
-    // we should not continue allocate containers on that.
-    long timeElapsedFromLastHeartbeat =
-        Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
-    if (timeElapsedFromLastHeartbeat > cs.nmHeartbeatInterval * 2) {
+    // Skip node which missed YarnConfiguration.SCHEDULER_SKIP_NODE_MULTIPLIER
+    // heartbeats since the node might be dead and we should not continue
+    // allocate containers on that.
+    if (!SchedulerUtils.isNodeHeartbeated(node, cs.getSkipNodeInterval())) {
       if (printVerboseLog && LOG.isDebugEnabled()) {
-        LOG.debug("Skip scheduling on node because it haven't heartbeated for "
+        long timeElapsedFromLastHeartbeat =
+            Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
+        LOG.debug("Skip scheduling on node " + node.getNodeID()
+            + " because it haven't heartbeated for "
             + timeElapsedFromLastHeartbeat / 1000.0f + " secs");
+      }
+      return true;
+    }
+
+    if (node.getRMNode().getState() != NodeState.RUNNING) {
+      if (printVerboseLog && LOG.isDebugEnabled()) {
+        LOG.debug("Skip scheduling on node because it is in " +
+            node.getRMNode().getState() + " state");
       }
       return true;
     }
     return false;
   }
 
+  private static boolean isPrintSkippedNodeLogging(CapacityScheduler cs) {
+    // To avoid too verbose DEBUG logging, only print debug log once for
+    // every 10 secs.
+    boolean printSkipedNodeLogging = false;
+    if (LOG.isDebugEnabled()) {
+      if (Time.monotonicNow() / 1000 % 10 == 0) {
+        printSkipedNodeLogging = (!cs.printedVerboseLoggingForAsyncScheduling);
+      } else {
+        cs.printedVerboseLoggingForAsyncScheduling = false;
+      }
+    }
+    return printSkipedNodeLogging;
+  }
+
   /**
    * Schedule on all nodes by starting at a random point.
+   * Schedule on all partitions by starting at a random partition
+   * when multiNodePlacementEnabled is true.
    * @param cs
    */
   static void schedule(CapacityScheduler cs) throws InterruptedException{
@@ -547,44 +581,72 @@ public class CapacityScheduler extends
     if(nodeSize == 0) {
       return;
     }
-    int start = random.nextInt(nodeSize);
 
-    // To avoid too verbose DEBUG logging, only print debug log once for
-    // every 10 secs.
-    boolean printSkipedNodeLogging = false;
-    if (Time.monotonicNow() / 1000 % 10 == 0) {
-      printSkipedNodeLogging = (!printedVerboseLoggingForAsyncScheduling);
-    } else {
-      printedVerboseLoggingForAsyncScheduling = false;
-    }
+    if (!cs.multiNodePlacementEnabled) {
+      int start = random.nextInt(nodeSize);
 
-    // Allocate containers of node [start, end)
-    for (FiCaSchedulerNode node : nodes) {
-      if (current++ >= start) {
-        if (shouldSkipNodeSchedule(node, cs, printSkipedNodeLogging)) {
+      boolean printSkippedNodeLogging = isPrintSkippedNodeLogging(cs);
+
+      // Allocate containers of node [start, end)
+      for (FiCaSchedulerNode node : nodes) {
+        if (current++ >= start) {
+          if (shouldSkipNodeSchedule(node, cs, printSkippedNodeLogging)) {
+            continue;
+          }
+          cs.allocateContainersToNode(node.getNodeID(), false);
+        }
+      }
+
+      current = 0;
+
+      // Allocate containers of node [0, start)
+      for (FiCaSchedulerNode node : nodes) {
+        if (current++ > start) {
+          break;
+        }
+        if (shouldSkipNodeSchedule(node, cs, printSkippedNodeLogging)) {
           continue;
         }
         cs.allocateContainersToNode(node.getNodeID(), false);
       }
-    }
 
-    current = 0;
-
-    // Allocate containers of node [0, start)
-    for (FiCaSchedulerNode node : nodes) {
-      if (current++ > start) {
-        break;
+      if (printSkippedNodeLogging) {
+        cs.printedVerboseLoggingForAsyncScheduling = true;
       }
-      if (shouldSkipNodeSchedule(node, cs, printSkipedNodeLogging)) {
-        continue;
+    } else {
+      // Get all partitions
+      List<String> partitions = cs.nodeTracker.getPartitions();
+      int partitionSize = partitions.size();
+      // First randomize the start point
+      int start = random.nextInt(partitionSize);
+      // Allocate containers of partition [start, end)
+      for (String partition : partitions) {
+        if (current++ >= start) {
+          CandidateNodeSet<FiCaSchedulerNode> candidates =
+                  cs.getCandidateNodeSet(partition);
+          if (candidates == null) {
+            continue;
+          }
+          cs.allocateContainersToNode(candidates, false);
+        }
       }
-      cs.allocateContainersToNode(node.getNodeID(), false);
-    }
 
-    if (printSkipedNodeLogging) {
-      printedVerboseLoggingForAsyncScheduling = true;
-    }
+      current = 0;
 
+      // Allocate containers of partition [0, start)
+      for (String partition : partitions) {
+        if (current++ > start) {
+          break;
+        }
+        CandidateNodeSet<FiCaSchedulerNode> candidates =
+                cs.getCandidateNodeSet(partition);
+        if (candidates == null) {
+          continue;
+        }
+        cs.allocateContainersToNode(candidates, false);
+      }
+
+    }
     Thread.sleep(cs.getAsyncScheduleInterval());
   }
 
@@ -595,6 +657,7 @@ public class CapacityScheduler extends
 
     public AsyncScheduleThread(CapacityScheduler cs) {
       this.cs = cs;
+      setName("AsyncCapacitySchedulerThread" + cs.threadNum++);
       setDaemon(true);
     }
 
@@ -681,24 +744,14 @@ public class CapacityScheduler extends
     }
   }
 
-  @VisibleForTesting
-  public PlacementRule getUserGroupMappingPlacementRule() throws IOException {
-    readLock.lock();
-    try {
-      UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule();
-      ugRule.initialize(this);
-      return ugRule;
-    } finally {
-      readLock.unlock();
-    }
-  }
 
-  public PlacementRule getAppNameMappingPlacementRule() throws IOException {
+  @VisibleForTesting
+  public PlacementRule getCSMappingPlacementRule() throws IOException {
     readLock.lock();
     try {
-      AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule();
-      anRule.initialize(this);
-      return anRule;
+      CSMappingPlacementRule mappingRule = new CSMappingPlacementRule();
+      mappingRule.initialize(this);
+      return mappingRule;
     } finally {
       readLock.unlock();
     }
@@ -710,32 +763,28 @@ public class CapacityScheduler extends
     Collection<String> placementRuleStrs = conf.getStringCollection(
         YarnConfiguration.QUEUE_PLACEMENT_RULES);
     List<PlacementRule> placementRules = new ArrayList<>();
-    Set<String> distingushRuleSet = new HashSet<>();
-    // fail the case if we get duplicate placementRule add in
-    for (String pls : placementRuleStrs) {
-      if (!distingushRuleSet.add(pls)) {
-        throw new IOException("Invalid PlacementRule inputs which "
-            + "contains duplicate rule strings");
-      }
+    Set<String> distinguishRuleSet = CapacitySchedulerConfigValidator
+            .validatePlacementRules(placementRuleStrs);
+
+    // add UserGroupMappingPlacementRule if empty,default value of
+    // yarn.scheduler.queue-placement-rules is user-group
+    if (distinguishRuleSet.isEmpty()) {
+      distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
     }
 
-    // add UserGroupMappingPlacementRule if absent
-    distingushRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
-
-    placementRuleStrs = new ArrayList<>(distingushRuleSet);
+    placementRuleStrs = new ArrayList<>(distinguishRuleSet);
+    boolean csMappingAdded = false;
 
     for (String placementRuleStr : placementRuleStrs) {
       switch (placementRuleStr) {
       case YarnConfiguration.USER_GROUP_PLACEMENT_RULE:
-        PlacementRule ugRule = getUserGroupMappingPlacementRule();
-        if (null != ugRule) {
-          placementRules.add(ugRule);
-        }
-        break;
       case YarnConfiguration.APP_NAME_PLACEMENT_RULE:
-        PlacementRule anRule = getAppNameMappingPlacementRule();
-        if (null != anRule) {
-          placementRules.add(anRule);
+        if (!csMappingAdded) {
+          PlacementRule csMappingRule = getCSMappingPlacementRule();
+          if (null != csMappingRule) {
+            placementRules.add(csMappingRule);
+            csMappingAdded = true;
+          }
         }
         break;
       default:
@@ -764,14 +813,19 @@ public class CapacityScheduler extends
 
   @Lock(CapacityScheduler.class)
   private void initializeQueues(CapacitySchedulerConfiguration conf)
-    throws IOException {
+    throws YarnException {
+    try {
+      this.queueManager.initializeQueues(conf);
 
-    this.queueManager.initializeQueues(conf);
+      updatePlacementRules();
 
-    updatePlacementRules();
+      this.workflowPriorityMappingsMgr.initialize(this);
 
-    // Notify Preemption Manager
-    preemptionManager.refreshQueues(null, this.getRootQueue());
+      // Notify Preemption Manager
+      preemptionManager.refreshQueues(null, this.getRootQueue());
+    } catch (Exception e) {
+      throw new YarnException("Failed to initialize queues", e);
+    }
   }
 
   @Lock(CapacityScheduler.class)
@@ -779,6 +833,8 @@ public class CapacityScheduler extends
   throws IOException {
     this.queueManager.reinitializeQueues(newConf);
     updatePlacementRules();
+
+    this.workflowPriorityMappingsMgr.initialize(this);
 
     // Notify Preemption Manager
     preemptionManager.refreshQueues(null, this.getRootQueue());
@@ -792,9 +848,35 @@ public class CapacityScheduler extends
     return this.queueManager.getQueue(queueName);
   }
 
+  /**
+   * Returns the normalized queue name, which should be used for internal
+   * queue references. Currently this is the fullQueuename which disambiguously
+   * identifies a queue.
+   * @param name Name of the queue to be normalized
+   * @return The normalized (full name) of the queue
+   */
+  public String normalizeQueueName(String name) {
+    if (this.queueManager == null) {
+      return name;
+    }
+    return this.queueManager.normalizeQueueName(name);
+  }
+
+  /**
+   * Determines if a short queue name reference is ambiguous, if there are at
+   * least two queues with the same name, it is considered ambiguous. Otherwise
+   * it is not.
+   * @param queueName The name of the queue to check for ambiguity
+   * @return true if there are at least 2 queues with the same name
+   */
+  public boolean isAmbiguous(String queueName) {
+    return this.queueManager.isAmbiguous(queueName);
+  }
+
   private void addApplicationOnRecovery(ApplicationId applicationId,
       String queueName, String user,
-      Priority priority, ApplicationPlacementContext placementContext) {
+      Priority priority, ApplicationPlacementContext placementContext,
+      boolean unmanagedAM) {
     writeLock.lock();
     try {
       //check if the queue needs to be auto-created during recovery
@@ -804,7 +886,7 @@ public class CapacityScheduler extends
       if (queue == null) {
         //During a restart, this indicates a queue was removed, which is
         //not presently supported
-        if (!getConfiguration().shouldAppFailFast(getConfig())) {
+        if (!appShouldFailFast) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
                   "Application killed on recovery as it"
@@ -825,7 +907,7 @@ public class CapacityScheduler extends
       if (!(queue instanceof LeafQueue)) {
         // During RM restart, this means leaf queue was converted to a parent
         // queue, which is not supported for running apps.
-        if (!getConfiguration().shouldAppFailFast(getConfig())) {
+        if (!appShouldFailFast) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
                   "Application killed on recovery as it was "
@@ -856,9 +938,11 @@ public class CapacityScheduler extends
         // Ignore the exception for recovered app as the app was previously
         // accepted.
       }
-      queue.getMetrics().submitApp(user);
+      queue.getMetrics().submitApp(user, unmanagedAM);
+
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority,
+              unmanagedAM);
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
@@ -872,51 +956,89 @@ public class CapacityScheduler extends
   private CSQueue getOrCreateQueueFromPlacementContext(ApplicationId
       applicationId, String user, String queueName,
       ApplicationPlacementContext placementContext,
-       boolean isRecovery) {
-
+      boolean isRecovery) {
     CSQueue queue = getQueue(queueName);
+    QueuePath queuePath = new QueuePath(queueName);
 
-    if (queue == null) {
-      if (placementContext != null && placementContext.hasParentQueue()) {
-        try {
-          return autoCreateLeafQueue(placementContext);
-        } catch (YarnException | IOException e) {
-          if (isRecovery) {
-            if (!getConfiguration().shouldAppFailFast(getConfig())) {
-              LOG.error("Could not auto-create leaf queue " + queueName +
-                  " due to : ", e);
-              this.rmContext.getDispatcher().getEventHandler().handle(
-                  new RMAppEvent(applicationId, RMAppEventType.KILL,
-                      "Application killed on recovery"
-                          + " as it was submitted to queue " + queueName
-                          + " which could not be auto-created"));
-            } else{
-              String queueErrorMsg =
-                  "Queue named " + queueName + " could not be "
-                      + "auto-created during application recovery.";
-              LOG.error(FATAL, queueErrorMsg, e);
-              throw new QueueInvalidException(queueErrorMsg);
-            }
-          } else{
-            LOG.error("Could not auto-create leaf queue due to : ", e);
-            final String message =
-                "Application " + applicationId + " submission by user : "
-                    + user
-                    + " to  queue : " + queueName + " failed : " + e
-                    .getMessage();
-            this.rmContext.getDispatcher().getEventHandler().handle(
-                new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-                    message));
-          }
-        }
-      }
+    if (queue != null) {
+      return queue;
     }
-    return queue;
+
+    if (isAmbiguous(queueName)) {
+      return null;
+    }
+
+    if (placementContext != null) {
+      queuePath = new QueuePath(placementContext.getFullQueuePath());
+    }
+
+    //we need to make sure there are no empty path parts present
+    if (queuePath.hasEmptyPart()) {
+      LOG.error("Application submitted to invalid path due to empty parts: " +
+          "'{}'", queuePath);
+      return null;
+    }
+
+    if (!queuePath.hasParent()) {
+      LOG.error("Application submitted to a queue without parent" +
+          " '{}'", queuePath);
+      return null;
+    }
+
+    try {
+      writeLock.lock();
+      return queueManager.createQueue(queuePath);
+    } catch (YarnException | IOException e) {
+      // A null queue is expected if the placementContext is null. In order
+      // not to disrupt the control flow, if we fail to auto create a queue,
+      // we fall back to the original logic.
+      if (placementContext == null) {
+        LOG.error("Could not auto-create leaf queue " + queueName +
+            " due to : ", e);
+        return null;
+      }
+      handleQueueCreationError(applicationId, user, queueName, isRecovery, e);
+    } finally {
+      writeLock.unlock();
+    }
+    return null;
+  }
+
+  private void handleQueueCreationError(
+      ApplicationId applicationId, String user, String queueName,
+      boolean isRecovery, Exception e) {
+    if (isRecovery) {
+      if (!appShouldFailFast) {
+        LOG.error("Could not auto-create leaf queue " + queueName +
+            " due to : ", e);
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppEvent(applicationId, RMAppEventType.KILL,
+                "Application killed on recovery"
+                    + " as it was submitted to queue " + queueName
+                    + " which did not exist and could not be auto-created"));
+      } else {
+        String queueErrorMsg =
+            "Queue named " + queueName + " could not be "
+                + "auto-created during application recovery.";
+        LOG.error(FATAL, queueErrorMsg, e);
+        throw new QueueInvalidException(queueErrorMsg);
+      }
+    } else {
+      LOG.error("Could not auto-create leaf queue due to : ", e);
+      final String message =
+          "Application " + applicationId + " submission by user : "
+              + user
+              + " to  queue : " + queueName + " failed : " + e
+              .getMessage();
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+              message));
+    }
   }
 
   private void addApplication(ApplicationId applicationId, String queueName,
       String user, Priority priority,
-      ApplicationPlacementContext placementContext) {
+      ApplicationPlacementContext placementContext, boolean unmanagedAM) {
     writeLock.lock();
     try {
       if (isSystemAppsLimitReached()) {
@@ -929,13 +1051,21 @@ public class CapacityScheduler extends
       }
 
       //Could be a potential auto-created leaf queue
-      CSQueue queue = getOrCreateQueueFromPlacementContext(applicationId, user,
-            queueName, placementContext, false);
+      CSQueue queue = getOrCreateQueueFromPlacementContext(
+           applicationId, user, queueName, placementContext, false);
 
       if (queue == null) {
-        final String message =
-            "Application " + applicationId + " submitted by user " + user
-                + " to unknown queue: " + queueName;
+        String message;
+        if (isAmbiguous(queueName)) {
+          message = "Application " + applicationId
+              + " submitted by user " + user
+              + " to ambiguous queue: " + queueName
+              + " please use full queue path instead.";
+        } else {
+          message =
+              "Application " + applicationId + " submitted by user " + user
+                  + " to unknown queue: " + queueName;
+        }
 
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
@@ -969,13 +1099,15 @@ public class CapacityScheduler extends
           // For a queue which exists already and
           // not auto-created above, then its parent queue should match
           // the parent queue specified in queue mapping
-        } else if (!queue.getParent().getQueueName().equals(
-            placementContext.getParentQueue())) {
+        } else if (!queue.getParent().getQueueShortName().equals(
+                placementContext.getParentQueue())
+            && !queue.getParent().getQueuePath().equals(
+                placementContext.getParentQueue())) {
           String message =
               "Auto created Leaf queue " + placementContext.getQueue() + " "
                   + "already exists under queue : " + queue
-                  .getParent().getQueuePath()
-                  + ".But Queue mapping configuration " +
+                  .getParent().getQueueShortName()
+                  + ". But Queue mapping configuration " +
                    CapacitySchedulerConfiguration.QUEUE_MAPPING + " has been "
                   + "updated to a different parent queue : "
                   + placementContext.getParentQueue()
@@ -985,6 +1117,17 @@ public class CapacityScheduler extends
                   message));
           return;
         }
+      }
+
+      try {
+        priority = workflowPriorityMappingsMgr.mapWorkflowPriorityForApp(
+            applicationId, queue, user, priority);
+      } catch (YarnException e) {
+        String message = "Failed to submit application " + applicationId +
+            " submitted by user " + user + " reason: " + e.getMessage();
+        this.rmContext.getDispatcher().getEventHandler().handle(new RMAppEvent(
+            applicationId, RMAppEventType.APP_REJECTED, message));
+        return;
       }
 
       // Submit to the queue
@@ -999,9 +1142,10 @@ public class CapacityScheduler extends
         return;
       }
       // update the metrics
-      queue.getMetrics().submitApp(user);
+      queue.getMetrics().submitApp(user, unmanagedAM);
       SchedulerApplication<FiCaSchedulerApp> application =
-          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority);
+          new SchedulerApplication<FiCaSchedulerApp>(queue, user, priority,
+              unmanagedAM);
       applications.put(applicationId, application);
       LOG.info("Accepted application " + applicationId + " from user: " + user
           + ", in queue: " + queueName);
@@ -1048,10 +1192,13 @@ public class CapacityScheduler extends
       // SchedulerApplication#setCurrentAppAttempt.
       attempt.setPriority(application.getPriority());
 
+      maxRunningEnforcer.checkRunnabilityWithUpdate(attempt);
+      maxRunningEnforcer.trackApp(attempt);
+
       queue.submitApplicationAttempt(attempt, application.getUser());
       LOG.info("Added Application Attempt " + applicationAttemptId
           + " to scheduler from user " + application.getUser() + " in queue "
-          + queue.getQueueName());
+          + queue.getQueuePath());
       if (isAttemptRecovering) {
         LOG.debug("{} is recovering. Skipping notifying ATTEMPT_ADDED",
             applicationAttemptId);
@@ -1080,7 +1227,7 @@ public class CapacityScheduler extends
       CSQueue queue = (CSQueue) application.getQueue();
       if (!(queue instanceof LeafQueue)) {
         LOG.error("Cannot finish application " + "from non-leaf queue: " + queue
-            .getQueueName());
+            .getQueuePath());
       } else{
         queue.finishApplication(applicationId, application.getUser());
       }
@@ -1135,13 +1282,19 @@ public class CapacityScheduler extends
       attempt.stop(rmAppAttemptFinalState);
 
       // Inform the queue
-      String queueName = attempt.getQueue().getQueueName();
-      CSQueue queue = this.getQueue(queueName);
-      if (!(queue instanceof LeafQueue)) {
+      Queue  queue = attempt.getQueue();
+      CSQueue csQueue = (CSQueue) queue;
+      if (!(csQueue instanceof LeafQueue)) {
         LOG.error(
-            "Cannot finish application " + "from non-leaf queue: " + queueName);
-      } else{
-        queue.finishApplicationAttempt(attempt, queue.getQueueName());
+            "Cannot finish application " + "from non-leaf queue: "
+            + csQueue.getQueuePath());
+      } else {
+        csQueue.finishApplicationAttempt(attempt, csQueue.getQueuePath());
+
+        maxRunningEnforcer.untrackApp(attempt);
+        if (attempt.isRunnable()) {
+          maxRunningEnforcer.updateRunnabilityOnAppRemoval(attempt);
+        }
       }
     } finally {
       writeLock.unlock();
@@ -1263,7 +1416,13 @@ public class CapacityScheduler extends
     CSQueue queue = null;
     queue = this.getQueue(queueName);
     if (queue == null) {
-      throw new IOException("Unknown queue: " + queueName);
+      if (isAmbiguous(queueName)) {
+        throw new IOException("Ambiguous queue reference: " + queueName
+            + " please use full queue path instead.");
+      } else {
+        throw new IOException("Unknown queue: " + queueName);
+      }
+
     }
     return queue.getQueueInfo(includeChildQueues, recursive);
   }
@@ -1434,18 +1593,50 @@ public class CapacityScheduler extends
             || assignedContainers < maxAssignPerHeartbeat);
   }
 
+  private Map<NodeId, FiCaSchedulerNode> getNodesHeartbeated(String partition) {
+    Map<NodeId, FiCaSchedulerNode> nodesByPartition = new HashMap<>();
+    boolean printSkippedNodeLogging = isPrintSkippedNodeLogging(this);
+    List<FiCaSchedulerNode> nodes = nodeTracker
+        .getNodesPerPartition(partition);
+
+    if (nodes != null && !nodes.isEmpty()) {
+      //Filter for node heartbeat too long
+      nodes.stream()
+          .filter(node ->
+              !shouldSkipNodeSchedule(node, this, printSkippedNodeLogging))
+          .forEach(n -> nodesByPartition.put(n.getNodeID(), n));
+    }
+
+    if (printSkippedNodeLogging) {
+      printedVerboseLoggingForAsyncScheduling = true;
+    }
+    return nodesByPartition;
+  }
+
   private CandidateNodeSet<FiCaSchedulerNode> getCandidateNodeSet(
-      FiCaSchedulerNode node) {
+          String partition) {
+    CandidateNodeSet<FiCaSchedulerNode> candidates = null;
+    Map<NodeId, FiCaSchedulerNode> nodesByPartition
+        = getNodesHeartbeated(partition);
+
+    if (!nodesByPartition.isEmpty()) {
+      candidates = new SimpleCandidateNodeSet<FiCaSchedulerNode>(
+          nodesByPartition, partition);
+    }
+
+    return candidates;
+  }
+
+  private CandidateNodeSet<FiCaSchedulerNode> getCandidateNodeSet(
+          FiCaSchedulerNode node) {
     CandidateNodeSet<FiCaSchedulerNode> candidates = null;
     candidates = new SimpleCandidateNodeSet<>(node);
     if (multiNodePlacementEnabled) {
-      Map<NodeId, FiCaSchedulerNode> nodesByPartition = new HashMap<>();
-      List<FiCaSchedulerNode> nodes = nodeTracker
-          .getNodesPerPartition(node.getPartition());
-      if (nodes != null && !nodes.isEmpty()) {
-        nodes.forEach(n -> nodesByPartition.put(n.getNodeID(), n));
+      Map<NodeId, FiCaSchedulerNode> nodesByPartition =
+          getNodesHeartbeated(node.getPartition());
+      if (!nodesByPartition.isEmpty()) {
         candidates = new SimpleCandidateNodeSet<FiCaSchedulerNode>(
-            nodesByPartition, node.getPartition());
+                nodesByPartition, node.getPartition());
       }
     }
     return candidates;
@@ -1462,8 +1653,8 @@ public class CapacityScheduler extends
       int offswitchCount = 0;
       int assignedContainers = 0;
 
-      CandidateNodeSet<FiCaSchedulerNode> candidates = getCandidateNodeSet(
-          node);
+      CandidateNodeSet<FiCaSchedulerNode> candidates =
+              getCandidateNodeSet(node);
       CSAssignment assignment = allocateContainersToNode(candidates,
           withNodeHeartbeat);
       // Only check if we can allocate more container on the same node when
@@ -1519,7 +1710,7 @@ public class CapacityScheduler extends
       LOG.error("Trying to schedule on a removed node, please double check, "
           + "nodeId=" + node.getNodeID());
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
-          "", getRootQueue().getQueueName(), ActivityState.REJECTED,
+          "", getRootQueue().getQueuePath(), ActivityState.REJECTED,
           ActivityDiagnosticConstant.INIT_CHECK_SINGLE_NODE_REMOVED);
       ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
           node);
@@ -1548,7 +1739,7 @@ public class CapacityScheduler extends
       LOG.debug("This node " + node.getNodeID() + " doesn't have sufficient "
           + "available or preemptible resource for minimum allocation");
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
-          "", getRootQueue().getQueueName(), ActivityState.REJECTED,
+          "", getRootQueue().getQueuePath(), ActivityState.REJECTED,
           ActivityDiagnosticConstant.
               INIT_CHECK_SINGLE_NODE_RESOURCE_INSUFFICIENT);
       ActivitiesLogger.NODE.finishSkippedNodeAllocation(activitiesManager,
@@ -1597,14 +1788,14 @@ public class CapacityScheduler extends
       schedulerHealth.updateSchedulerFulfilledReservationCounts(1);
 
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
-          queue.getParent().getQueueName(), queue.getQueueName(),
+          queue.getParent().getQueuePath(), queue.getQueuePath(),
           ActivityState.ACCEPTED, ActivityDiagnosticConstant.EMPTY);
       ActivitiesLogger.NODE.finishAllocatedNodeAllocation(activitiesManager,
           node, reservedContainer.getContainerId(),
           AllocationState.ALLOCATED_FROM_RESERVED);
     } else if (assignment.getAssignmentInformation().getNumReservations() > 0) {
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
-          queue.getParent().getQueueName(), queue.getQueueName(),
+          queue.getParent().getQueuePath(), queue.getQueuePath(),
           ActivityState.RE_RESERVED, ActivityDiagnosticConstant.EMPTY);
       ActivitiesLogger.NODE.finishAllocatedNodeAllocation(activitiesManager,
           node, reservedContainer.getContainerId(), AllocationState.RESERVED);
@@ -1679,31 +1870,13 @@ public class CapacityScheduler extends
    */
   private CSAssignment allocateContainersOnMultiNodes(
       CandidateNodeSet<FiCaSchedulerNode> candidates) {
-    // When this time look at multiple nodes, try schedule if the
-    // partition has any available resource or killable resource
-    if (getRootQueue().getQueueCapacities().getUsedCapacity(
-        candidates.getPartition()) >= 1.0f
-        && preemptionManager.getKillableResource(
-        CapacitySchedulerConfiguration.ROOT, candidates.getPartition())
-        == Resources.none()) {
-      // Try to allocate from reserved containers
-      for (FiCaSchedulerNode node : candidates.getAllNodes().values()) {
-        RMContainer reservedContainer = node.getReservedContainer();
-        if (reservedContainer != null) {
-          allocateFromReservedContainer(node, false, reservedContainer);
-        }
+    // Try to allocate from reserved containers
+    for (FiCaSchedulerNode node : candidates.getAllNodes().values()) {
+      RMContainer reservedContainer = node.getReservedContainer();
+      if (reservedContainer != null) {
+        allocateFromReservedContainer(node, false, reservedContainer);
       }
-      LOG.debug("This partition '{}' doesn't have available or "
-          + "killable resource", candidates.getPartition());
-      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, null,
-          "", getRootQueue().getQueueName(), ActivityState.REJECTED,
-          ActivityDiagnosticConstant.
-              INIT_CHECK_PARTITION_RESOURCE_INSUFFICIENT);
-      ActivitiesLogger.NODE
-          .finishSkippedNodeAllocation(activitiesManager, null);
-      return null;
     }
-
     return allocateOrReserveNewContainers(candidates, false);
   }
 
@@ -1746,6 +1919,40 @@ public class CapacityScheduler extends
       CapacitySchedulerMetrics.getMetrics().addAllocate(allocateTime);
     }
     return assignment;
+  }
+
+  /**
+   * This method extracts the actual queue name from an app add event.
+   * Currently unfortunately ApplicationPlacementContext and
+   * ApplicationSubmissionContext are used in a quite erratic way, this method
+   * helps to get the proper placement path for the queue if placement context
+   * is provided
+   * @param appAddedEvent The application add event with details about the app
+   * @return The name of the queue the application should be added
+   */
+  private String getAddedAppQueueName(AppAddedSchedulerEvent appAddedEvent) {
+    //appAddedEvent uses the queue from ApplicationSubmissionContext but in
+    //the case of CS it may be only a leaf name due to legacy reasons
+    String ret = appAddedEvent.getQueue();
+    ApplicationPlacementContext placementContext =
+        appAddedEvent.getPlacementContext();
+
+    //If we have a placement context, it means a mapping rule made a decision
+    //about the queue placement, so we use those data, it is supposed to be in
+    //sync with the ApplicationSubmissionContext and appAddedEvent.getQueue, but
+    //because of the aforementioned legacy reasons these two may only contain
+    //the leaf queue name.
+    if (placementContext != null) {
+      String leafName = placementContext.getQueue();
+      String parentName = placementContext.getParentQueue();
+      if (leafName != null) {
+        //building the proper queue path from the parent and leaf queue name
+        ret = placementContext.hasParentQueue() ?
+            (parentName + "." + leafName) : leafName;
+      }
+    }
+
+    return ret;
   }
 
   @Override
@@ -1792,24 +1999,27 @@ public class CapacityScheduler extends
     case NODE_UPDATE:
     {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
+      updateSchedulerNodeHBIntervalMetrics(nodeUpdatedEvent);
       nodeUpdate(nodeUpdatedEvent.getRMNode());
     }
     break;
     case APP_ADDED:
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
-      String queueName = resolveReservationQueueName(appAddedEvent.getQueue(),
-          appAddedEvent.getApplicationId(), appAddedEvent.getReservationID(),
-          appAddedEvent.getIsAppRecovering());
+      String queueName = resolveReservationQueueName(
+          getAddedAppQueueName(appAddedEvent), appAddedEvent.getApplicationId(),
+          appAddedEvent.getReservationID(), appAddedEvent.getIsAppRecovering());
       if (queueName != null) {
         if (!appAddedEvent.getIsAppRecovering()) {
           addApplication(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext());
+              appAddedEvent.getPlacementContext(),
+              appAddedEvent.isUnmanagedAM());
         } else {
           addApplicationOnRecovery(appAddedEvent.getApplicationId(), queueName,
               appAddedEvent.getUser(), appAddedEvent.getApplicatonPriority(),
-              appAddedEvent.getPlacementContext());
+              appAddedEvent.getPlacementContext(),
+              appAddedEvent.isUnmanagedAM());
         }
       }
     }
@@ -1910,15 +2120,39 @@ public class CapacityScheduler extends
             .validateAndApplyQueueManagementChanges(queueManagementChanges);
       } catch (SchedulerDynamicEditException sde) {
         LOG.error("Queue Management Change event cannot be applied for "
-            + "parent queue : " + parentQueue.getQueueName(), sde);
+            + "parent queue : " + parentQueue.getQueuePath(), sde);
       } catch (IOException ioe) {
         LOG.error("Queue Management Change event cannot be applied for "
-            + "parent queue : " + parentQueue.getQueueName(), ioe);
+            + "parent queue : " + parentQueue.getQueuePath(), ioe);
       }
     }
     break;
+    case AUTO_QUEUE_DELETION:
+      try {
+        AutoCreatedQueueDeletionEvent autoCreatedQueueDeletionEvent =
+            (AutoCreatedQueueDeletionEvent) event;
+        removeAutoCreatedQueue(autoCreatedQueueDeletionEvent.
+            getCheckQueue());
+      } catch (SchedulerDynamicEditException sde) {
+        LOG.error("Dynamic queue deletion cannot be applied for "
+            + "queue : ", sde);
+      }
+      break;
     default:
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+    }
+  }
+
+  private void removeAutoCreatedQueue(CSQueue checkQueue)
+      throws SchedulerDynamicEditException{
+    writeLock.lock();
+    try {
+      if (checkQueue instanceof AbstractCSQueue
+          && ((AbstractCSQueue) checkQueue).isInactiveDynamicQueue()) {
+        removeQueue(checkQueue);
+      }
+    } finally {
+      writeLock.unlock();
     }
   }
 
@@ -2047,6 +2281,7 @@ public class CapacityScheduler extends
         super.completedContainer(container, SchedulerUtils
             .createAbnormalContainerStatus(container.getContainerId(),
                 SchedulerUtils.LOST_CONTAINER), RMContainerEventType.KILL);
+        node.releaseContainer(container.getContainerId(), true);
       }
 
       // Remove reservations, if any
@@ -2074,6 +2309,19 @@ public class CapacityScheduler extends
               + getClusterResource());
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void updateSchedulerNodeHBIntervalMetrics(
+      NodeUpdateSchedulerEvent nodeUpdatedEvent) {
+    // Add metrics for evaluating the time difference between heartbeats.
+    SchedulerNode node =
+        nodeTracker.getNode(nodeUpdatedEvent.getRMNode().getNodeID());
+    if (node != null) {
+      long lastInterval =
+          Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
+      CapacitySchedulerMetrics.getMetrics()
+          .addSchedulerNodeHBInterval(lastInterval);
     }
   }
 
@@ -2187,10 +2435,10 @@ public class CapacityScheduler extends
         // notify PreemptionManager
         // Get the application for the finished container
         if (null != application) {
-          String leafQueueName = application.getCSLeafQueue().getQueueName();
+          String leafQueuePath = application.getCSLeafQueue().getQueuePath();
           getPreemptionManager().addKillableContainer(
               new KillableContainer(killableContainer, node.getPartition(),
-                  leafQueueName));
+                  leafQueuePath));
         }
       }
     } finally {
@@ -2216,10 +2464,10 @@ public class CapacityScheduler extends
       // notify PreemptionManager
       // Get the application for the finished container
       if (null != application) {
-        String leafQueueName = application.getCSLeafQueue().getQueueName();
+        String leafQueuePath = application.getCSLeafQueue().getQueuePath();
         getPreemptionManager().removeKillableContainer(
             new KillableContainer(nonKillableContainer, node.getPartition(),
-                leafQueueName));
+                leafQueuePath));
       }
     } finally {
       writeLock.unlock();
@@ -2230,6 +2478,21 @@ public class CapacityScheduler extends
   public boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
     CSQueue queue = getQueue(queueName);
+
+    if (queueName.startsWith("root.")) {
+      // can only check proper ACLs if the path is fully qualified
+      while (queue == null) {
+        int sepIndex = queueName.lastIndexOf(".");
+        String parentName = queueName.substring(0, sepIndex);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Queue {} does not exist, checking parent {}",
+              queueName, parentName);
+        }
+        queueName = parentName;
+        queue = queueManager.getQueue(queueName);
+      }
+    }
+
     if (queue == null) {
       LOG.debug("ACL not found for queue access-type {} for queue {}",
           acl, queueName);
@@ -2289,7 +2552,7 @@ public class CapacityScheduler extends
                   message));
           return null;
         }
-        if (!queue.getParent().getQueueName().equals(queueName)) {
+        if (!queue.getParent().getQueuePath().equals(queueName)) {
           String message =
               "Application: " + applicationId + " submitted to a reservation "
                   + resQName + " which does not belong to the specified queue: "
@@ -2317,30 +2580,45 @@ public class CapacityScheduler extends
       throws SchedulerDynamicEditException {
     writeLock.lock();
     try {
-      LOG.info("Removing queue: " + queueName);
-      CSQueue q = this.getQueue(queueName);
-      if (!(AbstractAutoCreatedLeafQueue.class.isAssignableFrom(
-          q.getClass()))) {
+      queueManager.removeLegacyDynamicQueue(queueName);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  public void removeQueue(CSQueue queue)
+      throws SchedulerDynamicEditException {
+    writeLock.lock();
+    try {
+      LOG.info("Removing queue: " + queue.getQueuePath());
+      if (!((AbstractCSQueue)queue).isDynamicQueue()) {
         throw new SchedulerDynamicEditException(
-            "The queue that we are asked " + "to remove (" + queueName
-                + ") is not a AutoCreatedLeafQueue or ReservationQueue");
-      }
-      AbstractAutoCreatedLeafQueue disposableLeafQueue =
-          (AbstractAutoCreatedLeafQueue) q;
-      // at this point we should have no more apps
-      if (disposableLeafQueue.getNumApplications() > 0) {
-        throw new SchedulerDynamicEditException(
-            "The queue " + queueName + " is not empty " + disposableLeafQueue
-                .getApplications().size() + " active apps "
-                + disposableLeafQueue.getPendingApplications().size()
-                + " pending apps");
+            "The queue that we are asked "
+                + "to remove (" + queue.getQueuePath()
+                + ") is not a DynamicQueue");
       }
 
-      ((AbstractManagedParentQueue) disposableLeafQueue.getParent())
-          .removeChildQueue(q);
-      this.queueManager.removeQueue(queueName);
-      LOG.info(
-          "Removal of AutoCreatedLeafQueue " + queueName + " has succeeded");
+      if (!((AbstractCSQueue) queue).isEligibleForAutoDeletion()) {
+        LOG.warn("Queue " + queue.getQueuePath() +
+            " is marked for deletion, but not eligible for deletion");
+        return;
+      }
+
+      ParentQueue parentQueue = (ParentQueue)queue.getParent();
+      if (parentQueue != null) {
+        ((ParentQueue) queue.getParent()).removeChildQueue(queue);
+      } else {
+        throw new SchedulerDynamicEditException(
+            "The queue " + queue.getQueuePath()
+                + " can't be removed because it's parent is null");
+      }
+
+      if (parentQueue.childQueues.contains(queue) ||
+          queueManager.getQueue(queue.getQueuePath()) != null) {
+        throw new SchedulerDynamicEditException(
+            "The queue " + queue.getQueuePath()
+                + " has not been removed normally.");
+      }
     } finally {
       writeLock.unlock();
     }
@@ -2351,34 +2629,7 @@ public class CapacityScheduler extends
       throws SchedulerDynamicEditException, IOException {
     writeLock.lock();
     try {
-      if (queue == null) {
-        throw new SchedulerDynamicEditException(
-            "Queue specified is null. Should be an implementation of "
-                + "AbstractAutoCreatedLeafQueue");
-      } else if (!(AbstractAutoCreatedLeafQueue.class
-          .isAssignableFrom(queue.getClass()))) {
-        throw new SchedulerDynamicEditException(
-            "Queue is not an implementation of "
-                + "AbstractAutoCreatedLeafQueue : " + queue.getClass());
-      }
-
-      AbstractAutoCreatedLeafQueue newQueue =
-          (AbstractAutoCreatedLeafQueue) queue;
-
-      if (newQueue.getParent() == null || !(AbstractManagedParentQueue.class.
-          isAssignableFrom(newQueue.getParent().getClass()))) {
-        throw new SchedulerDynamicEditException(
-            "ParentQueue for " + newQueue + " is not properly set"
-                + " (should be set and be a PlanQueue or ManagedParentQueue)");
-      }
-
-      AbstractManagedParentQueue parent =
-          (AbstractManagedParentQueue) newQueue.getParent();
-      String queuename = newQueue.getQueueName();
-      parent.addChildQueue(newQueue);
-      this.queueManager.addQueue(queuename, newQueue);
-
-      LOG.info("Creation of AutoCreatedLeafQueue " + newQueue + " succeeded");
+      queueManager.addLegacyDynamicQueue(queue);
     } finally {
       writeLock.unlock();
     }
@@ -2453,6 +2704,11 @@ public class CapacityScheduler extends
           // attach the Container to another queue
           dest.attachContainer(getClusterResource(), app, rmContainer);
         }
+        // Move all reserved containers
+        for (RMContainer rmContainer : app.getReservedContainers()) {
+          source.detachContainer(getClusterResource(), app, rmContainer);
+          dest.attachContainer(getClusterResource(), app, rmContainer);
+        }
         if (!app.isStopped()) {
           source.finishApplicationAttempt(app, sourceQueueName);
           // Submit to a new queue
@@ -2483,7 +2739,9 @@ public class CapacityScheduler extends
       if (application == null) {
         throw new YarnException("App to be moved " + appId + " not found.");
       }
-      String sourceQueueName = application.getQueue().getQueueName();
+      Queue queue = application.getQueue();
+      String sourceQueueName = queue instanceof CSQueue ?
+          ((CSQueue) queue).getQueuePath() : queue.getQueueName();
       this.queueManager.getAndCheckLeafQueue(sourceQueueName);
       String destQueueName = handleMoveToPlanQueue(newQueue);
       LeafQueue dest = this.queueManager.getAndCheckLeafQueue(destQueueName);
@@ -2532,7 +2790,7 @@ public class CapacityScheduler extends
     }
     if (nonAccessiblelabels.size() > 0) {
       throw new YarnException(
-          "Specified queue=" + dest.getQueueName() + " can't satisfy following "
+          "Specified queue=" + dest.getQueuePath() + " can't satisfy following "
               + "apps label expressions =" + nonAccessiblelabels
               + " accessible node labels =" + targetqueuelabels);
     }
@@ -2555,7 +2813,12 @@ public class CapacityScheduler extends
     }
     CSQueue queue = getQueue(queueName);
     if (queue == null) {
-      LOG.error("Unknown queue: " + queueName);
+      if (isAmbiguous(queueName)) {
+        LOG.error("Ambiguous queue reference: " + queueName
+            + " please use full queue path instead.");
+      } else {
+        LOG.error("Unknown queue: " + queueName);
+      }
       return getMaximumResourceCapability();
     }
     if (!(queue instanceof LeafQueue)) {
@@ -2597,8 +2860,8 @@ public class CapacityScheduler extends
 
   @Override
   public Priority checkAndGetApplicationPriority(
-      Priority priorityRequestedByApp, UserGroupInformation user,
-      String queueName, ApplicationId applicationId) throws YarnException {
+          Priority priorityRequestedByApp, UserGroupInformation user,
+          String queuePath, ApplicationId applicationId) throws YarnException {
     readLock.lock();
     try {
       Priority appPriority = priorityRequestedByApp;
@@ -2609,14 +2872,16 @@ public class CapacityScheduler extends
         // user's default priority will get precedence over queue default.
         // for updateApplicationPriority call flow, this check is done in
         // CientRMService itself.
-        appPriority = this.appPriorityACLManager.getDefaultPriority(queueName,
+        appPriority = this.appPriorityACLManager.getDefaultPriority(
+            normalizeQueueName(queuePath),
             user);
 
         // Get the default priority for the Queue. If Queue is non-existent,
         // then
         // use default priority. Do it only if user doesn't have any default.
         if (null == appPriority) {
-          appPriority = this.queueManager.getDefaultPriorityForQueue(queueName);
+          appPriority = this.queueManager.getDefaultPriorityForQueue(
+              normalizeQueueName(queuePath));
         }
 
         LOG.info(
@@ -2634,14 +2899,14 @@ public class CapacityScheduler extends
       }
 
       // Lets check for ACLs here.
-      if (!appPriorityACLManager.checkAccess(user, queueName, appPriority)) {
+      if (!appPriorityACLManager.checkAccess(user, normalizeQueueName(queuePath), appPriority)) {
         throw new YarnException(new AccessControlException(
-            "User " + user + " does not have permission to submit/update "
-                + applicationId + " for " + appPriority));
+                "User " + user + " does not have permission to submit/update "
+                        + applicationId + " for " + appPriority));
       }
 
       LOG.info("Priority '" + appPriority.getPriority()
-          + "' is acceptable in queue : " + queueName + " for application: "
+          + "' is acceptable in queue : " + queuePath + " for application: "
           + applicationId);
 
       return appPriority;
@@ -3045,6 +3310,10 @@ public class CapacityScheduler extends
     return this.queueManager;
   }
 
+  public WorkflowPriorityMappingsManager getWorkflowPriorityMappingsManager() {
+    return this.workflowPriorityMappingsMgr;
+  }
+
   /**
    * Try to move a reserved container to a targetNode.
    * If the targetNode is reserved by another application (other than this one).
@@ -3135,7 +3404,12 @@ public class CapacityScheduler extends
   public long getMaximumApplicationLifetime(String queueName) {
     CSQueue queue = getQueue(queueName);
     if (queue == null || !(queue instanceof LeafQueue)) {
-      LOG.error("Unknown queue: " + queueName);
+      if (isAmbiguous(queueName)) {
+        LOG.error("Ambiguous queue reference: " + queueName
+            + " please use full queue path instead.");
+      } else {
+        LOG.error("Unknown queue: " + queueName);
+      }
       return -1;
     }
     // In seconds
@@ -3155,42 +3429,8 @@ public class CapacityScheduler extends
     return null;
   }
 
-  private LeafQueue autoCreateLeafQueue(
-      ApplicationPlacementContext placementContext)
-      throws IOException, YarnException {
-
-    AutoCreatedLeafQueue autoCreatedLeafQueue = null;
-
-    String leafQueueName = placementContext.getQueue();
-    String parentQueueName = placementContext.getParentQueue();
-
-    if (!StringUtils.isEmpty(parentQueueName)) {
-      CSQueue parentQueue = getQueue(parentQueueName);
-
-      if (parentQueue != null && conf.isAutoCreateChildQueueEnabled(
-          parentQueue.getQueuePath())) {
-
-        ManagedParentQueue autoCreateEnabledParentQueue =
-            (ManagedParentQueue) parentQueue;
-        autoCreatedLeafQueue = new AutoCreatedLeafQueue(this, leafQueueName,
-            autoCreateEnabledParentQueue);
-
-        addQueue(autoCreatedLeafQueue);
-
-      } else{
-        throw new SchedulerDynamicEditException(
-            "Could not auto-create leaf queue for " + leafQueueName
-                + ". Queue mapping specifies an invalid parent queue "
-                + "which does not exist "
-                + parentQueueName);
-      }
-    } else{
-      throw new SchedulerDynamicEditException(
-          "Could not auto-create leaf queue for " + leafQueueName
-              + ". Queue mapping does not specify"
-              + " which parent queue it needs to be created under.");
-    }
-    return autoCreatedLeafQueue;
+  public CSConfigurationProvider getCsConfProvider() {
+    return csConfProvider;
   }
 
   @Override
@@ -3204,5 +3444,23 @@ public class CapacityScheduler extends
 
   public int getNumAsyncSchedulerThreads() {
     return asyncSchedulerThreads == null ? 0 : asyncSchedulerThreads.size();
+  }
+
+  @VisibleForTesting
+  public void setMaxRunningAppsEnforcer(CSMaxRunningAppsEnforcer enforcer) {
+    this.maxRunningEnforcer = enforcer;
+  }
+
+  /**
+   * Returning true as capacity scheduler supports placement constraints.
+   */
+  @Override
+  public boolean placementConstraintEnabled() {
+    return true;
+  }
+
+  @VisibleForTesting
+  public void setQueueManager(CapacitySchedulerQueueManager qm) {
+    this.queueManager = qm;
   }
 }

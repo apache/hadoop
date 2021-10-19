@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.VolumeCheckContext;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,7 +234,7 @@ public class DatasetVolumeChecker {
                   }
                 }), MoreExecutors.directExecutor());
       } else {
-        IOUtils.cleanup(null, reference);
+        IOUtils.cleanupWithLogger(null, reference);
         if (numVolumes.decrementAndGet() == 0) {
           latch.countDown();
         }
@@ -311,7 +311,7 @@ public class DatasetVolumeChecker {
       );
       return true;
     } else {
-      IOUtils.cleanup(null, volumeReference);
+      IOUtils.cleanupWithLogger(null, volumeReference);
     }
     return false;
   }
@@ -354,23 +354,29 @@ public class DatasetVolumeChecker {
     }
 
     @Override
-    public void onSuccess(@Nonnull VolumeCheckResult result) {
-      switch(result) {
-      case HEALTHY:
-      case DEGRADED:
-        LOG.debug("Volume {} is {}.", reference.getVolume(), result);
-        markHealthy();
-        break;
-      case FAILED:
-        LOG.warn("Volume {} detected as being unhealthy",
+    public void onSuccess(VolumeCheckResult result) {
+      if (result == null) {
+        LOG.error("Unexpected health check result null for volume {}",
             reference.getVolume());
-        markFailed();
-        break;
-      default:
-        LOG.error("Unexpected health check result {} for volume {}",
-            result, reference.getVolume());
         markHealthy();
-        break;
+      } else {
+        switch(result) {
+        case HEALTHY:
+        case DEGRADED:
+          LOG.debug("Volume {} is {}.", reference.getVolume(), result);
+          markHealthy();
+          break;
+        case FAILED:
+          LOG.warn("Volume {} detected as being unhealthy",
+              reference.getVolume());
+          markFailed();
+          break;
+        default:
+          LOG.error("Unexpected health check result {} for volume {}",
+              result, reference.getVolume());
+          markHealthy();
+          break;
+        }
       }
       cleanup();
     }
@@ -398,7 +404,7 @@ public class DatasetVolumeChecker {
     }
 
     private void cleanup() {
-      IOUtils.cleanup(null, reference);
+      IOUtils.cleanupWithLogger(null, reference);
       invokeCallback();
     }
 

@@ -31,6 +31,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,11 +59,10 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * A JournalManager that writes to a set of remote JournalNodes,
@@ -73,9 +73,9 @@ public class QuorumJournalManager implements JournalManager {
   static final Logger LOG = LoggerFactory.getLogger(QuorumJournalManager.class);
 
   // This config is not publicly exposed
-  static final String QJM_RPC_MAX_TXNS_KEY =
+  public static final String QJM_RPC_MAX_TXNS_KEY =
       "dfs.ha.tail-edits.qjm.rpc.max-txns";
-  static final int QJM_RPC_MAX_TXNS_DEFAULT = 5000;
+  public static final int QJM_RPC_MAX_TXNS_DEFAULT = 5000;
 
   // Maximum number of transactions to fetch at a time when using the
   // RPC edit fetch mechanism
@@ -414,7 +414,7 @@ public class QuorumJournalManager implements JournalManager {
                                          String nameServiceId)
       throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
-    List<InetSocketAddress> addrs = Util.getAddressesList(uri);
+    List<InetSocketAddress> addrs = Util.getAddressesList(uri, conf);
     if (addrs.size() % 2 == 0) {
       LOG.warn("Quorum journal URI '" + uri + "' has an even number " +
           "of Journal Nodes specified. This is not recommended!");
@@ -579,12 +579,14 @@ public class QuorumJournalManager implements JournalManager {
         LOG.debug(msg.toString());
       }
     }
+    // Cancel any outstanding calls to JN's.
+    q.cancelCalls();
 
     int maxAllowedTxns = !onlyDurableTxns ? highestTxnCount :
         responseCounts.get(responseCounts.size() - loggers.getMajoritySize());
     if (maxAllowedTxns == 0) {
       LOG.debug("No new edits available in logs; requested starting from " +
-          "ID " + fromTxnId);
+          "ID {}", fromTxnId);
       return;
     }
     LogAction logAction = selectInputStreamLogHelper.record(fromTxnId);
@@ -616,9 +618,10 @@ public class QuorumJournalManager implements JournalManager {
     Map<AsyncLogger, RemoteEditLogManifest> resps =
         loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs,
             "selectStreamingInputStreams");
-
-    LOG.debug("selectStreamingInputStream manifests:\n" +
-        Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("selectStreamingInputStream manifests:\n {}",
+          Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
+    }
 
     final PriorityQueue<EditLogInputStream> allStreams =
         new PriorityQueue<EditLogInputStream>(64,

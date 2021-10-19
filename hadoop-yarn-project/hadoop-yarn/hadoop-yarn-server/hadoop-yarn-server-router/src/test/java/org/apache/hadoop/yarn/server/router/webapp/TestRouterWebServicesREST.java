@@ -72,6 +72,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -131,8 +132,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -203,17 +204,27 @@ public class TestRouterWebServicesREST {
   public static void setUp() throws Exception {
     conf = new YarnConfiguration();
 
+    File baseDir = GenericTestUtils.getTestDir("processes");
+    baseDir.mkdirs();
+    String baseName = TestRouterWebServicesREST.class.getSimpleName();
+
+    File rmOutput = new File(baseDir, baseName + "-rm.log");
+    rmOutput.createNewFile();
     List<String> addClasspath = new LinkedList<>();
     addClasspath.add("../hadoop-yarn-server-timelineservice/target/classes");
-    rm = new JavaProcess(ResourceManager.class, addClasspath);
+    rm = new JavaProcess(ResourceManager.class, addClasspath, rmOutput);
     rmAddress = getRMWebAppURLWithScheme(conf);
     waitWebAppRunning(rmAddress, RM_WEB_SERVICE_PATH);
 
-    router = new JavaProcess(Router.class);
+    File routerOutput = new File(baseDir, baseName + "-router.log");
+    routerOutput.createNewFile();
+    router = new JavaProcess(Router.class, routerOutput);
     routerAddress = getRouterWebAppURLWithScheme(conf);
     waitWebAppRunning(routerAddress, RM_WEB_SERVICE_PATH);
 
-    nm = new JavaProcess(NodeManager.class);
+    File nmOutput = new File(baseDir, baseName + "-nm.log");
+    nmOutput.createNewFile();
+    nm = new JavaProcess(NodeManager.class, nmOutput);
     nmAddress = "http://" + getNMWebAppURLWithoutScheme(conf);
     waitWebAppRunning(nmAddress, "/ws/v1/node");
   }

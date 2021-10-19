@@ -25,9 +25,11 @@
 #include <limits>
 #include <future>
 #include <tuple>
-#include <iostream>
 #include <pwd.h>
-#include <fnmatch.h>
+
+#include <boost/asio/ip/tcp.hpp>
+
+#include "x-platform/syscall.h"
 
 #define FMT_THIS_ADDR "this=" << (void*)this
 
@@ -36,7 +38,7 @@ namespace hdfs {
 static const char kNamenodeProtocol[] = "org.apache.hadoop.hdfs.protocol.ClientProtocol";
 static const int kNamenodeProtocolVersion = 1;
 
-using ::asio::ip::tcp;
+using boost::asio::ip::tcp;
 
 static constexpr uint16_t kDefaultPort = 8020;
 
@@ -296,7 +298,7 @@ void FileSystemImpl::Connect(const std::string &server,
 
 void FileSystemImpl::ConnectToDefaultFs(const std::function<void(const Status &, FileSystem *)> &handler) {
   std::string scheme = options_.defaultFS.get_scheme();
-  if (strcasecmp(scheme.c_str(), "hdfs") != 0) {
+  if (!XPlatform::Syscall::StringCompareIgnoreCase(scheme, "hdfs")) {
     std::string error_message;
     error_message += "defaultFS of [" + options_.defaultFS.str() + "] is not supported";
     handler(Status::InvalidArgument(error_message.c_str()), nullptr);
@@ -720,8 +722,8 @@ void FileSystemImpl::FindShim(const Status &stat, const std::vector<StatInfo> & 
       for (StatInfo const& si : stat_infos) {
         //If we are at the last depth and it matches both path and name, we need to output it.
         if (operational_state->depth == shared_state->dirs.size() - 2
-            && !fnmatch(shared_state->dirs[operational_state->depth + 1].c_str(), si.path.c_str(), 0)
-            && !fnmatch(shared_state->name.c_str(), si.path.c_str(), 0)) {
+            && XPlatform::Syscall::FnMatch(shared_state->dirs[operational_state->depth + 1], si.path)
+            && XPlatform::Syscall::FnMatch(shared_state->name, si.path)) {
           outputs.push_back(si);
         }
         //Skip if not directory
@@ -729,7 +731,7 @@ void FileSystemImpl::FindShim(const Status &stat, const std::vector<StatInfo> & 
           continue;
         }
         //Checking for a match with the path at the current depth
-        if(!fnmatch(shared_state->dirs[operational_state->depth + 1].c_str(), si.path.c_str(), 0)){
+        if(XPlatform::Syscall::FnMatch(shared_state->dirs[operational_state->depth + 1], si.path)) {
           //Launch a new requests for every matched directory
           shared_state->outstanding_requests++;
           auto callback = [this, si, operational_state, shared_state](const Status &stat, const std::vector<StatInfo> & stat_infos, bool has_more) {
@@ -753,7 +755,7 @@ void FileSystemImpl::FindShim(const Status &stat, const std::vector<StatInfo> & 
           nn_.GetListing(si.full_path, callback);
         }
         //All names that match the specified name are saved to outputs
-        if(!fnmatch(shared_state->name.c_str(), si.path.c_str(), 0)){
+        if(XPlatform::Syscall::FnMatch(shared_state->name, si.path)) {
           outputs.push_back(si);
         }
       }

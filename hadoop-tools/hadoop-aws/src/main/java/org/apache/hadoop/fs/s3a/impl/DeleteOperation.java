@@ -23,10 +23,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,9 +46,10 @@ import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.maybeAwaitCompletion;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 
 /**
  * Implementation of the delete() operation.
@@ -152,10 +155,13 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
   /**
    * List of keys built up for the next delete batch.
    */
-  private List<DeleteObjectsRequest.KeyVersion> keys;
+  private List<DeleteEntry> keys;
 
   /**
-   * List of paths built up for deletion.
+   * List of paths built up for incremental deletion on tree delete.
+   * At the end of the entire delete the full tree is scanned in S3Guard
+   * and tombstones added. For this reason this list of paths <i>must not</i>
+   * include directory markers, as that will break the scan.
    */
   private List<Path> paths;
 
@@ -186,7 +192,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * @param status  pre-fetched source status
    * @param recursive recursive delete?
    * @param callbacks callback provider
-   * @param pageSize number of entries in a page
+   * @param pageSize size of delete pages
    */
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
@@ -200,10 +206,11 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     this.callbacks = callbacks;
     checkArgument(pageSize > 0
             && pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
-        "page size out of range: %d", pageSize);
+        "page size out of range: %s", pageSize);
     this.pageSize = pageSize;
     metadataStore = context.getMetadataStore();
-    executor = context.createThrottledExecutor(1);
+    executor = MoreExecutors.listeningDecorator(
+        context.createThrottledExecutor(1));
   }
 
   public long getFilesDeleted() {
@@ -279,7 +286,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       LOG.debug("deleting simple file {}", path);
       deleteObjectAtPath(path, key, true);
     }
-    LOG.debug("Deleted {} files", filesDeleted);
+    LOG.debug("Deleted {} objects", filesDeleted);
     return true;
   }
 
@@ -323,7 +330,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       // list files including any under tombstones through S3Guard
       LOG.debug("Getting objects for directory prefix {} to delete", dirKey);
       final RemoteIterator<S3ALocatedFileStatus> locatedFiles =
-          callbacks.listFilesAndEmptyDirectories(path, status, false, true);
+          callbacks.listFilesAndDirectoryMarkers(path, status,
+              false, true);
 
       // iterate through and delete. The next() call will block when a new S3
       // page is required; this any active delete submitted to the executor
@@ -358,7 +366,10 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         while (objects.hasNext()) {
           // get the next entry in the listing.
           extraFilesDeleted++;
-          queueForDeletion(deletionKey(objects.next()), null);
+          S3AFileStatus next = objects.next();
+          LOG.debug("Found Unlisted entry {}", next);
+          queueForDeletion(deletionKey(next), null,
+              next.isDirectory());
         }
         if (extraFilesDeleted > 0) {
           LOG.debug("Raw S3 Scan found {} extra file(s) to delete",
@@ -401,7 +412,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    */
   private void queueForDeletion(
       final S3AFileStatus stat) throws IOException {
-    queueForDeletion(deletionKey(stat), stat.getPath());
+    queueForDeletion(deletionKey(stat), stat.getPath(), stat.isDirectory());
   }
 
   /**
@@ -412,14 +423,18 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    *
    * @param key key to delete
    * @param deletePath nullable path of the key
+   * @param isDirMarker is the entry a directory?
    * @throws IOException failure of the previous batch of deletions.
    */
   private void queueForDeletion(final String key,
-      @Nullable final Path deletePath) throws IOException {
+      @Nullable final Path deletePath,
+      boolean isDirMarker) throws IOException {
     LOG.debug("Adding object to delete: \"{}\"", key);
-    keys.add(new DeleteObjectsRequest.KeyVersion(key));
+    keys.add(new DeleteEntry(key, isDirMarker));
     if (deletePath != null) {
-      paths.add(deletePath);
+      if (!isDirMarker) {
+        paths.add(deletePath);
+      }
     }
 
     if (keys.size() == pageSize) {
@@ -483,20 +498,22 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * @return the submitted future or null
    */
   private CompletableFuture<Void> submitDelete(
-      final List<DeleteObjectsRequest.KeyVersion> keyList,
+      final List<DeleteEntry> keyList,
       final List<Path> pathList) {
 
     if (keyList.isEmpty() && pathList.isEmpty()) {
       return null;
     }
     filesDeleted += keyList.size();
-    return submit(executor, () -> {
-      asyncDeleteAction(operationState,
-          keyList,
-          pathList,
-          LOG.isDebugEnabled());
-      return null;
-    });
+    return submit(executor,
+        callableWithinAuditSpan(
+            getAuditSpan(), () -> {
+              asyncDeleteAction(operationState,
+                  keyList,
+                  pathList,
+                  LOG.isDebugEnabled());
+              return null;
+            }));
   }
 
   /**
@@ -513,31 +530,62 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
   @Retries.RetryTranslated
   private void asyncDeleteAction(
       final BulkOperationState state,
-      final List<DeleteObjectsRequest.KeyVersion> keyList,
+      final List<DeleteEntry> keyList,
       final List<Path> pathList,
       final boolean auditDeletedKeys)
       throws IOException {
+    List<DeleteObjectsResult.DeletedObject> deletedObjects = new ArrayList<>();
     try (DurationInfo ignored =
-             new DurationInfo(LOG, false, "Delete page of keys")) {
+             new DurationInfo(LOG, false,
+                 "Delete page of %d keys", keyList.size())) {
       DeleteObjectsResult result = null;
       List<Path> undeletedObjects = new ArrayList<>();
       if (!keyList.isEmpty()) {
-        result = Invoker.once("Remove S3 Keys",
+        // first delete the files.
+        List<DeleteObjectsRequest.KeyVersion> files = keyList.stream()
+            .filter(e -> !e.isDirMarker)
+            .map(e -> e.keyVersion)
+            .collect(Collectors.toList());
+        LOG.debug("Deleting of {} file objects", files.size());
+        result = Invoker.once("Remove S3 Files",
             status.getPath().toString(),
             () -> callbacks.removeKeys(
-                keyList,
+                files,
                 false,
                 undeletedObjects,
                 state,
                 !auditDeletedKeys));
+        if (result != null) {
+          deletedObjects.addAll(result.getDeletedObjects());
+        }
+        // now the dirs
+        List<DeleteObjectsRequest.KeyVersion> dirs = keyList.stream()
+            .filter(e -> e.isDirMarker)
+            .map(e -> e.keyVersion)
+            .collect(Collectors.toList());
+        LOG.debug("Deleting of {} directory markers", dirs.size());
+        // This is invoked with deleteFakeDir = true, so
+        // S3Guard is not updated.
+        result = Invoker.once("Remove S3 Dir Markers",
+            status.getPath().toString(),
+            () -> callbacks.removeKeys(
+                dirs,
+                true,
+                undeletedObjects,
+                state,
+                !auditDeletedKeys));
+        if (result != null) {
+          deletedObjects.addAll(result.getDeletedObjects());
+        }
       }
       if (!pathList.isEmpty()) {
+        // delete file paths only. This stops tombstones
+        // being added until the final directory cleanup
+        // (HADOOP-17244)
         metadataStore.deletePaths(pathList, state);
       }
-      if (auditDeletedKeys && result != null) {
+      if (auditDeletedKeys) {
         // audit the deleted keys
-        List<DeleteObjectsResult.DeletedObject> deletedObjects =
-            result.getDeletedObjects();
         if (deletedObjects.size() != keyList.size()) {
           // size mismatch
           LOG.warn("Size mismatch in deletion operation. "
@@ -548,7 +596,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
           for (DeleteObjectsResult.DeletedObject del : deletedObjects) {
             keyList.removeIf(kv -> kv.getKey().equals(del.getKey()));
           }
-          for (DeleteObjectsRequest.KeyVersion kv : keyList) {
+          for (DeleteEntry kv : keyList) {
             LOG.debug("{}", kv.getKey());
           }
         }
@@ -557,20 +605,29 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
   }
 
   /**
-   * Block awaiting completion for any non-null future passed in;
-   * No-op if a null arg was supplied.
-   * @param future future
-   * @throws IOException if one of the called futures raised an IOE.
-   * @throws RuntimeException if one of the futures raised one.
+   * Deletion entry; dir marker state is tracked to control S3Guard
+   * update policy.
    */
-  private void maybeAwaitCompletion(
-      @Nullable final CompletableFuture<Void> future)
-      throws IOException {
-    if (future != null) {
-      try (DurationInfo ignored =
-               new DurationInfo(LOG, false, "delete completion")) {
-        waitForCompletion(future);
-      }
+  private static final class DeleteEntry {
+    private final DeleteObjectsRequest.KeyVersion keyVersion;
+
+    private final boolean isDirMarker;
+
+    private DeleteEntry(final String key, final boolean isDirMarker) {
+      this.keyVersion = new DeleteObjectsRequest.KeyVersion(key);
+      this.isDirMarker = isDirMarker;
+    }
+
+    public String getKey() {
+      return keyVersion.getKey();
+    }
+
+    @Override
+    public String toString() {
+      return "DeleteEntry{" +
+          "key='" + getKey() + '\'' +
+          ", isDirMarker=" + isDirMarker +
+          '}';
     }
   }
 

@@ -21,7 +21,13 @@ The YARN UI is an Ember based web-app that provides visualization of the applica
 
 ## Configurations
 
-* You can point the UI to custom locations by setting the environment variables in `src/main/webapp/config/configs.env`
+You can point the UI to custom locations by setting the environment variables in `src/main/webapp/config/configs.env`.
+
+In order to make the UI running on Ember server (started by `yarn start`)
+work with independently running ResouceManager,
+you need to enable CORS by setting `hadoop.http.cross-origin.enabled` to true
+and adding `org.apache.hadoop.security.HttpCrossOriginFilterInitializer`
+to `hadoop.http.filter.initializers` in core-site.xml of the ResourceManager.
 
 ## Development
 
@@ -31,8 +37,8 @@ All the following commands must be run inside `src/main/webapp`.
 
 You will need the following things properly installed on your computer.
 
-* Install [Yarn](https://yarnpkg.com) v0.21.3
-* Install [Bower](http://bower.io/) v1.7.7
+* Install [Yarn](https://yarnpkg.com) v1.21.1
+* Install [Bower](http://bower.io/) v1.8.8
 * Install all dependencies by running `yarn install` & `bower install`
 
 ### Running UI
@@ -62,3 +68,22 @@ YARN UI has replaced NPM with Yarn package manager. And hence Yarn would be used
 ### Adding new routes (pages), controllers, components etc.
 
 * Use ember-cli blueprint generator - [Ember CLI](http://ember-cli.com/extending/#generators-and-blueprints)
+
+### Building with Maven
+
+[YARN-6278](https://issues.apache.org/jira/browse/YARN-6278)
+added `yarn-ui` profile to pom.xml leveraging
+[frontend-maven-plugin](https://github.com/eirslett/frontend-maven-plugin) which
+automatically installs Node.js and Yarn locally under target/webapp directory.
+After building yarn-ui by `mvn package -Pyarn-ui`, you can reuse
+the locally installed Node.js and Yarn instead of manually installing them.
+
+```
+$ mvn package -Pyarn-ui
+$ export PATH=$PWD/target/webapp/node:$PATH
+$ export YARNJS=$PWD/target/webapp/node/yarn/dist/bin/yarn.js
+$ cd src/main/webapp/
+$ node $YARNJS install
+$ node node_modules/.bin/bower install
+$ node $YARNJS start
+```

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
@@ -39,7 +40,7 @@ public class TestPreemptionForQueueWithPriorities
     extends ProportionalCapacityPreemptionPolicyMockFramework {
   @Before
   public void setup() {
-    rc = new DefaultResourceCalculator();
+    resourceCalculator = new DefaultResourceCalculator();
     super.setup();
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
   }
@@ -82,13 +83,13 @@ public class TestPreemptionForQueueWithPriorities
 
     // 10 preempted from app1, 15 preempted from app2, and nothing preempted
     // from app3
-    verify(mDisp, times(10)).handle(argThat(
+    verify(eventHandler, times(10)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(15)).handle(argThat(
+    verify(eventHandler, times(15)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -135,13 +136,13 @@ public class TestPreemptionForQueueWithPriorities
 
     // 10 preempted from app1, 15 preempted from app2, and nothing preempted
     // from app3
-    verify(mDisp, times(10)).handle(argThat(
+    verify(eventHandler, times(10)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(15)).handle(argThat(
+    verify(eventHandler, times(15)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -185,10 +186,10 @@ public class TestPreemptionForQueueWithPriorities
     policy.editSchedule();
 
     // Nothing preempted
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -236,16 +237,16 @@ public class TestPreemptionForQueueWithPriorities
     // from app3/app4
     // (After preemption, a has 35 - 23 = 12, b has 25 - 6 = 19, so a:b after
     //  preemption is 1.58, close to 1.50)
-    verify(mDisp, times(23)).handle(argThat(
+    verify(eventHandler, times(23)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(6)).handle(argThat(
+    verify(eventHandler, times(6)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -295,16 +296,16 @@ public class TestPreemptionForQueueWithPriorities
     // We suppose to preempt some resource from A, but now since queueA
     // disables preemption, so we need to preempt some resource from B and
     // some from C even if C has higher priority than A
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(19)).handle(argThat(
+    verify(eventHandler, times(19)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -352,16 +353,16 @@ public class TestPreemptionForQueueWithPriorities
 
     // Preemption should first divide capacities between a / b, and b2 should
     // get less preemption than b1 (because b2 has higher priority)
-    verify(mDisp, times(6)).handle(argThat(
+    verify(eventHandler, times(6)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(13)).handle(argThat(
+    verify(eventHandler, times(13)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(10)).handle(argThat(
+    verify(eventHandler, times(10)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -408,16 +409,16 @@ public class TestPreemptionForQueueWithPriorities
 
     // Preemption should first divide capacities between a / b, and b1 should
     // get less preemption than b2 (because b1 has higher priority)
-    verify(mDisp, times(3)).handle(argThat(
+    verify(eventHandler, times(3)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(2)).handle(argThat(
+    verify(eventHandler, times(2)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -474,23 +475,23 @@ public class TestPreemptionForQueueWithPriorities
     // get less preemption than a1 (because a2 has higher priority). More
     // specifically, a2 will not get preempted since the resource preempted
     // from a1 can satisfy b already.
-    verify(mDisp, times(7)).handle(argThat(
+    verify(eventHandler, times(7)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
 
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
 
   @Test
   public void test3ResourceTypesInterQueuePreemption() throws IOException {
-    rc = new DominantResourceCalculator();
-    when(cs.getResourceCalculator()).thenReturn(rc);
+    resourceCalculator = new DominantResourceCalculator();
+    when(cs.getResourceCalculator()).thenReturn(resourceCalculator);
 
     // Initialize resource map
     String RESOURCE_1 = "res1";
@@ -535,7 +536,7 @@ public class TestPreemptionForQueueWithPriorities
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -589,10 +590,10 @@ public class TestPreemptionForQueueWithPriorities
     // b and c has same relativeAssigned=1.0f(idealAssigned / guaranteed),
     // since c has higher priority, c will be put in mostUnderServedQueue and
     // get all remain 30 capacity.
-    verify(mDisp, times(10)).handle(argThat(
+    verify(eventHandler, times(10)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }

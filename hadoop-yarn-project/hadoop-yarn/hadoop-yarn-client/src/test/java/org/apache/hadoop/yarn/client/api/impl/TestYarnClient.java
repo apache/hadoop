@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -68,6 +69,8 @@ import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -368,7 +371,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
   public void testKillApplication() throws Exception {
     MockRM rm = new MockRM();
     rm.start();
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     @SuppressWarnings("resource")
     final YarnClient client = new MockYarnClient();
@@ -385,11 +388,19 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     RMApp app1 =
-        rm.submitApp(200, "name", "user",
-                new HashMap<>(), false, "default", -1,
-          null, "MAPREDUCE");
+        MockRMAppSubmitter.submit(rm,
+            MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+                .withAppName("name")
+                .withUser("user")
+                .withAcls(new HashMap<>())
+                .withUnmanagedAM(false)
+                .withQueue("default")
+                .withMaxAppAttempts(-1)
+                .withCredentials(null)
+                .withAppType("MAPREDUCE")
+                .build());
     Assert.assertEquals("YARN", app.getApplicationType());
     Assert.assertEquals("MAPREDUCE", app1.getApplicationType());
     rm.stop();
@@ -401,9 +412,17 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     MockRM rm = new MockRM();
     rm.start();
     RMApp app1 =
-        rm.submitApp(200, "name", "user",
-                new HashMap<>(), false, "default", -1,
-          null, "MAPREDUCE-LENGTH-IS-20");
+        MockRMAppSubmitter.submit(rm,
+            MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+                .withAppName("name")
+                .withUser("user")
+                .withAcls(new HashMap<>())
+                .withUnmanagedAM(false)
+                .withQueue("default")
+                .withMaxAppAttempts(-1)
+                .withCredentials(null)
+                .withAppType("MAPREDUCE-LENGTH-IS-20")
+                .build());
     Assert.assertEquals("MAPREDUCE-LENGTH-IS-", app1.getApplicationType());
     rm.stop();
   }
@@ -1210,6 +1229,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         timelineClientBestEffort);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION,
         timelineVersion);
+    // Timeline Delegation token and client is only used for kerberos
+    conf.set(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE,
+            KerberosAuthenticationHandler.TYPE);
     MockYarnClient client = new MockYarnClient();
     MockYarnClient spyClient = spy(client);
     when(spyClient.createTimelineClient()).thenThrow(mockErr);

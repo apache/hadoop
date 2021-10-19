@@ -27,7 +27,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.cleanup;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -80,6 +81,15 @@ public abstract class AbstractFSContractTestBase extends Assert
   @BeforeClass
   public static void nameTestThread() {
     Thread.currentThread().setName("JUnit");
+  }
+
+  @Before
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit-" + getMethodName());
+  }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
   }
 
   /**
@@ -155,7 +165,8 @@ public abstract class AbstractFSContractTestBase extends Assert
    * Set the timeout for every test.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(getTestTimeoutMillis());
+  public Timeout testTimeout =
+      new Timeout(getTestTimeoutMillis(), TimeUnit.MILLISECONDS);
 
   /**
    * Option for tests to override the default timeout value.
@@ -172,6 +183,7 @@ public abstract class AbstractFSContractTestBase extends Assert
    */
   @Before
   public void setup() throws Exception {
+    Thread.currentThread().setName("setup");
     LOG.debug("== Setup ==");
     contract = createContract(createConfiguration());
     contract.init();
@@ -200,8 +212,12 @@ public abstract class AbstractFSContractTestBase extends Assert
    */
   @After
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.debug("== Teardown ==");
     deleteTestDirInTeardown();
+    if (contract != null) {
+      contract.teardown();
+    }
     LOG.debug("== Teardown complete ==");
   }
 
@@ -223,6 +239,15 @@ public abstract class AbstractFSContractTestBase extends Assert
   protected Path path(String filepath) throws IOException {
     return getFileSystem().makeQualified(
       new Path(getContract().getTestPath(), filepath));
+  }
+
+  /**
+   * Get a path whose name ends with the name of this method.
+   * @return a path implicitly unique amongst all methods in this class
+   * @throws IOException IO problems
+   */
+  protected Path methodPath() throws IOException {
+    return path(methodName.getMethodName());
   }
 
   /**

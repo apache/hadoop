@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -52,9 +52,9 @@ class FSDirConcatOp {
       String target, String[] srcs, boolean logRetryCache) throws IOException {
     validatePath(target, srcs);
     assert srcs != null;
-    if (FSDirectory.LOG.isDebugEnabled()) {
-      FSDirectory.LOG.debug("concat {} to {}", Arrays.toString(srcs), target);
-    }
+    NameNode.stateChangeLog.debug("DIR* NameSystem.concat: {} to {}",
+        Arrays.toString(srcs), target);
+
     final INodesInPath targetIIP = fsd.resolvePath(pc, target, DirOp.WRITE);
     // write permission for the target
     if (fsd.isPermissionEnabled()) {
@@ -65,11 +65,6 @@ class FSDirConcatOp {
     verifyTargetFile(fsd, target, targetIIP);
     // check the srcs
     INodeFile[] srcFiles = verifySrcFiles(fsd, srcs, targetIIP, pc);
-
-    if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.concat: " +
-          Arrays.toString(srcs) + " to " + target);
-    }
 
     long timestamp = now();
     fsd.writeLock();
@@ -150,7 +145,7 @@ class FSDirConcatOp {
             + " is referred by some other reference in some snapshot.");
       }
       // source file cannot be the same with the target file
-      if (srcINode == targetINode) {
+      if (srcINode.equals(targetINode)) {
         throw new HadoopIllegalArgumentException("concat: the src file " + src
             + " is the same with the target file " + targetIIP.getPath());
       }
@@ -214,6 +209,7 @@ class FSDirConcatOp {
         }
       }
     }
+    deltas.addNameSpace(-srcList.length);
     return deltas;
   }
 
@@ -233,10 +229,8 @@ class FSDirConcatOp {
   static void unprotectedConcat(FSDirectory fsd, INodesInPath targetIIP,
       INodeFile[] srcList, long timestamp) throws IOException {
     assert fsd.hasWriteLock();
-    if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "
-          + targetIIP.getPath());
-    }
+    NameNode.stateChangeLog.debug("DIR* NameSystem.concat to {}",
+        targetIIP.getPath());
 
     final INodeFile trgInode = targetIIP.getLastINode().asFile();
     QuotaCounts deltas = computeQuotaDeltas(fsd, trgInode, srcList);

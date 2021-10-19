@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

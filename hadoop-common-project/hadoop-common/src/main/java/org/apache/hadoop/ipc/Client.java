@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -53,8 +54,8 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -649,10 +650,21 @@ public class Client implements AutoCloseable {
     
     private synchronized void setupConnection(
         UserGroupInformation ticket) throws IOException {
+      LOG.debug("Setup connection to " + server.toString());
       short ioFailures = 0;
       short timeoutFailures = 0;
       while (true) {
         try {
+          if (server.isUnresolved()) {
+            // Jump into the catch block. updateAddress() will re-resolve
+            // the address if this is just a temporary DNS failure. If not,
+            // it will timeout after max ipc client retries
+            throw NetUtils.wrapException(server.getHostName(),
+                server.getPort(),
+                NetUtils.getHostname(),
+                0,
+                new UnknownHostException());
+          }
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.setKeepAlive(true);
@@ -711,8 +723,16 @@ public class Client implements AutoCloseable {
         } catch (IOException ie) {
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
+            try {
+              // HADOOP-17068: when server changed, ignore the exception.
+              handleConnectionFailure(ioFailures++, ie);
+            } catch (IOException ioe) {
+              LOG.warn("Exception when handle ConnectionFailure: "
+                  + ioe.getMessage());
+            }
+          } else {
+            handleConnectionFailure(ioFailures++, ie);
           }
-          handleConnectionFailure(ioFailures++, ie);
         }
       }
     }
@@ -761,8 +781,17 @@ public class Client implements AutoCloseable {
               throw (IOException) new IOException(msg).initCause(ex);
             }
           } else {
-            LOG.warn("Exception encountered while connecting to "
-                + "the server : " + ex);
+            // With RequestHedgingProxyProvider, one rpc call will send multiple
+            // requests to all namenodes. After one request return successfully,
+            // all other requests will be interrupted. It's not a big problem,
+            // and should not print a warning log.
+            if (ex instanceof InterruptedIOException) {
+              LOG.debug("Exception encountered while connecting to the server",
+                  ex);
+            } else {
+              LOG.warn("Exception encountered while connecting to the server ",
+                  ex);
+            }
           }
           if (ex instanceof RemoteException)
             throw (RemoteException) ex;
@@ -839,7 +868,8 @@ public class Client implements AutoCloseable {
               }
             } else if (UserGroupInformation.isSecurityEnabled()) {
               if (!fallbackAllowed) {
-                throw new IOException("Server asks us to fall back to SIMPLE " +
+                throw new AccessControlException(
+                    "Server asks us to fall back to SIMPLE " +
                     "auth, but this client is configured to only allow secure " +
                     "connections.");
               }
@@ -1031,7 +1061,10 @@ public class Client implements AutoCloseable {
         if (timeout>0) {
           try {
             wait(timeout);
-          } catch (InterruptedException e) {}
+          } catch (InterruptedException e) {
+            LOG.trace("Interrupted while waiting to retrieve RPC response.");
+            Thread.currentThread().interrupt();
+          }
         }
       }
       
@@ -1268,7 +1301,7 @@ public class Client implements AutoCloseable {
           cleanupCalls();
         }
       } else {
-        // log the info
+        // Log the newest server information if update address.
         if (LOG.isDebugEnabled()) {
           LOG.debug("closing ipc connection to " + server + ": " +
               closeException.getMessage(),closeException);
@@ -1363,6 +1396,9 @@ public class Client implements AutoCloseable {
         try {
           emptyCondition.wait();
         } catch (InterruptedException e) {
+          LOG.trace(
+              "Interrupted while waiting on all connections to be closed.");
+          Thread.currentThread().interrupt();
         }
       }
     }
@@ -1578,15 +1614,6 @@ public class Client implements AutoCloseable {
   private Connection getConnection(ConnectionId remoteId,
       Call call, int serviceClass, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
-    final InetSocketAddress address = remoteId.getAddress();
-    if (address.isUnresolved()) {
-      throw NetUtils.wrapException(address.getHostName(),
-          address.getPort(),
-          null,
-          0,
-          new UnknownHostException());
-    }
-
     final Consumer<Connection> removeMethod = c -> {
       final boolean removed = connections.remove(remoteId, c);
       if (removed && connections.isEmpty()) {
@@ -1880,10 +1907,12 @@ public class Client implements AutoCloseable {
         }
       }
       if (length <= 0) {
-        throw new RpcException("RPC response has invalid length");
+        throw new RpcException(String.format("RPC response has " +
+            "invalid length of %d", length));
       }
       if (maxResponseLength > 0 && length > maxResponseLength) {
-        throw new RpcException("RPC response exceeds maximum data length");
+        throw new RpcException(String.format("RPC response has a " +
+            "length of %d exceeds maximum data length", length));
       }
       ByteBuffer bb = ByteBuffer.allocate(length);
       in.readFully(bb.array());

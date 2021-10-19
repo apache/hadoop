@@ -17,8 +17,16 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * Unit tests for SQLFederationStateStore.
@@ -45,5 +53,25 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         DATABASE_URL + System.currentTimeMillis());
     super.setConf(conf);
     return new HSQLDBFederationStateStore();
+  }
+
+  @Test
+  public void testSqlConnectionsCreatedCount() throws YarnException {
+    FederationStateStore stateStore = getStateStore();
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+    ApplicationId appId = ApplicationId.newInstance(1, 1);
+
+    SubClusterInfo subClusterInfo = createSubClusterInfo(subClusterId);
+
+    stateStore.registerSubCluster(
+        SubClusterRegisterRequest.newInstance(subClusterInfo));
+    Assert.assertEquals(subClusterInfo, querySubClusterInfo(subClusterId));
+
+    addApplicationHomeSC(appId, subClusterId);
+    Assert.assertEquals(subClusterId, queryApplicationHomeSC(appId));
+
+    // Verify if connection is created only once at statestore init
+    Assert.assertEquals(1,
+        FederationStateStoreClientMetrics.getNumConnections());
   }
 }

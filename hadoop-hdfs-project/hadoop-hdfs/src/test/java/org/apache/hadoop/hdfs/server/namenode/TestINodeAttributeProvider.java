@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,16 +36,17 @@ import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Lists;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Lists;
 
 public class TestINodeAttributeProvider {
   private static final Logger LOG =
@@ -53,6 +56,7 @@ public class TestINodeAttributeProvider {
   private static final Set<String> CALLED = new HashSet<String>();
   private static final short HDFS_PERMISSION = 0777;
   private static final short PROVIDER_PERMISSION = 0770;
+  private static boolean runPermissionCheck = false;
 
   public static class MyAuthorizationProvider extends INodeAttributeProvider {
 
@@ -70,14 +74,28 @@ public class TestINodeAttributeProvider {
           int ancestorIndex, boolean doCheckOwner, FsAction ancestorAccess,
           FsAction parentAccess, FsAction access, FsAction subAccess,
           boolean ignoreEmptyDir) throws AccessControlException {
-        if (ancestorIndex > 1
+        if ((ancestorIndex > 1
             && inodes[1].getLocalName().equals("user")
-            && inodes[2].getLocalName().equals("acl")) {
+            && inodes[2].getLocalName().equals("acl")) || runPermissionCheck) {
           this.ace.checkPermission(fsOwner, supergroup, ugi, inodeAttrs, inodes,
               pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
               ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
         }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
+      }
+
+      @Override
+      public void checkPermissionWithContext(
+          AuthorizationContext authzContext) throws AccessControlException {
+        if (authzContext.getAncestorIndex() > 1
+            && authzContext.getInodes()[1].getLocalName().equals("user")
+            && authzContext.getInodes()[2].getLocalName().equals("acl")
+            || runPermissionCheck) {
+          this.ace.checkPermissionWithContext(authzContext);
+        }
+        CALLED.add("checkPermission|" + authzContext.getAncestorAccess()
+            + "|" + authzContext.getParentAccess() + "|" + authzContext
+            .getAccess());
       }
     }
 
@@ -188,8 +206,7 @@ public class TestINodeAttributeProvider {
     }
 
     private boolean useDefault(String[] pathElements) {
-      return (pathElements.length < 2) ||
-          !(pathElements[0].equals("user") && pathElements[1].equals("authz"));
+      return !Arrays.stream(pathElements).anyMatch("authz"::equals);
     }
 
     private boolean useNullAclFeature(String[] pathElements) {
@@ -220,6 +237,7 @@ public class TestINodeAttributeProvider {
       miniDFS.shutdown();
       miniDFS = null;
     }
+    runPermissionCheck = false;
     Assert.assertTrue(CALLED.contains("stop"));
   }
 
@@ -434,6 +452,99 @@ public class TestINodeAttributeProvider {
         Assert.assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
         Assert.assertEquals(PROVIDER_PERMISSION,
             fs.getAclStatus(authzChild).getPermission().toShort());
+        return null;
+      }
+    });
+  }
+
+
+  @Test
+  // HDFS-15165 - ContentSummary calls should use the provider permissions(if
+  // attribute provider is configured) and not the underlying HDFS permissions.
+  public void testContentSummary() throws Exception {
+    runPermissionCheck = true;
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+    // Create the path /user/authz/child2 where the HDFS permissions are
+    // 777, 700, 700.
+    // The permission provider will give permissions 770 to authz and child2
+    // with the owner foo, group bar.
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(0777));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(0700));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(0700));
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("foo",
+        new String[]{"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        fs.getContentSummary(authz);
+        return null;
+      }
+    });
+  }
+
+  @Test
+  // See HDFS-16132 where an issue was reported after HDFS-15372. The sequence
+  // of operations here causes that change to break and the test fails with:
+  // org.apache.hadoop.ipc.RemoteException(java.lang.AssertionError):
+  //     Absolute path required, but got 'foo'
+  //  at org.apache.hadoop.hdfs.server.namenode.INode.checkAbsolutePath
+  //    (INode.java:838)
+  //  at org.apache.hadoop.hdfs.server.namenode.INode.getPathComponents
+  //    (INode.java:813)
+  // After reverting HDFS-15372 the test passes, so including this test in the
+  // revert for future reference.
+  public void testAttrProviderWorksCorrectlyOnRenamedSnapshotPaths()
+      throws Exception {
+    runPermissionCheck = true;
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    DistributedFileSystem hdfs = miniDFS.getFileSystem();
+    final Path parent = new Path("/user");
+    hdfs.mkdirs(parent);
+    fs.setPermission(parent, new FsPermission(HDFS_PERMISSION));
+    final Path sub1 = new Path(parent, "sub1");
+    final Path sub1foo = new Path(sub1, "foo");
+    hdfs.mkdirs(sub1);
+    hdfs.mkdirs(sub1foo);
+    Path f = new Path(sub1foo, "file0");
+    DFSTestUtil.createFile(hdfs, f, 0, (short) 1, 0);
+    hdfs.allowSnapshot(parent);
+    hdfs.createSnapshot(parent, "s0");
+
+    f = new Path(sub1foo, "file1");
+    DFSTestUtil.createFile(hdfs, f, 0, (short) 1, 0);
+    f = new Path(sub1foo, "file2");
+    DFSTestUtil.createFile(hdfs, f, 0, (short) 1, 0);
+
+    final Path sub2 = new Path(parent, "sub2");
+    hdfs.mkdirs(sub2);
+    final Path sub2foo = new Path(sub2, "foo");
+    // mv /parent/sub1/foo to /parent/sub2/foo
+    hdfs.rename(sub1foo, sub2foo);
+
+    hdfs.createSnapshot(parent, "s1");
+    hdfs.createSnapshot(parent, "s2");
+
+    final Path sub3 = new Path(parent, "sub3");
+    hdfs.mkdirs(sub3);
+    // mv /parent/sub2/foo to /parent/sub3/foo
+    hdfs.rename(sub2foo, sub3);
+
+    hdfs.delete(sub3, true);
+    UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting("u1", new String[] {"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        ((DistributedFileSystem)fs).getSnapshotDiffReport(parent, "s1", "s2");
+        CALLED.clear();
         return null;
       }
     });

@@ -41,7 +41,20 @@
     <m>1</m>
     <options> </options>
   </schema>
+  <schema id="RSk12m4">
+    <codec>rs</codec>
+    <k>12</k>
+    <m>4</m>
+    <options> </options>
+  </schema>
+  <schema id="RS-LEGACYk12m4">
+    <codec>rs-legacy</codec>
+    <k>12</k>
+    <m>4</m>
+    <options> </options>
+  </schema>
   <schema id="RSk6m3">
+    <!-- just for failed test -->
     <codec>RS</codec>
     <k>6</k>
     <m>3</m>
@@ -55,6 +68,14 @@
     <!-- schema is referred by its id -->
     <schema>XORk2m1</schema>
     <!-- cellsize must be an positive integer multiple of 1024(1k) -->
+    <cellsize>131072</cellsize>
+  </policy>
+  <policy>
+    <schema>RSk12m4</schema>
+    <cellsize>131072</cellsize>
+  </policy>
+  <policy>
+    <schema>RS-LEGACYk12m4</schema>
     <cellsize>131072</cellsize>
   </policy>
   <policy>

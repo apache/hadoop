@@ -76,6 +76,6 @@ final public class ExtendedBlockId {
 
   @Override
   public String toString() {
-    return String.valueOf(blockId) + "_" + bpId;
+    return blockId + "_" + bpId;
   }
 }

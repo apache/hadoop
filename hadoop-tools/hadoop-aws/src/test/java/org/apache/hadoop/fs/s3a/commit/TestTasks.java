@@ -25,12 +25,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,6 +58,12 @@ public class TestTasks extends HadoopTestBase {
    * Thread pool for task execution.
    */
   private ExecutorService threadPool;
+
+  /**
+   * Task submitter bonded to the thread pool, or
+   * null for the 0-thread case.
+   */
+  Tasks.Submitter submitter;
   private final CounterTask failingTask
       = new CounterTask("failing committer", FAILPOINT, Item::commit);
 
@@ -73,7 +80,7 @@ public class TestTasks extends HadoopTestBase {
    * more checks on single thread than parallel ops.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "threads={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {0},
@@ -117,6 +124,9 @@ public class TestTasks extends HadoopTestBase {
               .setDaemon(true)
               .setNameFormat(getMethodName() + "-pool-%d")
               .build());
+      submitter = new PoolSubmitter();
+    } else {
+      submitter = null;
     }
 
   }
@@ -129,12 +139,21 @@ public class TestTasks extends HadoopTestBase {
     }
   }
 
+  private class PoolSubmitter implements Tasks.Submitter {
+
+    @Override
+    public Future<?> submit(final Runnable task) {
+      return threadPool.submit(task);
+    }
+
+  }
+
   /**
    * create the builder.
    * @return pre-inited builder
    */
   private Tasks.Builder<Item> builder() {
-    return Tasks.foreach(items).executeWith(threadPool);
+    return Tasks.foreach(items).executeWith(submitter);
   }
 
   private void assertRun(Tasks.Builder<Item> builder,

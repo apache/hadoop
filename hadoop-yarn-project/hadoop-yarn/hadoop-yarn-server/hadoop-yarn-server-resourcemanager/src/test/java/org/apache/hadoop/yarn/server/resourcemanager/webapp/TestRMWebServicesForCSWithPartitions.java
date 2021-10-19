@@ -39,9 +39,9 @@ import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -74,7 +76,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
@@ -98,6 +100,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String LABEL_LX = "Lx";
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
+  private static final String DOT = ".";
   private static MockRM rm;
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
@@ -277,7 +280,14 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, QUEUE_B, LABEL_LX);
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue(QUEUE_B)
+              .withAmLabel(LABEL_LX)
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
       am1.allocate(Arrays.asList(
           ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
@@ -301,7 +311,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       verifyNumberOfAllocations(schedulerActivitiesJson, 1);
       // verify queue Qb
       Predicate<JSONObject> findQueueBPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_B);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_B);
       List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
@@ -313,7 +324,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
       // verify queue Qa
       Predicate<JSONObject> findQueueAPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_A);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_A);
       List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
@@ -325,7 +337,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
       // verify queue Qc
       Predicate<JSONObject> findQueueCPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_C);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_C);
       List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);
@@ -438,8 +451,6 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
             Assert.fail("Unexpected partition" + partitionName);
           }
         }
-      } else if (queueChildElem.getTagName().equals("resources")) {
-        verifyResourceUsageInfoXML(queueChildElem);
       }
     }
     assertEquals("Node Labels are not matching", LABEL_LX,
@@ -563,7 +574,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements", 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements", 22, info.length());
     JSONObject capacitiesJsonObject = info.getJSONObject(CAPACITIES);
     JSONArray partitionsCapsArray =
         capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);
@@ -581,16 +592,12 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     for (int i = 0; i < queuesArray.length(); i++) {
       JSONObject queueJson = queuesArray.getJSONObject(i);
       String queue = queueJson.getString("queueName");
-
-      assertEquals("Partition resourceInfo is wrong", 1,
-          queueJson.getJSONObject("resources")
-              .getJSONArray(RESOURCE_USAGES_BY_PARTITION).length());
+      JSONArray resourceUsageByPartition = queueJson.getJSONObject("resources")
+          .getJSONArray(RESOURCE_USAGES_BY_PARTITION);
 
       JSONObject resourcesJsonObject = queueJson.getJSONObject("resources");
       JSONArray partitionsResourcesArray =
-          resourcesJsonObject.getJSONArray("resourceUsagesByPartition");
-      assertEquals("incorrect number of elements", 1,
-          partitionsResourcesArray.length());
+          resourcesJsonObject.getJSONArray(RESOURCE_USAGES_BY_PARTITION);
 
       capacitiesJsonObject = queueJson.getJSONObject(CAPACITIES);
       partitionsCapsArray =
@@ -607,6 +614,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         verifyPartitionCapacityInfoJson(partitionInfo, 30, 0, 50, 30, 0, 50);
         assertEquals("incorrect number of elements", 7,
             partitionsResourcesArray.getJSONObject(0).length());
+        assertEquals("incorrect number of objects", 1,
+            resourceUsageByPartition.length());
         break;
       case QUEUE_B:
         assertEquals("Invalid default Label expression", LABEL_LX,
@@ -616,6 +625,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
         verifyAccesibleNodeLabels(queueJson, ImmutableSet.of(LABEL_LX));
         assertEquals("incorrect number of partitions", 2,
             partitionsCapsArray.length());
+        assertEquals("incorrect number of objects", 2,
+            resourceUsageByPartition.length());
         for (int j = 0; j < partitionsCapsArray.length(); j++) {
           partitionInfo = partitionsCapsArray.getJSONObject(j);
           partitionName = partitionInfo.getString("partitionName");

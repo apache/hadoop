@@ -59,11 +59,16 @@ public class NativePmemMappedBlock implements MappableBlock {
   }
 
   @Override
+  public ExtendedBlockId getKey() {
+    return key;
+  }
+
+  @Override
   public void close() {
     if (pmemMappedAddress != -1L) {
-      String cacheFilePath =
-          PmemVolumeManager.getInstance().getCachePath(key);
       try {
+        String cacheFilePath =
+            PmemVolumeManager.getInstance().getCachePath(key);
         // Current libpmem will report error when pmem_unmap is called with
         // length not aligned with page size, although the length is returned
         // by pmem_map_file.

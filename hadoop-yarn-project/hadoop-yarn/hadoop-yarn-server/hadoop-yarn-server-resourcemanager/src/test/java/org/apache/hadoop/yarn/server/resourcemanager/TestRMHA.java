@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -142,7 +142,7 @@ public class TestRMHA {
     try {
       rm.getNewAppId();
       nm = rm.registerNode("127.0.0.1:1", 2048);
-      app = rm.submitApp(1024);
+      app = MockRMAppSubmitter.submitWithMemory(1024, rm);
       attempt = app.getCurrentAppAttempt();
       rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.SCHEDULED);
     } catch (Exception e) {

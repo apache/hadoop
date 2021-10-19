@@ -19,7 +19,7 @@
 #ifndef COMMON_HDFS_NAMENODE_INFO_H_
 #define COMMON_HDFS_NAMENODE_INFO_H_
 
-#include <asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <hdfspp/options.h>
 
@@ -37,7 +37,7 @@ struct ResolvedNamenodeInfo : public NamenodeInfo {
   ResolvedNamenodeInfo& operator=(const NamenodeInfo &info);
   std::string str() const;
 
-  std::vector<::asio::ip::tcp::endpoint> endpoints;
+  std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 };
 
 // Clear endpoints if set and resolve all of them in parallel.

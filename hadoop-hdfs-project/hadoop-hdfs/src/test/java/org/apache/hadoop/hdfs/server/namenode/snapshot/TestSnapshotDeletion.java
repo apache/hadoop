@@ -156,7 +156,7 @@ public class TestSnapshotDeletion {
     assertEquals(2, cluster.getNamesystem().getSnapshotManager()
         .getNumSnapshottableDirs());
     assertEquals(2, cluster.getNamesystem().getSnapshotManager()
-        .getSnapshottableDirs().length);
+        .getSnapshottableDirs().size());
 
     // delete /foo
     hdfs.delete(foo, true);
@@ -165,7 +165,7 @@ public class TestSnapshotDeletion {
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
         .getNumSnapshottableDirs());
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
-        .getSnapshottableDirs().length);
+        .getSnapshottableDirs().size());
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
@@ -527,7 +527,7 @@ public class TestSnapshotDeletion {
     assertEquals(snapshot1.getId(), diffList.getLast().getSnapshotId());
     diffList = fsdir.getINode(metaChangeDir.toString()).asDirectory()
         .getDiffs();
-    assertEquals(0, diffList.asList().size());
+    assertEquals(null, diffList);
     
     // check 2. noChangeDir and noChangeFile are still there
     final INodeDirectory noChangeDirNode = 

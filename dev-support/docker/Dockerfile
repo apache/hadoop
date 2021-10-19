@@ -1,4 +1,3 @@
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,7 +17,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:xenial
+FROM ubuntu:focal
 
 WORKDIR /root
 
@@ -34,199 +33,67 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_TERSE true
 
 ######
-# Install common dependencies from packages. Versions here are either
-# sufficient or irrelevant.
-#
-# WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
-# Ubuntu Java.  See Java section below!
+# Platform package dependency resolver
 ######
-# hadolint ignore=DL3008
+COPY pkg-resolver pkg-resolver
+RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
+    && chmod a+r pkg-resolver/*.json
+
+######
+# Install packages from apt
+######
+# hadolint ignore=DL3008,SC2046
 RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends \
-        apt-utils \
-        build-essential \
-        bzip2 \
-        clang \
-        curl \
-        doxygen \
-        fuse \
-        g++ \
-        gcc \
-        git \
-        gnupg-agent \
-        libbz2-dev \
-        libcurl4-openssl-dev \
-        libfuse-dev \
-        libprotobuf-dev \
-        libprotoc-dev \
-        libsasl2-dev \
-        libsnappy-dev \
-        libssl-dev \
-        libtool \
-        libzstd1-dev \
-        locales \
-        make \
-        pinentry-curses \
-        pkg-config \
-        python \
-        python2.7 \
-        python-pip \
-        python-pkg-resources \
-        python-setuptools \
-        python-wheel \
-        rsync \
-        software-properties-common \
-        snappy \
-        sudo \
-        valgrind \
-        zlib1g-dev \
+    && apt-get -q install -y --no-install-recommends python3 \
+    && apt-get -q install -y --no-install-recommends $(pkg-resolver/resolve.py ubuntu:focal) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+RUN locale-gen en_US.UTF-8
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
+ENV PYTHONIOENCODING=utf-8
+
+######
+# Set env vars required to build Hadoop
+######
+ENV MAVEN_HOME /usr
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
 #######
-# OpenJDK 8
+# Set env vars for SpotBugs 4.2.2
 #######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-8-jdk libbcprov-java \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ENV SPOTBUGS_HOME /opt/spotbugs
 
-
-######
-# Install cmake 3.1.0 (3.5.1 ships with Xenial)
-######
-RUN mkdir -p /opt/cmake \
-    && curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz \
-    && tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
-ENV CMAKE_HOME /opt/cmake
-ENV PATH "${PATH}:/opt/cmake/bin"
-
-######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
-######
-# hadolint ignore=DL3003
-RUN mkdir -p /opt/protobuf-src \
-    && curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
-      -o /opt/protobuf.tar.gz \
-    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
-    && cd /opt/protobuf-src \
-    && ./configure --prefix=/opt/protobuf \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-src
+#######
+# Set env vars for Google Protobuf 3.7.1
+#######
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
-
-######
-# Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends maven \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV MAVEN_HOME /usr
-
-######
-# Install findbugs 3.0.1 (3.0.1 ships with Xenial)
-# Ant is needed for findbugs
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends findbugs ant \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV FINDBUGS_HOME /usr
-
-####
-# Install shellcheck (0.4.6, the latest as of 2017-09-26)
-####
-# hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
-####
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends bats \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install pylint at fixed version (2.0.0 removed python2 support)
-# https://github.com/PyCQA/pylint/issues/2294
-####
-RUN pip2 install pylint==1.9.2
-
-####
-# Install dateutil.parser
-####
-RUN pip2 install python-dateutil==2.7.3
-
-###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
-###
-# hadolint ignore=DL3008, DL3016
-RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
-    && npm install npm@latest -g \
-    && npm install -g jshint
-
-###
-# Install hadolint
-####
-RUN curl -L -s -S \
-        https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
-        -o /bin/hadolint \
-   && chmod a+rx /bin/hadolint \
-   && shasum -a 512 /bin/hadolint | \
-        awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
 
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx1536m
+ENV MAVEN_OPTS -Xms256m -Xmx3072m
 
-RUN mkdir -p /opt/protobuf-3.7-src \
-    && curl -L -s -S \
-      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
-      -o /opt/protobuf-3.7.1.tar.gz \
-    && tar xzf /opt/protobuf-3.7.1.tar.gz --strip-components 1 -C /opt/protobuf-3.7-src \
-    && cd /opt/protobuf-3.7-src \
-    && ./configure --prefix=/opt/protobuf-3.7 \
-    && make install \
-    && cd /root \
-    && rm -rf /opt/protobuf-3.7-src
+# Skip gpg verification when downloading Yetus via yetus-wrapper
+ENV HADOOP_SKIP_YETUS_VERIFICATION true
+
+####
+# Install packages
+####
+RUN pkg-resolver/install-common-pkgs.sh
+RUN pkg-resolver/install-spotbugs.sh ubuntu:focal
+RUN pkg-resolver/install-boost.sh ubuntu:focal
+RUN pkg-resolver/install-protobuf.sh ubuntu:focal
+RUN pkg-resolver/install-hadolint.sh ubuntu:focal
+RUN pkg-resolver/install-intel-isa-l.sh ubuntu:focal
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
 # So tell Yetus not to read the rest of the file:
 # YETUS CUT HERE
 ###
-
-# Hugo static website generator (for new hadoop site and Ozone docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
-    && dpkg --install hugo.deb \
-    && rm hugo.deb
-
-######
-# Install Google Protobuf 3.7.1 (2.6.0 ships with Xenial)
-# Keep 2.5.0 as well, until 3.7.1 upgrade is complete.
-######
-# hadolint ignore=DL3003
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh

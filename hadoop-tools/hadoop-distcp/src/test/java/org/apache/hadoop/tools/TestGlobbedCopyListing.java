@@ -72,7 +72,7 @@ public class TestGlobbedCopyListing {
       recordInExpectedValues(path);
     }
     finally {
-      IOUtils.cleanup(null, fileSystem);
+      IOUtils.cleanupWithLogger(null, fileSystem);
     }
   }
 
@@ -85,7 +85,7 @@ public class TestGlobbedCopyListing {
       recordInExpectedValues(path);
     }
     finally {
-      IOUtils.cleanup(null, fileSystem, outputStream);
+      IOUtils.cleanupWithLogger(null, fileSystem, outputStream);
     }
   }
 

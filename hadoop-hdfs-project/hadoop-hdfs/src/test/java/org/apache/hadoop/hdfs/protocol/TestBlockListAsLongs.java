@@ -57,8 +57,8 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class TestBlockListAsLongs {
   static Block b1 = new Block(1, 11, 111);
@@ -240,7 +240,7 @@ public class TestBlockListAsLongs {
     request.set(null);
     nsInfo.setCapabilities(Capability.STORAGE_BLOCK_REPORT_BUFFERS.getMask());
     nn.blockReport(reg, "pool", sbr,
-        new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+        new BlockReportContext(1, 0, System.nanoTime(), 0L));
     BlockReportRequestProto proto = request.get();
     assertNotNull(proto);
     assertTrue(proto.getReports(0).getBlocksList().isEmpty());
@@ -253,7 +253,7 @@ public class TestBlockListAsLongs {
     StorageBlockReport[] obp = new StorageBlockReport[] {
         new StorageBlockReport(new DatanodeStorage("s1"), blockList) };
     nn.blockReport(reg, "pool", obp,
-        new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+        new BlockReportContext(1, 0, System.nanoTime(), 0L));
     proto = request.get();
     assertNotNull(proto);
     assertFalse(proto.getReports(0).getBlocksList().isEmpty());

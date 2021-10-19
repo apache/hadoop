@@ -19,17 +19,18 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN NodeManager</name>
 
   <properties>
     <!-- Basedir eeded for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
     <container-executor.conf.dir>../etc/hadoop</container-executor.conf.dir>
+    <extra.libhadoop.rpath>../lib/native</extra.libhadoop.rpath>
     <container-executor.additional_cflags></container-executor.additional_cflags>
   </properties>
 
@@ -88,8 +89,8 @@
       <artifactId>javax-websocket-server-impl</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
 
     <dependency>
@@ -124,6 +125,11 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -166,7 +172,7 @@
       <artifactId>hadoop-yarn-server-common</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.fusesource.leveldbjni</groupId>
+      <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
     <dependency>
@@ -199,6 +205,7 @@
                   <source>${basedir}/src</source>
                   <vars>
                     <HADOOP_CONF_DIR>${container-executor.conf.dir}</HADOOP_CONF_DIR>
+                    <EXTRA_LIBHADOOP_RPATH>${extra.libhadoop.rpath}</EXTRA_LIBHADOOP_RPATH>
                     <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
                   </vars>
                   <env>
@@ -355,32 +362,46 @@
           </excludes>
         </configuration>
       </plugin>
-
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
+            <id>src-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-		  <include>yarn_server_nodemanager_recovery.proto</include>
-                  <include>yarn_server_nodemanager_service_protos.proto</include>
-                  <include>LocalizationProtocol.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
             </configuration>
           </execution>
         </executions>

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Iterator;
@@ -75,6 +75,18 @@ public class MutableRatesWithAggregation extends MutableMetric {
     for (Method method : protocol.getDeclaredMethods()) {
       String name = method.getName();
       LOG.debug(name);
+      addMetricIfNotExists(name);
+    }
+  }
+
+  /**
+   * Initialize the registry with all rate names passed in.
+   * This is an alternative to the above init function since this metric
+   * can be used more than just for rpc name.
+   * @param names the array of all rate names
+   */
+  public void init(String[] names) {
+    for (String name : names) {
       addMetricIfNotExists(name);
     }
   }
@@ -151,6 +163,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
     MutableRate metric = globalMetrics.get(name);
     if (metric == null) {
       metric = new MutableRate(name + typePrefix, name + typePrefix, false);
+      metric.setUpdateTimeStamp(true);
       globalMetrics.put(name, metric);
     }
     return metric;

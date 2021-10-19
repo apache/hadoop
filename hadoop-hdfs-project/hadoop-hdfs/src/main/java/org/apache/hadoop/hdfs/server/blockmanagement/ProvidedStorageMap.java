@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,7 +53,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * This class allows us to manage and multiplex between storages local to
@@ -75,11 +75,9 @@ public class ProvidedStorageMap {
   private final ProvidedDescriptor providedDescriptor;
   private final DatanodeStorageInfo providedStorageInfo;
   private boolean providedEnabled;
-  private long capacity;
   private int defaultReplication;
 
-  ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf)
-      throws IOException {
+  ProvidedStorageMap(RwLock lock, BlockManager bm, Configuration conf) {
 
     storageId = conf.get(DFSConfigKeys.DFS_PROVIDER_STORAGEUUID,
         DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT);
@@ -401,7 +399,8 @@ public class ProvidedStorageMap {
     }
 
     @Override
-    void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
+    public void addBlockToBeReplicated(Block block,
+        DatanodeStorageInfo[] targets) {
       // pick a random datanode, delegate to it
       DatanodeDescriptor node = chooseRandom(targets);
       if (node != null) {

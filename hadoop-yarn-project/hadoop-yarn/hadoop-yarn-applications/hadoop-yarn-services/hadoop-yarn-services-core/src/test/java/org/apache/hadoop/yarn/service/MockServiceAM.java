@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
+import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
@@ -29,6 +28,7 @@ import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
 import org.apache.hadoop.registry.client.types.yarn.YarnRegistryAttributes;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -127,6 +127,16 @@ public class MockServiceAM extends ServiceMaster {
     Path path = new Path(new Path("target", "apps"), service.getName());
     LOG.info("Service path: {}", path);
     return path;
+  }
+
+  @Override
+  protected ClientAMService createClientAMService() {
+    return new ClientAMService(context) {
+      @Override
+      String getNMHostName() {
+        return "0.0.0.0";
+      }
+    };
   }
 
   @Override

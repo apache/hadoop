@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 
 import java.util.Iterator;
 
@@ -27,15 +28,16 @@ import java.util.Iterator;
  * instance.
  */
 @InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class StorageStatistics {
 
   /**
    * These are common statistic names.
-   *
+   * <p>
    * The following names are considered general and preserved across different
    * StorageStatistics classes. When implementing a new StorageStatistics, it is
    * highly recommended to use the common statistic names.
-   *
+   * <p>
    * When adding new common statistic name constants, please make them unique.
    * By convention, they are implicitly unique:
    * <ul>
@@ -43,39 +45,46 @@ public abstract class StorageStatistics {
    *   underscores.</li>
    *   <li>the value of the constants are lowercase of the constant names.</li>
    * </ul>
+   * See {@link StoreStatisticNames} for the field names used here
+   * and elsewhere.
    */
   @InterfaceStability.Evolving
   public interface CommonStatisticNames {
     // The following names are for file system operation invocations
-    String OP_APPEND = "op_append";
-    String OP_COPY_FROM_LOCAL_FILE = "op_copy_from_local_file";
-    String OP_CREATE = "op_create";
-    String OP_CREATE_NON_RECURSIVE = "op_create_non_recursive";
-    String OP_DELETE = "op_delete";
-    String OP_EXISTS = "op_exists";
-    String OP_GET_CONTENT_SUMMARY = "op_get_content_summary";
-    String OP_GET_DELEGATION_TOKEN = "op_get_delegation_token";
-    String OP_GET_FILE_CHECKSUM = "op_get_file_checksum";
-    String OP_GET_FILE_STATUS = "op_get_file_status";
-    String OP_GET_STATUS = "op_get_status";
-    String OP_GLOB_STATUS = "op_glob_status";
-    String OP_IS_FILE = "op_is_file";
-    String OP_IS_DIRECTORY = "op_is_directory";
-    String OP_LIST_FILES = "op_list_files";
-    String OP_LIST_LOCATED_STATUS = "op_list_located_status";
-    String OP_LIST_STATUS = "op_list_status";
-    String OP_MKDIRS = "op_mkdirs";
-    String OP_MODIFY_ACL_ENTRIES = "op_modify_acl_entries";
-    String OP_OPEN = "op_open";
-    String OP_REMOVE_ACL = "op_remove_acl";
-    String OP_REMOVE_ACL_ENTRIES = "op_remove_acl_entries";
-    String OP_REMOVE_DEFAULT_ACL = "op_remove_default_acl";
-    String OP_RENAME = "op_rename";
-    String OP_SET_ACL = "op_set_acl";
-    String OP_SET_OWNER = "op_set_owner";
-    String OP_SET_PERMISSION = "op_set_permission";
-    String OP_SET_TIMES = "op_set_times";
-    String OP_TRUNCATE = "op_truncate";
+    String OP_APPEND = StoreStatisticNames.OP_APPEND;
+    String OP_COPY_FROM_LOCAL_FILE =
+        StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE;
+    String OP_CREATE = StoreStatisticNames.OP_CREATE;
+    String OP_CREATE_NON_RECURSIVE =
+        StoreStatisticNames.OP_CREATE_NON_RECURSIVE;
+    String OP_DELETE = StoreStatisticNames.OP_DELETE;
+    String OP_EXISTS = StoreStatisticNames.OP_EXISTS;
+    String OP_GET_CONTENT_SUMMARY =
+        StoreStatisticNames.OP_GET_CONTENT_SUMMARY;
+    String OP_GET_DELEGATION_TOKEN =
+        StoreStatisticNames.OP_GET_DELEGATION_TOKEN;
+    String OP_GET_FILE_CHECKSUM = StoreStatisticNames.OP_GET_FILE_CHECKSUM;
+    String OP_GET_FILE_STATUS = StoreStatisticNames.OP_GET_FILE_STATUS;
+    String OP_GET_STATUS = StoreStatisticNames.OP_GET_STATUS;
+    String OP_GLOB_STATUS = StoreStatisticNames.OP_GLOB_STATUS;
+    String OP_IS_FILE = StoreStatisticNames.OP_IS_FILE;
+    String OP_IS_DIRECTORY = StoreStatisticNames.OP_IS_DIRECTORY;
+    String OP_LIST_FILES = StoreStatisticNames.OP_LIST_FILES;
+    String OP_LIST_LOCATED_STATUS =
+        StoreStatisticNames.OP_LIST_LOCATED_STATUS;
+    String OP_LIST_STATUS = StoreStatisticNames.OP_LIST_STATUS;
+    String OP_MKDIRS = StoreStatisticNames.OP_MKDIRS;
+    String OP_MODIFY_ACL_ENTRIES = StoreStatisticNames.OP_MODIFY_ACL_ENTRIES;
+    String OP_OPEN = StoreStatisticNames.OP_OPEN;
+    String OP_REMOVE_ACL = StoreStatisticNames.OP_REMOVE_ACL;
+    String OP_REMOVE_ACL_ENTRIES = StoreStatisticNames.OP_REMOVE_ACL_ENTRIES;
+    String OP_REMOVE_DEFAULT_ACL = StoreStatisticNames.OP_REMOVE_DEFAULT_ACL;
+    String OP_RENAME = StoreStatisticNames.OP_RENAME;
+    String OP_SET_ACL = StoreStatisticNames.OP_SET_ACL;
+    String OP_SET_OWNER = StoreStatisticNames.OP_SET_OWNER;
+    String OP_SET_PERMISSION = StoreStatisticNames.OP_SET_PERMISSION;
+    String OP_SET_TIMES = StoreStatisticNames.OP_SET_TIMES;
+    String OP_TRUNCATE = StoreStatisticNames.OP_TRUNCATE;
   }
 
   /**

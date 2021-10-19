@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.client.impl;
 
 import java.util.*;
 
-import com.google.common.primitives.SignedBytes;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.SignedBytes;
 
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;

@@ -25,9 +25,10 @@ import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -108,10 +109,11 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Lists;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -182,7 +184,7 @@ public class FSEditLog implements LogsPurgeable {
   
   // these are statistics counters.
   private long numTransactions;        // number of transactions
-  private final AtomicLong numTransactionsBatchedInSync = new AtomicLong();
+  private final LongAdder numTransactionsBatchedInSync = new LongAdder();
   private long totalTimeTransactions;  // total time for all transactions
   private NameNodeMetrics metrics;
 
@@ -217,7 +219,10 @@ public class FSEditLog implements LogsPurgeable {
   private static final ThreadLocal<TransactionId> myTransactionId = new ThreadLocal<TransactionId>() {
     @Override
     protected synchronized TransactionId initialValue() {
-      return new TransactionId(Long.MAX_VALUE);
+      // If an RPC call did not generate any transactions,
+      // logSync() should exit without syncing
+      // Therefore the initial value of myTransactionId should be 0
+      return new TransactionId(0L);
     }
   };
 
@@ -462,6 +467,7 @@ public class FSEditLog implements LogsPurgeable {
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
 
+      beginTransaction(op);
       // check if it is time to schedule an automatic sync
       needsSync = doEditTransaction(op);
       if (needsSync) {
@@ -476,9 +482,11 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   synchronized boolean doEditTransaction(final FSEditLogOp op) {
-    long start = beginTransaction();
-    op.setTransactionId(txid);
+    LOG.debug("doEditTx() op={} txid={}", op, txid);
+    assert op.hasTransactionId() :
+      "Transaction id is not set for " + op + " EditLog.txId=" + txid;
 
+    long start = monotonicNow();
     try {
       editLogStream.write(op);
     } catch (IOException ex) {
@@ -522,7 +530,7 @@ public class FSEditLog implements LogsPurgeable {
     return editLogStream.shouldForceSync();
   }
   
-  private long beginTransaction() {
+  protected void beginTransaction(final FSEditLogOp op) {
     assert Thread.holdsLock(this);
     // get a new transactionId
     txid++;
@@ -532,7 +540,9 @@ public class FSEditLog implements LogsPurgeable {
     //
     TransactionId id = myTransactionId.get();
     id.txid = txid;
-    return monotonicNow();
+    if(op != null) {
+      op.setTransactionId(txid);
+    }
   }
   
   private void endTransaction(long start) {
@@ -649,7 +659,7 @@ public class FSEditLog implements LogsPurgeable {
   }
 
   protected void logSync(long mytxid) {
-    long syncStart = 0;
+    long lastJournalledTxId = HdfsServerConstants.INVALID_TXID;
     boolean sync = false;
     long editsBatchedInSync = 0;
     try {
@@ -676,8 +686,16 @@ public class FSEditLog implements LogsPurgeable {
           // now, this thread will do the sync.  track if other edits were
           // included in the sync - ie. batched.  if this is the only edit
           // synced then the batched count is 0
-          editsBatchedInSync = txid - synctxid - 1;
-          syncStart = txid;
+          lastJournalledTxId = editLogStream.getLastJournalledTxId();
+          LOG.debug("logSync(tx) synctxid={} lastJournalledTxId={} mytxid={}",
+              synctxid, lastJournalledTxId, mytxid);
+          assert lastJournalledTxId <= txid : "lastJournalledTxId exceeds txid";
+          // The stream has already been flushed, or there are no active streams
+          // We still try to flush up to mytxid
+          if(lastJournalledTxId <= synctxid) {
+            lastJournalledTxId = mytxid;
+          }
+          editsBatchedInSync = lastJournalledTxId - synctxid - 1;
           isSyncRunning = true;
           sync = true;
 
@@ -730,14 +748,14 @@ public class FSEditLog implements LogsPurgeable {
       if (metrics != null) { // Metrics non-null only when used inside name node
         metrics.addSync(elapsed);
         metrics.incrTransactionsBatchedInSync(editsBatchedInSync);
-        numTransactionsBatchedInSync.addAndGet(editsBatchedInSync);
+        numTransactionsBatchedInSync.add(editsBatchedInSync);
       }
       
     } finally {
       // Prevent RuntimeException from blocking other log edit sync 
       synchronized (this) {
         if (sync) {
-          synctxid = syncStart;
+          synctxid = lastJournalledTxId;
           for (JournalManager jm : journalSet.getJournalManagers()) {
             /**
              * {@link FileJournalManager#lastReadableTxId} is only meaningful
@@ -745,7 +763,7 @@ public class FSEditLog implements LogsPurgeable {
              * other types of {@link JournalManager}.
              */
             if (jm instanceof FileJournalManager) {
-              ((FileJournalManager)jm).setLastReadableTxId(syncStart);
+              ((FileJournalManager)jm).setLastReadableTxId(synctxid);
             }
           }
           isSyncRunning = false;
@@ -770,7 +788,7 @@ public class FSEditLog implements LogsPurgeable {
         .append(" Total time for transactions(ms): ")
         .append(totalTimeTransactions)
         .append(" Number of transactions batched in Syncs: ")
-        .append(numTransactionsBatchedInSync.get())
+        .append(numTransactionsBatchedInSync.longValue())
         .append(" Number of syncs: ")
         .append(editLogStream.getNumSync())
         .append(" SyncTimes(ms): ")
@@ -1116,26 +1134,52 @@ public class FSEditLog implements LogsPurgeable {
       .setNewHolder(newHolder);
     logEdit(op);
   }
-  
-  void logCreateSnapshot(String snapRoot, String snapName, boolean toLogRpcIds) {
+
+  /**
+   * Log that a snapshot is created.
+   * @param snapRoot Root of the snapshot.
+   * @param snapName Name of the snapshot.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot creation time set by Time.now().
+   */
+  void logCreateSnapshot(String snapRoot, String snapName, boolean toLogRpcIds,
+      long mtime) {
     CreateSnapshotOp op = CreateSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot).setSnapshotName(snapName);
+        .setSnapshotRoot(snapRoot).setSnapshotName(snapName)
+        .setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
   
-  void logDeleteSnapshot(String snapRoot, String snapName, boolean toLogRpcIds) {
+  /**
+   * Log that a snapshot is deleted.
+   * @param snapRoot Root of the snapshot.
+   * @param snapName Name of the snapshot.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot deletion time set by Time.now().
+   */
+  void logDeleteSnapshot(String snapRoot, String snapName, boolean toLogRpcIds,
+      long mtime) {
     DeleteSnapshotOp op = DeleteSnapshotOp.getInstance(cache.get())
-        .setSnapshotRoot(snapRoot).setSnapshotName(snapName);
+        .setSnapshotRoot(snapRoot).setSnapshotName(snapName)
+        .setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
   
+  /**
+   * Log that a snapshot is renamed.
+   * @param path Root of the snapshot.
+   * @param snapOldName Old name of the snapshot.
+   * @param snapNewName New name the snapshot will be renamed to.
+   * @param toLogRpcIds If it is logging RPC ids.
+   * @param mtime The snapshot modification time set by Time.now().
+   */
   void logRenameSnapshot(String path, String snapOldName, String snapNewName,
-      boolean toLogRpcIds) {
+      boolean toLogRpcIds, long mtime) {
     RenameSnapshotOp op = RenameSnapshotOp.getInstance(cache.get())
         .setSnapshotRoot(path).setSnapshotOldName(snapOldName)
-        .setSnapshotNewName(snapNewName);
+        .setSnapshotNewName(snapNewName).setSnapshotMTime(mtime);
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -1154,7 +1198,8 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Log a CacheDirectiveInfo returned from
-   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker)}
+   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker,
+   * EnumSet)}
    */
   void logAddCacheDirectiveInfo(CacheDirectiveInfo directive,
       boolean toLogRpcIds) {
@@ -1376,7 +1421,7 @@ public class FSEditLog implements LogsPurgeable {
     
     numTransactions = 0;
     totalTimeTransactions = 0;
-    numTransactionsBatchedInSync.set(0L);
+    numTransactionsBatchedInSync.reset();
 
     // TODO no need to link this back to storage anymore!
     // See HDFS-2174.
@@ -1590,7 +1635,8 @@ public class FSEditLog implements LogsPurgeable {
    * store yet.
    */   
   synchronized void logEdit(final int length, final byte[] data) {
-    long start = beginTransaction();
+    beginTransaction(null);
+    long start = monotonicNow();
 
     try {
       editLogStream.writeRaw(data, 0, length);

@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Cancels a running plan.
@@ -76,7 +77,7 @@ public class CancelCommand extends Command {
           "Invalid plan file specified.");
       String planData = null;
       try (FSDataInputStream plan = open(planFile)) {
-        planData = IOUtils.toString(plan);
+        planData = IOUtils.toString(plan, StandardCharsets.UTF_8);
       }
       cancelPlan(planData);
     }
@@ -94,7 +95,7 @@ public class CancelCommand extends Command {
     String dataNodeAddress = plan.getNodeName() + ":" + plan.getPort();
     Preconditions.checkNotNull(dataNodeAddress);
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);
-    String planHash = DigestUtils.shaHex(planData);
+    String planHash = DigestUtils.sha1Hex(planData);
     try {
       dataNode.cancelDiskBalancePlan(planHash);
     } catch (DiskBalancerException ex) {

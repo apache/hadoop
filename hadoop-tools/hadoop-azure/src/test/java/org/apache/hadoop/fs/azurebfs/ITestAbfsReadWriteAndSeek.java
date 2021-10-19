@@ -28,7 +28,12 @@ import org.junit.runners.Parameterized;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
@@ -40,12 +45,13 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.M
  */
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
-  private static final Path TEST_PATH = new Path("/testfile");
+  private static final String TEST_PATH = "/testfile";
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
     return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
         {DEFAULT_READ_BUFFER_SIZE},
+        {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
         {MAX_BUFFER_SIZE}});
   }
 
@@ -63,27 +69,73 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
 
-
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
-    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+
+    Path testPath = path(TEST_PATH);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
       stream.write(b);
     }
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
-    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
+      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.READ, true, 0,
+              ((AbfsInputStream) inputStream.getWrappedStream())
+                  .getStreamID()));
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);
+
+      //to test tracingHeader for case with bypassReadAhead == true
+      inputStream.seek(0);
+      byte[] temp = new byte[5];
+      int t = inputStream.read(temp, 0, 1);
+
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
     }
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);
+  }
+
+  @Test
+  public void testReadAheadRequestID() throws java.io.IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+    int bufferSize = MIN_BUFFER_SIZE;
+    abfsConfiguration.setReadBufferSize(bufferSize);
+
+    final byte[] b = new byte[bufferSize * 10];
+    new Random().nextBytes(b);
+    Path testPath = path(TEST_PATH);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
+      ((AbfsOutputStream) stream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.WRITE, false, 0,
+              ((AbfsOutputStream) stream.getWrappedStream())
+                  .getStreamID()));
+      stream.write(b);
+    }
+
+    final byte[] readBuffer = new byte[4 * bufferSize];
+    int result;
+    fs.registerListener(
+        new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+            fs.getFileSystemId(), FSOperationType.OPEN, false, 0));
+    try (FSDataInputStream inputStream = fs.open(testPath)) {
+      ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
+          new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
+              fs.getFileSystemId(), FSOperationType.READ, false, 0,
+              ((AbfsInputStream) inputStream.getWrappedStream())
+                  .getStreamID()));
+      result = inputStream.read(readBuffer, 0, bufferSize*4);
+    }
+    fs.registerListener(null);
   }
 }

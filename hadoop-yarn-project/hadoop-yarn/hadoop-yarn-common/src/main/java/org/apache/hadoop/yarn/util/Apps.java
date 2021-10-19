@@ -40,6 +40,7 @@ import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 /**
@@ -300,5 +301,18 @@ public class Apps {
     default:
       return true;
     }
+  }
+
+  /**
+   * Returns whether a given application state is final: FINISHED,
+   * FAILED or KILLED.
+   *
+   * @param appState application state
+   * @return whether the appState is final.
+   */
+  public static boolean isApplicationFinalState(YarnApplicationState appState) {
+    return appState == YarnApplicationState.FINISHED
+        || appState == YarnApplicationState.FAILED
+        || appState == YarnApplicationState.KILLED;
   }
 }

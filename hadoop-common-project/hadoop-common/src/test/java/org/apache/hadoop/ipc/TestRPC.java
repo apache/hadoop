@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -81,9 +81,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
@@ -486,14 +488,14 @@ public class TestRPC extends TestRpcBase {
               .setParam2(2).build();
       TestProtos.AddResponseProto addResponse =
           proxy.add(null, addRequest);
-      assertEquals(addResponse.getResult(), 3);
+      assertThat(addResponse.getResult()).isEqualTo(3);
 
       Integer[] integers = new Integer[] {1, 2};
       TestProtos.AddRequestProto2 addRequest2 =
           TestProtos.AddRequestProto2.newBuilder().addAllParams(
               Arrays.asList(integers)).build();
       addResponse = proxy.add2(null, addRequest2);
-      assertEquals(addResponse.getResult(), 3);
+      assertThat(addResponse.getResult()).isEqualTo(3);
 
       boolean caught = false;
       try {
@@ -1094,7 +1096,9 @@ public class TestRPC extends TestRpcBase {
 
       proxy.lockAndSleep(null, newSleepRequest(5));
       rpcMetrics = getMetrics(server.getRpcMetrics().name());
-      assertGauge("RpcLockWaitTimeAvgTime", 10000.0, rpcMetrics);
+      assertGauge("RpcLockWaitTimeAvgTime",
+          (double)(server.getRpcMetrics().getMetricsTimeUnit().convert(10L,
+              TimeUnit.SECONDS)), rpcMetrics);
     } finally {
       if (proxy2 != null) {
         RPC.stopProxy(proxy2);
@@ -1287,6 +1291,43 @@ public class TestRPC extends TestRpcBase {
     } finally {
       stop(server, proxy);
     }
+  }
+
+  @Test (timeout=30000)
+  public void testProtocolUserPriority() throws Exception {
+    final String ns = CommonConfigurationKeys.IPC_NAMESPACE + ".0";
+    conf.set(CLIENT_PRINCIPAL_KEY, "clientForProtocol");
+    Server server = null;
+    try {
+      server = setupDecayRpcSchedulerandTestServer(ns + ".");
+
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user");
+      // normal users start with priority 0.
+      Assert.assertEquals(0, server.getPriorityLevel(ugi));
+      // calls for a protocol defined client will have priority of 0.
+      Assert.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
+
+      // protocol defined client will have top priority of -1.
+      ugi = UserGroupInformation.createRemoteUser("clientForProtocol");
+      Assert.assertEquals(-1, server.getPriorityLevel(ugi));
+      // calls for a protocol defined client will have priority of 0.
+      Assert.assertEquals(0, server.getPriorityLevel(newSchedulable(ugi)));
+    } finally {
+      stop(server, null);
+    }
+  }
+
+  private static Schedulable newSchedulable(UserGroupInformation ugi) {
+    return new Schedulable(){
+      @Override
+      public UserGroupInformation getUserGroupInformation() {
+        return ugi;
+      }
+      @Override
+      public int getPriorityLevel() {
+        return 0; // doesn't matter.
+      }
+    };
   }
 
   private Server setupDecayRpcSchedulerandTestServer(String ns)
@@ -1548,6 +1589,82 @@ public class TestRPC extends TestRpcBase {
       stop(server, proxy);
     }
   }
+
+  @Test
+  public void testSetProtocolEngine() {
+    Configuration conf = new Configuration();
+    RPC.setProtocolEngine(conf, StoppedProtocol.class, StoppedRpcEngine.class);
+    RpcEngine rpcEngine = RPC.getProtocolEngine(StoppedProtocol.class, conf);
+    assertTrue(rpcEngine instanceof StoppedRpcEngine);
+
+    RPC.setProtocolEngine(conf, StoppedProtocol.class, ProtobufRpcEngine.class);
+    rpcEngine = RPC.getProtocolEngine(StoppedProtocol.class, conf);
+    assertTrue(rpcEngine instanceof StoppedRpcEngine);
+  }
+
+  @Test
+  public void testRpcMetricsInNanos() throws Exception {
+    final Server server;
+    TestRpcService proxy = null;
+
+    final int interval = 1;
+    conf.setBoolean(CommonConfigurationKeys.
+        RPC_METRICS_QUANTILE_ENABLE, true);
+    conf.set(CommonConfigurationKeys.
+        RPC_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
+    conf.set(CommonConfigurationKeys.RPC_METRICS_TIME_UNIT, "NANOSECONDS");
+
+    server = setupTestServer(conf, 5);
+    String testUser = "testUserInNanos";
+    UserGroupInformation anotherUser =
+        UserGroupInformation.createRemoteUser(testUser);
+    TestRpcService proxy2 =
+        anotherUser.doAs((PrivilegedAction<TestRpcService>) () -> {
+          try {
+            return RPC.getProxy(TestRpcService.class, 0,
+                server.getListenerAddress(), conf);
+          } catch (IOException e) {
+            LOG.error("Something went wrong.", e);
+          }
+          return null;
+        });
+    try {
+      proxy = getClient(addr, conf);
+      for (int i = 0; i < 100; i++) {
+        proxy.ping(null, newEmptyRequest());
+        proxy.echo(null, newEchoRequest("" + i));
+        proxy2.echo(null, newEchoRequest("" + i));
+      }
+      MetricsRecordBuilder rpcMetrics =
+          getMetrics(server.getRpcMetrics().name());
+      assertEquals("Expected zero rpc lock wait time",
+          0, getDoubleGauge("RpcLockWaitTimeAvgTime", rpcMetrics), 0.001);
+      MetricsAsserts.assertQuantileGauges("RpcQueueTime" + interval + "s",
+          rpcMetrics);
+      MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
+          rpcMetrics);
+
+      proxy.lockAndSleep(null, newSleepRequest(5));
+      rpcMetrics = getMetrics(server.getRpcMetrics().name());
+      assertGauge("RpcLockWaitTimeAvgTime",
+          (double)(server.getRpcMetrics().getMetricsTimeUnit().convert(10L,
+              TimeUnit.SECONDS)), rpcMetrics);
+      LOG.info("RpcProcessingTimeAvgTime: {} , RpcQueueTimeAvgTime: {}",
+          getDoubleGauge("RpcProcessingTimeAvgTime", rpcMetrics),
+          getDoubleGauge("RpcQueueTimeAvgTime", rpcMetrics));
+
+      assertTrue(getDoubleGauge("RpcProcessingTimeAvgTime", rpcMetrics)
+          > 4000000D);
+      assertTrue(getDoubleGauge("RpcQueueTimeAvgTime", rpcMetrics)
+          > 4000D);
+    } finally {
+      if (proxy2 != null) {
+        RPC.stopProxy(proxy2);
+      }
+      stop(server, proxy);
+    }
+  }
+
 
   public static void main(String[] args) throws Exception {
     new TestRPC().testCallsInternal(conf);

@@ -34,8 +34,8 @@ import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -247,7 +247,7 @@ public final class PathMetadataDynamoDBTranslation {
    * @return the creation time, or null
    * @throws IOException if the item is not a version marker
    */
-  static Long extractCreationTimeFromMarker(Item marker) throws IOException {
+  static Long extractCreationTimeFromMarker(Item marker) {
     if (marker.hasAttribute(TABLE_CREATED)) {
       return marker.getLong(TABLE_CREATED);
     } else {
@@ -318,8 +318,20 @@ public final class PathMetadataDynamoDBTranslation {
   static PrimaryKey pathToKey(Path path) {
     Preconditions.checkArgument(!path.isRoot(),
         "Root path is not mapped to any PrimaryKey");
-    return new PrimaryKey(PARENT, pathToParentKey(path.getParent()), CHILD,
-        path.getName());
+    String childName = path.getName();
+    PrimaryKey key = new PrimaryKey(PARENT,
+        pathToParentKey(path.getParent()), CHILD,
+        childName);
+    for (KeyAttribute attr : key.getComponents()) {
+      String name = attr.getName();
+      Object v = attr.getValue();
+      Preconditions.checkNotNull(v,
+          "Null value for DynamoDB attribute \"%s\"", name);
+      Preconditions.checkState(!((String)v).isEmpty(),
+          "Empty string value for DynamoDB attribute \"%s\"", name);
+    }
+    return key;
+
   }
 
   /**
@@ -397,5 +409,17 @@ public final class PathMetadataDynamoDBTranslation {
       }
     }
     return "s3a://" + parent + "/" + child;
+  }
+
+  /**
+   * Create an empty dir marker which, when passed to the
+   * DDB metastore, is considered authoritative.
+   * @param status file status
+   * @return path metadata.
+   */
+  static PathMetadata authoritativeEmptyDirectoryMarker(
+      final S3AFileStatus status) {
+    return new DDBPathMetadata(status, Tristate.TRUE,
+        false, true, 0);
   }
 }

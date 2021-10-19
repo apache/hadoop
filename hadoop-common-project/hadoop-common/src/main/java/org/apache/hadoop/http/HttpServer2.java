@@ -27,14 +27,18 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.Enumeration;
+import java.util.Arrays;
+import java.util.Timer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,9 +54,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -74,7 +78,10 @@ import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationF
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory;
+import org.apache.hadoop.security.ssl.FileMonitoringTimerTask;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -88,13 +95,12 @@ import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.SessionManager;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.handler.AllowSymLinkAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
-import org.eclipse.jetty.server.session.AbstractSessionManager;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
@@ -150,11 +156,15 @@ public final class HttpServer2 implements FilterContainer {
   // idle timeout in milliseconds
   public static final String HTTP_IDLE_TIMEOUT_MS_KEY =
       "hadoop.http.idle_timeout.ms";
-  public static final int HTTP_IDLE_TIMEOUT_MS_DEFAULT = 10000;
+  public static final int HTTP_IDLE_TIMEOUT_MS_DEFAULT = 60000;
   public static final String HTTP_TEMP_DIR_KEY = "hadoop.http.temp.dir";
 
   public static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
+
+  public static final String HTTP_SNI_HOST_CHECK_ENABLED_KEY
+      = "hadoop.http.sni.host.check.enabled";
+  public static final boolean HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT = false;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -182,6 +192,7 @@ public final class HttpServer2 implements FilterContainer {
   static final String STATE_DESCRIPTION_ALIVE = " - alive";
   static final String STATE_DESCRIPTION_NOT_LIVE = " - not live";
   private final SignerSecretProvider secretProvider;
+  private final Optional<java.util.Timer> configurationChangeMonitor;
   private XFrameOption xFrameOption;
   private boolean xFrameOptionIsEnabled;
   public static final String HTTP_HEADER_PREFIX = "hadoop.http.header.";
@@ -198,6 +209,9 @@ public final class HttpServer2 implements FilterContainer {
   private boolean prometheusSupport;
   protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
   private PrometheusMetricsSink prometheusMetricsSink;
+
+  private StatisticsHandler statsHandler;
+  private HttpServer2Metrics metrics;
 
   /**
    * Class to construct instances of HTTP server with specific options.
@@ -229,11 +243,17 @@ public final class HttpServer2 implements FilterContainer {
 
     private String hostName;
     private boolean disallowFallbackToRandomSignerSecretProvider;
-    private String authFilterConfigurationPrefix = "hadoop.http.authentication.";
+    private final List<String> authFilterConfigurationPrefixes =
+        new ArrayList<>(Collections.singletonList(
+            "hadoop.http.authentication."));
     private String excludeCiphers;
 
     private boolean xFrameEnabled;
     private XFrameOption xFrameOption = XFrameOption.SAMEORIGIN;
+
+    private boolean sniHostCheckEnabled;
+
+    private Optional<Timer> configurationChangeMonitor = Optional.empty();
 
     public Builder setName(String name){
       this.name = name;
@@ -347,8 +367,15 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
-    public Builder authFilterConfigurationPrefix(String value) {
-      this.authFilterConfigurationPrefix = value;
+    public Builder setAuthFilterConfigurationPrefix(String value) {
+      this.authFilterConfigurationPrefixes.clear();
+      this.authFilterConfigurationPrefixes.add(value);
+      return this;
+    }
+
+    public Builder setAuthFilterConfigurationPrefixes(String[] prefixes) {
+      this.authFilterConfigurationPrefixes.clear();
+      Collections.addAll(this.authFilterConfigurationPrefixes, prefixes);
       return this;
     }
 
@@ -376,6 +403,17 @@ public final class HttpServer2 implements FilterContainer {
      */
     public Builder setXFrameOption(String option) {
       this.xFrameOption = XFrameOption.getEnum(option);
+      return this;
+    }
+
+    /**
+     * Enable or disable sniHostCheck.
+     *
+     * @param sniHostCheckEnabled Enable sniHostCheck if true, else disable it.
+     * @return Builder.
+     */
+    public Builder setSniHostCheckEnabled(boolean sniHostCheckEnabled) {
+      this.sniHostCheckEnabled = sniHostCheckEnabled;
       return this;
     }
 
@@ -444,8 +482,10 @@ public final class HttpServer2 implements FilterContainer {
       HttpServer2 server = new HttpServer2(this);
 
       if (this.securityEnabled &&
-          !this.conf.get(authFilterConfigurationPrefix + "type").
-          equals(PseudoAuthenticationHandler.TYPE)) {
+          authFilterConfigurationPrefixes.stream().noneMatch(
+              prefix -> this.conf.get(prefix + "type")
+                  .equals(PseudoAuthenticationHandler.TYPE))
+      ) {
         server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
       }
 
@@ -472,6 +512,13 @@ public final class HttpServer2 implements FilterContainer {
 
       int backlogSize = conf.getInt(HTTP_SOCKET_BACKLOG_SIZE_KEY,
           HTTP_SOCKET_BACKLOG_SIZE_DEFAULT);
+
+      // If setSniHostCheckEnabled() is used to enable SNI hostname check,
+      // configuration lookup is skipped.
+      if (!sniHostCheckEnabled) {
+        sniHostCheckEnabled = conf.getBoolean(HTTP_SNI_HOST_CHECK_ENABLED_KEY,
+            HTTP_SNI_HOST_CHECK_ENABLED_DEFAULT);
+      }
 
       for (URI ep : endpoints) {
         final ServerConnector connector;
@@ -516,21 +563,29 @@ public final class HttpServer2 implements FilterContainer {
     private ServerConnector createHttpsChannelConnector(
         Server server, HttpConfiguration httpConfig) {
       httpConfig.setSecureScheme(HTTPS_SCHEME);
-      httpConfig.addCustomizer(new SecureRequestCustomizer());
+      httpConfig.addCustomizer(
+          new SecureRequestCustomizer(sniHostCheckEnabled));
       ServerConnector conn = createHttpChannelConnector(server, httpConfig);
 
-      SslContextFactory sslContextFactory = new SslContextFactory();
+      SslContextFactory.Server sslContextFactory =
+          new SslContextFactory.Server();
       sslContextFactory.setNeedClientAuth(needsClientAuth);
-      sslContextFactory.setKeyManagerPassword(keyPassword);
+      if (keyPassword != null) {
+        sslContextFactory.setKeyManagerPassword(keyPassword);
+      }
       if (keyStore != null) {
         sslContextFactory.setKeyStorePath(keyStore);
         sslContextFactory.setKeyStoreType(keyStoreType);
-        sslContextFactory.setKeyStorePassword(keyStorePassword);
+        if (keyStorePassword != null) {
+          sslContextFactory.setKeyStorePassword(keyStorePassword);
+        }
       }
       if (trustStore != null) {
         sslContextFactory.setTrustStorePath(trustStore);
         sslContextFactory.setTrustStoreType(trustStoreType);
-        sslContextFactory.setTrustStorePassword(trustStorePassword);
+        if (trustStorePassword != null) {
+          sslContextFactory.setTrustStorePassword(trustStorePassword);
+        }
       }
       if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
         sslContextFactory.setExcludeCipherSuites(
@@ -538,10 +593,86 @@ public final class HttpServer2 implements FilterContainer {
         LOG.info("Excluded Cipher List:" + excludeCiphers);
       }
 
+      setEnabledProtocols(sslContextFactory);
+
+      long storesReloadInterval =
+          conf.getLong(FileBasedKeyStoresFactory.SSL_STORES_RELOAD_INTERVAL_TPL_KEY,
+              FileBasedKeyStoresFactory.DEFAULT_SSL_STORES_RELOAD_INTERVAL);
+
+      if (storesReloadInterval > 0 &&
+          (keyStore != null || trustStore != null)) {
+        this.configurationChangeMonitor = Optional.of(
+            this.makeConfigurationChangeMonitor(storesReloadInterval, sslContextFactory));
+      }
+
       conn.addFirstConnectionFactory(new SslConnectionFactory(sslContextFactory,
           HttpVersion.HTTP_1_1.asString()));
 
       return conn;
+    }
+
+    private Timer makeConfigurationChangeMonitor(long reloadInterval,
+        SslContextFactory.Server sslContextFactory) {
+      java.util.Timer timer = new java.util.Timer(FileBasedKeyStoresFactory.SSL_MONITORING_THREAD_NAME, true);
+      ArrayList<Path> locations = new ArrayList<Path>();
+      if (keyStore != null) {
+        locations.add(Paths.get(keyStore));
+      }
+      if (trustStore != null) {
+        locations.add(Paths.get(trustStore));
+      }
+      //
+      // The Jetty SSLContextFactory provides a 'reload' method which will reload both
+      // truststore and keystore certificates.
+      //
+      timer.schedule(new FileMonitoringTimerTask(
+            locations,
+            path -> {
+              LOG.info("Reloading keystore and truststore certificates.");
+              try {
+                sslContextFactory.reload(factory -> { });
+              } catch (Exception ex) {
+                LOG.error("Failed to reload SSL keystore " +
+                    "and truststore certificates", ex);
+              }
+            },null),
+        reloadInterval,
+        reloadInterval
+      );
+      return timer;
+    }
+
+    private void setEnabledProtocols(SslContextFactory sslContextFactory) {
+      String enabledProtocols = conf.get(SSLFactory.SSL_ENABLED_PROTOCOLS_KEY,
+          SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT);
+      if (!enabledProtocols.equals(SSLFactory.SSL_ENABLED_PROTOCOLS_DEFAULT)) {
+        // Jetty 9.2.4.v20141103 and above excludes certain protocols by
+        // default. Remove the user enabled protocols from the exclude list,
+        // and add them into the include list.
+        String[] jettyExcludedProtocols =
+            sslContextFactory.getExcludeProtocols();
+        String[] enabledProtocolsArray =
+            StringUtils.getTrimmedStrings(enabledProtocols);
+        List<String> enabledProtocolsList =
+            Arrays.asList(enabledProtocolsArray);
+
+        List<String> resetExcludedProtocols = new ArrayList<>();
+        for (String jettyExcludedProtocol: jettyExcludedProtocols) {
+          if (!enabledProtocolsList.contains(jettyExcludedProtocol)) {
+            resetExcludedProtocols.add(jettyExcludedProtocol);
+          } else {
+            LOG.debug("Removed {} from exclude protocol list",
+                jettyExcludedProtocol);
+          }
+        }
+
+        sslContextFactory.setExcludeProtocols(
+            resetExcludedProtocols.toArray(new String[0]));
+        LOG.info("Reset exclude protocol list: {}", resetExcludedProtocols);
+
+        sslContextFactory.setIncludeProtocols(enabledProtocolsArray);
+        LOG.info("Enabled protocols: {}", enabledProtocols);
+      }
     }
   }
 
@@ -553,6 +684,7 @@ public final class HttpServer2 implements FilterContainer {
     this.webAppContext = createWebAppContext(b, adminsAcl, appDir);
     this.xFrameOptionIsEnabled = b.xFrameEnabled;
     this.xFrameOption = b.xFrameOption;
+    this.configurationChangeMonitor = b.configurationChangeMonitor;
 
     try {
       this.secretProvider =
@@ -587,12 +719,9 @@ public final class HttpServer2 implements FilterContainer {
       threadPool.setMaxThreads(maxThreads);
     }
 
-    SessionManager sm = webAppContext.getSessionHandler().getSessionManager();
-    if (sm instanceof AbstractSessionManager) {
-      AbstractSessionManager asm = (AbstractSessionManager)sm;
-      asm.setHttpOnly(true);
-      asm.getSessionCookieConfig().setSecure(true);
-    }
+    SessionHandler handler = webAppContext.getSessionHandler();
+    handler.setHttpOnly(true);
+    handler.getSessionCookieConfig().setSecure(true);
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     RequestLog requestLog = HttpRequestLog.getRequestLog(name);
@@ -607,6 +736,27 @@ public final class HttpServer2 implements FilterContainer {
     final String appDir = getWebAppsPath(name);
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
+
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
+      // Jetty StatisticsHandler must be inserted as the first handler.
+      // The tree might look like this:
+      //
+      // - StatisticsHandler (for all requests)
+      //   - HandlerList
+      //     - ContextHandlerCollection
+      //     - RequestLogHandler (if enabled)
+      //     - WebAppContext
+      //       - SessionHandler
+      //       - Servlets
+      //       - Filters
+      //       - etc..
+      //
+      // Reference: https://www.eclipse.org/lists/jetty-users/msg06273.html
+      statsHandler = new StatisticsHandler();
+      webServer.insertHandler(statsHandler);
+    }
 
     Map<String, String> xFrameParams = setHeaders(conf);
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);
@@ -672,18 +822,25 @@ public final class HttpServer2 implements FilterContainer {
       throws Exception {
     final Configuration conf = b.conf;
     Properties config = getFilterProperties(conf,
-                                            b.authFilterConfigurationPrefix);
+        b.authFilterConfigurationPrefixes);
     return AuthenticationFilter.constructSecretProvider(
         ctx, config, b.disallowFallbackToRandomSignerSecretProvider);
   }
 
-  private static Properties getFilterProperties(Configuration conf, String
-      prefix) {
-    Properties prop = new Properties();
-    Map<String, String> filterConfig = AuthenticationFilterInitializer
-        .getFilterConfigMap(conf, prefix);
-    prop.putAll(filterConfig);
-    return prop;
+  public static Properties getFilterProperties(Configuration conf, List<String> prefixes) {
+    Properties props = new Properties();
+    for (String prefix : prefixes) {
+      Map<String, String> filterConfigMap =
+          AuthenticationFilterInitializer.getFilterConfigMap(conf, prefix);
+      for (Map.Entry<String, String> entry : filterConfigMap.entrySet()) {
+        Object previous = props.setProperty(entry.getKey(), entry.getValue());
+        if (previous != null && !previous.equals(entry.getValue())) {
+          LOG.warn("Overwriting configuration for key='{}' with value='{}' " +
+              "previous value='{}'", entry.getKey(), entry.getValue(), previous);
+        }
+      }
+    }
+    return props;
   }
 
   private static void addNoCacheFilter(ServletContextHandler ctxt) {
@@ -743,12 +900,8 @@ public final class HttpServer2 implements FilterContainer {
       }
       logContext.setDisplayName("logs");
       SessionHandler handler = new SessionHandler();
-      SessionManager sm = handler.getSessionManager();
-      if (sm instanceof AbstractSessionManager) {
-        AbstractSessionManager asm = (AbstractSessionManager) sm;
-        asm.setHttpOnly(true);
-        asm.getSessionCookieConfig().setSecure(true);
-      }
+      handler.setHttpOnly(true);
+      handler.getSessionCookieConfig().setSecure(true);
       logContext.setSessionHandler(handler);
       logContext.addAliasCheck(new AllowSymLinkAliasChecker());
       setContextAttributes(logContext, conf);
@@ -766,12 +919,8 @@ public final class HttpServer2 implements FilterContainer {
     params.put("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
     params.put("org.eclipse.jetty.servlet.Default.gzip", "true");
     SessionHandler handler = new SessionHandler();
-    SessionManager sm = handler.getSessionManager();
-    if (sm instanceof AbstractSessionManager) {
-      AbstractSessionManager asm = (AbstractSessionManager) sm;
-      asm.setHttpOnly(true);
-      asm.getSessionCookieConfig().setSecure(true);
-    }
+    handler.setHttpOnly(true);
+    handler.getSessionCookieConfig().setSecure(true);
     staticContext.setSessionHandler(handler);
     staticContext.addAliasCheck(new AllowSymLinkAliasChecker());
     setContextAttributes(staticContext, conf);
@@ -1174,6 +1323,16 @@ public final class HttpServer2 implements FilterContainer {
               .register("prometheus", "Hadoop metrics prometheus exporter",
                   prometheusMetricsSink);
         }
+        if (statsHandler != null) {
+          // Create metrics source for each HttpServer2 instance.
+          // Use port number to make the metrics source name unique.
+          int port = -1;
+          for (ServerConnector connector : listeners) {
+            port = connector.getLocalPort();
+            break;
+          }
+          metrics = HttpServer2Metrics.create(statsHandler, port);
+        }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
@@ -1234,7 +1393,7 @@ public final class HttpServer2 implements FilterContainer {
    * @return
    */
   private static BindException constructBindException(ServerConnector listener,
-      BindException ex) {
+      IOException ex) {
     BindException be = new BindException("Port in use: "
         + listener.getHost() + ":" + listener.getPort());
     if (ex != null) {
@@ -1256,7 +1415,7 @@ public final class HttpServer2 implements FilterContainer {
       try {
         bindListener(listener);
         break;
-      } catch (BindException ex) {
+      } catch (IOException ex) {
         if (port == 0 || !findPort) {
           throw constructBindException(listener, ex);
         }
@@ -1276,13 +1435,13 @@ public final class HttpServer2 implements FilterContainer {
    */
   private void bindForPortRange(ServerConnector listener, int startPort)
       throws Exception {
-    BindException bindException = null;
+    IOException ioException = null;
     try {
       bindListener(listener);
       return;
-    } catch (BindException ex) {
+    } catch (IOException ex) {
       // Ignore exception.
-      bindException = ex;
+      ioException = ex;
     }
     for(Integer port : portRanges) {
       if (port == startPort) {
@@ -1293,12 +1452,16 @@ public final class HttpServer2 implements FilterContainer {
       try {
         bindListener(listener);
         return;
-      } catch (BindException ex) {
+      } catch (IOException ex) {
+        if (!(ex instanceof BindException)
+            && !(ex.getCause() instanceof BindException)) {
+          throw ex;
+        }
         // Ignore exception. Move to next port.
-        bindException = ex;
+        ioException = ex;
       }
     }
-    throw constructBindException(listener, bindException);
+    throw constructBindException(listener, ioException);
   }
 
   /**
@@ -1327,6 +1490,16 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void stop() throws Exception {
     MultiException exception = null;
+    if (this.configurationChangeMonitor.isPresent()) {
+      try {
+        this.configurationChangeMonitor.get().cancel();
+      } catch (Exception e) {
+        LOG.error(
+            "Error while canceling configuration monitoring timer for webapp"
+                + webAppContext.getDisplayName(), e);
+        exception = addMultiException(exception, e);
+      }
+    }
     for (ServerConnector c : listeners) {
       try {
         c.close();
@@ -1352,6 +1525,9 @@ public final class HttpServer2 implements FilterContainer {
 
     try {
       webServer.stop();
+      if (metrics != null) {
+        metrics.remove();
+      }
     } catch (Exception e) {
       LOG.error("Error while stopping web server for webapp "
           + webAppContext.getDisplayName(), e);
@@ -1732,4 +1908,10 @@ public final class HttpServer2 implements FilterContainer {
             splitVal[1]);
     return headers;
   }
+
+  @VisibleForTesting
+  HttpServer2Metrics getMetrics() {
+    return metrics;
+  }
+
 }

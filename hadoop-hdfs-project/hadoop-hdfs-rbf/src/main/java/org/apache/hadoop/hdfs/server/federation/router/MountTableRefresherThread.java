@@ -23,6 +23,8 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,10 +63,16 @@ public class MountTableRefresherThread extends Thread {
   @Override
   public void run() {
     try {
-      RefreshMountTableEntriesResponse refreshMountTableEntries =
-          manager.refreshMountTableEntries(
-              RefreshMountTableEntriesRequest.newInstance());
-      success = refreshMountTableEntries.getResult();
+      SecurityUtil.doAsLoginUser(() -> {
+        if (UserGroupInformation.isSecurityEnabled()) {
+          UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+        }
+        RefreshMountTableEntriesResponse refreshMountTableEntries = manager
+            .refreshMountTableEntries(
+                RefreshMountTableEntriesRequest.newInstance());
+        success = refreshMountTableEntries.getResult();
+        return true;
+      });
     } catch (IOException e) {
       LOG.error("Failed to refresh mount table entries cache at router {}",
           adminAddress, e);

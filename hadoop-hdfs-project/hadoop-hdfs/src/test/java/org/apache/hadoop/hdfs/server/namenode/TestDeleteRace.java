@@ -18,19 +18,21 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.concurrent.Semaphore;
 
+import org.apache.hadoop.fs.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -50,7 +52,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.Node;
@@ -63,8 +64,11 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Test race between delete and other operations.  For now only addBlock()
@@ -380,6 +384,10 @@ public class TestDeleteRace {
     // Disable permissions so that another user can recover the lease.
     config.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
     config.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    long leaseRecheck = 1000;
+    conf.setLong(DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY, leaseRecheck);
+    conf.setLong(DFS_LEASE_HARDLIMIT_KEY, leaseRecheck/1000);
+
     FSDataOutputStream stm = null;
     try {
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(3).build();
@@ -404,30 +412,8 @@ public class TestDeleteRace {
       // the streamer.
       AppendTestUtil.write(stm, 0, BLOCK_SIZE);
 
-      // Mock a scenario that the lease reached hard limit.
-      final LeaseManager lm = (LeaseManager) Whitebox
-          .getInternalState(cluster.getNameNode().getNamesystem(),
-              "leaseManager");
-      final TreeSet<Lease> leases =
-          (TreeSet<Lease>) Whitebox.getInternalState(lm, "sortedLeases");
-      final TreeSet<Lease> spyLeases = new TreeSet<>(new Comparator<Lease>() {
-        @Override
-        public int compare(Lease o1, Lease o2) {
-          return Long.signum(o1.getLastUpdate() - o2.getLastUpdate());
-        }
-      });
-      while (!leases.isEmpty()) {
-        final Lease lease = leases.first();
-        final Lease spyLease = Mockito.spy(lease);
-        Mockito.doReturn(true).when(spyLease).expiredHardLimit();
-        spyLeases.add(spyLease);
-        leases.remove(lease);
-      }
-      Whitebox.setInternalState(lm, "sortedLeases", spyLeases);
-
       // wait for lease manager's background 'Monitor' class to check leases.
-      Thread.sleep(2 * conf.getLong(DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
-          DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_DEFAULT));
+      Thread.sleep(2 * leaseRecheck);
 
       LOG.info("Now check we can restart");
       cluster.restartNameNodes();
@@ -436,6 +422,117 @@ public class TestDeleteRace {
       if (stm != null) {
         IOUtils.closeStream(stm);
       }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout = 20000)
+  public void testOpenRenameRace() throws Exception {
+    Configuration config = new Configuration();
+    config.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 1);
+    MiniDFSCluster dfsCluster = null;
+    final String src = "/dir/src-file";
+    final String dst = "/dir/dst-file";
+    final DistributedFileSystem hdfs;
+    try {
+      dfsCluster = new MiniDFSCluster.Builder(config).build();
+      dfsCluster.waitActive();
+      final FSNamesystem fsn = dfsCluster.getNamesystem();
+      hdfs = dfsCluster.getFileSystem();
+      DFSTestUtil.createFile(hdfs, new Path(src), 5, (short) 1, 0xFEED);
+      FileStatus status = hdfs.getFileStatus(new Path(src));
+      long accessTime = status.getAccessTime();
+
+      Semaphore openSem = new Semaphore(0);
+      Semaphore renameSem = new Semaphore(0);
+      // 1.hold writeLock.
+      // 2.start open thread.
+      // 3.openSem & yield makes sure open thread wait on readLock.
+      // 4.start rename thread.
+      // 5.renameSem & yield makes sure rename thread wait on writeLock.
+      // 6.release writeLock, it's fair lock so open thread gets read lock.
+      // 7.open thread unlocks, rename gets write lock and does rename.
+      // 8.rename thread unlocks, open thread gets write lock and update time.
+      Thread open = new Thread(() -> {
+        try {
+          openSem.release();
+          fsn.getBlockLocations("foo", src, 0, 5);
+        } catch (IOException e) {
+        }
+      });
+      Thread rename = new Thread(() -> {
+        try {
+          openSem.acquire();
+          renameSem.release();
+          fsn.renameTo(src, dst, false, Options.Rename.NONE);
+        } catch (IOException e) {
+        } catch (InterruptedException e) {
+        }
+      });
+      fsn.writeLock();
+      open.start();
+      openSem.acquire();
+      Thread.yield();
+      openSem.release();
+      rename.start();
+      renameSem.acquire();
+      Thread.yield();
+      fsn.writeUnlock();
+
+      // wait open and rename threads finish.
+      open.join();
+      rename.join();
+
+      status = hdfs.getFileStatus(new Path(dst));
+      assertNotEquals(accessTime, status.getAccessTime());
+      dfsCluster.restartNameNode(0);
+    } finally {
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test get snapshot diff on a directory which delete got failed.
+   */
+  @Test
+  public void testDeleteOnSnapshottableDir() throws Exception {
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
+        true);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      DistributedFileSystem hdfs = cluster.getFileSystem();
+      FSNamesystem fsn = cluster.getNamesystem();
+      FSDirectory fsdir = fsn.getFSDirectory();
+      Path dir = new Path("/dir");
+      hdfs.mkdirs(dir);
+      hdfs.allowSnapshot(dir);
+      Path file1 = new Path(dir, "file1");
+      Path file2 = new Path(dir, "file2");
+
+      // directory should not get deleted
+      FSDirectory fsdir2 = Mockito.spy(fsdir);
+      cluster.getNamesystem().setFSDirectory(fsdir2);
+      Mockito.doReturn(-1L).when(fsdir2).removeLastINode(any());
+      hdfs.delete(dir, true);
+
+      // create files and create snapshots
+      DFSTestUtil.createFile(hdfs, file1, BLOCK_SIZE, (short) 1, 0);
+      hdfs.createSnapshot(dir, "s1");
+      DFSTestUtil.createFile(hdfs, file2, BLOCK_SIZE, (short) 1, 0);
+      hdfs.createSnapshot(dir, "s2");
+
+      // should able to get snapshot diff on ancestor dir
+      Path dirDir1 = new Path(dir, "dir1");
+      hdfs.mkdirs(dirDir1);
+      hdfs.getSnapshotDiffReport(dirDir1, "s2", "s1");
+      assertEquals(1, fsn.getSnapshotManager().getNumSnapshottableDirs());
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }

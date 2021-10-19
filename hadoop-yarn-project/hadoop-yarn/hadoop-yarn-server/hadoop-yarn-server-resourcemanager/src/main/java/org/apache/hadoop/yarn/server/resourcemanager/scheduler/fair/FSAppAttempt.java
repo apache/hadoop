@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -99,6 +100,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private final Map<String, Set<String>> reservations = new HashMap<>();
 
   private final List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
+
+  private boolean enableAMPreemption;
+
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
    * containers over rack-local or off-switch containers. To achieve this
@@ -121,6 +125,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
     this.appPriority = Priority.newInstance(1);
+    this.enableAMPreemption = scheduler.getConf()
+            .getAMPreemptionEnabled(getQueue().getQueueName());
   }
 
   /**
@@ -456,7 +462,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       liveContainers.put(container.getId(), rmContainer);
       // Update consumption and track allocations
       ContainerRequest containerRequest = appSchedulingInfo.allocate(
-          type, node, schedulerKey, container);
+            type, node, schedulerKey, rmContainer);
       this.attemptResourceUsage.incUsed(container.getResource());
       getQueue().incUsedResource(container.getResource());
 
@@ -589,6 +595,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return false;
     }
 
+    if (container.isAMContainer() && !enableAMPreemption) {
+      return false;
+    }
+
     // Sanity check that the app owns this container
     if (!getLiveContainersMap().containsKey(container.getContainerId()) &&
         !newlyAllocatedContainers.contains(container)) {
@@ -683,7 +693,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   /**
    * Reserve a spot for {@code container} on this {@code node}. If
    * the container is {@code alreadyReserved} on the node, simply
-   * update relevant bookeeping. This dispatches ro relevant handlers
+   * update relevant bookkeeping. This dispatches ro relevant handlers
    * in {@link FSSchedulerNode}..
    * return whether reservation was possible with the current threshold limits
    */
@@ -1383,12 +1393,12 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
       return;
     }
 
-    StringBuilder diagnosticMessageBldr = new StringBuilder();
-    diagnosticMessageBldr.append(" (Resource request: ")
+    StringBuilder diagnosticMessage = new StringBuilder();
+    diagnosticMessage.append(" (Resource request: ")
         .append(resource)
         .append(reason);
     updateAMContainerDiagnostics(AMState.INACTIVATED,
-        diagnosticMessageBldr.toString());
+        diagnosticMessage.toString());
   }
 
   /*
@@ -1415,5 +1425,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   @Override
   public boolean isPreemptable() {
     return getQueue().isPreemptable();
+  }
+
+  @VisibleForTesting
+  public void setEnableAMPreemption(boolean enableAMPreemption) {
+    this.enableAMPreemption = enableAMPreemption;
   }
 }

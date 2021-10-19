@@ -51,11 +51,11 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.ReencryptionUpdater.FileEdekInfo;
 import org.apache.hadoop.security.SecurityUtil;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -75,7 +75,7 @@ final class FSDirEncryptionZoneOp {
    * Invoke KeyProvider APIs to generate an encrypted data encryption key for
    * an encryption zone. Should not be called with any locks held.
    *
-   * @param fsd fsdirectory
+   * @param fsd the namespace tree.
    * @param ezKeyName key name of an encryption zone
    * @return New EDEK, or null if ezKeyName is null
    * @throws IOException
@@ -142,11 +142,12 @@ final class FSDirEncryptionZoneOp {
   /**
    * Create an encryption zone on directory path using the specified key.
    *
-   * @param fsd fsdirectory
+   * @param fsd the namespace tree.
    * @param srcArg the path of a directory which will be the root of the
    *               encryption zone. The directory must be empty
    * @param pc permission checker to check fs permission
-   * @param cipher cipher
+   * @param cipher the name of the cipher suite, which will be used
+   *               when it is generated.
    * @param keyName name of a key which must be present in the configured
    *                KeyProvider
    * @param logRetryCache whether to record RPC ids in editlog for retry cache
@@ -180,7 +181,7 @@ final class FSDirEncryptionZoneOp {
   /**
    * Get the encryption zone for the specified path.
    *
-   * @param fsd fsdirectory
+   * @param fsd the namespace tree.
    * @param srcArg the path of a file or directory to get the EZ for
    * @param pc permission checker to check fs permission
    * @return the EZ with file status.
@@ -382,7 +383,6 @@ final class FSDirEncryptionZoneOp {
   static void saveFileXAttrsForBatch(FSDirectory fsd,
       List<FileEdekInfo> batch) {
     assert fsd.getFSNamesystem().hasWriteLock();
-    assert !fsd.hasWriteLock();
     if (batch != null && !batch.isEmpty()) {
       for (FileEdekInfo entry : batch) {
         final INode inode = fsd.getInode(entry.getInodeId());
@@ -401,7 +401,7 @@ final class FSDirEncryptionZoneOp {
   /**
    * Set the FileEncryptionInfo for an INode.
    *
-   * @param fsd fsdirectory
+   * @param fsd the namespace tree.
    * @param info file encryption information
    * @param flag action when setting xattr. Either CREATE or REPLACE.
    * @throws IOException
@@ -431,7 +431,7 @@ final class FSDirEncryptionZoneOp {
    * returns a consolidated FileEncryptionInfo instance. Null is returned
    * for non-encrypted or raw files.
    *
-   * @param fsd fsdirectory
+   * @param fsd the namespace tree.
    * @param iip inodes in the path containing the file, passed in to
    *            avoid obtaining the list of inodes again
    * @return consolidated file encryption info; null for non-encrypted files
@@ -488,7 +488,7 @@ final class FSDirEncryptionZoneOp {
    * else throw a retry exception.  The startFile method generates the EDEK
    * outside of the lock so the zone must be reverified.
    *
-   * @param dir fsdirectory
+   * @param dir the namespace tree.
    * @param iip inodes in the file path
    * @param ezInfo the encryption key
    * @return FileEncryptionInfo for the file
@@ -727,13 +727,13 @@ final class FSDirEncryptionZoneOp {
       final FSPermissionChecker pc, final String zone) throws IOException {
     assert dir.getProvider() != null;
     final INodesInPath iip;
-    dir.readLock();
+    dir.getFSNamesystem().readLock();
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);
       dir.ezManager.checkEncryptionZoneRoot(iip.getLastINode(), zone);
       return dir.ezManager.getKeyName(iip);
     } finally {
-      dir.readUnlock();
+      dir.getFSNamesystem().readUnlock();
     }
   }
 }

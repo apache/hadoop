@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.junit.After;
@@ -77,7 +78,7 @@ public class TestAMRMRPCResponseId {
 
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // Trigger the scheduling so the AM gets 'launched'
     nm1.nodeHeartbeat(true);

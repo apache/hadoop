@@ -778,9 +778,6 @@ POST URL - http://localhost:8088/app/v1/services
               "node_partitions": [
                 "gpu",
                 "fast-disk"
-              ],
-              "target_tags": [
-                "hello"
               ]
             }
           ]
@@ -797,11 +794,12 @@ GET URL - http://localhost:8088/app/v1/services/hello-world
 
 Note, for an anti-affinity component no more than 1 container will be allocated
 in a specific node. In this example, 3 containers have been requested by
-component "hello". All 3 containers were allocated because the cluster had 3 or
-more NMs. If the cluster had less than 3 NMs then less than 3 containers would
-be allocated. In cases when the number of allocated containers are less than the
-number of requested containers, the component and the service will be in
-non-STABLE state.
+component "hello". All 3 containers were allocated on separated centos7 nodes
+because the node attributes expects to run on centos7 nodes.
+If the cluster had less than 3 NMs then less than
+3 containers would be allocated. In cases when the number of allocated containers
+are less than the number of requested containers, the component and the service
+will be in non-STABLE state.
 
 ```json
 {
@@ -822,16 +820,19 @@ non-STABLE state.
             "placement_policy": {
               "constraints": [
                 {
-                  "type": "ANTI_AFFINITY",
+                  "type": "AFFINITY",
                   "scope": "NODE",
                   "node_attributes": {
-                    "os": ["centos6", "centos7"],
-                    "fault_domain": ["fd1", "fd2"]
+                    "os": ["centos7"]
                   },
                   "node_partitions": [
                     "gpu",
                     "fast-disk"
-                  ],
+                  ]
+                },
+                {
+                  "type": "ANTI_AFFINITY",
+                  "scope": "NODE",
                   "target_tags": [
                     "hello"
                   ]

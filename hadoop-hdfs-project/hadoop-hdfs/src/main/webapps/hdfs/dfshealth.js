@@ -65,8 +65,9 @@
     };
 
     var data = {};
+    var non_ha = false;
 
-    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': false}).done(
+    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': true}).done(
       function(d) {
         var $xml = $(d);
         var namespace, nnId;
@@ -80,6 +81,8 @@
         });
         if (namespace && nnId) {
           data['HAInfo'] = {"Namespace": namespace, "NamenodeID": nnId};
+        } else {
+          non_ha = true;
         }
     });
 
@@ -109,7 +112,17 @@
 
         data.fs.ObjectsTotal = data.fs.FilesTotal + data.fs.BlocksTotal;
 
-        render();
+        var wait_for_conf =  setInterval(function() {
+          if (non_ha ||
+              (('HAInfo' in data) &&
+                  ("Namespace" in data['HAInfo']) &&
+                  ("NamenodeID" in data['HAInfo'])
+              )
+          ) {
+            render();
+            clearInterval(wait_for_conf);
+          }
+        }, 5);
       }),
       function (url, jqxhr, text, err) {
         show_err_msg('<p>Failed to retrieve data from ' + url + ', cause: ' + err + '</p>');
@@ -343,7 +356,10 @@
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'string' , "defaultContent": ""}
               ],
@@ -414,8 +430,125 @@
       dust.render('snapshot-info', resp.beans[0], function(err, out) {
           $('#tab-snapshot').html(out);
           $('#ui-tabs a[href="#tab-snapshot"]').tab('show');
+
+          // Build a map to store snapshottable directory -> snapshots
+          var snapshots = 'Snapshots' in resp.beans[0] ? resp.beans[0].Snapshots : [];
+          var snapshotsMap = snapshots.reduce(function(result, snapshot) {
+            var rootPath = snapshot.snapshotDirectory.substr(0, snapshot.snapshotDirectory.indexOf(".snapshot") -1 );
+            if (rootPath in result) {
+              var arr = result[rootPath];
+              arr.push(snapshot);
+              result[rootPath] = arr;
+            } else {
+              result[rootPath] = [snapshot];
+            }
+            return result;
+          }, {});
+
+          var table = $('#table-snapshots').DataTable( {
+            'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+            'columns': [
+              { 'orderable': false, 'searchable': false, 'data': null, 'defaultContent': "" },
+              { 'data': 'path', 'orderDataType': 'ng-value', 'searchable': true , 'type': 'string', 'defaultContent': "" },
+              { 'data': 'snapshotNumber', 'orderDataType': 'ng-value', 'searchable': false , 'type': 'num', 'defaultContent': 0 },
+              { 'data': 'snapshotQuota', 'orderDataType': 'ng-value', 'searchable': false , 'type': 'num', 'defaultContent': 0 },
+              { 'data': 'modificationTime', 'orderDataType': 'ng-value', 'searchable': false , 'type': 'string', 'defaultContent': "" },
+              { 'data': 'permission', 'orderable': false, 'searchable': false , 'type': 'string', 'defaultContent': "" },
+              { 'data': 'owner', 'orderDataType': 'ng-value', 'searchable': true , 'type': 'string', 'defaultContent': "" },
+              { 'data': 'group', 'orderDataType': 'ng-value', 'searchable': true , 'type': 'string', 'defaultContent': "" }
+            ],
+            'order': [[ 1, 'asc' ]]
+          });
+          // Add event listener for opening and closing details
+          $('#table-snapshots tbody').on('click', 'td.details-control', function () {
+            var tr = $(this).closest('tr');
+            var row = table.row( tr );
+
+            if ( row.child.isShown() ) {
+              // This row is already open - close it
+              row.child.hide();
+              tr.removeClass('shown');
+            }
+            else {
+              // Open this row
+              row.child( formatExpandedRow(row.data(), snapshotsMap) ).show();
+              var tableId = getSubTableId(row.data());
+              if (!$.fn.dataTable.isDataTable('#'+tableId)) {
+                $('#' + tableId).DataTable({
+                  'lengthMenu': [[25, 50, 100, -1], [25, 50, 100, "All"]],
+                  'columns': [
+                    {
+                      'orderDataType': 'ng-value',
+                      'searchable': true,
+                      'type': 'num',
+                      'defaultContent': 0
+                    },
+                    {
+                      'orderDataType': 'ng-value',
+                      'searchable': true,
+                      'type': 'string',
+                      'defaultContent': ""
+                    },
+                    {
+                      'orderDataType': 'ng-value',
+                      'searchable': true,
+                      'type': 'string',
+                      'defaultContent': ""
+                    },
+                    {
+                      'orderDataType': 'ng-value',
+                      'searchable': true,
+                      'type': 'string',
+                      'defaultContent': ""
+                    }
+                  ],
+                  'order': [[0, 'asc']]
+                });
+              }
+              tr.addClass('shown');
+            }
+          });
         });
       })).fail(ajax_error_handler);
+  }
+
+  function getSubTableId(row) {
+    var path = row.path;
+    // replace all "/" with "-"
+    path = path.replace(/\//g, '-');
+    return "table-snapshots"+path;
+  }
+
+  function formatExpandedRow (row, snapshotsMap) {
+    // `row` is the original data object for the row
+    var tableId = getSubTableId(row);
+    var path = row.path;
+    var snapshots = snapshotsMap[path];
+    if (!snapshots || snapshots.length === 0) {
+      return 'No snapshots found for this path';
+    }
+    var tbody = snapshots.reduce(function(result, snapshot) {
+      var html = '<tr>'+
+          '<td ng-value="'+snapshot.snapshotID+'">'+ snapshot.snapshotID +'</td>'+
+          '<td ng-value="'+snapshot.snapshotDirectory+'">'+ snapshot.snapshotDirectory +'</td>'+
+          '<td ng-value="'+snapshot.modificationTime+'">'+ moment(Number(snapshot.modificationTime)).format('ddd MMM DD HH:mm:ss ZZ YYYY') +'</td>'+
+          '<td ng-value="'+snapshot.status+'">'+ snapshot.status +'</td>'+
+        '</tr>';
+      return result + html;
+    }, "");
+    return '<table class="table sub-table" id='+ tableId +'>'+
+      '<thead>'+
+      '<tr>'+
+      '<th>Snapshot ID</th>'+
+      '<th>Snapshot Directory</th>'+
+      '<th>Modification Time</th>' +
+      '<th>Status</th>' +
+      '</tr>'+
+      '</thead>'+
+      '<tbody>'+
+      tbody +
+      '</tbody>'+
+      '</table>';
   }
 
   function load_page() {

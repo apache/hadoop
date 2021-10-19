@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 // This file contains protocol buffers that are used to transfer data
 // to and from the datanode, as well as between datanodes.
 
@@ -58,8 +58,9 @@ message BaseHeaderProto {
 }
 
 message DataTransferTraceInfoProto {
-  required uint64 traceId = 1;
-  required uint64 parentId = 2;
+  optional uint64 traceId = 1;
+  optional uint64 parentId = 2;
+  optional bytes spanContext = 3;
 }
 
 message ClientOperationHeaderProto {

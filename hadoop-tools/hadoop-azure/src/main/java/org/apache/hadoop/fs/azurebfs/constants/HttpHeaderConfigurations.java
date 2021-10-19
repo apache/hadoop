@@ -43,6 +43,7 @@ public final class HttpHeaderConfigurations {
   public static final String USER_AGENT = "User-Agent";
   public static final String X_HTTP_METHOD_OVERRIDE = "X-HTTP-Method-Override";
   public static final String X_MS_CLIENT_REQUEST_ID = "x-ms-client-request-id";
+  public static final String X_MS_EXISTING_RESOURCE_TYPE = "x-ms-existing-resource-type";
   public static final String X_MS_DATE = "x-ms-date";
   public static final String X_MS_REQUEST_ID = "x-ms-request-id";
   public static final String X_MS_VERSION = "x-ms-version";
@@ -58,6 +59,17 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_PERMISSIONS = "x-ms-permissions";
   public static final String X_MS_UMASK = "x-ms-umask";
   public static final String X_MS_NAMESPACE_ENABLED = "x-ms-namespace-enabled";
+  public static final String X_MS_ABFS_CLIENT_LATENCY = "x-ms-abfs-client-latency";
+  public static final String X_MS_ENCRYPTION_KEY = "x-ms-encryption-key";
+  public static final String X_MS_ENCRYPTION_KEY_SHA256 = "x-ms-encryption-key-sha256";
+  public static final String X_MS_ENCRYPTION_ALGORITHM = "x-ms-encryption-algorithm";
+  public static final String X_MS_REQUEST_SERVER_ENCRYPTED = "x-ms-request-server-encrypted";
+  public static final String X_MS_SERVER_ENCRYPTED = "x-ms-server-encrypted";
+  public static final String X_MS_LEASE_ACTION = "x-ms-lease-action";
+  public static final String X_MS_LEASE_DURATION = "x-ms-lease-duration";
+  public static final String X_MS_LEASE_ID = "x-ms-lease-id";
+  public static final String X_MS_PROPOSED_LEASE_ID = "x-ms-proposed-lease-id";
+  public static final String X_MS_LEASE_BREAK_PERIOD = "x-ms-lease-break-period";
 
   private HttpHeaderConfigurations() {}
 }

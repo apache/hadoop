@@ -41,11 +41,6 @@
       <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
-    <breadcrumbs position="left">
-      <item name="Apache" href="http://www.apache.org/" />
-      <item name="Hadoop" href="http://hadoop.apache.org/"/>
-    </breadcrumbs>
-
     <menu name="General" inherit="top">
       <item name="Overview" href="index.html"/>
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>
@@ -73,6 +68,7 @@
       <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
       <item name="Tracing" href="hadoop-project-dist/hadoop-common/Tracing.html"/>
       <item name="Unix Shell Guide" href="hadoop-project-dist/hadoop-common/UnixShellGuide.html"/>
+      <item name="Registry" href="hadoop-project-dist/hadoop-common/registry/index.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
@@ -84,6 +80,7 @@
       <item name="Observer NameNode" href="hadoop-project-dist/hadoop-hdfs/ObserverNameNode.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="ViewFs" href="hadoop-project-dist/hadoop-hdfs/ViewFs.html"/>
+      <item name="ViewFsOverloadScheme" href="hadoop-project-dist/hadoop-hdfs/ViewFsOverloadScheme.html"/>
       <item name="Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>
       <item name="Edits Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsEditsViewer.html"/>
       <item name="Image Viewer" href="hadoop-project-dist/hadoop-hdfs/HdfsImageViewer.html"/>
@@ -109,15 +106,6 @@
       <item name="DataNode Admin" href="hadoop-project-dist/hadoop-hdfs/HdfsDataNodeAdminGuide.html"/>
       <item name="Router Federation" href="hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html"/>
       <item name="Provided Storage" href="hadoop-project-dist/hadoop-hdfs/HdfsProvidedStorage.html"/>
-    </menu>
-
-    <menu name="Ozone" inherit="top">
-      <item name="Getting Started" href="hadoop-project-dist/hadoop-hdfs/OzoneGettingStarted.html"/>
-      <item name="Ozone Overview"
-            href="hadoop-project-dist/hadoop-hdfs/OzoneOverview.html"/>
-      <item name="Commands Reference" href="hadoop-project-dist/hadoop-hdfs/OzoneCommandShell.html"/>
-      <item name="Ozone Rest API" href="hadoop-project-dist/hadoop-hdfs/OzoneRest.html"/>
-      <item name="Ozone Metrics" href="hadoop-project-dist/hadoop-hdfs/OzoneMetrics.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">
@@ -152,9 +140,9 @@
       <item name="YARN Application Security" href="hadoop-yarn/hadoop-yarn-site/YarnApplicationSecurity.html"/>
       <item name="NodeManager" href="hadoop-yarn/hadoop-yarn-site/NodeManager.html"/>
       <item name="Running Applications in Docker Containers" href="hadoop-yarn/hadoop-yarn-site/DockerContainers.html"/>
+      <item name="Running Applications in runC Containers" href="hadoop-yarn/hadoop-yarn-site/RuncContainers.html"/>
       <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCgroups.html"/>
       <item name="Secure Containers" href="hadoop-yarn/hadoop-yarn-site/SecureContainer.html"/>
-      <item name="Registry" href="hadoop-yarn/hadoop-yarn-site/registry/index.html"/>
       <item name="Reservation System" href="hadoop-yarn/hadoop-yarn-site/ReservationSystem.html"/>
       <item name="Graceful Decommission" href="hadoop-yarn/hadoop-yarn-site/GracefulDecommission.html"/>
       <item name="Opportunistic Containers" href="hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html"/>
@@ -183,12 +171,6 @@
       <item name="System Services" href="hadoop-yarn/hadoop-yarn-site/yarn-service/SystemServices.html"/>
     </menu>
 
-    <menu name="Submarine" inherit="top">
-      <item name="Index" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Index.html"/>
-      <item name="QuickStart" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/QuickStart.html"/>
-      <item name="Examples" href="hadoop-yarn/hadoop-yarn-applications/hadoop-yarn-submarine/Examples.html"/>
-    </menu>
-
     <menu name="Hadoop Compatible File Systems" inherit="top">
       <item name="Aliyun OSS" href="hadoop-aliyun/tools/hadoop-aliyun/index.html"/>
       <item name="Amazon S3" href="hadoop-aws/tools/hadoop-aws/index.html"/>
@@ -196,6 +178,8 @@
       <item name="Azure Data Lake Storage"
             href="hadoop-azure-datalake/index.html"/>
       <item name="OpenStack Swift" href="hadoop-openstack/index.html"/>
+      <item name="Tencent COS" href="hadoop-cos/cloud-storage/index.html"/>
+      <item name="Huaweicloud OBS" href="hadoop-huaweicloud/cloud-storage/index.html"/>
     </menu>
 
     <menu name="Auth" inherit="top">
@@ -210,6 +194,7 @@
       <item name="Hadoop Archives" href="hadoop-archives/HadoopArchives.html"/>
       <item name="Hadoop Archive Logs" href="hadoop-archive-logs/HadoopArchiveLogs.html"/>
       <item name="DistCp" href="hadoop-distcp/DistCp.html"/>
+      <item name="HDFS Federation Balance" href="hadoop-federation-balance/HDFSFederationBalance.html"/>
       <item name="GridMix" href="hadoop-gridmix/GridMix.html"/>
       <item name="Rumen" href="hadoop-rumen/Rumen.html"/>
       <item name="Resource Estimator Service" href="hadoop-resourceestimator/ResourceEstimator.html"/>
@@ -219,7 +204,7 @@
     </menu>
 
     <menu name="Reference" inherit="top">
-      <item name="Changelog and Release Notes" href="hadoop-project-dist/hadoop-common/release/index.html"/>
+      <item name="Changelog and Release Notes" href="hadoop-project-dist/hadoop-common/release/"/>
       <item name="Java API docs" href="api/index.html"/>
       <item name="Unix Shell API" href="hadoop-project-dist/hadoop-common/UnixShellAPI.html"/>
       <item name="Metrics" href="hadoop-project-dist/hadoop-common/Metrics.html"/>
@@ -231,6 +216,8 @@
       <item name="hdfs-rbf-default.xml" href="hadoop-project-dist/hadoop-hdfs-rbf/hdfs-rbf-default.xml"/>
       <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
       <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-common/yarn-default.xml"/>
+      <item name="kms-default.xml" href="hadoop-kms/kms-default.html"/>
+      <item name="httpfs-default.xml" href="hadoop-hdfs-httpfs/httpfs-default.html"/>
       <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>
     </menu>
 

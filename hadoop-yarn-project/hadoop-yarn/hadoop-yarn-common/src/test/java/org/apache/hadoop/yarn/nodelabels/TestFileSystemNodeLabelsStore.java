@@ -38,7 +38,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
 @RunWith(Parameterized.class)
 public class TestFileSystemNodeLabelsStore extends NodeLabelTestBase {

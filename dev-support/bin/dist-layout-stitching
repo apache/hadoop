@@ -21,9 +21,6 @@ VERSION=$1
 # project.build.directory
 BASEDIR=$2
 
-#hdds.version
-HDDS_VERSION=$3
-
 function run()
 {
   declare res

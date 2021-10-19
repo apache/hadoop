@@ -32,8 +32,8 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteStreams;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.io.ByteStreams;
 
 public class TestTools {
 

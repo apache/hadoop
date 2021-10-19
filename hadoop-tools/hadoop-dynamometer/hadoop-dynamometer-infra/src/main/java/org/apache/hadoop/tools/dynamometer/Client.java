@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
+import org.apache.hadoop.util.Lists;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditReplayMapper;
@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,6 +167,7 @@ public class Client extends Configured implements Tool {
   public static final String WORKLOAD_REPLAY_ENABLE_ARG =
       "workload_replay_enable";
   public static final String WORKLOAD_INPUT_PATH_ARG = "workload_input_path";
+  public static final String WORKLOAD_OUTPUT_PATH_ARG = "workload_output_path";
   public static final String WORKLOAD_THREADS_PER_MAPPER_ARG =
       "workload_threads_per_mapper";
   public static final String WORKLOAD_START_DELAY_ARG = "workload_start_delay";
@@ -231,6 +233,8 @@ public class Client extends Configured implements Tool {
   private volatile Job workloadJob;
   // The input path for the workload job.
   private String workloadInputPath = "";
+  // The output path for the workload job metric results.
+  private String workloadOutputPath = "";
   // The number of threads to use per mapper for the workload job.
   private int workloadThreadsPerMapper;
   // The startup delay for the workload job.
@@ -347,6 +351,8 @@ public class Client extends Configured implements Tool {
         + "audit logs against the HDFS cluster which is started.");
     opts.addOption(WORKLOAD_INPUT_PATH_ARG, true,
         "Location of the audit traces to replay (Required for workload)");
+    opts.addOption(WORKLOAD_OUTPUT_PATH_ARG, true,
+        "Location of the metrics output (Required for workload)");
     opts.addOption(WORKLOAD_THREADS_PER_MAPPER_ARG, true, "Number of threads "
         + "per mapper to use to replay the workload. (default "
         + AuditReplayMapper.NUM_THREADS_DEFAULT + ")");
@@ -476,6 +482,7 @@ public class Client extends Configured implements Tool {
       }
       launchWorkloadJob = true;
       workloadInputPath = commandLine.getOptionValue(WORKLOAD_INPUT_PATH_ARG);
+      workloadOutputPath = commandLine.getOptionValue(WORKLOAD_OUTPUT_PATH_ARG);
       workloadThreadsPerMapper = Integer
           .parseInt(commandLine.getOptionValue(WORKLOAD_THREADS_PER_MAPPER_ARG,
               String.valueOf(AuditReplayMapper.NUM_THREADS_DEFAULT)));
@@ -885,7 +892,8 @@ public class Client extends Configured implements Tool {
     boolean success = false;
 
     Thread namenodeMonitoringThread = new Thread(() -> {
-      Supplier<Boolean> exitCritera = () -> isCompleted(infraAppState);
+      Supplier<Boolean> exitCritera = () ->
+          Apps.isApplicationFinalState(infraAppState);
       Optional<Properties> namenodeProperties = Optional.empty();
       while (!exitCritera.get()) {
         try {
@@ -919,7 +927,7 @@ public class Client extends Configured implements Tool {
           return;
         }
       }
-      if (!isCompleted(infraAppState) && launchWorkloadJob) {
+      if (!Apps.isApplicationFinalState(infraAppState) && launchWorkloadJob) {
         launchAndMonitorWorkloadDriver(namenodeProperties.get());
       }
     });
@@ -1032,6 +1040,7 @@ public class Client extends Configured implements Tool {
           + workloadStartDelayMs;
       Configuration workloadConf = new Configuration(getConf());
       workloadConf.set(AuditReplayMapper.INPUT_PATH_KEY, workloadInputPath);
+      workloadConf.set(AuditReplayMapper.OUTPUT_PATH_KEY, workloadOutputPath);
       workloadConf.setInt(AuditReplayMapper.NUM_THREADS_KEY,
           workloadThreadsPerMapper);
       workloadConf.setDouble(AuditReplayMapper.RATE_FACTOR_KEY,
@@ -1043,7 +1052,8 @@ public class Client extends Configured implements Tool {
       workloadJob = WorkloadDriver.getJobForSubmission(workloadConf,
           nameNodeURI.toString(), workloadStartTime, AuditReplayMapper.class);
       workloadJob.submit();
-      while (!isCompleted(infraAppState) && !isCompleted(workloadAppState)) {
+      while (!Apps.isApplicationFinalState(infraAppState) &&
+          !isCompleted(workloadAppState)) {
         workloadJob.monitorAndPrintJob();
         Thread.sleep(5000);
         workloadAppState = workloadJob.getJobState();
@@ -1086,7 +1096,7 @@ public class Client extends Configured implements Tool {
         }
       }
     }
-    if (infraAppId != null && !isCompleted(infraAppState)) {
+    if (infraAppId != null && !Apps.isApplicationFinalState(infraAppState)) {
       try {
         LOG.info("Attempting to kill infrastructure app: " + infraAppId);
         forceKillApplication(infraAppId);
@@ -1103,15 +1113,6 @@ public class Client extends Configured implements Tool {
   private static boolean isCompleted(JobStatus.State state) {
     return state == JobStatus.State.SUCCEEDED || state == JobStatus.State.FAILED
         || state == JobStatus.State.KILLED;
-  }
-
-  /**
-   * Check if the input state represents completion.
-   */
-  private static boolean isCompleted(YarnApplicationState state) {
-    return state == YarnApplicationState.FINISHED
-        || state == YarnApplicationState.FAILED
-        || state == YarnApplicationState.KILLED;
   }
 
   /**

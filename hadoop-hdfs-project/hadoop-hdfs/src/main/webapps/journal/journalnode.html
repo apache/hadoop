@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+  <title>JournalNode Information</title>
+</head>
+<body>
+
+<header class="navbar navbar-inverse bs-docs-nav" role="banner">
+  <div class="container">
+    <div class="navbar-header">
+      <div class="navbar-brand">Hadoop</div>
+    </div>
+
+    <ul class="nav navbar-nav" id="ui-tabs">
+      <li><a href="#tab-overview">Overview</a></li>
+      <li class="dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+        <ul class="dropdown-menu">
+          <li><a href="logs/">Logs</a></li>
+          <li><a href="logLevel">Log Level</a></li>
+          <li><a href="jmx">Metrics</a></li>
+          <li><a href="conf">Configuration</a></li>
+          <li><a href="stacks">Process Thread Dump</a></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</header>
+
+<div class="container">
+
+  <div id="alert-panel">
+    <div class="alert alert-danger">
+      <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+      <div class="alert-body" id="alert-panel-body"></div>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <div class="tab-pane" id="tab-overview"></div>
+  </div>
+
+  <div class="row">
+    <hr />
+    <div class="col-xs-2"><p>Hadoop, {release-year-token}.</p></div>
+  </div>
+</div>
+
+<script type="text/x-dust-template" id="tmpl-jn">
+  {#jn}
+  <div class="page-header"><h1>JournalNode on <small>{HostAndPort}</small></h1></div>
+  <table class="table table-bordered table-striped">
+    <tr><th>Cluster ID:</th><td>{ClusterIds}</td></tr>
+    <tr><th>Version:</th><td>{Version}</td></tr>
+  </table>
+  {/jn}
+
+  <div class="page-header"><h1>Journal Status</h1></div>
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Nameservice</th>
+      <th>Current Transaction ID</th>
+      <th>Current Lag Transactions</th>
+      <th>Last Journal Timestamp</th>
+    </tr>
+    </thead>
+    {#journals}
+    <tr>
+      <td>{NameService}</td>
+      <td>{LastWrittenTxId}</td>
+      <td>{CurrentLagTxns}</td>
+      <td>{#helper_date_tostring value="{LastJournalTimestamp}"/}</td>
+    </tr>
+    {/journals}
+  </table>
+</script>
+
+<script type="text/javascript" src="/static/jquery-3.5.1.min.js"></script>
+<script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/static/moment.min.js"></script>
+<script type="text/javascript" src="/static/dust-full-2.0.0.min.js"></script>
+<script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js"></script>
+<script type="text/javascript" src="/static/dfs-dust.js"></script>
+<script type="text/javascript" src="jn.js"></script>
+
+</body>
+</html>

@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import java.io.IOException;
 import java.util.List;

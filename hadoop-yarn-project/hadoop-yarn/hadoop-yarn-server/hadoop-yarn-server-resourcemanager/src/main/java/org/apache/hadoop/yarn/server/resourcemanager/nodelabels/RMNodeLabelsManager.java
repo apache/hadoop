@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class RMNodeLabelsManager extends CommonNodeLabelsManager {
   protected static class Queue {
@@ -275,7 +275,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
       Map<String, Host> before = cloneNodeMap(ImmutableSet.of(nodeId));
       Node nm = getNMInNodeSet(nodeId);
       if (null != nm) {
-        if (null == nm.labels) {
+        if (isNodeLabelExplicit(nm.nodeId)) {
           // When node deactivated, remove the nm from node collection if no
           // labels explicitly set for this particular nm
 

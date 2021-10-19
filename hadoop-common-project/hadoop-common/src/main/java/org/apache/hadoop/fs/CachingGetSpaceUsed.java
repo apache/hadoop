@@ -47,6 +47,7 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   private final long jitter;
   private final String dirPath;
   private Thread refreshUsed;
+  private boolean shouldFirstRefresh;
 
   /**
    * This is the constructor used by the builder.
@@ -79,16 +80,30 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
     this.refreshInterval = interval;
     this.jitter = jitter;
     this.used.set(initialUsed);
+    this.shouldFirstRefresh = true;
   }
 
   void init() {
     if (used.get() < 0) {
       used.set(0);
+      if (!shouldFirstRefresh) {
+        // Skip initial refresh operation, so we need to do first refresh
+        // operation immediately in refresh thread.
+        initRefeshThread(true);
+        return;
+      }
       refresh();
     }
+    initRefeshThread(false);
+  }
 
+  /**
+   * RunImmediately should set true, if we skip the first refresh.
+   * @param runImmediately The param default should be false.
+   */
+  private void initRefeshThread (boolean runImmediately) {
     if (refreshInterval > 0) {
-      refreshUsed = new Thread(new RefreshThread(this),
+      refreshUsed = new Thread(new RefreshThread(this, runImmediately),
           "refreshUsed-" + dirPath);
       refreshUsed.setDaemon(true);
       refreshUsed.start();
@@ -99,6 +114,14 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   }
 
   protected abstract void refresh();
+
+  /**
+   * Reset that if we need to do the first refresh.
+   * @param shouldFirstRefresh The flag value to set.
+   */
+  protected void setShouldFirstRefresh(boolean shouldFirstRefresh) {
+    this.shouldFirstRefresh = shouldFirstRefresh;
+  }
 
   /**
    * @return an estimate of space used in the directory path.
@@ -156,9 +179,11 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   private static final class RefreshThread implements Runnable {
 
     final CachingGetSpaceUsed spaceUsed;
+    private boolean runImmediately;
 
-    RefreshThread(CachingGetSpaceUsed spaceUsed) {
+    RefreshThread(CachingGetSpaceUsed spaceUsed, boolean runImmediately) {
       this.spaceUsed = spaceUsed;
+      this.runImmediately = runImmediately;
     }
 
     @Override
@@ -176,7 +201,10 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
           }
           // Make sure that after the jitter we didn't end up at 0.
           refreshInterval = Math.max(refreshInterval, 1);
-          Thread.sleep(refreshInterval);
+          if (!runImmediately) {
+            Thread.sleep(refreshInterval);
+          }
+          runImmediately = false;
           // update the used variable
           spaceUsed.refresh();
         } catch (InterruptedException e) {

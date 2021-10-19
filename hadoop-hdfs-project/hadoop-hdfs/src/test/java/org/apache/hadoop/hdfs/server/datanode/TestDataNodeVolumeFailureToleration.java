@@ -246,6 +246,9 @@ public class TestDataNodeVolumeFailureToleration {
       GenericTestUtils.assertExceptionContains("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated", e);
     } finally {
+      for (File dir : dirs) {
+        FileUtil.chmod(dir.toString(), "755");
+      }
       boolean bpServiceState;
       // If the datanode not registered successfully,
       // because the invalid value configured for tolerated volumes
@@ -257,10 +260,6 @@ public class TestDataNodeVolumeFailureToleration {
                     .isBPServiceAlive(cluster.getNamesystem().getBlockPoolId());
       }
       assertEquals(expectedBPServiceState, bpServiceState);
-
-      for (File dir : dirs) {
-        FileUtil.chmod(dir.toString(), "755");
-      }
     }
   }
 

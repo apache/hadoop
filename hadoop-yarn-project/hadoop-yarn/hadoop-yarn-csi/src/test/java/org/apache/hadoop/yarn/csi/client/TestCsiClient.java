@@ -30,6 +30,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 /**
  * Test class for CSI client.
@@ -42,7 +43,9 @@ public class TestCsiClient {
 
   @BeforeClass
   public static void setUp() throws IOException {
-    testRoot = GenericTestUtils.getTestDir("csi-test");
+    File testDir = GenericTestUtils.getTestDir();
+    testRoot = Files
+        .createTempDirectory(testDir.toPath(), "test").toFile();
     File socketPath = new File(testRoot, "csi.sock");
     FileUtils.forceMkdirParent(socketPath);
     domainSocket = "unix://" + socketPath.getAbsolutePath();

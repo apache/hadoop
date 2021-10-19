@@ -32,9 +32,10 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
+import org.apache.hadoop.util.Lists;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 
 /**
  * Executes the report command.
@@ -153,7 +154,7 @@ public class ReportCommand extends Command {
 
       recordOutput(result, outputLine);
 
-      List<DiskBalancerDataNode> dbdns = Lists.newArrayList();
+      List<DiskBalancerDataNode> dbdns;
       try {
         dbdns = getNodes(nodeVal);
       } catch (DiskBalancerException e) {

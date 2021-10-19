@@ -24,7 +24,7 @@ public final class FairSchedulerUtilities {
 
   /**
    * Table copied from Google Guava v19:
-   * com/google/common/base/CharMatcher.java
+   * org.apache.hadoop.thirdparty.com.google.common/base/CharMatcher.java
    * <p>
    * Licensed under the Apache License Version 2.0.
    */

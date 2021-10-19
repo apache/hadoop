@@ -76,10 +76,20 @@ public class TestWorkPreservingUnmanagedAM
     boolean unamanged = true;
     int maxAttempts = 1;
     boolean waitForAccepted = true;
-    RMApp app = rm.submitApp(200, "",
-        UserGroupInformation.getCurrentUser().getShortUserName(), null,
-        unamanged, null, maxAttempts, null, null, waitForAccepted,
-        keepContainers);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+        .withAppName("")
+        .withUser(UserGroupInformation.getCurrentUser().getShortUserName())
+        .withAcls(null)
+        .withUnmanagedAM(unamanged)
+        .withQueue(null)
+        .withMaxAppAttempts(maxAttempts)
+        .withCredentials(null)
+        .withAppType(null)
+        .withWaitForAppAcceptedState(waitForAccepted)
+        .withKeepContainers(keepContainers)
+        .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
 
     MockAM am = MockRM.launchUAM(app, rm, nm);
 

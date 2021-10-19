@@ -17,16 +17,44 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * The Balancer ensures that it disperses RPCs to the NameNode
  * in order to avoid NN's RPC queue saturation.
  */
 public class TestBalancerRPCDelay {
+  @Rule
+  public Timeout globalTimeout = Timeout.seconds(100);
 
-  @Test(timeout=100000)
-  public void testBalancerRPCDelay() throws Exception {
-    new TestBalancer().testBalancerRPCDelay();
+  private TestBalancer testBalancer;
+
+  @Before
+  public void setup() {
+    testBalancer = new TestBalancer();
+    testBalancer.setup();
+  }
+
+  @After
+  public void teardown() throws Exception {
+    if (testBalancer != null) {
+      testBalancer.shutdown();
+    }
+  }
+
+  @Test
+  public void testBalancerRPCDelayQps3() throws Exception {
+    testBalancer.testBalancerRPCDelay(3);
+  }
+
+  @Test
+  public void testBalancerRPCDelayQpsDefault() throws Exception {
+    testBalancer.testBalancerRPCDelay(
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT);
   }
 }

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -37,14 +38,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.api.records.LocalizationStatus;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.UpdateContainerSchedulerEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -99,6 +102,14 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerImpl implements Container {
+  private enum LocalizationCounter {
+    // 1-to-1 correspondence with MR TaskCounter.LOCALIZED_*
+    BYTES_MISSED,
+    BYTES_CACHED,
+    FILES_MISSED,
+    FILES_CACHED,
+    MILLIS;
+  }
 
   private static final class ReInitializationContext {
     private final ContainerLaunchContext newLaunchContext;
@@ -152,6 +163,9 @@ public class ContainerImpl implements Container {
   private final NMStateStoreService stateStore;
   private final Credentials credentials;
   private final NodeManagerMetrics metrics;
+  private final long[] localizationCounts =
+      new long[LocalizationCounter.values().length];
+
   private volatile ContainerLaunchContext launchContext;
   private volatile ContainerTokenIdentifier containerTokenIdentifier;
   private final ContainerId containerId;
@@ -180,6 +194,7 @@ public class ContainerImpl implements Container {
   private volatile ReInitializationContext reInitContext;
   private volatile boolean isReInitializing = false;
   private volatile boolean isMarkeForKilling = false;
+  private Object containerRuntimeData;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -1209,27 +1224,44 @@ public class ContainerImpl implements Container {
       }
 
       container.containerLocalizationStartTime = clock.getTime();
+      // duration = end - start;
+      // record in RequestResourcesTransition: -start
+      // add in LocalizedTransition: +end
+      //
+      container.localizationCounts[LocalizationCounter.MILLIS.ordinal()]
+          = -Time.monotonicNow();
 
       // Send requests for public, private resources
-      Map<String,LocalResource> cntrRsrc = ctxt.getLocalResources();
-      if (!cntrRsrc.isEmpty()) {
-        try {
+      Map<String, LocalResource> cntrRsrc;
+      try {
+        cntrRsrc = container.context
+            .getContainerExecutor().getLocalResources(container);
+        if (!cntrRsrc.isEmpty()) {
           Map<LocalResourceVisibility, Collection<LocalResourceRequest>> req =
               container.resourceSet.addResources(ctxt.getLocalResources());
           container.dispatcher.getEventHandler().handle(
               new ContainerLocalizationRequestEvent(container, req));
-        } catch (URISyntaxException e) {
-          // malformed resource; abort container launch
-          LOG.warn("Failed to parse resource-request", e);
-          container.cleanup();
+          // Get list of resources for logging
+          List<String> resourcePaths = new ArrayList<>();
+          for (Collection<LocalResourceRequest> rsrcReqList : req.values()) {
+            for (LocalResourceRequest rsrc : rsrcReqList) {
+              resourcePaths.add(rsrc.getPath().toString());
+            }
+          }
+          LOG.info("Container " + container.getContainerId()
+              + " is localizing: " + resourcePaths);
+          return ContainerState.LOCALIZING;
+        } else {
+          container.sendScheduleEvent();
           container.metrics.endInitingContainer();
-          return ContainerState.LOCALIZATION_FAILED;
+          return ContainerState.SCHEDULED;
         }
-        return ContainerState.LOCALIZING;
-      } else {
-        container.sendScheduleEvent();
+      } catch (URISyntaxException | IOException e) {
+        // malformed resource; abort container launch
+        LOG.warn("Failed to parse resource-request", e);
+        container.cleanup();
         container.metrics.endInitingContainer();
-        return ContainerState.SCHEDULED;
+        return ContainerState.LOCALIZATION_FAILED;
       }
     }
   }
@@ -1255,6 +1287,21 @@ public class ContainerImpl implements Container {
         return ContainerState.LOCALIZING;
       }
 
+      final long localizedSize = rsrcEvent.getSize();
+      if (localizedSize > 0) {
+        container.localizationCounts
+        [LocalizationCounter.BYTES_MISSED.ordinal()] += localizedSize;
+        container.localizationCounts
+        [LocalizationCounter.FILES_MISSED.ordinal()]++;
+      } else if (localizedSize < 0) {
+        // cached: recorded negative, restore the sign
+        container.localizationCounts
+        [LocalizationCounter.BYTES_CACHED.ordinal()] -= localizedSize;
+        container.localizationCounts
+        [LocalizationCounter.FILES_CACHED.ordinal()]++;
+      }
+      container.metrics.localizationCacheHitMiss(localizedSize);
+
       // check to see if this resource should be uploaded to the shared cache
       // as well
       if (shouldBeUploadedToSharedCache(container, resourceRequest)) {
@@ -1265,6 +1312,14 @@ public class ContainerImpl implements Container {
         return ContainerState.LOCALIZING;
       }
 
+      // duration = end - start;
+      // record in RequestResourcesTransition: -start
+      // add in LocalizedTransition: +end
+      //
+      container.localizationCounts[LocalizationCounter.MILLIS.ordinal()]
+          += Time.monotonicNow();
+      container.metrics.localizationComplete(
+          container.localizationCounts[LocalizationCounter.MILLIS.ordinal()]);
       container.dispatcher.getEventHandler().handle(
           new ContainerLocalizationEvent(LocalizationEventType.
               CONTAINER_RESOURCES_LOCALIZED, container));
@@ -2282,5 +2337,29 @@ public class ContainerImpl implements Container {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  public void setContainerRuntimeData(Object containerRuntimeData) {
+    this.containerRuntimeData = containerRuntimeData;
+  }
+
+  public <T> T getContainerRuntimeData(Class<T> runtimeClass)
+      throws ContainerExecutionException {
+    if (!runtimeClass.isInstance(containerRuntimeData)) {
+      throw new ContainerExecutionException(
+          "Runtime class " + containerRuntimeData.getClass().getCanonicalName()
+          + " is invalid. Expected class " + runtimeClass.getCanonicalName());
+    }
+    return runtimeClass.cast(containerRuntimeData);
+  }
+
+  @Override
+  public String localizationCountersAsString() {
+    StringBuilder result =
+        new StringBuilder(String.valueOf(localizationCounts[0]));
+    for (int i = 1; i < localizationCounts.length; i++) {
+      result.append(',').append(localizationCounts[i]);
+    }
+    return result.toString();
   }
 }

@@ -19,6 +19,8 @@
 #include "common/retry_policy.h"
 #include "common/logging.h"
 
+#include <boost/asio/error.hpp>
+
 #include <sstream>
 
 namespace hdfs {
@@ -57,7 +59,7 @@ RetryAction FixedDelayWithFailover::ShouldRetry(const Status &s, uint64_t retrie
   (void)max_failover_conn_retries_;
   LOG_TRACE(kRPC, << "FixedDelayWithFailover::ShouldRetry(retries=" << retries << ", failovers=" << failovers << ")");
 
-  if(failovers < max_failover_retries_ && (s.code() == ::asio::error::timed_out || s.get_server_exception_type() == Status::kStandbyException) )
+  if(failovers < max_failover_retries_ && (s.code() == boost::asio::error::timed_out || s.get_server_exception_type() == Status::kStandbyException) )
   {
     // Try connecting to another NN in case this one keeps timing out
     // Can add the backoff wait specified by dfs.client.failover.sleep.base.millis here

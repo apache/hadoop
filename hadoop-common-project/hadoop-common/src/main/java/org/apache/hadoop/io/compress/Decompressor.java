@@ -92,7 +92,7 @@ public interface Decompressor {
    * {@link #needsInput()} should be called in order to determine if more
    * input data is required.
    * 
-   * @param b Buffer for the compressed data
+   * @param b Buffer for the uncompressed data
    * @param off Start offset of the data
    * @param len Size of the buffer
    * @return The actual number of bytes of uncompressed data.

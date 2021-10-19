@@ -42,6 +42,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.security.SecurityUtil;
+import org.eclipse.jetty.server.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -63,8 +64,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * This class is used in Namesystem's jetty to retrieve/upload a file 
@@ -99,12 +100,38 @@ public class ImageServlet extends HttpServlet {
       "recent.image.check.enabled";
   public static final boolean RECENT_IMAGE_CHECK_ENABLED_DEFAULT = true;
 
+  /*
+   * Specify a relaxation for the time delta check, the relaxation is to account
+   * for the scenario that there are chances that minor time difference (e.g.
+   * due to image upload delay, or minor machine clock skew) can cause ANN to
+   * reject a fsImage too aggressively.
+   */
+  private static double recentImageCheckTimePrecision = 0.75;
+
+  @VisibleForTesting
+  static void setRecentImageCheckTimePrecision(double ratio) {
+    recentImageCheckTimePrecision = ratio;
+  }
+
+  private FSImage getAndValidateFSImage(ServletContext context,
+      final HttpServletResponse response)
+      throws IOException {
+    final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
+    if (nnImage == null) {
+      String errorMsg = "NameNode initialization not yet complete. "
+          + "FSImage has not been set in the NameNode.";
+      sendError(response, HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      throw new IOException(errorMsg);
+    }
+    return nnImage;
+  }
+
   @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
     try {
       final ServletContext context = getServletContext();
-      final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
+      final FSImage nnImage = getAndValidateFSImage(context, response);
       final GetImageParams parsedParams = new GetImageParams(request, response);
       final Configuration conf = (Configuration) context
           .getAttribute(JspHelper.CURRENT_CONF);
@@ -192,7 +219,7 @@ public class ImageServlet extends HttpServlet {
       
     } catch (Throwable t) {
       String errMsg = "GetImage failed. " + StringUtils.stringifyException(t);
-      response.sendError(HttpServletResponse.SC_GONE, errMsg);
+      sendError(response, HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     } finally {
       response.getOutputStream().close();
@@ -208,7 +235,7 @@ public class ImageServlet extends HttpServlet {
             conf)) {
       String errorMsg = "Only Namenode, Secondary Namenode, and administrators may access "
           + "this servlet";
-      response.sendError(HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      sendError(response, HttpServletResponse.SC_FORBIDDEN, errorMsg);
       LOG.warn("Received non-NN/SNN/administrator request for image or edits from "
           + request.getUserPrincipal().getName()
           + " at "
@@ -221,7 +248,7 @@ public class ImageServlet extends HttpServlet {
         && !myStorageInfoString.equals(theirStorageInfoString)) {
       String errorMsg = "This namenode has storage info " + myStorageInfoString
           + " but the secondary expected " + theirStorageInfoString;
-      response.sendError(HttpServletResponse.SC_FORBIDDEN, errorMsg);
+      sendError(response, HttpServletResponse.SC_FORBIDDEN, errorMsg);
       LOG.warn("Received an invalid request file transfer request "
           + "from a secondary with storage info " + theirStorageInfoString);
       throw new IOException(errorMsg);
@@ -511,7 +538,7 @@ public class ImageServlet extends HttpServlet {
       final HttpServletResponse response) throws ServletException, IOException {
     try {
       ServletContext context = getServletContext();
-      final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
+      final FSImage nnImage = getAndValidateFSImage(context, response);
       final Configuration conf = (Configuration) getServletContext()
           .getAttribute(JspHelper.CURRENT_CONF);
       final PutImageParams parsedParams = new PutImageParams(request, response,
@@ -552,7 +579,7 @@ public class ImageServlet extends HttpServlet {
                 // we need a different response type here so the client can differentiate this
                 // from the failure to upload due to (1) security, or (2) other checkpoints already
                 // present
-                response.sendError(HttpServletResponse.SC_EXPECTATION_FAILED,
+                sendError(response, HttpServletResponse.SC_EXPECTATION_FAILED,
                     "Nameode "+request.getLocalAddr()+" is currently not in a state which can "
                         + "accept uploads of new fsimages. State: "+state);
                 return null;
@@ -567,7 +594,7 @@ public class ImageServlet extends HttpServlet {
               // if the node is attempting to upload an older transaction, we ignore it
               SortedSet<ImageUploadRequest> larger = currentlyDownloadingCheckpoints.tailSet(imageRequest);
               if (larger.size() > 0) {
-                response.sendError(HttpServletResponse.SC_CONFLICT,
+                sendError(response, HttpServletResponse.SC_CONFLICT,
                     "Another checkpointer is already in the process of uploading a" +
                         " checkpoint made up to transaction ID " + larger.last());
                 return null;
@@ -575,7 +602,7 @@ public class ImageServlet extends HttpServlet {
 
               //make sure no one else has started uploading one
               if (!currentlyDownloadingCheckpoints.add(imageRequest)) {
-                response.sendError(HttpServletResponse.SC_CONFLICT,
+                sendError(response, HttpServletResponse.SC_CONFLICT,
                     "Either current namenode is checkpointing or another"
                         + " checkpointer is already in the process of "
                         + "uploading a checkpoint made at transaction ID "
@@ -592,6 +619,9 @@ public class ImageServlet extends HttpServlet {
               long checkpointPeriod =
                   conf.getTimeDuration(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
                       DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT, TimeUnit.SECONDS);
+              checkpointPeriod = Math.round(
+                  checkpointPeriod * recentImageCheckTimePrecision);
+
               long checkpointTxnCount =
                   conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
                       DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
@@ -599,28 +629,37 @@ public class ImageServlet extends HttpServlet {
               long timeDelta = TimeUnit.MILLISECONDS.toSeconds(
                   now - lastCheckpointTime);
 
+              // Since the goal of the check below is to prevent overly
+              // frequent upload from Standby, the check should only be done
+              // for the periodical upload from Standby. For the other
+              // scenarios such as rollback image and ckpt file, they skip
+              // this check, see HDFS-15036 for more info.
               if (checkRecentImageEnable &&
+                  NameNodeFile.IMAGE.equals(parsedParams.getNameNodeFile()) &&
                   timeDelta < checkpointPeriod &&
                   txid - lastCheckpointTxid < checkpointTxnCount) {
                 // only when at least one of two conditions are met we accept
                 // a new fsImage
                 // 1. most recent image's txid is too far behind
                 // 2. last checkpoint time was too old
-                response.sendError(HttpServletResponse.SC_CONFLICT,
-                    "Most recent checkpoint is neither too far behind in "
-                        + "txid, nor too old. New txnid cnt is "
-                        + (txid - lastCheckpointTxid)
-                        + ", expecting at least " + checkpointTxnCount
-                        + " unless too long since last upload.");
+                String message = "Rejecting a fsimage due to small time delta "
+                    + "and txnid delta. Time since previous checkpoint is "
+                    + timeDelta + " expecting at least " + checkpointPeriod
+                    + " txnid delta since previous checkpoint is " +
+                    (txid - lastCheckpointTxid) + " expecting at least "
+                    + checkpointTxnCount;
+                LOG.info(message);
+                sendError(response, HttpServletResponse.SC_CONFLICT, message);
                 return null;
               }
 
               try {
                 if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
-                  response.sendError(HttpServletResponse.SC_CONFLICT,
-                      "Either current namenode has checkpointed or "
-                          + "another checkpointer already uploaded an "
-                          + "checkpoint for txid " + txid);
+                  String message = "Either current namenode has checkpointed or "
+                      + "another checkpointer already uploaded an "
+                      + "checkpoint for txid " + txid;
+                  LOG.info(message);
+                  sendError(response, HttpServletResponse.SC_CONFLICT, message);
                   return null;
                 }
 
@@ -657,9 +696,18 @@ public class ImageServlet extends HttpServlet {
           });
     } catch (Throwable t) {
       String errMsg = "PutImage failed. " + StringUtils.stringifyException(t);
-      response.sendError(HttpServletResponse.SC_GONE, errMsg);
+      sendError(response, HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     }
+  }
+
+  private void sendError(HttpServletResponse response, int code, String message)
+      throws IOException {
+    if (response instanceof Response) {
+      ((Response)response).setStatusWithReason(code, message);
+    }
+
+    response.sendError(code, message);
   }
 
   /*

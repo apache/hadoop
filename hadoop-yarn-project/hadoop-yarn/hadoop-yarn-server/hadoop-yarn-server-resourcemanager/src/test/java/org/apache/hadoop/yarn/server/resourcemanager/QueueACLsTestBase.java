@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.junit.Assert;
 
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -42,6 +45,19 @@ import org.junit.After;
 import org.junit.Test;
 
 public abstract class QueueACLsTestBase extends ACLsTestBase {
+
+  protected static final String QUEUED = "D";
+  protected static final String QUEUED1 = "D1";
+  private static final String ALL_ACL = "*";
+  private static final String NONE_ACL = " ";
+
+
+  abstract public String getQueueD();
+
+  abstract public String getQueueD1();
+
+  abstract public void updateConfigWithDAndD1Queues(String rootAcl,
+      String queueDAcl, String queueD1Acl) throws IOException;
 
   @After
   public void tearDown() {
@@ -73,6 +89,136 @@ public abstract class QueueACLsTestBase extends ACLsTestBase {
 
     verifyGetClientAMToken(QUEUE_A_USER, ROOT_ADMIN, QUEUEA, true);
 
+  }
+
+  /**
+   * Test for the case when the following submit application
+   * and administer queue ACLs are defined:
+   * root: (none)
+   *    D: * (all)
+   *      D1: * (all)
+   * Expected result: the user will have access only to D and D1 queues.
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclRestrictedRootACL() throws IOException {
+    updateConfigWithDAndD1Queues(NONE_ACL, ALL_ACL, ALL_ACL);
+    checkAccess(false, true, true);
+  }
+
+  /**
+   * Test for the case when the following submit application
+   * and administer queue ACLs are defined:
+   * root: (none)
+   *    D:  (none)
+   *      D1:  (none)
+   * Expected result: the user will have to none of the queues.
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclNoAccess() throws IOException {
+    updateConfigWithDAndD1Queues(NONE_ACL, NONE_ACL, NONE_ACL);
+    checkAccess(false, false, false);
+  }
+
+  /**
+   * Test for the case when the following submit application
+   * and administer queue ACLs are defined:
+   * root: (none)
+   *    D: * (all)
+   *      D1:  (none)
+   * Expected result: access to D1 will be permitted by root.D,
+   * so the user will be able to access queues D and D1.
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclRestrictedRootAndD1() throws IOException {
+    updateConfigWithDAndD1Queues(NONE_ACL, ALL_ACL, NONE_ACL);
+    checkAccess(false, true, true);
+  }
+
+  /**
+   * Test for the case when the following submit application
+   * and administer queue ACLs are defined:
+   * root: (none)
+   *    D:  (none)
+   *      D1:  (all)
+   * Expected result: only queue D1 can be accessed.
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclRestrictedRootAndD() throws IOException {
+    updateConfigWithDAndD1Queues(NONE_ACL, NONE_ACL, ALL_ACL);
+    checkAccess(false, false, true);
+  }
+
+  /**
+   * Test for the case when the following submit application
+   * and administer queue ACLs are defined:
+   * root: * (all)
+   *    D:  (none)
+   *      D1: * (all)
+   * Expected result: access to D will be permitted from the root queue,
+   * so the user will be able to access queues root, D and D1.
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclRestrictedD() throws IOException {
+    updateConfigWithDAndD1Queues(ALL_ACL, NONE_ACL, ALL_ACL);
+    checkAccess(true, true, true);
+  }
+
+  /**
+   * Test for the case when the following submit application
+   * and administer queue ACLs are defined:
+   * root: * (all)
+   *    D: * (all)
+   *      D1:  (none)
+   * Expected result: access to D1 will be permitted from queue D,
+   * so the user will be able to access queues root, D and D1.
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclRestrictedD1() throws IOException {
+    updateConfigWithDAndD1Queues(ALL_ACL, ALL_ACL, NONE_ACL);
+    checkAccess(true, true, true);
+  }
+
+  /**
+   * Test for the case when no ACLs are defined, so the default values are used
+   * Expected result: The default ACLs for the root queue is "*"(all) and for
+   * the other queues are " " (none), so the user will have access to all the
+   * queues because they will have permissions from the root.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testQueueAclDefaultValues() throws IOException {
+    updateConfigWithDAndD1Queues(null, null, null);
+    checkAccess(true, true, true);
+  }
+
+  private void checkAccess(boolean rootAccess, boolean dAccess,
+          boolean d1Access)throws IOException {
+    checkAccess(rootAccess, "root");
+    checkAccess(dAccess, getQueueD());
+    checkAccess(d1Access, getQueueD1());
+  }
+
+
+  private void checkAccess(boolean access, String queueName)
+      throws IOException {
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+
+    String failureMsg = "Wrong %s access to %s queue";
+    Assert.assertEquals(
+        String.format(failureMsg, QueueACL.ADMINISTER_QUEUE, queueName),
+        access, resourceManager.getResourceScheduler()
+        .checkAccess(user, QueueACL.ADMINISTER_QUEUE, queueName));
+    Assert.assertEquals(
+        String.format(failureMsg, QueueACL.SUBMIT_APPLICATIONS, queueName),
+        access, resourceManager.getResourceScheduler()
+        .checkAccess(user, QueueACL.SUBMIT_APPLICATIONS, queueName));
   }
 
   private void verifyGetClientAMToken(String submitter, String queueAdmin,

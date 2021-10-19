@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -113,6 +114,7 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void put(DirListingMetadata meta,
+      final List<Path> unchangedEntries,
       final BulkOperationState operationState) throws IOException {
   }
 
@@ -125,7 +127,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix) {
+  public long prune(PruneMode pruneMode, long cutoff, String keyPrefix) {
+    return 0;
   }
 
   @Override
@@ -169,8 +172,10 @@ public class NullMetadataStore implements MetadataStore {
     private NullRenameTracker(
         final StoreContext storeContext,
         final Path source,
-        final Path dest, MetadataStore metadataStore) {
-      super("null tracker", storeContext, metadataStore, source, dest, null);
+        final Path dest,
+        MetadataStore metadataStore) {
+      super("NullRenameTracker", storeContext, metadataStore, source, dest,
+          null);
     }
 
     @Override

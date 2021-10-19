@@ -25,7 +25,7 @@ import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_MAGIC_PATH_ELEMENT;

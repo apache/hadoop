@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
 import java.io.Serializable;
 import java.util.Map;

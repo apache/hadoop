@@ -28,9 +28,12 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.StringHelper;
 
 @Public
@@ -63,8 +66,10 @@ public class AppInfo {
   protected int priority;
   private long allocatedCpuVcores;
   private long allocatedMemoryMB;
+  private long allocatedGpus;
   private long reservedCpuVcores;
   private long reservedMemoryMB;
+  private long reservedGpus;
   protected boolean unmanagedApplication;
   private String appNodeLabelExpression;
   private String amNodeLabelExpression;
@@ -100,24 +105,35 @@ public class AppInfo {
     if (app.getPriority() != null) {
       priority = app.getPriority().getPriority();
     }
-    if (app.getApplicationResourceUsageReport() != null) {
-      runningContainers = app.getApplicationResourceUsageReport()
+    ApplicationResourceUsageReport usageReport =
+        app.getApplicationResourceUsageReport();
+    if (usageReport != null) {
+      runningContainers = usageReport
           .getNumUsedContainers();
-      if (app.getApplicationResourceUsageReport().getUsedResources() != null) {
-        allocatedCpuVcores = app.getApplicationResourceUsageReport()
+      if (usageReport.getUsedResources() != null) {
+        allocatedCpuVcores = usageReport
             .getUsedResources().getVirtualCores();
-        allocatedMemoryMB = app.getApplicationResourceUsageReport()
+        allocatedMemoryMB = usageReport
             .getUsedResources().getMemorySize();
-        reservedCpuVcores = app.getApplicationResourceUsageReport()
+        reservedCpuVcores = usageReport
             .getReservedResources().getVirtualCores();
-        reservedMemoryMB = app.getApplicationResourceUsageReport()
+        reservedMemoryMB = usageReport
             .getReservedResources().getMemorySize();
+        Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
+            .get(ResourceInformation.GPU_URI);
+        allocatedGpus = -1;
+        reservedGpus = -1;
+        if (gpuIndex != null) {
+          allocatedGpus = usageReport.getUsedResources()
+              .getResourceValue(ResourceInformation.GPU_URI);
+          reservedGpus = usageReport.getReservedResources()
+              .getResourceValue(ResourceInformation.GPU_URI);
+        }
       }
       aggregateResourceAllocation = StringHelper.getResourceSecondsString(
-        app.getApplicationResourceUsageReport().getResourceSecondsMap());
+          usageReport.getResourceSecondsMap());
       aggregatePreemptedResourceAllocation = StringHelper
-        .getResourceSecondsString(app.getApplicationResourceUsageReport()
-          .getPreemptedResourceSecondsMap());
+        .getResourceSecondsString(usageReport.getPreemptedResourceSecondsMap());
     }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
@@ -176,12 +192,20 @@ public class AppInfo {
     return allocatedMemoryMB;
   }
 
+  public long getAllocatedGpus() {
+    return allocatedGpus;
+  }
+
   public long getReservedCpuVcores() {
     return reservedCpuVcores;
   }
 
   public long getReservedMemoryMB() {
     return reservedMemoryMB;
+  }
+
+  public long getReservedGpus() {
+    return reservedGpus;
   }
 
   public float getProgress() {

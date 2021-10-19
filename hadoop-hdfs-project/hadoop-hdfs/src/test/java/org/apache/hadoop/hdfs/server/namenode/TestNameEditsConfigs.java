@@ -41,8 +41,8 @@ import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 /**
  * This class tests various combinations of dfs.namenode.name.dir 

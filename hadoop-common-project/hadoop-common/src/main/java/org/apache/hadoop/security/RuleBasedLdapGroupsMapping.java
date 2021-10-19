@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.security;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -25,7 +24,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -88,4 +89,18 @@ public class RuleBasedLdapGroupsMapping extends LdapGroupsMapping {
     }
   }
 
+  public synchronized Set<String> getGroupsSet(String user) {
+    Set<String> groups = super.getGroupsSet(user);
+    switch (rule) {
+    case TO_UPPER:
+      return groups.stream().map(StringUtils::toUpperCase).collect(
+          Collectors.toCollection(LinkedHashSet::new));
+    case TO_LOWER:
+      return groups.stream().map(StringUtils::toLowerCase).collect(
+          Collectors.toCollection(LinkedHashSet::new));
+    case NONE:
+    default:
+      return groups;
+    }
+  }
 }

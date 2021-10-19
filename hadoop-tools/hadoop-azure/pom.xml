@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-azure</artifactId>
@@ -50,10 +50,9 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
         <configuration>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
           <excludeFilterFile>${basedir}/dev-support/findbugs-exclude.xml
           </excludeFilterFile>
@@ -100,11 +99,43 @@
             </configuration>
           </execution>
         </executions>
+       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>de.skuzzle.enforcer</groupId>
+            <artifactId>restrict-imports-enforcer-rule</artifactId>
+            <version>${restrict-imports.enforcer.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <includeTestCode>true</includeTestCode>
+                  <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
     </plugins>
 
-    
+
     <!--
        The following is to suppress a m2e warning in eclipse
        (m2e doesn't know how to handle maven-enforcer:enforce, so we have to tell m2e to ignore it)
@@ -169,8 +200,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-guava</artifactId>
     </dependency>
 
     <dependency>
@@ -278,6 +309,17 @@
       <artifactId>bcpkix-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <profiles>
@@ -292,31 +334,13 @@
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
               <execution>
-                <id>create-parallel-tests-dirs</id>
-                <phase>test-compile</phase>
-                <configuration>
-                  <target>
-                    <script language="javascript"><![CDATA[
-                      var baseDirs = [
-                        project.getProperty("test.build.data"),
-                        project.getProperty("test.build.dir"),
-                        project.getProperty("hadoop.tmp.dir")
-                      ];
-                      for (var i in baseDirs) {
-                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
-                          var mkdir = project.createTask("mkdir");
-                          mkdir.setDir(new java.io.File(baseDirs[i], j));
-                          mkdir.perform();
-                        }
-                      }
-                    ]]></script>
-                  </target>
-                </configuration>
+                <id>parallel-tests-createdir</id>
                 <goals>
-                  <goal>run</goal>
+                  <goal>parallel-tests-createdir</goal>
                 </goals>
               </execution>
             </executions>
@@ -331,7 +355,6 @@
                   <goal>test</goal>
                 </goals>
                 <configuration>
-                  <forkCount>1</forkCount>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
@@ -397,7 +420,6 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
-                  <forkCount>1</forkCount>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
@@ -475,31 +497,13 @@
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
               <execution>
-                <id>create-parallel-tests-dirs</id>
-                <phase>test-compile</phase>
-                <configuration>
-                  <target>
-                    <script language="javascript"><![CDATA[
-                      var baseDirs = [
-                        project.getProperty("test.build.data"),
-                        project.getProperty("test.build.dir"),
-                        project.getProperty("hadoop.tmp.dir")
-                      ];
-                      for (var i in baseDirs) {
-                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
-                          var mkdir = project.createTask("mkdir");
-                          mkdir.setDir(new java.io.File(baseDirs[i], j));
-                          mkdir.perform();
-                        }
-                      }
-                    ]]></script>
-                  </target>
-                </configuration>
+                <id>parallel-tests-createdir</id>
                 <goals>
-                  <goal>run</goal>
+                  <goal>parallel-tests-createdir</goal>
                 </goals>
               </execution>
             </executions>
@@ -582,6 +586,8 @@
                     <exclude>**/azurebfs/ITestAbfsReadWriteAndSeek.java</exclude>
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
                     <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
+                    <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
+                    <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
                   </excludes>
 
                 </configuration>
@@ -621,6 +627,8 @@
                     <include>**/azurebfs/ITestAbfsReadWriteAndSeek.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
                     <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
+                    <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
+                    <include>**/azurebfs/services/ITestReadBufferManager.java</include>
                   </includes>
                 </configuration>
               </execution>
@@ -641,31 +649,13 @@
       <build>
         <plugins>
           <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
               <execution>
-                <id>create-parallel-tests-dirs</id>
-                <phase>test-compile</phase>
-                <configuration>
-                  <target>
-                    <script language="javascript"><![CDATA[
-                      var baseDirs = [
-                        project.getProperty("test.build.data"),
-                        project.getProperty("test.build.dir"),
-                        project.getProperty("hadoop.tmp.dir")
-                      ];
-                      for (var i in baseDirs) {
-                        for (var j = 1; j <= ${testsThreadCount}; ++j) {
-                          var mkdir = project.createTask("mkdir");
-                          mkdir.setDir(new java.io.File(baseDirs[i], j));
-                          mkdir.perform();
-                        }
-                      }
-                    ]]></script>
-                  </target>
-                </configuration>
+                <id>parallel-tests-createdir</id>
                 <goals>
-                  <goal>run</goal>
+                  <goal>parallel-tests-createdir</goal>
                 </goals>
               </execution>
             </executions>
@@ -680,7 +670,6 @@
                   <goal>test</goal>
                 </goals>
                 <configuration>
-                  <forkCount>1</forkCount>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>

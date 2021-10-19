@@ -56,6 +56,7 @@ Each metrics record contains tags such as ProcessName, SessionID and Hostname as
 | `GcNumWarnThresholdExceeded` | Number of times that the GC warn threshold is exceeded |
 | `GcNumInfoThresholdExceeded` | Number of times that the GC info threshold is exceeded |
 | `GcTotalExtraSleepTime` | Total GC extra sleep time in msec |
+| `GcTimePercentage` | The percentage (0..100) of time that the JVM spent in GC pauses within the observation window if `dfs.namenode.gc.time.monitor.enable` is set to true. Use `dfs.namenode.gc.time.monitor.sleep.interval.ms` to specify the sleep interval in msec. Use `dfs.namenode.gc.time.monitor.observation.window.ms` to specify the observation window in msec. |
 
 rpc context
 ===========
@@ -64,6 +65,8 @@ rpc
 ---
 
 Each metrics record contains tags such as Hostname and port (number to which server is bound) as additional information along with metrics.
+`rpc.metrics.timeunit` config can be used to configure timeunit for RPC metrics.
+The default timeunit used for RPC metrics is milliseconds (as per the below description).
 
 | Name | Description |
 |:---- |:---- |
@@ -121,6 +124,17 @@ FairCallQueue metrics will only exist if FairCallQueue is enabled. Each metric e
 |:---- |:---- |
 | `FairCallQueueSize_p`*Priority* | Current number of calls in priority queue |
 | `FairCallQueueOverflowedCalls_p`*Priority* | Total number of overflowed calls in priority queue |
+
+DecayRpcSchedulerDetailed
+-------------------------
+
+DecayRpcSchedulerDetailed metrics only exist when DecayRpcScheduler is used (FairCallQueue enabled). It is an addition
+to FairCallQueue metrics. For each level of priority, rpcqueue and rpcprocessing detailed metrics are exposed.
+
+| Name | Description |
+|:---- | :---- |
+|  `DecayRPCSchedulerPriority.`*Priority*`.RpcQueueTime` | RpcQueueTime metrics for each priority |
+|  `DecayRPCSchedulerPriority.`*Priority*`.RpcProcessingTime` | RpcProcessingTime metrics for each priority |
 
 rpcdetailed context
 ===================
@@ -216,6 +230,7 @@ Each metrics record contains tags such as ProcessName, SessionId, and Hostname a
 | `EditLogTailIntervalNumOps` | Total number of intervals between edit log tailings by standby NameNode |
 | `EditLogTailIntervalAvgTime` | Average time of intervals between edit log tailings by standby NameNode in milliseconds |
 | `EditLogTailInterval`*num*`s(50/75/90/95/99)thPercentileLatency` | The 50/75/90/95/99th percentile of time between edit log tailings by standby NameNode in milliseconds (*num* seconds granularity). Percentile measurement is off by default, by watching no intervals. The intervals are specified by `dfs.metrics.percentiles.intervals`. |
+| `PendingEditsCount` | Current number of pending edits |
 
 FSNamesystem
 ------------
@@ -437,10 +452,31 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `BlocksDeletedInPendingIBR` | Number of blocks at deleted status in pending incremental block report (IBR) |
 | `EcReconstructionTasks` | Total number of erasure coding reconstruction tasks |
 | `EcFailedReconstructionTasks` | Total number of erasure coding failed reconstruction tasks |
+| `EcInvalidReconstructionTasks` | Total number of erasure coding invalidated reconstruction tasks |
 | `EcDecodingTimeNanos` | Total number of nanoseconds spent by decoding tasks |
 | `EcReconstructionBytesRead` | Total number of bytes read by erasure coding worker |
 | `EcReconstructionBytesWritten` | Total number of bytes written by erasure coding worker |
 | `EcReconstructionRemoteBytesRead` | Total number of bytes remote read by erasure coding worker |
+| `CreateRbwOpNumOps` | Total number of create rbw operations |
+| `CreateRbwOpAvgTime` | Average time of create rbw operations in milliseconds |
+| `RecoverRbwOpNumOps` | Total number of recovery rbw operations |
+| `RecoverRbwOpAvgTime` | Average time of recovery rbw operations in milliseconds |
+| `ConvertTemporaryToRbwOpNumOps` | Total number of convert temporary to rbw operations |
+| `ConvertTemporaryToRbwOpAvgTime` | Average time of convert temporary to rbw operations in milliseconds |
+| `CreateTemporaryOpNumOps` | Total number of create temporary operations |
+| `CreateTemporaryOpAvgTime` | Average time of create temporary operations in milliseconds |
+| `FinalizeBlockOpNumOps` | Total number of finalize block operations |
+| `FinalizeBlockOpAvgTime` | Average time of finalize block operations in milliseconds |
+| `UnfinalizeBlockOpNumOps` | Total number of un-finalize block operations |
+| `UnfinalizeBlockOpAvgTime` | Average time of un-finalize block operations in milliseconds |
+| `CheckAndUpdateOpNumOps` | Total number of check and update operations |
+| `CheckAndUpdateOpAvgTime` | Average time of check and update operations in milliseconds |
+| `UpdateReplicaUnderRecoveryOpNumOps` | Total number of update replica under recovery operations |
+| `UpdateReplicaUnderRecoveryOpAvgTime` | Average time of update replica under recovery operations in milliseconds |
+| `PacketsReceived` | Total number of packets received by Datanode (excluding heartbeat packet from client) |
+| `PacketsSlowWriteToMirror` | Total number of packets whose write to other Datanodes in the pipeline takes more than a certain time (300ms by default) |
+| `PacketsSlowWriteToDisk` | Total number of packets whose write to disk takes more than a certain time (300ms by default) |
+| `PacketsSlowWriteToOsCache` | Total number of packets whose write to os cache takes more than a certain time (300ms by default) |
 
 FsVolume
 --------
@@ -493,9 +529,12 @@ RBFMetrics shows the metrics which are the aggregated values of sub-clusters' in
 | `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
 | `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |
 | `NumEnteringMaintenanceDataNodes` | Number of Datanodes that are entering the maintenance state |
-| `TotalCapacity` | Current raw capacity of DataNodes in bytes |
-| `UsedCapacity` | Current used capacity across all DataNodes in bytes |
-| `RemainingCapacity` | Current remaining capacity in bytes |
+| `TotalCapacity` | Current raw capacity of DataNodes in bytes (long primitive, may overflow) |
+| `UsedCapacity` | Current used capacity across all DataNodes in bytes (long primitive, may overflow) |
+| `RemainingCapacity` | Current remaining capacity in bytes (long primitive, may overflow) |
+| `TotalCapacityBigInt` | Current raw capacity of DataNodes in bytes (using BigInteger) |
+| `UsedCapacityBigInt` | Current used capacity across all DataNodes in bytes (using BigInteger) |
+| `RemainingCapacityBigInt` | Current remaining capacity in bytes (using BigInteger) |
 | `NumOfMissingBlocks` | Current number of missing blocks |
 | `NumLiveNodes` | Number of datanodes which are currently live |
 | `NumDeadNodes` | Number of datanodes which are currently dead |
@@ -520,17 +559,17 @@ RouterRPCMetrics shows the statistics of the Router component in Router-based fe
 |:---- |:---- |
 | `ProcessingOp` | Number of operations the Router processed internally |
 | `ProxyOp` | Number of operations the Router proxied to a Namenode |
-| `ProxyOpFailureStandby` | Number of operations to fail to reach NN |
-| `ProxyOpFailureCommunicate` | Number of operations to hit a standby NN |
+| `ProxyOpFailureStandby` | Number of operations to hit a standby NN |
+| `ProxyOpFailureCommunicate` | Number of operations to fail to reach NN |
 | `ProxyOpNotImplemented` | Number of operations not implemented |
 | `RouterFailureStateStore` | Number of failed requests due to State Store unavailable |
 | `RouterFailureReadOnly` | Number of failed requests due to read only mount point |
 | `RouterFailureLocked` | Number of failed requests due to locked path |
 | `RouterFailureSafemode` | Number of failed requests due to safe mode |
 | `ProcessingNumOps` | Number of operations the Router processed internally within an interval time of metric |
-| `ProcessingAvgTime` | Average time for the Router to process operations in nanoseconds |
+| `ProcessingAvgTime` | Average time for the Router to process operations in milliseconds |
 | `ProxyNumOps` | Number of times of that the Router to proxy operations to the Namenodes within an interval time of metric |
-| `ProxyAvgTime` | Average time for the Router to proxy operations to the Namenodes in nanoseconds |
+| `ProxyAvgTime` | Average time for the Router to proxy operations to the Namenodes in milliseconds |
 
 StateStoreMetrics
 -----------------

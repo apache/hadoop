@@ -360,6 +360,15 @@ public class TestMultipleDestinationResolver {
     assertEquals(3, destinations.size());
   }
 
+  @Test
+  public void testPrioritizeDestination() throws IOException {
+    PathLocation dest0 = resolver.getDestinationForPath("/hashall/file0.txt");
+    assertDest("subcluster0", dest0);
+    PathLocation prioritizedDest = PathLocation.prioritizeDestination(dest0,
+        "subcluster1");
+    assertDest("subcluster1", prioritizedDest);
+  }
+
   /**
    * Test that a path has files distributed across destinations evenly.
    * @param path Path to check.

@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.ProtoUtil;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
 /** A polymorphic Writable that writes an instance with it's class name.
  * Handles arrays, strings and primitive types without a Writable wrapper.

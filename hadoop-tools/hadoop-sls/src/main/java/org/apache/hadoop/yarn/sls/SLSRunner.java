@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -96,7 +97,6 @@ import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,6 +143,8 @@ public class SLSRunner extends Configured implements Tool {
 
   private static boolean exitAtTheFinish = false;
 
+  private static final String DEFAULT_USER = "default";
+
   /**
    * The type of trace in input.
    */
@@ -150,8 +152,16 @@ public class SLSRunner extends Configured implements Tool {
     SLS, RUMEN, SYNTH
   }
 
+  public static final String NETWORK_CACHE_TTL = "networkaddress.cache.ttl";
+  public static final String NETWORK_NEGATIVE_CACHE_TTL =
+      "networkaddress.cache.negative.ttl";
+
   private TraceType inputType;
   private SynthTraceJobProducer stjp;
+
+  public static int getRemainingApps() {
+    return remainingApps;
+  }
 
   public SLSRunner() throws ClassNotFoundException {
     Configuration tempConf = new Configuration(false);
@@ -241,6 +251,9 @@ public class SLSRunner extends Configured implements Tool {
 
   public void start() throws IOException, ClassNotFoundException, YarnException,
       InterruptedException {
+
+    enableDNSCaching(getConf());
+
     // start resource manager
     startRM();
     // start node managers
@@ -258,6 +271,23 @@ public class SLSRunner extends Configured implements Tool {
     waitForNodesRunning();
     // starting the runner once everything is ready to go,
     runner.start();
+  }
+
+  /**
+   * Enables DNS Caching based on config. If DNS caching is enabled, then set
+   * the DNS cache to infinite time. Since in SLS random nodes are added, DNS
+   * resolution can take significant time which can cause erroneous results.
+   * For more details, check <a href=
+   * "https://docs.oracle.com/javase/8/docs/technotes/guides/net/properties.html">
+   * Java Networking Properties</a>
+   * @param conf Configuration object.
+   */
+  static void enableDNSCaching(Configuration conf) {
+    if (conf.getBoolean(SLSConfiguration.DNS_CACHING_ENABLED,
+        SLSConfiguration.DNS_CACHING_ENABLED_DEFAULT)) {
+      Security.setProperty(NETWORK_CACHE_TTL, "-1");
+      Security.setProperty(NETWORK_NEGATIVE_CACHE_TTL, "-1");
+    }
   }
 
   private void startRM() throws ClassNotFoundException, YarnException {
@@ -346,7 +376,7 @@ public class SLSRunner extends Configured implements Tool {
 
     // create NM simulators
     Random random = new Random();
-    Set<String> rackSet = new ConcurrentHashSet<>();
+    Set<String> rackSet = ConcurrentHashMap.newKeySet();
     int threadPoolSize = Math.max(poolSize,
         SLSConfiguration.RUNNER_POOL_SIZE_DEFAULT);
     ExecutorService executorService = Executors.
@@ -708,7 +738,8 @@ public class SLSRunner extends Configured implements Tool {
     // creation
     while ((job = (SynthJob) stjp.getNextJob()) != null) {
       // only support MapReduce currently
-      String user = job.getUser();
+      String user = job.getUser() == null ? DEFAULT_USER :
+              job.getUser();
       String jobQueue = job.getQueueName();
       String oldJobId = job.getJobID().toString();
       long jobStartTimeMS = job.getSubmissionTime();
@@ -789,7 +820,7 @@ public class SLSRunner extends Configured implements Tool {
     if (appNum == null) {
       appNum = 1;
     } else {
-      appNum++;
+      appNum = appNum + 1;
     }
 
     queueAppNumMap.put(queueName, appNum);
@@ -906,12 +937,12 @@ public class SLSRunner extends Configured implements Tool {
 
   public static void decreaseRemainingApps() {
     remainingApps--;
+  }
 
-    if (remainingApps == 0) {
-      LOG.info("SLSRunner tears down.");
-      if (exitAtTheFinish) {
-        System.exit(0);
-      }
+  public static void exitSLSRunner() {
+    LOG.info("SLSRunner tears down.");
+    if (exitAtTheFinish) {
+      System.exit(0);
     }
   }
 

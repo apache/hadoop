@@ -124,7 +124,7 @@ public abstract class QueueManagementChange {
 
   @Override
   public String toString() {
-    return "QueueManagementChange{" + "queue=" + queue.getQueueName()
+    return "QueueManagementChange{" + "queue=" + queue.getQueuePath()
         + ", updatedEntitlementsByPartition=" + queueTemplateUpdate
         + ", queueAction=" + queueAction + ", transitionToQueueState="
         + transitionToQueueState + '}';

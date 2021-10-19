@@ -33,13 +33,17 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegistrationsRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamenodeRegistrationsResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetNamespaceInfoResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateNamenodeRegistrationRequest;
@@ -104,6 +108,16 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
 
     MembershipState newState = getNamenodeRegistration(ns, nn);
     assertEquals(FederationNamenodeServiceState.ACTIVE, newState.getState());
+
+    // Override cache
+    UpdateNamenodeRegistrationRequest request1 =
+        UpdateNamenodeRegistrationRequest.newInstance(ns, nn,
+            FederationNamenodeServiceState.OBSERVER);
+    assertTrue(
+        membershipStore.updateNamenodeRegistration(request1).getResult());
+
+    MembershipState newState1 = getNamenodeRegistration(ns, nn);
+    assertEquals(FederationNamenodeServiceState.OBSERVER, newState1.getState());
   }
 
   @Test
@@ -160,7 +174,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
         router, ns,
         nn, "testcluster", "testblock-" + ns, "testrpc-"+ ns + nn,
         "testservice-"+ ns + nn, "testlifeline-"+ ns + nn,
-        "testweb-" + ns + nn, state, false);
+        "http", "testweb-" + ns + nn, state, false);
     return record;
   }
 
@@ -228,34 +242,35 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     String lifelineAddress = "testlifelineaddress";
     String blockPoolId = "testblockpool";
     String clusterId = "testcluster";
+    String webScheme = "http";
     String webAddress = "testwebaddress";
     boolean safemode = false;
 
     // Active
     MembershipState record = MembershipState.newInstance(
         ROUTERS[0], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
-        FederationNamenodeServiceState.ACTIVE, safemode);
+        rpcAddress, serviceAddress, lifelineAddress, webScheme,
+        webAddress, FederationNamenodeServiceState.ACTIVE, safemode);
     registrationList.add(record);
 
     // Expired
     record = MembershipState.newInstance(
         ROUTERS[1], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
-        FederationNamenodeServiceState.EXPIRED, safemode);
+        rpcAddress, serviceAddress, lifelineAddress, webScheme,
+        webAddress, FederationNamenodeServiceState.EXPIRED, safemode);
     registrationList.add(record);
 
     // Expired
     record = MembershipState.newInstance(
         ROUTERS[2], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
+        rpcAddress, serviceAddress, lifelineAddress, webScheme, webAddress,
         FederationNamenodeServiceState.EXPIRED, safemode);
     registrationList.add(record);
 
     // Expired
     record = MembershipState.newInstance(
         ROUTERS[3], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
+        rpcAddress, serviceAddress, lifelineAddress, webScheme, webAddress,
         FederationNamenodeServiceState.EXPIRED, safemode);
     registrationList.add(record);
     registerAndLoadRegistrations(registrationList);
@@ -283,6 +298,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     String lifelineAddress = "testlifelineaddress";
     String blockPoolId = "testblockpool";
     String clusterId = "testcluster";
+    String webScheme = "http";
     String webAddress = "testwebaddress";
     boolean safemode = false;
     long startingTime = Time.now();
@@ -290,7 +306,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // Expired
     MembershipState record = MembershipState.newInstance(
         ROUTERS[0], ns, nn, clusterId, blockPoolId,
-        rpcAddress, webAddress, lifelineAddress, webAddress,
+        rpcAddress, webAddress, lifelineAddress, webScheme, webAddress,
         FederationNamenodeServiceState.EXPIRED, safemode);
     record.setDateModified(startingTime - 10000);
     registrationList.add(record);
@@ -298,7 +314,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // Expired
     record = MembershipState.newInstance(
         ROUTERS[1], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
+        rpcAddress, serviceAddress, lifelineAddress, webScheme, webAddress,
         FederationNamenodeServiceState.EXPIRED, safemode);
     record.setDateModified(startingTime);
     registrationList.add(record);
@@ -306,7 +322,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // Expired
     record = MembershipState.newInstance(
         ROUTERS[2], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
+        rpcAddress, serviceAddress, lifelineAddress, webScheme, webAddress,
         FederationNamenodeServiceState.EXPIRED, safemode);
     record.setDateModified(startingTime);
     registrationList.add(record);
@@ -314,7 +330,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // Expired
     record = MembershipState.newInstance(
         ROUTERS[3], ns, nn, clusterId, blockPoolId,
-        rpcAddress, serviceAddress, lifelineAddress, webAddress,
+        rpcAddress, serviceAddress, lifelineAddress, webScheme, webAddress,
         FederationNamenodeServiceState.EXPIRED, safemode);
     record.setDateModified(startingTime);
     registrationList.add(record);
@@ -459,6 +475,56 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
         return false;
       }
     }, 100, 3000);
+  }
+
+  @Test
+  public void testNamespaceInfoWithUnavailableNameNodeRegistration()
+      throws IOException {
+    // Populate the state store with one ACTIVE NameNode entry
+    // and one UNAVAILABLE NameNode entry
+    // 1) ns0:nn0 - ACTIVE
+    // 2) ns0:nn1 - UNAVAILABLE
+    List<MembershipState> registrationList = new ArrayList<>();
+    String router = ROUTERS[0];
+    String ns = NAMESERVICES[0];
+    String rpcAddress = "testrpcaddress";
+    String serviceAddress = "testserviceaddress";
+    String lifelineAddress = "testlifelineaddress";
+    String blockPoolId = "testblockpool";
+    String clusterId = "testcluster";
+    String webScheme = "http";
+    String webAddress = "testwebaddress";
+    boolean safemode = false;
+
+    MembershipState record = MembershipState.newInstance(
+        router, ns, NAMENODES[0], clusterId, blockPoolId,
+        rpcAddress, serviceAddress, lifelineAddress, webScheme,
+        webAddress, FederationNamenodeServiceState.ACTIVE, safemode);
+    registrationList.add(record);
+
+    // Set empty clusterId and blockPoolId for UNAVAILABLE NameNode
+    record = MembershipState.newInstance(
+        router, ns, NAMENODES[1], "", "",
+        rpcAddress, serviceAddress, lifelineAddress, webScheme,
+        webAddress, FederationNamenodeServiceState.UNAVAILABLE, safemode);
+    registrationList.add(record);
+
+    registerAndLoadRegistrations(registrationList);
+
+    GetNamespaceInfoRequest request = GetNamespaceInfoRequest.newInstance();
+    GetNamespaceInfoResponse response
+        = membershipStore.getNamespaceInfo(request);
+    Set<FederationNamespaceInfo> namespaces = response.getNamespaceInfo();
+
+    // Verify only one namespace is registered
+    assertEquals(1, namespaces.size());
+
+    // Verify the registered namespace has a valid pair of clusterId
+    // and blockPoolId derived from ACTIVE NameNode
+    FederationNamespaceInfo namespace = namespaces.iterator().next();
+    assertEquals(ns, namespace.getNameserviceId());
+    assertEquals(clusterId, namespace.getClusterId());
+    assertEquals(blockPoolId, namespace.getBlockPoolId());
   }
 
   /**

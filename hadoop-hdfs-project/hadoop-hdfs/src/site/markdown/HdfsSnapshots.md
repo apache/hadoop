@@ -236,6 +236,23 @@ See also the corresponding Java API
 `SnapshottableDirectoryStatus[] getSnapshottableDirectoryListing()`
 in `DistributedFileSystem`.
 
+#### Get Snapshot Listing
+
+Get all the snapshots for a snapshottable directory.
+
+* Command:
+
+        hdfs lsSnapshot <snapshotRoot>
+
+* Arguments:
+
+    | --- | --- |
+    | path | The path of the snapshottable directory. |
+
+See also the corresponding Java API
+`SnapshotStatus[] getSnapshotListing()`
+in `DistributedFileSystem`.
+
 
 #### Get Snapshots Difference Report
 

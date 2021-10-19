@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop MapReduce NativeTask</name>
 
   <properties>
@@ -46,22 +46,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-common</artifactId>
       <scope>test</scope>
@@ -69,6 +53,11 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.lz4</groupId>
+      <artifactId>lz4-java</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -97,6 +86,8 @@
         <configuration>
           <excludes>
             <exclude>src/main/native/testData/*</exclude>
+            <exclude>**/lz4.h</exclude>
+            <exclude>**/lz4.c</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -156,9 +147,9 @@
                 </goals>
                 <configuration>
                   <target>
-                    <copy file="${basedir}/../../../hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.h"
+                    <copy file="${basedir}/src/main/native/lz4/lz4.h"
                       todir="${project.build.directory}/native/" />
-                    <copy file="${basedir}/../../../hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c"
+                    <copy file="${basedir}/src/main/native/lz4/lz4.c"
                       todir="${project.build.directory}/native/" />
                     <copy todir="${project.build.directory}/native/test/testData"
                       overwrite="true">

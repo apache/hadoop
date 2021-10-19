@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceConfiguration;
@@ -80,7 +80,7 @@ import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
 import org.apache.hadoop.yarn.util.FSDownload;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 public class AuxServices extends AbstractService
     implements ServiceStateChangeListener, EventHandler<AuxServicesEvent> {
@@ -311,7 +311,8 @@ public class AuxServices extends AbstractService
    * @return path of the downloaded file
    * @throws IOException
    */
-  private Path maybeDownloadJars(String sName, String className, String
+  @VisibleForTesting
+  protected Path maybeDownloadJars(String sName, String className, String
       remoteFile, AuxServiceFile.TypeEnum type, Configuration conf)
       throws IOException {
     // load AuxiliaryService from remote classpath
@@ -351,7 +352,7 @@ public class AuxServices extends AbstractService
     FileStatus[] allSubDirs = localLFS.util().listStatus(nmAuxDir);
     for (FileStatus sub : allSubDirs) {
       if (sub.getPath().getName().equals(downloadDest.getName())) {
-        return new Path(targetDirPath + Path.SEPARATOR + "*");
+        return targetDirPath;
       } else {
         if (sub.getPath().getName().contains(className) &&
             !sub.getPath().getName().endsWith(DEL_SUFFIX)) {

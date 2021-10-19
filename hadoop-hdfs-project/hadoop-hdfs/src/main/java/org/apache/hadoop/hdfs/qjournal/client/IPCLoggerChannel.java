@@ -27,6 +27,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -50,21 +52,21 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StopWatch;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.net.InetAddresses;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.common.util.concurrent.UncaughtExceptionHandlers;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.UncaughtExceptionHandlers;
 
 /**
  * Channel to a remote JournalNode using Hadoop IPC.
@@ -233,13 +235,13 @@ public class IPCLoggerChannel implements AsyncLogger {
         true);
     
     RPC.setProtocolEngine(confCopy,
-        QJournalProtocolPB.class, ProtobufRpcEngine.class);
+        QJournalProtocolPB.class, ProtobufRpcEngine2.class);
     return SecurityUtil.doAsLoginUser(
         new PrivilegedExceptionAction<QJournalProtocol>() {
           @Override
           public QJournalProtocol run() throws IOException {
             RPC.setProtocolEngine(confCopy,
-                QJournalProtocolPB.class, ProtobufRpcEngine.class);
+                QJournalProtocolPB.class, ProtobufRpcEngine2.class);
             QJournalProtocolPB pbproxy = RPC.getProxy(
                 QJournalProtocolPB.class,
                 RPC.getProtocolVersion(QJournalProtocolPB.class),
@@ -270,13 +272,18 @@ public class IPCLoggerChannel implements AsyncLogger {
    */
   @VisibleForTesting
   protected ExecutorService createParallelExecutor() {
-    return Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder()
-            .setDaemon(true)
+    int numThreads =
+        conf.getInt(DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_KEY,
+            DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT);
+    ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(numThreads,
+        numThreads, 60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(),
+        new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Logger channel (from parallel executor) to " + addr)
-            .setUncaughtExceptionHandler(
-                UncaughtExceptionHandlers.systemExit())
+            .setUncaughtExceptionHandler(UncaughtExceptionHandlers.systemExit())
             .build());
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
+    return threadPoolExecutor;
   }
   
   @Override

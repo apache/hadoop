@@ -18,7 +18,11 @@
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
+project(hadoop_hdfs_native_client)
+
 enable_testing()
+
+set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)
 include(HadoopCommon)
@@ -65,6 +69,8 @@ if(WIN32)
     set(OUT_DIR bin)
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    # using old default behavior on GCC >= 10.0
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcommon")
     set(OS_DIR ${CMAKE_SOURCE_DIR}/main/native/libhdfs/os/posix)
 
     # IMPORTANT: OUT_DIR MUST be relative to maven's
@@ -85,7 +91,8 @@ function(build_libhdfs_test NAME LIBRARY)
             list(APPEND FILES ${CMAKE_SOURCE_DIR}/main/native/libhdfs-tests/${FIL})
         endif()
     endforeach()
-    add_executable("${NAME}_${LIBRARY}" ${FILES})
+    add_executable("${NAME}_${LIBRARY}" $<TARGET_OBJECTS:x_platform_obj_c_api> $<TARGET_OBJECTS:x_platform_obj> ${FILES})
+    target_include_directories("${NAME}_${LIBRARY}" PRIVATE main/native/libhdfspp/lib)
 endfunction()
 
 function(add_libhdfs_test NAME LIBRARY)
@@ -151,7 +158,8 @@ add_subdirectory(main/native/libhdfs-examples)
 # Temporary fix to disable Libhdfs++ build on older systems that do not support thread_local
 include(CheckCXXSourceCompiles)
 unset (THREAD_LOCAL_SUPPORTED CACHE)
-set (CMAKE_REQUIRED_DEFINITIONS "-std=c++11")
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_REQUIRED_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
 check_cxx_source_compiles(
     "#include <thread>

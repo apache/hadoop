@@ -27,8 +27,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protocol buffer based implementation of {@link SubClusterInfo}.

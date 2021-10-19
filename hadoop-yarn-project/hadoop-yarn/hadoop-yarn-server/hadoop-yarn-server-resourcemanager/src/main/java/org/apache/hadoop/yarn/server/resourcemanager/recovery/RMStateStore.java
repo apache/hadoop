@@ -39,8 +39,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -993,7 +993,8 @@ public abstract class RMStateStore extends AbstractService {
             appAttempt.getMasterContainer(),
             credentials, appAttempt.getStartTime(),
             resUsage.getResourceUsageSecondsMap(),
-            attempMetrics.getPreemptedResourceSecondsMap());
+            attempMetrics.getPreemptedResourceSecondsMap(),
+            attempMetrics.getTotalAllocatedContainers());
 
     getRMStateStoreEventHandler().handle(
       new RMStateStoreAppAttemptEvent(attemptState));

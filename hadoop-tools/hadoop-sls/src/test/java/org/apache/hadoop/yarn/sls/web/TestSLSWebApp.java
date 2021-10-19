@@ -23,6 +23,7 @@ import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.Map;
@@ -34,7 +35,7 @@ public class TestSLSWebApp {
   @Test
   public void testSimulateInfoPageHtmlTemplate() throws Exception {
     String simulateInfoTemplate = FileUtils.readFileToString(
-            new File("src/main/html/simulate.info.html.template"));
+            new File("src/main/html/simulate.info.html.template"), StandardCharsets.UTF_8);
 
     Map<String, Object> simulateInfoMap = new HashMap<>();
     simulateInfoMap.put("Number of racks", 10);
@@ -72,7 +73,7 @@ public class TestSLSWebApp {
   @Test
   public void testSimulatePageHtmlTemplate() throws Exception {
     String simulateTemplate = FileUtils.readFileToString(
-            new File("src/main/html/simulate.html.template"));
+            new File("src/main/html/simulate.html.template"), StandardCharsets.UTF_8);
 
     Set<String> queues = new HashSet<String>();
     queues.add("sls_queue_1");
@@ -96,7 +97,7 @@ public class TestSLSWebApp {
   @Test
   public void testTrackPageHtmlTemplate() throws Exception {
     String trackTemplate = FileUtils.readFileToString(
-            new File("src/main/html/track.html.template"));
+            new File("src/main/html/track.html.template"), StandardCharsets.UTF_8);
     String trackedQueueInfo = "";
     Set<String> trackedQueues = new HashSet<String>();
     trackedQueues.add("sls_queue_1");

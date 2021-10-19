@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.QueueStatistics;

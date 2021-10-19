@@ -18,6 +18,35 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.findQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ExpectedCapacities;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupBlockedQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupOtherBlockedQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfWithoutChildrenOfB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfiguration;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B3_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithB1AsParentQueue;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfigurationWithoutB1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.checkPendingResource;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.checkPendingResourceGreaterThanZero;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.toSet;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.waitforNMRegistered;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
@@ -37,6 +66,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -52,7 +83,9 @@ import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.service.ServiceStateException;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -60,6 +93,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -92,6 +126,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -109,6 +144,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -118,7 +155,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-
+import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
@@ -137,6 +174,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.CSQueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -144,6 +182,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestQueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator.AllocationState;
@@ -162,6 +201,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.SimpleCandidateNodeSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -181,13 +221,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-public class TestCapacityScheduler extends CapacitySchedulerTestBase {
+public class TestCapacityScheduler {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCapacityScheduler.class);
   private final static ContainerUpdates NULL_UPDATE_REQUESTS =
@@ -199,6 +239,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
   @Before
   public void setUp() throws Exception {
+    ResourceUtils.resetResourceTypes(new Configuration());
+    DefaultMetricsSystem.setMiniClusterMode(true);
     resourceManager = new ResourceManager() {
       @Override
       protected RMNodeLabelsManager createNodeLabelManager() {
@@ -233,9 +275,10 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
   private NodeManager registerNode(ResourceManager rm, String hostName,
       int containerManagerPort, int httpPort, String rackName,
-          Resource capability) throws IOException, YarnException {
+      Resource capability, NodeStatus nodeStatus)
+      throws IOException, YarnException {
     NodeManager nm = new NodeManager(hostName,
-        containerManagerPort, httpPort, rackName, capability, rm);
+        containerManagerPort, httpPort, rackName, capability, rm, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(rm.getRMContext().getRMNodes()
             .get(nm.getNodeId()));
@@ -277,11 +320,11 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
-                                   int httpPort, String rackName,
-                                   Resource capability)
-          throws IOException, YarnException {
+      int httpPort, String rackName,
+      Resource capability, NodeStatus nodeStatus)
+      throws IOException, YarnException {
     NodeManager nm = new NodeManager(hostName, containerManagerPort, httpPort,
-        rackName, capability, resourceManager);
+        rackName, capability, resourceManager, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(resourceManager.getRMContext()
             .getRMNodes().get(nm.getNodeId()));
@@ -294,17 +337,19 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     LOG.info("--- START: testCapacityScheduler ---");
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(4 * GB, 1));
+            Resources.createResource(4 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(2 * GB, 1));
+            Resources.createResource(2 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -434,11 +479,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     when(mC.getConfigurationProvider()).thenReturn(
         new LocalConfigurationProvider());
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host0 = "host_0";
     NodeManager nm0 =
         registerNode(rm, host0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(10 * GB, 10));
+        Resources.createResource(10 * GB, 10), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority0 = Priority.newInstance(0);
@@ -536,11 +583,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     when(mC.getConfigurationProvider()).thenReturn(
             new LocalConfigurationProvider());
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host0 = "host_0";
     NodeManager nm0 =
         registerNode(rm, host0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(10 * GB, 10));
+        Resources.createResource(10 * GB, 10), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority0 = Priority.newInstance(0);
@@ -623,225 +672,6 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     resourceManager.getResourceScheduler().handle(nodeUpdate);
   }
 
-  /**
-   * @param conf
-   * @return
-   *           root
-   *          /      \
-   *        a         b
-   *       / \     /  |  \
-   *      a1  a2  b1  b2 b3
-   *
-   */
-  private CapacitySchedulerConfiguration setupQueueConfiguration(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] {"a1", "a2"});
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    conf.setQueues(B, new String[] {"b1", "b2", "b3"});
-    conf.setCapacity(B1, B1_CAPACITY);
-    conf.setUserLimitFactor(B1, 100.0f);
-    conf.setCapacity(B2, B2_CAPACITY);
-    conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, B3_CAPACITY);
-    conf.setUserLimitFactor(B3, 100.0f);
-
-    LOG.info("Setup top-level queues a and b");
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has deleted all childred of queue(b)
-   *           root
-   *          /     \
-   *        a        b
-   *       / \
-   *      a1  a2
-   */
-  private CapacitySchedulerConfiguration setupQueueConfWithOutChildrenOfB(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a","b"});
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] {"a1","a2"});
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    LOG.info("Setup top-level queues a and b (without children)");
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has deleted a queue(b1)
-   *           root
-   *          /     \
-   *        a        b
-   *       / \       | \
-   *      a1  a2    b2  b3
-   */
-  private CapacitySchedulerConfiguration setupQueueConfigurationWithOutB1(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { "a", "b" });
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    conf.setQueues(B, new String[] { "b2", "b3" });
-    conf.setCapacity(B2, B2_CAPACITY + B1_CAPACITY); //as B1 is deleted
-    conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, B3_CAPACITY);
-    conf.setUserLimitFactor(B3, 100.0f);
-
-    LOG.info("Setup top-level queues a and b (without b3)");
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has converted b1 to parent queue
-   *           root
-   *          /     \
-   *        a        b
-   *       / \    /  |  \
-   *      a1  a2 b1  b2  b3
-   *              |
-   *             b11
-   */
-  private CapacitySchedulerConfiguration
-      setupQueueConfigurationWithB1AsParentQueue(
-          CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { "a", "b" });
-
-    conf.setCapacity(A, A_CAPACITY);
-    conf.setCapacity(B, B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    conf.setQueues(B, new String[] {"b1","b2", "b3"});
-    conf.setCapacity(B1, B1_CAPACITY);
-    conf.setUserLimitFactor(B1, 100.0f);
-    conf.setCapacity(B2, B2_CAPACITY);
-    conf.setUserLimitFactor(B2, 100.0f);
-    conf.setCapacity(B3, B3_CAPACITY);
-    conf.setUserLimitFactor(B3, 100.0f);
-
-    // Set childQueue for B1
-    conf.setQueues(B1, new String[] {"b11"});
-    String B11 = B1 + ".b11";
-    conf.setCapacity(B11, 100.0f);
-    conf.setUserLimitFactor(B11, 100.0f);
-
-    return conf;
-  }
-
-  /**
-   * @param conf, to be modified
-   * @return, CS configuration which has deleted a
-   *          Parent queue(b)
-   */
-  private CapacitySchedulerConfiguration setupQueueConfigurationWithOutB(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
-
-    conf.setCapacity(A, A_CAPACITY + B_CAPACITY);
-
-    // Define 2nd-level queues
-    conf.setQueues(A, new String[] { "a1", "a2" });
-    conf.setCapacity(A1, A1_CAPACITY);
-    conf.setUserLimitFactor(A1, 100.0f);
-    conf.setCapacity(A2, A2_CAPACITY);
-    conf.setUserLimitFactor(A2, 100.0f);
-
-    LOG.info("Setup top-level queues a");
-    return conf;
-  }
-
-
-  private CapacitySchedulerConfiguration setupBlockedQueueConfiguration(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[]{"a", "b"});
-
-    conf.setCapacity(A, 80f);
-    conf.setCapacity(B, 20f);
-    conf.setUserLimitFactor(A, 100);
-    conf.setUserLimitFactor(B, 100);
-    conf.setMaximumCapacity(A, 100);
-    conf.setMaximumCapacity(B, 100);
-    LOG.info("Setup top-level queues a and b");
-    return conf;
-  }
-
-  private CapacitySchedulerConfiguration setupOtherBlockedQueueConfiguration(
-      CapacitySchedulerConfiguration conf) {
-
-    // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[]{"p1", "p2"});
-
-    conf.setCapacity(P1, 50f);
-    conf.setMaximumCapacity(P1, 50f);
-    conf.setCapacity(P2, 50f);
-    conf.setMaximumCapacity(P2, 100f);
-    // Define 2nd-level queues
-    conf.setQueues(P1, new String[] {"x1", "x2"});
-    conf.setCapacity(X1, 80f);
-    conf.setMaximumCapacity(X1, 100f);
-    conf.setUserLimitFactor(X1, 2f);
-    conf.setCapacity(X2, 20f);
-    conf.setMaximumCapacity(X2, 100f);
-    conf.setUserLimitFactor(X2, 2f);
-
-    conf.setQueues(P2, new String[]{"y1", "y2"});
-    conf.setCapacity(Y1, 80f);
-    conf.setUserLimitFactor(Y1, 2f);
-    conf.setCapacity(Y2, 20f);
-    conf.setUserLimitFactor(Y2, 2f);
-    return conf;
-  }
 
   @Test
   public void testMaximumCapacitySetup() {
@@ -904,74 +734,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     conf.setCapacity(A, 80f);
     conf.setCapacity(B, 20f);
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, 80f, 20f);
+    checkQueueStructureCapacities(cs, getDefaultCapacities(80f / 100.0f, 20f / 100.0f));
     cs.stop();
-  }
-
-  void checkQueueCapacities(CapacityScheduler cs,
-      float capacityA, float capacityB) {
-    CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueA = findQueue(rootQueue, A);
-    CSQueue queueB = findQueue(rootQueue, B);
-    CSQueue queueA1 = findQueue(queueA, A1);
-    CSQueue queueA2 = findQueue(queueA, A2);
-    CSQueue queueB1 = findQueue(queueB, B1);
-    CSQueue queueB2 = findQueue(queueB, B2);
-    CSQueue queueB3 = findQueue(queueB, B3);
-
-    float capA = capacityA / 100.0f;
-    float capB = capacityB / 100.0f;
-
-    checkQueueCapacity(queueA, capA, capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueB, capB, capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueA1, A1_CAPACITY / 100.0f,
-        (A1_CAPACITY/100.0f) * capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueA2, A2_CAPACITY / 100.0f,
-        (A2_CAPACITY/100.0f) * capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueB1, B1_CAPACITY / 100.0f,
-        (B1_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueB2, B2_CAPACITY / 100.0f,
-        (B2_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueB3, B3_CAPACITY / 100.0f,
-        (B3_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-  }
-
-  void checkQueueCapacity(CSQueue q, float expectedCapacity,
-      float expectedAbsCapacity, float expectedMaxCapacity,
-      float expectedAbsMaxCapacity) {
-    final float epsilon = 1e-5f;
-    assertEquals("capacity", expectedCapacity, q.getCapacity(), epsilon);
-    assertEquals("absolute capacity", expectedAbsCapacity,
-        q.getAbsoluteCapacity(), epsilon);
-    assertEquals("maximum capacity", expectedMaxCapacity,
-        q.getMaximumCapacity(), epsilon);
-    assertEquals("absolute maximum capacity", expectedAbsMaxCapacity,
-        q.getAbsoluteMaximumCapacity(), epsilon);
-  }
-
-  CSQueue findQueue(CSQueue root, String queuePath) {
-    if (root.getQueuePath().equals(queuePath)) {
-      return root;
-    }
-
-    List<CSQueue> childQueues = root.getChildQueues();
-    if (childQueues != null) {
-      for (CSQueue q : childQueues) {
-        if (queuePath.startsWith(q.getQueuePath())) {
-          CSQueue result = findQueue(q, queuePath);
-          if (result != null) {
-            return result;
-          }
-        }
-      }
-    }
-
-    return null;
   }
 
   private void checkApplicationResourceUsage(int expected,
@@ -1089,35 +858,40 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-      null, new RMContainerTokenSecretManager(conf),
-      new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM(), null));
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+        null, new RMContainerTokenSecretManager(conf),
+        new NMTokenSecretManagerInRM(conf),
+        new ClientToAMTokenSecretManagerInRM(), null));
+    checkQueueStructureCapacities(cs);
 
     // Add a new queue b4
-    String B4 = B + ".b4";
-    float B4_CAPACITY = 10;
+    final String b4 = B + ".b4";
+    final float b4Capacity = 10;
+    final float modifiedB3Capacity = B3_CAPACITY - b4Capacity;
 
-    B3_CAPACITY -= B4_CAPACITY;
     try {
       conf.setCapacity(A, 80f);
       conf.setCapacity(B, 20f);
-      conf.setQueues(B, new String[] {"b1", "b2", "b3", "b4"});
+      conf.setQueues(B, new String[]{"b1", "b2", "b3", "b4"});
       conf.setCapacity(B1, B1_CAPACITY);
       conf.setCapacity(B2, B2_CAPACITY);
-      conf.setCapacity(B3, B3_CAPACITY);
-      conf.setCapacity(B4, B4_CAPACITY);
-      cs.reinitialize(conf,mockContext);
-      checkQueueCapacities(cs, 80f, 20f);
+      conf.setCapacity(B3, modifiedB3Capacity);
+      conf.setCapacity(b4, b4Capacity);
+      cs.reinitialize(conf, mockContext);
+
+      final float capA = 80f / 100.0f;
+      final float capB = 20f / 100.0f;
+      Map<String, ExpectedCapacities> expectedCapacities = getDefaultCapacities(capA, capB);
+      expectedCapacities.put(B3, new ExpectedCapacities(modifiedB3Capacity / 100.0f, capB));
+      expectedCapacities.put(b4, new ExpectedCapacities(b4Capacity / 100.0f, capB));
+      checkQueueStructureCapacities(cs, expectedCapacities);
 
       // Verify parent for B4
       CSQueue rootQueue = cs.getRootQueue();
       CSQueue queueB = findQueue(rootQueue, B);
-      CSQueue queueB4 = findQueue(queueB, B4);
+      CSQueue queueB4 = findQueue(queueB, b4);
 
       assertEquals(queueB, queueB4.getParent());
     } finally {
-      B3_CAPACITY += B4_CAPACITY;
       cs.stop();
     }
   }
@@ -1126,6 +900,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     QueueInfo queueInfo = resourceManager.getResourceScheduler().getQueueInfo("a", true, true);
     Assert.assertEquals("Queue Name should be a", "a",
         queueInfo.getQueueName());
+    Assert.assertEquals("Queue Path should be root.a", "root.a",
+        queueInfo.getQueuePath());
     Assert.assertEquals("Child Queues size should be 2", 2,
         queueInfo.getChildQueues().size());
 
@@ -1162,32 +938,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1, host);
     cs.handle(new NodeAddedSchedulerEvent(node));
 
-    ApplicationId appId = BuilderUtils.newApplicationId(100, 1);
-    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
-        appId, 1);
-
-    RMAppAttemptMetrics attemptMetric =
-        new RMAppAttemptMetrics(appAttemptId, rm.getRMContext());
-    RMAppImpl app = mock(RMAppImpl.class);
-    when(app.getApplicationId()).thenReturn(appId);
-    RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
-    Container container = mock(Container.class);
-    when(attempt.getMasterContainer()).thenReturn(container);
-    ApplicationSubmissionContext submissionContext = mock(
-        ApplicationSubmissionContext.class);
-    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
-    when(attempt.getAppAttemptId()).thenReturn(appAttemptId);
-    when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
-    when(app.getCurrentAppAttempt()).thenReturn(attempt);
-
-    rm.getRMContext().getRMApps().put(appId, app);
-
-    SchedulerEvent addAppEvent =
-        new AppAddedSchedulerEvent(appId, "default", "user");
-    cs.handle(addAppEvent);
-    SchedulerEvent addAttemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    cs.handle(addAttemptEvent);
+    ApplicationAttemptId appAttemptId = appHelper(rm, cs, 100, 1, "default", "user");
 
     // Verify the blacklist can be updated independent of requesting containers
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(), null,
@@ -1228,60 +979,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1, host);
     cs.handle(new NodeAddedSchedulerEvent(node));
 
-    //add app begin
-    ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
-    ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
-        appId1, 1);
-
-    RMAppAttemptMetrics attemptMetric1 =
-        new RMAppAttemptMetrics(appAttemptId1, rm.getRMContext());
-    RMAppImpl app1 = mock(RMAppImpl.class);
-    when(app1.getApplicationId()).thenReturn(appId1);
-    RMAppAttemptImpl attempt1 = mock(RMAppAttemptImpl.class);
-    Container container = mock(Container.class);
-    when(attempt1.getMasterContainer()).thenReturn(container);
-    ApplicationSubmissionContext submissionContext = mock(
-        ApplicationSubmissionContext.class);
-    when(attempt1.getSubmissionContext()).thenReturn(submissionContext);
-    when(attempt1.getAppAttemptId()).thenReturn(appAttemptId1);
-    when(attempt1.getRMAppAttemptMetrics()).thenReturn(attemptMetric1);
-    when(app1.getCurrentAppAttempt()).thenReturn(attempt1);
-
-    rm.getRMContext().getRMApps().put(appId1, app1);
-
-    SchedulerEvent addAppEvent1 =
-        new AppAddedSchedulerEvent(appId1, "default", "user");
-    cs.handle(addAppEvent1);
-    SchedulerEvent addAttemptEvent1 =
-        new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
-    cs.handle(addAttemptEvent1);
-    //add app end
-
-    //add app begin
-    ApplicationId appId2 = BuilderUtils.newApplicationId(100, 2);
-    ApplicationAttemptId appAttemptId2 = BuilderUtils.newApplicationAttemptId(
-        appId2, 1);
-
-    RMAppAttemptMetrics attemptMetric2 =
-        new RMAppAttemptMetrics(appAttemptId2, rm.getRMContext());
-    RMAppImpl app2 = mock(RMAppImpl.class);
-    when(app2.getApplicationId()).thenReturn(appId2);
-    RMAppAttemptImpl attempt2 = mock(RMAppAttemptImpl.class);
-    when(attempt2.getMasterContainer()).thenReturn(container);
-    when(attempt2.getSubmissionContext()).thenReturn(submissionContext);
-    when(attempt2.getAppAttemptId()).thenReturn(appAttemptId2);
-    when(attempt2.getRMAppAttemptMetrics()).thenReturn(attemptMetric2);
-    when(app2.getCurrentAppAttempt()).thenReturn(attempt2);
-
-    rm.getRMContext().getRMApps().put(appId2, app2);
-
-    SchedulerEvent addAppEvent2 =
-        new AppAddedSchedulerEvent(appId2, "default", "user");
-    cs.handle(addAppEvent2);
-    SchedulerEvent addAttemptEvent2 =
-        new AppAttemptAddedSchedulerEvent(appAttemptId2, false);
-    cs.handle(addAttemptEvent2);
-    //add app end
+    ApplicationAttemptId appAttemptId1 = appHelper(rm, cs, 100, 1, "default", "user");
+    ApplicationAttemptId appAttemptId2 = appHelper(rm, cs, 100, 2, "default", "user");
 
     RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -1301,8 +1000,9 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     //This happens because app2 has no demand/a magnitude of NaN, which
     //results in app1 and app2 being equal in the fairness comparison and
     //failling back to fifo (start) ordering
-    assertEquals(q.getOrderingPolicy().getAssignmentIterator().next().getId(),
-      appId1.toString());
+    assertEquals(q.getOrderingPolicy().getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR).next().getId(),
+        appAttemptId1.getApplicationId().toString());
 
     //Now, allocate for app2 (this would be the first/AM allocation)
     ResourceRequest r2 = TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 1, true, priority, recordFactory);
@@ -1314,8 +1014,9 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     //verify re-ordering based on the allocation alone
 
     //Now, the first app for assignment is app2
-    assertEquals(q.getOrderingPolicy().getAssignmentIterator().next().getId(),
-      appId2.toString());
+    assertEquals(q.getOrderingPolicy().getAssignmentIterator(
+        IteratorSelector.EMPTY_ITERATOR_SELECTOR).next().getId(),
+        appAttemptId2.getApplicationId().toString());
 
     rm.stop();
   }
@@ -1331,7 +1032,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     MockNM nm = rm.registerNode("127.0.0.1:1234", 4 * GB);
     NodeId nmId = nm.getNodeId();
-    RMApp app = rm.submitApp(2048);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 2GB on nm
     nm.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app.getCurrentAppAttempt();
@@ -1575,7 +1276,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Map<ApplicationAccessType, String> acls =
         new HashMap<ApplicationAccessType, String>(2);
     acls.put(ApplicationAccessType.VIEW_APP, "*");
-    RMApp app = rm.submitApp(1024, "appname", "appuser", acls);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("appname")
+            .withUser("appuser")
+            .withAcls(acls)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
 
     nm1.nodeHeartbeat(true);
 
@@ -1721,7 +1428,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(CONTAINER_MEMORY);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(CONTAINER_MEMORY, rm1);
     MockAM am0 = MockRM.launchAM(app0, rm1, nm1);
     am0.registerAppAttempt();
 
@@ -1787,7 +1494,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
-    RMApp app1 = rm1.submitApp(1024);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
 
@@ -1860,6 +1567,46 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   }
 
   @Test
+  public void testAppSubmission() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    conf.setQueues(A, new String[] {"a1", "a2", "b"});
+    conf.setCapacity(A1, 20);
+    conf.setCapacity("root.a.b", 10);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    RMApp noParentQueueApp = submitAppAndWaitForState(rm, "q", RMAppState.FAILED);
+    Assert.assertEquals(RMAppState.FAILED, noParentQueueApp.getState());
+
+    RMApp ambiguousQueueApp = submitAppAndWaitForState(rm, "b", RMAppState.FAILED);
+    Assert.assertEquals(RMAppState.FAILED, ambiguousQueueApp.getState());
+
+    RMApp emptyPartQueueApp = submitAppAndWaitForState(rm, "root..a1", RMAppState.FAILED);
+    Assert.assertEquals(RMAppState.FAILED, emptyPartQueueApp.getState());
+
+    RMApp failedAutoQueue = submitAppAndWaitForState(rm, "root.a.b.c.d", RMAppState.FAILED);
+    Assert.assertEquals(RMAppState.FAILED, failedAutoQueue.getState());
+  }
+
+  private RMApp submitAppAndWaitForState(MockRM rm, String b, RMAppState state) throws Exception {
+    MockRMAppSubmissionData ambiguousQueueAppData =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withWaitForAppAcceptedState(false)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue(b)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, ambiguousQueueAppData);
+    rm.waitForState(app1.getApplicationId(), state);
+    return app1;
+  }
+
+  @Test
   public void testMoveAppBasic() throws Exception {
     MockRM rm = setUpMove();
     AbstractYarnScheduler scheduler =
@@ -1867,7 +1614,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     QueueMetrics metrics = scheduler.getRootQueueMetrics();
     Assert.assertEquals(0, metrics.getAppsPending());
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -1939,8 +1694,20 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Assert.assertEquals(0, metrics.getAppsPending());
 
     // submit two apps in a1
-    RMApp app1 = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
-    RMApp app2 = rm.submitApp(GB, "test-move-2", "user_0", null, "a1");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .build());
+    RMApp app2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-2")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .build());
 
     appsInA1 = scheduler.getAppsInQueue("a1");
     appsInB1 = scheduler.getAppsInQueue("b1");
@@ -1949,7 +1716,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     assertEquals(2, metrics.getAppsPending());
 
     // submit one app in b1
-    RMApp app3 = rm.submitApp(GB, "test-move-2", "user_0", null, "b1");
+    RMApp app3 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-2")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("b1")
+            .build());
 
     appsInA1 = scheduler.getAppsInQueue("a1");
     appsInB1 = scheduler.getAppsInQueue("b1");
@@ -1993,7 +1766,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         (AbstractYarnScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2046,17 +1827,20 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   public void testMoveAppForMoveToQueueWithFreeCap() throws Exception {
 
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(4 * GB, 1));
+        Resources.createResource(4 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(2 * GB, 1));
+        Resources.createResource(2 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2162,17 +1946,19 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2284,11 +2070,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(6 * GB, 1));
+        Resources.createResource(6 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2332,17 +2120,19 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   public void testMoveAppQueueMetricsCheck() throws Exception {
     ResourceScheduler scheduler = resourceManager.getResourceScheduler();
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // Register node2
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-            Resources.createResource(5 * GB, 1));
+        Resources.createResource(5 * GB, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -2476,7 +2266,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
   private int getNumAppsInQueue(String name, List<CSQueue> queues) {
     for (CSQueue queue : queues) {
-      if (queue.getQueueName().equals(name)) {
+      if (queue.getQueueShortName().equals(name)) {
         return queue.getNumApplications();
       }
     }
@@ -2509,7 +2299,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         (AbstractYarnScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2571,7 +2369,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2629,7 +2435,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2752,34 +2566,9 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     RMNode node = MockNodes.newNodeInfo(0, newResource, 1, "127.0.0.1");
     SchedulerEvent addNode = new NodeAddedSchedulerEvent(node);
     sch.handle(addNode);
-    // create appid
-    ApplicationId appId = BuilderUtils.newApplicationId(100, 1);
-    ApplicationAttemptId appAttemptId =
-        BuilderUtils.newApplicationAttemptId(appId, 1);
 
-    RMAppAttemptMetrics attemptMetric =
-        new RMAppAttemptMetrics(appAttemptId, rm.getRMContext());
-    RMAppImpl app = mock(RMAppImpl.class);
-    when(app.getApplicationId()).thenReturn(appId);
-    RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
-    Container container = mock(Container.class);
-    when(attempt.getMasterContainer()).thenReturn(container);
-    ApplicationSubmissionContext submissionContext =
-        mock(ApplicationSubmissionContext.class);
-    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
-    when(attempt.getAppAttemptId()).thenReturn(appAttemptId);
-    when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
-    when(app.getCurrentAppAttempt()).thenReturn(attempt);
+    ApplicationAttemptId appAttemptId = appHelper(rm, sch, 100, 1, "a1", "user");
 
-    rm.getRMContext().getRMApps().put(appId, app);
-    // Add application
-    SchedulerEvent addAppEvent =
-        new AppAddedSchedulerEvent(appId, "a1", "user");
-    sch.handle(addAppEvent);
-    // Add application attempt
-    SchedulerEvent addAttemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    sch.handle(addAttemptEvent);
     // get Queues
     CSQueue queueA1 = sch.getQueue("a1");
     CSQueue queueB = sch.getQueue("b");
@@ -2810,7 +2599,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     sch.handle(new AppAttemptRemovedSchedulerEvent(appAttemptId,
         RMAppAttemptState.KILLED, true));
     // Move application to queue b1
-    sch.moveApplication(appId, "b1");
+    sch.moveApplication(appAttemptId.getApplicationId(), "b1");
     // Check queue metrics after move
     Assert.assertEquals(0, queueA1.getNumApplications());
     Assert.assertEquals(1, queueB.getNumApplications());
@@ -2818,7 +2607,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // Release attempt add event
     ApplicationAttemptId appAttemptId2 =
-        BuilderUtils.newApplicationAttemptId(appId, 2);
+        BuilderUtils.newApplicationAttemptId(appAttemptId.getApplicationId(), 2);
     SchedulerEvent addAttemptEvent2 =
         new AppAttemptAddedSchedulerEvent(appAttemptId2, true);
     sch.handle(addAttemptEvent2);
@@ -2887,7 +2676,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         (AbstractYarnScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2932,7 +2729,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     YarnScheduler scheduler = rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
@@ -2993,7 +2798,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     MockNM nm2 = rm.registerNode("127.0.0.1:1235", 10 * GB, 4);
     rm.registerNode("127.0.0.1:1236", 10 * GB, 4);
 
-    RMApp app1 = rm.submitApp(1024);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -3099,7 +2904,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     assertEquals("max allocation in CS",
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
@@ -3194,7 +2999,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);
@@ -3265,7 +3070,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     assertEquals("max allocation MB in CS", 10240,
         cs.getMaximumResourceCapability().getMemorySize());
@@ -3311,7 +3116,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     assertEquals("max allocation MB in CS", 10240,
         cs.getMaximumResourceCapability().getMemorySize());
@@ -3386,7 +3191,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);
@@ -3497,7 +3302,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, mockContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     setMaxAllocation(conf, CapacitySchedulerConfiguration.ROOT,
             "memory-mb=" + largerMem + ",vcores=2");
@@ -3565,7 +3370,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId attemptId =
         app1.getCurrentAppAttempt().getAppAttemptId();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
@@ -3716,7 +3529,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         new MockNM("127.0.0.1:1234", 100 * GB, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     waitContainerAllocated(am1, 1 * GB, 1, 2, rm1, nm1);
@@ -3726,7 +3547,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     Assert.assertEquals(69 * GB,
         am1.doHeartbeat().getAvailableResources().getMemorySize());
 
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "b2");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // Allocate 5 containers, each one is 8 GB in am2 (40 GB in total)
@@ -3744,7 +3573,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // Now we submit app3 to a1 (in higher level hierarchy), to see if headroom
     // of app1 (in queue b1) updated correctly
-    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm1);
 
     // Allocate 3 containers, each one is 8 GB in am3 (24 GB in total)
@@ -3797,12 +3634,28 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // Launch app1 in a1, resource usage is 1GB (am) + 4GB * 2 = 9GB 
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     waitContainerAllocated(am1, 4 * GB, 2, 2, rm1, nm1);
 
     // Try to launch app2 in a2, asked 2GB, should success 
-    RMApp app2 = rm1.submitApp(2 * GB, "app", "user", null, "a2");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a2")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
     try {
       // Try to allocate a container, a's usage=11G/max=12
@@ -3845,11 +3698,27 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm2.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
 
     // Launch app2 in queue=b1  
-    RMApp app2 = rm.submitApp(8 * GB, "app", "user", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(8 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
     // am1 asks for 8 * 1GB container for no label
@@ -3965,7 +3834,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         amMemory < minAllocMb);
     Resource minAllocResource = Resource.newInstance(minAllocMb, 1);
     String queueName = "a1";
-    RMApp rmApp = rm.submitApp(amMemory, "app-1", "user_0", null, queueName);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(amMemory, rm)
+            .withAppName("app-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue(queueName)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp rmApp = MockRMAppSubmitter.submit(rm, data);
 
     assertEquals("RMApp does not containes minimum allocation",
         minAllocResource, rmApp.getAMResourceRequests().get(0).getCapability());
@@ -4073,57 +3950,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     LeafQueue qb = (LeafQueue)cs.getQueue("default");
     qb.setUserLimitFactor((float)0.8);
 
-    // add app 1
-    ApplicationId appId = BuilderUtils.newApplicationId(100, 1);
-    ApplicationAttemptId appAttemptId =
-    BuilderUtils.newApplicationAttemptId(appId, 1);
-
-    RMAppAttemptMetrics attemptMetric =
-        new RMAppAttemptMetrics(appAttemptId, rm.getRMContext());
-    RMAppImpl app = mock(RMAppImpl.class);
-    when(app.getApplicationId()).thenReturn(appId);
-    RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
-    Container container = mock(Container.class);
-    when(attempt.getMasterContainer()).thenReturn(container);
-    ApplicationSubmissionContext submissionContext = mock(
-        ApplicationSubmissionContext.class);
-    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
-    when(attempt.getAppAttemptId()).thenReturn(appAttemptId);
-    when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
-    when(app.getCurrentAppAttempt()).thenReturn(attempt);
-
-    rm.getRMContext().getRMApps().put(appId, app);
-
-    SchedulerEvent addAppEvent =
-        new AppAddedSchedulerEvent(appId, "default", "user1");
-    cs.handle(addAppEvent);
-    SchedulerEvent addAttemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    cs.handle(addAttemptEvent);
-
-    // add app 2
-    ApplicationId appId2 = BuilderUtils.newApplicationId(100, 2);
-    ApplicationAttemptId appAttemptId2 =
-    BuilderUtils.newApplicationAttemptId(appId2, 1);
-
-    RMAppAttemptMetrics attemptMetric2 =
-        new RMAppAttemptMetrics(appAttemptId2, rm.getRMContext());
-    RMAppImpl app2 = mock(RMAppImpl.class);
-    when(app2.getApplicationId()).thenReturn(appId2);
-    RMAppAttemptImpl attempt2 = mock(RMAppAttemptImpl.class);
-    when(attempt2.getMasterContainer()).thenReturn(container);
-    when(attempt2.getSubmissionContext()).thenReturn(submissionContext);
-    when(attempt2.getAppAttemptId()).thenReturn(appAttemptId2);
-    when(attempt2.getRMAppAttemptMetrics()).thenReturn(attemptMetric2);
-    when(app2.getCurrentAppAttempt()).thenReturn(attempt2);
-
-    rm.getRMContext().getRMApps().put(appId2, app2);
-    addAppEvent =
-        new AppAddedSchedulerEvent(appId2, "default", "user2");
-    cs.handle(addAppEvent);
-    addAttemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId2, false);
-    cs.handle(addAttemptEvent);
+    ApplicationAttemptId appAttemptId = appHelper(rm, cs, 100, 1, "default", "user1");
+    ApplicationAttemptId appAttemptId2 = appHelper(rm, cs, 100, 2, "default", "user2");
 
     // add nodes  to cluster, so cluster have 20GB and 20 vcores
     Resource newResource = Resource.newInstance(10 * GB, 10);
@@ -4135,11 +3963,11 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.handle(new NodeAddedSchedulerEvent(node2));
 
     FiCaSchedulerApp fiCaApp1 =
-            cs.getSchedulerApplications().get(app.getApplicationId())
+            cs.getSchedulerApplications().get(appAttemptId.getApplicationId())
                 .getCurrentAppAttempt();
 
     FiCaSchedulerApp fiCaApp2 =
-            cs.getSchedulerApplications().get(app2.getApplicationId())
+            cs.getSchedulerApplications().get(appAttemptId2.getApplicationId())
                 .getCurrentAppAttempt();
     Priority u0Priority = TestUtils.createMockPriority(1);
     RecordFactory recordFactory =
@@ -4179,12 +4007,16 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     QueueInfo queueInfoA = cs.getQueueInfo("a", true, false);
     Assert.assertEquals("Queue Name should be a", "a",
         queueInfoA.getQueueName());
+    Assert.assertEquals("Queue Path should be root.a", "root.a",
+        queueInfoA.getQueuePath());
     Assert.assertEquals("Default Node Label Expression should be x", "x",
         queueInfoA.getDefaultNodeLabelExpression());
 
     QueueInfo queueInfoB = cs.getQueueInfo("b", true, false);
     Assert.assertEquals("Queue Name should be b", "b",
         queueInfoB.getQueueName());
+    Assert.assertEquals("Queue Path should be root.b", "root.b",
+        queueInfoB.getQueuePath());
     Assert.assertEquals("Default Node Label Expression should be y", "y",
         queueInfoB.getDefaultNodeLabelExpression());
   }
@@ -4234,7 +4066,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // Allocate two more containers
@@ -4341,9 +4181,23 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         }
       }, 100, 60 * 1000);
 
-    rm.submitApp(amResource1, "app-1", userName, null, queueName);
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource1, rm)
+        .withResource(amResource1)
+        .withAppName("app-1")
+        .withUser(userName)
+        .withAcls(null)
+        .withQueue(queueName)
+        .build());
 
-    rm.submitApp(amResource2, "app-2", userName, null, queueName);
+    MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource2, rm)
+        .withResource(amResource2)
+        .withAppName("app-2")
+        .withUser(userName)
+        .withAcls(null)
+        .withQueue(queueName)
+        .build());
 
     // When AM limit is exceeded, 1 applications will be activated.Rest all
     // applications will be in pending
@@ -4409,9 +4263,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
   }
   @Test
   public void testRemovedNodeDecomissioningNode() throws Exception {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register nodemanager
     NodeManager nm = registerNode("host_decom", 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -4454,10 +4311,14 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     ((CapacityScheduler) resourceManager.getResourceScheduler())
         .setRMContext(spyContext);
     ((AsyncDispatcher) mockDispatcher).start();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node
     String host_0 = "host_0";
     NodeManager nm_0 = registerNode(host_0, 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
 
@@ -4516,6 +4377,13 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         availableResource.getMemorySize());
     Assert.assertEquals("Available Resource Memory Size should be 0", 0,
         availableResource.getVirtualCores());
+    // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
+    // be skipped for DECOMMISSIONING state since the total resource is
+    // already equal to used resource from the previous heartbeat.
+    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
+    resourceManager.getResourceScheduler().handle(
+        new NodeUpdateSchedulerEvent(spyNode));
+    verify(mockDispatcher, times(4)).getEventHandler();
   }
 
   @Test
@@ -4529,7 +4397,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     MockRM rm = new MockRM(conf);
     rm.start();
-    RMApp app = rm.submitApp(100);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(100, rm);
     rm.drainEvents();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10240, 10);
@@ -4811,7 +4679,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     nm1.registerNode();
 
     // Launch app1 in queue=a1
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // Got one offswitch request and offswitch allocation
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
@@ -4861,18 +4737,18 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // test delete leaf queue when there is application running.
     Map<String, CSQueue> queues =
-        cs.getCapacitySchedulerQueueManager().getQueues();
+        cs.getCapacitySchedulerQueueManager().getShortNameQueues();
     String b1QTobeDeleted = "b1";
     LeafQueue csB1Queue = Mockito.spy((LeafQueue) queues.get(b1QTobeDeleted));
     when(csB1Queue.getState()).thenReturn(QueueState.DRAINING)
         .thenReturn(QueueState.STOPPED);
-    queues.put(b1QTobeDeleted, csB1Queue);
+    cs.getCapacitySchedulerQueueManager().addQueue(b1QTobeDeleted, csB1Queue);
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB1(conf);
+    setupQueueConfigurationWithoutB1(conf);
     try {
       cs.reinitialize(conf, mockContext);
       fail("Expected to throw exception when refresh queue tries to delete a"
@@ -4883,7 +4759,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete leaf queue(root.b.b1) when there is no application running.
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB1(conf);
+    setupQueueConfigurationWithoutB1(conf);
     try {
       cs.reinitialize(conf, mockContext);
     } catch (IOException e) {
@@ -4903,31 +4779,31 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // set the configurations such that it fails once but should be successfull
     // next time
-    queues = cs.getCapacitySchedulerQueueManager().getQueues();
+    queues = cs.getCapacitySchedulerQueueManager().getShortNameQueues();
     CSQueue bQueue = Mockito.spy((ParentQueue) queues.get("b"));
     when(bQueue.getState()).thenReturn(QueueState.DRAINING)
         .thenReturn(QueueState.STOPPED);
-    queues.put("b", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b1", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b1", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b2", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b2", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b3", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
     // test delete Parent queue when there is application running.
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB(conf);
+    setupQueueConfigurationWithoutB(conf);
     try {
       cs.reinitialize(conf, mockContext);
       fail("Expected to throw exception when refresh queue tries to delete a"
@@ -4938,7 +4814,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete Parent queue when there is no application running.
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfigurationWithOutB(conf);
+    setupQueueConfigurationWithoutB(conf);
     try {
       cs.reinitialize(conf, mockContext);
     } catch (IOException e) {
@@ -4978,27 +4854,27 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     // test delete all leaf queues when there is no application running.
     Map<String, CSQueue> queues =
-        cs.getCapacitySchedulerQueueManager().getQueues();
+        cs.getCapacitySchedulerQueueManager().getShortNameQueues();
 
     CSQueue bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
     when(bQueue.getState()).thenReturn(QueueState.RUNNING)
         .thenReturn(QueueState.STOPPED);
-    queues.put("b1", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b1", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b2", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b2", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b3", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
     conf = new CapacitySchedulerConfiguration();
-    setupQueueConfWithOutChildrenOfB(conf);
+    setupQueueConfWithoutChildrenOfB(conf);
 
     // test convert parent queue to leaf queue(root.b) when there is no
     // application running.
@@ -5055,7 +4931,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     cs.init(conf);
     cs.start();
     cs.reinitialize(conf, rmContext);
-    checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
+    checkQueueStructureCapacities(cs);
 
     String targetQueue = "b1";
     CSQueue b1 = cs.getQueue(targetQueue);
@@ -5137,6 +5013,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
     config.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
         "a1" +"=" + "agroup" + "");
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(config);
+
     config.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
         "g:agroup:%user");
 
@@ -5145,7 +5023,15 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     CapacityScheduler cs = ((CapacityScheduler) rm.getResourceScheduler());
     cs.start();
 
-    RMApp app = rm.submitApp(GB, "appname", "a1", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("appname")
+            .withUser("a1")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     List<ApplicationAttemptId> appsInA1 = cs.getAppsInQueue("a1");
     assertEquals(1, appsInA1.size());
   }
@@ -5214,9 +5100,10 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     try {
       setUpCSQueue(maxLifetime, defaultLifetime);
       Assert.fail("Expected to fails since maxLifetime < defaultLifetime.");
-    } catch (YarnRuntimeException ye) {
+    } catch (ServiceStateException sse) {
+      Throwable rootCause = sse.getCause().getCause();
       Assert.assertTrue(
-          ye.getMessage().contains("can't exceed maximum lifetime"));
+          rootCause.getMessage().contains("can't exceed maximum lifetime"));
     }
 
     maxLifetime = -1;
@@ -5262,7 +5149,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     final MockNM nm = rm.registerNode("h1:1234", 200 * GB);
 
     // submit app
-    final RMApp app = rm.submitApp(200, "app", "user");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+            .withAppName("app")
+            .withUser("user")
+            .build();
+    final RMApp app = MockRMAppSubmitter.submit(rm, data);
     MockRM.launchAndRegisterAM(app, rm, nm);
 
     // spy capacity scheduler to handle CapacityScheduler#apply
@@ -5326,7 +5218,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // submit app and request resource
     // container2 is larger than nm1 total resource, will trigger locality skip
-    final RMApp app = rm.submitApp(1 * GB, "app", "user");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .build();
+    final RMApp app = MockRMAppSubmitter.submit(rm, data);
     final MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
     am.addRequests(new String[] {"*"}, 5 * GB, 1, 1, 2);
     am.schedule();
@@ -5388,19 +5285,51 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     MockNM nm1 = rm.registerNode("h1:1234", 16 * GB);
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "u1", null, "a1");
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("u1")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data3);
     MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm1);
 
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();
 
-    RMApp app2 = rm.submitApp(1 * GB, "app", "u2", null, "a1");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u2")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data2);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
 
-    RMApp app3 = rm.submitApp(1 * GB, "app", "u3", null, "a1");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u3")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm, data1);
 
-    RMApp app4 = rm.submitApp(1 * GB, "app", "u4", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u4")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm, data);
 
     // Each application asks 50 * 1GB containers
     am1.allocate("*", 1 * GB, 50, null);
@@ -5480,23 +5409,109 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
   @Test
   public void testCSQueueMetrics() throws Exception {
-    CapacityScheduler cs = new CapacityScheduler();
-    cs.setConf(new YarnConfiguration());
-    cs.setRMContext(resourceManager.getRMContext());
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(conf);
-    cs.init(conf);
-    cs.start();
 
-    RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(50 * GB), 1, "n1");
-    RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(50 * GB), 2, "n2");
+    // Initialize resource map
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+
+    // Initialize mandatory resources
+    ResourceInformation memory =
+        ResourceInformation.newInstance(ResourceInformation.MEMORY_MB.getName(),
+            ResourceInformation.MEMORY_MB.getUnits(),
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores =
+        ResourceInformation.newInstance(ResourceInformation.VCORES.getName(),
+            ResourceInformation.VCORES.getUnits(),
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+    riMap.put(TestQueueMetricsForCustomResources.CUSTOM_RES_1,
+        ResourceInformation.newInstance(
+            TestQueueMetricsForCustomResources.CUSTOM_RES_1, "", 1, 10));
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.setResourceComparator(DominantResourceCalculator.class);
+
+    csConf.set(YarnConfiguration.RESOURCE_TYPES,
+        TestQueueMetricsForCustomResources.CUSTOM_RES_1);
+
+    setupQueueConfiguration(csConf);
+
+    YarnConfiguration conf = new YarnConfiguration(csConf);
+
+    // Don't reset resource types since we have already configured resource
+    // types
+    conf.setBoolean(TestResourceProfiles.TEST_CONF_RESET_RESOURCE_TYPES, false);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    RMNode n1 = MockNodes.newNodeInfo(0,
+        MockNodes.newResource(50 * GB, 50,
+            ImmutableMap.<String, String> builder()
+                .put(TestQueueMetricsForCustomResources.CUSTOM_RES_1,
+                    String.valueOf(1000))
+                .build()),
+        1, "n1");
+    RMNode n2 = MockNodes.newNodeInfo(0,
+        MockNodes.newResource(50 * GB, 50,
+            ImmutableMap.<String, String> builder()
+                .put(TestQueueMetricsForCustomResources.CUSTOM_RES_1,
+                    String.valueOf(2000))
+                .build()),
+        2, "n2");
     cs.handle(new NodeAddedSchedulerEvent(n1));
     cs.handle(new NodeAddedSchedulerEvent(n2));
+
+    Map<String, Long> guaranteedCapA11 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a1")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+    assertEquals(94, guaranteedCapA11
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapA11 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a1")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(3000, maxCapA11
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
 
     assertEquals(10240, ((CSQueueMetrics)cs.getQueue("a").getMetrics()).getGuaranteedMB());
     assertEquals(71680, ((CSQueueMetrics)cs.getQueue("b1").getMetrics()).getGuaranteedMB());
     assertEquals(102400, ((CSQueueMetrics)cs.getQueue("a").getMetrics()).getMaxCapacityMB());
     assertEquals(102400, ((CSQueueMetrics)cs.getQueue("b1").getMetrics()).getMaxCapacityMB());
+    Map<String, Long> guaranteedCapA =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+    assertEquals(314, guaranteedCapA
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapA =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(3000, maxCapA
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> guaranteedCapB1 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("b1")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+    assertEquals(2126, guaranteedCapB1
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapB1 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("b1")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(3000, maxCapB1
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
 
     // Remove a node, metrics should be updated
     cs.handle(new NodeRemovedSchedulerEvent(n2));
@@ -5504,6 +5519,31 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     assertEquals(35840, ((CSQueueMetrics)cs.getQueue("b1").getMetrics()).getGuaranteedMB());
     assertEquals(51200, ((CSQueueMetrics)cs.getQueue("a").getMetrics()).getMaxCapacityMB());
     assertEquals(51200, ((CSQueueMetrics)cs.getQueue("b1").getMetrics()).getMaxCapacityMB());
+    Map<String, Long> guaranteedCapA1 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+
+    assertEquals(104, guaranteedCapA1
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapA1 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(1000, maxCapA1
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> guaranteedCapB11 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("b1")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+    assertEquals(708, guaranteedCapB11
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapB11 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("b1")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(1000, maxCapB11
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
     assertEquals(A_CAPACITY / 100, ((CSQueueMetrics)cs.getQueue("a")
         .getMetrics()).getGuaranteedCapacity(), DELTA);
     assertEquals(A_CAPACITY / 100, ((CSQueueMetrics)cs.getQueue("a")
@@ -5522,19 +5562,152 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
         .getMaxAbsoluteCapacity(), DELTA);
 
     // Add child queue to a, and reinitialize. Metrics should be updated
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a", new String[] {"a1", "a2", "a3"} );
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a2", 30.0f);
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3", 40.0f);
-    conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3", 50.0f);
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a",
+        new String[] {"a1", "a2", "a3"});
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a2", 29.5f);
+    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3", 40.5f);
+    csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3",
+        50.0f);
 
-    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
-        null, new RMContainerTokenSecretManager(conf),
-        new NMTokenSecretManagerInRM(conf),
+    cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null,
+        null, new RMContainerTokenSecretManager(csConf),
+        new NMTokenSecretManagerInRM(csConf),
         new ClientToAMTokenSecretManagerInRM(), null));
 
     assertEquals(1024, ((CSQueueMetrics)cs.getQueue("a2").getMetrics()).getGuaranteedMB());
     assertEquals(2048, ((CSQueueMetrics)cs.getQueue("a3").getMetrics()).getGuaranteedMB());
     assertEquals(51200, ((CSQueueMetrics)cs.getQueue("a2").getMetrics()).getMaxCapacityMB());
     assertEquals(25600, ((CSQueueMetrics)cs.getQueue("a3").getMetrics()).getMaxCapacityMB());
+
+    Map<String, Long> guaranteedCapA2 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a2")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+    assertEquals(30, guaranteedCapA2
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapA2 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a2")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(1000, maxCapA2
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+
+    Map<String, Long> guaranteedCapA3 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a3")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getGuaranteedCapacity();
+    assertEquals(42, guaranteedCapA3
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    Map<String, Long> maxCapA3 =
+        ((CSQueueMetricsForCustomResources) ((CSQueueMetrics) cs.getQueue("a3")
+            .getMetrics()).getQueueMetricsForCustomResources())
+                .getMaxCapacity();
+    assertEquals(500, maxCapA3
+        .get(TestQueueMetricsForCustomResources.CUSTOM_RES_1).longValue());
+    rm.stop();
+  }
+
+  @Test
+  public void testReservedContainerLeakWhenMoveApplication() throws Exception {
+    CapacitySchedulerConfiguration csConf
+        = new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"a", "b"});
+    csConf.setCapacity("root.a", 50);
+    csConf.setMaximumCapacity("root.a", 100);
+    csConf.setUserLimitFactor("root.a", 100);
+    csConf.setCapacity("root.b", 50);
+    csConf.setMaximumCapacity("root.b", 100);
+    csConf.setUserLimitFactor("root.b", 100);
+
+    YarnConfiguration conf=new YarnConfiguration(csConf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    RMNodeLabelsManager mgr=new NullRMNodeLabelsManager();
+    mgr.init(conf);
+    MockRM rm1 = new MockRM(csConf);
+    CapacityScheduler scheduler=(CapacityScheduler) rm1.getResourceScheduler();
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8 * GB);
+    MockNM nm2 = rm1.registerNode("127.0.0.2:1234", 8 * GB);
+    /*
+     * simulation
+     * app1: (1 AM,1 running container)
+     * app2: (1 AM,1 reserved container)
+     */
+    // launch an app to queue, AM container should be launched in nm1
+    MockRMAppSubmissionData submissionData =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app_1")
+            .withUser("user_1")
+            .withAcls(null)
+            .withQueue("a")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, submissionData);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // launch another app to queue, AM container should be launched in nm1
+    submissionData =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app_2")
+            .withUser("user_1")
+            .withAcls(null)
+            .withQueue("a")
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, submissionData);
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
+
+    am1.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
+    // this containerRequest should be reserved
+    am2.allocate("*", 4 * GB, 1, new ArrayList<ContainerId>());
+
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    // Do node heartbeats 2 times
+    // First time will allocate container for app1, second time will reserve
+    // container for app2
+    scheduler.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    scheduler.handle(new NodeUpdateSchedulerEvent(rmNode1));
+
+    FiCaSchedulerApp schedulerApp1 =
+        scheduler.getApplicationAttempt(am1.getApplicationAttemptId());
+    FiCaSchedulerApp schedulerApp2 =
+        scheduler.getApplicationAttempt(am2.getApplicationAttemptId());
+    // APP1:  1 AM, 1 allocatedContainer
+    Assert.assertEquals(2, schedulerApp1.getLiveContainers().size());
+    // APP2:  1 AM,1 reservedContainer
+    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assert.assertEquals(1, schedulerApp2.getReservedContainers().size());
+    //before,move app2 which has one reservedContainer
+    LeafQueue srcQueue = (LeafQueue) scheduler.getQueue("a");
+    LeafQueue desQueue = (LeafQueue) scheduler.getQueue("b");
+    Assert.assertEquals(4, srcQueue.getNumContainers());
+    Assert.assertEquals(10*GB, srcQueue.getUsedResources().getMemorySize());
+    Assert.assertEquals(0, desQueue.getNumContainers());
+    Assert.assertEquals(0, desQueue.getUsedResources().getMemorySize());
+    //app1 ResourceUsage (0 reserved)
+    Assert.assertEquals(5*GB,
+        schedulerApp1
+            .getAppAttemptResourceUsage().getAllUsed().getMemorySize());
+    Assert.assertEquals(0,
+        schedulerApp1.getCurrentReservation().getMemorySize());
+    //app2  ResourceUsage (4GB reserved)
+    Assert.assertEquals(1*GB,
+        schedulerApp2
+            .getAppAttemptResourceUsage().getAllUsed().getMemorySize());
+    Assert.assertEquals(4*GB,
+        schedulerApp2.getCurrentReservation().getMemorySize());
+    //move app2 which has one reservedContainer
+    scheduler.moveApplication(app2.getApplicationId(), "b");
+    // keep this order
+    // if killing app1 first,the reservedContainer of app2 will be allocated
+    rm1.killApp(app2.getApplicationId());
+    rm1.killApp(app1.getApplicationId());
+    //after,moved app2 which has one reservedContainer
+    Assert.assertEquals(0, srcQueue.getNumContainers());
+    Assert.assertEquals(0, desQueue.getNumContainers());
+    Assert.assertEquals(0, srcQueue.getUsedResources().getMemorySize());
+    Assert.assertEquals(0, desQueue.getUsedResources().getMemorySize());
+    rm1.close();
   }
 }

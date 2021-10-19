@@ -22,17 +22,15 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import com.google.common.annotations.VisibleForTesting;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
-import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * Class for writing RPC server programs based on RFC 1050. Extend this class
  * and implement {@link #handleInternal} to handle the requests received.
  */
-public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
+public abstract class RpcProgram extends ChannelInboundHandlerAdapter {
   static final Logger LOG = LoggerFactory.getLogger(RpcProgram.class);
   public static final int RPCB_PORT = 111;
   private final String program;
@@ -162,9 +160,9 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   public void stopDaemons() {}
   
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+  public void channelRead(ChannelHandlerContext ctx, Object msg)
       throws Exception {
-    RpcInfo info = (RpcInfo) e.getMessage();
+    RpcInfo info = (RpcInfo) msg;
     RpcCall call = (RpcCall) info.header();
     
     SocketAddress remoteAddress = info.remoteAddress();
@@ -214,7 +212,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   private void sendAcceptedReply(RpcCall call, SocketAddress remoteAddress,
       AcceptState acceptState, ChannelHandlerContext ctx) {
     RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
-        acceptState, Verifier.VERIFIER_NONE);
+        acceptState, VerifierNone.INSTANCE);
 
     XDR out = new XDR();
     reply.write(out);
@@ -222,7 +220,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
       out.writeInt(lowProgVersion);
       out.writeInt(highProgVersion);
     }
-    ChannelBuffer b = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+    ByteBuf b = Unpooled.wrappedBuffer(out.asReadOnlyWrap()
         .buffer());
     RpcResponse rsp = new RpcResponse(b, remoteAddress);
     RpcUtil.sendRpcResponse(ctx, rsp);
@@ -235,7 +233,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
         RpcReply.ReplyState.MSG_DENIED,
         RpcDeniedReply.RejectState.AUTH_ERROR, new VerifierNone());
     reply.write(out);
-    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
+    ByteBuf buf = Unpooled.wrappedBuffer(out.asReadOnlyWrap()
         .buffer());
     RpcResponse rsp = new RpcResponse(buf, remoteAddress);
     RpcUtil.sendRpcResponse(ctx, rsp);

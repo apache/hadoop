@@ -20,6 +20,7 @@ package org.apache.hadoop.http;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpServer2.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.http.resource.JerseyResource;
 import org.apache.hadoop.net.NetUtils;
@@ -29,14 +30,15 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.test.Whitebox;
+
+import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,8 +64,10 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
@@ -75,9 +79,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   private static HttpServer2 server;
   private static final int MAX_THREADS = 10;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-  
   @SuppressWarnings("serial")
   public static class EchoMapServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
@@ -146,6 +147,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   @BeforeClass public static void setup() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer2.HTTP_MAX_THREADS_KEY, MAX_THREADS);
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, true);
     server = createTestServer(conf);
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
@@ -271,6 +274,39 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
+  public void testHttpServer2Metrics() throws Exception {
+    final HttpServer2Metrics metrics = server.getMetrics();
+    final int before = metrics.responses2xx();
+    final URL servletUrl = new URL(baseUrl, "/echo?echo");
+    final HttpURLConnection conn =
+        (HttpURLConnection)servletUrl.openConnection();
+    conn.connect();
+    Assertions.assertThat(conn.getResponseCode()).isEqualTo(200);
+    final int after = metrics.responses2xx();
+    Assertions.assertThat(after).isGreaterThan(before);
+  }
+
+  /**
+   * Jetty StatisticsHandler must be inserted via Server#insertHandler
+   * instead of Server#setHandler. The server fails to start if
+   * the handler is added by setHandler.
+   */
+  @Test
+  public void testSetStatisticsHandler() throws Exception {
+    final Configuration conf = new Configuration();
+    // skip insert
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED, false);
+    final HttpServer2 testServer = createTestServer(conf);
+    testServer.webServer.setHandler(new StatisticsHandler());
+    try {
+      testServer.start();
+      fail("IOException should be thrown.");
+    } catch (IOException ignore) {
+    }
+  }
+
+  @Test
   public void testHttpResonseContainsXFrameOptions() throws Exception {
     validateXFrameOption(HttpServer2.XFrameOption.SAMEORIGIN);
   }
@@ -327,11 +363,11 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
-  public void testHttpResonseInvalidValueType() throws Exception {
+  public void testHttpResonseInvalidValueType() {
     Configuration conf = new Configuration();
     boolean xFrameEnabled = true;
-    exception.expect(IllegalArgumentException.class);
-    createServer(xFrameEnabled, "Hadoop", conf);
+    assertThrows(IllegalArgumentException.class, () ->
+        createServer(xFrameEnabled, "Hadoop", conf));
   }
 
 
@@ -409,6 +445,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     @Override
     public List<String> getGroups(String user) throws IOException {
       return mapping.get(user);
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      Set<String> result = new HashSet();
+      result.addAll(mapping.get(user));
+      return result;
     }
   }
 

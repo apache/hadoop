@@ -178,6 +178,14 @@ public class S3AFileStatus extends FileStatus {
     return versionId;
   }
 
+  /**
+   * set the S3 object versionId, else null.
+   * @param versionId version ID or null.
+   */
+  public void setVersionId(final String versionId) {
+    this.versionId = versionId;
+  }
+
   /** Compare if this object is equal to another object.
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.

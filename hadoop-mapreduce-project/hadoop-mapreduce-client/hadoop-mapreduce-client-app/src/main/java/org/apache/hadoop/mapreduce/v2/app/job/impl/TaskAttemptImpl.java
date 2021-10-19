@@ -145,8 +145,8 @@ import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,6 +158,9 @@ public abstract class TaskAttemptImpl implements
     org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt,
       EventHandler<TaskAttemptEvent> {
 
+  @VisibleForTesting
+  protected final static Map<TaskType, Resource> RESOURCE_REQUEST_CACHE
+      = new HashMap<>();
   static final Counters EMPTY_COUNTERS = new Counters();
   private static final Logger LOG =
       LoggerFactory.getLogger(TaskAttemptImpl.class);
@@ -172,7 +175,7 @@ public abstract class TaskAttemptImpl implements
   private final Clock clock;
   private final org.apache.hadoop.mapred.JobID oldJobId;
   private final TaskAttemptListener taskAttemptListener;
-  private final Resource resourceCapability;
+  private Resource resourceCapability;
   protected Set<String> dataLocalHosts;
   protected Set<String> dataLocalRacks;
   private final List<String> diagnostics = new ArrayList<String>();
@@ -382,6 +385,10 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+         new TooManyFetchFailureTransition())
      // ignore-able events
      .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
@@ -471,20 +478,29 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptEventType.TA_COMMIT_PENDING)
 
-     // Transitions from SUCCESS_CONTAINER_CLEANUP state
-     // kill and cleanup the container
-     .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-         TaskAttemptStateInternal.SUCCEEDED,
-         TaskAttemptEventType.TA_CONTAINER_CLEANED)
-     .addTransition(
+      // Transitions from SUCCESS_CONTAINER_CLEANUP state
+      // kill and cleanup the container
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          TaskAttemptStateInternal.SUCCEEDED,
+          TaskAttemptEventType.TA_CONTAINER_CLEANED)
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          TaskAttemptStateInternal.FAILED,
+          TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+          new TooManyFetchFailureTransition())
+      .addTransition(
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
           DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          EnumSet.of(TaskAttemptStateInternal.SUCCEEDED,
+              TaskAttemptStateInternal.KILLED),
+          TaskAttemptEventType.TA_KILL,
+          new KilledAfterSuccessTransition())
       // Ignore-able events
      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
          TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-         EnumSet.of(TaskAttemptEventType.TA_KILL,
+         EnumSet.of(
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT,
              TaskAttemptEventType.TA_TIMED_OUT,
@@ -699,6 +715,10 @@ public abstract class TaskAttemptImpl implements
         getResourceTypePrefix(taskType);
     boolean memorySet = false;
     boolean cpuVcoresSet = false;
+    if (RESOURCE_REQUEST_CACHE.get(taskType) != null) {
+      resourceCapability = RESOURCE_REQUEST_CACHE.get(taskType);
+      return;
+    }
     if (resourceTypePrefix != null) {
       List<ResourceInformation> resourceRequests =
           ResourceUtils.getRequestedResourcesFromConfig(conf,
@@ -759,6 +779,9 @@ public abstract class TaskAttemptImpl implements
     if (!cpuVcoresSet) {
       this.resourceCapability.setVirtualCores(getCpuRequired(conf, taskType));
     }
+    RESOURCE_REQUEST_CACHE.put(taskType, resourceCapability);
+    LOG.info("Resource capability of task type {} is set to {}",
+        taskType, resourceCapability);
   }
 
   private String getCpuVcoresKey(TaskType taskType) {
@@ -2148,6 +2171,10 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      if (taskAttempt.getInternalState() ==
+          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER) {
+        sendContainerCleanup(taskAttempt, event);
+      }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
           (TaskAttemptTooManyFetchFailureEvent) event;
       // too many fetch failure can only happen for map tasks

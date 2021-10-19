@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,9 +50,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * A HDFS specific delegation token secret manager.
@@ -191,7 +191,7 @@ public class DelegationTokenSecretManager
     }
   }
 
-  public synchronized void loadSecretManagerState(SecretManagerState state)
+  public synchronized void loadSecretManagerState(SecretManagerState state, Counter counter)
       throws IOException {
     Preconditions.checkState(!running,
         "Can't load state from image in a running SecretManager.");
@@ -211,6 +211,7 @@ public class DelegationTokenSecretManager
       id.setSequenceNumber(t.getSequenceNumber());
       id.setMasterKeyId(t.getMasterKeyId());
       addPersistedDelegationToken(id, t.getExpiryDate());
+      counter.increment();
     }
   }
 

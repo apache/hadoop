@@ -70,8 +70,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Tool which allows the standby node's storage directories to be bootstrapped
@@ -108,6 +108,9 @@ public class BootstrapStandby implements Tool, Configurable {
   @Override
   public int run(String[] args) throws Exception {
     parseArgs(args);
+    // Disable using the RPC tailing mechanism for bootstrapping the standby
+    // since it is less efficient in this case; see HDFS-14806
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, false);
     parseConfAndFindOtherNN();
     NameNode.checkAllowFormat(conf);
 

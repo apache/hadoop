@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
-import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.collections.IteratorUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +45,6 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -76,22 +74,6 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public Iterator<N> getPreferredNodeIterator(
-      CandidateNodeSet<N> candidateNodeSet) {
-    // Now only handle the case that single node in the candidateNodeSet
-    // TODO, Add support to multi-hosts inside candidateNodeSet which is passed
-    // in.
-
-    N singleNode = CandidateNodeSetUtils.getSingleNode(candidateNodeSet);
-    if (null != singleNode) {
-      return IteratorUtils.singletonIterator(singleNode);
-    }
-
-    return IteratorUtils.emptyIterator();
   }
 
   @Override
@@ -363,6 +345,7 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
           placementConstraintManager, allocationTagsManager, dcOpt);
     } catch (InvalidAllocationTagsQueryException e) {
       LOG.warn("Failed to query node cardinality:", e);
+      this.incrementPlacementAttempt();
       return false;
     }
   }

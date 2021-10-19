@@ -92,6 +92,7 @@ void getInputs(JNIEnv *env, jobjectArray inputs, jintArray inputOffsets,
       destInputs[i] = NULL;
     }
   }
+  (*env)->ReleaseIntArrayElements(env, inputOffsets, tmpInputOffsets, 0);
 }
 
 void getOutputs(JNIEnv *env, jobjectArray outputs, jintArray outputOffsets,
@@ -112,4 +113,5 @@ void getOutputs(JNIEnv *env, jobjectArray outputs, jintArray outputOffsets,
                                                                   byteBuffer));
     destOutputs[i] += tmpOutputOffsets[i];
   }
+  (*env)->ReleaseIntArrayElements(env, outputOffsets, tmpOutputOffsets, 0);
 }

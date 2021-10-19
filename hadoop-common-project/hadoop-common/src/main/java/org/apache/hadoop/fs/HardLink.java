@@ -29,7 +29,7 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import static java.nio.file.Files.createLink;
 
@@ -153,11 +153,11 @@ public class HardLink {
    */
 
   /**
-   * Creates a hardlink 
+   * Creates a hardlink.
    * @param file - existing source file
    * @param linkName - desired target link file
    */
-  public static void createHardLink(File file, File linkName) 
+  public static void createHardLink(File file, File linkName)
       throws IOException {
     if (file == null) {
       throw new IOException(

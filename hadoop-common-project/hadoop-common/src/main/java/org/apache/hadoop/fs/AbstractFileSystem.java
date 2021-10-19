@@ -23,7 +23,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -31,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,6 +43,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -56,9 +55,11 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * This class provides an interface for implementors of a Hadoop file system
@@ -72,7 +73,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public abstract class AbstractFileSystem {
+public abstract class AbstractFileSystem implements PathCapabilities {
   static final Logger LOG = LoggerFactory.getLogger(AbstractFileSystem.class);
 
   /** Recording statistics per a file system class. */
@@ -864,6 +865,20 @@ public abstract class AbstractFileSystem {
       UnresolvedLinkException, IOException;
 
   /**
+   * Synchronize client metadata state.
+   * <p>
+   * In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
+
+  /**
    * The specification of this method matches that of
    * {@link FileContext#access(Path, FsAction)}
    * except that an UnresolvedLinkException may be thrown if a symlink is
@@ -1030,7 +1045,7 @@ public abstract class AbstractFileSystem {
    */
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return new ArrayList<Token<?>>(0);
+    return Collections.emptyList();
   }
 
   /**
@@ -1338,7 +1353,7 @@ public abstract class AbstractFileSystem {
   
   @Override //Object
   public boolean equals(Object other) {
-    if (other == null || !(other instanceof AbstractFileSystem)) {
+    if (!(other instanceof AbstractFileSystem)) {
       return false;
     }
     return myUri.equals(((AbstractFileSystem) other).myUri);
@@ -1353,22 +1368,62 @@ public abstract class AbstractFileSystem {
    * setting up the expectation that the {@code get()} call
    * is needed to evaluate the result.
    * @param path path to the file
-   * @param mandatoryKeys set of options declared as mandatory.
-   * @param options options set during the build sequence.
-   * @param bufferSize buffer size
+   * @param parameters open file parameters from the builder.
    * @return a future which will evaluate to the opened file.
    * @throws IOException failure to resolve the link.
    * @throws IllegalArgumentException unknown mandatory key
    */
   public CompletableFuture<FSDataInputStream> openFileWithOptions(Path path,
-      Set<String> mandatoryKeys,
-      Configuration options,
-      int bufferSize) throws IOException {
-    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+      final OpenFileParameters parameters) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
         Collections.emptySet(),
         "for " + path);
     return LambdaUtils.eval(
-        new CompletableFuture<>(), () -> open(path, bufferSize));
+        new CompletableFuture<>(), () ->
+            open(path, parameters.getBufferSize()));
   }
 
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_SYMLINKS:
+      // delegate to the existing supportsSymlinks() call.
+      return supportsSymlinks();
+    default:
+      // the feature is not implemented.
+      return false;
+    }
+  }
+
+  /**
+   * Create a multipart uploader.
+   * @param basePath file path under which all files are uploaded
+   * @return a MultipartUploaderBuilder object to build the uploader
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public MultipartUploaderBuilder createMultipartUploader(Path basePath)
+      throws IOException {
+    methodNotSupported();
+    return null;
+  }
+
+  /**
+   * Helper method that throws an {@link UnsupportedOperationException} for the
+   * current {@link FileSystem} method being called.
+   */
+  protected final void methodNotSupported() {
+    // The order of the stacktrace elements is (from top to bottom):
+    //   - java.lang.Thread.getStackTrace
+    //   - org.apache.hadoop.fs.FileSystem.methodNotSupported
+    //   - <the FileSystem method>
+    // therefore, to find out the current method name, we use the element at
+    // index 2.
+    String name = Thread.currentThread().getStackTrace()[2].getMethodName();
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method " + name);
+  }
 }

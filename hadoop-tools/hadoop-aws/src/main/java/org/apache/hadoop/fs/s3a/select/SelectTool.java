@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.DurationInfo;
@@ -97,8 +96,6 @@ public class SelectTool extends S3GuardTool {
   public static final String OPT_OUTPUTFORMAT = "inputformat";
 
   static final String TOO_FEW_ARGUMENTS = "Too few arguments";
-
-  static final String WRONG_FILESYSTEM = "Wrong filesystem for ";
 
   static final String SELECT_IS_DISABLED = "S3 Select is disabled";
 
@@ -227,14 +224,9 @@ public class SelectTool extends S3GuardTool {
     }
 
     // now bind to the filesystem.
-    FileSystem fs = path.getFileSystem(getConf());
-    if (!(fs instanceof S3AFileSystem)) {
-      throw new ExitUtil.ExitException(EXIT_SERVICE_UNAVAILABLE,
-          WRONG_FILESYSTEM + file + ": got " + fs);
-    }
-    setFilesystem((S3AFileSystem) fs);
+    FileSystem fs = bindFilesystem(path.getFileSystem(getConf()));
 
-    if (!getFilesystem().hasCapability(S3_SELECT_CAPABILITY)) {
+    if (!fs.hasPathCapability(path, S3_SELECT_CAPABILITY)) {
       // capability disabled
       throw new ExitUtil.ExitException(EXIT_SERVICE_UNAVAILABLE,
           SELECT_IS_DISABLED + " for " + file);

@@ -23,6 +23,8 @@
 #include "ProtobufRpcEngine.pb.h"
 #include "IpcConnectionContext.pb.h"
 
+#include <boost/asio/error.hpp>
+
 namespace hdfs {
 
 namespace pb = ::google::protobuf;
@@ -34,7 +36,7 @@ using namespace ::std::placeholders;
 static void AddHeadersToPacket(
     std::string *res, std::initializer_list<const pb::MessageLite *> headers,
     const std::string *payload) {
-  int len = 0;
+  size_t len = 0;
   std::for_each(
       headers.begin(), headers.end(),
       [&len](const pb::MessageLite *v) { len += DelimitedPBMessageSize(v); });
@@ -55,7 +57,7 @@ static void AddHeadersToPacket(
 
   std::for_each(
       headers.begin(), headers.end(), [&buf](const pb::MessageLite *v) {
-        buf = pbio::CodedOutputStream::WriteVarint32ToArray(v->ByteSize(), buf);
+        buf = pbio::CodedOutputStream::WriteVarint64ToArray(v->ByteSizeLong(), buf);
         buf = v->SerializeWithCachedSizesToArray(buf);
       });
 
@@ -89,7 +91,7 @@ void RpcConnection::StartReading() {
   }
 
   service->PostLambda(
-    [shared_this, this] () { OnRecvCompleted(::asio::error_code(), 0); }
+    [shared_this, this] () { OnRecvCompleted(boost::system::error_code(), 0); }
   );
 }
 
@@ -248,8 +250,8 @@ Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
 }
 
 void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
-                                     const ::asio::error_code &ec) {
-  if (ec.value() == asio::error::operation_aborted) {
+                                     const boost::system::error_code &ec) {
+  if (ec.value() == boost::asio::error::operation_aborted) {
     return;
   }
 
@@ -260,7 +262,7 @@ void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
     return;
   }
 
-  Status stat = ToStatus(ec ? ec : make_error_code(::asio::error::timed_out));
+  Status stat = ToStatus(ec ? ec : make_error_code(boost::asio::error::timed_out));
 
   r->OnResponseArrived(nullptr, stat);
 }
@@ -304,13 +306,19 @@ std::shared_ptr<std::string> RpcConnection::PrepareContextPacket() {
     return std::make_shared<std::string>();
   }
 
+  const auto& client_name = pinnedEngine->client_name();
+  if (client_name == nullptr) {
+    LOG_ERROR(kRPC, << "RpcConnection@" << this << " unable to generate random client name");
+    return std::make_shared<std::string>();
+  }
+
   std::shared_ptr<std::string> serializedPacketBuffer = std::make_shared<std::string>();
 
   RpcRequestHeaderProto headerProto;
   headerProto.set_rpckind(RPC_PROTOCOL_BUFFER);
   headerProto.set_rpcop(RpcRequestHeaderProto::RPC_FINAL_PACKET);
   headerProto.set_callid(RpcEngine::kCallIdConnectionContext);
-  headerProto.set_clientid(pinnedEngine->client_name());
+  headerProto.set_clientid(*client_name);
 
   IpcConnectionContextProto handshakeContextProto;
   handshakeContextProto.set_protocol(pinnedEngine->protocol_name());
@@ -469,7 +477,7 @@ void RpcConnection::CommsError(const Status &status) {
   pinnedEngine->AsyncRpcCommsError(status, shared_from_this(), requestsToReturn);
 }
 
-void RpcConnection::ClearAndDisconnect(const ::asio::error_code &ec) {
+void RpcConnection::ClearAndDisconnect(const boost::system::error_code &ec) {
   Disconnect();
   std::vector<std::shared_ptr<Request>> requests;
   std::transform(sent_requests_.begin(), sent_requests_.end(),

@@ -111,11 +111,17 @@ Default: `org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec, org.apache.hadoop.c
 
 Comma-separated list of crypto codec implementations for AES/CTR/NoPadding. The first implementation will be used if available, others are fallbacks.
 
+#### hadoop.security.crypto.codec.classes.sm4.ctr.nopadding
+
+Default: `org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec, org.apache.hadoop.crypto.JceSm4CtrCryptoCodec`
+
+Comma-separated list of crypto codec implementations for SM4/CTR/NoPadding. The first implementation will be used if available, others are fallbacks.
+
 #### hadoop.security.crypto.cipher.suite
 
 Default: `AES/CTR/NoPadding`
 
-Cipher suite for crypto codec.
+Cipher suite for crypto codec, now AES/CTR/NoPadding and SM4/CTR/NoPadding are supported.
 
 #### hadoop.security.crypto.jce.provider
 

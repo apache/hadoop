@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.service;
 
-import com.google.common.util.concurrent.Futures;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;

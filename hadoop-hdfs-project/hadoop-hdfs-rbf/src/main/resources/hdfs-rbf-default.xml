@@ -216,6 +216,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.admin.mount.check.enable</name>
+    <value>false</value>
+    <description>
+      If true, add/update mount table will include a destination check to make
+      sure the file exists in downstream namenodes, and changes to mount table
+      will fail if the file doesn't exist in any of the destination namenode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.http-address</name>
     <value>0.0.0.0:50071</value>
     <description>
@@ -264,10 +274,14 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.metrics.enable</name>
-    <value>true</value>
+    <name>dfs.federation.router.fs-limits.max-component-length</name>
+    <value>0</value>
     <description>
-      If the metrics service in the router is enabled.
+      Defines the maximum number of bytes in UTF-8 encoding in each
+      component of a path at Router side. A value of 0 will disable the check.
+      Support multiple size unit suffix(case insensitive). It is act as
+      configuration dfs.namenode.fs-limits.max-component-length at NameNode
+      side.
     </description>
   </property>
 
@@ -445,6 +459,26 @@
     <value></value>
     <description>
       The identifier of the namenodes to monitor and heartbeat.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolution-enabled</name>
+    <value>false</value>
+    <description>
+      Determines if the given monitored namenode address is a domain name which needs to
+      be resolved.
+      This is used by router to resolve namenodes.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.monitor.namenode.nameservice.resolver.impl</name>
+    <value></value>
+    <description>
+      Nameservice resolver implementation used by router.
+      Effective with
+      dfs.federation.router.monitor.namenode.nameservices.resolution-enabled on.
     </description>
   </property>
 
@@ -653,4 +687,98 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.top.num.token.realowners</name>
+    <value>10</value>
+    <description>
+      The number of top real owners by tokens count to report in the JMX metrics.
+      Real owners are the effective users whose cretential are used to generate
+      the tokens.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.fairness.policy.controller.class</name>
+    <value>org.apache.hadoop.hdfs.server.federation.fairness.NoRouterRpcFairnessPolicyController</value>
+    <description>
+      No fairness policy handler by default, for fairness
+      StaticFairnessPolicyController should be configured.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.fairness.handler.count.EXAMPLENAMESERVICE</name>
+    <value></value>
+    <description>
+      Dedicated handler count for nameservice EXAMPLENAMESERVICE. The handler
+      (configed by dfs.federation.router.handler.count)resource is controlled
+      internally by Semaphore permits. Two requirements have to be satisfied.
+      1) all downstream nameservices need this config otherwise no permit will
+      be given thus not proxy will happen. 2) if a special *concurrent*
+      nameservice is specified, the sum of all configured values is smaller or
+      equal to the total number of router handlers; if the special *concurrent*
+      is not specified, the sum of all configured values must be strictly
+      smaller than the router handlers thus the left will be allocated to the
+      concurrent calls.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.bandwidth</name>
+    <value>10</value>
+    <description>
+      Specify bandwidth per map in MB.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.map</name>
+    <value>10</value>
+    <description>
+      Max number of concurrent maps to use for copy.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.delay</name>
+    <value>1000</value>
+    <description>
+      Specify the delayed duration(millie seconds) when the job needs to retry.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.diff</name>
+    <value>0</value>
+    <description>
+      Specify the threshold of the diff entries that used in incremental copy
+      stage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.option</name>
+    <value>NONE</value>
+    <description>
+      Specify the action when rename across namespaces. The option can be NONE
+      and DISTCP.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.force.close.open.file</name>
+    <value>true</value>
+    <description>
+      Force close all open files when there is no diff in the DIFF_DISTCP stage.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.federation.rename.trash</name>
+    <value>trash</value>
+    <description>
+      This options has 3 values: trash (move the source path to trash), delete
+      (delete the source path directly) and skip (skip both trash and deletion).
+    </description>
+  </property>
 </configuration>

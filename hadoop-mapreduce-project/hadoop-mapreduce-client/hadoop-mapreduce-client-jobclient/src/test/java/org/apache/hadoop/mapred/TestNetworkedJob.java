@@ -247,7 +247,7 @@ public class TestNetworkedJob {
       QueueAclsInfo[] aai = client.getQueueAclsForCurrentUser();
       assertEquals(2, aai.length);
       assertEquals("root", aai[0].getQueueName());
-      assertEquals("default", aai[1].getQueueName());
+      assertEquals("root.default", aai[1].getQueueName());
       
       // test JobClient
       // The following asserts read JobStatus twice and ensure the returned

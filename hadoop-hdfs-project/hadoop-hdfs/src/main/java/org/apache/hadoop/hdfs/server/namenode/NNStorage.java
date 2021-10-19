@@ -54,12 +54,12 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * NNStorage is responsible for management of the StorageDirectories used by
@@ -218,13 +218,13 @@ public class NNStorage extends Storage implements Closeable,
 
   /**
    * Set flag whether an attempt should be made to restore failed storage
-   * directories at the next available oppurtuinity.
+   * directories at the next available opportunity.
    *
    * @param val Whether restoration attempt should be made.
    */
   void setRestoreFailedStorage(boolean val) {
     LOG.warn("set restore failed storage to {}", val);
-    restoreFailedStorage=val;
+    restoreFailedStorage = val;
   }
 
   /**

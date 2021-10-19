@@ -20,7 +20,7 @@
 
 namespace hdfs {
 
-MockConnectionBase::MockConnectionBase(::asio::io_service *io_service)
+MockConnectionBase::MockConnectionBase(boost::asio::io_service *io_service)
     : io_service_(io_service)
 {}
 
@@ -31,7 +31,7 @@ ProducerResult SharedMockConnection::Produce() {
     return shared_prducer->Produce();
   } else {
     assert(false && "No producer registered");
-    return std::make_pair(asio::error_code(), "");
+    return std::make_pair(boost::system::error_code(), "");
   }
 }
 

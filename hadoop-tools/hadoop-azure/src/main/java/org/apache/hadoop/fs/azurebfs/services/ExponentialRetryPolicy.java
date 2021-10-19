@@ -21,15 +21,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Random;
 import java.net.HttpURLConnection;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.classification.VisibleForTesting;
+
 /**
  * Retry policy used by AbfsClient.
  * */
 public class ExponentialRetryPolicy {
-  /**
-   * Represents the default number of retry attempts.
-   */
-  private static final int DEFAULT_CLIENT_RETRY_COUNT = 30;
-
   /**
    * Represents the default amount of time used when calculating a random delta in the exponential
    * delay between retries.
@@ -86,8 +84,20 @@ public class ExponentialRetryPolicy {
   /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    */
-  public ExponentialRetryPolicy() {
-    this(DEFAULT_CLIENT_RETRY_COUNT, DEFAULT_MIN_BACKOFF, DEFAULT_MAX_BACKOFF, DEFAULT_CLIENT_BACKOFF);
+  public ExponentialRetryPolicy(final int maxIoRetries) {
+
+    this(maxIoRetries, DEFAULT_MIN_BACKOFF, DEFAULT_MAX_BACKOFF,
+        DEFAULT_CLIENT_BACKOFF);
+  }
+
+  /**
+   * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
+   *
+   * @param conf The {@link AbfsConfiguration} from which to retrieve retry configuration.
+   */
+  public ExponentialRetryPolicy(AbfsConfiguration conf) {
+    this(conf.getMaxIoRetries(), conf.getMinBackoffIntervalMilliseconds(), conf.getMaxBackoffIntervalMilliseconds(),
+        conf.getBackoffIntervalMilliseconds());
   }
 
   /**
@@ -141,4 +151,25 @@ public class ExponentialRetryPolicy {
 
     return retryInterval;
   }
+
+  @VisibleForTesting
+  int getRetryCount() {
+    return this.retryCount;
+  }
+
+  @VisibleForTesting
+  int getMinBackoff() {
+    return this.minBackoff;
+  }
+
+  @VisibleForTesting
+  int getMaxBackoff() {
+    return maxBackoff;
+  }
+
+  @VisibleForTesting
+  int getDeltaBackoff() {
+    return this.deltaBackoff;
+  }
+
 }

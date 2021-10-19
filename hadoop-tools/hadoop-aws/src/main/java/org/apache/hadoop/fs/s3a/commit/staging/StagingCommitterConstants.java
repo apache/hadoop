@@ -34,7 +34,7 @@ public final class StagingCommitterConstants {
   /**
    * The temporary path for staging data, if not explicitly set.
    * By using an unqualified path, this will be qualified to be relative
-   * to the users' home directory, so protectec from access for others.
+   * to the users' home directory, so protected from access for others.
    */
   public static final String FILESYSTEM_TEMP_PATH = "tmp/staging";
 
@@ -46,19 +46,4 @@ public final class StagingCommitterConstants {
    */
   public static final String STAGING_UPLOADS = "staging-uploads";
 
-  // Spark configuration keys
-
-  /**
-   * The UUID for jobs: {@value}.
-   */
-  public static final String SPARK_WRITE_UUID =
-      "spark.sql.sources.writeJobUUID";
-
-  /**
-   * The App ID for jobs.
-   */
-
-  public static final String SPARK_APP_ID = "spark.app.id";
-
-  public static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
 }

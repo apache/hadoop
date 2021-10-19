@@ -163,6 +163,9 @@
             {{#link-to 'yarn-app.logs' tagName="li" class=(if (eq target.currentPath 'yarn-app.logs') "active")}}
               {{#link-to 'yarn-app.logs' appId (query-params service=serviceName)}}Logs{{/link-to}}
             {{/link-to}}
+            {{#link-to 'yarn-app.threaddump' tagName="li" class=(if (eq target.currentPath 'yarn-app.threaddump') "active")}}
+              {{#link-to 'yarn-app.threaddump' appId (query-params service=serviceName)}}Threaddump{{/link-to}}
+            {{/link-to}}
           </ul>
         </ul>
       </div>

@@ -372,6 +372,29 @@ public interface MRJobConfig {
 
   public static final int TASK_EXIT_TIMEOUT_CHECK_INTERVAL_MS_DEFAULT = 20 * 1000;
 
+  /**
+   * TaskAttemptListenerImpl will log the task progress when the delta progress
+   * is larger than or equal the defined value.
+   * The double value has to be between 0, and 1 with two decimals.
+   */
+  String TASK_LOG_PROGRESS_DELTA_THRESHOLD =
+      "mapreduce.task.log.progress.delta.threshold";
+  /**
+   * Default delta progress is set to 5%.
+   */
+  double TASK_LOG_PROGRESS_DELTA_THRESHOLD_DEFAULT = 0.05;
+  /**
+   * TaskAttemptListenerImpl will log the task progress when the defined value
+   * in seconds expires.
+   * This helps to debug task attempts that are doing very slow progress.
+   */
+  String TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS =
+      "mapreduce.task.log.progress.wait.interval-seconds";
+  /**
+   * Default period to log the task attempt progress is 60 seconds.
+   */
+  long TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS_DEFAULT = 60L;
+
   public static final String TASK_ID = "mapreduce.task.id";
 
   public static final String TASK_OUTPUT_DIR = "mapreduce.task.output.dir";
@@ -855,6 +878,37 @@ public interface MRJobConfig {
   public static final String MR_AM_TASK_ESTIMATOR_EXPONENTIAL_RATE_ENABLE =
     MR_AM_PREFIX + "job.task.estimator.exponential.smooth.rate";
 
+  /** The lambda value in the smoothing function of the task estimator.*/
+  String MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_LAMBDA_MS =
+      MR_AM_PREFIX
+          + "job.task.estimator.simple.exponential.smooth.lambda-ms";
+  long DEFAULT_MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_LAMBDA_MS = 1000L * 120;
+
+  /**
+   * The window length in the simple exponential smoothing that considers the
+   * task attempt is stagnated.
+   */
+  String MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_STAGNATED_MS =
+      MR_AM_PREFIX
+          + "job.task.estimator.simple.exponential.smooth.stagnated-ms";
+  long DEFAULT_MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_STAGNATED_MS =
+      1000L * 360;
+
+  /**
+   * The number of initial readings that the estimator ignores before giving a
+   * prediction. At the beginning the smooth estimator won't be accurate in
+   * prediction.
+   */
+  String MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_SKIP_INITIALS =
+      MR_AM_PREFIX
+          + "job.task.estimator.simple.exponential.smooth.skip-initials";
+
+  /**
+   * The default number of reading the estimators is going to ignore before
+   * returning the smooth exponential prediction.
+   */
+  int DEFAULT_MR_AM_TASK_ESTIMATOR_SIMPLE_SMOOTH_INITIALS = 24;
+
   /** The number of threads used to handle task RPC calls.*/
   public static final String MR_AM_TASK_LISTENER_THREAD_COUNT =
     MR_AM_PREFIX + "job.task.listener.thread-count";
@@ -1050,6 +1104,9 @@ public interface MRJobConfig {
 
   public static final String MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL =
     "mapreduce.job.end-notification.max.retry.interval";
+
+  String MR_JOB_END_NOTIFICATION_CUSTOM_NOTIFIER_CLASS =
+      "mapreduce.job.end-notification.custom-notifier-class";
 
   public static final int DEFAULT_MR_JOB_END_NOTIFICATION_TIMEOUT =
       5000;

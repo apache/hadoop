@@ -85,8 +85,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -157,8 +156,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     delSrvc.init(conf);
     exec = createContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
-    nodeHealthChecker = new NodeHealthCheckerService(
-        NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
+    nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
     nodeHealthChecker.init(conf);
 
   }
@@ -439,14 +437,16 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     waitForNMContainerState(cm, cid,
         org.apache.hadoop.yarn.server.nodemanager
             .containermanager.container.ContainerState.RUNNING);
-    TestNodeManagerMetrics.checkMetrics(1, 0, 0, 0, 0, 1, 1, 1, 9, 1, 7);
+    TestNodeManagerMetrics.checkMetrics(1, 0, 0, 0, 0,
+        1, 1, 1, 9, 1, 7, 0F, 1);
 
     // restart and verify metrics could be recovered
     cm.stop();
     DefaultMetricsSystem.shutdown();
     metrics = NodeManagerMetrics.create();
     metrics.addResource(Resource.newInstance(10240, 8));
-    TestNodeManagerMetrics.checkMetrics(0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 8);
+    TestNodeManagerMetrics.checkMetrics(0, 0, 0, 0, 0, 0,
+        0, 0, 10, 0, 8, 0F, 0);
     context = createContext(conf, stateStore);
     cm = createContainerManager(context, delSrvc);
     cm.init(conf);
@@ -454,7 +454,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertEquals(1, context.getApplications().size());
     app = context.getApplications().get(appId);
     assertNotNull(app);
-    TestNodeManagerMetrics.checkMetrics(1, 0, 0, 0, 0, 1, 1, 1, 9, 1, 7);
+    TestNodeManagerMetrics.checkMetrics(1, 0, 0, 0, 0,
+        1, 1, 1, 9, 1, 7, 0F, 1);
     cm.stop();
   }
 
@@ -794,6 +795,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       .byteValue() }));
     context.getContainerTokenSecretManager().setMasterKey(masterKey);
     context.getNMTokenSecretManager().setMasterKey(masterKey);
+    context.setContainerExecutor(exec);
     return context;
   }
 

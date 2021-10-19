@@ -26,7 +26,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * This storage statistics tracks how many times each DFS operation was issued.
@@ -111,6 +111,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     SET_XATTR("op_set_xattr"),
     GET_SNAPSHOT_DIFF("op_get_snapshot_diff"),
     GET_SNAPSHOTTABLE_DIRECTORY_LIST("op_get_snapshottable_directory_list"),
+    GET_SNAPSHOT_LIST("op_get_snapshot_list"),
     TRUNCATE(CommonStatisticNames.OP_TRUNCATE),
     UNSET_EC_POLICY("op_unset_ec_policy"),
     UNSET_STORAGE_POLICY("op_unset_storage_policy");
@@ -140,21 +141,21 @@ public class DFSOpsCountStatistics extends StorageStatistics {
 
   public static final String NAME = "DFSOpsCountStatistics";
 
-  private final Map<OpType, AtomicLong> opsCount = new EnumMap<>(OpType.class);
+  private final Map<OpType, LongAdder> opsCount = new EnumMap<>(OpType.class);
 
   public DFSOpsCountStatistics() {
     super(NAME);
     for (OpType opType : OpType.values()) {
-      opsCount.put(opType, new AtomicLong(0));
+      opsCount.put(opType, new LongAdder());
     }
   }
 
   public void incrementOpCounter(OpType op) {
-    opsCount.get(op).addAndGet(1);
+    opsCount.get(op).increment();
   }
 
   private class LongIterator implements Iterator<LongStatistic> {
-    private Iterator<Entry<OpType, AtomicLong>> iterator =
+    private final Iterator<Entry<OpType, LongAdder>> iterator =
         opsCount.entrySet().iterator();
 
     @Override
@@ -167,9 +168,9 @@ public class DFSOpsCountStatistics extends StorageStatistics {
       if (!iterator.hasNext()) {
         throw new NoSuchElementException();
       }
-      final Entry<OpType, AtomicLong> entry = iterator.next();
+      final Entry<OpType, LongAdder> entry = iterator.next();
       return new LongStatistic(entry.getKey().getSymbol(),
-          entry.getValue().get());
+          entry.getValue().longValue());
     }
 
     @Override
@@ -191,7 +192,7 @@ public class DFSOpsCountStatistics extends StorageStatistics {
   @Override
   public Long getLong(String key) {
     final OpType type = OpType.fromSymbol(key);
-    return type == null ? null : opsCount.get(type).get();
+    return type == null ? null : opsCount.get(type).longValue();
   }
 
   @Override
@@ -201,8 +202,8 @@ public class DFSOpsCountStatistics extends StorageStatistics {
 
   @Override
   public void reset() {
-    for (AtomicLong count : opsCount.values()) {
-      count.set(0);
+    for (LongAdder count : opsCount.values()) {
+      count.reset();
     }
   }
 

@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -153,17 +154,24 @@ public class PassThroughRESTRequestInterceptor
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     return getNextInterceptor().getApps(hsr, stateQuery, statesQuery,
         finalStatusQuery, userQuery, queueQuery, count, startedBegin,
         startedEnd, finishBegin, finishEnd, applicationTypes, applicationTags,
-        unselectedFields);
+        name, unselectedFields);
   }
 
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
       String groupBy) {
     return getNextInterceptor().getActivities(hsr, nodeId, groupBy);
+  }
+
+  @Override
+  public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
+      String groupBy, int activitiesCount) throws InterruptedException {
+    return getNextInterceptor().getBulkActivities(hsr, groupBy,
+        activitiesCount);
   }
 
   @Override

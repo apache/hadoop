@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -75,6 +76,7 @@ public class TestSchedulerApplicationAttempt {
     ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
         user, queue1, queue1.getAbstractUsersManager(), rmContext);
 
@@ -98,7 +100,7 @@ public class TestSchedulerApplicationAttempt {
     app.liveContainers.put(container1.getContainerId(), container1);
     SchedulerNode node = createNode();
     app.appSchedulingInfo.allocate(NodeType.OFF_SWITCH, node,
-        toSchedulerKey(requestedPriority), container1.getContainer());
+        toSchedulerKey(requestedPriority), container1);
 
     // Active user count has to decrease from queue2 due to app has NO pending requests
     assertEquals(0, queue2.getAbstractUsersManager().getNumActiveUsers());
@@ -121,9 +123,11 @@ public class TestSchedulerApplicationAttempt {
     ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
         user, oldQueue, oldQueue.getAbstractUsersManager(), rmContext);
-    oldMetrics.submitApp(user);
+    app.appSchedulingInfo.setUnmanagedAM(false);
+    oldMetrics.submitApp(user, false);
     
     // confirm that containerId is calculated based on epoch.
     assertEquals(0x30000000001L, app.getNewContainerId());
@@ -140,7 +144,7 @@ public class TestSchedulerApplicationAttempt {
     app.liveContainers.put(container1.getContainerId(), container1);
     SchedulerNode node = createNode();
     app.appSchedulingInfo.allocate(NodeType.OFF_SWITCH, node,
-        toSchedulerKey(requestedPriority), container1.getContainer());
+        toSchedulerKey(requestedPriority), container1);
     
     // Reserved container
     Priority prio1 = Priority.newInstance(1);
@@ -213,8 +217,9 @@ public class TestSchedulerApplicationAttempt {
 
   private Queue createQueue(String name, Queue parent, float capacity) {
     QueueMetrics metrics = QueueMetrics.forQueue(name, parent, false, conf);
-    QueueInfo queueInfo = QueueInfo.newInstance(name, capacity, 1.0f, 0, null,
-        null, QueueState.RUNNING, null, "", null, false, null, false);
+    QueueInfo queueInfo = QueueInfo.newInstance(name,
+        "root." + name, capacity, 1.0f, 0, null,
+        null, QueueState.RUNNING, null, "", null, false, -1.0f, 10, null, false);
     ActiveUsersManager activeUsersManager = new ActiveUsersManager(metrics);
     Queue queue = mock(Queue.class);
     when(queue.getMetrics()).thenReturn(metrics);
@@ -242,6 +247,7 @@ public class TestSchedulerApplicationAttempt {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
     when(rmContext.getScheduler()).thenReturn(scheduler);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
 
     final String user = "user1";
     Queue queue = createQueue("test", null);
@@ -300,6 +306,7 @@ public class TestSchedulerApplicationAttempt {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
     when(rmContext.getScheduler()).thenReturn(scheduler);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
 
     final String user = "user1";
     Queue queue = createQueue("test", null);
@@ -317,11 +324,49 @@ public class TestSchedulerApplicationAttempt {
   }
 
   @Test
+  public void testAllResourceUsage() throws Exception {
+    FifoScheduler scheduler = mock(FifoScheduler.class);
+    when(scheduler.getClusterResource()).thenReturn(Resource.newInstance(0, 0));
+    when(scheduler.getResourceCalculator())
+        .thenReturn(new DefaultResourceCalculator());
+
+    ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getEpoch()).thenReturn(3L);
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+
+    final String user = "user1";
+    Queue queue = createQueue("test", null);
+    SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
+        user, queue, queue.getAbstractUsersManager(), rmContext);
+
+    // Resource request
+    Resource requestedResource = Resource.newInstance(1536, 2);
+    app.attemptResourceUsage.incUsed("X", requestedResource);
+    app.attemptResourceUsage.incUsed("Y", requestedResource);
+    Resource r2 = Resource.newInstance(1024, 1);
+    app.attemptResourceUsage.incReserved("X", r2);
+    app.attemptResourceUsage.incReserved("Y", r2);
+
+    assertTrue("getUsedResources expected " + Resource.newInstance(3072, 4)
+                + " but was " + app.getResourceUsageReport().getUsedResources(),
+        Resources.equals(Resource.newInstance(3072, 4),
+        app.getResourceUsageReport().getUsedResources()));
+    assertTrue("getReservedResources expected " + Resource.newInstance(2048, 2)
+               + " but was "
+               + app.getResourceUsageReport().getReservedResources(),
+        Resources.equals(Resource.newInstance(2048, 2),
+        app.getResourceUsageReport().getReservedResources()));
+  }
+
+  @Test
   public void testSchedulingOpportunityOverflow() throws Exception {
     ApplicationAttemptId attemptId = createAppAttemptId(0, 0);
     Queue queue = createQueue("test", null);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(
         attemptId, "user", queue, queue.getAbstractUsersManager(), rmContext);
     Priority priority = Priority.newInstance(1);
@@ -347,6 +392,7 @@ public class TestSchedulerApplicationAttempt {
     Queue queue = createQueue("test", null);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getEpoch()).thenReturn(3L);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
     SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(
         attemptId, "user", queue, queue.getAbstractUsersManager(), rmContext);
 

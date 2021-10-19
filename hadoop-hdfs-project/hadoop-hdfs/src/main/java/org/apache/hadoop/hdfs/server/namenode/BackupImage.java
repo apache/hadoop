@@ -28,10 +28,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Extension of FSImage for the backup node.
@@ -218,7 +218,12 @@ public class BackupImage extends FSImage {
       }
       lastAppliedTxId = logLoader.getLastAppliedTxId();
 
-      getNamesystem().dir.updateCountForQuota();
+      getNamesystem().writeLock();
+      try {
+        getNamesystem().dir.updateCountForQuota();
+      } finally {
+        getNamesystem().writeUnlock();
+      }
     } finally {
       backupInputStream.clear();
     }

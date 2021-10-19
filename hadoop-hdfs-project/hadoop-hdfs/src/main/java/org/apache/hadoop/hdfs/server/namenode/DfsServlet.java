@@ -30,7 +30,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * A base class for the servlets in DFS.
  */
-abstract class DfsServlet extends HttpServlet {
+public abstract class DfsServlet extends HttpServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
 

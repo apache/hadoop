@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,7 +36,7 @@ import static org.mockito.Mockito.verify;
  */
 public class TestProportionalCapacityPreemptionPolicyIntraQueue
     extends
-      ProportionalCapacityPreemptionPolicyMockFramework {
+    ProportionalCapacityPreemptionPolicyMockFramework {
   @Before
   public void setup() {
     super.setup();
@@ -101,10 +102,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     // For queue B, app3 and app4 were of lower priority. Hence take 8
     // containers from them by hitting the intraQueuePreemptionDemand of 20%.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(7)).handle(argThat(
+    verify(eventHandler, times(7)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -156,10 +157,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -215,16 +216,16 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // For queue B, none of the apps should be preempted.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(5))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(6))));
   }
@@ -272,16 +273,16 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     // For queue A/B, none of the apps should be preempted as used capacity
     // is under 50%.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
   }
@@ -337,7 +338,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     // For queueB, eventhough app4 needs 100 resources, only 30 resources were
     // preempted. (max is 50% of guaranteed cap of any queue
     // "maxIntraQueuePreemptable")
-    verify(mDisp, times(30)).handle(argThat(
+    verify(eventHandler, times(30)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -391,7 +392,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     // For queue B eventhough app4 needs 100 resources, only 10 resources were
     // preempted. This is the 10% limit of TOTAL_PREEMPTION_PER_ROUND.
-    verify(mDisp, times(10)).handle(argThat(
+    verify(eventHandler, times(10)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -433,13 +434,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     String appsConfig =
     // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
-        "a\t" // app1 in a
+        "root.a\t" // app1 in a
             + "(1,1,n1,,50,false,15);" + // app1 a
-            "a\t" // app2 in a
+            "root.a\t" // app2 in a
             + "(2,1,n1,,20,false,20);" + // app2 a
-            "b\t" // app3 in b
+            "root.b\t" // app3 in b
             + "(4,1,n1,,20,false,20);" + // app3 b
-            "b\t" // app1 in a
+            "root.b\t" // app1 in a
             + "(4,1,n1,,5,false,100)";
 
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
@@ -448,10 +449,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     // As per intra queue preemption algorithm, 20 more containers were needed
     // for app2 (in queue a). Inter queue pre-emption had already preselected 9
     // containers and hence preempted only 11 more.
-    verify(mDisp, times(20)).handle(argThat(
+    verify(eventHandler, times(20)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -502,10 +503,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // Ensure that only 9 containers are preempted from app2 (sparing 1 AM)
-    verify(mDisp, times(11)).handle(argThat(
+    verify(eventHandler, times(11)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -552,10 +553,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // Make sure that app1's Am container is spared. Only 9/10 is preempted.
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, never()).handle(argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
@@ -595,7 +596,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // Ensure there are 0 preemptions since only one app is running in queue.
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -638,13 +639,13 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // Complete demand request from QueueB for 20 resource must be preempted.
-    verify(mDisp, times(20)).handle(argThat(
+    verify(eventHandler, times(20)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
-    verify(mDisp, times(0)).handle(argThat(
+    verify(eventHandler, times(0)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -703,11 +704,11 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     policy.editSchedule();
 
     // 20 preempted from app1
-    verify(mDisp, times(20))
+    verify(eventHandler, times(20))
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, never())
+    verify(eventHandler, never())
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
-    verify(mDisp, never())
+    verify(eventHandler, never())
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(3))));
   }
 
@@ -785,26 +786,26 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     // High priority app in queueA has 30 resource demand. But low priority
     // app has only 5 resource. Hence preempt 4 here sparing AM.
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
     // Multiple high priority apps has demand  of 17. This will be preempted
     // from another set of low priority apps.
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(9)).handle(argThat(
+    verify(eventHandler, times(9)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(6))));
-    verify(mDisp, times(4)).handle(argThat(
+    verify(eventHandler, times(4)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(5))));
     // Only 3 resources will be freed in this round for queue C as we
     // are trying to save AM container.
-    verify(mDisp, times(2)).handle(argThat(
+    verify(eventHandler, times(2)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(10))));
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(11))));
   }
@@ -861,7 +862,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
     // 14 more (5 is already running) eventhough demand is for 30. Ideally we
     // must preempt 15. But 15th container will bring user1's usage to 20 which
     // is same as user-limit. Hence skip 15th container.
-    verify(mDisp, times(14)).handle(argThat(
+    verify(eventHandler, times(14)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }
@@ -927,19 +928,19 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     // Label X: app3 has demand of 20 for label X. Hence app2 will loose
     // 4 (sparing AM) and 16 more from app1 till preemption limit is met.
-    verify(mDisp, times(16))
+    verify(eventHandler, times(16))
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(1))));
-    verify(mDisp, times(4))
+    verify(eventHandler, times(4))
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(2))));
 
     // Default Label:For a demand of 30, preempt from all low priority
     // apps of default label. 25 will be preempted as preemption limit is
     // met.
-    verify(mDisp, times(1))
+    verify(eventHandler, times(1))
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(8))));
-    verify(mDisp, times(2))
+    verify(eventHandler, times(2))
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(7))));
-    verify(mDisp, times(22))
+    verify(eventHandler, times(22))
         .handle(argThat(new IsPreemptionRequestFor(getAppAttemptId(6))));
   }
 
@@ -1017,10 +1018,10 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
 
     // For queue B, app3 and app4 were of lower priority. Hence take 8
     // containers from them by hitting the intraQueuePreemptionDemand of 20%.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(4))));
-    verify(mDisp, times(7)).handle(argThat(
+    verify(eventHandler, times(7)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
   }

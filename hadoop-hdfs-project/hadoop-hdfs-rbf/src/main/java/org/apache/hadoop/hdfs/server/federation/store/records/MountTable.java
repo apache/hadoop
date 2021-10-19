@@ -54,9 +54,9 @@ public abstract class MountTable extends BaseRecord {
       "Invalid entry, all mount points must start with / ";
   public static final String ERROR_MSG_NO_DEST_PATH_SPECIFIED =
       "Invalid entry, no destination paths specified ";
-  public static final String ERROR_MSG_INVAILD_DEST_NS =
+  public static final String ERROR_MSG_INVALID_DEST_NS =
       "Invalid entry, invalid destination nameservice ";
-  public static final String ERROR_MSG_INVAILD_DEST_PATH =
+  public static final String ERROR_MSG_INVALID_DEST_PATH =
       "Invalid entry, invalid destination path ";
   public static final String ERROR_MSG_ALL_DEST_MUST_START_WITH_BACK_SLASH =
       "Invalid entry, all destination must start with / ";
@@ -149,7 +149,7 @@ public abstract class MountTable extends BaseRecord {
     // Set permission fields
     UserGroupInformation ugi = NameNode.getRemoteUser();
     record.setOwnerName(ugi.getShortUserName());
-    String group = ugi.getGroups().isEmpty() ? ugi.getShortUserName()
+    String group = ugi.getGroupsSet().isEmpty() ? ugi.getShortUserName()
         : ugi.getPrimaryGroupName();
     record.setGroupName(group);
     record.setMode(new FsPermission(
@@ -394,11 +394,11 @@ public abstract class MountTable extends BaseRecord {
       String nsId = loc.getNameserviceId();
       if (nsId == null || nsId.length() == 0) {
         throw new IllegalArgumentException(
-            ERROR_MSG_INVAILD_DEST_NS + this);
+            ERROR_MSG_INVALID_DEST_NS + this);
       }
       if (loc.getDest() == null || loc.getDest().length() == 0) {
         throw new IllegalArgumentException(
-            ERROR_MSG_INVAILD_DEST_PATH + this);
+            ERROR_MSG_INVALID_DEST_PATH + this);
       }
       if (!loc.getDest().startsWith("/")) {
         throw new IllegalArgumentException(
@@ -430,6 +430,8 @@ public abstract class MountTable extends BaseRecord {
         .append(this.isReadOnly())
         .append(this.getDestOrder())
         .append(this.isFaultTolerant())
+        .append(this.getQuota().getQuota())
+        .append(this.getQuota().getSpaceQuota())
         .toHashCode();
   }
 
@@ -443,6 +445,9 @@ public abstract class MountTable extends BaseRecord {
           .append(this.isReadOnly(), other.isReadOnly())
           .append(this.getDestOrder(), other.getDestOrder())
           .append(this.isFaultTolerant(), other.isFaultTolerant())
+          .append(this.getQuota().getQuota(), other.getQuota().getQuota())
+          .append(this.getQuota().getSpaceQuota(),
+              other.getQuota().getSpaceQuota())
           .isEquals();
     }
     return false;

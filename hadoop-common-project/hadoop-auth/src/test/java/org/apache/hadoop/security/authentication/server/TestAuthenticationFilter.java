@@ -305,6 +305,34 @@ public class TestAuthenticationFilter {
       filter.destroy();
     }
   }
+
+  @Test
+  public void testEmptySecretFileFallbacksToRandomSecret() throws Exception {
+    AuthenticationFilter filter = new AuthenticationFilter();
+    try {
+      FilterConfig config = Mockito.mock(FilterConfig.class);
+      Mockito.when(config.getInitParameter(
+              AuthenticationFilter.AUTH_TYPE)).thenReturn("simple");
+      File secretFile = File.createTempFile("test_empty_secret", ".txt");
+      secretFile.deleteOnExit();
+      Assert.assertTrue(secretFile.exists());
+      Mockito.when(config.getInitParameter(
+              AuthenticationFilter.SIGNATURE_SECRET_FILE))
+              .thenReturn(secretFile.getAbsolutePath());
+      Mockito.when(config.getInitParameterNames()).thenReturn(
+              new Vector<>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+                      AuthenticationFilter.SIGNATURE_SECRET_FILE)).elements());
+      ServletContext context = Mockito.mock(ServletContext.class);
+      Mockito.when(context.getAttribute(
+              AuthenticationFilter.SIGNER_SECRET_PROVIDER_ATTRIBUTE))
+              .thenReturn(null);
+      Mockito.when(config.getServletContext()).thenReturn(context);
+      filter.init(config);
+      Assert.assertTrue(filter.isRandomSecret());
+    } finally {
+      filter.destroy();
+    }
+  }
   
   @Test
   public void testInitCaseSensitivity() throws Exception {

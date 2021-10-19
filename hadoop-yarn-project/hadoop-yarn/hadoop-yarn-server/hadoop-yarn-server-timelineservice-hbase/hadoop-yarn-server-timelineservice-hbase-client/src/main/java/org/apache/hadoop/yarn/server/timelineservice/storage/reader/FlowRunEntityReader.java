@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKeyP
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Timeline entity reader for flow run entities that are stored in the flow run

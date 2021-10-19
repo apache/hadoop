@@ -52,23 +52,21 @@ public final class TestContainerLogsUtils {
    * @param conf the configuration
    * @param fs the FileSystem
    * @param rootLogDir the root log directory
-   * @param containerId the containerId
+   * @param appId the application id
+   * @param containerToContent mapping between container id and its content
    * @param nodeId the nodeId
    * @param fileName the log file name
    * @param user the application user
-   * @param content the log context
-   * @param deletePreviousRemoteLogDir whether to delete remote log dir.
+   * @param deleteRemoteLogDir whether to delete remote log dir.
    * @throws IOException if we can not create log files locally
    *         or we can not upload container logs into RemoteFS.
    */
   public static void createContainerLogFileInRemoteFS(Configuration conf,
-      FileSystem fs, String rootLogDir, ContainerId containerId, NodeId nodeId,
-      String fileName, String user, String content,
-      boolean deleteRemoteLogDir) throws Exception {
+      FileSystem fs, String rootLogDir, ApplicationId appId,
+      Map<ContainerId, String> containerToContent, NodeId nodeId,
+      String fileName, String user, boolean deleteRemoteLogDir)
+      throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-    //prepare the logs for remote directory
-    ApplicationId appId = containerId.getApplicationAttemptId()
-        .getApplicationId();
     // create local logs
     List<String> rootLogDirList = new ArrayList<String>();
     rootLogDirList.add(rootLogDir);
@@ -83,8 +81,7 @@ public final class TestContainerLogsUtils {
     }
     assertTrue(fs.mkdirs(appLogsDir));
 
-    createContainerLogInLocalDir(appLogsDir, containerId, fs, fileName,
-        content);
+    createContainerLogInLocalDir(appLogsDir, containerToContent, fs, fileName);
     // upload container logs to remote log dir
 
     LogAggregationFileControllerFactory factory =
@@ -98,27 +95,33 @@ public final class TestContainerLogsUtils {
       fs.delete(path, true);
     }
     assertTrue(fs.mkdirs(path));
-    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId,
-        containerId, path, fs);
+    uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId, appId,
+        containerToContent.keySet(), path);
   }
 
   private static void createContainerLogInLocalDir(Path appLogsDir,
-      ContainerId containerId, FileSystem fs, String fileName, String content)
-      throws IOException{
-    Path containerLogsDir = new Path(appLogsDir, containerId.toString());
-    if (fs.exists(containerLogsDir)) {
-      fs.delete(containerLogsDir, true);
+      Map<ContainerId, String> containerToContent, FileSystem fs,
+      String fileName) throws IOException {
+    for (Map.Entry<ContainerId, String> containerAndContent :
+        containerToContent.entrySet()) {
+      ContainerId containerId = containerAndContent.getKey();
+      String content = containerAndContent.getValue();
+      Path containerLogsDir = new Path(appLogsDir, containerId.toString());
+      if (fs.exists(containerLogsDir)) {
+        fs.delete(containerLogsDir, true);
+      }
+      assertTrue(fs.mkdirs(containerLogsDir));
+      Writer writer =
+          new FileWriter(new File(containerLogsDir.toString(), fileName));
+      writer.write(content);
+      writer.close();
     }
-    assertTrue(fs.mkdirs(containerLogsDir));
-    Writer writer =
-        new FileWriter(new File(containerLogsDir.toString(), fileName));
-    writer.write(content);
-    writer.close();
   }
 
   private static void uploadContainerLogIntoRemoteDir(UserGroupInformation ugi,
       Configuration configuration, List<String> rootLogDirs, NodeId nodeId,
-      ContainerId containerId, Path appDir, FileSystem fs) throws Exception {
+      ApplicationId appId, Iterable<ContainerId> containerIds, Path appDir)
+      throws Exception {
     Path path =
         new Path(appDir, LogAggregationUtils.getNodeString(nodeId));
     LogAggregationFileControllerFactory factory
@@ -128,16 +131,16 @@ public final class TestContainerLogsUtils {
     try {
       Map<ApplicationAccessType, String> appAcls = new HashMap<>();
       appAcls.put(ApplicationAccessType.VIEW_APP, ugi.getUserName());
-      ApplicationId appId = containerId.getApplicationAttemptId()
-          .getApplicationId();
       LogAggregationFileControllerContext context
           = new LogAggregationFileControllerContext(
               path, path, true, 1000,
               appId, appAcls, nodeId, ugi);
       fileController.initializeWriter(context);
-      fileController.write(new AggregatedLogFormat.LogKey(containerId),
-          new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
-              ugi.getShortUserName()));
+      for (ContainerId containerId : containerIds) {
+        fileController.write(new AggregatedLogFormat.LogKey(containerId),
+            new AggregatedLogFormat.LogValue(rootLogDirs, containerId,
+                ugi.getShortUserName()));
+      }
     } finally {
       fileController.closeWriter();
     }

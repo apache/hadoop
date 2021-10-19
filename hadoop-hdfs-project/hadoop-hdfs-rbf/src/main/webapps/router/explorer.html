@@ -1,0 +1,328 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap-editable.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
+    <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+    <title>Browsing HDFS</title>
+  </head>
+  <body>
+
+    <header class="navbar navbar-inverse bs-docs-nav" role="banner">
+    <div class="container">
+      <div class="navbar-header">
+        <div class="navbar-brand">Hadoop</div>
+      </div>
+
+      <ul class="nav navbar-nav" id="ui-tabs">
+        <li><a href="federationhealth.html#tab-overview">Overview</a></li>
+        <li><a href="federationhealth.html#tab-namenode">Subclusters</a></li>
+        <li><a href="federationhealth.html#tab-router">Routers</a></li>
+        <li><a href="federationhealth.html#tab-datanode">Datanodes</a></li>
+        <li><a href="federationhealth.html#tab-mounttable">Mount table</a></li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">Browse the file system</a></li>
+            <li><a href="logs">Logs</a></li>
+            <li><a href="logLevel">Log Level</a></li>
+            <li><a href="jmx">Metrics</a></li>
+            <li><a href="conf">Configuration</a></li>
+            <li><a href="stacks">Process Thread Dump</a></li>
+            <li><a href="topology">Network Topology</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    </header>
+
+    <div class="modal" id="file-info" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="file-info-title">File information</h4>
+      </div>
+      <div class="modal-body" id="file-info-body">
+        <div class=row>
+              <span class="col-xs-4">
+                <a id="file-info-download">Download</a>
+              </span>
+              <span class="col-xs-4">
+                <a id="file-info-preview-head" style="cursor:pointer">Head the file (first 32K)</a>
+              </span>
+              <span class="col-xs-4">
+                <a id="file-info-preview-tail" style="cursor:pointer">Tail the file (last 32K)</a>
+          </span>
+        </div>
+        <hr />
+        <div class="panel panel-success" id="file-info-blockinfo-panel">
+          <div class="panel-heading">
+        Block information --
+        <select class="btn btn-default" id="file-info-blockinfo-list">
+        </select>
+          </div>
+          <div class="panel-body" id="file-info-blockinfo-body"></div>
+        </div>
+        <div class="panel panel-info" id="file-info-tail" style="display:none">
+          <div class="panel-heading">File contents</div>
+          <div class="panel-body">
+        <div class="input-group-sm">
+        <textarea class="form-control" style="height: 150px" id="file-info-preview-body"></textarea>
+        </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-success"
+                        data-dismiss="modal">Close</button></div>
+    </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="page-header">
+    <h1>Browse Directory</h1>
+      </div>
+      <div class="alert alert-danger" id="alert-panel" style="display:none">
+    <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+    <div class="alert-body" id="alert-panel-body"></div>
+      </div>
+    <div class="modal" id="btn-create-directory" tabindex="-1" role="dialog"
+      aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close"
+              data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Create Directory</h4>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <div class="input-group">
+                <span class="input-group-addon" id="new_directory_pwd"></span>
+                <input type="text" class="form-control" id="new_directory"
+                  placeholder="New Directory Name" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success"
+              id="btn-create-directory-send" data-complete-text="Creating...">
+              Create
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modal-upload-file" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog">
+         <div class="modal-content">
+           <div class="modal-header"><button type="button" class="close"
+             data-dismiss="modal" aria-hidden="true">&times;</button>
+             <h4 class="modal-title" id="file-upload-title">Upload File</h4>
+           </div>
+           <div class="modal-body" id="file-upload-body">
+             <input id="modal-upload-file-input" type="file" class="file" multiple>
+           </div>
+           <div class="modal-footer">
+             <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+             <button type="button" class="btn btn-success" id="modal-upload-file-button" data-complete-text="Uploading...">Upload</button>
+           </div>
+         </div>
+      </div>
+    </div>
+  <div class="modal" id="delete-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+            aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="delete-modal-title">Delete</h4>
+        </div>
+        <div class="modal-body">
+          <div class="panel-body">
+            <div id="delete-prompt"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="delete-button"
+            data-complete-text="Deleting...">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+      <div class="row">
+      <div class="col-xs-9 col-md-9">
+        <form onsubmit="return false;">
+          <div class="input-group">
+            <input type="text" class="form-control" id="directory"/>
+            <span class="input-group-btn">
+              <button class="btn btn-default" type="button" id="btn-nav-directory">Go!</button>
+            </span>
+          </div>
+        </form>
+      </div>
+      <div class="col-xs-3 col-md-3">
+        <button type="button" class="btn btn-default" data-toggle="modal"
+          aria-label="New Directory" data-target="#btn-create-directory"
+          title="Create Directory" id="btn-create-dir">
+            <span class="glyphicon glyphicon-folder-open"></span>
+        </button>
+        <button type="button" class="btn btn-default" data-toggle="modal"
+          data-target="#modal-upload-file" title="Upload Files" id="btn-upload-files">
+            <span class="glyphicon glyphicon-cloud-upload"></span>
+        </button>
+        <button class="btn btn-default dropdown-toggle" type="button"
+          data-toggle="dropdown" title="Cut & Paste">
+        <span class="glyphicon glyphicon-list-alt"></span></button>
+        <ul class="dropdown-menu cut-paste">
+          <li><a id="explorer-cut">Cut</a></li>
+          <li><a id="explorer-paste">Paste</a></li>
+        </ul>
+        <button type="button" class="btn btn-default"  data-toggle="modal"
+          aria-label="Parent Directory" title="Parent Directory" id="parentDir">
+           <span class="glyphicon glyphicon-level-up"></span>
+        </button>
+      </div>
+    </div>
+
+      <br />
+      <div id="panel"></div>
+
+      <div class="row">
+        <hr />
+        <div class="col-xs-2"><p>Hadoop, {release-year-token}.</p></div>
+      </div>
+
+    </div>
+
+    <script type="text/x-template" id="explorer-popover-perm-info">
+      <div class="explorer-popover-perm-body">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th class="text-center">User</th>
+              <th class="text-center">Group</th>
+              <th class="text-center">Other</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><label><input type="checkbox" data-bit="8" /> Read</label></td>
+              <td><label><input type="checkbox" data-bit="5" /> Read</label></td>
+              <td><label><input type="checkbox" data-bit="2" /> Read</label></td>
+            </tr>
+            <tr>
+              <td><label><input type="checkbox" data-bit="7" /> Write</label></td>
+              <td><label><input type="checkbox" data-bit="4" /> Write</label></td>
+              <td><label><input type="checkbox" data-bit="1" /> Write</label></td>
+            </tr>
+            <tr>
+              <td><label><input type="checkbox" data-bit="6" /> Execute</label></td>
+              <td><label><input type="checkbox" data-bit="3" /> Execute</label></td>
+              <td><label><input type="checkbox" data-bit="0" /> Execute</label></td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="text-align: right; margin-right: 10px">
+          <label><input type="checkbox" id="explorer-perm-sticky" data-bit="9" /> Sticky bit</label>
+        </div>
+        <hr/>
+        <div style="text-align: right">
+          <button type="button" class="btn" id="explorer-perm-cancel">Cancel</button>
+          <button type="button" class="btn btn-success" id="explorer-set-perm-button"
+                  data-complete-text="Updating...">Set</button>
+        </div>
+      </div>
+    </script>
+
+    <script type="text/x-dust-template" id="tmpl-explorer">
+      <table class="table" id="table-explorer">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="file-selector-all"></th>
+            <th title="Permissions">Permission</th>
+            <th>Owner</th>
+            <th>Group</th>
+            <th>Size</th>
+            <th title="Last Modified">Last Modified</th>
+            <th title="Replication">Replication</th>
+            <th>Block Size</th>
+            <th>Name</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {#FileStatus}
+          <tr inode-path="{pathSuffix}" data-permission="{permission}"
+            class="explorer-entry">
+            <td><input type="checkbox" class="file_selector"> </td>
+            <td><span class="explorer-perm-links editable-click">
+              {type|helper_to_directory}{permission|helper_to_permission}
+              {aclBit|helper_to_acl_bit}
+              </span></td>
+            <td><span class="explorer-owner-links">{owner}</span></td>
+            <td><span class="explorer-group-links">{group}</span></td>
+            <td>{length}</td>
+            <td>{modificationTime}</td>
+            <td><span class="explorer-replication-links">{replication}</span></td>
+            <td>{blockSize|fmt_bytes}</td>
+            <td><a inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
+            <td><span class="glyphicon glyphicon-trash"></span></td>
+          </tr>
+          {/FileStatus}
+        </tbody>
+      </table>
+    </script>
+
+    <script type="text/x-dust-template" id="tmpl-block-info">
+      {#block}
+      <p>Block ID: {blockId}</p>
+      <p>Block Pool ID: {blockPoolId}</p>
+      <p>Generation Stamp: {generationStamp}</p>
+      <p>Size: {numBytes}</p>
+      {/block}
+      <p>Availability:
+        <ul>
+          {#locations}
+          <li>{hostName}</li>
+          {/locations}
+        </ul>
+      </p>
+    </script>
+    <script type="text/javascript" src="/static/jquery-3.5.1.min.js">
+    </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap-editable.min.js">
+    </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
+    </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
+    </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
+    </script><script type="text/javascript" src="/static/dfs-dust.js">
+    </script><script type="text/javascript" src="/static/json-bignum.js">
+    </script><script type="text/javascript" src="/static/rest-csrf.js">
+    </script><script type="text/javascript" src="explorer.js">
+    </script><script type="text/javascript" src="/static/moment.min.js">
+    </script>
+  </body>
+</html>

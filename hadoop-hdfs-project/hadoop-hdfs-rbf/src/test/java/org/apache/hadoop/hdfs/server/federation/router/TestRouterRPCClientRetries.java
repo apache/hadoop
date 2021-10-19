@@ -54,7 +54,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Test retry behavior of the Router RPC Client.
@@ -173,7 +173,7 @@ public class TestRouterRPCClientRetries {
     NamenodeStatusReport report = new NamenodeStatusReport(ns0,
         nnInfo.getNamenodeId(), nnInfo.getRpcAddress(),
         nnInfo.getServiceAddress(), nnInfo.getLifelineAddress(),
-        nnInfo.getWebAddress());
+        nnInfo.getWebScheme(), nnInfo.getWebAddress());
     report.setRegistrationValid(false);
     assertTrue(resolver.registerNamenode(report));
     resolver.loadCache(true);

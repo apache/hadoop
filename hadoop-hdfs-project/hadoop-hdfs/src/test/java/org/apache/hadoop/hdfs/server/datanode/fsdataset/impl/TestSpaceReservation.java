@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import com.google.common.base.Supplier;
-import org.apache.commons.io.IOUtils;
+import java.util.function.Supplier;
+
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,13 +46,13 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -101,8 +102,8 @@ public class TestSpaceReservation {
   }
 
   static {
-    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(FsDatasetImpl.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(DataNode.LOG, Level.TRACE);
   }
 
   /**
@@ -554,7 +555,7 @@ public class TestSpaceReservation {
           String filename = "/file-" + rand.nextLong();
           os = localClient.create(filename, false);
           os.write(data, 0, rand.nextInt(data.length));
-          IOUtils.closeQuietly(os);
+          IOUtils.closeStream(os);
           os = null;
           localClient.delete(filename, false);
           Thread.sleep(50);     // Sleep for a bit to avoid killing the system.
@@ -566,7 +567,7 @@ public class TestSpaceReservation {
           return;
         } finally {
           if (os != null) {
-            IOUtils.closeQuietly(os);
+            IOUtils.closeStream(os);
           }
         }
       }

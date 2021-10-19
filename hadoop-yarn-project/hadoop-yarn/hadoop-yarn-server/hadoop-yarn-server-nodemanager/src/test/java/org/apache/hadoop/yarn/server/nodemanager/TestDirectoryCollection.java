@@ -177,6 +177,105 @@ public class TestDirectoryCollection {
   }
 
   @Test
+  public void testDiskSpaceUtilizationThresholdEnabled() throws IOException {
+
+    String dirA = new File(testDir, "dirA").getPath();
+    String[] dirs = {dirA};
+    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F);
+
+    // Disable disk utilization threshold.
+    dc.setDiskUtilizationThresholdEnabled(false);
+    Assert.assertFalse(dc.getDiskUtilizationThresholdEnabled());
+
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    // Enable disk utilization threshold.
+    dc.setDiskUtilizationThresholdEnabled(true);
+    Assert.assertTrue(dc.getDiskUtilizationThresholdEnabled());
+
+    dc.checkDirs();
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(1, dc.getFailedDirs().size());
+    Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
+    Assert.assertEquals(DirectoryCollection.DiskErrorCause.DISK_FULL,
+        dc.getDirectoryErrorInfo(dirA).cause);
+
+    // no good dirs
+    Assert.assertEquals(0,
+        dc.getGoodDirsDiskUtilizationPercentage());
+
+    dc = new DirectoryCollection(dirs, 100.0F);
+    int utilizedSpacePerc =
+        (int) ((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    Assert.assertEquals(utilizedSpacePerc,
+        dc.getGoodDirsDiskUtilizationPercentage());
+
+    dc = new DirectoryCollection(dirs,
+        testDir.getTotalSpace() / (1024 * 1024));
+
+    // Disable disk utilization threshold.
+    dc.setDiskUtilizationThresholdEnabled(false);
+    Assert.assertFalse(dc.getDiskUtilizationThresholdEnabled());
+
+    // Disable disk free space threshold.
+    dc.setDiskFreeSpaceThresholdEnabled(false);
+    Assert.assertFalse(dc.getDiskFreeSpaceThresholdEnabled());
+    dc.checkDirs();
+
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    dc = new DirectoryCollection(dirs,
+        testDir.getTotalSpace() / (1024 * 1024));
+
+    // Enable disk free space threshold.
+    dc.setDiskFreeSpaceThresholdEnabled(true);
+    Assert.assertTrue(dc.getDiskFreeSpaceThresholdEnabled());
+
+    dc.checkDirs();
+
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(1, dc.getFailedDirs().size());
+    Assert.assertEquals(1, dc.getFullDirs().size());
+    Assert.assertNotNull(dc.getDirectoryErrorInfo(dirA));
+    // no good dirs
+    Assert.assertEquals(0, dc.getGoodDirsDiskUtilizationPercentage());
+
+    dc = new DirectoryCollection(dirs, 100.0F, 100.0F, 0);
+    utilizedSpacePerc =
+        (int)((testDir.getTotalSpace() - testDir.getUsableSpace()) * 100 /
+            testDir.getTotalSpace());
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getErroredDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+    Assert.assertEquals(0, dc.getFullDirs().size());
+    Assert.assertNull(dc.getDirectoryErrorInfo(dirA));
+
+    Assert.assertEquals(utilizedSpacePerc,
+        dc.getGoodDirsDiskUtilizationPercentage());
+  }
+
+  @Test
   public void testDiskLimitsCutoffSetters() throws IOException {
 
     String[] dirs = { "dir" };
@@ -203,12 +302,30 @@ public class TestDirectoryCollection {
     Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
 
-    long spaceValue = 57;
-    dc.setDiskUtilizationSpaceCutoff(spaceValue);
-    Assert.assertEquals(spaceValue, dc.getDiskUtilizationSpaceCutoff());
-    spaceValue = -57;
-    dc.setDiskUtilizationSpaceCutoff(spaceValue);
-    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+    long lowSpaceValue = 57;
+    dc.setDiskUtilizationSpaceCutoff(lowSpaceValue);
+    Assert.assertEquals(lowSpaceValue, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(lowSpaceValue, dc.getDiskUtilizationSpaceCutoffHigh());
+    long highSpaceValue = 73;
+    dc.setDiskUtilizationSpaceCutoff(lowSpaceValue, highSpaceValue);
+    Assert.assertEquals(lowSpaceValue, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(highSpaceValue, dc.getDiskUtilizationSpaceCutoffHigh());
+    lowSpaceValue = -57;
+    dc.setDiskUtilizationSpaceCutoff(lowSpaceValue);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
+    dc.setDiskUtilizationSpaceCutoff(lowSpaceValue, highSpaceValue);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(highSpaceValue, dc.getDiskUtilizationSpaceCutoffHigh());
+    highSpaceValue = -10;
+    dc.setDiskUtilizationSpaceCutoff(lowSpaceValue, highSpaceValue);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
+    lowSpaceValue = 33;
+    dc.setDiskUtilizationSpaceCutoff(lowSpaceValue, highSpaceValue);
+    Assert.assertEquals(lowSpaceValue, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(lowSpaceValue, dc.getDiskUtilizationSpaceCutoffHigh());
+
   }
 
   @Test
@@ -273,42 +390,96 @@ public class TestDirectoryCollection {
         delta);
     Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
-    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
 
     dc = new DirectoryCollection(dirs, 57.5F);
     Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoffHigh(),
         delta);
     Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
-    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
 
     dc = new DirectoryCollection(dirs, 57);
     Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
         delta);
     Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
-    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoff());
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffHigh());
+
+    dc = new DirectoryCollection(dirs, 57, 73);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(73, dc.getDiskUtilizationSpaceCutoffHigh());
+
+    dc = new DirectoryCollection(dirs, 57, 33);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffHigh());
+
+    dc = new DirectoryCollection(dirs, 57, -33);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoffHigh());
+
+    dc = new DirectoryCollection(dirs, -57, -33);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
+
+    dc = new DirectoryCollection(dirs, -57, 33);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(33, dc.getDiskUtilizationSpaceCutoffHigh());
 
     dc = new DirectoryCollection(dirs, 57.5F, 50.5F, 67);
     Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoffHigh(),
         delta);
     Assert.assertEquals(50.5F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
-    Assert.assertEquals(67, dc.getDiskUtilizationSpaceCutoff());
+    Assert.assertEquals(67, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(67, dc.getDiskUtilizationSpaceCutoffHigh());
 
     dc = new DirectoryCollection(dirs, -57.5F, -57.5F, -67);
     Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
         delta);
     Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
-    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
 
     dc = new DirectoryCollection(dirs, 157.5F, 157.5F, -67);
     Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
         delta);
     Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
         delta);
-    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoffHigh());
+
+    dc = new DirectoryCollection(dirs, 157.5F, 157.5F, 5, 10);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffHigh(),
+        delta);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoffLow(),
+        delta);
+    Assert.assertEquals(5, dc.getDiskUtilizationSpaceCutoffLow());
+    Assert.assertEquals(10, dc.getDiskUtilizationSpaceCutoffHigh());
   }
 
   @Test

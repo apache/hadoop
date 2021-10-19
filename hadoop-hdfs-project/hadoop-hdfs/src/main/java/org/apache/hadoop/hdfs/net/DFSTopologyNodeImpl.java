@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.net;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.net.InnerNode;
@@ -107,10 +107,6 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
     } else {
       return 0;
     }
-  }
-
-  int getNumOfChildren() {
-    return children.size();
   }
 
   private void incStorageTypeCount(StorageType type) {

@@ -71,8 +71,8 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import java.util.function.Supplier;
 
 /**
  * This class tests if EnhancedByteBufferAccess works correctly.
@@ -358,7 +358,7 @@ public class TestEnhancedByteBufferAccess {
     fsIn.close();
     fsIn = fs.open(TEST_PATH);
     final ShortCircuitCache cache = ClientContext.get(
-        CONTEXT, conf).getShortCircuitCache();
+        CONTEXT, conf).getShortCircuitCache(0);
     cache.accept(new CountingVisitor(0, 5, 5, 0));
     results[0] = fsIn.read(null, BLOCK_SIZE,
         EnumSet.of(ReadOption.SKIP_CHECKSUMS));
@@ -654,12 +654,12 @@ public class TestEnhancedByteBufferAccess {
         BLOCK_SIZE), byteBufferToArray(result2));
     fsIn2.releaseBuffer(result2);
     fsIn2.close();
-    
+
     // check that the replica is anchored 
     final ExtendedBlock firstBlock =
         DFSTestUtil.getFirstBlock(fs, TEST_PATH);
     final ShortCircuitCache cache = ClientContext.get(
-        CONTEXT, conf).getShortCircuitCache();
+        CONTEXT, conf).getShortCircuitCache(0);
     waitForReplicaAnchorStatus(cache, firstBlock, true, true, 1);
     // Uncache the replica
     fs.removeCacheDirective(directiveId);
@@ -841,7 +841,7 @@ public class TestEnhancedByteBufferAccess {
       if (buf2 != null) {
         fsIn2.releaseBuffer(buf2);
       }
-      IOUtils.cleanup(null, fsIn, fsIn2);
+      IOUtils.cleanupWithLogger(null, fsIn, fsIn2);
       if (cluster != null) {
         cluster.shutdown();
       }

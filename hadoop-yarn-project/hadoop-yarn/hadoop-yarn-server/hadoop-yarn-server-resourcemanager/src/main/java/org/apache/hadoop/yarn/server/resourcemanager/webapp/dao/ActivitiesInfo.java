@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

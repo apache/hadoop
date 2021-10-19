@@ -19,7 +19,7 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 
-import com.google.common.collect.TreeMultimap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.TreeMultimap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Time;
@@ -35,7 +35,7 @@ import java.util.*;
 @InterfaceStability.Unstable
 public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
 
-  private class RamDiskReplicaLru extends RamDiskReplica {
+  private static class RamDiskReplicaLru extends RamDiskReplica {
     long lastUsedTime;
 
     private RamDiskReplicaLru(String bpid, long blockId,
@@ -88,7 +88,7 @@ public class RamDiskReplicaLruTracker extends RamDiskReplicaTracker {
     }
     RamDiskReplicaLru ramDiskReplicaLru =
         new RamDiskReplicaLru(bpid, blockId, transientVolume,
-                              lockedBytesReserved);
+            lockedBytesReserved);
     map.put(blockId, ramDiskReplicaLru);
     replicasNotPersisted.add(ramDiskReplicaLru);
   }

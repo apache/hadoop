@@ -121,7 +121,7 @@ public class TestCopy {
 
     tryCopyStream(in, false);
     verify(mockFs, never()).rename(any(Path.class), any(Path.class));
-    verify(mockFs, never()).delete(eq(tmpPath), anyBoolean());
+    verify(mockFs).delete(eq(tmpPath), anyBoolean());
     verify(mockFs, never()).delete(eq(path), anyBoolean());
     verify(mockFs, never()).close();
   }

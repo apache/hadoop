@@ -35,7 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
@@ -82,8 +82,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 @InterfaceAudience.Private
 public class FSImageFormatPBSnapshot {
@@ -438,7 +438,7 @@ public class FSImageFormatPBSnapshot {
           .setSnapshotCounter(sm.getSnapshotCounter())
           .setNumSnapshots(sm.getNumSnapshots());
 
-      INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
+      final List<INodeDirectory> snapshottables = sm.getSnapshottableDirs();
       for (INodeDirectory sdir : snapshottables) {
         b.addSnapshottableDir(sdir.getId());
       }

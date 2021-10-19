@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "RpcHeaderProtos";
 option java_generate_equals_and_hash = true;
@@ -63,7 +63,7 @@ enum RpcKindProto {
 message RPCTraceInfoProto {
     optional int64 traceId = 1; // parentIdHigh
     optional int64 parentId = 2; // parentIdLow
-
+    optional bytes spanContext = 3; // Trace SpanContext
 }
 
 /**

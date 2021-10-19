@@ -17,14 +17,14 @@
  */
 
 package org.apache.hadoop.fs.azure;
-import com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 
 /**
  * Class that provides caching for Authorize and getSasUri calls

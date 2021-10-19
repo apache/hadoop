@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
@@ -47,6 +48,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -191,6 +193,17 @@ public class ProviderUtils implements YarnServiceConstants {
     return compInstanceDir;
   }
 
+  public static Path initCompPublicResourceDir(SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      ComponentInstance instance) {
+    Path compDir = fs.getComponentPublicResourceDir(
+        compLaunchContext.getServiceVersion(), compLaunchContext.getName());
+    Path compPublicResourceDir = new Path(compDir,
+        instance.getCompInstanceName());
+    return compPublicResourceDir;
+  }
+
+
   // 1. Create all config files for a component on hdfs for localization
   // 2. Add the config file to localResource
   public static synchronized void createConfigFileAndAddLocalResource(
@@ -210,6 +223,20 @@ public class ProviderUtils implements YarnServiceConstants {
           new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
     } else {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
+    }
+
+    Path compPublicResourceDir = initCompPublicResourceDir(fs,
+        compLaunchContext, instance);
+    if (!fs.getFileSystem().exists(compPublicResourceDir)) {
+      log.info("{} version {} : Creating Public Resource dir on hdfs: {}",
+          instance.getCompInstanceId(), compLaunchContext.getServiceVersion(),
+          compPublicResourceDir);
+      fs.getFileSystem().mkdirs(compPublicResourceDir,
+          new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE,
+          FsAction.EXECUTE));
+    } else {
+      log.info("Component instance public resource dir already exists: "
+          + compPublicResourceDir);
     }
 
     log.debug("Tokens substitution for component instance: {}{}{}" + instance
@@ -236,7 +263,14 @@ public class ProviderUtils implements YarnServiceConstants {
        * substitution and merges in new configs, and writes a new file to
        * compInstanceDir/fileName.
        */
-      Path remoteFile = new Path(compInstanceDir, fileName);
+      Path remoteFile = null;
+      LocalResourceVisibility visibility = configFile.getVisibility();
+      if (visibility != null &&
+          visibility.equals(LocalResourceVisibility.PUBLIC)) {
+        remoteFile = new Path(compPublicResourceDir, fileName);
+      } else {
+        remoteFile = new Path(compInstanceDir, fileName);
+      }
 
       if (!fs.getFileSystem().exists(remoteFile)) {
         log.info("Saving config file on hdfs for component " + instance
@@ -268,7 +302,8 @@ public class ProviderUtils implements YarnServiceConstants {
 
       // Add resource for localization
       LocalResource configResource =
-          fs.createAmResource(remoteFile, LocalResourceType.FILE);
+          fs.createAmResource(remoteFile, LocalResourceType.FILE,
+          configFile.getVisibility());
       Path destFile = new Path(configFile.getDestFile());
       String symlink = APP_CONF_DIR + "/" + fileName;
       addLocalResource(launcher, symlink, configResource, destFile,
@@ -311,7 +346,8 @@ public class ProviderUtils implements YarnServiceConstants {
       LocalResource localResource = fs.createAmResource(sourceFile,
           (staticFile.getType() == ConfigFile.TypeEnum.ARCHIVE ?
               LocalResourceType.ARCHIVE :
-              LocalResourceType.FILE));
+              LocalResourceType.FILE), staticFile.getVisibility());
+
       Path destFile = new Path(sourceFile.getName());
       if (staticFile.getDestFile() != null && !staticFile.getDestFile()
           .isEmpty()) {
@@ -430,7 +466,7 @@ public class ProviderUtils implements YarnServiceConstants {
     content = substituteStrWithTokens(content, tokensForSubstitution);
 
     try (OutputStream output = fs.create(remoteFile)) {
-      org.apache.commons.io.IOUtils.write(content, output);
+      org.apache.commons.io.IOUtils.write(content, output, StandardCharsets.UTF_8);
     } catch (IOException e) {
       log.info("Failed to create " + remoteFile);
     }

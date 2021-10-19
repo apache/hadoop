@@ -38,7 +38,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.http.HttpServer2;
 import org.junit.BeforeClass;

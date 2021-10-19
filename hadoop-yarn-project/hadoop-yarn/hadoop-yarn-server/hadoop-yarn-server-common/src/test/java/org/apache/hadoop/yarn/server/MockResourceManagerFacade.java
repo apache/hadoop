@@ -172,7 +172,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 
-import com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 /**
  * Mock Resource Manager facade implementation that exposes all the methods

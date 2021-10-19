@@ -522,7 +522,8 @@ public class TestWebHdfsTokens {
     Assert.assertSame(token, token2);
     reset(fs);
 
-    // verify an expired ugi token is NOT replaced with a new token
+    // verify an expired ugi token is not replaced with a new token if the
+    // ugi does not contain a new token
     fs.cancelDelegationToken(token);
     for (int i=0; i<2; i++) {
       try {
@@ -543,6 +544,22 @@ public class TestWebHdfsTokens {
       reset(fs);
     }
     
+    // verify an expired ugi token is replaced with a new token
+    // if one is available in UGI
+    token = fs.getDelegationToken(null);
+    ugi.addToken(token);
+    reset(fs);
+    fs.getFileStatus(new Path("/"));
+    verify(fs, times(2)).getDelegationToken(); // first bad, then good
+    verify(fs, times(1)).replaceExpiredDelegationToken();
+    verify(fs, never()).getDelegationToken(anyString());
+    verify(fs, times(1)).setDelegationToken(eq(token));
+    token2 = fs.getRenewToken();
+    Assert.assertNotNull(token2);
+    Assert.assertEquals(fs.getTokenKind(), token.getKind());
+    Assert.assertSame(token, token2);
+    reset(fs);
+
     // verify fs close does NOT cancel the ugi token
     fs.close();
     verify(fs, never()).getDelegationToken();

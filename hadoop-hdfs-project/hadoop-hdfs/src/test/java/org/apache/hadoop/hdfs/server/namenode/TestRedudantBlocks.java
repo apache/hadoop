@@ -35,8 +35,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +60,7 @@ public class TestRedudantBlocks {
   private final int cellSize = ecPolicy.getCellSize();
   private final int stripesPerBlock = 4;
   private final int blockSize = stripesPerBlock * cellSize;
-  private final int numDNs = groupSize + 1;
+  private final int numDNs = groupSize;
 
   @Before
   public void setup() throws IOException {
@@ -108,14 +110,26 @@ public class TestRedudantBlocks {
     blk.setBlockId(groupId + 2);
     cluster.injectBlocks(i, Arrays.asList(blk), bpid);
 
+    BlockInfoStriped blockInfo =
+        (BlockInfoStriped)cluster.getNamesystem().getBlockManager()
+            .getStoredBlock(new Block(groupId));
     // update blocksMap
     cluster.triggerBlockReports();
-    // add to invalidates
+    // delete redundant block
     cluster.triggerHeartbeats();
-    // datanode delete block
+    //wait for IBR
+    GenericTestUtils.waitFor(
+        () -> cluster.getNamesystem().getBlockManager()
+            .countNodes(blockInfo).liveReplicas() >= groupSize -1,
+        500, 10000);
+
+    // trigger reconstruction
     cluster.triggerHeartbeats();
-    // update blocksMap
-    cluster.triggerBlockReports();
+    //wait for IBR
+    GenericTestUtils.waitFor(
+        () -> cluster.getNamesystem().getBlockManager()
+            .countNodes(blockInfo).liveReplicas() >= groupSize,
+        500, 10000);
 
     HashSet<Long> blockIdsSet = new HashSet<Long>();
 

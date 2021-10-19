@@ -31,7 +31,7 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ha.protocolPB.ZKFCProtocolClientSideTranslatorPB;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Represents a target of the client side HA administration commands.
@@ -43,6 +43,12 @@ public abstract class HAServiceTarget {
   private static final String HOST_SUBST_KEY = "host";
   private static final String PORT_SUBST_KEY = "port";
   private static final String ADDRESS_SUBST_KEY = "address";
+
+  /**
+   * The HAState this service target is intended to be after transition
+   * is complete.
+   */
+  private HAServiceProtocol.HAServiceState transitionTargetHAStatus;
 
   /**
    * @return the IPC address of the target node.
@@ -91,6 +97,15 @@ public abstract class HAServiceTarget {
   public HAServiceProtocol getProxy(Configuration conf, int timeoutMs)
       throws IOException {
     return getProxyForAddress(conf, timeoutMs, getAddress());
+  }
+
+  public void setTransitionTargetHAStatus(
+      HAServiceProtocol.HAServiceState status) {
+    this.transitionTargetHAStatus = status;
+  }
+
+  public HAServiceProtocol.HAServiceState getTransitionTargetHAStatus() {
+    return this.transitionTargetHAStatus;
   }
 
   /**

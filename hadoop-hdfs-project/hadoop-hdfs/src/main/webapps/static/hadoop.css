@@ -262,7 +262,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 
 .dfshealth-node-down-decommissioned:before {
     color: #c7254e;
-    content: "\e017";
+    content: "\e090";
 }
 
 .dfshealth-node-down-maintenance:before {
@@ -283,6 +283,47 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 
 .dfshealth-node-legend li:before {
     padding-right: 5pt;
+}
+
+.dfshealth-namenode-icon:before {
+    font-size: 10pt;
+    padding-right: 1pt;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.dfshealth-namenode-active:before {
+    color: #5fa341;
+    content: "\e013";
+}
+
+.dfshealth-namenode-observer:before {
+    color: #CCCC00;
+    content: "\e013";
+}
+
+.dfshealth-namenode-unavailable:before {
+    color: #c7254e;
+    content: "\e101";
+}
+
+.dfshealth-namenode-standby:before {
+    color: #2e6da6;
+    content: "\e017";
+}
+
+.dfshealth-namenode-safemode:before {
+    color: #bc5f04;
+    content: "\e090";
+}
+
+.dfshealth-namenode-disabled:before {
+    color: #eea236;
+    content: "\e136";
 }
 
 .explorer-entry .explorer-browse-links { cursor: pointer; }
@@ -328,4 +369,35 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
 .bar text {
     fill: #fff;
     font: 10px sans-serif;
+}
+
+td.details-control:before {
+    color: #5fa341;
+    content: "\2b";
+    cursor: pointer;
+    font-size: 1.5em;
+    line-height: 1em;
+}
+
+tr.shown td.details-control:before {
+    color: #c7254e;
+    content: "\2212";
+    cursor: pointer;
+    font-size: 1.5em;
+    line-height: 1em;
+}
+
+#table-snapshots_wrapper {
+    margin-top: 20px;
+}
+
+table#table-snapshots>tbody>tr>td>.dataTables_wrapper {
+    padding-left: 50px;
+    padding-right: 10px;
+    padding-top: 10px;
+    background-color: #ddd;
+}
+
+.snapshot-stats>h2 {
+    margin: 0;
 }

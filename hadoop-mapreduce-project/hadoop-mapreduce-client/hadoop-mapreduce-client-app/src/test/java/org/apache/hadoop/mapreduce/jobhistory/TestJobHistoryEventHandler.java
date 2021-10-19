@@ -1119,6 +1119,7 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
 class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
   public JHEventHandlerForSigtermTest(AppContext context, int startCount) {
     super(context, startCount);
+    JobHistoryEventHandler.fileMap.clear();
   }
 
   public void addToFileMap(JobId jobId) {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import com.sun.jersey.api.client.Client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -49,21 +50,24 @@ public class AboutBlock extends HtmlBlock {
   protected void render(Block html) {
     Configuration conf = this.router.getConfig();
     String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
+    Client client = RouterWebServiceUtil.createJerseyClient(conf);
 
-    ClusterMetricsInfo metrics = RouterWebServiceUtil.genericForward(
-        webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null);
+    ClusterMetricsInfo metrics = RouterWebServiceUtil
+        .genericForward(webAppAddress, null, ClusterMetricsInfo.class,
+            HTTPMethods.GET,
+            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+            conf, client);
     boolean isEnabled = conf.getBoolean(
         YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
     info("Cluster Status").
         __("Federation Enabled", isEnabled).
-        __("Applications Submitted", "N/A").
-        __("Applications Pending", "N/A").
-        __("Applications Running", "N/A").
-        __("Applications Failed", "N/A").
-        __("Applications Killed", "N/A").
-        __("Applications Completed", "N/A").
+        __("Applications Submitted", metrics.getAppsSubmitted()).
+        __("Applications Pending", metrics.getAppsPending()).
+        __("Applications Running", metrics.getAppsRunning()).
+        __("Applications Failed", metrics.getAppsFailed()).
+        __("Applications Killed", metrics.getAppsKilled()).
+        __("Applications Completed", metrics.getAppsCompleted()).
         __("Containers Allocated", metrics.getContainersAllocated()).
         __("Containers Reserved", metrics.getReservedContainers()).
         __("Containers Pending", metrics.getPendingContainers()).

@@ -29,6 +29,19 @@ package org.apache.hadoop.fs.s3a.s3guard;
  * Time is measured in milliseconds,
  */
 public interface ITtlTimeProvider {
+
+  /**
+   * The current time in milliseconds.
+   * Assuming this calls System.currentTimeMillis(), this is a native iO call
+   * and so should be invoked sparingly (i.e. evaluate before any loop, rather
+   * than inside).
+   * @return the current time.
+   */
   long getNow();
+
+  /**
+   * The TTL of the metadata.
+   * @return time in millis after which metadata is considered out of date.
+   */
   long getMetadataTtl();
 }

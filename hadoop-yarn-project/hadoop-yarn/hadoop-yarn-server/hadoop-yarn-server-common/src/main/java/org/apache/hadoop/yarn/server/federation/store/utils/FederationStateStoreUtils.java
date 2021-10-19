@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
+import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +70,7 @@ public final class FederationStateStoreUtils {
     if (conn != null) {
       try {
         conn.close();
+        FederationStateStoreClientMetrics.decrConnections();
       } catch (SQLException e) {
         logAndThrowException(log, "Exception while trying to close Connection",
             e);
@@ -96,6 +98,18 @@ public final class FederationStateStoreUtils {
   public static void returnToPool(Logger log, CallableStatement cstmt,
       Connection conn) throws YarnException {
     returnToPool(log, cstmt, conn, null);
+  }
+
+  /**
+   * Returns the SQL <code>FederationStateStore</code> connections to the pool.
+   *
+   * @param log the logger interface
+   * @param cstmt the interface used to execute SQL stored procedures
+   * @throws YarnException on failure
+   */
+  public static void returnToPool(Logger log, CallableStatement cstmt)
+      throws YarnException {
+    returnToPool(log, cstmt, null);
   }
 
   /**

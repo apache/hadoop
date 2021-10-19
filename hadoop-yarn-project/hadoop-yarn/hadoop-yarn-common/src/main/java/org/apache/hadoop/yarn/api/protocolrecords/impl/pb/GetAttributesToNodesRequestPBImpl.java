@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAttributesToNodesRequestProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Attributes to nodes mapping request.

@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestDSSleepingAppMaster extends ApplicationMaster{
+public class TestDSSleepingAppMaster extends ApplicationMaster {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(TestDSSleepingAppMaster.class);
@@ -30,8 +29,8 @@ public class TestDSSleepingAppMaster extends ApplicationMaster{
 
   public static void main(String[] args) {
     boolean result = false;
+    TestDSSleepingAppMaster appMaster = new TestDSSleepingAppMaster();
     try {
-      TestDSSleepingAppMaster appMaster = new TestDSSleepingAppMaster();
       boolean doRun = appMaster.init(args);
       if (!doRun) {
         System.exit(0);
@@ -48,6 +47,10 @@ public class TestDSSleepingAppMaster extends ApplicationMaster{
       result = appMaster.finish();
     } catch (Throwable t) {
       System.exit(1);
+    } finally {
+      if (appMaster != null) {
+        appMaster.cleanup();
+      }
     }
     if (result) {
       LOG.info("Application Master completed successfully. exiting");

@@ -42,16 +42,18 @@
 #ifdef UNIX
 static void * (*dlsym_CRYPTO_malloc) (int, const char *, int);
 static void (*dlsym_CRYPTO_free) (void *);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static int (*dlsym_CRYPTO_num_locks) (void);
 static void (*dlsym_CRYPTO_set_locking_callback) (void (*)());
 static void (*dlsym_CRYPTO_set_id_callback) (unsigned long (*)());
 static void (*dlsym_ENGINE_load_rdrand) (void);
+static void (*dlsym_ENGINE_cleanup) (void);
+#endif
 static ENGINE * (*dlsym_ENGINE_by_id) (const char *);
 static int (*dlsym_ENGINE_init) (ENGINE *);
 static int (*dlsym_ENGINE_set_default) (ENGINE *, unsigned int);
 static int (*dlsym_ENGINE_finish) (ENGINE *);
 static int (*dlsym_ENGINE_free) (ENGINE *);
-static void (*dlsym_ENGINE_cleanup) (void);
 static int (*dlsym_RAND_bytes) (unsigned char *, int);
 static unsigned long (*dlsym_ERR_get_error) (void);
 #endif
@@ -113,6 +115,8 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_random_OpensslSecureRandom_
   dlerror();  // Clear any existing error
   LOAD_DYNAMIC_SYMBOL(dlsym_CRYPTO_malloc, env, openssl, "CRYPTO_malloc");
   LOAD_DYNAMIC_SYMBOL(dlsym_CRYPTO_free, env, openssl, "CRYPTO_free");
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+  // pre-1.1.0
   LOAD_DYNAMIC_SYMBOL(dlsym_CRYPTO_num_locks, env, openssl, "CRYPTO_num_locks");
   LOAD_DYNAMIC_SYMBOL(dlsym_CRYPTO_set_locking_callback,  \
                       env, openssl, "CRYPTO_set_locking_callback");
@@ -120,13 +124,14 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_random_OpensslSecureRandom_
                       openssl, "CRYPTO_set_id_callback");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_load_rdrand, env,  \
                       openssl, "ENGINE_load_rdrand");
+  LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_cleanup, env, openssl, "ENGINE_cleanup");
+#endif
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_by_id, env, openssl, "ENGINE_by_id");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_init, env, openssl, "ENGINE_init");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_set_default, env,  \
                       openssl, "ENGINE_set_default");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_finish, env, openssl, "ENGINE_finish");
   LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_free, env, openssl, "ENGINE_free");
-  LOAD_DYNAMIC_SYMBOL(dlsym_ENGINE_cleanup, env, openssl, "ENGINE_cleanup");
   LOAD_DYNAMIC_SYMBOL(dlsym_RAND_bytes, env, openssl, "RAND_bytes");
   LOAD_DYNAMIC_SYMBOL(dlsym_ERR_get_error, env, openssl, "ERR_get_error");
 #endif
@@ -303,9 +308,11 @@ static unsigned long pthreads_thread_id(void)
  */
 static ENGINE * openssl_rand_init(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   locks_setup();
   
   dlsym_ENGINE_load_rdrand();
+#endif
   ENGINE *eng = dlsym_ENGINE_by_id("rdrand");
   
   int ret = -1;
@@ -340,11 +347,12 @@ static void openssl_rand_clean(ENGINE *eng, int clean_locks)
     dlsym_ENGINE_finish(eng);
     dlsym_ENGINE_free(eng);
   }
-    
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
   dlsym_ENGINE_cleanup();
   if (clean_locks) {
     locks_cleanup();
   }
+#endif
 }
 
 static int openssl_rand_bytes(unsigned char *buf, int num)

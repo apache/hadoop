@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+syntax="proto2";
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "ErasureCodingProtos";
 option java_generate_equals_and_hash = true;
@@ -87,6 +87,14 @@ message UnsetErasureCodingPolicyRequestProto {
 }
 
 message UnsetErasureCodingPolicyResponseProto {
+}
+
+message GetECTopologyResultForPoliciesRequestProto {
+  repeated string policies = 1;
+}
+
+message GetECTopologyResultForPoliciesResponseProto {
+  required ECTopologyVerifierResultProto response = 1;
 }
 
 /**

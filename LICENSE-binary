@@ -214,8 +214,8 @@ com.aliyun:aliyun-java-sdk-core:3.4.0
 com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
-com.aliyun.oss:aliyun-sdk-oss:3.4.1
-com.amazonaws:aws-java-sdk-bundle:1.11.563
+com.aliyun.oss:aliyun-sdk-oss:3.13.0
+com.amazonaws:aws-java-sdk-bundle:1.11.901
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.9.9
@@ -225,7 +225,7 @@ com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.9.9
 com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.9.9
 com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.9.9
 com.fasterxml.uuid:java-uuid-generator:3.1.4
-com.fasterxml.woodstox:woodstox-core:5.0.3
+com.fasterxml.woodstox:woodstox-core:5.3.0
 com.github.davidmoten:rxjava-extras:0.8.0.17
 com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
@@ -240,29 +240,29 @@ com.google.guava:guava:20.0
 com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
-com.nimbusds:nimbus-jose-jwt:4.41.1
+com.nimbusds:nimbus-jose-jwt:9.8.1
 com.squareup.okhttp:okhttp:2.7.5
 com.squareup.okio:okio:1.6.0
-com.zaxxer:HikariCP-java7:2.4.12
+com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.3
 commons-cli:commons-cli:1.2
 commons-codec:commons-codec:1.11
 commons-collections:commons-collections:3.2.2
 commons-daemon:commons-daemon:1.0.13
-commons-io:commons-io:2.5
+commons-io:commons-io:2.8.0
 commons-lang:commons-lang:2.6
 commons-logging:commons-logging:1.1.3
 commons-net:commons-net:3.6
 de.ruedigermoeller:fst:2.50
-io.grpc:grpc-context:1.15.1
-io.grpc:grpc-core:1.15.1
-io.grpc:grpc-netty:1.15.1
-io.grpc:grpc-protobuf:1.15.1
-io.grpc:grpc-protobuf-lite:1.15.1
-io.grpc:grpc-stub:1.15.1
+io.grpc:grpc-api:1.26.0
+io.grpc:grpc-context:1.26.0
+io.grpc:grpc-core:1.26.0
+io.grpc:grpc-netty:1.26.0
+io.grpc:grpc-protobuf:1.26.0
+io.grpc:grpc-protobuf-lite:1.26.0
+io.grpc:grpc-stub:1.26.0
 io.netty:netty:3.10.6.Final
-io.netty:netty-all:4.0.52.Final
-io.netty:netty-all:4.1.27.Final
+io.netty:netty-all:4.1.42.Final
 io.netty:netty-buffer:4.1.27.Final
 io.netty:netty-codec:4.1.27.Final
 io.netty:netty-codec-http:4.1.27.Final
@@ -282,12 +282,11 @@ io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
 log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
-net.jpountz.lz4:lz4:1.2.0
 net.minidev:accessors-smart:1.2
-net.minidev:json-smart:2.3
+net.minidev:json-smart:2.4.7
 org.apache.avro:avro:1.7.7
 org.apache.commons:commons-collections4:4.2
-org.apache.commons:commons-compress:1.19
+org.apache.commons:commons-compress:1.21
 org.apache.commons:commons-configuration2:2.1.1
 org.apache.commons:commons-csv:1.0
 org.apache.commons:commons-digester:1.8.1
@@ -295,9 +294,9 @@ org.apache.commons:commons-lang3:3.7
 org.apache.commons:commons-math3:3.1.1
 org.apache.commons:commons-text:1.4
 org.apache.commons:commons-validator:1.6
-org.apache.curator:curator-client:2.13.0
-org.apache.curator:curator-framework:2.13.0
-org.apache.curator:curator-recipes:2.13.0
+org.apache.curator:curator-client:5.2.0
+org.apache.curator:curator-framework:5.2.0
+org.apache.curator:curator-recipes:5.2.0
 org.apache.geronimo.specs:geronimo-jcache_1.0_spec:1.0-alpha-1
 org.apache.hbase:hbase-annotations:1.4.8
 org.apache.hbase:hbase-client:1.4.8
@@ -307,7 +306,7 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.6
 org.apache.httpcomponents:httpcore:4.4.10
-org.apache.kafka:kafka-clients:0.8.2.1
+org.apache.kafka:kafka-clients:2.8.1
 org.apache.kerby:kerb-admin:1.0.1
 org.apache.kerby:kerb-client:1.0.1
 org.apache.kerby:kerb-common:1.0.1
@@ -324,7 +323,7 @@ org.apache.kerby:kerby-util:1.0.1
 org.apache.kerby:kerby-xdr:1.0.1
 org.apache.kerby:token-provider:1.0.1
 org.apache.yetus:audience-annotations:0.5.0
-org.apache.zookeeper:zookeeper:3.4.13
+org.apache.zookeeper:zookeeper:3.6.3
 org.codehaus.jackson:jackson-core-asl:1.9.13
 org.codehaus.jackson:jackson-jaxrs:1.9.13
 org.codehaus.jackson:jackson-mapper-asl:1.9.13
@@ -345,7 +344,8 @@ org.eclipse.jetty:jetty-xml:9.3.27.v20190418
 org.eclipse.jetty.websocket:javax-websocket-client-impl:9.3.27.v20190418
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.3.27.v20190418
 org.ehcache:ehcache:3.3.1
-org.objenesis:objenesis:1.0:compile
+org.lz4:lz4-java:1.7.1
+org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.0.5
 org.yaml:snakeyaml:1.16:
 org.wildfly.openssl:wildfly-openssl:1.0.7.Final
@@ -364,8 +364,9 @@ hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/com
 hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/compat/{fstatat|openat|unlinkat}.h
 
+com.github.luben:zstd-jni:1.4.9-1
 dnsjava:dnsjava:2.1.7
-org.codehaus.woodstox:stax2-api:3.1.4
+org.codehaus.woodstox:stax2-api:4.2.1
 
 
 BSD 3-Clause
@@ -384,7 +385,7 @@ com.google.protobuf:protobuf-java:3.6.1
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.54
 com.thoughtworks.paranamer:paranamer:2.3
-javax.activation:javax.activation-api:1.2.0
+jakarta.activation:jakarta.activation-api:1.2.1
 org.fusesource.leveldbjni:leveldbjni-all:1.8
 org.jline:jline:3.9.0
 org.hamcrest:hamcrest-core:1.3
@@ -404,7 +405,7 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.css
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dataTables.bootstrap.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-full-2.0.0.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/dust-helpers-1.1.1.min.js
-hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.4.1.min.js
+hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery-3.5.1.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/jquery.dataTables.min.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/moment.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
@@ -501,7 +502,7 @@ javax.xml.bind:jaxb-api:2.2.11
 Eclipse Public License 1.0
 --------------------------
 
-junit:junit:4.12
+junit:junit:4.13.2
 
 
 HSQL License

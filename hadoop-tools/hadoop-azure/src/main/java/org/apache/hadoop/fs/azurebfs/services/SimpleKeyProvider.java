@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,12 +44,29 @@ public class SimpleKeyProvider implements KeyProvider {
     try {
       AbfsConfiguration abfsConfig = new AbfsConfiguration(rawConfig, accountName);
       key = abfsConfig.getPasswordString(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
-    } catch(IllegalAccessException | InvalidConfigurationValueException e) {
+
+      // Validating the key.
+      validateStorageAccountKey(key);
+    } catch (IllegalAccessException | InvalidConfigurationValueException e) {
       throw new KeyProviderException("Failure to initialize configuration", e);
     } catch(IOException ioe) {
       LOG.warn("Unable to get key from credential providers. {}", ioe);
     }
 
     return key;
+  }
+
+  /**
+   * A method to validate the storage key.
+   *
+   * @param key the key to be validated.
+   * @throws InvalidConfigurationValueException
+   */
+  private void validateStorageAccountKey(String key)
+      throws InvalidConfigurationValueException {
+    Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
+        ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
+
+    validator.validate(key);
   }
 }

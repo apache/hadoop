@@ -1,4 +1,5 @@
 /**
+
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +18,12 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -40,22 +43,32 @@ public class AdminHelper {
   static final int MAX_LINE_WIDTH = 80;
   static final String HELP_COMMAND_NAME = "-help";
 
-  static DistributedFileSystem getDFS(Configuration conf)
+  public static DistributedFileSystem getDFS(Configuration conf)
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    if (!(fs instanceof DistributedFileSystem)) {
-      throw new IllegalArgumentException("FileSystem " + fs.getUri() +
-          " is not an HDFS file system");
-    }
-    return (DistributedFileSystem)fs;
+    return checkAndGetDFS(fs, conf);
   }
 
   static DistributedFileSystem getDFS(URI uri, Configuration conf)
       throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
+    return checkAndGetDFS(fs, conf);
+  }
+
+  static DistributedFileSystem checkAndGetDFS(FileSystem fs, Configuration conf)
+      throws IOException {
+    if ((fs instanceof ViewFileSystemOverloadScheme)) {
+      // With ViewFSOverloadScheme, the admin will pass -fs option with intended
+      // child fs mount path. GenericOptionsParser would have set the given -fs
+      // as FileSystem's defaultURI. So, we are using FileSystem.getDefaultUri
+      // to use the given -fs path.
+      fs = ((ViewFileSystemOverloadScheme) fs)
+          .getRawFileSystem(new Path(FileSystem.getDefaultUri(conf)), conf);
+    }
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs.getUri()
-          + " is not an HDFS file system");
+          + " is not an HDFS file system. The fs class is: "
+          + fs.getClass().getName());
     }
     return (DistributedFileSystem) fs;
   }

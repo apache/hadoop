@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.security.SecureRandom;
 import java.util.Random;

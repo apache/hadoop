@@ -42,9 +42,9 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.AsyncCallback.*;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.KeeperException.Code;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -577,6 +577,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     }
 
     fatalError(errorMessage);
+  }
+
+  @VisibleForTesting
+  public boolean getWantToBeInElection() {
+    return wantToBeInElection;
   }
 
   /**

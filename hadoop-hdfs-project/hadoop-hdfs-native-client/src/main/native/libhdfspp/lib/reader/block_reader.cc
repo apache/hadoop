@@ -24,6 +24,10 @@
 
 #include <future>
 
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/completion_condition.hpp>
+
 namespace hdfs {
 
 #define FMT_CONT_AND_PARENT_ADDR "this=" << (void*)this << ", parent=" << (void*)parent_
@@ -113,7 +117,7 @@ void BlockReaderImpl::AsyncRequestBlock(const std::string &client_name,
   auto read_pb_message =
       new continuation::ReadDelimitedPBMessageContinuation<AsyncStream, 16384>(dn_, &s->response);
 
-  m->Push(asio_continuation::Write(dn_, asio::buffer(s->header))).Push(read_pb_message);
+  m->Push(asio_continuation::Write(dn_, boost::asio::buffer(s->header))).Push(read_pb_message);
 
   m->Run([this, handler, offset](const Status &status, const State &s) {    Status stat = status;
     if (stat.ok()) {
@@ -167,7 +171,7 @@ struct BlockReaderImpl::ReadPacketHeader : continuation::Continuation
 
     parent_->packet_data_read_bytes_ = 0;
     parent_->packet_len_ = 0;
-    auto handler = [next, this](const asio::error_code &ec, size_t) {
+    auto handler = [next, this](const boost::system::error_code &ec, size_t) {
       Status status;
       if (ec) {
         status = Status(ec.value(), ec.message().c_str());
@@ -191,7 +195,7 @@ struct BlockReaderImpl::ReadPacketHeader : continuation::Continuation
       next(status);
     };
 
-    asio::async_read(*parent_->dn_, asio::buffer(buf_),
+    boost::asio::async_read(*parent_->dn_, boost::asio::buffer(buf_),
                      std::bind(&ReadPacketHeader::CompletionHandler, this,
                                std::placeholders::_1, std::placeholders::_2), handler);
   }
@@ -215,7 +219,7 @@ private:
     return ntohs(*reinterpret_cast<const short *>(&buf_[kHeaderLenOffset]));
   }
 
-  size_t CompletionHandler(const asio::error_code &ec, size_t transferred) {
+  size_t CompletionHandler(const boost::system::error_code &ec, size_t transferred) {
     if (ec) {
       return 0;
     } else if (transferred < kHeaderStart) {
@@ -245,7 +249,7 @@ struct BlockReaderImpl::ReadChecksum : continuation::Continuation
 
     std::shared_ptr<DataNodeConnection> keep_conn_alive_ = shared_conn_;
 
-    auto handler = [parent, next, this, keep_conn_alive_](const asio::error_code &ec, size_t)
+    auto handler = [parent, next, this, keep_conn_alive_](const boost::system::error_code &ec, size_t)
     {
       Status status;
       if (ec) {
@@ -266,7 +270,7 @@ struct BlockReaderImpl::ReadChecksum : continuation::Continuation
 
     parent->checksum_.resize(parent->packet_len_ - sizeof(int) - parent->header_.datalen());
 
-    asio::async_read(*parent->dn_, asio::buffer(parent->checksum_), handler);
+    boost::asio::async_read(*parent->dn_, boost::asio::buffer(parent->checksum_), handler);
   }
 
 private:
@@ -279,8 +283,8 @@ private:
 struct BlockReaderImpl::ReadData : continuation::Continuation
 {
   ReadData(BlockReaderImpl *parent, std::shared_ptr<size_t> bytes_transferred,
-        const asio::mutable_buffers_1 &buf) : parent_(parent),
-        bytes_transferred_(bytes_transferred), buf_(buf), shared_conn_(parent->dn_)
+        const boost::asio::mutable_buffers_1 &buf) : parent_(parent),
+                                                     bytes_transferred_(bytes_transferred), buf_(buf), shared_conn_(parent->dn_)
   {
     buf_.begin();
   }
@@ -293,7 +297,7 @@ struct BlockReaderImpl::ReadData : continuation::Continuation
     LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadData::Run("
                             << FMT_CONT_AND_PARENT_ADDR << ") called");
     auto handler =
-        [next, this](const asio::error_code &ec, size_t transferred) {
+        [next, this](const boost::system::error_code &ec, size_t transferred) {
           Status status;
           if (ec) {
             status = Status(ec.value(), ec.message().c_str());
@@ -320,13 +324,13 @@ struct BlockReaderImpl::ReadData : continuation::Continuation
 
     auto data_len = parent_->header_.datalen() - parent_->packet_data_read_bytes_;
 
-    asio::async_read(*parent_->dn_, buf_, asio::transfer_exactly(data_len), handler);
+    boost::asio::async_read(*parent_->dn_, buf_, boost::asio::transfer_exactly(data_len), handler);
   }
 
 private:
   BlockReaderImpl *parent_;
   std::shared_ptr<size_t> bytes_transferred_;
-  const asio::mutable_buffers_1 buf_;
+  const boost::asio::mutable_buffers_1 buf_;
 
   // Keep DNConnection alive.
   std::shared_ptr<DataNodeConnection> shared_conn_;
@@ -337,7 +341,7 @@ struct BlockReaderImpl::ReadPadding : continuation::Continuation
   ReadPadding(BlockReaderImpl *parent) : parent_(parent),
         padding_(parent->chunk_padding_bytes_),
         bytes_transferred_(std::make_shared<size_t>(0)),
-        read_data_(new ReadData(parent, bytes_transferred_, asio::buffer(padding_))),
+        read_data_(new ReadData(parent, bytes_transferred_, boost::asio::buffer(padding_))),
         shared_conn_(parent->dn_) {}
 
   virtual void Run(const Next &next) override {
@@ -505,7 +509,7 @@ private:
 struct BlockReaderImpl::ReadBlockContinuation : continuation::Continuation
 {
   ReadBlockContinuation(BlockReader *reader, MutableBuffer buffer, size_t *transferred)
-      : reader_(reader), buffer_(buffer), buffer_size_(asio::buffer_size(buffer)), transferred_(transferred) {}
+      : reader_(reader), buffer_(buffer), buffer_size_(boost::asio::buffer_size(buffer)), transferred_(transferred) {}
 
   virtual void Run(const Next &next) override {
     LOG_TRACE(kBlockReader, << "BlockReaderImpl::ReadBlockContinuation::Run("
@@ -532,7 +536,7 @@ private:
       next_(status);
     } else {
       reader_->AsyncReadPacket(
-          asio::buffer(buffer_ + *transferred_, buffer_size_ - *transferred_),
+          boost::asio::buffer(buffer_ + *transferred_, buffer_size_ - *transferred_),
           std::bind(&ReadBlockContinuation::OnReadData, this, _1, _2));
     }
   }
@@ -551,7 +555,7 @@ void BlockReaderImpl::AsyncReadBlock(
   auto m = continuation::Pipeline<size_t>::Create(cancel_state_);
   size_t * bytesTransferred = &m->state();
 
-  size_t size = asio::buffer_size(buffer);
+  size_t size = boost::asio::buffer_size(buffer);
 
   m->Push(new RequestBlockContinuation(this, client_name, &block.b(), size, offset))
     .Push(new ReadBlockContinuation(this, buffer, bytesTransferred));

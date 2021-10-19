@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -205,8 +205,13 @@ public class ContentSummaryComputationContext {
   void checkPermission(INodeDirectory inode, int snapshotId, FsAction access)
       throws AccessControlException {
     if (dir != null && dir.isPermissionEnabled()
-        && pc != null && !pc.isSuperUser()) {
-      pc.checkPermission(inode, snapshotId, access);
+        && pc != null) {
+      if (pc.isSuperUser()) {
+        // call external enforcer for audit
+        pc.checkSuperuserPrivilege(inode.getFullPathName());
+      } else {
+        pc.checkPermission(inode, snapshotId, access);
+      }
     }
   }
 }

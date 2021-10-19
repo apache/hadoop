@@ -32,6 +32,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -44,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -391,7 +395,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     AppsInfo responseGet = interceptor.getApps(null, null, null, null, null,
-        null, null, null, null, null, null, null, null, null);
+        null, null, null, null, null, null, null, null, null, null);
 
     Assert.assertNotNull(responseGet);
     Assert.assertEquals(NUM_SUBCLUSTER, responseGet.getApps().size());
@@ -519,6 +523,41 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppState response = interceptor.getAppState(null, "Application_wrong_id");
 
     Assert.assertNull(response);
+  }
+
+  /**
+   * This test validates the creation of new interceptor in case of a
+   * RMSwitchover in a subCluster.
+   */
+  @Test
+  public void testRMSwitchoverOfOneSC() throws Exception {
+    SubClusterId subClusterId = SubClusterId.newInstance(Integer.toString(0));
+
+    interceptor.getClusterMetricsInfo();
+    Assert.assertEquals("http://1.2.3.4:4", interceptor
+            .getInterceptorForSubCluster(subClusterId).getWebAppAddress());
+
+    //Register the first subCluster with secondRM simulating RMSwitchover
+    registerSubClusterWithSwitchoverRM(subClusterId);
+
+    interceptor.getClusterMetricsInfo();
+    Assert.assertEquals("http://5.6.7.8:8", interceptor
+            .getInterceptorForSubCluster(subClusterId).getWebAppAddress());
+  }
+
+  private void registerSubClusterWithSwitchoverRM(SubClusterId subClusterId)
+          throws YarnException {
+    String amRMAddress = "5.6.7.8:5";
+    String clientRMAddress = "5.6.7.8:6";
+    String rmAdminAddress = "5.6.7.8:7";
+    String webAppAddress = "5.6.7.8:8";
+
+    SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
+            amRMAddress, clientRMAddress, rmAdminAddress, webAppAddress,
+            SubClusterState.SC_RUNNING, new MonotonicClock().getTime(),
+            "capability");
+    stateStore.registerSubCluster(
+            SubClusterRegisterRequest.newInstance(subClusterInfo));
   }
 
 }

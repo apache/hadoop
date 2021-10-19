@@ -24,6 +24,9 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
@@ -34,9 +37,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 @InterfaceStability.Unstable
 public abstract class UGIResolver {
 
-  static final int USER_STRID_OFFSET = 40;
-  static final int GROUP_STRID_OFFSET = 16;
-  static final long USER_GROUP_STRID_MASK = (1 << 24) - 1;
+  public static final int USER_STRID_OFFSET = 40;
+  public static final int GROUP_STRID_OFFSET = 16;
+  public static final long USER_GROUP_STRID_MASK = (1 << 24) - 1;
 
   /**
    * Permission is serialized as a 64-bit long. [0:24):[25:48):[48:64) (in Big
@@ -117,19 +120,77 @@ public abstract class UGIResolver {
   }
 
   public long resolve(FileStatus s) {
-    return buildPermissionStatus(user(s), group(s), permission(s).toShort());
+    String resolvedGroup = group(s.getGroup());
+    String resolvedOwner = user(s.getOwner());
+    FsPermission resolvedPermission = permission(s.getPermission());
+    return buildPermissionStatus(
+        resolvedOwner, resolvedGroup, resolvedPermission.toShort());
   }
 
-  public String user(FileStatus s) {
-    return s.getOwner();
+  private long resolve(AclStatus aclStatus) {
+    String resolvedOwner = user(aclStatus.getOwner());
+    String resolvedGroup = group(aclStatus.getGroup());
+    FsPermission resolvedPermision = permission(aclStatus.getPermission());
+    return buildPermissionStatus(
+        resolvedOwner, resolvedGroup, resolvedPermision.toShort());
   }
 
-  public String group(FileStatus s) {
-    return s.getGroup();
+  protected String user(String s) {
+    return s;
   }
 
-  public FsPermission permission(FileStatus s) {
-    return s.getPermission();
+  protected String group(String s) {
+    return s;
   }
 
+  public FsPermission permission(FsPermission s) {
+    return s;
+  }
+
+  /**
+   * Get the serialized, local permissions for the external
+   * {@link FileStatus} or {@link AclStatus}. {@code remoteAcl} is used when it
+   * is not null, otherwise {@code remoteStatus} is used.
+   *
+   * @param remoteStatus FileStatus on remote store.
+   * @param remoteAcl AclStatus on external store.
+   * @return serialized, local permissions the FileStatus or AclStatus map to.
+   */
+  public long getPermissionsProto(FileStatus remoteStatus,
+      AclStatus remoteAcl) {
+    addUGI(remoteStatus, remoteAcl);
+    if (remoteAcl == null) {
+      return resolve(remoteStatus);
+    } else {
+      return resolve(remoteAcl);
+    }
+  }
+
+  /**
+   * Add the users and groups specified by the given {@link FileStatus} and
+   * {@link AclStatus}.
+   *
+   * @param remoteStatus
+   * @param remoteAcl
+   */
+  private void addUGI(FileStatus remoteStatus, AclStatus remoteAcl) {
+    if (remoteAcl != null) {
+      addUser(remoteAcl.getOwner());
+      addGroup(remoteAcl.getGroup());
+      for (AclEntry entry : remoteAcl.getEntries()) {
+        // add the users and groups in this acl entry to ugi
+        String name = entry.getName();
+        if (name != null) {
+          if (entry.getType() == AclEntryType.USER) {
+            addUser(name);
+          } else if (entry.getType() == AclEntryType.GROUP) {
+            addGroup(name);
+          }
+        }
+      }
+    } else {
+      addUser(remoteStatus.getOwner());
+      addGroup(remoteStatus.getGroup());
+    }
+  }
 }

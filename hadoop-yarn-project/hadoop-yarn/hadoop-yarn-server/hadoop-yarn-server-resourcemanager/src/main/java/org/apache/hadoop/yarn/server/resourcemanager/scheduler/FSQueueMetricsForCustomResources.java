@@ -17,6 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 
 import java.util.Map;
 
@@ -26,20 +27,20 @@ import java.util.Map;
  * It provides increase and decrease methods for all types of metrics.
  */
 public class FSQueueMetricsForCustomResources {
-  private final QueueMetricsCustomResource fairShare =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource steadyFairShare =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource minShare =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource maxShare =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource maxAMShare =
-      new QueueMetricsCustomResource();
-  private final QueueMetricsCustomResource amResourceUsage =
-      new QueueMetricsCustomResource();
+  private final CustomResourceMetricValue
+      fairShare = new CustomResourceMetricValue();
+  private final CustomResourceMetricValue steadyFairShare =
+      new CustomResourceMetricValue();
+  private final CustomResourceMetricValue
+      minShare = new CustomResourceMetricValue();
+  private final CustomResourceMetricValue
+      maxShare = new CustomResourceMetricValue();
+  private final CustomResourceMetricValue
+      maxAMShare = new CustomResourceMetricValue();
+  private final CustomResourceMetricValue amResourceUsage =
+      new CustomResourceMetricValue();
 
-  public QueueMetricsCustomResource getFairShare() {
+  public CustomResourceMetricValue getFairShare() {
     return fairShare;
   }
 
@@ -51,7 +52,7 @@ public class FSQueueMetricsForCustomResources {
     return fairShare.getValues();
   }
 
-  public QueueMetricsCustomResource getSteadyFairShare() {
+  public CustomResourceMetricValue getSteadyFairShare() {
     return steadyFairShare;
   }
 
@@ -63,7 +64,7 @@ public class FSQueueMetricsForCustomResources {
     return steadyFairShare.getValues();
   }
 
-  public QueueMetricsCustomResource getMinShare() {
+  public CustomResourceMetricValue getMinShare() {
     return minShare;
   }
 
@@ -75,7 +76,7 @@ public class FSQueueMetricsForCustomResources {
     return minShare.getValues();
   }
 
-  public QueueMetricsCustomResource getMaxShare() {
+  public CustomResourceMetricValue getMaxShare() {
     return maxShare;
   }
 
@@ -87,7 +88,7 @@ public class FSQueueMetricsForCustomResources {
     return maxShare.getValues();
   }
 
-  public QueueMetricsCustomResource getMaxAMShare() {
+  public CustomResourceMetricValue getMaxAMShare() {
     return maxAMShare;
   }
 
@@ -99,7 +100,7 @@ public class FSQueueMetricsForCustomResources {
     return maxAMShare.getValues();
   }
 
-  public QueueMetricsCustomResource getAMResourceUsage() {
+  public CustomResourceMetricValue getAMResourceUsage() {
     return amResourceUsage;
   }
 

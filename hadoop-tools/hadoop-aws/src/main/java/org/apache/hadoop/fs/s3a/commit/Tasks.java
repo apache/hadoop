@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -76,7 +75,7 @@ public final class Tasks {
    */
   public static class Builder<I> {
     private final Iterable<I> items;
-    private ExecutorService service = null;
+    private Submitter service = null;
     private FailureTask<I, ?> onFailure = null;
     private boolean stopOnFailure = false;
     private boolean suppressExceptions = false;
@@ -96,11 +95,11 @@ public final class Tasks {
     /**
      * Declare executor service: if null, the tasks are executed in a single
      * thread.
-     * @param executorService service to schedule tasks with.
+     * @param submitter service to schedule tasks with.
      * @return this builder.
      */
-    public Builder<I> executeWith(ExecutorService executorService) {
-      this.service = executorService;
+    public Builder<I> executeWith(Submitter submitter) {
+      this.service = submitter;
       return this;
     }
 
@@ -407,4 +406,18 @@ public final class Tasks {
     }
     throw (E) e;
   }
+
+  /**
+   * Interface to whatever lets us submit tasks.
+   */
+  public interface Submitter {
+
+    /**
+     * Submit work.
+     * @param task task to execute
+     * @return the future of the submitted task.
+     */
+    Future<?> submit(Runnable task);
+  }
+
 }

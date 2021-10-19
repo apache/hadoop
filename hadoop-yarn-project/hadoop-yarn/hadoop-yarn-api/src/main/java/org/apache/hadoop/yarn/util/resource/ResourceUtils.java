@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -76,6 +76,7 @@ public class ResourceUtils {
           + "\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?)/)?\\p{Alpha}([\\w.-]*)$");
 
   private final static String RES_PATTERN = "^[^=]+=\\d+\\s?\\w*$";
+  public static final String YARN_IO_OPTIONAL = "(yarn\\.io/)?";
 
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
@@ -250,7 +251,8 @@ public class ResourceUtils {
   private static Map<String, ResourceInformation> getResourceInformationMapFromConfig(
       Configuration conf) {
     Map<String, ResourceInformation> resourceInformationMap = new HashMap<>();
-    String[] resourceNames = conf.getStrings(YarnConfiguration.RESOURCE_TYPES);
+    String[] resourceNames =
+        conf.getTrimmedStrings(YarnConfiguration.RESOURCE_TYPES);
 
     if (resourceNames != null && resourceNames.length != 0) {
       for (String resourceName : resourceNames) {
@@ -696,7 +698,7 @@ public class ResourceUtils {
       Configuration configuration, String prefix) {
     List<ResourceInformation> result = new ArrayList<>();
     Map<String, String> customResourcesMap = configuration
-        .getValByRegex("^" + Pattern.quote(prefix) + "[^.]+$");
+        .getValByRegex("^" + Pattern.quote(prefix) + YARN_IO_OPTIONAL + "[^.]+$");
     for (Entry<String, String> resource : customResourcesMap.entrySet()) {
       String resourceName = resource.getKey().substring(prefix.length());
       Matcher matcher =
@@ -899,5 +901,20 @@ public class ResourceUtils {
                 "Unknown resource: " + resourceName);
       }
     }
+  }
+
+  public static StringBuilder
+      getCustomResourcesStrings(Resource resource) {
+    StringBuilder res = new StringBuilder();
+    if (ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      ResourceInformation[] resources =
+          resource.getResources();
+      for (int i = 2; i < resources.length; i++) {
+        ResourceInformation resInfo = resources[i];
+        res.append(","
+            + resInfo.getName() + "=" + resInfo.getValue());
+      }
+    }
+    return  res;
   }
 }

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.metrics2.impl;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import java.util.function.Predicate;
+import java.util.stream.StreamSupport;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
@@ -65,16 +65,22 @@ public class MetricsRecords {
         resourceLimitMetric);
   }
 
-  private static MetricsTag getFirstTagByName(MetricsRecord record, String name) {
-    return Iterables.getFirst(Iterables.filter(record.tags(),
-        new MetricsTagPredicate(name)), null);
+  private static MetricsTag getFirstTagByName(MetricsRecord record,
+      String name) {
+    if (record.tags() == null) {
+      return null;
+    }
+    return record.tags().stream().filter(
+        new MetricsTagPredicate(name)).findFirst().orElse(null);
   }
 
   private static AbstractMetric getFirstMetricByName(
       MetricsRecord record, String name) {
-    return Iterables.getFirst(
-        Iterables.filter(record.metrics(), new AbstractMetricPredicate(name)),
-        null);
+    if (record.metrics() == null) {
+      return null;
+    }
+    return StreamSupport.stream(record.metrics().spliterator(), false)
+        .filter(new AbstractMetricPredicate(name)).findFirst().orElse(null);
   }
 
   private static class MetricsTagPredicate implements Predicate<MetricsTag> {
@@ -86,7 +92,7 @@ public class MetricsRecords {
     }
 
     @Override
-    public boolean apply(MetricsTag input) {
+    public boolean test(MetricsTag input) {
       return input.name().equals(tagName);
     }
   }
@@ -101,7 +107,7 @@ public class MetricsRecords {
     }
 
     @Override
-    public boolean apply(AbstractMetric input) {
+    public boolean test(AbstractMetric input) {
       return input.name().equals(metricName);
     }
   }

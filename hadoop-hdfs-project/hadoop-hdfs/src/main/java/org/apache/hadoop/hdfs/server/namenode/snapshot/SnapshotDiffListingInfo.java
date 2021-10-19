@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.ChunkedArrayList;
 
 /**
@@ -116,7 +116,7 @@ class SnapshotDiffListingInfo {
 
     if (lastIndex == -1 || lastIndex >= clist.size()) {
       final List<INode> dlist =  diff.getDeletedUnmodifiable();
-      int size = dlist.size();
+      int size = clist.size();
       ListIterator<INode> iterator = lastIndex != -1 ?
           dlist.listIterator(lastIndex - size): dlist.listIterator();
       while (iterator.hasNext()) {
@@ -130,6 +130,10 @@ class SnapshotDiffListingInfo {
           deletedList.add(e);
         } else {
           setLastPath(parent);
+          // the offset will be set to created list + iterator index in the
+          // deleted list so that it points to the exact entry in the deleted
+          // list post checking the created list in the next iteration of rpc
+          // call
           setLastIndex(size + iterator.nextIndex());
           return false;
         }

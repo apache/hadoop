@@ -35,9 +35,9 @@ import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.apache.hadoop.security.authentication.server.CompositeAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.HttpConstants;
 import org.apache.hadoop.security.authentication.server.MultiSchemeAuthenticationHandler;
+import org.apache.hadoop.util.Preconditions;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 
 /**
  * A {@link CompositeAuthenticationHandler} that supports multiple HTTP

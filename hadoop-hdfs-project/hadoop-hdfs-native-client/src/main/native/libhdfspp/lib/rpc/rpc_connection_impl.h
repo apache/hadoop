@@ -28,9 +28,11 @@
 #include "common/libhdfs_events_impl.h"
 #include "hdfspp/ioservice.h"
 
-#include <asio/connect.hpp>
-#include <asio/read.hpp>
-#include <asio/write.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/read.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
 
 #include <system_error>
 
@@ -44,17 +46,17 @@ public:
   RpcConnectionImpl(std::shared_ptr<RpcEngine> engine);
   virtual ~RpcConnectionImpl() override;
 
-  virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+  virtual void Connect(const std::vector<boost::asio::ip::tcp::endpoint> &server,
                        const AuthInfo & auth_info,
                        RpcCallback &handler) override;
   virtual void ConnectAndFlush(
-      const std::vector<::asio::ip::tcp::endpoint> &server) override;
+      const std::vector<boost::asio::ip::tcp::endpoint> &server) override;
   virtual void SendHandshake(RpcCallback &handler) override;
   virtual void SendContext(RpcCallback &handler) override;
   virtual void Disconnect() override;
-  virtual void OnSendCompleted(const ::asio::error_code &ec,
+  virtual void OnSendCompleted(const boost::system::error_code &ec,
                                size_t transferred) override;
-  virtual void OnRecvCompleted(const ::asio::error_code &ec,
+  virtual void OnRecvCompleted(const boost::system::error_code &ec,
                                size_t transferred) override;
   virtual void FlushPendingRequests() override;
 
@@ -65,12 +67,12 @@ public:
 
  private:
   const Options options_;
-  ::asio::ip::tcp::endpoint current_endpoint_;
-  std::vector<::asio::ip::tcp::endpoint> additional_endpoints_;
+  boost::asio::ip::tcp::endpoint current_endpoint_;
+  std::vector<boost::asio::ip::tcp::endpoint> additional_endpoints_;
   Socket socket_;
-  ::asio::deadline_timer connect_timer_;
+  boost::asio::deadline_timer connect_timer_;
 
-  void ConnectComplete(const ::asio::error_code &ec, const ::asio::ip::tcp::endpoint &remote);
+  void ConnectComplete(const boost::system::error_code &ec, const boost::asio::ip::tcp::endpoint &remote);
 };
 
 template <class Socket>
@@ -95,7 +97,7 @@ RpcConnectionImpl<Socket>::~RpcConnectionImpl() {
 
 template <class Socket>
 void RpcConnectionImpl<Socket>::Connect(
-    const std::vector<::asio::ip::tcp::endpoint> &server,
+    const std::vector<boost::asio::ip::tcp::endpoint> &server,
     const AuthInfo & auth_info,
     RpcCallback &handler) {
   LOG_TRACE(kRPC, << "RpcConnectionImpl::Connect called");
@@ -124,7 +126,7 @@ void RpcConnectionImpl<Socket>::Connect(
 
 template <class Socket>
 void RpcConnectionImpl<Socket>::ConnectAndFlush(
-    const std::vector<::asio::ip::tcp::endpoint> &server) {
+    const std::vector<boost::asio::ip::tcp::endpoint> &server) {
 
   LOG_INFO(kRPC, << "ConnectAndFlush called");
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
@@ -147,29 +149,29 @@ void RpcConnectionImpl<Socket>::ConnectAndFlush(
 
   // Take the first endpoint, but remember the alternatives for later
   additional_endpoints_ = server;
-  ::asio::ip::tcp::endpoint first_endpoint = additional_endpoints_.front();
+  boost::asio::ip::tcp::endpoint first_endpoint = additional_endpoints_.front();
   additional_endpoints_.erase(additional_endpoints_.begin());
   current_endpoint_ = first_endpoint;
 
   auto shared_this = shared_from_this();
-  socket_.async_connect(first_endpoint, [shared_this, this, first_endpoint](const ::asio::error_code &ec) {
+  socket_.async_connect(first_endpoint, [shared_this, this, first_endpoint](const boost::system::error_code &ec) {
     ConnectComplete(ec, first_endpoint);
   });
 
   // Prompt the timer to timeout
   auto weak_this = std::weak_ptr<RpcConnection>(shared_this);
   connect_timer_.expires_from_now(
-        std::chrono::milliseconds(options_.rpc_connect_timeout));
-  connect_timer_.async_wait([shared_this, this, first_endpoint](const ::asio::error_code &ec) {
+        boost::posix_time::milliseconds(options_.rpc_connect_timeout));
+  connect_timer_.async_wait([shared_this, this, first_endpoint](const boost::system::error_code &ec) {
       if (ec)
         ConnectComplete(ec, first_endpoint);
       else
-        ConnectComplete(make_error_code(asio::error::host_unreachable), first_endpoint);
+        ConnectComplete(make_error_code(boost::asio::error::host_unreachable), first_endpoint);
   });
 }
 
 template <class Socket>
-void RpcConnectionImpl<Socket>::ConnectComplete(const ::asio::error_code &ec, const ::asio::ip::tcp::endpoint & remote) {
+void RpcConnectionImpl<Socket>::ConnectComplete(const boost::system::error_code &ec, const boost::asio::ip::tcp::endpoint & remote) {
   auto shared_this = RpcConnectionImpl<Socket>::shared_from_this();
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
   connect_timer_.cancel();
@@ -211,20 +213,20 @@ void RpcConnectionImpl<Socket>::ConnectComplete(const ::asio::error_code &ec, co
     if (!additional_endpoints_.empty()) {
       // If we have additional endpoints, keep trying until we either run out or
       //    hit one
-      ::asio::ip::tcp::endpoint next_endpoint = additional_endpoints_.front();
+        boost::asio::ip::tcp::endpoint next_endpoint = additional_endpoints_.front();
       additional_endpoints_.erase(additional_endpoints_.begin());
       current_endpoint_ = next_endpoint;
 
-      socket_.async_connect(next_endpoint, [shared_this, this, next_endpoint](const ::asio::error_code &ec) {
+      socket_.async_connect(next_endpoint, [shared_this, this, next_endpoint](const boost::system::error_code &ec) {
         ConnectComplete(ec, next_endpoint);
       });
       connect_timer_.expires_from_now(
-            std::chrono::milliseconds(options_.rpc_connect_timeout));
-      connect_timer_.async_wait([shared_this, this, next_endpoint](const ::asio::error_code &ec) {
+            boost::posix_time::milliseconds(options_.rpc_connect_timeout));
+      connect_timer_.async_wait([shared_this, this, next_endpoint](const boost::system::error_code &ec) {
           if (ec)
             ConnectComplete(ec, next_endpoint);
           else
-            ConnectComplete(make_error_code(asio::error::host_unreachable), next_endpoint);
+            ConnectComplete(make_error_code(boost::asio::error::host_unreachable), next_endpoint);
         });
     } else {
       CommsError(status);
@@ -241,9 +243,9 @@ void RpcConnectionImpl<Socket>::SendHandshake(RpcCallback &handler) {
 
   auto shared_this = shared_from_this();
   auto handshake_packet = PrepareHandshakePacket();
-  ::asio::async_write(socket_, asio::buffer(*handshake_packet),
+  boost::asio::async_write(socket_, boost::asio::buffer(*handshake_packet),
                       [handshake_packet, handler, shared_this, this](
-                          const ::asio::error_code &ec, size_t) {
+                          const boost::system::error_code &ec, size_t) {
                         Status status = ToStatus(ec);
                         handler(status);
                       });
@@ -257,16 +259,16 @@ void RpcConnectionImpl<Socket>::SendContext(RpcCallback &handler) {
 
   auto shared_this = shared_from_this();
   auto context_packet = PrepareContextPacket();
-  ::asio::async_write(socket_, asio::buffer(*context_packet),
+  boost::asio::async_write(socket_, boost::asio::buffer(*context_packet),
                       [context_packet, handler, shared_this, this](
-                          const ::asio::error_code &ec, size_t) {
+                          const boost::system::error_code &ec, size_t) {
                         Status status = ToStatus(ec);
                         handler(status);
                       });
 }
 
 template <class Socket>
-void RpcConnectionImpl<Socket>::OnSendCompleted(const ::asio::error_code &ec,
+void RpcConnectionImpl<Socket>::OnSendCompleted(const boost::system::error_code &ec,
                                                    size_t) {
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -340,16 +342,16 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
     outgoing_request_ = req;
 
     req->timer().expires_from_now(
-        std::chrono::milliseconds(options_.rpc_timeout));
-    req->timer().async_wait([weak_this, weak_req, this](const ::asio::error_code &ec) {
+        boost::posix_time::milliseconds(options_.rpc_timeout));
+    req->timer().async_wait([weak_this, weak_req, this](const boost::system::error_code &ec) {
         auto timeout_this = weak_this.lock();
         auto timeout_req = weak_req.lock();
         if (timeout_this && timeout_req)
           this->HandleRpcTimeout(timeout_req, ec);
     });
 
-    asio::async_write(socket_, asio::buffer(*payload),
-                      [shared_this, this, payload](const ::asio::error_code &ec,
+    boost::asio::async_write(socket_, boost::asio::buffer(*payload),
+                      [shared_this, this, payload](const boost::system::error_code &ec,
                                                    size_t size) {
                         OnSendCompleted(ec, size);
                       });
@@ -374,13 +376,13 @@ void RpcConnectionImpl<Socket>::FlushPendingRequests() {
 
 
 template <class Socket>
-void RpcConnectionImpl<Socket>::OnRecvCompleted(const ::asio::error_code &original_ec,
+void RpcConnectionImpl<Socket>::OnRecvCompleted(const boost::system::error_code &original_ec,
                                                    size_t) {
   using std::placeholders::_1;
   using std::placeholders::_2;
   std::lock_guard<std::mutex> state_lock(connection_state_lock_);
 
-  ::asio::error_code my_ec(original_ec);
+  boost::system::error_code my_ec(original_ec);
 
   LOG_TRACE(kRPC, << "RpcConnectionImpl::OnRecvCompleted called");
 
@@ -390,7 +392,7 @@ void RpcConnectionImpl<Socket>::OnRecvCompleted(const ::asio::error_code &origin
     event_response event_resp = event_handlers_->call(FS_NN_READ_EVENT, cluster_name_.c_str(), 0);
 #ifndef LIBHDFSPP_SIMULATE_ERROR_DISABLED
     if (event_resp.response_type() == event_response::kTest_Error) {
-      my_ec = std::make_error_code(std::errc::network_down);
+      my_ec = boost::system::error_code(boost::system::errc::errc_t::network_down, boost::system::system_category());
     }
 #endif
   }
@@ -399,7 +401,7 @@ void RpcConnectionImpl<Socket>::OnRecvCompleted(const ::asio::error_code &origin
     case 0:
       // No errors
       break;
-    case asio::error::operation_aborted:
+    case boost::asio::error::operation_aborted:
       // The event loop has been shut down. Ignore the error.
       return;
     default:
@@ -414,20 +416,20 @@ void RpcConnectionImpl<Socket>::OnRecvCompleted(const ::asio::error_code &origin
 
   if (current_response_state_->state_ == Response::kReadLength) {
     current_response_state_->state_ = Response::kReadContent;
-    auto buf = ::asio::buffer(reinterpret_cast<char *>(&current_response_state_->length_),
+    auto buf = boost::asio::buffer(reinterpret_cast<char *>(&current_response_state_->length_),
                               sizeof(current_response_state_->length_));
-    asio::async_read(
+    boost::asio::async_read(
         socket_, buf,
-        [shared_this, this](const ::asio::error_code &ec, size_t size) {
+        [shared_this, this](const boost::system::error_code &ec, size_t size) {
           OnRecvCompleted(ec, size);
         });
   } else if (current_response_state_->state_ == Response::kReadContent) {
     current_response_state_->state_ = Response::kParseResponse;
     current_response_state_->length_ = ntohl(current_response_state_->length_);
     current_response_state_->data_.resize(current_response_state_->length_);
-    asio::async_read(
-        socket_, ::asio::buffer(current_response_state_->data_),
-        [shared_this, this](const ::asio::error_code &ec, size_t size) {
+    boost::asio::async_read(
+        socket_, boost::asio::buffer(current_response_state_->data_),
+        [shared_this, this](const boost::system::error_code &ec, size_t size) {
           OnRecvCompleted(ec, size);
         });
   } else if (current_response_state_->state_ == Response::kParseResponse) {

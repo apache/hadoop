@@ -20,17 +20,21 @@ package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -47,12 +51,11 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 
 public class TestDataNodeUGIProvider {
   private final URI uri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://"
@@ -184,6 +187,35 @@ public class TestDataNodeUGIProvider {
     Assert.assertNotEquals(
         "With UGI cache, two UGIs for the different user should not be same",
         ugi11, url22);
+  }
+
+  @Test
+  public void testUGINullTokenSecure() throws IOException {
+    SecurityUtil.setAuthenticationMethod(KERBEROS, conf);
+    UserGroupInformation.setConfiguration(conf);
+
+    String uri1 = WebHdfsFileSystem.PATH_PREFIX
+            + PATH
+            + "?op=OPEN"
+            + Param.toSortedString("&", new OffsetParam((long) OFFSET),
+            new LengthParam((long) LENGTH), new UserParam("root"));
+
+    ParameterParser params = new ParameterParser(
+            new QueryStringDecoder(URI.create(uri1)), conf);
+
+    DataNodeUGIProvider ugiProvider = new DataNodeUGIProvider(params);
+
+    String usernameFromQuery = params.userName();
+    String doAsUserFromQuery = params.doAsUser();
+    String remoteUser = usernameFromQuery == null ? JspHelper
+            .getDefaultWebUserName(params.conf())
+            : usernameFromQuery;
+
+    DataNodeUGIProvider spiedUGIProvider = spy(ugiProvider);
+    spiedUGIProvider.ugi();
+
+    verify(spiedUGIProvider).nonTokenUGI(usernameFromQuery, doAsUserFromQuery,
+            remoteUser);
   }
 
   /**

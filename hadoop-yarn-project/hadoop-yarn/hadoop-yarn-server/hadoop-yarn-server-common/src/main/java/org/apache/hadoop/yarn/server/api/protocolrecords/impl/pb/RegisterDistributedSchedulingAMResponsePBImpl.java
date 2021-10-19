@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 

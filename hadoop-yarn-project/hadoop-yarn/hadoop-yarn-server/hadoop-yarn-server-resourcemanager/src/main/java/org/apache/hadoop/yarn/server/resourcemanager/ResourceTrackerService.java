@@ -32,7 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.CollectionUtils;
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -93,7 +92,7 @@ import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 public class ResourceTrackerService extends AbstractService implements
     ResourceTracker {
@@ -114,6 +113,13 @@ public class ResourceTrackerService extends AbstractService implements
   private final WriteLock writeLock;
 
   private long nextHeartBeatInterval;
+  private boolean heartBeatIntervalScalingEnable;
+  private long heartBeatIntervalMin;
+  private long heartBeatIntervalMax;
+  private float heartBeatIntervalSpeedupFactor;
+  private float heartBeatIntervalSlowdownFactor;
+
+
   private Server server;
   private InetSocketAddress resourceTrackerAddress;
   private String minimumNodeManagerVersion;
@@ -157,14 +163,6 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
 
     RackResolver.init(conf);
-    nextHeartBeatInterval =
-        conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
-            YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
-    if (nextHeartBeatInterval <= 0) {
-      throw new YarnRuntimeException("Invalid Configuration. "
-          + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS
-          + " should be larger than 0.");
-    }
 
     checkIpHostnameInRegistration = conf.getBoolean(
         YarnConfiguration.RM_NM_REGISTRATION_IP_HOSTNAME_CHECK_KEY,
@@ -188,7 +186,7 @@ public class ResourceTrackerService extends AbstractService implements
       isDelegatedCentralizedNodeLabelsConf =
           YarnConfiguration.isDelegatedCentralizedNodeLabelConfiguration(conf);
     }
-
+    updateHeartBeatConfiguration(conf);
     loadDynamicResourceConfiguration(conf);
     decommissioningWatcher.init(conf);
     super.serviceInit(conf);
@@ -228,6 +226,84 @@ public class ResourceTrackerService extends AbstractService implements
     this.writeLock.lock();
     try {
       this.drConf = conf;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  /**
+   * Update HearBeatConfiguration with new configuration.
+   * @param conf Yarn Configuration
+   */
+  public void updateHeartBeatConfiguration(Configuration conf) {
+    this.writeLock.lock();
+    try {
+      nextHeartBeatInterval =
+          conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS,
+              YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
+      heartBeatIntervalScalingEnable =
+          conf.getBoolean(
+              YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_SCALING_ENABLE,
+              YarnConfiguration.
+                  DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SCALING_ENABLE);
+      heartBeatIntervalMin =
+          conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MIN_MS,
+              YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MIN_MS);
+      heartBeatIntervalMax =
+          conf.getLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MAX_MS,
+              YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MAX_MS);
+      heartBeatIntervalSpeedupFactor =
+          conf.getFloat(
+              YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR,
+              YarnConfiguration.
+                  DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR);
+      heartBeatIntervalSlowdownFactor =
+          conf.getFloat(
+              YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR,
+              YarnConfiguration.
+                  DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR);
+
+      if (nextHeartBeatInterval <= 0) {
+        LOG.warn("HeartBeat interval: " + nextHeartBeatInterval
+            + " must be greater than 0, using default.");
+        nextHeartBeatInterval =
+            YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS;
+      }
+
+      if (heartBeatIntervalScalingEnable) {
+        if (heartBeatIntervalMin <= 0
+            || heartBeatIntervalMin > heartBeatIntervalMax
+            || nextHeartBeatInterval < heartBeatIntervalMin
+            || nextHeartBeatInterval > heartBeatIntervalMax) {
+          LOG.warn("Invalid NM Heartbeat Configuration. "
+              + "Required: 0 < minimum <= interval <= maximum. Got: 0 < "
+              + heartBeatIntervalMin + " <= "
+              + nextHeartBeatInterval + " <= "
+              + heartBeatIntervalMax
+              + " Setting min and max to configured interval.");
+          heartBeatIntervalMin = nextHeartBeatInterval;
+          heartBeatIntervalMax = nextHeartBeatInterval;
+        }
+        if (heartBeatIntervalSpeedupFactor < 0
+            || heartBeatIntervalSlowdownFactor < 0) {
+          LOG.warn(
+              "Heartbeat scaling factors must be >= 0 "
+                  + " SpeedupFactor:" + heartBeatIntervalSpeedupFactor
+                  + " SlowdownFactor:" + heartBeatIntervalSlowdownFactor
+                  + ". Using Defaults");
+          heartBeatIntervalSlowdownFactor =
+              YarnConfiguration.
+                  DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR;
+          heartBeatIntervalSpeedupFactor =
+              YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SPEEDUP_FACTOR;
+        }
+        LOG.info("Heartbeat Scaling Configuration: "
+            + " defaultInterval:" + nextHeartBeatInterval
+            + " minimumInterval:" + heartBeatIntervalMin
+            + " maximumInterval:" + heartBeatIntervalMax
+            + " speedupFactor:" + heartBeatIntervalSpeedupFactor
+            + " slowdownFactor:" + heartBeatIntervalSlowdownFactor);
+      }
     } finally {
       this.writeLock.unlock();
     }
@@ -335,6 +411,7 @@ public class ResourceTrackerService extends AbstractService implements
     Resource capability = request.getResource();
     String nodeManagerVersion = request.getNMVersion();
     Resource physicalResource = request.getPhysicalResource();
+    NodeStatus nodeStatus = request.getNodeStatus();
 
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -426,7 +503,7 @@ public class ResourceTrackerService extends AbstractService implements
     if (oldNode == null) {
       RMNodeStartedEvent startEvent = new RMNodeStartedEvent(nodeId,
           request.getNMContainerStatuses(),
-          request.getRunningApplications());
+          request.getRunningApplications(), nodeStatus);
       if (request.getLogAggregationReportsForApps() != null
           && !request.getLogAggregationReportsForApps().isEmpty()) {
         if (LOG.isDebugEnabled()) {
@@ -462,7 +539,7 @@ public class ResourceTrackerService extends AbstractService implements
 
         this.rmContext.getRMNodes().put(nodeId, rmNode);
         this.rmContext.getDispatcher().getEventHandler()
-            .handle(new RMNodeStartedEvent(nodeId, null, null));
+            .handle(new RMNodeStartedEvent(nodeId, null, null, nodeStatus));
       } else {
         // Reset heartbeat ID since node just restarted.
         oldNode.resetLastNodeHeartBeatResponse();
@@ -628,10 +705,17 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     // Heartbeat response
+    long newInterval = nextHeartBeatInterval;
+    if (heartBeatIntervalScalingEnable) {
+      newInterval = rmNode.calculateHeartBeatInterval(
+          nextHeartBeatInterval, heartBeatIntervalMin,
+          heartBeatIntervalMax, heartBeatIntervalSpeedupFactor,
+          heartBeatIntervalSlowdownFactor);
+    }
     NodeHeartbeatResponse nodeHeartBeatResponse =
         YarnServerBuilderUtils.newNodeHeartbeatResponse(
             getNextResponseId(lastNodeHeartbeatResponse.getResponseId()),
-            NodeAction.NORMAL, null, null, null, null, nextHeartBeatInterval);
+            NodeAction.NORMAL, null, null, null, null, newInterval);
     rmNode.setAndUpdateNodeHeartbeatResponse(nodeHeartBeatResponse);
 
     populateKeys(request, nodeHeartBeatResponse);
@@ -836,10 +920,17 @@ public class ResourceTrackerService extends AbstractService implements
    */
   private boolean isNodeInDecommissioning(NodeId nodeId) {
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
-    if (rmNode != null &&
-        rmNode.getState().equals(NodeState.DECOMMISSIONING)) {
-      return true;
+
+    if (rmNode != null) {
+      NodeState state = rmNode.getState();
+
+      if (state == NodeState.DECOMMISSIONING ||
+          (state == NodeState.RUNNING &&
+          this.nodesListManager.isGracefullyDecommissionableNode(rmNode))) {
+        return true;
+      }
     }
+
     return false;
   }
 

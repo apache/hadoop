@@ -42,6 +42,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.security.IntermediateEncryptedStream;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.CryptoUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -50,7 +51,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 class Fetcher<K,V> extends Thread {
   
@@ -512,7 +513,9 @@ class Fetcher<K,V> extends Thread {
       }
 
       InputStream is = input;
-      is = CryptoUtils.wrapIfNecessary(jobConf, is, compressedLength);
+      is =
+          IntermediateEncryptedStream.wrapIfNecessary(jobConf, is,
+              compressedLength, null);
       compressedLength -= CryptoUtils.cryptoPadding(jobConf);
       decompressedLength -= CryptoUtils.cryptoPadding(jobConf);
       

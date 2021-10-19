@@ -18,28 +18,32 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Service to periodically update the {@link RouterQuotaUsage}
- * cached information in the {@link Router} and update corresponding
- * mount table in State Store.
+ * cached information in the {@link Router}.
  */
 public class RouterQuotaUpdateService extends PeriodicService {
   private static final Logger LOG =
@@ -66,8 +70,8 @@ public class RouterQuotaUpdateService extends PeriodicService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.setIntervalMs(conf.getTimeDuration(
-        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL,
-        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL_DEFAULT,
+        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL,
+        RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS));
 
     super.serviceInit(conf);
@@ -77,13 +81,16 @@ public class RouterQuotaUpdateService extends PeriodicService {
   protected void periodicInvoke() {
     LOG.debug("Start to update quota cache.");
     try {
-      List<MountTable> updateMountTables = new LinkedList<>();
       List<MountTable> mountTables = getQuotaSetMountTables();
+      Map<RemoteLocation, QuotaUsage> remoteQuotaUsage = new HashMap<>();
       for (MountTable entry : mountTables) {
         String src = entry.getSourcePath();
         RouterQuotaUsage oldQuota = entry.getQuota();
         long nsQuota = oldQuota.getQuota();
         long ssQuota = oldQuota.getSpaceQuota();
+        long[] typeQuota = new long[StorageType.values().length];
+        Quota.eachByStorageType(
+            t -> typeQuota[t.ordinal()] = oldQuota.getTypeQuota(t));
 
         QuotaUsage currentQuotaUsage = null;
 
@@ -93,31 +100,24 @@ public class RouterQuotaUpdateService extends PeriodicService {
         // For other mount entry get current quota usage
         HdfsFileStatus ret = this.rpcServer.getFileInfo(src);
         if (ret == null || ret.getModificationTime() == 0) {
-          currentQuotaUsage = new RouterQuotaUsage.Builder()
-              .fileAndDirectoryCount(0)
-              .quota(nsQuota)
-              .spaceConsumed(0)
-              .spaceQuota(ssQuota).build();
+          long[] zeroConsume = new long[StorageType.values().length];
+          currentQuotaUsage =
+              new RouterQuotaUsage.Builder().fileAndDirectoryCount(0)
+                  .quota(nsQuota).spaceConsumed(0).spaceQuota(ssQuota)
+                  .typeConsumed(zeroConsume)
+                  .typeQuota(typeQuota).build();
         } else {
           // Call RouterRpcServer#getQuotaUsage for getting current quota usage.
           // If any exception occurs catch it and proceed with other entries.
           try {
-            currentQuotaUsage = this.rpcServer.getQuotaModule()
-                .getQuotaUsage(src);
+            Quota quotaModule = this.rpcServer.getQuotaModule();
+            Map<RemoteLocation, QuotaUsage> usageMap =
+                quotaModule.getEachQuotaUsage(src);
+            currentQuotaUsage = quotaModule.aggregateQuota(src, usageMap);
+            remoteQuotaUsage.putAll(usageMap);
           } catch (IOException ioe) {
             LOG.error("Unable to get quota usage for " + src, ioe);
             continue;
-          }
-        }
-
-        // If quota is not set in some subclusters under federation path,
-        // set quota for this path.
-        if (currentQuotaUsage.getQuota() == HdfsConstants.QUOTA_RESET) {
-          try {
-            this.rpcServer.setQuota(src, nsQuota, ssQuota, null);
-          } catch (IOException ioe) {
-            LOG.error("Unable to set quota at remote location for "
-                + src, ioe);
           }
         }
 
@@ -125,23 +125,43 @@ public class RouterQuotaUpdateService extends PeriodicService {
             currentQuotaUsage);
         this.quotaManager.put(src, newQuota);
         entry.setQuota(newQuota);
-
-        // only update mount tables which quota was changed
-        if (!oldQuota.equals(newQuota)) {
-          updateMountTables.add(entry);
-
-          LOG.debug(
-              "Update quota usage entity of path: {}, nsCount: {},"
-                  + " nsQuota: {}, ssCount: {}, ssQuota: {}.",
-              src, newQuota.getFileAndDirectoryCount(),
-              newQuota.getQuota(), newQuota.getSpaceConsumed(),
-              newQuota.getSpaceQuota());
-        }
       }
 
-      updateMountTableEntries(updateMountTables);
+      // Fix inconsistent quota.
+      for (Entry<RemoteLocation, QuotaUsage> en : remoteQuotaUsage
+          .entrySet()) {
+        RemoteLocation remoteLocation = en.getKey();
+        QuotaUsage currentQuota = en.getValue();
+        fixGlobalQuota(remoteLocation, currentQuota);
+      }
     } catch (IOException e) {
       LOG.error("Quota cache updated error.", e);
+    }
+  }
+
+  private void fixGlobalQuota(RemoteLocation location, QuotaUsage remoteQuota)
+      throws IOException {
+    QuotaUsage gQuota =
+        this.rpcServer.getQuotaModule().getGlobalQuota(location.getSrc());
+    if (remoteQuota.getQuota() != gQuota.getQuota()
+        || remoteQuota.getSpaceQuota() != gQuota.getSpaceQuota()) {
+      this.rpcServer.getQuotaModule()
+          .setQuotaInternal(location.getSrc(), Arrays.asList(location),
+              gQuota.getQuota(), gQuota.getSpaceQuota(), null);
+      LOG.info("[Fix Quota] src={} dst={} oldQuota={}/{} newQuota={}/{}",
+          location.getSrc(), location, remoteQuota.getQuota(),
+          remoteQuota.getSpaceQuota(), gQuota.getQuota(),
+          gQuota.getSpaceQuota());
+    }
+    for (StorageType t : StorageType.values()) {
+      if (remoteQuota.getTypeQuota(t) != gQuota.getTypeQuota(t)) {
+        this.rpcServer.getQuotaModule()
+            .setQuotaInternal(location.getSrc(), Arrays.asList(location),
+                HdfsConstants.QUOTA_DONT_SET, gQuota.getTypeQuota(t), t);
+        LOG.info("[Fix Quota] src={} dst={} type={} oldQuota={} newQuota={}",
+            location.getSrc(), location, t, remoteQuota.getTypeQuota(t),
+            gQuota.getTypeQuota(t));
+      }
     }
   }
 
@@ -198,7 +218,7 @@ public class RouterQuotaUpdateService extends PeriodicService {
 
       // update mount table entries info in quota cache
       String src = entry.getSourcePath();
-      this.quotaManager.put(src, entry.getQuota());
+      this.quotaManager.updateQuota(src, entry.getQuota());
       stalePaths.remove(src);
     }
 
@@ -230,30 +250,15 @@ public class RouterQuotaUpdateService extends PeriodicService {
    */
   private RouterQuotaUsage generateNewQuota(RouterQuotaUsage oldQuota,
       QuotaUsage currentQuotaUsage) {
-    RouterQuotaUsage newQuota = new RouterQuotaUsage.Builder()
+    RouterQuotaUsage.Builder newQuotaBuilder = new RouterQuotaUsage.Builder()
         .fileAndDirectoryCount(currentQuotaUsage.getFileAndDirectoryCount())
         .quota(oldQuota.getQuota())
         .spaceConsumed(currentQuotaUsage.getSpaceConsumed())
-        .spaceQuota(oldQuota.getSpaceQuota()).build();
-    return newQuota;
-  }
-
-  /**
-   * Write out updated mount table entries into State Store.
-   * @param updateMountTables Mount tables to be updated.
-   * @throws IOException
-   */
-  private void updateMountTableEntries(List<MountTable> updateMountTables)
-      throws IOException {
-    for (MountTable entry : updateMountTables) {
-      UpdateMountTableEntryRequest updateRequest = UpdateMountTableEntryRequest
-          .newInstance(entry);
-      try {
-        getMountTableStore().updateMountTableEntry(updateRequest);
-      } catch (IOException e) {
-        LOG.error("Quota update error for mount entry "
-            + entry.getSourcePath(), e);
-      }
-    }
+        .spaceQuota(oldQuota.getSpaceQuota());
+    Quota.eachByStorageType(t -> {
+      newQuotaBuilder.typeQuota(t, oldQuota.getTypeQuota(t));
+      newQuotaBuilder.typeConsumed(t, currentQuotaUsage.getTypeConsumed(t));
+    });
+    return newQuotaBuilder.build();
   }
 }

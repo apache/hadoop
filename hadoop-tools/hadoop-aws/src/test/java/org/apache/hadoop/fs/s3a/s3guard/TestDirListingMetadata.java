@@ -316,18 +316,23 @@ public class TestDirListingMetadata {
     List<PathMetadata> listing = Arrays.asList(pathMeta1, pathMeta2, pathMeta3);
     DirListingMetadata meta = new DirListingMetadata(path, listing, false);
 
-    meta.removeExpiredEntriesFromListing(ttl, now);
+    List<PathMetadata> expired = meta.removeExpiredEntriesFromListing(ttl,
+        now);
 
     Assertions.assertThat(meta.getListing())
         .describedAs("Metadata listing for %s", path)
         .doesNotContain(pathMeta1)
         .contains(pathMeta2)
         .contains(pathMeta3);
+    Assertions.assertThat(expired)
+        .describedAs("Expire entries underr %s", path)
+        .doesNotContain(pathMeta2)
+        .contains(pathMeta1);
   }
 
-  /*
+  /**
    * Create DirListingMetadata with two dirs and one file living in directory
-   * 'parent'
+   * 'parent'.
    */
   private static DirListingMetadata makeTwoDirsOneFile(Path parent) {
     PathMetadata pathMeta1 = new PathMetadata(

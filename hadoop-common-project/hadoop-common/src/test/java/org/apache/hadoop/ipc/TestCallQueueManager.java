@@ -176,6 +176,12 @@ public class TestCallQueueManager {
   private static final Class<? extends RpcScheduler> schedulerClass
       = CallQueueManager.convertSchedulerClass(DefaultRpcScheduler.class);
 
+  private static final Class<? extends BlockingQueue<FakeCall>> fcqueueClass
+      = CallQueueManager.convertQueueClass(FairCallQueue.class, FakeCall.class);
+
+  private static final Class<? extends RpcScheduler> rpcSchedulerClass
+      = CallQueueManager.convertSchedulerClass(DecayRpcScheduler.class);
+
   @Test
   public void testCallQueueCapacity() throws InterruptedException {
     manager = new CallQueueManager<FakeCall>(queueClass, schedulerClass, false,
@@ -212,7 +218,8 @@ public class TestCallQueueManager {
 
     // Specify only Fair Call Queue without a scheduler
     // Ensure the DecayScheduler will be added to avoid breaking.
-    Class<? extends RpcScheduler> scheduler = Server.getSchedulerClass(ns,
+    Class<? extends RpcScheduler> scheduler =
+        Server.getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, 0,
         conf);
     assertTrue(scheduler.getCanonicalName().
         equals("org.apache.hadoop.ipc.DecayRpcScheduler"));
@@ -244,8 +251,8 @@ public class TestCallQueueManager {
         "LinkedBlockingQueue"));
 
     manager = new CallQueueManager<FakeCall>(queue,
-        Server.getSchedulerClass(ns, conf), false,
-        3, "", conf);
+        Server.getSchedulerClass(CommonConfigurationKeys.IPC_NAMESPACE, 0,
+            conf), false, 3, "", conf);
 
     // LinkedBlockingQueue with a capacity of 3 can put 3 calls
     assertCanPut(manager, 3, 3);
@@ -317,6 +324,55 @@ public class TestCallQueueManager {
     }
 
     assertEquals(totalCallsConsumed, totalCallsCreated);
+  }
+
+  @Test
+  public void testQueueCapacity() throws InterruptedException {
+    int capacity = 4;
+    String ns = "ipc.8020";
+    conf.setInt("ipc.8020.scheduler.priority.levels", 2);
+    conf.set("ipc.8020.callqueue.capacity.weights", "1,3");
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        capacity, ns, conf);
+
+    // insert 4 calls with 2 at each priority
+    // since the queue with priority 0 has only 1 capacity, the second call
+    // with p0 will be overflowed to queue with priority 1
+    for (int i = 0; i < capacity; i++) {
+      FakeCall fc = new FakeCall(i);
+      fc.setPriorityLevel(i%2);
+      manager.put(fc);
+    }
+
+    // get calls, the order should be
+    // call 0 with p0
+    // call 1 with p1
+    // call 2 with p0 since overflow
+    // call 3 with p1
+    assertEquals(manager.take().priorityLevel, 0);
+    assertEquals(manager.take().priorityLevel, 1);
+    assertEquals(manager.take().priorityLevel, 0);
+    assertEquals(manager.take().priorityLevel, 1);
+
+    conf.set("ipc.8020.callqueue.capacity.weights", "1,1");
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        capacity, ns, conf);
+
+    for (int i = 0; i < capacity; i++) {
+      FakeCall fc = new FakeCall(i);
+      fc.setPriorityLevel(i%2);
+      manager.put(fc);
+    }
+
+    // get calls, the order should be
+    // call 0 with p0
+    // call 2 with p0
+    // call 1 with p1
+    // call 3 with p1
+    assertEquals(manager.take().priorityLevel, 0);
+    assertEquals(manager.take().priorityLevel, 0);
+    assertEquals(manager.take().priorityLevel, 1);
+    assertEquals(manager.take().priorityLevel, 1);
   }
 
   public static class ExceptionFakeCall implements Schedulable {

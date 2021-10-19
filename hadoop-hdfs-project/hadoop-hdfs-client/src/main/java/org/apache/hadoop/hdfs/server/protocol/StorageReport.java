@@ -28,11 +28,20 @@ public class StorageReport {
   private final long nonDfsUsed;
   private final long remaining;
   private final long blockPoolUsed;
+  private final float blockPoolUsagePercent;
+  private final String mount;
 
   public static final StorageReport[] EMPTY_ARRAY = {};
 
   public StorageReport(DatanodeStorage storage, boolean failed, long capacity,
       long dfsUsed, long remaining, long bpUsed, long nonDfsUsed) {
+    this(storage, failed, capacity, dfsUsed,
+        remaining, bpUsed, nonDfsUsed, "");
+  }
+
+  public StorageReport(DatanodeStorage storage, boolean failed, long capacity,
+      long dfsUsed, long remaining, long bpUsed,
+      long nonDfsUsed, String mount) {
     this.storage = storage;
     this.failed = failed;
     this.capacity = capacity;
@@ -40,6 +49,9 @@ public class StorageReport {
     this.nonDfsUsed = nonDfsUsed;
     this.remaining = remaining;
     this.blockPoolUsed = bpUsed;
+    this.blockPoolUsagePercent = capacity <= 0 ? 0.0f :
+        (bpUsed * 100.0f) / capacity;
+    this.mount = mount;
   }
 
   public DatanodeStorage getStorage() {
@@ -68,5 +80,13 @@ public class StorageReport {
 
   public long getBlockPoolUsed() {
     return blockPoolUsed;
+  }
+
+  public String getMount() {
+    return mount;
+  }
+
+  public float getBlockPoolUsagePercent() {
+    return blockPoolUsagePercent;
   }
 }

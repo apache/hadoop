@@ -19,7 +19,15 @@ set -e               # exit on error
 
 cd "$(dirname "$0")" # connect to root
 
-docker build -t hadoop-build dev-support/docker
+DOCKER_DIR=dev-support/docker
+DOCKER_FILE="${DOCKER_DIR}/Dockerfile"
+
+CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
+if [ "$CPU_ARCH" = "aarch64" ]; then
+  DOCKER_FILE="${DOCKER_DIR}/Dockerfile_aarch64"
+fi
+
+docker build -t hadoop-build -f $DOCKER_FILE $DOCKER_DIR
 
 USER_NAME=${SUDO_USER:=$USER}
 USER_ID=$(id -u "${USER_NAME}")
@@ -58,13 +66,16 @@ if [ "$(uname -s)" = "Linux" ]; then
   fi
 fi
 
+# Set the home directory in the Docker container.
+DOCKER_HOME_DIR=${DOCKER_HOME_DIR:-/home/${USER_NAME}}
+
 docker build -t "hadoop-build-${USER_ID}" - <<UserSpecificDocker
 FROM hadoop-build
 RUN rm -f /var/log/faillog /var/log/lastlog
 RUN groupadd --non-unique -g ${GROUP_ID} ${USER_NAME}
-RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME}
+RUN useradd -g ${GROUP_ID} -u ${USER_ID} -k /root -m ${USER_NAME} -d "${DOCKER_HOME_DIR}"
 RUN echo "${USER_NAME} ALL=NOPASSWD: ALL" > "/etc/sudoers.d/hadoop-build-${USER_ID}"
-ENV HOME /home/${USER_NAME}
+ENV HOME "${DOCKER_HOME_DIR}"
 
 UserSpecificDocker
 
@@ -77,8 +88,9 @@ DOCKER_INTERACTIVE_RUN=${DOCKER_INTERACTIVE_RUN-"-i -t"}
 # system.  And this also is a significant speedup in subsequent
 # builds because the dependencies are downloaded only once.
 docker run --rm=true $DOCKER_INTERACTIVE_RUN \
-  -v "${PWD}:/home/${USER_NAME}/hadoop${V_OPTS:-}" \
-  -w "/home/${USER_NAME}/hadoop" \
-  -v "${HOME}/.m2:/home/${USER_NAME}/.m2${V_OPTS:-}" \
-  -u "${USER_NAME}" \
+  -v "${PWD}:${DOCKER_HOME_DIR}/hadoop${V_OPTS:-}" \
+  -w "${DOCKER_HOME_DIR}/hadoop" \
+  -v "${HOME}/.m2:${DOCKER_HOME_DIR}/.m2${V_OPTS:-}" \
+  -v "${HOME}/.gnupg:${DOCKER_HOME_DIR}/.gnupg${V_OPTS:-}" \
+  -u "${USER_ID}" \
   "hadoop-build-${USER_ID}" "$@"

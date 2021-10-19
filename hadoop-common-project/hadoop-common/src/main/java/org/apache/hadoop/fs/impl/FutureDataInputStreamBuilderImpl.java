@@ -26,12 +26,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 
@@ -61,6 +62,12 @@ public abstract class FutureDataInputStreamBuilderImpl
   private int bufferSize;
 
   /**
+   * File status passed in through a {@link #withFileStatus(FileStatus)}
+   * call; null otherwise.
+   */
+  private FileStatus status;
+
+  /**
    * Construct from a {@link FileContext}.
    *
    * @param fc FileContext
@@ -69,8 +76,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    */
   protected FutureDataInputStreamBuilderImpl(@Nonnull FileContext fc,
       @Nonnull Path path) throws IOException {
-    super(checkNotNull(path));
-    checkNotNull(fc);
+    super(requireNonNull(path, "path"));
+    requireNonNull(fc, "file context");
     this.fileSystem = null;
     bufferSize = IO_FILE_BUFFER_SIZE_DEFAULT;
   }
@@ -82,8 +89,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    */
   protected FutureDataInputStreamBuilderImpl(@Nonnull FileSystem fileSystem,
       @Nonnull Path path) {
-    super(checkNotNull(path));
-    this.fileSystem = checkNotNull(fileSystem);
+    super(requireNonNull(path, "path"));
+    this.fileSystem = requireNonNull(fileSystem, "fileSystem");
     initFromFS();
   }
 
@@ -108,7 +115,7 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   protected FileSystem getFS() {
-    checkNotNull(fileSystem);
+    requireNonNull(fileSystem, "fileSystem");
     return fileSystem;
   }
 
@@ -137,5 +144,19 @@ public abstract class FutureDataInputStreamBuilderImpl
   @Override
   public FutureDataInputStreamBuilder getThisBuilder() {
     return this;
+  }
+
+  @Override
+  public FutureDataInputStreamBuilder withFileStatus(FileStatus st) {
+    this.status = requireNonNull(st, "status");
+    return this;
+  }
+
+  /**
+   * Get any status set in {@link #withFileStatus(FileStatus)}.
+   * @return a status value or null.
+   */
+  protected FileStatus getStatus() {
+    return status;
   }
 }

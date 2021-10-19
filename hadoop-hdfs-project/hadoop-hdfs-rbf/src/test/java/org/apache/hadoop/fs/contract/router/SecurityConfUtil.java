@@ -65,6 +65,9 @@ public final class SecurityConfUtil {
   private static final String ROUTER_USER_NAME = "router";
   private static final String PREFIX = "hadoop.http.authentication.";
 
+  private static MiniKdc kdc;
+  private static File baseDir;
+
   private static String spnegoPrincipal;
   private static String routerPrincipal;
 
@@ -78,14 +81,14 @@ public final class SecurityConfUtil {
 
   public static Configuration initSecurity() throws Exception {
     // delete old test dir
-    File baseDir = GenericTestUtils.getTestDir(
+    baseDir = GenericTestUtils.getTestDir(
         SecurityConfUtil.class.getSimpleName());
     FileUtil.fullyDelete(baseDir);
     assertTrue(baseDir.mkdirs());
 
     // start a mini kdc with default conf
     Properties kdcConf = MiniKdc.createConf();
-    MiniKdc kdc = new MiniKdc(kdcConf, baseDir);
+    kdc = new MiniKdc(kdcConf, baseDir);
     kdc.start();
 
     Configuration conf = new HdfsConfiguration();
@@ -155,5 +158,13 @@ public final class SecurityConfUtil {
         MockDelegationTokenSecretManager.class.getName());
 
     return conf;
+  }
+
+  public static void destroy() throws Exception {
+    if (kdc != null) {
+      kdc.stop();
+      FileUtil.fullyDelete(baseDir);
+      KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+    }
   }
 }

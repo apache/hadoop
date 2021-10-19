@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceUtilizationProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

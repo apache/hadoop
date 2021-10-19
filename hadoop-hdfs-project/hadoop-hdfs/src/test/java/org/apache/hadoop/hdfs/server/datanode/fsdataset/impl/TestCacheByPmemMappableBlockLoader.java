@@ -21,7 +21,7 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_DIRS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -62,8 +62,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
+import java.util.function.Supplier;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY;
 
@@ -137,7 +137,7 @@ public class TestCacheByPmemMappableBlockLoader {
     new File(PMEM_DIR_0).getAbsoluteFile().mkdir();
     new File(PMEM_DIR_1).getAbsoluteFile().mkdir();
     // Configure two bogus pmem volumes
-    conf.set(DFS_DATANODE_CACHE_PMEM_DIRS_KEY, PMEM_DIR_0 + "," + PMEM_DIR_1);
+    conf.set(DFS_DATANODE_PMEM_CACHE_DIRS_KEY, PMEM_DIR_0 + "," + PMEM_DIR_1);
     PmemVolumeManager.setMaxBytes((long) (CACHE_CAPACITY * 0.5));
 
     prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
@@ -259,14 +259,18 @@ public class TestCacheByPmemMappableBlockLoader {
       // The cachePath shouldn't be null if the replica has been cached
       // to pmem.
       assertNotNull(cachePath);
-      String expectFileName =
-          PmemVolumeManager.getInstance().getCacheFileName(key);
+      Path path = new Path(cachePath);
+      String fileName = path.getName();
       if (cachePath.startsWith(PMEM_DIR_0)) {
-        assertTrue(cachePath.equals(PmemVolumeManager
-            .getRealPmemDir(PMEM_DIR_0) + "/" + expectFileName));
+        String expectPath = PmemVolumeManager.
+            getRealPmemDir(PMEM_DIR_0) + "/" + key.getBlockPoolId();
+        assertTrue(path.toString().startsWith(expectPath));
+        assertTrue(key.getBlockId() == Long.parseLong(fileName));
       } else if (cachePath.startsWith(PMEM_DIR_1)) {
-        assertTrue(cachePath.equals(PmemVolumeManager
-            .getRealPmemDir(PMEM_DIR_1) + "/" + expectFileName));
+        String expectPath = PmemVolumeManager.
+            getRealPmemDir(PMEM_DIR_1) + "/" + key.getBlockPoolId();
+        assertTrue(path.toString().startsWith(expectPath));
+        assertTrue(key.getBlockId() == Long.parseLong(fileName));
       } else {
         fail("The cache path is not the expected one: " + cachePath);
       }

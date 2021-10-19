@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -52,6 +53,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -89,6 +92,7 @@ public class TestRouterMountTable {
         .admin()
         .rpc()
         .build();
+    conf.setInt(RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY, 20);
     cluster.addRouterOverrides(conf);
     cluster.startCluster();
     cluster.startRouters();
@@ -189,6 +193,55 @@ public class TestRouterMountTable {
   }
 
   /**
+   * Update a mount table entry to the mount table through the admin API.
+   * @param entry Mount table entry to update.
+   * @return If it was successfully update.
+   * @throws IOException Problems adding entries.
+   */
+  private boolean updateMountTable(final MountTable entry) throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(entry);
+    UpdateMountTableEntryResponse updateResponse =
+        mountTableManager.updateMountTableEntry(updateRequest);
+
+    // Reload the Router cache
+    mountTable.loadCache(true);
+
+    return updateResponse.getStatus();
+  }
+
+  /**
+   * Verify that the maximum number of bytes in each component of a
+   * destination path.
+   */
+  @Test
+  public void testMountPointLimit() throws Exception {
+    // Add mount table entry
+    MountTable addEntry = MountTable.newInstance("/testdir-shortlength",
+        Collections.singletonMap("ns0", "/testdir-shortlength"));
+    assertTrue(addMountTable(addEntry));
+
+    final MountTable longAddEntry = MountTable.newInstance(
+        "/testdir-verylonglength",
+        Collections.singletonMap("ns0", "/testdir-verylonglength"));
+    LambdaTestUtils.intercept(IOException.class,
+        "The maximum path component name limit of testdir-verylonglength in "
+            + "directory /testdir-verylonglength is exceeded",
+        () -> addMountTable(longAddEntry));
+
+    final MountTable updateEntry = MountTable.newInstance(
+        "/testdir-shortlength",
+        Collections.singletonMap("ns0", "/testdir-shortlength-change-to-long"));
+    LambdaTestUtils.intercept(IOException.class,
+        "The maximum path component name limit of " +
+            "testdir-shortlength-change-to-long in directory " +
+            "/testdir-shortlength-change-to-long is exceeded",
+        () -> updateMountTable(updateEntry));
+  }
+
+  /**
    * Verify that the file/dir listing contains correct date/time information.
    */
   @Test
@@ -269,11 +322,11 @@ public class TestRouterMountTable {
       assertTrue(addMountTable(addEntry));
       addEntry = MountTable.newInstance("/testA/testB",
           Collections.singletonMap("ns0", "/testA/testB"));
+      addEntry.setOwnerName("userB");
+      addEntry.setGroupName("groupB");
       assertTrue(addMountTable(addEntry));
       addEntry = MountTable.newInstance("/testB",
           Collections.singletonMap("ns0", "/test1/testB"));
-      addEntry.setOwnerName("userB");
-      addEntry.setGroupName("groupB");
       assertTrue(addMountTable(addEntry));
 
       assertTrue(nnFs0.mkdirs(new Path("/test1")));
@@ -289,6 +342,37 @@ public class TestRouterMountTable {
     }
   }
 
+  /**
+   * Verify the getMountPointStatus result of passing in different parameters.
+   */
+  @Test
+  public void testGetMountPointStatus() throws IOException {
+    MountTable addEntry = MountTable.newInstance("/testA/testB/testC/testD",
+        Collections.singletonMap("ns0", "/testA/testB/testC/testD"));
+    assertTrue(addMountTable(addEntry));
+    RouterClientProtocol clientProtocol = new RouterClientProtocol(
+        nnFs0.getConf(), routerContext.getRouter().getRpcServer());
+    String src = "/";
+    String child = "testA";
+    Path childPath = new Path(src, child);
+    HdfsFileStatus dirStatus =
+        clientProtocol.getMountPointStatus(childPath.toString(), 0, 0);
+    assertEquals(child, dirStatus.getLocalName());
+
+    String src1 = "/testA";
+    String child1 = "testB";
+    Path childPath1 = new Path(src1, child1);
+    HdfsFileStatus dirStatus1 =
+        clientProtocol.getMountPointStatus(childPath1.toString(), 0, 0);
+    assertEquals(child1, dirStatus1.getLocalName());
+
+    String src2 = "/testA/testB";
+    String child2 = "testC";
+    Path childPath2 = new Path(src2, child2);
+    HdfsFileStatus dirStatus2 =
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
+    assertEquals(child2, dirStatus2.getLocalName());
+  }
   /**
    * GetListing of testPath through router.
    */
@@ -311,6 +395,44 @@ public class TestRouterMountTable {
     assertEquals("groupB", currentGroup);
   }
 
+  @Test
+  public void testListNonExistPath() throws Exception {
+    mountTable.setDefaultNSEnable(false);
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        "File /base does not exist.",
+        "Expect FileNotFoundException.",
+        () -> routerFs.listStatus(new Path("/base")));
+  }
+
+  @Test
+  public void testListWhenDisableDefaultMountTable() throws IOException {
+    mountTable.setDefaultNSEnable(false);
+    /**
+     * /base/dir1 -> ns0:/base/dir1
+     * /base/dir2 -> ns0:/base/dir2
+     */
+    assertTrue(addMountTable(createEntry("/base/dir1", "ns0", "/base/dir1",
+        "group2", "owner2", (short) 0750)));
+    assertTrue(addMountTable(createEntry("/base/dir2", "ns0", "/base/dir2",
+        "group3", "owner3", (short) 0755)));
+
+    FileStatus[] list = routerFs.listStatus(new Path("/base"));
+    assertEquals(2, list.length);
+    for (FileStatus status : list) {
+      if (status.getPath().toUri().getPath().equals("/base/dir1")) {
+        assertEquals("group2", status.getGroup());
+        assertEquals("owner2", status.getOwner());
+        assertEquals((short) 0750, status.getPermission().toShort());
+      } else if (status.getPath().toUri().getPath().equals("/base/dir2")) {
+        assertEquals("group3", status.getGroup());
+        assertEquals("owner3", status.getOwner());
+        assertEquals((short) 0755, status.getPermission().toShort());
+      } else {
+        fail("list result should be either /base/dir1 or /base/dir2.");
+      }
+    }
+  }
+
   /**
    * Verify permission for a mount point when the actual destination is not
    * present. It returns the permissions of the mount point.
@@ -328,6 +450,16 @@ public class TestRouterMountTable {
     assertEquals("group1", list[0].getGroup());
     assertEquals("owner1", list[0].getOwner());
     assertEquals((short) 0775, list[0].getPermission().toShort());
+  }
+
+  private MountTable createEntry(String mountPath, String ns, String remotePath,
+      String group, String owner, short permission) throws IOException {
+    MountTable entry = MountTable
+        .newInstance(mountPath, Collections.singletonMap(ns, remotePath));
+    entry.setGroupName(group);
+    entry.setOwnerName(owner);
+    entry.setMode(FsPermission.createImmutable(permission));
+    return entry;
   }
 
   /**
@@ -613,6 +745,22 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testrename1"), true);
       nnFs0.delete(new Path("/testrename2"), true);
+    }
+  }
+
+  @Test
+  public void testListStatusMountPoint() throws Exception {
+    try {
+      MountTable addEntry = MountTable.newInstance("/mount/testLsMountEntry",
+          Collections.singletonMap("ns0", "/testLsMountEntryDest"));
+      assertTrue(addMountTable(addEntry));
+      nnFs0.mkdirs(new Path("/testLsMountEntryDest"));
+      DistributedFileSystem routerDfs = (DistributedFileSystem) routerFs;
+      Path mountPath = new Path("/mount/testLsMountEntry");
+      routerDfs.setErasureCodingPolicy(mountPath, "RS-6-3-1024k");
+      assertTrue(routerDfs.listStatus(new Path("/mount"))[0].isErasureCoded());
+    } finally {
+      nnFs0.delete(new Path("/testLsMountEntryDest"), true);
     }
   }
 }

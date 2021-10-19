@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -335,8 +335,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
   }
 
   private void injectToken() throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      Token<DelegationTokenIdentifier> token = params.delegationToken();
+    Token<DelegationTokenIdentifier> token = params.delegationToken();
+    if (UserGroupInformation.isSecurityEnabled() && token != null) {
       token.setKind(HDFS_DELEGATION_KIND);
       ugi.addToken(token);
     }

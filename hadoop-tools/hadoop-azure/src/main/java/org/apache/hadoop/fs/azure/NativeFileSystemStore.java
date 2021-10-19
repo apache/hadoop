@@ -23,13 +23,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Date;
+import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * <p>
@@ -49,6 +50,9 @@ interface NativeFileSystemStore {
   InputStream retrieve(String key) throws IOException;
 
   InputStream retrieve(String key, long byteRangeStart) throws IOException;
+
+  InputStream retrieve(String key, long byteRangeStart,
+      Optional<Configuration> options) throws IOException;
 
   DataOutputStream storefile(String keyEncoded,
       PermissionStatus permissionStatus,
@@ -75,6 +79,10 @@ interface NativeFileSystemStore {
 
   void changePermissionStatus(String key, PermissionStatus newPermission)
       throws AzureException;
+
+  byte[] retrieveAttribute(String key, String attribute) throws IOException;
+
+  void storeAttribute(String key, String attribute, byte[] value) throws IOException;
 
   /**
    * API to delete a blob in the back end azure storage.

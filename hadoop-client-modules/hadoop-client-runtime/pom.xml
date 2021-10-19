@@ -18,11 +18,11 @@
 <parent>
    <groupId>org.apache.hadoop</groupId>
    <artifactId>hadoop-project</artifactId>
-   <version>3.3.0-SNAPSHOT</version>
+   <version>3.4.0-SNAPSHOT</version>
    <relativePath>../../hadoop-project</relativePath>
 </parent>
   <artifactId>hadoop-client-runtime</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
@@ -60,6 +60,12 @@
       <artifactId>hadoop-client-api</artifactId>
       <scope>runtime</scope>
     </dependency>
+    <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <!-- This comes from our parent pom. If we don't expressly change it here to get included,
          downstream will get warnings at compile time. -->
     <dependency>
@@ -75,15 +81,9 @@
     </dependency>
     <!-- Since hadoop-client is listed as optional, we have to list transitive
          dependencies that we still want to show up.
-         * HTrace
          * Slf4j API
          * commons-logging
       -->
-    <dependency>
-      <groupId>org.apache.htrace</groupId>
-      <artifactId>htrace-core4</artifactId>
-      <scope>runtime</scope>
-    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -146,8 +146,6 @@
                     <excludes>
                       <!-- We need a filter that matches just those things that aer included in the api jar -->
                       <exclude>org.apache.hadoop:hadoop-client-api</exclude>
-                      <!-- Leave HTrace as an unshaded dependency on purpose, since a static class member is used to trace within a given JVM instance -->
-                      <exclude>org.apache.htrace:htrace-core4</exclude>
                       <!-- Leave slf4j unshaded so downstream users can configure logging. -->
                       <exclude>org.slf4j:slf4j-api</exclude>
                       <!-- Leave commons-logging unshaded so downstream users can configure logging. -->
@@ -158,12 +156,13 @@
                       <!-- the jdk ships part of the javax.annotation namespace, so if we want to relocate this we'll have to care it out by class :( -->
                       <exclude>com.google.code.findbugs:jsr305</exclude>
                       <exclude>io.dropwizard.metrics:metrics-core</exclude>
-                      <exclude>org.eclipse.jetty.websocket:*</exclude>
                       <exclude>org.eclipse.jetty:jetty-servlet</exclude>
                       <exclude>org.eclipse.jetty:jetty-security</exclude>
                       <exclude>org.ow2.asm:*</exclude>
                       <!-- Leave bouncycastle unshaded because it's signed with a special Oracle certificate so it can be a custom JCE security provider -->
                       <exclude>org.bouncycastle:*</exclude>
+                      <!-- Leave snappy that includes native methods which cannot be relocated. -->
+                      <exclude>org.xerial.snappy:*</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -211,6 +210,13 @@
                       </excludes>
                     </filter>
                     <filter>
+                      <!-- skip jetty license info already incorporated into LICENSE/NOTICE -->
+                      <artifact>org.eclipse.jetty.websocket:*</artifact>
+                      <excludes>
+                        <exclude>about.html</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
                       <!-- skip docs on formats used in kerby -->
                       <artifact>org.apache.kerby:kerb-util</artifact>
                       <excludes>
@@ -244,9 +250,7 @@
                       <excludes>
                         <exclude>org/apache/hadoop/*</exclude>
                         <exclude>org/apache/hadoop/**/*</exclude>
-                        <!-- Our non-shaded htrace and logging libraries -->
-                        <exclude>org/apache/htrace/*</exclude>
-                        <exclude>org/apache/htrace/**/*</exclude>
+                        <!-- Our non-shaded logging libraries -->
                         <exclude>org/slf4j/*</exclude>
                         <exclude>org/slf4j/**/*</exclude>
                         <exclude>org/apache/commons/logging/*</exclude>
@@ -261,6 +265,11 @@
                         <exclude>org/w3c/dom/**/*</exclude>
                         <exclude>org/xml/sax/*</exclude>
                         <exclude>org/xml/sax/**/*</exclude>
+                        <exclude>org/bouncycastle/*</exclude>
+                        <exclude>org/bouncycastle/**/*</exclude>
+                        <!-- Exclude snappy-java -->
+                        <exclude>org/xerial/snappy/*</exclude>
+                        <exclude>org/xerial/snappy/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>
@@ -337,6 +346,13 @@
                       </excludes>
                     </relocation>
                     <relocation>
+                      <pattern>javax/xml/bind/</pattern>
+                      <shadedPattern>${shaded.dependency.prefix}.javax.xml.bind.</shadedPattern>
+                      <excludes>
+                        <exclude>**/pom.xml</exclude>
+                      </excludes>
+                    </relocation>
+                    <relocation>
                       <pattern>net/</pattern>
                       <shadedPattern>${shaded.dependency.prefix}.net.</shadedPattern>
                       <excludes>
@@ -344,6 +360,9 @@
                         <!-- Exclude config keys for Hadoop that look like package names -->
                         <exclude>net/topology/*</exclude>
                         <exclude>net/topology/**/*</exclude>
+                        <!-- Exclude lz4-java -->
+                        <exclude>net/jpountz/*</exclude>
+                        <exclude>net/jpountz/**/*</exclude>
                       </excludes>
                     </relocation>
                     <!-- okio declares a top level package instead of nested -->

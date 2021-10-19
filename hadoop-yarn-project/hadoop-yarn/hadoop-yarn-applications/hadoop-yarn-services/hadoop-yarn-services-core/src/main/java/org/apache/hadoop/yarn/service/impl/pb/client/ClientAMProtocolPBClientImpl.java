@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.service.impl.pb.client;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -58,7 +58,7 @@ public class ClientAMProtocolPBClientImpl
   public ClientAMProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ClientAMProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     proxy = RPC.getProxy(ClientAMProtocolPB.class, clientVersion, addr, conf);
 
   }

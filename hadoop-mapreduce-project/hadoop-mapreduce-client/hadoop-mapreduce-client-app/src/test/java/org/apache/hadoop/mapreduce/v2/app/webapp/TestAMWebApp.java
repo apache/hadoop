@@ -69,7 +69,7 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.google.common.net.HttpHeaders;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import com.google.inject.Injector;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 

@@ -368,7 +368,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
         DurationInfo ignored = new DurationInfo(LOG, "requesting credentials")) {
       Configuration conf = new Configuration(getContract().getConf());
       ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, null);
+          S3AUtils.createAwsConf(conf, null, AWS_SERVICE_IDENTIFIER_STS);
       return intercept(clazz, exceptionText,
           () -> {
             AWSSecurityTokenService tokenService =

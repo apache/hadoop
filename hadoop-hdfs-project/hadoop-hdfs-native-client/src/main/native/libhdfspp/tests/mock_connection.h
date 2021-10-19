@@ -20,21 +20,21 @@
 
 #include "common/async_stream.h"
 
-#include <asio/error_code.hpp>
-#include <asio/buffer.hpp>
-#include <asio/streambuf.hpp>
-#include <asio/io_service.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/streambuf.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include <gmock/gmock.h>
 
 namespace hdfs {
 
-typedef std::pair<asio::error_code, std::string> ProducerResult;
+typedef std::pair<boost::system::error_code, std::string> ProducerResult;
 class AsioProducer {
 public:
   /*
    *  Return either:
-   *     (::asio::error_code(), <some data>) for a good result
+   *     (::boost::system::error_code(), <some data>) for a good result
    *     (<an ::asio::error instance>, <anything>) to pass an error to the caller
    *     (::asio::error::would_block, <anything>) to block the next call forever
    */
@@ -45,53 +45,53 @@ public:
 
 class MockConnectionBase : public AsioProducer, public AsyncStream {
 public:
-  MockConnectionBase(::asio::io_service *io_service);
+  MockConnectionBase(boost::asio::io_service *io_service);
   virtual ~MockConnectionBase();
-  typedef std::pair<asio::error_code, std::string> ProducerResult;
+  typedef std::pair<boost::system::error_code, std::string> ProducerResult;
 
   void async_read_some(const MutableBuffer &buf,
-          std::function<void (const asio::error_code & error,
+          std::function<void (const boost::system::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     if (produced_.size() == 0) {
       ProducerResult r = Produce();
-      if (r.first == asio::error::would_block) {
+      if (r.first == boost::asio::error::would_block) {
         return; // No more reads to do
       }
       if (r.first) {
         io_service_->post(std::bind(handler, r.first, 0));
         return;
       }
-      asio::mutable_buffers_1 data = produced_.prepare(r.second.size());
-      asio::buffer_copy(data, asio::buffer(r.second));
+      boost::asio::mutable_buffers_1 data = produced_.prepare(r.second.size());
+      boost::asio::buffer_copy(data, boost::asio::buffer(r.second));
       produced_.commit(r.second.size());
     }
 
-    size_t len = std::min(asio::buffer_size(buf), produced_.size());
-    asio::buffer_copy(buf, produced_.data());
+    size_t len = std::min(boost::asio::buffer_size(buf), produced_.size());
+    boost::asio::buffer_copy(buf, produced_.data());
     produced_.consume(len);
-    io_service_->post(std::bind(handler, asio::error_code(), len));
+    io_service_->post(std::bind(handler, boost::system::error_code(), len));
   }
 
   void async_write_some(const ConstBuffer &buf,
-            std::function<void (const asio::error_code & error,
+            std::function<void (const boost::system::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     // CompletionResult res = OnWrite(buf);
-    io_service_->post(std::bind(handler, asio::error_code(), asio::buffer_size(buf)));
+    io_service_->post(std::bind(handler, boost::system::error_code(), boost::asio::buffer_size(buf)));
   }
 
   template <class Endpoint, class Callback>
   void async_connect(const Endpoint &, Callback &&handler) {
-    io_service_->post([handler]() { handler(::asio::error_code()); });
+    io_service_->post([handler]() { handler(::boost::system::error_code()); });
   }
 
   virtual void cancel() {}
   virtual void close() {}
 protected:
   ProducerResult Produce() override = 0;
-  ::asio::io_service *io_service_;
+  boost::asio::io_service *io_service_;
 
 private:
-  asio::streambuf produced_;
+  boost::asio::streambuf produced_;
 };
 
 
@@ -114,10 +114,10 @@ public:
     assert(data);
 
     if (!data->checkProducerForConnect) {
-      io_service_->post([handler]() { handler(::asio::error_code()); });
+      io_service_->post([handler]() { handler(::boost::system::error_code()); });
     } else {
       ProducerResult result = Produce();
-      if (result.first == asio::error::would_block) {
+      if (result.first == boost::asio::error::would_block) {
         return; // Connect will hang
       } else {
         io_service_->post([handler, result]() { handler( result.first); });

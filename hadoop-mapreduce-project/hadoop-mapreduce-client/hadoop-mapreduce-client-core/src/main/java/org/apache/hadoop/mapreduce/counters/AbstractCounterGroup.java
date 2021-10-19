@@ -32,7 +32,7 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
 import org.apache.hadoop.util.StringInterner;
 
-import com.google.common.collect.Iterators;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
 /**
  * An abstract class to provide common implementation of the

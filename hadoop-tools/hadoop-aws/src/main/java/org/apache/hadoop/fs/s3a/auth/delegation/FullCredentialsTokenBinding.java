@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -30,6 +32,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_TOKEN_KIND;
 
@@ -61,7 +64,7 @@ public class FullCredentialsTokenBinding extends
   private String credentialOrigin;
 
   /**
-   * Constructor, uses name of {@link #name} and token kind of
+   * Constructor, uses name of {@link #NAME} and token kind of
    * {@link DelegationConstants#FULL_TOKEN_KIND}.
    *
    */
@@ -72,7 +75,6 @@ public class FullCredentialsTokenBinding extends
   @Override
   protected void serviceStart() throws Exception {
     super.serviceStart();
-    loadAWSCredentials();
   }
 
   /**
@@ -115,11 +117,12 @@ public class FullCredentialsTokenBinding extends
   @Override
   public AWSCredentialProviderList deployUnbonded() throws IOException {
     requireServiceStarted();
+    loadAWSCredentials();
     return new AWSCredentialProviderList(
         "Full Credentials Token Binding",
         new MarshalledCredentialProvider(
             FULL_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             awsCredentials,
             MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));
@@ -138,11 +141,14 @@ public class FullCredentialsTokenBinding extends
   @Override
   public AbstractS3ATokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
-
+    Preconditions.checkNotNull(
+        awsCredentials, "No AWS credentials to use for a delegation token");
     return new FullCredentialsTokenIdentifier(getCanonicalUri(),
         getOwnerText(),
+        renewer,
         awsCredentials,
         encryptionSecrets,
         credentialOrigin);
@@ -156,9 +162,10 @@ public class FullCredentialsTokenBinding extends
         convertTokenIdentifier(retrievedIdentifier,
             FullCredentialsTokenIdentifier.class);
     return new AWSCredentialProviderList(
-        "", new MarshalledCredentialProvider(
+        "Full Credentials Token Binding",
+        new MarshalledCredentialProvider(
             FULL_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             tokenIdentifier.getMarshalledCredentials(),
             MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));

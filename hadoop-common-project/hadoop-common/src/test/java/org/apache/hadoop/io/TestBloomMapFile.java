@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -49,6 +51,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestBloomMapFile {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestBloomMapFile.class);
   private static Configuration conf = new Configuration();
   private static final Path TEST_ROOT = new Path(GenericTestUtils.getTempPath(
       TestMapFile.class.getSimpleName()));
@@ -107,7 +111,7 @@ public class TestBloomMapFile {
       System.out.println("False positives: " + falsePos);
       assertTrue(falsePos < 2);
     } finally {
-      IOUtils.cleanup(null, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, writer, reader);
     }
   }
 
@@ -136,7 +140,7 @@ public class TestBloomMapFile {
       reader.close();
       fs.delete(qualifiedDirName, true);
     } finally {
-      IOUtils.cleanup(null, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, writer, reader);
     }
   }
 
@@ -173,7 +177,7 @@ public class TestBloomMapFile {
     } catch (Exception ex) {
       fail("unexpect ex in testDeleteFile !!!");
     } finally {
-      IOUtils.cleanup(null, writer);
+      IOUtils.cleanupWithLogger(LOG, writer);
     }
   }
   
@@ -202,7 +206,7 @@ public class TestBloomMapFile {
     } catch (Exception ex) {
       fail("unexpect ex in testIOExceptionInWriterConstructor !!!");
     } finally {
-      IOUtils.cleanup(null, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, writer, reader);
     }
   }
 
@@ -237,7 +241,7 @@ public class TestBloomMapFile {
     } catch (Exception ex) {
       fail("unexpect ex in testGetBloomMapFile !!!");
     } finally {
-      IOUtils.cleanup(null, writer, reader);
+      IOUtils.cleanupWithLogger(LOG, writer, reader);
     }
   }
 
@@ -286,7 +290,7 @@ public class TestBloomMapFile {
     } catch (Exception ex) {
       fail("testBloomMapFileConstructors error !!!");
     } finally {
-      IOUtils.cleanup(null, writer);
+      IOUtils.cleanupWithLogger(LOG, writer);
     }
   }
 

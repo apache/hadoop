@@ -36,7 +36,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 /**
  * StateStoreDriver implementation based on a local file.
@@ -88,7 +88,18 @@ public class StateStoreFileImpl extends StateStoreFileBaseImpl {
     if (this.rootDirectory == null) {
       String dir = getConf().get(FEDERATION_STORE_FILE_DIRECTORY);
       if (dir == null) {
-        File tempDir = Files.createTempDir();
+        File tempDirBase =
+            new File(System.getProperty("java.io.tmpdir"));
+        File tempDir = null;
+        try {
+          tempDir = java.nio.file.Files.createTempDirectory(
+              tempDirBase.toPath(), System.currentTimeMillis() + "-").toFile();
+        } catch (IOException e) {
+          // fallback to the base upon exception.
+          LOG.debug("Unable to create a temporary directory. Fall back to " +
+              " the default system temp directory {}", tempDirBase, e);
+          tempDir = tempDirBase;
+        }
         dir = tempDir.getAbsolutePath();
         LOG.warn("The root directory is not available, using {}", dir);
       }

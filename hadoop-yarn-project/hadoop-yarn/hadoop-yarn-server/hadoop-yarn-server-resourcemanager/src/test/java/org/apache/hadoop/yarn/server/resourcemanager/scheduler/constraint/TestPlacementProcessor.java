@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -127,7 +129,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' are restricted to 1 per NODE
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(Collections.singleton("foo"),
@@ -176,7 +186,15 @@ public class TestPlacementProcessor {
     nm4.registerNode();
     nm5.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' are restricted to 1 per NODE
     Map<Set<String>, PlacementConstraint> pcMap = new HashMap<>();
     pcMap.put(Collections.singleton("foo"),
@@ -227,7 +245,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' should not exceed 4 per NODE
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(Collections.singleton("foo"),
@@ -280,7 +306,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' should be placed where
     // containers with allocationTag 'bar' are already running
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
@@ -328,7 +362,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     Map<Set<String>, PlacementConstraint> constraintMap = new HashMap<>();
     // Containers with allocationTag 'bar' should not exceed 1 per NODE
     constraintMap.put(Collections.singleton("bar"),
@@ -399,7 +441,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' are restricted to 1 per NODE
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(
@@ -470,7 +520,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' are restricted to 1 per NODE
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(
@@ -556,7 +614,15 @@ public class TestPlacementProcessor {
     nm4.registerNode();
     // Do not register nm5 yet..
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' are restricted to 1 per NODE
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(
@@ -628,7 +694,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     // Containers with allocationTag 'foo' are restricted to 1 per NODE
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2,
         Collections.singletonMap(
@@ -703,7 +777,15 @@ public class TestPlacementProcessor {
     nm3.registerNode();
     nm4.registerNode();
 
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     // Register app1 with following constraints
     // 1) foo anti-affinity with foo on node

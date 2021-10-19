@@ -24,11 +24,11 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
-import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
@@ -40,12 +40,13 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 /**
  * Represents an HTTP operation.
  */
-public class AbfsHttpOperation {
+public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
@@ -58,14 +59,16 @@ public class AbfsHttpOperation {
 
   private final String method;
   private final URL url;
+  private String maskedUrl;
+  private String maskedEncodedUrl;
 
   private HttpURLConnection connection;
   private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage  = "";
-  private String clientRequestId = "";
   private String requestId  = "";
+  private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
 
   // metrics
@@ -77,6 +80,31 @@ public class AbfsHttpOperation {
   private long connectionTimeMs;
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
+  private boolean shouldMask = false;
+
+  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
+      final URL url,
+      final String method,
+      final int httpStatus) {
+    AbfsHttpOperationWithFixedResult httpOp
+        = new AbfsHttpOperationWithFixedResult(url, method, httpStatus);
+    return httpOp;
+  }
+
+  /**
+   * Constructor for FixedResult instance, avoiding connection init.
+   * @param url request url
+   * @param method Http method
+   * @param httpStatus HttpStatus
+   */
+  protected AbfsHttpOperation(final URL url,
+      final String method,
+      final int httpStatus) {
+    this.isTraceEnabled = LOG.isTraceEnabled();
+    this.url = url;
+    this.method = method;
+    this.statusCode = httpStatus;
+  }
 
   protected  HttpURLConnection getConnection() {
     return connection;
@@ -86,8 +114,8 @@ public class AbfsHttpOperation {
     return method;
   }
 
-  public URL getUrl() {
-    return url;
+  public String getHost() {
+    return url.getHost();
   }
 
   public int getStatusCode() {
@@ -107,11 +135,20 @@ public class AbfsHttpOperation {
   }
 
   public String getClientRequestId() {
-    return clientRequestId;
+    return this.connection
+        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+  }
+
+  public String getExpectedAppendPos() {
+    return expectedAppendPos;
   }
 
   public String getRequestId() {
     return requestId;
+  }
+
+  public void setMaskForSAS() {
+    shouldMask = true;
   }
 
   public int getBytesSent() {
@@ -133,13 +170,14 @@ public class AbfsHttpOperation {
   // Returns a trace message for the request
   @Override
   public String toString() {
-    final String urlStr = url.toString();
     final StringBuilder sb = new StringBuilder();
     sb.append(statusCode);
     sb.append(",");
     sb.append(storageErrorCode);
+    sb.append(",");
+    sb.append(expectedAppendPos);
     sb.append(",cid=");
-    sb.append(clientRequestId);
+    sb.append(getClientRequestId());
     sb.append(",rid=");
     sb.append(requestId);
     if (isTraceEnabled) {
@@ -157,8 +195,61 @@ public class AbfsHttpOperation {
     sb.append(",");
     sb.append(method);
     sb.append(",");
-    sb.append(urlStr);
+    sb.append(getMaskedUrl());
     return sb.toString();
+  }
+
+  // Returns a trace message for the ABFS API logging service to consume
+  public String getLogString() {
+
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=")
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(getClientRequestId())
+      .append(" ri=")
+      .append(requestId);
+
+    if (isTraceEnabled) {
+      sb.append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs);
+    }
+
+    sb.append(" bs=")
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(getMaskedEncodedUrl());
+
+    return sb.toString();
+  }
+
+  public String getMaskedUrl() {
+    if (!shouldMask) {
+      return url.toString();
+    }
+    if (maskedUrl != null) {
+      return maskedUrl;
+    }
+    maskedUrl = UriUtils.getMaskedUrl(url);
+    return maskedUrl;
+  }
+
+  public String getMaskedEncodedUrl() {
+    if (maskedEncodedUrl != null) {
+      return maskedEncodedUrl;
+    }
+    maskedEncodedUrl = UriUtils.encodedUrlStr(getMaskedUrl());
+    return maskedEncodedUrl;
   }
 
   /**
@@ -175,7 +266,6 @@ public class AbfsHttpOperation {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-    this.clientRequestId = UUID.randomUUID().toString();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -194,8 +284,6 @@ public class AbfsHttpOperation {
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
-
-    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
   }
 
    /**
@@ -322,7 +410,9 @@ public class AbfsHttpOperation {
           }
         }
       } catch (IOException ex) {
-        LOG.error("UnexpectedError: ", ex);
+        LOG.warn("IO/Network error: {} {}: {}",
+            method, getMaskedUrl(), ex.getMessage());
+        LOG.debug("IO Error: ", ex);
         throw ex;
       } finally {
         if (this.isTraceEnabled) {
@@ -333,6 +423,9 @@ public class AbfsHttpOperation {
     }
   }
 
+  public void setRequestProperty(String key, String value) {
+    this.connection.setRequestProperty(key, value);
+  }
 
   /**
    * Open the HTTP connection.
@@ -392,6 +485,9 @@ public class AbfsHttpOperation {
               case "message":
                 storageErrorMessage = fieldValue;
                 break;
+              case "ExpectedAppendPos":
+                expectedAppendPos = fieldValue;
+                break;
               default:
                 break;
             }
@@ -445,5 +541,26 @@ public class AbfsHttpOperation {
    */
   private boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
+  }
+
+  public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
+    /**
+     * Creates an instance to represent fixed results.
+     * This is used in idempotency handling.
+     *
+     * @param url The full URL including query string parameters.
+     * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+     * @param httpStatus StatusCode to hard set
+     */
+    public AbfsHttpOperationWithFixedResult(final URL url,
+        final String method,
+        final int httpStatus) {
+      super(url, method, httpStatus);
+    }
+
+    @Override
+    public String getResponseHeader(final String httpHeader) {
+      return "";
+    }
   }
 }

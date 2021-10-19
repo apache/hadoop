@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.counters;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -34,8 +34,8 @@ import org.apache.hadoop.mapreduce.util.ResourceBundles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
+import org.apache.hadoop.thirdparty.com.google.common.collect.AbstractIterator;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 
 /**
  * An abstract class to provide common implementation for the framework

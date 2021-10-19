@@ -43,6 +43,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.server.datanode.FSCachingGetSpaceUsed;
 import org.slf4j.Logger;
@@ -67,7 +69,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaTrack
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.DiskChecker;
@@ -75,7 +76,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Timer;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.
@@ -101,9 +102,15 @@ class BlockPoolSlice {
   private final Runnable shutdownHook;
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  private final boolean deleteDuplicateReplicas;
+
+  /**
+   * Only tests are allowed to modify the value. For source code,
+   * this should be treated as final only.
+   */
+  private boolean deleteDuplicateReplicas;
   private static final String REPLICA_CACHE_FILE = "replicas";
-  private final long replicaCacheExpiry = 5*60*1000;
+  private final long replicaCacheExpiry;
+  private final File replicaCacheDir;
   private AtomicLong numOfBlocks = new AtomicLong();
   private final long cachedDfsUsedCheckTime;
   private final Timer timer;
@@ -180,6 +187,24 @@ class BlockPoolSlice {
     fileIoProvider.mkdirs(volume, rbwDir);
     fileIoProvider.mkdirs(volume, tmpDir);
 
+    String cacheDirRoot = conf.get(
+        DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY);
+    if (cacheDirRoot != null && !cacheDirRoot.isEmpty()) {
+      this.replicaCacheDir = new File(cacheDirRoot,
+          currentDir.getCanonicalPath());
+      if (!this.replicaCacheDir.exists()) {
+        if (!this.replicaCacheDir.mkdirs()) {
+          throw new IOException("Failed to mkdirs " + this.replicaCacheDir);
+        }
+      }
+    } else {
+      this.replicaCacheDir = currentDir;
+    }
+    this.replicaCacheExpiry = conf.getTimeDuration(
+        DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_EXPIRY_TIME_KEY,
+        DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_EXPIRY_TIME_DEFAULT,
+        TimeUnit.MILLISECONDS);
+
     // Use cached value initially if available. Or the following call will
     // block until the initial du command completes.
     this.dfsUsage = new FSCachingGetSpaceUsed.Builder().setBpid(bpid)
@@ -192,7 +217,7 @@ class BlockPoolSlice {
 
     if (addReplicaThreadPool == null) {
       // initialize add replica fork join pool
-      initializeAddReplicaPool(conf);
+      initializeAddReplicaPool(conf, (FsDatasetImpl) volume.getDataset());
     }
     // Make the dfs usage to be saved during shutdown.
     shutdownHook = new Runnable() {
@@ -208,9 +233,9 @@ class BlockPoolSlice {
         SHUTDOWN_HOOK_PRIORITY);
   }
 
-  private synchronized void initializeAddReplicaPool(Configuration conf) {
+  private synchronized static void initializeAddReplicaPool(Configuration conf,
+      FsDatasetImpl dataset) {
     if (addReplicaThreadPool == null) {
-      FsDatasetImpl dataset = (FsDatasetImpl) volume.getDataset();
       int numberOfBlockPoolSlice = dataset.getVolumeCount()
           * dataset.getBPServiceCount();
       int poolsize = Math.max(numberOfBlockPoolSlice,
@@ -420,7 +445,7 @@ class BlockPoolSlice {
           "Recovered " + numRecovered + " replicas from " + lazypersistDir);
     }
 
-    boolean  success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
+    boolean success = readReplicasFromCache(volumeMap, lazyWriteReplicaMap);
     if (!success) {
       List<IOException> exceptions = Collections
           .synchronizedList(new ArrayList<IOException>());
@@ -875,8 +900,8 @@ class BlockPoolSlice {
 
   private boolean readReplicasFromCache(ReplicaMap volumeMap,
       final RamDiskReplicaTracker lazyWriteReplicaMap) {
-    ReplicaMap tmpReplicaMap = new ReplicaMap(new AutoCloseableLock());
-    File replicaFile = new File(currentDir, REPLICA_CACHE_FILE);
+    ReplicaMap tmpReplicaMap = new ReplicaMap(new ReentrantReadWriteLock());
+    File replicaFile = new File(replicaCacheDir, REPLICA_CACHE_FILE);
     // Check whether the file exists or not.
     if (!replicaFile.exists()) {
       LOG.info("Replica Cache file: "+  replicaFile.getPath() +
@@ -954,8 +979,8 @@ class BlockPoolSlice {
         blocksListToPersist.getNumberOfBlocks()== 0) {
       return;
     }
-    final File tmpFile = new File(currentDir, REPLICA_CACHE_FILE + ".tmp");
-    final File replicaCacheFile = new File(currentDir, REPLICA_CACHE_FILE);
+    final File tmpFile = new File(replicaCacheDir, REPLICA_CACHE_FILE + ".tmp");
+    final File replicaCacheFile = new File(replicaCacheDir, REPLICA_CACHE_FILE);
     if (!fileIoProvider.deleteWithExistsCheck(volume, tmpFile) ||
         !fileIoProvider.deleteWithExistsCheck(volume, replicaCacheFile)) {
       return;
@@ -1050,4 +1075,22 @@ class BlockPoolSlice {
   public static int getAddReplicaForkPoolSize() {
     return addReplicaThreadPool.getPoolSize();
   }
+
+  @VisibleForTesting
+  public ForkJoinPool getAddReplicaThreadPool() {
+    return addReplicaThreadPool;
+  }
+
+  @VisibleForTesting
+  public static void reInitializeAddReplicaThreadPool() {
+    addReplicaThreadPool.shutdown();
+    addReplicaThreadPool = null;
+  }
+
+  @VisibleForTesting
+  void setDeleteDuplicateReplicasForTests(
+      boolean deleteDuplicateReplicasForTests) {
+    this.deleteDuplicateReplicas = deleteDuplicateReplicasForTests;
+  }
+
 }

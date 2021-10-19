@@ -20,17 +20,7 @@ package org.apache.hadoop.lib.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.w3c.dom.DOMException;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.Text;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
@@ -98,62 +88,6 @@ public abstract class ConfigurationUtils {
    * @throws IOException thrown if the configuration could not be read.
    */
   public static void load(Configuration conf, InputStream is) throws IOException {
-    try {
-      DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-      // ignore all comments inside the xml file
-      docBuilderFactory.setIgnoringComments(true);
-      DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-      Document doc = builder.parse(is);
-      parseDocument(conf, doc);
-    } catch (SAXException e) {
-      throw new IOException(e);
-    } catch (ParserConfigurationException e) {
-      throw new IOException(e);
-    }
+    conf.addResource(is);
   }
-
-  // Canibalized from FileSystemAccess <code>Configuration.loadResource()</code>.
-  private static void parseDocument(Configuration conf, Document doc) throws IOException {
-    try {
-      Element root = doc.getDocumentElement();
-      if (!"configuration".equals(root.getTagName())) {
-        throw new IOException("bad conf file: top-level element not <configuration>");
-      }
-      NodeList props = root.getChildNodes();
-      for (int i = 0; i < props.getLength(); i++) {
-        Node propNode = props.item(i);
-        if (!(propNode instanceof Element)) {
-          continue;
-        }
-        Element prop = (Element) propNode;
-        if (!"property".equals(prop.getTagName())) {
-          throw new IOException("bad conf file: element not <property>");
-        }
-        NodeList fields = prop.getChildNodes();
-        String attr = null;
-        String value = null;
-        for (int j = 0; j < fields.getLength(); j++) {
-          Node fieldNode = fields.item(j);
-          if (!(fieldNode instanceof Element)) {
-            continue;
-          }
-          Element field = (Element) fieldNode;
-          if ("name".equals(field.getTagName()) && field.hasChildNodes()) {
-            attr = ((Text) field.getFirstChild()).getData().trim();
-          }
-          if ("value".equals(field.getTagName()) && field.hasChildNodes()) {
-            value = ((Text) field.getFirstChild()).getData();
-          }
-        }
-
-        if (attr != null && value != null) {
-          conf.set(attr, value);
-        }
-      }
-
-    } catch (DOMException e) {
-      throw new IOException(e);
-    }
-  }
-
 }

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.conf;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.conf.ReconfigurationUtil.PropertyChange;
 import org.slf4j.Logger;

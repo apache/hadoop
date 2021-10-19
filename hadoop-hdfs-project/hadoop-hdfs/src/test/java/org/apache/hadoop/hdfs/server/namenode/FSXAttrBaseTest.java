@@ -36,11 +36,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.XAttrNotFoundException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Lists;
 
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
 import static org.apache.hadoop.fs.permission.AclEntryType.USER;
@@ -59,8 +61,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 /**
  * Tests NameNode interaction for all XAttr APIs.
@@ -127,7 +128,7 @@ public class FSXAttrBaseTest {
 
   @After
   public void destroyFileSystems() {
-    IOUtils.cleanup(null, fs);
+    IOUtils.cleanupWithLogger(null, fs);
     fs = null;
   }
   
@@ -408,7 +409,7 @@ public class FSXAttrBaseTest {
       Assert.fail("expected IOException");
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
-          "At least one of the attributes provided was not found.", e);
+          XAttrNotFoundException.DEFAULT_EXCEPTION_MSG, e);
     }
     
     /* Throw an exception if an xattr that was requested does not exist. */
@@ -422,7 +423,7 @@ public class FSXAttrBaseTest {
         Assert.fail("expected IOException");
       } catch (IOException e) {
         GenericTestUtils.assertExceptionContains(
-            "At least one of the attributes provided was not found.", e);
+            XAttrNotFoundException.DEFAULT_EXCEPTION_MSG, e);
       }
     }
     

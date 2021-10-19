@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.test;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -406,7 +406,7 @@ public final class LambdaTestUtils {
       throws Exception {
     try {
       eval.call();
-      throw new AssertionError("Expected an exception");
+      throw new AssertionError("Expected an exception of type " + clazz);
     } catch (Throwable e) {
       if (clazz.isAssignableFrom(e.getClass())) {
         return (E)e;
@@ -575,6 +575,9 @@ public final class LambdaTestUtils {
     if (o == null) {
       return NULL_RESULT;
     } else {
+      if (o instanceof String) {
+        return '"' + (String)o + '"';
+      }
       try {
         return o.toString();
       } catch (Exception e) {

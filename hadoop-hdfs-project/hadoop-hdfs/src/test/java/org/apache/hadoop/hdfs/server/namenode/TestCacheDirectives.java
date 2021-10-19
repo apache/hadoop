@@ -96,7 +96,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 public class TestCacheDirectives {
   static final Logger LOG = LoggerFactory.getLogger(TestCacheDirectives.class);
@@ -132,8 +132,14 @@ public class TestCacheDirectives {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, 2);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES,
         2);
-
     return conf;
+  }
+
+  /**
+   * @return the configuration.
+   */
+  Configuration getConf() {
+    return this.conf;
   }
 
   @Before
@@ -142,12 +148,19 @@ public class TestCacheDirectives {
     cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
-    dfs = cluster.getFileSystem();
+    dfs = getDFS();
     proto = cluster.getNameNodeRpc();
     namenode = cluster.getNameNode();
     prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
     BlockReaderTestUtil.enableHdfsCachingTracing();
+  }
+
+  /**
+   * @return the dfs instance.
+   */
+  DistributedFileSystem getDFS() throws IOException {
+    return (DistributedFileSystem) FileSystem.get(conf);
   }
 
   @After
@@ -630,10 +643,12 @@ public class TestCacheDirectives {
       String groupName = "partygroup";
       FsPermission mode = new FsPermission((short)0777);
       long limit = 747;
+      long maxExpiry = 1234567890;
       dfs.addCachePool(new CachePoolInfo(pool)
           .setGroupName(groupName)
           .setMode(mode)
-          .setLimit(limit));
+          .setLimit(limit)
+          .setMaxRelativeExpiryMs(maxExpiry));
       RemoteIterator<CachePoolEntry> pit = dfs.listCachePools();
       assertTrue("No cache pools found", pit.hasNext());
       CachePoolInfo info = pit.next().getInfo();
@@ -641,6 +656,7 @@ public class TestCacheDirectives {
       assertEquals(groupName, info.getGroupName());
       assertEquals(mode, info.getMode());
       assertEquals(limit, (long)info.getLimit());
+      assertEquals(maxExpiry, (long)info.getMaxRelativeExpiryMs());
       assertFalse("Unexpected # of cache pools found", pit.hasNext());
     
       // Create some cache entries
@@ -701,6 +717,7 @@ public class TestCacheDirectives {
       assertEquals(groupName, info.getGroupName());
       assertEquals(mode, info.getMode());
       assertEquals(limit, (long)info.getLimit());
+      assertEquals(maxExpiry, (long)info.getMaxRelativeExpiryMs());
       assertFalse("Unexpected # of cache pools found", pit.hasNext());
     
       dit = dfs.listCacheDirectives(null);
@@ -1609,6 +1626,14 @@ public class TestCacheDirectives {
             "testAddingCacheDirectiveInfosWhenCachingIsDisabled:2");
   }
 
+  /**
+   * @return the dfs instance for nnIdx.
+   */
+  DistributedFileSystem getDFS(MiniDFSCluster cluster, int nnIdx)
+      throws IOException {
+    return cluster.getFileSystem(0);
+  }
+
   @Test(timeout=120000)
   public void testExpiryTimeConsistency() throws Exception {
     conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
@@ -1619,7 +1644,7 @@ public class TestCacheDirectives {
             .build();
     dfsCluster.transitionToActive(0);
 
-    DistributedFileSystem fs = dfsCluster.getFileSystem(0);
+    DistributedFileSystem fs = getDFS(dfsCluster, 0);
     final NameNode ann = dfsCluster.getNameNode(0);
 
     final Path filename = new Path("/file");

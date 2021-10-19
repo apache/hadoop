@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
@@ -26,6 +27,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.function.Supplier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,14 +63,14 @@ public class TestRMHATimelineCollectors extends RMHATestBase {
         = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());
     MockNM nm2
         = new MockNM("127.0.0.1:5678", 15121, rm2.getResourceTrackerService());
-    RMApp app1 = rm1.submitApp(1024);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     String collectorAddr1 = "1.2.3.4:5";
     AppCollectorData data1 = AppCollectorData.newInstance(
         app1.getApplicationId(), collectorAddr1);
     nm1.addRegisteringCollector(app1.getApplicationId(), data1);
 
     String collectorAddr2 = "5.4.3.2:1";
-    RMApp app2 = rm1.submitApp(1024);
+    RMApp app2 = MockRMAppSubmitter.submitWithMemory(1024, rm1);
     AppCollectorData data2 = AppCollectorData.newInstance(
         app2.getApplicationId(), collectorAddr2, rm1.getStartTime(), 1);
     nm1.addRegisteringCollector(app2.getApplicationId(), data2);
@@ -97,16 +100,28 @@ public class TestRMHATimelineCollectors extends RMHATestBase {
     assertEquals(collectorAddr2,
         results1.get(app2.getApplicationId()).getCollectorAddr());
 
-    Map<ApplicationId, AppCollectorData> results2
-        = nm2.nodeHeartbeat(true).getAppCollectors();
     // addr of app1 should be collectorAddr1 since it's registering (no time
-    // stamp).
-    assertEquals(collectorAddr1,
-        results2.get(app1.getApplicationId()).getCollectorAddr());
-    // addr of app2 should be collectorAddr22 since its version number is
+    // stamp). and addr of app2 should be collectorAddr22 since its version
+    // number is
     // greater.
-    assertEquals(collectorAddr22,
-        results2.get(app2.getApplicationId()).getCollectorAddr());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          Map<ApplicationId, AppCollectorData> results2 = nm2
+              .nodeHeartbeat(true).getAppCollectors();
+          if (null != results2) {
+            return collectorAddr1 == results2.get(app1.getApplicationId())
+                .getCollectorAddr()
+                && collectorAddr22 == results2.get(app2.getApplicationId())
+                    .getCollectorAddr();
+          }
+          return false;
+        } catch (Exception e) {
+          return false;
+        }
+      }
+    }, 300, 10000);
 
     // Now nm1 should get updated collector list
     nm1.getRegisteringCollectors().clear();

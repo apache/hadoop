@@ -53,14 +53,14 @@ import org.apache.hadoop.mapred.Task.CombineValuesIterator;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
-import org.apache.hadoop.mapreduce.CryptoUtils;
+import org.apache.hadoop.mapreduce.security.IntermediateEncryptedStream;
 import org.apache.hadoop.mapreduce.task.reduce.MapOutput.MapOutputComparator;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @SuppressWarnings(value={"unchecked"})
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -468,7 +468,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
                                            mergeOutputSize).suffix(
                                                Task.MERGED_OUTPUT_PREFIX);
 
-      FSDataOutputStream out = CryptoUtils.wrapIfNecessary(jobConf, rfs.create(outputPath));
+      FSDataOutputStream out =
+          IntermediateEncryptedStream.wrapIfNecessary(jobConf,
+              rfs.create(outputPath), outputPath);
       Writer<K, V> writer = new Writer<K, V>(jobConf, out,
           (Class<K>) jobConf.getMapOutputKeyClass(),
           (Class<V>) jobConf.getMapOutputValueClass(), codec, null, true);
@@ -552,7 +554,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         localDirAllocator.getLocalPathForWrite(inputs.get(0).toString(), 
             approxOutputSize, jobConf).suffix(Task.MERGED_OUTPUT_PREFIX);
 
-      FSDataOutputStream out = CryptoUtils.wrapIfNecessary(jobConf, rfs.create(outputPath));
+      FSDataOutputStream out =
+          IntermediateEncryptedStream.wrapIfNecessary(jobConf,
+              rfs.create(outputPath), outputPath);
       Writer<K, V> writer = new Writer<K, V>(jobConf, out,
           (Class<K>) jobConf.getMapOutputKeyClass(),
           (Class<V>) jobConf.getMapOutputValueClass(), codec, null, true);
@@ -735,7 +739,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
             tmpDir, comparator, reporter, spilledRecordsCounter, null, 
             mergePhase);
 
-        FSDataOutputStream out = CryptoUtils.wrapIfNecessary(job, fs.create(outputPath));
+        FSDataOutputStream out =
+            IntermediateEncryptedStream.wrapIfNecessary(job,
+                fs.create(outputPath), outputPath);
         Writer<K, V> writer = new Writer<K, V>(job, out, keyClass, valueClass,
             codec, null, true);
         try {

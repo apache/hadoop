@@ -41,8 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.TestEditLog;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
-
-import com.google.common.collect.Lists;
+import org.apache.hadoop.util.Lists;
 
 public abstract class QJMTestUtil {
   public static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
@@ -173,7 +172,7 @@ public abstract class QJMTestUtil {
         lastRecoveredTxn = elis.getLastTxId();
       }
     } finally {
-      IOUtils.cleanup(null, streams.toArray(new Closeable[0]));
+      IOUtils.cleanupWithLogger(null, streams.toArray(new Closeable[0]));
     }
     return lastRecoveredTxn;
   }

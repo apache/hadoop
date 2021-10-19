@@ -27,7 +27,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.api.impl.pb.client;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
@@ -63,7 +63,7 @@ public class DistributedSchedulingAMProtocolPBClientImpl implements
   public DistributedSchedulingAMProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, DistributedSchedulingAMProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     proxy = RPC.getProxy(DistributedSchedulingAMProtocolPB.class, clientVersion,
         addr, conf);
   }

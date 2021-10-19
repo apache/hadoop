@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -51,7 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.CandidateNodeSet;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * <code>CSQueue</code> represents a node in the tree of 
@@ -73,10 +72,16 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public void setParent(CSQueue newParentQueue);
 
   /**
-   * Get the queue name.
+   * Get the queue's internal reference name.
    * @return the queue name
    */
   public String getQueueName();
+
+  /**
+   * Get the queue's legacy name.
+   * @return the queue name
+   */
+  String getQueueShortName();
 
   /**
    * Get the full name of the queue, including the heirarchy.
@@ -145,6 +150,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return current run-state
    */
   public QueueState getState();
+
+  /**
+   * Get the max-parallel-applications property of the queue
+   * @return max-parallel-applications
+   */
+  public int getMaxParallelApps();
   
   /**
    * Get child queues
@@ -381,10 +392,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   Priority getPriority();
 
   /**
-   * Get a map of usernames and weights
-   * @return map of usernames and corresponding weight
+   * Get the UserWeights object that wraps a map of usernames and weights
+   * @return The UserWeights object.
    */
-  Map<String, Float> getUserWeights();
+  UserWeights getUserWeights();
 
   /**
    * Get QueueResourceQuotas associated with each queue.
@@ -449,4 +460,26 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return policy name
    */
   String getMultiNodeSortingPolicyName();
+
+  /**
+   * Get the maximum lifetime in seconds of an application which is submitted to
+   * this queue. Apps can set their own lifetime timeout up to this value.
+   * @return max lifetime in seconds
+   */
+  long getMaximumApplicationLifetime();
+
+  /**
+   * Get the default lifetime in seconds of an application which is submitted to
+   * this queue. If an app doesn't specify its own timeout when submitted, this
+   * value will be used.
+   * @return default app lifetime
+   */
+  long getDefaultApplicationLifetime();
+
+  /**
+   * Get the indicator of whether or not the default application lifetime was
+   * set by a config property or was calculated by the capacity scheduler.
+   * @return indicator whether set or calculated
+   */
+  boolean getDefaultAppLifetimeWasSpecifiedInConfig();
 }

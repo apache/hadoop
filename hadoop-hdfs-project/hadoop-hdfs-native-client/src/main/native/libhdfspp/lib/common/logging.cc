@@ -136,7 +136,7 @@ LogMessage& LogMessage::operator<<(const std::string& str) {
   return *this;
 }
 
-LogMessage& LogMessage::operator<<(const ::asio::ip::tcp::endpoint& endpoint) {
+LogMessage& LogMessage::operator<<(const boost::asio::ip::tcp::endpoint& endpoint) {
   msg_buffer_ << endpoint;
   return *this;
 }

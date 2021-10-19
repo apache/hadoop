@@ -21,6 +21,7 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -88,7 +89,7 @@ import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Implementation of the Router metrics collector.
@@ -124,7 +125,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private MountTableStore mountTableStore;
   /** Router state store. */
   private RouterStore routerStore;
-
+  /** The number of top token owners reported in metrics. */
+  private int topTokenRealOwners;
 
   public RBFMetrics(Router router) throws IOException {
     this.router = router;
@@ -166,7 +168,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     Configuration conf = router.getConfig();
     this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
         RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
-
+    this.topTokenRealOwners = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
+        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
   }
 
   /**
@@ -352,7 +356,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   /**
    * Populate the map with the State Store versions.
    *
-   * @param innerInfo Map with the information.
+   * @param map Map with the information.
    * @param version State Store versions.
    */
   private static void setStateStoreVersions(
@@ -378,13 +382,28 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public long getUsedCapacity() {
+    return getTotalCapacity() - getRemainingCapacity();
+  }
+
+  @Override
+  public BigInteger getTotalCapacityBigInt() {
+    return getNameserviceAggregatedBigInt(MembershipStats::getTotalSpace);
+  }
+
+  @Override
+  public BigInteger getRemainingCapacityBigInt() {
+    return getNameserviceAggregatedBigInt(MembershipStats::getAvailableSpace);
+  }
+
+  @Override
   public long getProvidedSpace() {
     return getNameserviceAggregatedLong(MembershipStats::getProvidedSpace);
   }
 
   @Override
-  public long getUsedCapacity() {
-    return getTotalCapacity() - getRemainingCapacity();
+  public BigInteger getUsedCapacityBigInt() {
+    return getTotalCapacityBigInt().subtract(getRemainingCapacityBigInt());
   }
 
   @Override
@@ -650,8 +669,58 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   }
 
   @Override
+  public String getTopTokenRealOwners() {
+    RouterSecurityManager mgr =
+        this.router.getRpcServer().getRouterSecurityManager();
+    if (mgr != null && mgr.getSecretManager() != null) {
+      return JSON.toString(mgr.getSecretManager()
+          .getTopTokenRealOwners(this.topTokenRealOwners));
+    }
+    return "";
+  }
+
+  @Override
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  @Override
+  public int getCorruptFilesCount() {
+    return getNameserviceAggregatedInt(MembershipStats::getCorruptFilesCount);
+  }
+
+  @Override
+  public long getScheduledReplicationBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getScheduledReplicationBlocks);
+  }
+
+  @Override
+  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getNumberOfMissingBlocksWithReplicationFactorOne);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyReplicatedBlocks);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyECBlocks);
+  }
+
+  @Override
+  public int getRouterFederationRenameCount() {
+    return this.router.getRpcServer().getRouterFederationRenameCount();
+  }
+
+  @Override
+  public int getSchedulerJobCount() {
+    return this.router.getRpcServer().getSchedulerJobCount();
   }
 
   @Override
@@ -727,6 +796,22 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     } catch (IOException e) {
       LOG.error("Unable to extract metrics: {}", e.getMessage());
       return 0;
+    }
+  }
+
+  private BigInteger getNameserviceAggregatedBigInt(
+      ToLongFunction<MembershipStats> f) {
+    try {
+      List<MembershipState> states = getActiveNamenodeRegistrations();
+      BigInteger sum = BigInteger.valueOf(0);
+      for (MembershipState state : states) {
+        long lvalue = f.applyAsLong(state.getStats());
+        sum = sum.add(BigInteger.valueOf(lvalue));
+      }
+      return sum;
+    } catch (IOException e) {
+      LOG.error("Unable to extract metrics: {}", e.getMessage());
+      return new BigInteger("0");
     }
   }
 

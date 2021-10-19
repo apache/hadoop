@@ -74,4 +74,8 @@ public class MiniMRYarnClusterAdapter implements MiniMRClientCluster {
     miniMRYarnCluster.start();
   }
 
+  public MiniMRYarnCluster getMiniMRYarnCluster() {
+    return miniMRYarnCluster;
+  }
+
 }

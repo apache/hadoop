@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -50,13 +51,13 @@ import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.core.TraceScope;
+import org.apache.hadoop.tracing.TraceScope;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_SEQUENTIAL;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 
 /**
@@ -255,7 +256,7 @@ class BlockSender implements java.io.Closeable {
       // the append write.
       ChunkChecksum chunkChecksum = null;
       final long replicaVisibleLength;
-      try(AutoCloseableLock lock = datanode.data.acquireDatasetLock()) {
+      try(AutoCloseableLock lock = datanode.data.acquireDatasetReadLock()) {
         replica = getReplica(block, datanode);
         replicaVisibleLength = replica.getVisibleLength();
       }
@@ -431,9 +432,10 @@ class BlockSender implements java.io.Closeable {
       ris = new ReplicaInputStreams(
           blockIn, checksumIn, volumeRef, fileIoProvider);
     } catch (IOException ioe) {
+      IOUtils.cleanupWithLogger(null, volumeRef);
       IOUtils.closeStream(this);
-      org.apache.commons.io.IOUtils.closeQuietly(blockIn);
-      org.apache.commons.io.IOUtils.closeQuietly(checksumIn);
+      IOUtils.closeStream(blockIn);
+      IOUtils.closeStream(checksumIn);
       throw ioe;
     }
   }
@@ -630,6 +632,7 @@ class BlockSender implements java.io.Closeable {
          * 
          * Reporting of this case is done in DataXceiver#run
          */
+        LOG.warn("Sending packets timed out.", e);
       } else {
         /* Exception while writing to the client. Connection closure from
          * the other end is mostly the case and we do not care much about
@@ -641,18 +644,21 @@ class BlockSender implements java.io.Closeable {
          * It was done here because the NIO throws an IOException for EPIPE.
          */
         String ioem = e.getMessage();
-        /*
-         * If we got an EIO when reading files or transferTo the client socket,
-         * it's very likely caused by bad disk track or other file corruptions.
-         */
-        if (ioem.startsWith(EIO_ERROR)) {
-          throw new DiskFileCorruptException("A disk IO error occurred", e);
-        }
-        if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
-          LOG.error("BlockSender.sendChunks() exception: ", e);
-          datanode.getBlockScanner().markSuspectBlock(
-              ris.getVolumeRef().getVolume().getStorageID(),
-              block);
+        if (ioem != null) {
+          /*
+           * If we got an EIO when reading files or transferTo the client
+           * socket, it's very likely caused by bad disk track or other file
+           * corruptions.
+           */
+          if (ioem.startsWith(EIO_ERROR)) {
+            throw new DiskFileCorruptException("A disk IO error occurred", e);
+          }
+          if (!ioem.startsWith("Broken pipe")
+              && !ioem.startsWith("Connection reset")) {
+            LOG.error("BlockSender.sendChunks() exception: ", e);
+            datanode.getBlockScanner().markSuspectBlock(
+                ris.getVolumeRef().getVolume().getStorageID(), block);
+          }
         }
       }
       throw ioeToSocketException(e);
@@ -747,8 +753,8 @@ class BlockSender implements java.io.Closeable {
    */
   long sendBlock(DataOutputStream out, OutputStream baseStream, 
                  DataTransferThrottler throttler) throws IOException {
-    final TraceScope scope = datanode.getTracer().
-        newScope("sendBlock_" + block.getBlockId());
+    final TraceScope scope = FsTracer.get(null)
+        .newScope("sendBlock_" + block.getBlockId());
     try {
       return doSendBlock(out, baseStream, throttler);
     } finally {

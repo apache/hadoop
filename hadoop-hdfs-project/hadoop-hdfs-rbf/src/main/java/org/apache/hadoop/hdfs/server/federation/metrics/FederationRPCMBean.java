@@ -77,6 +77,21 @@ public interface FederationRPCMBean {
   int getRpcClientNumActiveConnections();
 
   /**
+   * Get the number of idle RPC connections between the Router and the NNs.
+   * @return Number of idle RPC connections between the Router and the NNs.
+   */
+  int getRpcClientNumIdleConnections();
+
+  /**
+   * Get the number of recently active RPC connections between
+   * the Router and the NNs.
+   *
+   * @return Number of recently active RPC connections between
+   * the Router and the NNs.
+   */
+  int getRpcClientNumActiveConnectionsRecently();
+
+  /**
    * Get the number of RPC connections to be created.
    * @return Number of RPC connections to be created.
    */
@@ -93,4 +108,16 @@ public interface FederationRPCMBean {
    * @return JSON string representation.
    */
   String getRpcClientConnections();
+
+  /**
+   * Get the JSON representation of the async caller thread pool.
+   * @return JSON string representation of the async caller thread pool.
+   */
+  String getAsyncCallerPool();
+
+  /**
+   * Get the number of operations rejected due to lack of permits.
+   * @return Number of operations rejected due to lack of permits.
+   */
+  long getProxyOpPermitRejected();
 }

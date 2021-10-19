@@ -432,7 +432,7 @@ jobAttempts:
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| id | string | The job attempt id |
+| id | int | The job attempt id |
 | nodeId | string | The node id of the node the attempt ran on |
 | nodeHttpAddress | string | The node http address of the node the attempt ran on |
 | logsLink | string | The http link to the job attempt logs |
@@ -1415,7 +1415,7 @@ With the task counters API, you can object a collection of resources that repres
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
 | id | string | The task id |
-| taskcounterGroup | array of counterGroup objects(JSON)/zero or more counterGroup objects(XML) | A collection of counter group objects |
+| taskCounterGroup | array of counterGroup objects(JSON)/zero or more counterGroup objects(XML) | A collection of counter group objects |
 
 #### Elements of the *counterGroup* object
 

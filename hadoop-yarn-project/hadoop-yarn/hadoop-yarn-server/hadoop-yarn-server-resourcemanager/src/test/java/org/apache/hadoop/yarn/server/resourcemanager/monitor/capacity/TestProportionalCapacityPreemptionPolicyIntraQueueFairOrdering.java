@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Before;
 import org.junit.Test;
@@ -85,7 +86,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(20)).handle(argThat(
+    verify(eventHandler, times(20)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -133,7 +134,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(5)).handle(argThat(
+    verify(eventHandler, times(5)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
@@ -156,7 +157,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(15)).handle(argThat(
+    verify(eventHandler, times(15)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -208,7 +209,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 
-    verify(mDisp, times(20)).handle(argThat(
+    verify(eventHandler, times(20)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
@@ -258,18 +259,18 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
 
     // app3 is the younges and also over its user limit. 5 should be preempted
     // from app3 until it comes down to user3's user limit.
-    verify(mDisp, times(5)).handle(argThat(
+    verify(eventHandler, times(5)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(3))));
 
     // User1's app2 is its youngest. 19 should be preempted from app2, leaving
     // only the AM
-    verify(mDisp, times(19)).handle(argThat(
+    verify(eventHandler, times(19)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
 
     // Preempt the remaining resource from User1's oldest app1.
-    verify(mDisp, times(1)).handle(argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
   }
