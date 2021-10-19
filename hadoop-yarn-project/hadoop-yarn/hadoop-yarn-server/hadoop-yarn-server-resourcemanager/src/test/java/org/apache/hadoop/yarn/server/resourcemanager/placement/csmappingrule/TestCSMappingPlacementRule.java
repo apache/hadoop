@@ -807,7 +807,7 @@ public class TestCSMappingPlacementRule {
    * original problem described in YARN-10597.<br>
    */
   @Test
-  public void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws YarnException, IOException {
+  public void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws IOException {
     Groups.reset();
     final String user = "testuser";
 
@@ -880,22 +880,22 @@ public class TestCSMappingPlacementRule {
   public static class MockUnixGroupsMapping implements GroupMappingServiceProvider {
 
     public MockUnixGroupsMapping() {
-      group.clear();
-      group.add("testGroup1");
-      group.add("testGroup2");
-      group.add("testGroup3");
+      GROUP.clear();
+      GROUP.add("testGroup1");
+      GROUP.add("testGroup2");
+      GROUP.add("testGroup3");
     }
 
-    private static final List<String> group = new ArrayList<>();
+    private static final List<String> GROUP = new ArrayList<>();
 
     @Override
     public List<String> getGroups(String user) throws IOException {
-      return group;
+      return GROUP;
     }
 
     @Override
     public void cacheGroupsRefresh() {
-      group.add(0, "testGroup0");
+      GROUP.add(0, "testGroup0");
     }
 
     @Override
@@ -905,7 +905,7 @@ public class TestCSMappingPlacementRule {
 
     @Override
     public Set<String> getGroupsSet(String user) {
-      return ImmutableSet.copyOf(group);
+      return ImmutableSet.copyOf(GROUP);
     }
   }
 }
