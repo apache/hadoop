@@ -5068,12 +5068,14 @@
 </property>
 
   <property>
-    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerate</name>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance</name>
     <value>5</value>
     <description>
       Only used when the dfs.block.replicator.classname is set to
       org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
-      Special value between 0 and 100, noninclusive.  Increases tolerance of
+      Special value between 0 and 20 , noninclusive. if the value is set beyond the scope,
+      `DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT`
+      will be set as the default value, Increases tolerance of
       placing blocks on Datanodes with similar disk space used.
     </description>
   </property>
@@ -5104,12 +5106,14 @@
   </description>
 </property>
 <property>
-  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerate</name>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerance</name>
   <value>5</value>
   <description>
     Only used when the dfs.block.replicator.classname is set to
     org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
-    Special value between 0 and 100, noninclusive.  Increases tolerance of
+    Special value between 0 and 20, noninclusive. if the value is set beyond the scope,
+    `DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT`
+    will be set as the default value, Increases tolerance of
     placing blocks on Datanodes with similar disk space used.
   </description>
 </property>
