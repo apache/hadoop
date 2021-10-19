@@ -35,12 +35,12 @@ bool CreateSnapshot::Initialize() {
   auto add_options = opt_desc_.add_options();
   add_options("help,h", "Show the help for hdfs_createSnapshot");
   add_options("path", po::value<std::string>(),
-              "The path to the directory to make it snapshot-able");
+              "The path to the directory for creating the snapshot");
   add_options("name,n", po::value<std::string>(),
               "The snapshot name, a default name is selected if omitted");
 
   // We allow only one argument to be passed to path option. An exception is
-  // thrown if multiple arguments are passed.
+  // thrown if multiple arguments are passed to this.
   pos_opt_desc_.add("path", 1);
 
   po::store(po::command_line_parser(argc_, argv_)

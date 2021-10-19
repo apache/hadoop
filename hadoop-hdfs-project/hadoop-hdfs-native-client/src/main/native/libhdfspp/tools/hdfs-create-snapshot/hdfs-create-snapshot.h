@@ -92,4 +92,5 @@ private:
   po::positional_options_description pos_opt_desc_;
 };
 } // namespace hdfs::tools
+
 #endif

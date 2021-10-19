@@ -32,7 +32,7 @@
 namespace hdfs::tools::test {
 /**
  * {@class CreateSnapshotMock} is an {@class CreateSnapshot} whereby it mocks
- * the HandleHelp and HandlePath methods for testing their functionality.
+ * the HandleHelp and HandleSnapshot methods for testing their functionality.
  */
 class CreateSnapshotMock : public hdfs::tools::CreateSnapshot {
 public:

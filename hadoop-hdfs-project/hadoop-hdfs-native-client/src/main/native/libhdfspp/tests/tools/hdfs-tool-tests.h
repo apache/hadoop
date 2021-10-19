@@ -17,8 +17,8 @@
   under the License.
 */
 
-#ifndef LIBHDFSPP_TOOLS_HDFS_TOOL_TEST
-#define LIBHDFSPP_TOOLS_HDFS_TOOL_TEST
+#ifndef LIBHDFSPP_TOOLS_HDFS_TOOL_TESTS
+#define LIBHDFSPP_TOOLS_HDFS_TOOL_TESTS
 
 #include <memory>
 #include <string>
