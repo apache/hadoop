@@ -877,8 +877,7 @@ public class TestCSMappingPlacementRule {
     return cs;
   }
 
-  public static class MockUnixGroupsMapping implements
-      GroupMappingServiceProvider {
+  public static class MockUnixGroupsMapping implements GroupMappingServiceProvider {
 
     public MockUnixGroupsMapping() {
       group.clear();
@@ -887,7 +886,7 @@ public class TestCSMappingPlacementRule {
       group.add("testGroup3");
     }
 
-    private static List<String> group = new ArrayList<>();
+    private static final List<String> group = new ArrayList<>();
 
     @Override
     public List<String> getGroups(String user) throws IOException {
@@ -895,17 +894,17 @@ public class TestCSMappingPlacementRule {
     }
 
     @Override
-    public void cacheGroupsRefresh() throws IOException {
+    public void cacheGroupsRefresh() {
       group.add(0, "testGroup0");
     }
 
     @Override
-    public void cacheGroupsAdd(List<String> groups) throws IOException {
+    public void cacheGroupsAdd(List<String> groups) {
       // Do nothing
     }
 
     @Override
-    public Set<String> getGroupsSet(String user) throws IOException {
+    public Set<String> getGroupsSet(String user) {
       return ImmutableSet.copyOf(group);
     }
   }
