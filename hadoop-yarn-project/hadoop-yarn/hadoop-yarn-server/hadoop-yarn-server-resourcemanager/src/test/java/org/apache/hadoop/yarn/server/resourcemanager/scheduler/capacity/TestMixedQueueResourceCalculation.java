@@ -48,6 +48,7 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder();
 
     QueueHierarchyUpdateContext updateContext = update(assertionBuilder, UPDATE_RESOURCE);
+    System.out.println("");
 
   }
 

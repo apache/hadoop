@@ -21,7 +21,7 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
       QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
     super.calculateChildQueueResources(updateContext, parentQueue);
 
-    iterateThroughChildrenResources(
+    setChildrenResources(
         parentQueue, updateContext, ((childQueue, label, capacityVectorEntry) -> {
           String resourceName = capacityVectorEntry.getResourceName();
           float parentAbsoluteCapacity = updateContext.getRelativeResourceRatio(
@@ -37,9 +37,6 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
           long resource = (long) Math.floor(updateContext.getUpdatedClusterResource(label)
               .getResourceValue(capacityVectorEntry.getResourceName())
               * queueAbsoluteCapacity);
-          childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-              .setResourceValue(capacityVectorEntry.getResourceName(),
-                  resource);
 
           updateContext.getRelativeResourceRatio(childQueue.getQueuePath(), label)
               .setValue(capacityVectorEntry.getResourceName(),

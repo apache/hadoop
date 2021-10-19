@@ -166,21 +166,32 @@ public abstract class AbstractQueueCapacityCalculator {
     return sumValue;
   }
 
-  protected void iterateThroughChildrenResources(
+  protected void setChildrenResources(
       CSQueue parentQueue, QueueHierarchyUpdateContext updateContext,
-      ChildrenResourceCalculator callable) {
+      ChildResourceCalculator callable) {
     Map<String, ResourceVector> aggregatedResources = new HashMap<>();
     for (CSQueue childQueue : parentQueue.getChildQueues()) {
       for (String label : childQueue.getConfiguredNodeLabels()) {
       ResourceVector aggregatedUsedResource = aggregatedResources.getOrDefault(
           label, ResourceVector.newInstance());
         for (String resourceName : getResourceNames(childQueue, label)) {
-          float resource = callable.call(childQueue, label, childQueue
+          long parentResource = parentQueue.getEffectiveCapacity(label)
+              .getResourceValue(resourceName);
+          long resource = callable.call(childQueue, label, childQueue
               .getConfiguredCapacityVector(label).getResource(resourceName));
+          
+          if (resource > parentResource) {
+            updateContext.addUpdateWarning(
+                QueueUpdateWarning.QUEUE_OVERUTILIZED.ofQueue(childQueue.getQueuePath()));
+            resource = parentResource;
+          }
           if (resource == 0) {
             updateContext.addUpdateWarning(QueueUpdateWarning.
                 QUEUE_ZERO_RESOURCE.ofQueue(childQueue.getQueuePath()));
           }
+          
+          childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
+              .setResourceValue(resourceName, resource);
           aggregatedUsedResource.increment(resourceName, resource);
         }
         aggregatedResources.put(label, aggregatedUsedResource);
@@ -193,8 +204,8 @@ public abstract class AbstractQueueCapacityCalculator {
     }
   }
 
-  protected interface ChildrenResourceCalculator {
-    float call(CSQueue childQueue, String label,
+  protected interface ChildResourceCalculator {
+    long call(CSQueue childQueue, String label,
               QueueCapacityVectorEntry capacityVectorEntry);
   }
 }

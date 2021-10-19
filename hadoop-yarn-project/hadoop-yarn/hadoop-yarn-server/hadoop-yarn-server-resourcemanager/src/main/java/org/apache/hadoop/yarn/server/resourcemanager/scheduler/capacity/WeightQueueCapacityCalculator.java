@@ -13,7 +13,7 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
   public void calculateChildQueueResources(QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
     Map<String, Map<String, Float>> sumWeightsPerLabel = summarizeWeights(parentQueue);
 
-    iterateThroughChildrenResources(parentQueue, updateContext,
+    setChildrenResources(parentQueue, updateContext,
         ((childQueue, label, capacityVectorEntry) -> {
           String resourceName = capacityVectorEntry.getResourceName();
           float normalizedWeight = capacityVectorEntry.getResourceValue()
@@ -31,10 +31,6 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
           long resource = (long) Math.floor(updateContext.getUpdatedClusterResource(label)
               .getResourceValue(resourceName)
               * queueAbsoluteCapacity);
-
-          childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-              .setResourceValue(capacityVectorEntry.getResourceName(),
-                  resource);
 
           updateContext.getRelativeResourceRatio(childQueue.getQueuePath(), label)
               .setValue(capacityVectorEntry.getResourceName(),
@@ -73,9 +69,11 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
       Map<String, Float> sumWeight = new HashMap<>();
 
       for (CSQueue childQueue : parentQueue.getChildQueues()) {
-        for (String resourceName : childQueue.getConfiguredCapacityVector(label).getResourceNamesByCapacityType(getCapacityType())) {
+        for (String resourceName : childQueue.getConfiguredCapacityVector(label)
+            .getResourceNamesByCapacityType(getCapacityType())) {
           sumWeight.put(resourceName, sumWeight.getOrDefault(resourceName, 0f)
-              + childQueue.getConfiguredCapacityVector(label).getResource(resourceName).getResourceValue());
+              + childQueue.getConfiguredCapacityVector(label)
+              .getResource(resourceName).getResourceValue());
         }
       }
       sumWeightsPerResource.put(label, sumWeight);
