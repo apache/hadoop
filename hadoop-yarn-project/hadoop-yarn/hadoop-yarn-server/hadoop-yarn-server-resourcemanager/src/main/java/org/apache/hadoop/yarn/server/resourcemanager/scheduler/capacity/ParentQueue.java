@@ -328,7 +328,7 @@ public class ParentQueue extends AbstractCSQueue {
           Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
               scheduler.getClusterResource());
           Resource parentMinResource =
-              queueResourceQuotas.getConfiguredMinResource(nodeLabel);
+              usageTracker.getQueueResourceQuotas().getConfiguredMinResource(nodeLabel);
           if (!parentMinResource.equals(Resources.none()) && Resources.lessThan(
               resourceCalculator, resourceByLabel, parentMinResource, minRes)) {
             throw new IOException(
@@ -475,9 +475,9 @@ public class ParentQueue extends AbstractCSQueue {
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
-        "usedResources=" + queueUsage.getUsed() + 
-        "usedCapacity=" + getUsedCapacity() + ", " + 
-        "numApps=" + getNumApplications() + ", " + 
+        "usedResources=" + usageTracker.getQueueUsage().getUsed() +
+        "usedCapacity=" + getUsedCapacity() + ", " +
+        "numApps=" + getNumApplications() + ", " +
         "numContainers=" + getNumContainers();
   }
 
@@ -992,7 +992,7 @@ public class ParentQueue extends AbstractCSQueue {
           LOG.debug("assignedContainer reserved=" + isReserved + " queue="
               + getQueuePath() + " usedCapacity=" + getUsedCapacity()
               + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
-              + queueUsage.getUsed() + " cluster=" + clusterResource);
+              + usageTracker.getQueueUsage().getUsed() + " cluster=" + clusterResource);
 
           LOG.debug(
               "ParentQ=" + getQueuePath() + " assignedSoFarInThisIteration="
@@ -1065,7 +1065,7 @@ public class ParentQueue extends AbstractCSQueue {
     // First, cap parent limit by parent's max
     parentLimits.setLimit(Resources.min(resourceCalculator, clusterResource,
         parentLimits.getLimit(),
-        queueResourceQuotas.getEffectiveMaxResource(nodePartition)));
+        usageTracker.getQueueResourceQuotas().getEffectiveMaxResource(nodePartition)));
 
     // Parent available resource = parent-limit - parent-used-resource
     Resource limit = parentLimits.getLimit();
@@ -1073,7 +1073,7 @@ public class ParentQueue extends AbstractCSQueue {
       limit = parentLimits.getNetLimit();
     }
     Resource parentMaxAvailableResource = Resources.subtract(
-        limit, queueUsage.getUsed(nodePartition));
+        limit, usageTracker.getQueueUsage().getUsed(nodePartition));
 
     // Deduct killable from used
     Resources.addTo(parentMaxAvailableResource,
@@ -1332,9 +1332,9 @@ public class ParentQueue extends AbstractCSQueue {
       }
     } else {
       if (Resources.lessThan(resourceCalculator, clusterResource,
-          queueResourceQuotas.getEffectiveMinResource(label),
+          usageTracker.getQueueResourceQuotas().getEffectiveMinResource(label),
           configuredMinResources)) {
-        numeratorForMinRatio = queueResourceQuotas
+        numeratorForMinRatio = usageTracker.getQueueResourceQuotas()
             .getEffectiveMinResource(label);
       }
     }
@@ -1344,8 +1344,8 @@ public class ParentQueue extends AbstractCSQueue {
 
     // Update effective resources for my self;
     if (rootQueue) {
-      queueResourceQuotas.setEffectiveMinResource(label, resourceByLabel);
-      queueResourceQuotas.setEffectiveMaxResource(label, resourceByLabel);
+      usageTracker.getQueueResourceQuotas().setEffectiveMinResource(label, resourceByLabel);
+      usageTracker.getQueueResourceQuotas().setEffectiveMaxResource(label, resourceByLabel);
     } else{
       super.updateEffectiveResources(clusterResource);
     }
@@ -1442,8 +1442,8 @@ public class ParentQueue extends AbstractCSQueue {
           .getResource(), node.getPartition());
       LOG.info("movedContainer" + " queueMoveIn=" + getQueuePath()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-          + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed() + " cluster="
-          + clusterResource);
+          + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed() +
+          " cluster=" + clusterResource);
       // Inform the parent
       if (parent != null) {
         parent.attachContainer(clusterResource, application, rmContainer);
@@ -1462,8 +1462,8 @@ public class ParentQueue extends AbstractCSQueue {
           node.getPartition());
       LOG.info("movedContainer" + " queueMoveOut=" + getQueuePath()
           + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-          + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed() + " cluster="
-          + clusterResource);
+          + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed() +
+          " cluster=" + clusterResource);
       // Inform the parent
       if (parent != null) {
         parent.detachContainer(clusterResource, application, rmContainer);
@@ -1507,11 +1507,11 @@ public class ParentQueue extends AbstractCSQueue {
        * When this happens, we have to preempt killable container (on same or different
        * nodes) of parent queue to avoid violating parent's max resource.
        */
-      if (!queueResourceQuotas.getEffectiveMaxResource(nodePartition)
+      if (!usageTracker.getQueueResourceQuotas().getEffectiveMaxResource(nodePartition)
           .equals(Resources.none())) {
         if (Resources.lessThan(resourceCalculator, clusterResource,
-            queueResourceQuotas.getEffectiveMaxResource(nodePartition),
-            queueUsage.getUsed(nodePartition))) {
+            usageTracker.getQueueResourceQuotas().getEffectiveMaxResource(nodePartition),
+            usageTracker.getQueueUsage().getUsed(nodePartition))) {
           killContainersToEnforceMaxQueueCapacity(nodePartition,
               clusterResource);
         }
@@ -1541,7 +1541,7 @@ public class ParentQueue extends AbstractCSQueue {
     Resource maxResource = getEffectiveMaxCapacity(partition);
 
     while (Resources.greaterThan(resourceCalculator, partitionResource,
-        queueUsage.getUsed(partition), maxResource)) {
+        usageTracker.getQueueUsage().getUsed(partition), maxResource)) {
       RMContainer toKillContainer = killableContainerIter.next();
       FiCaSchedulerApp attempt = csContext.getApplicationAttempt(
           toKillContainer.getContainerId().getApplicationAttemptId());
@@ -1584,7 +1584,7 @@ public class ParentQueue extends AbstractCSQueue {
 
           LOG.info("assignedContainer" + " queue=" + getQueuePath()
               + " usedCapacity=" + getUsedCapacity() + " absoluteUsedCapacity="
-              + getAbsoluteUsedCapacity() + " used=" + queueUsage.getUsed()
+              + getAbsoluteUsedCapacity() + " used=" + usageTracker.getQueueUsage().getUsed()
               + " cluster=" + cluster);
         } finally {
           writeLock.unlock();
