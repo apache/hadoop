@@ -53,11 +53,6 @@ bool CreateSnapshot::Initialize() {
 }
 
 bool CreateSnapshot::ValidateConstraints() const {
-  // Only "help" is allowed as single argument
-  if (argc_ == 2) {
-    return opt_val_.count("help") > 0;
-  }
-
   // If the name option is specified, there will be 4 arguments in total
   if (argc_ == 4) {
     return opt_val_.count("name") > 0;
@@ -109,7 +104,7 @@ bool CreateSnapshot::Do() {
   if (opt_val_.count("path") > 0) {
     const auto path = opt_val_["path"].as<std::string>();
     const auto name = opt_val_.count("name") > 0
-                          ? std::optional{opt_val_["path"].as<std::string>()}
+                          ? std::optional{opt_val_["name"].as<std::string>()}
                           : std::nullopt;
     return HandleSnapshot(path, name);
   }

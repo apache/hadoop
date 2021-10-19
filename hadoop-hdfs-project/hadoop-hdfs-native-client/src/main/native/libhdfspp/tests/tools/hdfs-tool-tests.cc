@@ -75,7 +75,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(Pass2Paths<hdfs::tools::test::AllowSnapshotMock>));
 
 INSTANTIATE_TEST_SUITE_P(
-    HdfsRenameSnapshot, HdfsToolNegativeTestThrows,
+    HdfsRenameSnapshot, HdfsToolNegativeTestNoThrow,
     testing::Values(PassAPath<hdfs::tools::test::RenameSnapshotMock>,
                     Pass2Paths<hdfs::tools::test::RenameSnapshotMock>));
 
