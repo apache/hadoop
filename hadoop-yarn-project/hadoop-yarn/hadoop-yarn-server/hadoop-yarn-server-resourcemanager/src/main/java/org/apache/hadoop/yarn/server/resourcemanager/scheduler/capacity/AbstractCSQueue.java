@@ -1462,53 +1462,6 @@ public abstract class AbstractCSQueue implements CSQueue {
         configuredMaxResource, parentMaxResource));
   }
 
-  void updateMaxAppRelatedField(CapacitySchedulerConfiguration conf,
-      LeafQueue leafQueue) {
-    int maxApplications = conf.getMaximumApplicationsPerQueue(queuePath);
-    int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-    String maxLabel = RMNodeLabelsManager.NO_LABEL;
-
-    if (maxApplications < 0) {
-      for (String label : configuredNodeLabels) {
-        int maxApplicationsByLabel = 0;
-        if (maxGlobalPerQueueApps > 0) {
-          // In absolute mode, should
-          // shrink when change to corresponding label capacity.
-          maxApplicationsByLabel = this.capacityConfigType
-              != CapacityConfigType.ABSOLUTE_RESOURCE ?
-              maxGlobalPerQueueApps :
-              (int) (maxGlobalPerQueueApps * queueCapacities
-                  .getAbsoluteCapacity(label));
-        } else {
-          maxApplicationsByLabel = (int) (conf.getMaximumSystemApplications()
-              * queueCapacities.getAbsoluteCapacity(label));
-        }
-        if (maxApplicationsByLabel > maxApplications) {
-          maxApplications = maxApplicationsByLabel;
-          maxLabel = label;
-        }
-      }
-    }
-    leafQueue.setMaxApplications(maxApplications);
-
-    int maxApplicationsPerUser = Math.min(maxApplications,
-        (int) (maxApplications
-            * (leafQueue.getUsersManager().getUserLimit() / 100.0f)
-            * leafQueue.getUsersManager().getUserLimitFactor()));
-    if (leafQueue.getUsersManager().getUserLimitFactor() == -1) {
-      maxApplicationsPerUser =  maxApplications;
-    }
-
-    leafQueue.setMaxApplicationsPerUser(maxApplicationsPerUser);
-    LOG.info("LeafQueue:" + leafQueue.getQueuePath() +
-        "update max app related, maxApplications="
-        + maxApplications + ", maxApplicationsPerUser="
-        + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
-        .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
-        .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
-        .getMaximumCapacity(maxLabel));
-  }
-
   void deriveCapacityFromAbsoluteConfigurations(String label,
       Resource clusterResource) {
     // Update capacity with a float calculated from the parent's minResources

@@ -461,6 +461,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
   }
 
+  public void setMaximumSystemApplications(int numMaxApps) {
+    setInt(MAXIMUM_SYSTEM_APPLICATIONS, numMaxApps);
+  }
+
   public int getMaximumSystemApplications() {
     int maxApplications =
       getInt(MAXIMUM_SYSTEM_APPLICATIONS, DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS);
