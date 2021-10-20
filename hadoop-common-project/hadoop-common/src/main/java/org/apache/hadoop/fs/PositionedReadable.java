@@ -116,9 +116,10 @@ public interface PositionedReadable {
    * data from the file's range.
    * @param ranges the byte ranges to read
    * @param allocate the function to allocate ByteBuffer
+   * @throws IOException any IOE.
    */
   default void readAsync(List<? extends FileRange> ranges,
-                         IntFunction<ByteBuffer> allocate) {
+                         IntFunction<ByteBuffer> allocate) throws IOException {
     AsyncReaderUtils.readAsync(this, ranges, allocate,  minimumReasonableSeek(),
         maximumReadSize());
   }

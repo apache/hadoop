@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -46,6 +47,11 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.function.IntFunction;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
@@ -100,6 +106,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private S3ObjectInputStream wrappedStream;
   private final S3AReadOpContext context;
   private final InputStreamCallbacks client;
+  private final ExecutorService boundedThreadPool;
   private final String bucket;
   private final String key;
   private final String pathStr;
@@ -145,8 +152,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param client S3 client to use
    */
   public S3AInputStream(S3AReadOpContext ctx,
-      S3ObjectAttributes s3Attributes,
-      InputStreamCallbacks client) {
+                        S3ObjectAttributes s3Attributes,
+                        InputStreamCallbacks client,
+                        ExecutorService threadPool) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
@@ -168,6 +176,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
+    this.boundedThreadPool = threadPool;
   }
 
   /**
@@ -780,6 +789,56 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
     }
   }
+
+  @Override
+  public void readAsync(List<? extends FileRange> ranges,
+                        IntFunction<ByteBuffer> allocate) throws IOException {
+    checkNotClosed();
+    for (FileRange range : ranges) {
+      validateRangeRequest(range);
+      CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+      range.setData(result);
+      boundedThreadPool.submit(() -> readSingleRange(range, allocate));
+    }
+  }
+
+  /**
+   * Should I move this for FSInputStream for subclasses to use?
+   * I think so. Pls comment.
+   * @param range
+   * @throws EOFException
+   */
+  private void validateRangeRequest(FileRange range) throws EOFException {
+
+    Preconditions.checkArgument(range.getLength() >= 0, "length is negative");
+    if (range.getOffset() < 0) {
+      throw new EOFException("position is negative");
+    }
+  }
+
+  /**
+   * Add retry in client.getObject().
+   * @param range
+   * @param allocate
+   */
+  private void readSingleRange(FileRange range, IntFunction<ByteBuffer> allocate) {
+    try {
+      long position = range.getOffset();
+      int length = range.getLength();
+      ByteBuffer buffer = allocate.apply(length);
+      final GetObjectRequest request = client.newGetRequest(key)
+              .withRange(position, position + range.getLength() - 1);
+      String text = String.format("%s %s at %d",
+              "readAsync", uri, position);
+      S3Object object = Invoker.once(text, uri,
+              () -> client.getObject(request));
+      object.getObjectContent().read(buffer.array(), buffer.arrayOffset(), range.getLength());
+      range.getData().complete(buffer);
+    } catch (IOException ex) {
+      range.getData().completeExceptionally(ex);
+    }
+  }
+
 
   /**
    * Access the input stream statistics.

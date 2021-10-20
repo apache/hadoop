@@ -379,7 +379,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
 
     @Override
     public void readAsync(List<? extends FileRange> ranges,
-                          IntFunction<ByteBuffer> allocate) {
+                          IntFunction<ByteBuffer> allocate) throws IOException {
       // If the stream doesn't have checksums, just delegate.
       if (sums == null) {
         datas.readAsync(ranges, allocate);
