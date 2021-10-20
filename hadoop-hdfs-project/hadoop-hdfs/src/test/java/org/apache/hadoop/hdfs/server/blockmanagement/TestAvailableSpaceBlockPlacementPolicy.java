@@ -39,7 +39,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
 
 public class TestAvailableSpaceBlockPlacementPolicy {
   private final static int numRacks = 4;
