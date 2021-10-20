@@ -73,6 +73,8 @@ public class QueueCapacityVector implements
    * Creates a uniform and homogeneous {@code QueueCapacityVector}.
    * The resources are defined in absolute capacity type by default.
    *
+   * @param value value to be set for each resource
+   * @param capacityType capacity type to be set for each resource
    * @return uniform capacity vector
    */
   public static QueueCapacityVector of(

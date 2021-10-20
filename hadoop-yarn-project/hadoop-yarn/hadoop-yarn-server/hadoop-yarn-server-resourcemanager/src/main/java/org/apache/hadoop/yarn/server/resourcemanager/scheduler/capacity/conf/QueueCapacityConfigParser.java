@@ -35,13 +35,13 @@ import java.util.regex.Pattern;
  *
  * A new syntax for capacity property could be implemented, by creating a parser
  * with a regex to match the pattern and a method that creates a
- * {@code QueueCapacityVector} from the matched pattern
- * eg. root.capacity 20-50
+ * {@code QueueCapacityVector} from the matched pattern.
+ * Extending the parsers field with a {@code Parser} object in the constructor
+ * is needed in this case.
  *
  * A new capacity type for the existing parsers could be added by extending
  * the {@code QueueCapacityVector.QueueCapacityType} with a new type and its
  * associated postfix symbol.
- * eg. root.capacity 20g
  */
 public class QueueCapacityConfigParser {
   private static final String UNIFORM_REGEX = "^([0-9.]+)(.*)";
@@ -91,39 +91,44 @@ public class QueueCapacityConfigParser {
   }
 
   /**
-   * A parser method that is usable on uniform capacity values eg. percentage or
+   * A parser method that is usable on uniform capacity values e.g. percentage or
    * weight.
    * @param matcher a regex matcher that contains parsed value and its possible
    *                suffix
-   * @return a parsed resource vector
+   * @return a parsed capacity vector
    */
   private QueueCapacityVector uniformParser(Matcher matcher) {
-    QueueCapacityType capacityType = QueueCapacityType.PERCENTAGE;
+    QueueCapacityType capacityType = null;
     String value = matcher.group(1);
     if (matcher.groupCount() == 2) {
       String matchedSuffix = matcher.group(2);
-      if (!matchedSuffix.isEmpty()) {
-        for (QueueCapacityType suffix : QueueCapacityType.values()) {
-          // when capacity is given in percentage, we do not need % symbol
-          String uniformSuffix = suffix.getPostfix().replaceAll("%", "");
-          if (uniformSuffix.equals(matchedSuffix)) {
-            capacityType = suffix;
-          }
+      for (QueueCapacityType suffix : QueueCapacityType.values()) {
+        // Absolute uniform syntax is not supported
+        if (suffix.equals(QueueCapacityType.ABSOLUTE)) {
+          continue;
+        }
+        // when capacity is given in percentage, we do not need % symbol
+        String uniformSuffix = suffix.getPostfix().replaceAll("%", "");
+        if (uniformSuffix.equals(matchedSuffix)) {
+          capacityType = suffix;
         }
       }
+    }
+
+    if (capacityType == null) {
+      return new QueueCapacityVector();
     }
 
     return QueueCapacityVector.of(Float.parseFloat(value), capacityType);
   }
 
   /**
-   * A parser method that is usable on resource capacity values eg. mixed or
+   * A parser method that is usable on resource capacity values e.g. mixed or
    * absolute resource.
    * @param matcher a regex matcher that contains the matched resource string
    * @return a parsed capacity vector
    */
   private QueueCapacityVector heterogeneousParser(Matcher matcher) {
-    // Define resource here.
     QueueCapacityVector capacityVector = QueueCapacityVector.newInstance();
 
     /*
@@ -133,12 +138,10 @@ public class QueueCapacityConfigParser {
      */
     // Get the sub-group.
     String bracketedGroup = matcher.group(0);
-    if (bracketedGroup.trim().isEmpty()) {
-      return capacityVector;
-    }
+    // Get the string inside starting and closing []
     bracketedGroup = bracketedGroup.substring(1, bracketedGroup.length() - 1);
-    // Split by comma and equals delimiter eg. memory=1024, vcores=6 to
-    // [[memory, 1024], [vcores, 6]]
+    // Split by comma and equals delimiter eg. the string memory=1024,vcores=6
+    // is converted to an array of array as {{memory,1024}, {vcores, 6}}
     for (String kvPair : bracketedGroup.trim().split(",")) {
       String[] splits = kvPair.split("=");
 
@@ -148,9 +151,9 @@ public class QueueCapacityConfigParser {
       }
     }
 
-    // Memory has to be configured always.
+    // Memory always have to be defined
     if (capacityVector.getMemory() == 0L) {
-      return QueueCapacityVector.newInstance();
+      return new QueueCapacityVector();
     }
 
     return capacityVector;
@@ -160,7 +163,7 @@ public class QueueCapacityConfigParser {
       QueueCapacityVector resource, String resourceName, String resourceValue) {
     QueueCapacityType capacityType = QueueCapacityType.ABSOLUTE;
 
-    // Extract suffix from a value eg. for 6w extract w
+    // Extract suffix from a value e.g. for 6w extract w
     String suffix = resourceValue.replaceAll("[0-9]", "");
     if (!resourceValue.endsWith(suffix)) {
       return;
