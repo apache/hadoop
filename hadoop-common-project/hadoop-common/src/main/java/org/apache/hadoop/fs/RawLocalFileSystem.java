@@ -293,8 +293,8 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     @Override
-    public void readAsync(List<? extends FileRange> ranges,
-                          IntFunction<ByteBuffer> allocate) {
+    public void readVectored(List<? extends FileRange> ranges,
+                             IntFunction<ByteBuffer> allocate) {
       // Set up all of the futures, so that we can use them if things fail
       for(FileRange range: ranges) {
         range.setData(new CompletableFuture<>());

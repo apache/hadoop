@@ -94,7 +94,7 @@ public interface PositionedReadable {
    * What is the smallest reasonable seek?
    * @return the minimum number of bytes
    */
-  default int minimumReasonableSeek() {
+  default int minSeekForVectorReads() {
     return 4 * 1024;
   }
 
@@ -102,7 +102,7 @@ public interface PositionedReadable {
    * What is the largest size that we should group ranges together as?
    * @return the number of bytes to read at once
    */
-  default int maximumReadSize() {
+  default int maxReadSizeForVectorReads() {
     return 1024 * 1024;
   }
 
@@ -118,9 +118,9 @@ public interface PositionedReadable {
    * @param allocate the function to allocate ByteBuffer
    * @throws IOException any IOE.
    */
-  default void readAsync(List<? extends FileRange> ranges,
-                         IntFunction<ByteBuffer> allocate) throws IOException {
-    AsyncReaderUtils.readAsync(this, ranges, allocate,  minimumReasonableSeek(),
-        maximumReadSize());
+  default void readVectored(List<? extends FileRange> ranges,
+                            IntFunction<ByteBuffer> allocate) throws IOException {
+    AsyncReaderUtils.readAsync(this, ranges, allocate,  minSeekForVectorReads(),
+        maxReadSizeForVectorReads());
   }
 }
