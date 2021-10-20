@@ -133,7 +133,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      groups = Groups.getUserToGroupsMappingService(conf);
+      groups = Groups.getUserToGroupsMappingService(csContext.getConf());
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
@@ -534,5 +534,10 @@ public class CSMappingPlacementRule extends PlacementRule {
     } else {
       return name;
     }
+  }
+
+  @VisibleForTesting
+  public Groups getGroups() {
+    return groups;
   }
 }
