@@ -87,7 +87,7 @@ public class TestQueueCapacityConfigParser {
   }
 
   @Test
-  public void testAbsoluteResourceCapacityConfig() {
+  public void testAbsoluteCapacityVectorConfig() {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE) + CapacitySchedulerConfiguration.CAPACITY, ABSOLUTE_RESOURCE);
     conf.set(YarnConfiguration.RESOURCE_TYPES, RESOURCE_TYPES);
@@ -151,18 +151,41 @@ public class TestQueueCapacityConfigParser {
   @Test
   public void testInvalidCapacityConfigs() {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
+        + CapacitySchedulerConfiguration.CAPACITY, "50nonexistingsuffix");
+    QueueCapacityVector capacityVectorWithInvalidSuffix =
+        capacityConfigParser.parse(conf, QUEUE, "");
+    List<QueueCapacityVectorEntry> entriesWithInvalidSuffix =
+        Lists.newArrayList(capacityVectorWithInvalidSuffix.iterator());
+    Assert.assertEquals(0, entriesWithInvalidSuffix.size());
+
+    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
+        + CapacitySchedulerConfiguration.CAPACITY, "[memory-100,vcores-60]");
+    QueueCapacityVector invalidDelimiterCapacityVector =
+        capacityConfigParser.parse(conf, QUEUE, "");
+    List<QueueCapacityVectorEntry> invalidDelimiterEntries =
+        Lists.newArrayList(invalidDelimiterCapacityVector.iterator());
+    Assert.assertEquals(0, invalidDelimiterEntries.size());
+
     conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
         + CapacitySchedulerConfiguration.CAPACITY, "[invalid]");
-
-    QueueCapacityVector invalidResourceCapacity =
+    QueueCapacityVector invalidCapacityVector =
         capacityConfigParser.parse(conf, QUEUE, "");
     List<QueueCapacityVectorEntry> resources =
-        Lists.newArrayList(invalidResourceCapacity.iterator());
+        Lists.newArrayList(invalidCapacityVector.iterator());
+    Assert.assertEquals(0, resources.size());
+
+    conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
+        + CapacitySchedulerConfiguration.CAPACITY, "[]");
+    QueueCapacityVector emptyBracketCapacityVector =
+        capacityConfigParser.parse(conf, QUEUE, "");
+    List<QueueCapacityVectorEntry> emptyEntries =
+        Lists.newArrayList(emptyBracketCapacityVector.iterator());
     Assert.assertEquals(0, resources.size());
 
     conf.set(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
         + CapacitySchedulerConfiguration.CAPACITY, "");
-
     QueueCapacityVector emptyCapacity =
         capacityConfigParser.parse(conf, QUEUE, "");
     List<QueueCapacityVectorEntry> emptyResources =
@@ -171,7 +194,6 @@ public class TestQueueCapacityConfigParser {
 
     conf.unset(CapacitySchedulerConfiguration.getQueuePrefix(QUEUE)
         + CapacitySchedulerConfiguration.CAPACITY);
-
     QueueCapacityVector nonSetCapacity =
         capacityConfigParser.parse(conf, QUEUE, "");
     List<QueueCapacityVectorEntry> nonSetResources =

@@ -77,6 +77,11 @@ public class TestResourceVector {
     Assert.assertEquals(18, resourceVector.getValue("memory-mb"), 1e-6);
     Assert.assertEquals(13, resourceVector.getValue("vcores"), 1e-6);
     Assert.assertEquals(13, resourceVector.getValue("custom"), 1e-6);
+
+    // Check whether overflow causes any issues
+    ResourceVector maxFloatResourceVector = ResourceVector.of(Float.MAX_VALUE);
+    maxFloatResourceVector.increment("memory-mb", 100);
+    Assert.assertEquals(Float.MAX_VALUE, maxFloatResourceVector.getValue("memory-mb"), 1e-6);
   }
 
   @Test
