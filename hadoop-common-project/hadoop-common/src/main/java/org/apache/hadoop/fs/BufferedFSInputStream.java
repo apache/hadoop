@@ -167,18 +167,18 @@ public class BufferedFSInputStream extends BufferedInputStream
   }
 
   @Override
-  public int minimumReasonableSeek() {
-    return ((PositionedReadable) in).minimumReasonableSeek();
+  public int minSeekForVectorReads() {
+    return ((PositionedReadable) in).minSeekForVectorReads();
   }
 
   @Override
-  public int maximumReadSize() {
-    return ((PositionedReadable) in).maximumReadSize();
+  public int maxReadSizeForVectorReads() {
+    return ((PositionedReadable) in).maxReadSizeForVectorReads();
   }
 
   @Override
-  public void readAsync(List<? extends FileRange> ranges,
-                        IntFunction<ByteBuffer> allocate) throws IOException {
-    ((PositionedReadable) in).readAsync(ranges, allocate);
+  public void readVectored(List<? extends FileRange> ranges,
+                           IntFunction<ByteBuffer> allocate) throws IOException {
+    ((PositionedReadable) in).readVectored(ranges, allocate);
   }
 }

@@ -791,8 +791,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   @Override
-  public void readAsync(List<? extends FileRange> ranges,
-                        IntFunction<ByteBuffer> allocate) throws IOException {
+  public void readVectored(List<? extends FileRange> ranges,
+                           IntFunction<ByteBuffer> allocate) throws IOException {
     checkNotClosed();
     for (FileRange range : ranges) {
       validateRangeRequest(range);

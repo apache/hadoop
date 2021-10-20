@@ -23,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A byte range of a file.
  * This is used for the asynchronous gather read API of
- * {@link PositionedReadable#readAsync}.
+ * {@link PositionedReadable#readVectored}.
  */
 public interface FileRange {
   /**
@@ -46,7 +46,7 @@ public interface FileRange {
 
   /**
    * Set a future for this range's data.
-   * This method is called by {@link PositionedReadable#readAsync} to store the
+   * This method is called by {@link PositionedReadable#readVectored} to store the
    * data for the user to pick up later via {@link #getData}.
    * @param data the future of the ByteBuffer that will have the data
    */

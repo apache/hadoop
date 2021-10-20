@@ -378,22 +378,22 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     @Override
-    public void readAsync(List<? extends FileRange> ranges,
-                          IntFunction<ByteBuffer> allocate) throws IOException {
+    public void readVectored(List<? extends FileRange> ranges,
+                             IntFunction<ByteBuffer> allocate) throws IOException {
       // If the stream doesn't have checksums, just delegate.
       if (sums == null) {
-        datas.readAsync(ranges, allocate);
+        datas.readVectored(ranges, allocate);
         return;
       }
-      int minSeek = minimumReasonableSeek();
-      int maxSize = maximumReadSize();
+      int minSeek = minSeekForVectorReads();
+      int maxSize = maxReadSizeForVectorReads();
       List<CombinedFileRange> dataRanges =
           AsyncReaderUtils.sortAndMergeRanges(ranges, bytesPerSum,
-              minSeek, maximumReadSize());
+              minSeek, maxReadSizeForVectorReads());
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
-      sums.readAsync(checksumRanges, allocate);
-      datas.readAsync(dataRanges, allocate);
+      sums.readVectored(checksumRanges, allocate);
+      datas.readVectored(dataRanges, allocate);
       for(CombinedFileRange checksumRange: checksumRanges) {
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum
