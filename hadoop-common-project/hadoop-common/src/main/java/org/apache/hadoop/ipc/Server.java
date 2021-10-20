@@ -652,17 +652,17 @@ public abstract class Server {
     }
   }
 
-  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  @VisibleForTesting
   int getPriorityLevel(Schedulable e) {
     return callQueue.getPriorityLevel(e);
   }
 
-  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  @VisibleForTesting
   int getPriorityLevel(UserGroupInformation ugi) {
     return callQueue.getPriorityLevel(ugi);
   }
 
-  @org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting
+  @VisibleForTesting
   void setPriorityLevel(UserGroupInformation ugi, int priority) {
     callQueue.setPriorityLevel(ugi, priority);
   }
