@@ -213,21 +213,21 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
 
   @Test
   public void testChooseSimilarDataNode() {
-    DatanodeDescriptor tolerateDataNodes[];
+    DatanodeDescriptor[] tolerateDataNodes;
+    DatanodeStorageInfo[] tolerateStorages;
+    AvailableSpaceRackFaultTolerantBlockPlacementPolicy toleratePlacementPolicy;
     int capacity  = 3;
-    Collection<Node> allNodes = new ArrayList<>(capacity);
-    String[] ownerRackOfNodes = new String[capacity];
+    Collection<Node> allTolerateNodes = new ArrayList<>(capacity);
+    String[] ownerRackOfTolerateNodes = new String[capacity];
     for (int i = 0; i < capacity; i++) {
-      ownerRackOfNodes[i] = "rack"+i;
+      ownerRackOfTolerateNodes[i] = "rack"+i;
     }
-    storages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfNodes);
-    tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
+    tolerateStorages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfTolerateNodes);
+    tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(tolerateStorages);
 
-    Collections.addAll(allNodes, tolerateDataNodes);
-    FSClusterStats statistics = mock(FSClusterStats.class);
-    AvailableSpaceRackFaultTolerantBlockPlacementPolicy policy =
-            (AvailableSpaceRackFaultTolerantBlockPlacementPolicy) placementPolicy;
-    placementPolicy.initialize(conf, statistics, null, null);
+    Collections.addAll(allTolerateNodes, tolerateDataNodes);
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    toleratePlacementPolicy = (AvailableSpaceRackFaultTolerantBlockPlacementPolicy)bm.getBlockPlacementPolicy();
 
     updateHeartbeatWithUsage(tolerateDataNodes[0],
             20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
@@ -247,10 +247,10 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
 
-    assertTrue(policy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[1]) == 0);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[1], tolerateDataNodes[0]) == 0);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[2]) == -1);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[2], tolerateDataNodes[0]) == 1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[1]) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1], tolerateDataNodes[0]) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[2]) == -1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2], tolerateDataNodes[0]) == 1);
   }
 
   @AfterClass

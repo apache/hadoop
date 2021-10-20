@@ -64,7 +64,7 @@ public class TestAvailableSpaceBlockPlacementPolicy {
       0.6f);
     conf.setInt(
       DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
-            5);
+      5);
     String[] racks = new String[numRacks];
     for (int i = 0; i < numRacks; i++) {
       racks[i] = "/rack" + i;
@@ -179,21 +179,21 @@ public class TestAvailableSpaceBlockPlacementPolicy {
 
   @Test
   public void testChooseSimilarDataNode() {
-    DatanodeDescriptor tolerateDataNodes[];
+    DatanodeDescriptor[] tolerateDataNodes;
+    DatanodeStorageInfo[] tolerateStorages;
+    AvailableSpaceBlockPlacementPolicy toleratePlacementPolicy;
     int capacity  = 3;
-    Collection<Node> allNodes = new ArrayList<>(capacity);
-    String[] ownerRackOfNodes = new String[capacity];
+    Collection<Node> allTolerateNodes = new ArrayList<>(capacity);
+    String[] ownerRackOfTolerateNodes = new String[capacity];
     for (int i = 0; i < capacity; i++) {
-      ownerRackOfNodes[i] = "rack"+i;
+      ownerRackOfTolerateNodes[i] = "rack"+i;
     }
-    storages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfNodes);
-    tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
+    tolerateStorages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfTolerateNodes);
+    tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(tolerateStorages);
 
-    Collections.addAll(allNodes, tolerateDataNodes);
-    FSClusterStats statistics = mock(FSClusterStats.class);
-    AvailableSpaceBlockPlacementPolicy policy =
-            (AvailableSpaceBlockPlacementPolicy) placementPolicy;
-    placementPolicy.initialize(conf, statistics, null, null);
+    Collections.addAll(allTolerateNodes, tolerateDataNodes);
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    toleratePlacementPolicy = (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
 
     updateHeartbeatWithUsage(tolerateDataNodes[0],
             20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
@@ -213,10 +213,10 @@ public class TestAvailableSpaceBlockPlacementPolicy {
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * blockSize, 0L, 0L, 0L, 0, 0);
 
-    assertTrue(policy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[1], false) == 0);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[1], tolerateDataNodes[0], false) == 0);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[2], false) == -1);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[2], tolerateDataNodes[0], false) == 1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[1], false) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1], tolerateDataNodes[0], false) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[2], false) == -1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2], tolerateDataNodes[0], false) == 1);
   }
 
   @AfterClass
