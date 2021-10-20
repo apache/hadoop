@@ -2746,7 +2746,8 @@ public class BlockManager implements BlockStatsMXBean {
       node = datanodeManager.getDatanode(nodeID);
       if (node == null || !node.isRegistered()) {
         throw new IOException(
-            "ProcessReport from dead or unregistered node: " + nodeID);
+            "ProcessReport from dead or unregistered node: " +
+                nodeID.getXferAddrWithHostname());
       }
 
       // To minimize startup time, we discard any second (or later) block reports
@@ -2766,7 +2767,7 @@ public class BlockManager implements BlockStatsMXBean {
         blockLog.info("BLOCK* processReport 0x{}: "
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
-            strBlockReportId, nodeID);
+            strBlockReportId, nodeID.getXferAddrWithHostname());
         blockReportLeaseManager.removeLease(node);
         return !node.hasStaleStorages();
       }
@@ -2778,7 +2779,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "storage report for {} from datanode {}",
             strBlockReportId,
             storageInfo.getStorageID(),
-            nodeID);
+            nodeID.getXferAddrWithHostname());
         processFirstBlockReport(storageInfo, newReport);
       } else {
         // Block reports for provided storage are not
@@ -2809,7 +2810,7 @@ public class BlockManager implements BlockStatsMXBean {
     blockLog.info("BLOCK* processReport 0x{}: from storage {} node {}, " +
         "blocks: {}, hasStaleStorage: {}, processing time: {} msecs, " +
         "invalidatedBlocks: {}", strBlockReportId, storage.getStorageID(),
-        nodeID, newReport.getNumberOfBlocks(),
+        nodeID.getXferAddrWithHostname(), newReport.getNumberOfBlocks(),
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());
     return !node.hasStaleStorages();
