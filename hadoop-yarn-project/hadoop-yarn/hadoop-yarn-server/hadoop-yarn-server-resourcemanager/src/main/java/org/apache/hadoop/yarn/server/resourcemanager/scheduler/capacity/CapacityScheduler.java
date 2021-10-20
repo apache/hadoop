@@ -937,6 +937,10 @@ public class CapacityScheduler extends
       } catch (AccessControlException ace) {
         // Ignore the exception for recovered app as the app was previously
         // accepted.
+        LOG.warn("AccessControlException received when trying to recover "
+            + applicationId + " in queue " + queueName  + " for user " + user
+            + ". Since the app was in the queue prior to recovery, the Capacity"
+            + " Scheduler will recover the app anyway.", ace);
       }
       queue.getMetrics().submitApp(user, unmanagedAM);
 
@@ -2948,7 +2952,7 @@ public class CapacityScheduler extends
       ApplicationStateData appState = ApplicationStateData.newInstance(
           rmApp.getSubmitTime(), rmApp.getStartTime(),
           rmApp.getApplicationSubmissionContext(), rmApp.getUser(),
-          rmApp.getCallerContext());
+          rmApp.getRealUser(), rmApp.getCallerContext());
       appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
       appState.setLaunchTime(rmApp.getLaunchTime());
       rmContext.getStateStore().updateApplicationStateSynchronously(appState,
