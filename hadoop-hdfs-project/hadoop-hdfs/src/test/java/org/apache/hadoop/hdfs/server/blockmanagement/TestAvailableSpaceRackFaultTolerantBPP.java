@@ -69,8 +69,8 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
         DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         0.6f);
     conf.setInt(
-            DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
-            5);
+        DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
+        5);
     String[] racks = new String[NUM_RACKS];
     for (int i = 0; i < NUM_RACKS; i++) {
       racks[i] = "/rack" + i;
@@ -213,13 +213,13 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
 
   @Test
   public void testChooseSimilarDataNode() {
+    DatanodeDescriptor tolerateDataNodes[];
     int capacity  = 3;
     Collection<Node> allNodes = new ArrayList<>(capacity);
     String[] ownerRackOfNodes = new String[capacity];
     for (int i = 0; i < capacity; i++) {
       ownerRackOfNodes[i] = "rack"+i;
     }
-    DatanodeDescriptor tolerateDataNodes[];
     storages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfNodes);
     tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
 
@@ -229,22 +229,28 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
             (AvailableSpaceRackFaultTolerantBlockPlacementPolicy) placementPolicy;
     placementPolicy.initialize(conf, statistics, null, null);
 
-    updateHeartbeatWithUsage(tolerateDataNodes[0], 20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
-            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+    updateHeartbeatWithUsage(tolerateDataNodes[0],
+            20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
 
-    updateHeartbeatWithUsage(tolerateDataNodes[1], 11 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
-            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+    updateHeartbeatWithUsage(tolerateDataNodes[1],
+            11 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
 
-    updateHeartbeatWithUsage(tolerateDataNodes[2], 10 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
-            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE, HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+    updateHeartbeatWithUsage(tolerateDataNodes[2],
+            10 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
 
-    assertTrue(policy.compareDataNode(tolerateDataNodes[0],tolerateDataNodes[1]) == 0);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[1],tolerateDataNodes[0]) == 0);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[0],tolerateDataNodes[2]) == -1);
-    assertTrue(policy.compareDataNode(tolerateDataNodes[2],tolerateDataNodes[0]) == 1);
+    assertTrue(policy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[1]) == 0);
+    assertTrue(policy.compareDataNode(tolerateDataNodes[1], tolerateDataNodes[0]) == 0);
+    assertTrue(policy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[2]) == -1);
+    assertTrue(policy.compareDataNode(tolerateDataNodes[2], tolerateDataNodes[0]) == 1);
   }
 
   @AfterClass
