@@ -178,7 +178,7 @@ public class BufferedFSInputStream extends BufferedInputStream
 
   @Override
   public void readAsync(List<? extends FileRange> ranges,
-                        IntFunction<ByteBuffer> allocate) {
+                        IntFunction<ByteBuffer> allocate) throws IOException {
     ((PositionedReadable) in).readAsync(ranges, allocate);
   }
 }
