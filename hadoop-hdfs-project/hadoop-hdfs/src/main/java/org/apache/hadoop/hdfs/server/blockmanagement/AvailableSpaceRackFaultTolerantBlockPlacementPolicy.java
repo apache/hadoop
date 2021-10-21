@@ -82,7 +82,7 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
     if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
       LOG.warn("The value of "
           + DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY
-          + " is invalid, Default value " +
+          + " is invalid, Current value is " + balancedSpaceTolerance + ", Default value " +
             DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT
           + " will be used instead.");
       balancedSpaceTolerance =
