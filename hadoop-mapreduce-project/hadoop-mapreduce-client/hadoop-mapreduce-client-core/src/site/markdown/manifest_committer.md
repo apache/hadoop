@@ -96,7 +96,6 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
     The default committer factory for GCS is for the manifest committer.
   </description>
 </property>
-
 ```
 
 In `spark-default`
@@ -168,6 +167,7 @@ or in the case of S3A filesystems, one of the S3A committers. They all use the s
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.io.read.rate` | Rate limit in operations/second for read operations. | `10000` |
 | `mapreduce.manifest.committer.io.write.rate` | Rate limit in operations/second for write operations. | `10000` |
+| `mapreduce.manifest.committer.store.operations.classname` | Classname for Store Operations |  |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
@@ -187,7 +187,7 @@ This allows for the statistics of jobs to be collected irrespective of their out
 Whether or not saving the `_SUCCESS` marker is enabled, and without problems
 caused by a chain of queries overwriting the markers.
 
-# Viewing Success/Summary files.
+# Viewing Success/Summary files through the `ManifestPrinter` command.
 
 The summary files are JSON, and can be viewed in any text editor.
 
@@ -264,3 +264,48 @@ the time to acquire permits and so identify any delays.
 The need for any throttling can be determined by looking at job logs to see if throttling events and
 retries took place, or, (often easier) the store service's logs and their throttling status codes (usually 503 or 500).
 
+# Working with Azure Storage
+
+
+The option `mapreduce.manifest.committer.store.operations.classname` should be set to the Azure Specific store binding,  `org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations`.
+
+This allows for ABFS-specific performance and consistency logic to be used from within the committer.
+In particular, the [Etag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) header
+can be collected in listings and used in the job commit phase.
+
+```xml
+<property>
+  <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+  <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+</property>
+```
+
+The overall set of Azure-optimized options becomes
+
+```xml
+<property>
+<name>mapreduce.outputcommitter.factory.scheme.abfs</name>
+<value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
+</property>
+<property>
+  <name>mapreduce.manifest.committer.store.operations.classname</name>
+  <value>org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations</value>
+</property>
+<property>
+  <name>cleanup.parallel.delete.attempt.directories</name>
+  <value>true/value>
+  <description>Parallel directory deletion to address scale-related timeouts.</description>
+</property>
+
+<property>
+  <name>mapreduce.manifest.committer.io.write.rate</name>
+  <value>10000</value>
+  <description>Rate limit in operations/second for write operations.</description>
+</property>
+<property>
+  <name>mapreduce.manifest.committer.io.read.rate</name>
+  <value>10000</value>
+  <description>Rate limit in operations/second for read operations.</description>
+</property>
+
+```

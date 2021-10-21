@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -36,6 +37,18 @@ import static java.util.Objects.requireNonNull;
  * FileSystem operations which are needed to generate the task manifest.
  */
 public interface StoreOperations extends Closeable {
+
+  /**
+   * Bind to the filesystem.
+   * This is called by the manifest committer after the operations
+   * have been instantiated.
+   * @param fileSystem target FS
+   * @param path actual path under FS.
+   * @throws IOException if there are binding problems.
+   */
+  default void bindToFileSystem(FileSystem fileSystem, Path path) throws IOException {
+
+  }
 
   /**
    * Forward to {@link FileSystem#getFileStatus(Path)}.
@@ -97,6 +110,19 @@ public interface StoreOperations extends Closeable {
       throws IOException;
 
   /**
+   * Commit one file.
+   * The default uses {@link #renameFile(Path, Path)}.
+   * If etags were collected during task commit, these will be
+   * in the entries passed in here.
+   * @param entry entry to commit
+   * @return the result of rename()
+   * @throws IOException
+   */
+  default boolean commitFile(FileOrDirEntry entry) throws IOException {
+    return renameFile(entry.getSourcePath(), entry.getDestPath());
+  }
+
+  /**
    * List the directory.
    * @param path path to list.
    * @return an iterator over the results.
@@ -152,6 +178,21 @@ public interface StoreOperations extends Closeable {
    * @return the outcome.
    */
   MoveToTrashResult moveToTrash(String jobId, Path path);
+
+  /**
+   * Extract an etag from a status if the conditions are met.
+   * If the conditions are not met, return null or ""; they will
+   * both be treated as "no etags available"
+   * <pre>
+   *   1. The status is of a type which the implementation recognizes
+   *   as containing an etag.
+   *   2. After casting the etag field can be retrieved
+   *   3. and that value is non-null/non-empty.
+   * </pre>
+   * @param status status, which may be of any subclass of FileStatus.
+   * @return either a valid etag, or null or "".
+   */
+  String getEtag(FileStatus status);
 
   /**
    * Enum of outcomes.

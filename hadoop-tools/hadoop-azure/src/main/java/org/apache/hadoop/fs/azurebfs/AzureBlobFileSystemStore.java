@@ -1951,4 +1951,30 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     return etag;
   }
+
+  /**
+   * Get the etag header from a response, stripping any quotations.
+   * see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+   * @param result response to process.
+   * @return the quote-unwrapped etag.
+   */
+  private static String extractEtagHeader(AbfsHttpOperation result) {
+    String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+    if (etag != null) {
+      // strip out any wrapper "" quotes which come back, for consistency with
+      // list calls
+      if (etag.startsWith("W/\"")) {
+        // Weak etag
+        etag = etag.substring(3);
+      } else if (etag.startsWith("\"")) {
+        // strong etag
+        etag = etag.substring(1);
+      }
+      if (etag.endsWith("\"")) {
+        // trailing quote
+        etag = etag.substring(0, etag.length() - 1);
+      }
+    }
+    return etag;
+  }
 }

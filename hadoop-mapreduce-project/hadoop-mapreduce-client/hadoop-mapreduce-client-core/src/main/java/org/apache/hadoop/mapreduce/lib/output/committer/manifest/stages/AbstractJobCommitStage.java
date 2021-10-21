@@ -86,7 +86,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   /**
    * Error text on rename failure: {@value}.
    */
-  public static final String FAILED_TO_RENAME = "Failed to rename";
+  public static final String FAILED_TO_RENAME = "Failed to ";
 
   /**
    * Error text on when clean up is to trash, but
@@ -642,15 +642,32 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final void renameFile(final Path source, final Path dest)
       throws IOException {
-    LOG.debug("{}: renameFile('{}', '{}')", getName(), source, dest);
+    commitFile(new FileOrDirEntry(source, dest, 0, null), true, false);
+  }
 
-    // delete the destination, always, knowing that it's a no-op if
-    // the data isn't there. Skipping the change saves one round trip
-    // to actually look for the file/object
-    boolean deleted = delete(dest, true);
-    // log the outcome in case of emergency diagnostics traces
-    // being needed.
-    LOG.debug("{}: delete('{}') returned {}'", getName(), dest, deleted);
+  /**
+   * Rename a file from source to dest; if the underlying FS API call
+   * returned false that's escalated to an IOE.
+   * @param entry entry from manifest (or created just for this method call)
+   * @throws IOException failure
+   * @throws PathIOException if the rename() call returned false.
+   */
+  protected final void commitFile(FileOrDirEntry entry, boolean deleteDest, boolean isCommit)
+      throws IOException {
+    final String operation = isCommit ? "commit" : "rename";
+    final Path source = entry.getSourcePath();
+    final Path dest = entry.getDestPath();
+    LOG.debug("{}: {} '{}' to '{}')", getName(), operation, source, dest);
+
+    if (deleteDest) {
+      // delete the destination, always, knowing that it's a no-op if
+      // the data isn't there. Skipping the change saves one round trip
+      // to actually look for the file/object
+      boolean deleted = delete(dest, true);
+      // log the outcome in case of emergency diagnostics traces
+      // being needed.
+      LOG.debug("{}: delete('{}') returned {}'", getName(), dest, deleted);
+    }
 
     // now do the rename.
     // the uprating of a false to PathIOE is done in the duration
@@ -665,8 +682,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
         final FileStatus destStatus = getFileStatusOrNull(dest);
         LOG.error("{}: rename failure from {} to {}", getName(), sourceStatus, destStatus);
         throw new PathIOException(source.toString(),
-            FAILED_TO_RENAME +
-                " " + sourceStatus
+            FAILED_TO_RENAME
+                + operation
+                + " " + sourceStatus
                 + " to " + dest + " (" + destStatus + ")");
       }
     });

@@ -87,6 +87,11 @@ public class StubStoreOperations implements StoreOperations {
   }
 
   @Override
+  public String getEtag(FileStatus status) {
+    return null;
+  }
+
+  @Override
   public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
     return new MoveToTrashResult(MoveToTrashOutcome.RENAMED_TO_TRASH, null);
   }

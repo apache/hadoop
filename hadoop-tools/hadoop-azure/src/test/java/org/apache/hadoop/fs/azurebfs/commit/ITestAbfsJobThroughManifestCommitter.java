@@ -18,14 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.commit;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestJobThroughManifestCommitter;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+
+import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
 
 /**
  * Test the Manifest committer stages against ABFS.
@@ -48,7 +59,7 @@ public class ITestAbfsJobThroughManifestCommitter
 
   @Override
   protected Configuration createConfiguration() {
-    return enableManifestCommitter(binding.getRawConfiguration());
+    return enableManifestCommitter(prepareTestConfiguration(binding));
   }
 
   @Override
@@ -56,4 +67,22 @@ public class ITestAbfsJobThroughManifestCommitter
     return new AbfsFileSystemContract(conf, binding.isSecureMode());
   }
 
+  @Override
+  protected void validateTaskAttemptManifest(String attemptId,
+      List<Path> files,
+      TaskManifest manifest) throws IOException {
+    super.validateTaskAttemptManifest(attemptId, files, manifest);
+    final List<FileOrDirEntry> commit = manifest.getFilesToCommit();
+    final StoreOperations operations = getStoreOperations();
+    for (FileOrDirEntry entry : commit) {
+      Assertions.assertThat(entry.getEtag())
+          .describedAs("Etag of %s", entry)
+          .isNotEmpty();
+      final FileStatus sourceStatus = operations.getFileStatus(entry.getSourcePath());
+      final String etag = operations.getEtag(sourceStatus);
+      Assertions.assertThat(etag)
+          .describedAs("Etag of %s", sourceStatus)
+          .isEqualTo(entry.getEtag());
+    }
+  }
 }

@@ -44,7 +44,7 @@ public class ITestAbfsCreateOutputDirectoriesStage extends TestCreateOutputDirec
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
+    return AbfsCommitTestHelper.prepareTestConfiguration(binding);
   }
 
   @Override

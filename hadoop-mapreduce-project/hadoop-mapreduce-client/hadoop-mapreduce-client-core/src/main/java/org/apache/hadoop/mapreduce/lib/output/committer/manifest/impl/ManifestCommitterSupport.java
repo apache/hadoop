@@ -23,7 +23,9 @@ import java.time.ZonedDateTime;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStoreBuilder;
@@ -40,6 +42,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.COUNTER_STATISTICS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.DURATION_STATISTICS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.INITIAL_APP_ATTEMPT_ID;
@@ -55,7 +58,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.DiagnosticKeys.STAGE;
 
 /**
- * Class for commit support util methods.
+ * Class for manifest committer support util methods.
  */
 public final class ManifestCommitterSupport {
 
@@ -221,6 +224,34 @@ public final class ManifestCommitterSupport {
    */
   public static String createJobSummaryFilename(String jobId) {
     return String.format(SUMMARY_FILENAME_FORMAT, jobId);
+  }
+
+  /**
+   * Create the store operations for the given FS.
+   * This supports binding to custom filesystem handlers.
+   * @param conf configuration.
+   * @param filesystem fs.
+   * @param path path under FS.
+   * @return a bonded store operations.
+   * @throws IOException on binding/init problems.
+   */
+  public static StoreOperations createStoreOperations(Configuration conf,
+      FileSystem filesystem,
+      Path path) throws IOException {
+    try {
+      final Class<? extends StoreOperations> storeClass = conf.getClass(OPT_STORE_OPERATIONS_CLASS,
+          StoreOperationsThroughFileSystem.class,
+          StoreOperations.class);
+      final StoreOperations operations = storeClass.newInstance();
+      operations.bindToFileSystem(filesystem, path);
+      return operations;
+    } catch (InstantiationException | IllegalAccessException | RuntimeException e) {
+      throw new PathIOException(path.toString(),
+          "Failed to create Store Operations from configuration option"
+              + OPT_STORE_OPERATIONS_CLASS
+              + ":" + e, e);
+
+    }
   }
 
   /**

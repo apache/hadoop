@@ -98,7 +98,7 @@ public abstract class AbstractAbfsClusterITest extends
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
+    return AbfsCommitTestHelper.prepareTestConfiguration(binding);
   }
 
   /**

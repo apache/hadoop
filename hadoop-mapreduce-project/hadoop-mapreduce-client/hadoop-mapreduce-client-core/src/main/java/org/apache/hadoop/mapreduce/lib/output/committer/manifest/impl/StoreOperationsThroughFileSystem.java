@@ -49,7 +49,15 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
   public static final String E_TRASH_FALSE = "Failed to rename to trash" +
       " -check trash interval in " + FS_TRASH_INTERVAL_KEY +": ";
 
-  private final FileSystem fileSystem;
+  /**
+   * Filesystem; set in {@link #bindToFileSystem(FileSystem, Path)}.
+   */
+  private FileSystem fileSystem;
+
+  /**
+   * Has a call to msync failed as unsupported?
+   */
+  private boolean msyncUnsupported = false;
 
   /**
    * Constructor.
@@ -59,9 +67,20 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
     this.fileSystem = fileSystem;
   }
 
+  /**
+   * Constructor used for introspection-based binding.
+   */
+  public StoreOperationsThroughFileSystem() {
+  }
+
   @Override
   public void close() throws IOException {
 
+  }
+
+  @Override
+  public void bindToFileSystem(FileSystem filesystem, Path path) throws IOException {
+    fileSystem = filesystem;
   }
 
   @Override
@@ -132,16 +151,42 @@ public class StoreOperationsThroughFileSystem implements StoreOperations {
     }
   }
 
+  /**
+   * Invokes FileSystem msync(); swallows UnsupportedOperationExceptions.
+   * This ensures client metadata caches are in sync in an HDFS-HA deployment.
+   * No other filesystems support this; in the absence of a hasPathCapability()
+   * probe, after the operation is rejected, an atomic boolean is set
+   * to stop further attempts from even trying.
+   * @param path path
+   * @throws IOException failure to synchronize.
+   */
   @Override
   public void msync(Path path) throws IOException {
+    // there's need for atomicity here, as the sole cost of
+    // multiple failures
+    if (msyncUnsupported) {
+      return;
+    }
     // qualify so we can be confident that the FS being synced
     // is the one we expect.
     fileSystem.makeQualified(path);
     try {
       fileSystem.msync();
     } catch (UnsupportedOperationException ignored) {
-
+      // this exception is the default.
+      // set the unsupported flag so no future attempts are made.
+      msyncUnsupported = true;
     }
+  }
+
+  /**
+   * etag extract is not available in the base store.
+   * @param status status, which may be of any subclass of FileStatus.
+   * @return null.
+   */
+  @Override
+  public String getEtag(FileStatus status) {
+    return null;
   }
 
   /**

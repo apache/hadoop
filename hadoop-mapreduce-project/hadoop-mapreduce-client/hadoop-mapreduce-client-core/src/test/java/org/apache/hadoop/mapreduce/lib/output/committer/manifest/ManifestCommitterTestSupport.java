@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobID;
@@ -42,6 +43,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestP
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -202,6 +204,17 @@ public final class ManifestCommitterTestSupport {
     assertThat(fileOrDir.getSize())
         .describedAs("Size of " + entry)
         .isEqualTo(l);
+  }
+
+  /**
+   * Enable Trash in a filesystem configuration; needed
+   * for cleanup to fall back to trash.
+   * @param conf configuration to patch
+   * @return the patched configuration.
+   */
+  public static Configuration enableTrash(Configuration conf) {
+    conf.setInt(FS_TRASH_INTERVAL_KEY, 10);
+    return conf;
   }
 
   /**

@@ -18,15 +18,32 @@
 
 package org.apache.hadoop.fs.azurebfs.commit;
 
+import java.io.IOException;
+
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.EtagExtractor;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 
 /**
- * Extension of StoreOperationsThroughFileSystem which can extract the
- * etag of files.
+ * Extension of StoreOperationsThroughFileSystem with ABFS awareness.
  */
-public class AbfsEtagExtractor implements EtagExtractor {
+public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSystem {
+
+  public static final String NAME
+      = "org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations";
+
+  @Override
+  public void bindToFileSystem(FileSystem filesystem, Path path) throws IOException {
+    if (!(filesystem instanceof AzureBlobFileSystem)) {
+      throw new PathIOException(path.toString(),
+          "Not an abfs filesystem: " + filesystem.getClass());
+    }
+    super.bindToFileSystem(filesystem, path);
+  }
 
   @Override
   public String getEtag(FileStatus status) {

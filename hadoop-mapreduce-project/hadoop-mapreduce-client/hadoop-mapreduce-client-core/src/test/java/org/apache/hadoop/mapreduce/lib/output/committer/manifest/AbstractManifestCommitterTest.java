@@ -54,7 +54,6 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
@@ -310,8 +309,9 @@ public abstract class AbstractManifestCommitterTest
    * Overrride point: create the store operations.
    * @return store operations for this suite.
    */
-  protected StoreOperations createStoreOperations() {
-    return new StoreOperationsThroughFileSystem(getFileSystem());
+  protected StoreOperations createStoreOperations() throws IOException {
+    final FileSystem fs = getFileSystem();
+    return ManifestCommitterSupport.createStoreOperations(fs.getConf(), fs, getTestPath());
   }
 
   @Override
@@ -333,6 +333,10 @@ public abstract class AbstractManifestCommitterTest
   @Override
   protected int getTestTimeoutMillis() {
     return 600_000;
+  }
+
+  protected Path getTestPath() {
+    return getContract().getTestPath();
   }
 
   /**
@@ -951,17 +955,6 @@ public abstract class AbstractManifestCommitterTest
           .describedAs("Number of directories deleted in cleanup %s", result)
           .isEqualTo(expectedDirsDeleted);
     }
-  }
-
-  /**
-   * Enable Trash in a filesystem configuration; needed
-   * for cleanup to fall back to trash.
-   * @param conf configuration to patch
-   * @return the patched configuration.
-   */
-  protected Configuration enableTrash(Configuration conf) {
-    conf.setInt(FS_TRASH_INTERVAL_KEY, 10);
-    return conf;
   }
 
   /**

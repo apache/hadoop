@@ -366,6 +366,11 @@ public class UnreliableStoreOperations implements StoreOperations {
   }
 
   @Override
+  public String getEtag(FileStatus status) {
+    return wrappedOperations.getEtag(status);
+  }
+
+  @Override
   public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
     if (trashDisabled) {
       // same exception as FS implementation.

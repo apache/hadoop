@@ -21,19 +21,10 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_DIRECTORY;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.*;
 /**
- * Constants internal and external for the manifest committer.
+ * Public constants for the manifest committer.
+ * This includes all configuration options and their default values.
  */
-
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class ManifestCommitterConstants {
@@ -96,10 +87,10 @@ public final class ManifestCommitterConstants {
   /** Default job marker option: {@value}. */
   public static final boolean DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER = true;
 
-
   /**
    * The limit to the number of committed objects tracked during
    * job commits and saved to the _SUCCESS file.
+   * Value: {@value}.
    */
   public static final int SUCCESS_MARKER_FILE_LIMIT = 100;
 
@@ -116,24 +107,26 @@ public final class ManifestCommitterConstants {
    * String to use as source of the job ID.
    * This SHOULD be kept in sync with that of
    * {@code AbstractS3ACommitter.JobUUIDSource}.
+   * Value: {@value}.
    */
   public static final String JOB_ID_SOURCE_MAPREDUCE = "JobID";
 
   /**
-   * Prefix to use for config options: {@value }.
+   * Prefix to use for config options: {@value}.
    */
   public static final String OPT_PREFIX = "mapreduce.manifest.committer.";
 
   /**
-   * rather than delete in cleanup, should the working directory
+   * Rather than delete in cleanup, should the working directory
    * be moved to the trash directory?
    * Potentially faster on some stores.
+   * Value: {@value}.
    */
   public static final String OPT_CLEANUP_MOVE_TO_TRASH =
-      OPT_PREFIX +"cleanup.move.to.trash";
+      OPT_PREFIX + "cleanup.move.to.trash";
 
   /**
-   * Default value:  {@value }.
+   * Default value:  {@value}.
    */
   public static final boolean OPT_CLEANUP_MOVE_TO_TRASH_DEFAULT = false;
 
@@ -142,9 +135,10 @@ public final class ManifestCommitterConstants {
    * before trying to delete the toplevel dirs.
    * For GCS this may deliver speedup, while on ABFS it may avoid
    * timeouts in certain deployments.
+   * Value: {@value}.
    */
   public static final String OPT_CLEANUP_PARALLEL_ATTEMPT_DIRS =
-      OPT_PREFIX +"cleanup.parallel.delete.attempt.directories";
+      OPT_PREFIX + "cleanup.parallel.delete.attempt.directories";
 
   /**
    * Default value:  {@value}.
@@ -157,46 +151,49 @@ public final class ManifestCommitterConstants {
   public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.thread.count";
 
   /**
-   * Default value:  {@value }.
+   * Default value:  {@value}.
    */
   public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
 
   /**
    * Rate limit in operations/second for read operations.
+   * Value: {@value}.
    */
   public static final String OPT_IO_READ_RATE = OPT_PREFIX + "io.read.rate";
 
   /**
-   * Default value:  {@value }.
+   * Default value:  {@value}.
    */
   public static final int OPT_IO_READ_RATE_DEFAULT = 10000;
 
   /**
    * Rate limit in operations/second for write operations.
+   * Value: {@value}.
    */
   public static final String OPT_IO_WRITE_RATE = OPT_PREFIX + "io.write.rate";
 
   /**
-   * Default value:  {@value }.
+   * Default value:  {@value}.
    */
   public static final int OPT_IO_WRITE_RATE_DEFAULT = 10000;
-
 
   /**
    * Directory for saving job summary reports.
    * These are the _SUCCESS files, but are saved even on
    * job failures.
+   * Value: {@value}.
    */
   public static final String OPT_SUMMARY_REPORT_DIR =
       OPT_PREFIX + "summary.report.directory";
 
   /**
    * Should the output be validated?
+   * Value: {@value}.
    */
   public static final String OPT_VALIDATE_OUTPUT = OPT_PREFIX + "validate.output";
 
   /**
-   * Default value:  {@value }.
+   * Default value: {@value}.
    */
   public static final boolean OPT_VALIDATE_OUTPUT_DEFAULT = false;
 
@@ -206,6 +203,20 @@ public final class ManifestCommitterConstants {
   public static final String MANIFEST_COMMITTER_FACTORY =
       "org.apache.hadoop.mapreduce.lib.output.committer.manifest" +
           ".ManifestCommitterFactory";
+
+  /**
+   * Classname of the store operations; filesystems and tests
+   * may override.
+   * Value: {@value}.
+   */
+  public static final String OPT_STORE_OPERATIONS_CLASS = OPT_PREFIX + "store.operations.classname";
+
+  /**
+   * Default classname of the store operations.
+   * Value: {@value}.
+   */
+  public static final String STORE_OPERATIONS_CLASS_DEFAULT
+      = "org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem";
 
   /**
    * Stage attribute in audit context: {@value}.

@@ -44,7 +44,7 @@ public class ITestAbfsLoadManifestsStage extends TestLoadManifestsStage {
 
   @Override
   protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
+    return AbfsCommitTestHelper.prepareTestConfiguration(binding);
   }
 
   @Override

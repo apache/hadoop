@@ -18,23 +18,27 @@
 
 package org.apache.hadoop.fs.azurebfs.commit;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestManifestCommitProtocol;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
 
-/**
- * Test the Manifest protocol against ABFS.
- */
-public class ITestAbfsManifestCommitProtocol extends
-    TestManifestCommitProtocol {
+public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterTest {
 
   private final ABFSContractTestBinding binding;
 
-  public ITestAbfsManifestCommitProtocol() throws Exception {
+  public ITestAbfsManifestStoreOperations() throws Exception {
     binding = new ABFSContractTestBinding();
   }
 
@@ -54,9 +58,25 @@ public class ITestAbfsManifestCommitProtocol extends
     return new AbfsFileSystemContract(conf, binding.isSecureMode());
   }
 
+  @Test
+  public void testEtagConsistencyAcrossListAndHead() throws Throwable {
+    final Path path = methodPath();
+    final FileSystem fs = getFileSystem();
+    ContractTestUtils.touch(fs, path);
+    final StoreOperations operations = createStoreOperations();
+    final FileStatus st = operations.getFileStatus(path);
+    final String etag = operations.getEtag(st);
+    Assertions.assertThat(etag)
+        .describedAs("Etag of %s", st)
+        .isNotBlank();
 
-  @Override
-  protected String suitename() {
-    return "ITestAbfsManifestCommitProtocol";
+    final FileStatus[] statuses = fs.listStatus(path);
+    Assertions.assertThat(statuses)
+        .describedAs("List(%s)", path)
+        .hasSize(1);
+    final FileStatus lsStatus = statuses[0];
+    Assertions.assertThat(operations.getEtag(lsStatus))
+        .describedAs("etag of list status (%s) compared to HEAD value of %s", lsStatus, st)
+        .isEqualTo(etag);
   }
 }

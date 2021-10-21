@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.files;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -129,6 +130,20 @@ public final class FileOrDirEntry implements Serializable {
     this.size = size;
   }
 
+  public String getEtag() {
+    return etag;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public FileOrDirEntry withEtag(String value) {
+    etag = value;
+    return this;
+  }
+
   public void validate() throws IOException {
     final String s = toString();
     verify(source != null && source.length() > 0,
@@ -149,6 +164,24 @@ public final class FileOrDirEntry implements Serializable {
     sb.append(", etag='").append(etag).append('\'');;
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    FileOrDirEntry that = (FileOrDirEntry) o;
+    return size == that.size && source.equals(that.source) && dest.equals(that.dest) &&
+        Objects.equals(etag, that.etag);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(source, dest);
   }
 
   /**

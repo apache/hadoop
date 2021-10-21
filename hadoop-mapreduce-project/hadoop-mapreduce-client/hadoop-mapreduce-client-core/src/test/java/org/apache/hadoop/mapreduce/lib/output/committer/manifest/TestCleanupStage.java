@@ -91,7 +91,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   @Override
   protected Configuration createConfiguration() {
 
-    return enableTrash(super.createConfiguration());
+    return ManifestCommitterTestSupport.enableTrash(super.createConfiguration());
   }
 
   @Test

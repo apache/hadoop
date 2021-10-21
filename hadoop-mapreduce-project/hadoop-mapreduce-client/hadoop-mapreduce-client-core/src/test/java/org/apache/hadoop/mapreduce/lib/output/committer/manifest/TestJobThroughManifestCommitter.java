@@ -345,7 +345,22 @@ public class TestJobThroughManifestCommitter
     // clear the IOStats to reduce the size of the printed JSON.
     manifest.setIOStatistics(null);
     LOG.info("Task Manifest {}", manifest.toJson());
-    verifyManifestTaskAttemptID(manifest, taskAttempt00);
+    validateTaskAttemptManifest(this.taskAttempt00, files, manifest);
+  }
+
+  /**
+   * Validate the manifest of a task attempt.
+   * @param attemptId attempt ID
+   * @param files files which were created.
+   * @param manifest manifest
+   * @throws IOException IO problem
+   */
+  protected void validateTaskAttemptManifest(
+      String attemptId,
+      List<Path> files,
+      TaskManifest manifest) throws IOException {
+
+    verifyManifestTaskAttemptID(manifest, attemptId);
 
     // validate the manifest
     verifyManifestFilesMatch(manifest, files);
@@ -378,8 +393,7 @@ public class TestJobThroughManifestCommitter
     manifest.setIOStatistics(null);
     LOG.info("Task Manifest {}", manifest.toJson());
 
-    verifyManifestTaskAttemptID(manifest, taskAttempt01);
-    verifyManifestFilesMatch(manifest, files);
+    validateTaskAttemptManifest(taskAttempt01, files, manifest);
 
   }
 
@@ -399,9 +413,7 @@ public class TestJobThroughManifestCommitter
     CommitTaskStage.Result result = new CommitTaskStage(ta10Config)
         .apply(null);
     TaskManifest manifest = result.getTaskManifest();
-    verifyManifestTaskAttemptID(manifest, taskAttempt10);
-    // validate the manifest
-    verifyManifestFilesMatch(manifest, files);
+    validateTaskAttemptManifest(taskAttempt10, files, manifest);
   }
 
   @Test

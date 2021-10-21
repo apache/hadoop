@@ -39,8 +39,8 @@ import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitJobStage;
@@ -231,7 +231,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
   public boolean needsTaskCommit(final TaskAttemptContext context)
       throws IOException {
     LOG.info("Probe for needsTaskCommit({})",
-        context.getTaskAttemptID().toString());
+        context.getTaskAttemptID());
     return true;
   }
 
@@ -247,7 +247,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
   public boolean isCommitJobRepeatable(final JobContext jobContext)
       throws IOException {
     LOG.info("Probe for isCommitJobRepeatable({}): returning false",
-        jobContext.getJobID().toString());
+        jobContext.getJobID());
     return false;
   }
 
@@ -263,7 +263,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
   public boolean isRecoverySupported(final JobContext jobContext)
       throws IOException {
     LOG.info("Probe for isRecoverySupported({}): returning false",
-        jobContext.getJobID().toString());
+        jobContext.getJobID());
     return false;
   }
 
@@ -634,8 +634,10 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @throws IOException failure to instantiate.
    */
   protected StoreOperations createStoreOperations() throws IOException {
-    return new StoreOperationsThroughFileSystem(
-        baseConfig.getDestinationFileSystem());
+    return ManifestCommitterSupport.createStoreOperations(
+        baseConfig.getConf(),
+        baseConfig.getDestinationFileSystem(),
+        baseConfig.getDestinationDir());
   }
 
   /**
@@ -697,8 +699,9 @@ public class ManifestCommitter extends PathOutputCommitter implements
       report.recordJobFailure(thrown);
     }
     report.putDiagnostic(STAGE, activeStage);
+    final FileSystem fs = path.getFileSystem(conf);
     try (StoreOperations operations =
-             new StoreOperationsThroughFileSystem(path.getFileSystem(conf))) {
+             ManifestCommitterSupport.createStoreOperations(conf, fs, reportDirPath)) {
       if (!overwrite) {
         // check for file existence so there is no need to worry about
         // precisely what exception is raised when overwrite=false and dest file

@@ -20,35 +20,26 @@ package org.apache.hadoop.fs.azurebfs.commit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
-import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestTaskManifestFile;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport;
+
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
 
 /**
- * Test Reading/writing manifest file through ABFS.
+ * Helper methods for committer tests on ABFS.
  */
-public class ITestAbfsTaskManifestFile extends TestTaskManifestFile {
+class AbfsCommitTestHelper {
 
-  private final ABFSContractTestBinding binding;
-
-  public ITestAbfsTaskManifestFile() throws Exception {
-    binding = new ABFSContractTestBinding();
+  /**
+   * Prepare the test configuration
+   * @param contractTestBinding test binding
+   * @return an extraced and patched configuration.
+   */
+  static Configuration prepareTestConfiguration(
+      ABFSContractTestBinding contractTestBinding) {
+    final Configuration conf = ManifestCommitterTestSupport.enableTrash(
+        contractTestBinding.getRawConfiguration());
+    conf.set(OPT_STORE_OPERATIONS_CLASS,
+        AbfsManifestStoreOperations.NAME);
+    return conf;
   }
-
-  @Override
-  public void setup() throws Exception {
-    binding.setup();
-    super.setup();
-  }
-
-  @Override
-  protected Configuration createConfiguration() {
-    return AbfsCommitTestHelper.prepareTestConfiguration(binding);
-  }
-
-  @Override
-  protected AbstractFSContract createContract(final Configuration conf) {
-    return new AbfsFileSystemContract(conf, binding.isSecureMode());
-  }
-
 }

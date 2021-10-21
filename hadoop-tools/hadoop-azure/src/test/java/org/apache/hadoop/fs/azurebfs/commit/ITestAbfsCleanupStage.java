@@ -43,7 +43,7 @@ public class ITestAbfsCleanupStage extends TestCleanupStage {
 
   @Override
   protected Configuration createConfiguration() {
-    return enableTrash(binding.getRawConfiguration());
+    return AbfsCommitTestHelper.prepareTestConfiguration(binding);
   }
 
   @Override
