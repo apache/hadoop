@@ -48,15 +48,50 @@ public abstract class AbstractQueueCapacityCalculator {
   public void calculateChildQueueResources(
       QueueHierarchyUpdateContext updateContext,
       CSQueue parentQueue) {
-    for (String label : parentQueue.getConfiguredNodeLabels()) {
-      // We need to set normalized resource ratio only once, not for each
-      // resource calculator
-      if (!updateContext.getQueueBranchContext(
-          parentQueue.getQueuePath()).isParentAlreadyUpdated()) {
-        setNormalizedResourceRatio(updateContext, parentQueue, label);
-        updateContext.getQueueBranchContext(parentQueue.getQueuePath())
-            .setUpdateFlag();
+    calculateResourcePrerequisites(updateContext, parentQueue);
+
+    Map<String, ResourceVector> aggregatedResources = new HashMap<>();
+    for (CSQueue childQueue : parentQueue.getChildQueues()) {
+      for (String label : childQueue.getConfiguredNodeLabels()) {
+        ResourceVector aggregatedUsedResource = aggregatedResources.getOrDefault(
+            label, ResourceVector.newInstance());
+        calculateMinResForAllResource(updateContext, childQueue, label, aggregatedUsedResource);
+        aggregatedResources.put(label, aggregatedUsedResource);
       }
+    }
+
+    for (Map.Entry<String, ResourceVector> entry : aggregatedResources.entrySet()){
+      updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+          .getRemainingResource(entry.getKey()).subtract(entry.getValue());
+    }
+  }
+
+  private void calculateMinResForAllResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      ResourceVector aggregatedUsedResource) {
+    CSQueue parentQueue = childQueue.getParent();
+    for (String resourceName : getResourceNames(childQueue, label)) {
+      long parentResource = parentQueue.getEffectiveCapacity(label)
+          .getResourceValue(resourceName);
+      long minimumResource = calculateMinimumResource(updateContext, childQueue,
+          label, childQueue.getConfiguredCapacityVector(label)
+              .getResource(resourceName));
+
+      if (minimumResource > parentResource) {
+        updateContext.addUpdateWarning(
+            QueueUpdateWarning.QUEUE_OVERUTILIZED.ofQueue(childQueue.getQueuePath())
+                .withInfo("Resource name: " + resourceName + " resource value: " + minimumResource));
+        minimumResource = parentResource;
+      }
+      if (minimumResource == 0) {
+        updateContext.addUpdateWarning(QueueUpdateWarning.
+            QUEUE_ZERO_RESOURCE.ofQueue(childQueue.getQueuePath()));
+      }
+
+      childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
+          .setResourceValue(resourceName, minimumResource);
+
+      aggregatedUsedResource.increment(resourceName, minimumResource);
     }
   }
 
@@ -74,6 +109,28 @@ public abstract class AbstractQueueCapacityCalculator {
    * @return capacity type
    */
   protected abstract QueueCapacityType getCapacityType();
+
+  protected abstract long calculateMinimumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry);
+
+  protected abstract long calculateMaximumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry);
+
+  protected void calculateResourcePrerequisites(
+      QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
+    for (String label : parentQueue.getConfiguredNodeLabels()) {
+      // We need to set normalized resource ratio only once, not for each
+      // resource calculator
+      if (!updateContext.getQueueBranchContext(
+          parentQueue.getQueuePath()).isParentAlreadyUpdated()) {
+        setNormalizedResourceRatio(updateContext, parentQueue, label);
+        updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+            .setUpdateFlag();
+      }
+    }
+  }
 
   /**
    * Returns all resource names that are defined for the capacity type that is
@@ -127,9 +184,6 @@ public abstract class AbstractQueueCapacityCalculator {
         continue;
       }
 
-      updateContext.addUpdateWarning(QueueUpdateWarning.BRANCH_DOWNSCALED.ofQueue(
-          parentQueue.getQueuePath()));
-
       // Factor to scale down effective resource: When cluster has sufficient
       // resources, effective_min_resources will be same as configured
       // min_resources.
@@ -138,6 +192,8 @@ public abstract class AbstractQueueCapacityCalculator {
         numeratorForMinRatio = parentQueue.getQueueResourceQuotas()
             .getEffectiveMinResource(label).getResourceValue(
                 capacityVectorEntry.getResourceName());
+        updateContext.addUpdateWarning(QueueUpdateWarning.BRANCH_DOWNSCALED.ofQueue(
+            parentQueue.getQueuePath()));
       }
 
       String unit = capacityVectorEntry.getResourceName().equals("memory-mb")
@@ -174,6 +230,7 @@ public abstract class AbstractQueueCapacityCalculator {
       for (String label : childQueue.getConfiguredNodeLabels()) {
       ResourceVector aggregatedUsedResource = aggregatedResources.getOrDefault(
           label, ResourceVector.newInstance());
+      
         for (String resourceName : getResourceNames(childQueue, label)) {
           long parentResource = parentQueue.getEffectiveCapacity(label)
               .getResourceValue(resourceName);
@@ -192,8 +249,10 @@ public abstract class AbstractQueueCapacityCalculator {
           
           childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
               .setResourceValue(resourceName, resource);
+          
           aggregatedUsedResource.increment(resourceName, resource);
         }
+        
         aggregatedResources.put(label, aggregatedUsedResource);
       }
     }

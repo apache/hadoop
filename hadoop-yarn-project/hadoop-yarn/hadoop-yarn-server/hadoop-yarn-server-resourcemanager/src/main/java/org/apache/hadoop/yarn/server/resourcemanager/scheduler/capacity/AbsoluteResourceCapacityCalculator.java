@@ -2,35 +2,32 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 
 public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  public void calculateChildQueueResources(QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
-    super.calculateChildQueueResources(updateContext, parentQueue);
+  protected long calculateMinimumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
+    String resourceName = capacityVectorEntry.getResourceName();
+    ResourceVector ratio = updateContext.getNormalizedMinResourceRatio(
+        childQueue.getParent().getQueuePath(), label);
 
-    setChildrenResources(parentQueue, updateContext, ((childQueue, label, capacityVectorEntry) -> {
-      String resourceName = capacityVectorEntry.getResourceName();
-      ResourceVector ratio = updateContext.getNormalizedMinResourceRatio(
-          parentQueue.getQueuePath(), label);
+    long resource = (long) Math.floor(ratio.getValue(resourceName)
+        * capacityVectorEntry.getResourceValue());
 
-      long resource = (long) Math.floor(ratio.getValue(resourceName)
-          * capacityVectorEntry.getResourceValue());
-      long parentResource = parentQueue.getEffectiveCapacity(label)
-          .getResourceValue(resourceName);
-      if (resource > parentResource) {
-        updateContext.addUpdateWarning(
-            QueueUpdateWarning.QUEUE_OVERUTILIZED.ofQueue(childQueue.getQueuePath()));
-        resource = parentResource;
-      }
+    float absolutePercentage = (float) resource
+        / updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName);
 
-      float absolutePercentage = (float) resource
-          / updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName);
+    updateContext.getRelativeResourceRatio(childQueue.getQueuePath(),
+        label).setValue(resourceName, absolutePercentage);
+    return resource;
+  }
 
-      updateContext.getRelativeResourceRatio(childQueue.getQueuePath(),
-          label).setValue(resourceName, absolutePercentage);
-      return resource;
-    }));
+  @Override
+  protected long calculateMaximumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+    return 0;
   }
 
   @Override

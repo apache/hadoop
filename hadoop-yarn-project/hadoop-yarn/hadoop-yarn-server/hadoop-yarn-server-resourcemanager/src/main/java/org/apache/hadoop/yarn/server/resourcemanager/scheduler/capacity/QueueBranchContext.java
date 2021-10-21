@@ -31,7 +31,18 @@ import java.util.Map;
  */
 public class QueueBranchContext {
   private final Map<String, ResourceVector> remainingResourceByLabel = new HashMap<>();
+  private final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
   private boolean isUpdated = false;
+
+  public void incrementWeight(String label, String resourceName, float value) {
+    sumWeightsPerLabel.putIfAbsent(label, new HashMap<>());
+    sumWeightsPerLabel.get(label).put(resourceName,
+        sumWeightsPerLabel.get(label).getOrDefault(resourceName, 0f) + value);
+  }
+
+  public float getSumWeightsByResource(String label, String resourceName) {
+    return sumWeightsPerLabel.get(label).get(resourceName);
+  }
 
   public void setRemainingResource(String label, ResourceVector resource) {
     remainingResourceByLabel.put(label, resource);

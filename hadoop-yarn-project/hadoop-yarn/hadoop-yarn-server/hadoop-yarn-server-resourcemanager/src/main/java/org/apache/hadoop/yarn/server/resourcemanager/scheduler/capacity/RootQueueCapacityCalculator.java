@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
@@ -35,18 +36,27 @@ public class RootQueueCapacityCalculator extends
   public void calculateChildQueueResources(
       QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
     for (String label : parentQueue.getConfiguredNodeLabels()) {
-      for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
+      for (QueueCapacityVectorEntry capacityVectorEntry : parentQueue.getConfiguredCapacityVector(label)) {
         updateContext.getRelativeResourceRatio(ROOT, label).setValue(
-            resource.getName(), 1);
+            capacityVectorEntry.getResourceName(), 1);
 
+        long minimumResource = calculateMinimumResource(updateContext, parentQueue, label, capacityVectorEntry);
         parentQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-            .setResourceValue(resource.getName(),
-                updateContext.getUpdatedClusterResource(label).getResourceValue(
-                    resource.getName()));
+            .setResourceValue(capacityVectorEntry.getResourceName(), minimumResource);
       }
-
-      setNormalizedResourceRatio(updateContext, parentQueue, label);
     }
+
+    calculateResourcePrerequisites(updateContext, parentQueue);
+  }
+
+  @Override
+  protected long calculateMinimumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(capacityVectorEntry.getResourceName());
+  }
+
+  @Override
+  protected long calculateMaximumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+    return 0;
   }
 
   @Override

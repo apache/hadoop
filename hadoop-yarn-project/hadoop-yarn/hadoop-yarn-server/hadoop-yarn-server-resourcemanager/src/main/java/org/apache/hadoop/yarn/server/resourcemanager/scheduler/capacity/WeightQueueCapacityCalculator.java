@@ -1,43 +1,60 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.WEIGHT;
 
 public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  public void calculateChildQueueResources(QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
-    Map<String, Map<String, Float>> sumWeightsPerLabel = summarizeWeights(parentQueue);
+  protected void calculateResourcePrerequisites(QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
+    super.calculateResourcePrerequisites(updateContext, parentQueue);
 
-    setChildrenResources(parentQueue, updateContext,
-        ((childQueue, label, capacityVectorEntry) -> {
-          String resourceName = capacityVectorEntry.getResourceName();
-          float normalizedWeight = capacityVectorEntry.getResourceValue()
-              / sumWeightsPerLabel.get(label).get(resourceName);
+      for (CSQueue childQueue : parentQueue.getChildQueues()) {
+        for (String label : childQueue.getConfiguredNodeLabels()) {
+        for (String resourceName : childQueue.getConfiguredCapacityVector(label)
+            .getResourceNamesByCapacityType(getCapacityType())) {
+          updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+              .incrementWeight(label, resourceName, childQueue.getConfiguredCapacityVector(label).getResource(resourceName).getResourceValue());
+        }
+      }
+    }
+  }
 
-          float remainingPerEffectiveResourceRatio = updateContext.getQueueBranchContext(
-                  parentQueue.getQueuePath()).getRemainingResource(label)
-              .getValue(resourceName) / parentQueue.getEffectiveCapacity(label)
-              .getResourceValue(resourceName);
+  @Override
+  protected long calculateMinimumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+    CSQueue parentQueue = childQueue.getParent();
+    String resourceName = capacityVectorEntry.getResourceName();
+    float normalizedWeight = capacityVectorEntry.getResourceValue()
+        / updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+        .getSumWeightsByResource(label, resourceName);
 
-          float parentAbsoluteCapacity = updateContext.getRelativeResourceRatio(
-              parentQueue.getQueuePath(), label).getValue(resourceName);
-          float queueAbsoluteCapacity = parentAbsoluteCapacity *
-              remainingPerEffectiveResourceRatio * normalizedWeight;
-          long resource = (long) Math.floor(updateContext.getUpdatedClusterResource(label)
-              .getResourceValue(resourceName)
-              * queueAbsoluteCapacity);
+    float remainingPerEffectiveResourceRatio = updateContext.getQueueBranchContext(
+            parentQueue.getQueuePath()).getRemainingResource(label)
+        .getValue(resourceName) / parentQueue.getEffectiveCapacity(label)
+        .getResourceValue(resourceName);
 
-          updateContext.getRelativeResourceRatio(childQueue.getQueuePath(), label)
-              .setValue(capacityVectorEntry.getResourceName(),
-                  queueAbsoluteCapacity);
+    float parentAbsoluteCapacity = updateContext.getRelativeResourceRatio(
+        parentQueue.getQueuePath(), label).getValue(resourceName);
+    float queueAbsoluteCapacity = parentAbsoluteCapacity *
+        remainingPerEffectiveResourceRatio * normalizedWeight;
+    long resource = (long) Math.floor(updateContext.getUpdatedClusterResource(label)
+        .getResourceValue(resourceName)
+        * queueAbsoluteCapacity);
 
-          return resource;
-        }));
+    updateContext.getRelativeResourceRatio(childQueue.getQueuePath(), label)
+        .setValue(capacityVectorEntry.getResourceName(),
+            queueAbsoluteCapacity);
+
+    return resource;
+  }
+
+  @Override
+  protected long calculateMaximumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+    return 0;
   }
 
   @Override
@@ -60,26 +77,6 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
     }
 
     queue.getQueueCapacities().setNormalizedWeight(label, sumNormalizedWeight);
-  }
-
-  private Map<String, Map<String, Float>> summarizeWeights(CSQueue parentQueue) {
-    Map<String, Map<String, Float>> sumWeightsPerResource = new HashMap<>();
-
-    for (String label : parentQueue.getConfiguredNodeLabels()) {
-      Map<String, Float> sumWeight = new HashMap<>();
-
-      for (CSQueue childQueue : parentQueue.getChildQueues()) {
-        for (String resourceName : childQueue.getConfiguredCapacityVector(label)
-            .getResourceNamesByCapacityType(getCapacityType())) {
-          sumWeight.put(resourceName, sumWeight.getOrDefault(resourceName, 0f)
-              + childQueue.getConfiguredCapacityVector(label)
-              .getResource(resourceName).getResourceValue());
-        }
-      }
-      sumWeightsPerResource.put(label, sumWeight);
-    }
-
-    return sumWeightsPerResource;
   }
 
 }
