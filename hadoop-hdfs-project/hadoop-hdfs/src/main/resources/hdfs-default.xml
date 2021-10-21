@@ -5073,7 +5073,7 @@
     <description>
       Only used when the dfs.block.replicator.classname is set to
       org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
-      Special value between 0 and 20 , noninclusive. if the value is set beyond the scope,
+      Special value between 0 and 20, inclusive. if the value is set beyond the scope,
       this value will be set as 5 by default, Increases tolerance of
       placing blocks on Datanodes with similar disk space used.
     </description>
@@ -5110,7 +5110,7 @@
   <description>
     Only used when the dfs.block.replicator.classname is set to
     org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
-    Special value between 0 and 20, noninclusive. if the value is set beyond the scope,
+    Special value between 0 and 20, inclusive. if the value is set beyond the scope,
     this value will be set as 5 by default, Increases tolerance of
     placing blocks on Datanodes with similar disk space used.
   </description>

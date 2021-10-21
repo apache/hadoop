@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.net.DFSNetworkTopology;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 
-
 /**
  * Space balanced block placement policy.
  */
@@ -88,13 +87,12 @@ public class AvailableSpaceBlockPlacementPolicy extends
           + " receive  more block allocations.");
     }
 
-    if (balancedSpaceTolerance >= 20 || balancedSpaceTolerance <= 0) {
+    if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
       LOG.warn("The value of "
           + DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY
           + " is invalid, Default value " +
             DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT
-          + " will be used instead. Increases tolerance of"
-          + " placing blocks on Datanodes with similar disk space used ");
+          + " will be used instead.");
       balancedSpaceTolerance =
               DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
     }

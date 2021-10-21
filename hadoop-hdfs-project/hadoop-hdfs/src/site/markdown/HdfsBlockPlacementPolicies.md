@@ -123,7 +123,7 @@ The AvailableSpaceBlockPlacementPolicy is a space balanced block placement polic
 <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance</name>
 <value>5</value>
 <description>
-    Special value between 0 and 20, noninclusive. if the value is set beyond the scope,
+    Special value between 0 and 20, inclusive. if the value is set beyond the scope,
     this value will be set as 5 by default, Increases tolerance of
     placing blocks on Datanodes with similar disk space used.
 </description>
@@ -177,7 +177,7 @@ amongst maximum number of racks possible and at the same time will try to choose
   <description>
     Only used when the dfs.block.replicator.classname is set to
     org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
-    Special value between 0 and 20, noninclusive. if the value is set beyond the scope,
+    Special value between 0 and 20, inclusive. if the value is set beyond the scope,
     this value will be set as 5 by default, Increases tolerance of
     placing blocks on Datanodes with similar disk space used.
   </description>

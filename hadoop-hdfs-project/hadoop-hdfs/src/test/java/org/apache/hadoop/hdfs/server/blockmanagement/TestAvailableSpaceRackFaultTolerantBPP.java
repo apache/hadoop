@@ -67,9 +67,6 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
     conf.setFloat(
         DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         0.6f);
-    conf.setInt(
-        DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
-        5);
     String[] racks = new String[NUM_RACKS];
     for (int i = 0; i < NUM_RACKS; i++) {
       racks[i] = "/rack" + i;
@@ -214,7 +211,6 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
   public void testChooseSimilarDataNode() {
     DatanodeDescriptor[] tolerateDataNodes;
     DatanodeStorageInfo[] tolerateStorages;
-    AvailableSpaceRackFaultTolerantBlockPlacementPolicy toleratePlacementPolicy;
     int capacity  = 3;
     Collection<Node> allTolerateNodes = new ArrayList<>(capacity);
     String[] ownerRackOfTolerateNodes = new String[capacity];
@@ -226,7 +222,8 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
 
     Collections.addAll(allTolerateNodes, tolerateDataNodes);
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
-    toleratePlacementPolicy = (AvailableSpaceRackFaultTolerantBlockPlacementPolicy)bm.getBlockPlacementPolicy();
+    AvailableSpaceRackFaultTolerantBlockPlacementPolicy toleratePlacementPolicy =
+            (AvailableSpaceRackFaultTolerantBlockPlacementPolicy)bm.getBlockPlacementPolicy();
 
     updateHeartbeatWithUsage(tolerateDataNodes[0],
             20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * BLOCK_SIZE,

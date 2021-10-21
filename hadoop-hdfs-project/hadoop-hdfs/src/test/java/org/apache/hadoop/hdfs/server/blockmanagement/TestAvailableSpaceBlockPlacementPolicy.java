@@ -61,9 +61,6 @@ public class TestAvailableSpaceBlockPlacementPolicy {
     conf.setFloat(
       DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
       0.6f);
-    conf.setInt(
-      DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
-      5);
     String[] racks = new String[numRacks];
     for (int i = 0; i < numRacks; i++) {
       racks[i] = "/rack" + i;
@@ -180,7 +177,6 @@ public class TestAvailableSpaceBlockPlacementPolicy {
   public void testChooseSimilarDataNode() {
     DatanodeDescriptor[] tolerateDataNodes;
     DatanodeStorageInfo[] tolerateStorages;
-    AvailableSpaceBlockPlacementPolicy toleratePlacementPolicy;
     int capacity  = 3;
     Collection<Node> allTolerateNodes = new ArrayList<>(capacity);
     String[] ownerRackOfTolerateNodes = new String[capacity];
@@ -192,7 +188,8 @@ public class TestAvailableSpaceBlockPlacementPolicy {
 
     Collections.addAll(allTolerateNodes, tolerateDataNodes);
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
-    toleratePlacementPolicy = (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
+    AvailableSpaceBlockPlacementPolicy toleratePlacementPolicy =
+            (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
 
     updateHeartbeatWithUsage(tolerateDataNodes[0],
             20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
