@@ -243,10 +243,14 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
             HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
                     * BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
 
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[1]) == 0);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1], tolerateDataNodes[0]) == 0);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0], tolerateDataNodes[2]) == -1);
-    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2], tolerateDataNodes[0]) == 1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[1]) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
+            tolerateDataNodes[0]) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[2]) == -1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
+            tolerateDataNodes[0]) == 1);
   }
 
   @AfterClass
