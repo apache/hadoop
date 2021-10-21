@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;

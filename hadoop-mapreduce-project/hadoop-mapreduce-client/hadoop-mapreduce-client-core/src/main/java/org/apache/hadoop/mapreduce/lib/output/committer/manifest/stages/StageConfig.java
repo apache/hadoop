@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
+import java.util.Objects;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.RateLimiting;
+import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
@@ -135,12 +138,12 @@ public class StageConfig {
   /**
    * Rate limiter for read operations.
    */
-  private RateLimiter readLimiter;
+  private RateLimiting readLimiter = RateLimitingFactory.unlimitedRate();
 
   /**
    * Rate limiter for read operations.
    */
-  private RateLimiter writeLimiter;
+  private RateLimiting writeLimiter = RateLimitingFactory.unlimitedRate();
 
   /**
    * Name for logging.
@@ -347,9 +350,9 @@ public class StageConfig {
    * @param value new value
    * @return the builder
    */
-  public StageConfig withReadLimiter(RateLimiter value) {
+  public StageConfig withReadLimiter(RateLimiting value) {
     checkOpen();
-    readLimiter = value;
+    readLimiter = Objects.requireNonNull(value);
     return this;
   }
 
@@ -358,9 +361,9 @@ public class StageConfig {
    * @param value new value
    * @return the builder
    */
-  public StageConfig withWriteLimiter(RateLimiter value) {
+  public StageConfig withWriteLimiter(RateLimiting value) {
     checkOpen();
-    writeLimiter = value;
+    writeLimiter = Objects.requireNonNull(value);
     return this;
   }
 
@@ -507,7 +510,7 @@ public class StageConfig {
    * Read limiter.
    * @return Read limiter.
    */
-  public RateLimiter getReadLimiter() {
+  public RateLimiting getReadLimiter() {
     return readLimiter;
   }
 
@@ -515,7 +518,7 @@ public class StageConfig {
    * Write limiter.
    * @return Write limiter.
    */
-  public RateLimiter getWriteLimiter() {
+  public RateLimiting getWriteLimiter() {
     return writeLimiter;
   }
 
@@ -525,12 +528,10 @@ public class StageConfig {
    * limiter mandates it.
    * no-op if (in test setups) there's no rate limiter.
    * @param permits permit count.
-   * @return delay in seconds; 0 if none.
+   * @return delay in milliseconds; 0 if none.
    */
-  public double acquireReadPermits(int permits) {
-    return readLimiter != null
-        ? readLimiter.acquire(permits)
-        : 0.0;
+  public int acquireReadPermits(int permits) {
+    return readLimiter.acquire(permits);
   }
 
   /**
@@ -539,12 +540,10 @@ public class StageConfig {
    * limiter mandates it.
    * no-op if (in test setups) there's no rate limiter.
    * @param permits permit count.
-   * @return delay in seconds; 0 if none.
+   * @return delay in milliseconds; 0 if none.
    */
-  public double acquireWritePermits(int permits) {
-    return writeLimiter != null
-        ? writeLimiter.acquire(permits)
-        : 0.0;
+  public int acquireWritePermits(int permits) {
+    return writeLimiter.acquire(permits);
   }
 
   /**

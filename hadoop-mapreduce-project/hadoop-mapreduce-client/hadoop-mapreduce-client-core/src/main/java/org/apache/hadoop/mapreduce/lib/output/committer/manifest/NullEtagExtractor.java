@@ -16,15 +16,20 @@
  * limitations under the License.
  */
 
-/**
- * Intermediate manifest committer.
- *
- * The individual and aggregate stages of the task and job commit process.
- */
-
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
+
+/**
+ * Does not extract etags.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public class NullEtagExtractor implements EtagExtractor {
+  @Override
+  public String getEtag(FileStatus status) {
+    return null;
+  }
+}

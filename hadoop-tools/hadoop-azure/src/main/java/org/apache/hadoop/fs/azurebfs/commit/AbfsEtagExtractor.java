@@ -16,15 +16,20 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.fs.azurebfs.commit;
+
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.EtagExtractor;
+
 /**
- * Intermediate manifest committer.
- *
- * The individual and aggregate stages of the task and job commit process.
+ * Extension of StoreOperationsThroughFileSystem which can extract the
+ * etag of files.
  */
+public class AbfsEtagExtractor implements EtagExtractor {
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+  @Override
+  public String getEtag(FileStatus status) {
+    return AzureBlobFileSystemStore.extractVersion(status);
+  }
+}

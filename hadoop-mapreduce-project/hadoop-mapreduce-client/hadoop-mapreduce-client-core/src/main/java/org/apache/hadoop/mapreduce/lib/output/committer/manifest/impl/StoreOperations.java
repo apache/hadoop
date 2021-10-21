@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;

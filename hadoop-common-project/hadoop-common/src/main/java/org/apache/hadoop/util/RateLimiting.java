@@ -16,15 +16,28 @@
  * limitations under the License.
  */
 
-/**
- * Intermediate manifest committer.
- *
- * The individual and aggregate stages of the task and job commit process.
- */
-
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
+package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+/**
+ * Minimal subset of google rate limiter class.
+ * Can be used to throttle use of object stores where excess load
+ * will trigger cluster-wide throttling, backoff etc and so collapse
+ * performance.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public interface RateLimiting {
+
+  /**
+   * Acquire rate limiter capacity.
+   * If there is not enough space, the permits will be acquired,
+   * but the subsequent call will block until the capacity has been
+   * refilled.
+   * @param capacity capacity to acquire.
+   * @return time in milliseconds spent waiting for output.
+   */
+  int acquire(int capacity);
+}

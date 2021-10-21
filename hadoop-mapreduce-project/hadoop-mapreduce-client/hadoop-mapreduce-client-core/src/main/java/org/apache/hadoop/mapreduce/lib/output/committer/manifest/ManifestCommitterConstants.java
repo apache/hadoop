@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
@@ -33,7 +34,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Constants internal and external for the manifest committer.
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class ManifestCommitterConstants {
 
   /**
@@ -79,72 +81,6 @@ public final class ManifestCommitterConstants {
    * Value: {@value}.
    */
   public static final String JOB_ATTEMPT_DIR_FORMAT_STR = "%d";
-
-
-  /**
-   * Durations.
-   */
-  public static final String[] DURATION_STATISTICS = {
-
-      /* Job stages. */
-      OP_STAGE_JOB_ABORT,
-      OP_STAGE_JOB_CLEANUP,
-      OP_STAGE_JOB_COMMIT,
-      OP_STAGE_JOB_CREATE_TARGET_DIRS,
-      OP_STAGE_JOB_LOAD_MANIFESTS,
-      OP_STAGE_JOB_RENAME_FILES,
-      OP_STAGE_JOB_SAVE_SUCCESS,
-      OP_STAGE_JOB_SETUP,
-      OP_STAGE_JOB_VALIDATE_OUTPUT,
-
-      /* Task stages. */
-
-      OP_STAGE_TASK_ABORT_TASK,
-      OP_STAGE_TASK_COMMIT,
-      OP_STAGE_TASK_SAVE_MANIFEST,
-      OP_STAGE_TASK_SCAN_DIRECTORY,
-      OP_STAGE_TASK_SETUP,
-
-
-      /* Lower level store/fs operations. */
-      OP_CREATE_DIRECTORIES,
-      OP_CREATE_ONE_DIRECTORY,
-      OP_DIRECTORY_SCAN,
-      OP_DELETE,
-      OP_DELETE_FILE_UNDER_DESTINATION,
-      OP_GET_FILE_STATUS,
-      OP_IS_DIRECTORY,
-      OP_IS_FILE,
-      OP_LIST_STATUS,
-      OP_LOAD_MANIFEST,
-      OP_LOAD_ALL_MANIFESTS,
-      OP_MKDIRS,
-      OP_MKDIRS_RETURNED_FALSE,
-      OP_MSYNC,
-      OP_PREPARE_DIR_ANCESTORS,
-      OP_RENAME_FILE,
-      OP_SAVE_TASK_MANIFEST,
-
-      OBJECT_LIST_REQUEST,
-      OBJECT_CONTINUE_LIST_REQUEST,
-
-      IO_ACQUIRE_READ_PERMIT,
-      IO_ACQUIRE_WRITE_PERMIT
-  };
-
-  /**
-   * Counters.
-   */
-  public static final String[] COUNTER_STATISTICS = {
-      COMMITTER_BYTES_COMMITTED_COUNT,
-      COMMITTER_FILES_COMMITTED_COUNT,
-      COMMITTER_TASKS_COMPLETED_COUNT,
-      COMMITTER_TASKS_FAILED_COUNT,
-      COMMITTER_TASK_DIRECTORY_COUNT_MEAN,
-      COMMITTER_TASK_DIRECTORY_DEPTH_MEAN,
-      COMMITTER_TASK_FILE_COUNT_MEAN,
-      COMMITTER_TASK_FILE_SIZE_MEAN,
-  };
 
   /**
    * Committer classname as recorded in the committer _SUCCESS file.
@@ -272,11 +208,6 @@ public final class ManifestCommitterConstants {
           ".ManifestCommitterFactory";
 
   /**
-   * Error string from ABFS connector on timeout.
-   */
-  public static final String OPERATION_TIMED_OUT = "OperationTimedOut";
-
-  /**
    * Stage attribute in audit context: {@value}.
    */
   public static final String CONTEXT_ATTR_STAGE = "st";
@@ -285,51 +216,6 @@ public final class ManifestCommitterConstants {
    * Task ID attribute in audit context: {@value}.
    */
   public static final String CONTEXT_ATTR_TASK_ATTEMPT_ID = "ta";
-
-  /**
-   * Read permit cost for any of the status probes: {@value}.
-   */
-  public static final int PERMIT_READ_GET_FILE_STATUS = 1;
-
-  /**
-   * Read permit cost for list operations: {@value}.
-   */
-  public static final int PERMIT_READ_LIST = 2;
-
-  /**
-   * Read permit cost for list operations: {@value}.
-   */
-  public static final int PERMIT_READ_OPEN_FILE = 2;
-
-  /**
-   * Write permit cost for delete(): {@value}.
-   */
-  public static final int PERMIT_WRITE_CREATE_FILE = 1;
-
-  /**
-   * Write permit cost for delete(): {@value}.
-   */
-  public static final int PERMIT_WRITE_DELETE = 1;
-
-  /**
-   * Write permit cost for mkdir(): {@value}.
-   */
-  public static final int PERMIT_WRITE_MKDIR = 1;
-
-  /**
-   * Write permit cost for rename(): {@value}.
-   */
-  public static final int PERMIT_WRITE_RENAME = 1;
-
-  /**
-   * Format string for task attempt names.
-   */
-  public static final String NAME_FORMAT_TASK_ATTEMPT = "[Task-Attempt %s]";
-
-  /**
-   * Format string for job attempt names.
-   */
-  public static final String NAME_FORMAT_JOB_ATTEMPT = "[Job-Attempt %s]";
 
   private ManifestCommitterConstants() {
   }

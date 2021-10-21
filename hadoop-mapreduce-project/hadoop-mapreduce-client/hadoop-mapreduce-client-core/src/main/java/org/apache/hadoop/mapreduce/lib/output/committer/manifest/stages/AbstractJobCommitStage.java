@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.OperationDuration;
@@ -50,15 +51,15 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTracker;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.AuditingIntegration.enterStageWorker;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_READ_GET_FILE_STATUS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_READ_LIST;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_READ_OPEN_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_CREATE_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_DELETE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_MKDIR;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.PERMIT_WRITE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_GET_FILE_STATUS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_LIST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_OPEN_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_CREATE_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_DELETE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_MKDIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
@@ -339,12 +340,12 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @param statistic statistic key.
    * @param wait wait time in seconds.
    */
-  private void noteAnyRateLimiting(String statistic, double wait) {
+  private void noteAnyRateLimiting(String statistic, int wait) {
     if (wait > 0) {
       // rate limiting took place
       getIOStatistics().addTimedOperation(
           statistic,
-          (long) (wait * 1000));
+          wait);
     }
   }
 
@@ -808,6 +809,23 @@ public abstract class AbstractJobCommitStage<IN, OUT>
 
     return trackDuration(getIOStatistics(), OP_RENAME, () ->
         operations.moveToTrash(getJobId(), dir));
+  }
+
+  /**
+   * Create an entry for a file to rename under the destination.
+   * If the store operations supports extracting etags from file status
+   * entries, that is included in the entry
+   * @param status source file
+   * @param destDir destination directory
+   * @return an entry which includes the rename path
+   */
+  protected FileOrDirEntry fileEntry(FileStatus status, Path destDir) {
+    // generate a new path under the dest dir
+    Path dest = new Path(destDir, status.getPath().getName());
+    return new FileOrDirEntry(status.getPath(),
+        dest,
+        status.getLen(),
+        operations.getEtag(status));
   }
 
 }

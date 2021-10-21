@@ -30,12 +30,13 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageEventCallbacks;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
@@ -49,15 +50,15 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.buildJobUUID;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.getAppAttemptId;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.buildJobUUID;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getAppAttemptId;
 
 /**
  * The configuration for the committer as built up from the job configuration
  * and data passed down from the committer factory.
  * Isolated for ease of dev/test
  */
-final class ManifestCommitterConfig implements IOStatisticsSource {
+public final class ManifestCommitterConfig implements IOStatisticsSource {
 
   /**
    * Final destination of work.
@@ -210,7 +211,7 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
       taskAttemptDir = dirs.getTaskAttemptPath(taskAttemptId);
       // the context is also the progress callback.
       progressable = tac;
-      name = String.format(ManifestCommitterConstants.NAME_FORMAT_TASK_ATTEMPT, taskAttemptId);
+      name = String.format(InternalConstants.NAME_FORMAT_TASK_ATTEMPT, taskAttemptId);
 
     } else {
       // it's a job
@@ -218,7 +219,7 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
       taskAttemptId = "";
       taskAttemptDir = null;
       progressable = null;
-      name =  String.format(ManifestCommitterConstants.NAME_FORMAT_JOB_ATTEMPT, jobAttemptId);
+      name =  String.format(InternalConstants.NAME_FORMAT_JOB_ATTEMPT, jobAttemptId);
     }
   }
 
@@ -271,10 +272,10 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
         .withTaskId(taskId);
 
     if (readRate > 0) {
-      stageConfig.withReadLimiter(RateLimiter.create(readRate));
+      stageConfig.withReadLimiter(RateLimitingFactory.create(readRate));
     }
     if (writeRate > 0) {
-      stageConfig.withWriteLimiter(RateLimiter.create(writeRate));
+      stageConfig.withWriteLimiter(RateLimitingFactory.create(writeRate));
     }
     return stageConfig;
   }
@@ -337,7 +338,7 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
   }
 
   /**
-   * Create a new thread pool from the
+   * Create a new submitter task pool from the
    * {@link ManifestCommitterConstants#OPT_IO_PROCESSORS}
    * settings.
    * @return a new thread pool.
@@ -348,11 +349,10 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
   }
 
   /**
-   * Create a new thread pool.
-   * This must be shut down.
+   * Create a new submitter task pool.
    * @param key config key with pool size.
    * @param defVal default value.
-   * @return a new thread pool.
+   * @return a new task pool.
    */
   public CloseableTaskPoolSubmitter createSubmitter(String key, int defVal) {
     int numThreads = conf.getInt(key, defVal);
@@ -363,7 +363,13 @@ final class ManifestCommitterConfig implements IOStatisticsSource {
     return createCloseableTaskSubmitter(numThreads, getJobAttemptId());
   }
 
-  @VisibleForTesting
+  /**
+   * Create a new submitter task pool.
+   *
+   * @param numThreads thread count.
+   * @param jobAttemptId job ID
+   * @return a new task pool.
+   */
   public static CloseableTaskPoolSubmitter createCloseableTaskSubmitter(
       final int numThreads,
       final String jobAttemptId) {

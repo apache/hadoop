@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -130,7 +131,12 @@ public class ManifestPrinter extends Configured implements Tool {
   /**
    */
   public static void main(String[] argv) throws Exception {
-    int res = ToolRunner.run(new ManifestPrinter(), argv);
-    System.exit(res);
+
+    try {
+      int res = ToolRunner.run(new ManifestPrinter(), argv);
+      System.exit(res);
+    } catch (ExitUtil.ExitException e) {
+      ExitUtil.terminate(e);
+    }
   }
 }

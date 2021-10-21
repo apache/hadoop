@@ -78,7 +78,7 @@ public class TestTaskManifestFile extends AbstractManifestCommitterTest {
     Path subfileD = new Path(subdirD, "file");
     long len = 256L;
     FileOrDirEntry subFileEntry = new FileOrDirEntry(subfileS,
-        subfileD, len);
+        subfileD, len, etag);
     source.addFileToCommit(subFileEntry);
 
 
@@ -126,9 +126,9 @@ public class TestTaskManifestFile extends AbstractManifestCommitterTest {
     Path subfileD = new Path(subdirD, "file");
     long len = 256L;
     source.addFileToCommit(
-        new FileOrDirEntry(subfileS, subfileD, len));
+        new FileOrDirEntry(subfileS, subfileD, len, etag));
     source.addFileToCommit(
-        new FileOrDirEntry(subfileS2, subfileD, len));
+        new FileOrDirEntry(subfileS2, subfileD, len, etag));
     assertValidationFailureOnRoundTrip(source);
   }
 
@@ -140,7 +140,7 @@ public class TestTaskManifestFile extends AbstractManifestCommitterTest {
   @Test
   public void testValidateRejectsIncompleteFileEntry() throws Throwable {
     source.addFileToCommit(
-        new FileOrDirEntry(taPath, null, 0));
+        new FileOrDirEntry(taPath, null, 0, etag));
     assertValidationFailureOnRoundTrip(source);
   }
 
@@ -150,7 +150,7 @@ public class TestTaskManifestFile extends AbstractManifestCommitterTest {
   @Test
   public void testValidateRejectsInvalidFileLength() throws Throwable {
     source.addFileToCommit(
-        new FileOrDirEntry(taPath, testPath, -1));
+        new FileOrDirEntry(taPath, testPath, -1, etag));
     assertValidationFailureOnRoundTrip(source);
   }
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -37,8 +37,8 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManif
 import org.apache.hadoop.util.JsonSerialization;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPERATION_TIMED_OUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.StoreOperationsThroughFileSystem.E_TRASH_FALSE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.OPERATION_TIMED_OUT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem.E_TRASH_FALSE;
 
 /**
  * Wrap an existing StoreOperations implementation and fail on

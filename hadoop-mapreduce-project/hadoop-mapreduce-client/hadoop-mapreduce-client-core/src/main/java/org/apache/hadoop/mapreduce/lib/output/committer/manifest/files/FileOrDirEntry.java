@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData.marshallPath;
@@ -52,6 +51,12 @@ public final class FileOrDirEntry implements Serializable {
   @JsonProperty("size")
   private long size;
 
+  /**
+   * Etag value if we can extract this.
+   */
+  @JsonProperty("etag")
+  private String etag;
+
   public FileOrDirEntry() {
   }
 
@@ -60,14 +65,17 @@ public final class FileOrDirEntry implements Serializable {
    * @param source source path.
    * @param dest destination path.
    * @param size file size.
+   * @param etag optional etag
    */
   public FileOrDirEntry(
       final String source,
       final String dest,
-      final long size) {
+      final long size,
+      final String etag) {
     this.source = source;
     this.dest = dest;
     this.size = size;
+    this.etag = etag;
   }
 
 
@@ -76,14 +84,14 @@ public final class FileOrDirEntry implements Serializable {
    * @param source source path.
    * @param dest destination path.
    * @param size file size.
+   * @param etag optional etag
    */
   public FileOrDirEntry(
       final Path source,
       final Path dest,
-      final long size) {
-    this.source = marshallPath(source);
-    this.dest = marshallPath(dest);
-    this.size = size;
+      final long size,
+      final String etag) {
+    this(marshallPath(source), marshallPath(dest), size, etag);
   }
 
 
@@ -138,6 +146,7 @@ public final class FileOrDirEntry implements Serializable {
     sb.append("source='").append(source).append('\'');
     sb.append(", dest='").append(dest).append('\'');
     sb.append(", size=").append(size);
+    sb.append(", etag='").append(etag).append('\'');;
     sb.append('}');
     return sb.toString();
   }
@@ -150,21 +159,7 @@ public final class FileOrDirEntry implements Serializable {
    */
   public static FileOrDirEntry dirEntry(Path src, Path dest) {
     return new FileOrDirEntry(src,
-        dest, 0);
-  }
-
-  /**
-   * Create an entry for a file to rename under the destination.
-   * @param status source file
-   * @param destDir destination directory
-   * @return an entry which includes the rename path
-   */
-  public static FileOrDirEntry fileEntry(FileStatus status, Path destDir) {
-    // generate a new path under the dest dir
-    Path dest = new Path(destDir, status.getPath().getName());
-    return new FileOrDirEntry(status.getPath(),
-        dest,
-        status.getLen());
+        dest, 0, null);
   }
 
 }

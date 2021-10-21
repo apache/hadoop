@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig;
 
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.CONTEXT_ATTR_STAGE;

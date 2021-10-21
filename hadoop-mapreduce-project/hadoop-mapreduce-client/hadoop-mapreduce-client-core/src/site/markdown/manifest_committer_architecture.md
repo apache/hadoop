@@ -140,6 +140,9 @@ and (though not relevant here) S3.
 
 A 0-byte `_SUCCESS` file is written.
 
+
+### V1 versus V2
+
 V2's job commit algorithm is clearly a lot faster —all the rename has already
 taken place.
 
@@ -204,7 +207,7 @@ by the job committer and used in a POST request.
 
 ### Staging Committer
 
-The Staging committer is based on the contribution by Ryan Blue of Netflix.
+The _Staging Committer_ is based on the contribution by Ryan Blue of Netflix.
 it  relies on HDFS to be the consistent store to propagate the `.pendingset` files.
 
 The working directory of each task attempt is in the local filesystem, "the
@@ -225,7 +228,7 @@ the same correctness guarantees as the v1 algorithm.
 
 ### The Magic Committer
 
-The magic committer is purely-S3A and takes advantage and of
+The _Magic Committer_ is purely-S3A and takes advantage and of
 the fact the authorts could make changes within the file system client itself.
 
 "Magic" paths are defined which, when opened for writing under, initiate a
@@ -235,20 +238,20 @@ multi-party upload to the final destination directory. When the output stream is
 saved.
 
 Task commit:
-1. list all `.pending` files under each task attempt's magic directory;
-1. aggregate to a `.pendingset` file
-1. save to the job attempt directory with the task ID.
+1. List all `.pending` files under each task attempt's magic directory;
+1. Aggregate to a `.pendingset` file
+1. Save to the job attempt directory with the task ID.
 
 Job commit:
 
-1. list `.pendingset` files in the job attempt directory
-1. complete the uploads with POST requests.
+1. List `.pendingset` files in the job attempt directory
+1. Complete the uploads with POST requests.
 
 The Magic committer absolutely requires a consistent S3 Store -originally with
 S3Guard. Now that S3 is consistent, raw S3 can be used. It does not need HDFS
 or any other filesystem with `rename()`.
 
-## Performance Correctness of the S3A committers
+## Performance, Scalability and Correctness of the S3A committers
 
 ## Performance and Scalability.
 
@@ -392,6 +395,21 @@ Task attempts are committed by:
 
 No renaming takes place —the files are left in their original location.
 
+Performance: time to treewalk a task attempt's output directories, then save the manifest.
+
+If treewalking is single-threaded, then it is `O(directories)`, with each directory listing using one or more
+paged LIST calls.
+
+If treewalking is done in a thread pool, then lists can be parallelized; there's the startup
+delays of listing parent directories and so queue the next scans; use of `listStatusIncremental`
+will help here.
+
+Alternatively: use `listStatus(Path, recursive=true)`. This is very, very fast on S3, but doesn't
+deliver speedups on ABFS. GCS performance is unknown.
+
+*Proposed*: simple treewalk for now; statistics analysis will give us better answers.
+
+
 ### Job Commit
 
 Job Commit becomes:
@@ -420,6 +438,8 @@ per task, specifically:
 Directory creation can be optimised by building a map of directories which have
 already been created and their parents —there is no need to replicate work.
 
+TODO: Update
+
 For each directory then:
 
 1. Probe shared directory map for directory existing. If found: operation is
@@ -429,10 +449,9 @@ For each directory then:
    add entry and those of all parent paths Found and is file: delete. then
    create as before.
 
-Handling concurrent creation of directories (or delete+create) is going to be a
-troublespot. It's notable that duplicate operations are not harmful if, when
-mkdir() returns false, the path is probed to see if it now exists. If it does,
-another thread has created it.
+Efficiently handling concurrent creation of directories (or delete+create) is going to be a
+troublespot; some effort is invested there to build the set of directories to
+create.
 
 ### Benefits
 
@@ -525,7 +544,7 @@ manifest, so it isn't.
 
 #### Thread pool lifetimes
 
-Review the issues related to the S3A committer and avoid (HADOOP-16798).
+The lifespan of thread pools is constrained by the stage configuration; 
 
 #### Scale issues similar to S3A HADOOP-16570.
 

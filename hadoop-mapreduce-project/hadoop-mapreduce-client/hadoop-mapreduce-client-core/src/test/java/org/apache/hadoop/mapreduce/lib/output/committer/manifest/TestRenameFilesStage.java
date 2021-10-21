@@ -29,13 +29,14 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.UnreliableStoreOperations.SIMULATED_FAILURE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -79,7 +80,7 @@ public class TestRenameFilesStage extends AbstractManifestCommitterTest {
       String name = String.format("file%04d", i);
       Path src = new Path(jobAttemptTaskSubDir, name);
       Path dest = new Path(destDir, name);
-      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0));
+      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0, null));
       if (i == 500) {
         // add file #500 to the failure list, and only that file.
         file500 = src;
@@ -122,7 +123,7 @@ public class TestRenameFilesStage extends AbstractManifestCommitterTest {
       String name = String.format("file%04d", i);
       Path src = new Path(jobAttemptTaskSubDir, name);
       Path dest = new Path(destDir, name);
-      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0));
+      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0, null));
       if (i == 500) {
         // add file #500 to the failure list, and only that file.
         file500 = src;

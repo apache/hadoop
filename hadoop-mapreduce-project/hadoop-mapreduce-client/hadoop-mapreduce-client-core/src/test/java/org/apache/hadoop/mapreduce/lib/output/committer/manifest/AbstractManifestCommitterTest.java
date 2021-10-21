@@ -52,13 +52,16 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
@@ -72,14 +75,14 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig.createCloseableTaskSubmitter;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.NAME_FORMAT_JOB_ATTEMPT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.NAME_FORMAT_JOB_ATTEMPT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.createIOStatisticsStore;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterSupport.createTaskManifest;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createIOStatisticsStore;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.createTaskManifest;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.getProjectBuildDir;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
@@ -155,6 +158,11 @@ public abstract class AbstractManifestCommitterTest
   private static final AtomicLong CREATE_FILE_COUNTER = new AtomicLong();
 
   protected static final byte[] NO_DATA = new byte[0];
+
+  /**
+   * The thread leak tracker.
+   */
+  private static final ThreadLeakTracker threadLeakTracker = new ThreadLeakTracker();
 
   /**
    * Submitter for tasks; may be null.
@@ -387,6 +395,22 @@ public abstract class AbstractManifestCommitterTest
    */
   public final URI getReportDirUri() {
     return getReportDir().toURI();
+  }
+
+  /**
+   * Get the (shared) thread leak tracker.
+   * @return the thread leak tracker.
+   */
+  protected static ThreadLeakTracker getThreadLeakTracker() {
+    return threadLeakTracker;
+  }
+
+  /**
+   * Make sure there's no thread leakage.
+   */
+  @AfterClass
+  public static void threadLeakage() {
+    threadLeakTracker.assertNoThreadLeakage();
   }
 
   /**
@@ -738,8 +762,8 @@ public abstract class AbstractManifestCommitterTest
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
         .withOperations(getStoreOperations())
         .withProgressable(getProgressCounter())
-        .withReadLimiter(RateLimiter.create(OPT_IO_READ_RATE_DEFAULT))
-        .withWriteLimiter(RateLimiter.create(OPT_IO_WRITE_RATE_DEFAULT));
+        .withReadLimiter(RateLimitingFactory.create(OPT_IO_READ_RATE_DEFAULT))
+        .withWriteLimiter(RateLimitingFactory.create(OPT_IO_WRITE_RATE_DEFAULT));
 
     // if there's a task attempt ID set, set up its details
     if (taskIndex >= 0) {
@@ -857,13 +881,13 @@ public abstract class AbstractManifestCommitterTest
     for (int i = 0; i < filesPerTaskAttempt; i++) {
       Path in = new Path(taDir, "dir" + i);
       Path out = new Path(getDestDir(), "dir" + i);
-      manifest.addDirectory(new FileOrDirEntry(in, out, 0));
+      manifest.addDirectory(new FileOrDirEntry(in, out, 0, null));
       String name = taskStageConfig.getTaskAttemptId() + ".csv";
       Path src = new Path(in, name);
       Path dest = new Path(out, name);
       long fileSize = size + i * 1000L;
-      manifest.addFileToCommit(new FileOrDirEntry(src, dest,
-          fileSize));
+      manifest.addFileToCommit(
+          new FileOrDirEntry(src, dest, fileSize, null));
       totalDataSize.addAndGet(fileSize);
     }
 

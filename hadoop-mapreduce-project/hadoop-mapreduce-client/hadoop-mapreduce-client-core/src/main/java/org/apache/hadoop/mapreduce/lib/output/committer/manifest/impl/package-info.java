@@ -16,23 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
-
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathIOException;
-
 /**
- * Exception raised during validation.
- * This can be treated differently from other outcomes.
+ * Implementation classes for the manifest committer.
+ * Nothing outside this module should be using these classes.
  */
-public class OutputValidationException extends PathIOException {
-  public OutputValidationException(Path path, String error) {
-    super(path.toUri().toString(), error);
-  }
 
-  public OutputValidationException(Path path,
-      String error,
-      Throwable cause) {
-    super(path.toUri().toString(), error, cause);
-  }
-}
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
