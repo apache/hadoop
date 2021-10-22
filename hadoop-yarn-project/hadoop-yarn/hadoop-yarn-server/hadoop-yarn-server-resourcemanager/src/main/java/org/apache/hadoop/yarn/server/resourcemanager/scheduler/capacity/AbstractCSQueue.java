@@ -131,6 +131,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected CapacityConfigType capacityConfigType =
       CapacityConfigType.NONE;
 
+  protected Map<String, QueueCapacityVector> configuredCapacityVectors;
+
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   protected CapacitySchedulerContext csContext;
@@ -374,6 +376,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       this.reservationsContinueLooking =
           configuration.getReservationContinueLook();
+      this.configuredCapacityVectors = csContext.getConfiguration()
+          .parseConfiguredResourceVector(queuePath, configuredNodeLabels);
 
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
@@ -688,6 +692,12 @@ public abstract class AbstractCSQueue implements CSQueue {
         minimumAllocation);
   }
 
+  @Override
+  public QueueCapacityVector getConfiguredCapacityVector(
+      String label) {
+    return configuredCapacityVectors.get(label);
+  }
+
   private void initializeQueueState(CapacitySchedulerConfiguration configuration) {
     QueueState previousState = getState();
     QueueState configuredState = configuration
@@ -978,7 +988,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           "Default lifetime " + defaultAppLifetime
               + " can't exceed maximum lifetime " + myMaxAppLifetime);
     }
-    
+
     if (defaultAppLifetime <= 0) {
       defaultAppLifetime = myMaxAppLifetime;
     }
