@@ -34,8 +34,8 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestQueueMetricsForCustomResources.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 
 public class TestQueueCapacityConfigParser {
 
