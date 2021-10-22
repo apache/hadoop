@@ -69,6 +69,10 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
+    public String getRealUser() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
     public ApplicationSubmissionContext getApplicationSubmissionContext() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
