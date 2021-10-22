@@ -459,9 +459,9 @@ public class DebugAdmin extends Configured implements Tool {
       if (!command.name.equals("help")) {
         System.out.println(command.usageText);
       }
-      System.out.println();
-      ToolRunner.printGenericCommandUsage(System.out);
     }
+    System.out.println();
+    ToolRunner.printGenericCommandUsage(System.out);
   }
 
   public static void main(String[] argsArray) throws Exception {
