@@ -807,17 +807,18 @@ public class Client implements AutoCloseable {
      */
     private synchronized void setupIOstreams(
         AtomicBoolean fallbackToSimpleAuth) {
-      if (socket != null || shouldCloseConnection.get()) {
-        return;
-      }
-      UserGroupInformation ticket = remoteId.getTicket();
-      if (ticket != null) {
-        final UserGroupInformation realUser = ticket.getRealUser();
-        if (realUser != null) {
-          ticket = realUser;
-        }
-      }
       try {
+        if (socket != null || shouldCloseConnection.get()) {
+          setFallBackToSimpleAuth(fallbackToSimpleAuth);
+          return;
+        }
+        UserGroupInformation ticket = remoteId.getTicket();
+        if (ticket != null) {
+          final UserGroupInformation realUser = ticket.getRealUser();
+          if (realUser != null) {
+            ticket = realUser;
+          }
+        }
         connectingThread.set(Thread.currentThread());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
@@ -863,20 +864,8 @@ public class Client implements AutoCloseable {
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
               LOG.debug("Negotiated QOP is :" + remoteId.saslQop);
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(false);
-              }
-            } else if (UserGroupInformation.isSecurityEnabled()) {
-              if (!fallbackAllowed) {
-                throw new AccessControlException(
-                    "Server asks us to fall back to SIMPLE " +
-                    "auth, but this client is configured to only allow secure " +
-                    "connections.");
-              }
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(true);
-              }
             }
+            setFallBackToSimpleAuth(fallbackToSimpleAuth);
           }
 
           if (doPing) {
@@ -907,6 +896,35 @@ public class Client implements AutoCloseable {
         close();
       } finally {
         connectingThread.set(null);
+      }
+    }
+
+    private void setFallBackToSimpleAuth(AtomicBoolean fallbackToSimpleAuth)
+        throws IOException {
+      if (fallbackToSimpleAuth == null) {
+        LOG.trace("Connection {} skips setting fallbackToSimpleAuth as it is null.", remoteId);
+        return;
+      }
+      if (authMethod == null) {
+        // setupIOStreams() will set up authMethod first, then call this method again.
+        return;
+      }
+      LOG.trace(
+          "Setting fallbackToSimpleAuth. AuthMethod is {}. Fallback allowed by configuration: {}. "
+              + "Security is {}.",
+          authMethod, fallbackAllowed,
+          UserGroupInformation.isSecurityEnabled() ? "enabled" : "disabled");
+      if (authMethod != AuthMethod.SIMPLE) {
+        LOG.trace("Disabling fallbackToSimpleAuth target does not require SIMPLE authentication.");
+        fallbackToSimpleAuth.set(false);
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        if (!fallbackAllowed) {
+          throw new IOException("Server asks us to fall back to SIMPLE auth, but this client is "
+              + "configured to only allow secure connections.");
+        }
+        LOG.trace("Enable fallbackToSimpleAuth for target, as we are allowed to fall back to "
+            + "SIMPLE authentication.");
+        fallbackToSimpleAuth.set(true);
       }
     }
     
