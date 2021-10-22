@@ -160,7 +160,7 @@ public class ShortCircuitReplica {
       long deltaMs = Time.monotonicNow() - creationTimeMs;
       long staleThresholdMs = cache.getStaleThresholdMs();
       if (deltaMs > staleThresholdMs) {
-        LOG.trace("{} is stale because it's {} ms old and staleThreadholdMS={}",
+        LOG.trace("{} is stale because it's {} ms old and staleThresholdMs={}",
             this, deltaMs, staleThresholdMs);
         return true;
       } else {
