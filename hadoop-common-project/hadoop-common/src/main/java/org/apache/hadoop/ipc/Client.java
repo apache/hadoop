@@ -900,7 +900,7 @@ public class Client implements AutoCloseable {
     }
 
     private void setFallBackToSimpleAuth(AtomicBoolean fallbackToSimpleAuth)
-        throws IOException {
+        throws AccessControlException {
       if (fallbackToSimpleAuth == null) {
         LOG.trace("Connection {} skips setting fallbackToSimpleAuth as it is null.", remoteId);
         return;
@@ -919,8 +919,8 @@ public class Client implements AutoCloseable {
         fallbackToSimpleAuth.set(false);
       } else if (UserGroupInformation.isSecurityEnabled()) {
         if (!fallbackAllowed) {
-          throw new IOException("Server asks us to fall back to SIMPLE auth, but this client is "
-              + "configured to only allow secure connections.");
+          throw new AccessControlException("Server asks us to fall back to SIMPLE auth, but this"
+              + "client is configured to only allow secure connections.");
         }
         LOG.trace("Enable fallbackToSimpleAuth for target, as we are allowed to fall back to "
             + "SIMPLE authentication.");
