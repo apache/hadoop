@@ -41,6 +41,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManif
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbortTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitJobStage;
@@ -596,8 +597,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
    * @return the path where a task attempt should be stored.
    */
   public Path getTaskManifestPath(TaskAttemptContext context) {
-    final Path dir = enterCommitter(false,
-        context).getJobAttemptDir();
+    final Path dir = enterCommitter(false, context).getTaskManifestDir();
     Path manifestFile = new Path(dir,
         context.getTaskAttemptID().getTaskID().toString() + MANIFEST_SUFFIX);
 
@@ -628,7 +628,9 @@ public class ManifestCommitter extends PathOutputCommitter implements
   }
 
   /**
-   * Create a FS level store operations.
+   * Create a FS level store operations for the destination store.
+   * This MUST NOT be used for the success report operations, as
+   * they may be to a different filesystem.
    * This is a point which can be overridden during testing.
    * @return a new store operations instance bonded to the destination fs.
    * @throws IOException failure to instantiate.
@@ -686,8 +688,12 @@ public class ManifestCommitter extends PathOutputCommitter implements
     Configuration conf = config.getConf();
     String reportDir = conf.getTrimmed(OPT_SUMMARY_REPORT_DIR, "");
     if (reportDir.isEmpty()) {
+      LOG.debug("No summary directory set in " + OPT_SUMMARY_REPORT_DIR);
       return null;
     }
+    LOG.debug("Summary directory set in to {}" + OPT_SUMMARY_REPORT_DIR,
+        reportDir);
+
     // update to the latest statistics
     report.snapshotIOStatistics(config.getIOStatistics());
 
@@ -700,8 +706,7 @@ public class ManifestCommitter extends PathOutputCommitter implements
     }
     report.putDiagnostic(STAGE, activeStage);
     final FileSystem fs = path.getFileSystem(conf);
-    try (StoreOperations operations =
-             ManifestCommitterSupport.createStoreOperations(conf, fs, reportDirPath)) {
+    try (StoreOperations operations = new StoreOperationsThroughFileSystem(fs)) {
       if (!overwrite) {
         // check for file existence so there is no need to worry about
         // precisely what exception is raised when overwrite=false and dest file

@@ -165,8 +165,7 @@ or in the case of S3A filesystems, one of the S3A committers. They all use the s
 | `mapreduce.manifest.committer.cleanup.move.to.trash` | Move the `_temporary` directory to `~/.trash` | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories` | Delete task attempt directories in parallel | `true` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
-| `mapreduce.manifest.committer.io.read.rate` | Rate limit in operations/second for read operations. | `10000` |
-| `mapreduce.manifest.committer.io.write.rate` | Rate limit in operations/second for write operations. | `10000` |
+| `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for store operations. | `10000` |
 | `mapreduce.manifest.committer.store.operations.classname` | Classname for Store Operations |  |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
@@ -253,16 +252,16 @@ operations per second.
 
 | Option | Meaning | 
 |--------|---------|
-| `mapreduce.manifest.committer.io.read.rate` | Rate limit in operations/second for read operations. |
-| `mapreduce.manifest.committer.io.write.rate` | Rate limit in operations/second for write operations. |
+| `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for IO operations. |
 
-Set the options to `0` remove all rate limiting.
+Set the option to `0` remove all rate limiting.
 
 If rate limiting is imposed, The statistics `io_acquire_write_permit` and `io_acquire_read_permit` report
-the time to acquire permits and so identify any delays.
+the time to acquire permits for read and write and so identify any delays.
 
-The need for any throttling can be determined by looking at job logs to see if throttling events and
-retries took place, or, (often easier) the store service's logs and their throttling status codes (usually 503 or 500).
+The need for any throttling can be determined by looking at job logs to see if
+throttling events and retries took place, or, (often easier) the store service's
+logs and their throttling status codes (usually 503 or 500).
 
 # Working with Azure Storage
 
@@ -280,32 +279,49 @@ can be collected in listings and used in the job commit phase.
 </property>
 ```
 
-The overall set of Azure-optimized options becomes
+The core set of Azure-optimized options becomes
 
 ```xml
 <property>
 <name>mapreduce.outputcommitter.factory.scheme.abfs</name>
 <value>org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory</value>
 </property>
+
 <property>
   <name>mapreduce.manifest.committer.store.operations.classname</name>
   <value>org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations</value>
 </property>
+
 <property>
-  <name>cleanup.parallel.delete.attempt.directories</name>
+  <name>mapreduce.manifest.committer.cleanup.parallel.delete.attempt.directories</name>
   <value>true/value>
   <description>Parallel directory deletion to address scale-related timeouts.</description>
 </property>
 
+
 <property>
-  <name>mapreduce.manifest.committer.io.write.rate</name>
-  <value>10000</value>
-  <description>Rate limit in operations/second for write operations.</description>
-</property>
-<property>
-  <name>mapreduce.manifest.committer.io.read.rate</name>
-  <value>10000</value>
-  <description>Rate limit in operations/second for read operations.</description>
+<name>mapreduce.manifest.committer.io.rate</name>
+<value>10000</value>
+<description>Rate limit for a store, unless increased by Microsoft</description>
 </property>
 
+```
+
+And optional settings for debugging/performance analysis
+
+```xml
+
+<property>
+  <name>mapreduce.manifest.committer.summary.report.directory/name>
+  <value>abfs:// Path within same store/separate store</value>
+  <description>Optional: path to where job summaries are saved</description>
+</property>
+
+<property>
+<name>mapreduce.manifest.committer.validate.output</name>
+<value>true</value>
+<description>Validate the output</description>
+</property>
+
+        ``
 ```

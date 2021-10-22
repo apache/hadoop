@@ -38,7 +38,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERV
 /**
  * Implement task and job operations through the filesystem API.
  */
-public class StoreOperationsThroughFileSystem implements StoreOperations {
+public class StoreOperationsThroughFileSystem extends StoreOperations {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       StoreOperationsThroughFileSystem.class);

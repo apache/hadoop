@@ -47,18 +47,24 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Sto
  * Mockito 2 spy code but is not so that:
  * 1. It can be backported to Hadoop versions using Mockito 1.x.
  * 2. It can be extended to use in production. This is why it is in
- * the production module -to allow for downstream test to adopt it.
+ * the production module -to allow for downstream tests to adopt it.
  * 3. You can actually debug what's going on.
  */
 @InterfaceStability.Unstable
-public class UnreliableStoreOperations implements StoreOperations {
+public class UnreliableStoreOperations extends StoreOperations {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       UnreliableStoreOperations.class);
 
+  /**
+   * The timeout message ABFS raises.
+   */
   public static final String E_TIMEOUT
       = "Operation could not be completed within the specified time";
 
+  /**
+   * Text to use in simulated failure exceptions.
+   */
   public static final String SIMULATED_FAILURE = "Simulated failure";
 
   /**
@@ -127,6 +133,10 @@ public class UnreliableStoreOperations implements StoreOperations {
    */
   private boolean trashDisabled;
 
+  /**
+   * Constructor.
+   * @param wrappedOperations operations to wrap.
+   */
   public UnreliableStoreOperations(final StoreOperations wrappedOperations) {
     this.wrappedOperations = wrappedOperations;
   }

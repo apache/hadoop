@@ -105,8 +105,9 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
 
   @Test
   public void testPrepareSomeDirs() throws Throwable {
-    // assert original count of dirs created == 1
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, 1);
+    // assert original count of dirs created == 2 : job and task manifest
+    final int initialCount = 2;
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, initialCount);
 
     final int dirCount = 8;
     final List<Path> dirs = subpaths(destDir, dirCount);
@@ -124,7 +125,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
     LOG.info("Job Statistics\n{}", ioStatisticsToPrettyString(iostats));
 
     // now dirCount new dirs are added.
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, 1 + dirCount);
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, initialCount + dirCount);
 
     // now rerun the same preparation sequence
     final CreateOutputDirectoriesStage s2 =
@@ -138,7 +139,7 @@ public class TestCreateOutputDirectoriesStage extends AbstractManifestCommitterT
         .containsExactlyInAnyOrderElementsOf(dirs);
     LOG.info("Job Statistics after second pass\n{}", ioStatisticsToPrettyString(iostats));
 
-    verifyStatisticCounterValue(iostats, OP_MKDIRS, 1 + dirCount * 2);
+    verifyStatisticCounterValue(iostats, OP_MKDIRS, initialCount + dirCount * 2);
     verifyStatisticCounterValue(iostats, OP_DELETE_FILE_UNDER_DESTINATION, 0);
     verifyStatisticCounterValue(iostats, OP_IS_FILE, 0);
 

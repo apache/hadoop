@@ -32,6 +32,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimite
 public class RateLimitingFactory {
 
   private static final RateLimiting UNLIMITED = new NoRateLimiting();
+
   /**
    * No Rate Limiting.
    */
@@ -73,11 +74,15 @@ public class RateLimitingFactory {
 
   /**
    * Create an instance.
+   * If the rate is 0; return the unlimited rate.
    * @param capacity capacity in permits/second.
    * @return limiter restricted to the given capacity.
    */
   public static RateLimiting create(int capacity) {
-    return new RestrictedRateLimiting(capacity);
+
+    return capacity == 0
+        ? unlimitedRate()
+        : new RestrictedRateLimiting(capacity);
   }
 
 }

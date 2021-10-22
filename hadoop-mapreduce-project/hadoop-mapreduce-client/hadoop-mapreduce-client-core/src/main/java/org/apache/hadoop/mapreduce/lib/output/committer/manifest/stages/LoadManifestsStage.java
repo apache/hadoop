@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
@@ -83,19 +84,20 @@ public class LoadManifestsStage extends
   protected LoadManifestsStage.Result executeStage(
       final Boolean prune) throws IOException {
 
+    final Path manifestDir = getTaskManifestDir();
     LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
         getName(),
-        getJobAttemptDir());
+        manifestDir);
     pruneManifests = prune;
     // build a list of all manifests in the JA directory.
-    msync(getJobAttemptDir());
-    final RemoteIterator<FileStatus> manifestFiles = listManifestsInJobAttemptDir();
+    msync(manifestDir);
+    final RemoteIterator<FileStatus> manifestFiles = listManifests();
 
     final List<TaskManifest> manifestList = loadAllManifests(manifestFiles);
     LOG.info("{}: Summary of {} manifests loaded in {}: {}",
         getName(),
         manifestList.size(),
-        getJobAttemptDir(),
+        manifestDir,
         summaryInfo);
 
     // collect any stats

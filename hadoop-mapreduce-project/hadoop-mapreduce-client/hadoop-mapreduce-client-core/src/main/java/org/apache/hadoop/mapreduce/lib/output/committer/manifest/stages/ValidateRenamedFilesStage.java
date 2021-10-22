@@ -30,11 +30,12 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.util.functional.TaskPool;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_VALIDATE_OUTPUT;
 import static org.apache.hadoop.thirdparty.com.google.common.collect.Iterables.concat;
 
@@ -136,27 +137,58 @@ public class ValidateRenamedFilesStage extends
     progress();
     // look validate the file.
     // raising an FNFE if the file isn't there.
-    FileStatus st = null;
-    Path path = entry.getDestPath();
+    FileStatus destStatus;
+    final Path sourcePath = entry.getSourcePath();
+    Path destPath = entry.getDestPath();
     try {
-      st = getFileStatus(path);
+      destStatus = getFileStatus(destPath);
 
       // it must be a file
-      if (!st.isFile()) {
-        throw new OutputValidationException(path,
-            "Expected a file, found " + st);
+      if (!destStatus.isFile()) {
+        throw new OutputValidationException(destPath,
+            "Expected a file renamed from " + sourcePath
+                + "; found " + destStatus);
       }
-      // of the expected length
-      if (st.getLen() != entry.getSize()) {
-        throw new OutputValidationException(path,
-            String.format("Expected a file of length %s"
-                    + " but found a file of length %s",
-                entry.getSize(),
-                st.getLen()));
+      final long sourceSize = entry.getSize();
+      final long destSize = destStatus.getLen();
+
+      // etags, if the source had one.
+      final String sourceEtag = entry.getEtag();
+      if (isNotBlank(sourceEtag)) {
+        final String destEtag = getEtag(destStatus);
+        if (!sourceEtag.equals(destEtag)) {
+          LOG.warn("Etag of dest file {}: {} does not match that of manifest entry {}",
+              destPath, destStatus, entry);
+          throw new OutputValidationException(destPath,
+              String.format("Expected the file"
+                      + " renamed from %s"
+                      + " with etag %s and length %s"
+                      + " but found a file with etag %s and length %d",
+                  sourcePath,
+                  sourceEtag,
+                  sourceSize,
+                  destEtag,
+                  destSize));
+
+        }
       }
+      // check the expected length after any etag validation
+      if (destSize != sourceSize) {
+        LOG.warn("Length of dest file {}: {} does not match that of manifest entry {}",
+            destPath, destStatus, entry);
+        throw new OutputValidationException(destPath,
+            String.format("Expected the file"
+                    + " renamed from %s"
+                    + " with length %d"
+                    + " but found a file of length %d",
+                sourcePath,
+                sourceSize,
+                destSize));
+      }
+
     } catch (FileNotFoundException e) {
       // file didn't exist
-      throw new OutputValidationException(path,
+      throw new OutputValidationException(destPath,
           "Expected a file, but it was not found", e);
     }
     addFileCommitted(entry);

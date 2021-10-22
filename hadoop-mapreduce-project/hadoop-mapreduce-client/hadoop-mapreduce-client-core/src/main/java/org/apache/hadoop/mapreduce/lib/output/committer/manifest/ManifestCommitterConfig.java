@@ -44,10 +44,8 @@ import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.SUCCESS
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_PROCESSORS_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.buildJobUUID;
@@ -148,12 +146,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   /**
    * Read operation rate limit per second..
    */
-  private final int readRate;
-
-  /**
-   * Write operation rate limit per second..
-   */
-  private final int writeRate;
+  private final int iopsRate;
 
   /**
    * Name for logging.
@@ -196,8 +189,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.dirs = new ManifestCommitterSupport.AttemptDirectories(outputPath,
         this.jobUniqueId, jobAttemptNumber);
 
-    this.readRate = conf.getInt(OPT_IO_READ_RATE, OPT_IO_READ_RATE_DEFAULT);
-    this.writeRate = conf.getInt(OPT_IO_WRITE_RATE, OPT_IO_WRITE_RATE_DEFAULT);
+    this.iopsRate = conf.getInt(OPT_IO_RATE, OPT_IO_RATE_DEFAULT);
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
@@ -269,14 +261,10 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         .withStageEventCallbacks(stageEventCallbacks)
         .withTaskAttemptDir(taskAttemptDir)
         .withTaskAttemptId(taskAttemptId)
-        .withTaskId(taskId);
+        .withTaskId(taskId)
+        .withIOLimiter(RateLimitingFactory.create(iopsRate))
+        .withDeleteTargetPaths(false);
 
-    if (readRate > 0) {
-      stageConfig.withReadLimiter(RateLimitingFactory.create(readRate));
-    }
-    if (writeRate > 0) {
-      stageConfig.withWriteLimiter(RateLimitingFactory.create(writeRate));
-    }
     return stageConfig;
   }
 
@@ -295,6 +283,11 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   public Path getJobAttemptDir() {
     return dirs.getJobAttemptDir();
   }
+
+  public Path getTaskManifestDir() {
+    return dirs.getTaskManifestDir();
+  }
+
 
   public Configuration getConf() {
     return conf;

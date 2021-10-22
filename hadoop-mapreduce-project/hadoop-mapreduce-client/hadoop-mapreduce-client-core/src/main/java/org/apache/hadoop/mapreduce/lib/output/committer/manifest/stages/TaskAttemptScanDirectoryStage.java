@@ -47,13 +47,13 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.Fi
  * Stage to scan a directory tree and build a task manifest.
  * This is executed by the task committer.
  */
-public final class ScanTaskAttemptDirectoryStage
+public final class TaskAttemptScanDirectoryStage
     extends AbstractJobCommitStage<Void, TaskManifest> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      ScanTaskAttemptDirectoryStage.class);
+      TaskAttemptScanDirectoryStage.class);
 
-  public ScanTaskAttemptDirectoryStage(
+  public TaskAttemptScanDirectoryStage(
       final StageConfig stageConfig) {
     super(true, stageConfig, OP_STAGE_TASK_SCAN_DIRECTORY, false);
   }

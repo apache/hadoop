@@ -47,8 +47,6 @@ public class SetupTaskStage extends
    */
   @Override
   protected Path executeStage(final String name) throws IOException {
-    directoryMustExist("Verify Job attempt dir",
-        getJobAttemptDir());
     return createNewDirectory("Task setup " + name,
         requireNonNull(getTaskAttemptDir(), "No task attempt directory"));
   }

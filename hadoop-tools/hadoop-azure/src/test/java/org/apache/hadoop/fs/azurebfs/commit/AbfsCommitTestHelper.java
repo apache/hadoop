@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 
 /**
  * Helper methods for committer tests on ABFS.
@@ -30,7 +31,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 class AbfsCommitTestHelper {
 
   /**
-   * Prepare the test configuration
+   * Prepare the test configuration.
    * @param contractTestBinding test binding
    * @return an extraced and patched configuration.
    */
@@ -38,8 +39,13 @@ class AbfsCommitTestHelper {
       ABFSContractTestBinding contractTestBinding) {
     final Configuration conf = ManifestCommitterTestSupport.enableTrash(
         contractTestBinding.getRawConfiguration());
+
+    // use ABFS Store operations
     conf.set(OPT_STORE_OPERATIONS_CLASS,
         AbfsManifestStoreOperations.NAME);
+
+    // validate output, including etags
+    conf.setBoolean(OPT_VALIDATE_OUTPUT, true);
     return conf;
   }
 }

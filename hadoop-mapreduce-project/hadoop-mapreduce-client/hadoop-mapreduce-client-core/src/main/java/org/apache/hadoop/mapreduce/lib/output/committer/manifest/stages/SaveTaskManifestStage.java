@@ -67,12 +67,11 @@ public class SaveTaskManifestStage extends
   protected Path executeStage(final TaskManifest manifest)
       throws IOException {
 
-    final Path jobAttemptDir = directoryMustExist("Job attempt dir",
-        getJobAttemptDir());
+    final Path manifestDir = getTaskManifestDir();
     // final manifest file is by task ID
-    Path manifestFile = manifestPathForTask(jobAttemptDir,
+    Path manifestFile = manifestPathForTask(manifestDir,
         getRequiredTaskId());
-    Path manifestTempFile = manifestTempPathForTaskAttempt(jobAttemptDir,
+    Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
         getRequiredTaskAttemptId());
     LOG.info("{}: Saving manifest file to {}", getName(), manifestFile);
     save(manifest, manifestTempFile, manifestFile);

@@ -33,7 +33,8 @@ import org.apache.hadoop.util.JsonSerialization;
  * Stub Store operations.
  * Everything "works" provided you don't look too close.
  */
-public class StubStoreOperations implements StoreOperations {
+public class StubStoreOperations extends StoreOperations {
+
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
@@ -86,6 +87,7 @@ public class StubStoreOperations implements StoreOperations {
 
   }
 
+
   @Override
   public String getEtag(FileStatus status) {
     return null;
@@ -96,7 +98,7 @@ public class StubStoreOperations implements StoreOperations {
     return new MoveToTrashResult(MoveToTrashOutcome.RENAMED_TO_TRASH, null);
   }
 
-  @Override
+    @Override
   public void close() throws IOException {
 
   }

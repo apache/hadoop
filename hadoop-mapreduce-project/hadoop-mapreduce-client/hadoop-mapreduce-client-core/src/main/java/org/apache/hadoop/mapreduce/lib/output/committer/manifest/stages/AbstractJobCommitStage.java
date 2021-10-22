@@ -424,6 +424,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final Path path)
       throws IOException {
     LOG.trace("{}: getFileStatus('{}')", getName(), path);
+    requireNonNull(path,
+        () -> String.format("%s: Null path for getFileStatus() call", getName()));
     return trackDuration(getIOStatistics(), OP_GET_FILE_STATUS, () -> {
       acquireReadPermits(PERMIT_READ_GET_FILE_STATUS);
       return operations.getFileStatus(path);
@@ -540,14 +542,14 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   }
 
   /**
-   * List all the manifests in the job attempt dir.
+   * List all the manifests in the task manifest dir.
    * @return a iterator of manifests.
    * @throws IOException IO Failure.
    */
-  protected final RemoteIterator<FileStatus> listManifestsInJobAttemptDir()
+  protected final RemoteIterator<FileStatus> listManifests()
       throws IOException {
     return RemoteIterators.filteringRemoteIterator(
-        listStatusIterator(getJobAttemptDir()),
+        listStatusIterator(getTaskManifestDir()),
         st -> st.getPath().toUri().toString().endsWith(MANIFEST_SUFFIX));
   }
 
@@ -576,6 +578,8 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       final String operation,
       final Path path) throws IOException {
     LOG.trace("{}: {} createNewDirectory('{}')", getName(), operation, path);
+    requireNonNull(path,
+        () -> String.format("%s: Null path for operation %s", getName(), operation));
     // check for dir existence before trying to create.
     try {
       final FileStatus status = getFileStatus(path);
@@ -747,6 +751,15 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   }
 
   /**
+   * Directory to put task manifests into.
+   * @return a path under the job attempt dir.
+   */
+  protected final Path getTaskManifestDir() {
+    return stageConfig.getTaskManifestDir();
+  }
+
+
+  /**
    * Task attempt dir.
    */
   protected final Path getTaskAttemptDir() {
@@ -843,7 +856,19 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     return new FileOrDirEntry(status.getPath(),
         dest,
         status.getLen(),
-        operations.getEtag(status));
+        getEtag(status));
+  }
+
+  /**
+   * Get the etag of a FileStatus instance if the
+   * StoreOperations implementation can extract it
+   * from the listing/getFileStatus call.
+   * The ABFS implementation can do this.
+   * @param status file status
+   * @return an etag or "" or null
+   */
+  protected String getEtag(FileStatus status) {
+    return operations.getEtag(status);
   }
 
 }

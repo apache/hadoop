@@ -65,7 +65,6 @@ import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
@@ -75,8 +74,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.NAME_FORMAT_JOB_ATTEMPT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_READ_RATE_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_WRITE_RATE_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
@@ -766,8 +764,7 @@ public abstract class AbstractManifestCommitterTest
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
         .withOperations(getStoreOperations())
         .withProgressable(getProgressCounter())
-        .withReadLimiter(RateLimitingFactory.create(OPT_IO_READ_RATE_DEFAULT))
-        .withWriteLimiter(RateLimitingFactory.create(OPT_IO_WRITE_RATE_DEFAULT));
+        .withIOLimiter(RateLimitingFactory.create(OPT_IO_RATE_DEFAULT));
 
     // if there's a task attempt ID set, set up its details
     if (taskIndex >= 0) {

@@ -30,7 +30,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 /**
  * Commit a task attempt.
  * Scan the task attempt directories through
- * {@link ScanTaskAttemptDirectoryStage}
+ * {@link TaskAttemptScanDirectoryStage}
  * and then save to the task manifest path at
  * {@link SaveTaskManifestStage}.
  */
@@ -55,8 +55,8 @@ public class CommitTaskStage extends
       throws IOException {
 
     // execute the scan
-    final ScanTaskAttemptDirectoryStage scanStage =
-        new ScanTaskAttemptDirectoryStage(getStageConfig());
+    final TaskAttemptScanDirectoryStage scanStage =
+        new TaskAttemptScanDirectoryStage(getStageConfig());
     TaskManifest manifest = scanStage.apply(arguments);
 
     // add the scan as task commit. It's not quite, as it doesn't include

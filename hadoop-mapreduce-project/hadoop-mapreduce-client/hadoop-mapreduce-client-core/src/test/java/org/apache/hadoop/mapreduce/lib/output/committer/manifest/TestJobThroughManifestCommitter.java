@@ -212,13 +212,6 @@ public class TestJobThroughManifestCommitter
   }
 
   @Test
-  public void test_0050_setupTaskFailsNoJob() throws Throwable {
-    describe("Set up a task; job must have been set up first");
-    intercept(FileNotFoundException.class, "", () ->
-        new SetupTaskStage(ta00Config).apply(""));
-  }
-
-  @Test
   public void test_0100_setupJobStage() throws Throwable {
     describe("Set up a job");
     verifyPath("Job attempt dir",
@@ -318,7 +311,7 @@ public class TestJobThroughManifestCommitter
     intercept(FileNotFoundException.class, () ->
         new CommitTaskStage(ta11Config).apply(null));
     assertPathDoesNotExist("task manifest",
-        manifestPathForTask(dirs.getJobAttemptDir(),
+        manifestPathForTask(dirs.getTaskManifestDir(),
             TASK_IDS.getTaskId(TASK1)));
   }
 
@@ -432,7 +425,7 @@ public class TestJobThroughManifestCommitter
         new CommitTaskStage(ta11Config).apply(null));
 
     // and the manifest MUST be unchanged from the previous stage
-    Path manifestPathForTask1 = manifestPathForTask(dirs.getJobAttemptDir(),
+    Path manifestPathForTask1 = manifestPathForTask(dirs.getTaskManifestDir(),
         TASK_IDS.getTaskId(TASK1));
     verifyManifestTaskAttemptID(
         TaskManifest.load(getFileSystem(), manifestPathForTask1),

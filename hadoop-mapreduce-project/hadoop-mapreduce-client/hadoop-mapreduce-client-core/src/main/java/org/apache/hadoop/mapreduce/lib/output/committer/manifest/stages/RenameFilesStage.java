@@ -94,7 +94,7 @@ public class RenameFilesStage extends
         OP_STAGE_JOB_COMMIT);
 
     LOG.info("{}: Executing Manifest Job Commit with manifests in {}",
-        getName(), getJobAttemptDir());
+        getName(), getTaskManifestDir());
 
     LOG.info("{}: Committing the output of successful tasks", getName());
     // first step is to aggregate the output of all manifests into a single
@@ -140,7 +140,7 @@ public class RenameFilesStage extends
     // report progress back
     progress();
     // do the rename
-    commitFile(entry, false, true);
+    commitFile(entry, getStageConfig().getDeleteTargetPaths(), true);
 
     // update the list and IOStats
     synchronized (this) {

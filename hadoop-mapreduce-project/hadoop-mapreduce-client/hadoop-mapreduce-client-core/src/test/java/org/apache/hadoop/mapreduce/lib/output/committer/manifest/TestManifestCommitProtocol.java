@@ -970,6 +970,8 @@ public class TestManifestCommitProtocol
       boolean expectSuccess) throws IOException {
     File file = new File(getReportDir(),
         createJobSummaryFilename(jobUniqueId));
+    ContractTestUtils.assertIsFile(FileSystem.getLocal(getConfiguration()),
+        new Path(file.toURI()));
     ManifestSuccessData report = ManifestSuccessData.serializer().load(file);
     LOG.info("Report for job {}:\n{}", jobUniqueId, report.toJson());
     Assertions.assertThat(report.getSuccess())

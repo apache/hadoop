@@ -66,11 +66,9 @@ public class SaveSuccessFileStage extends
   @Override
   protected Path executeStage(final ManifestSuccessData successData)
       throws IOException {
-    final Path jobAttemptDir = directoryMustExist("Job attempt dir",
-        getJobAttemptDir());
     // Save the marker
     Path successFile = getStageConfig().getJobSuccessMarkerPath();
-    Path successTempFile = new Path(jobAttemptDir, SUCCESS_MARKER + TMP_SUFFIX);
+    Path successTempFile = new Path(getJobAttemptDir(), SUCCESS_MARKER + TMP_SUFFIX);
     LOG.debug("{}: Saving _SUCCESS file to {} via {}", successFile,
         getName(),
         successTempFile);

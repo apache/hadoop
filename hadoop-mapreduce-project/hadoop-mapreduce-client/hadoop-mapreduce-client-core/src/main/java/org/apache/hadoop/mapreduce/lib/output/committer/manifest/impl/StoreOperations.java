@@ -35,8 +35,9 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * FileSystem operations which are needed to generate the task manifest.
+ * The specific choice of which implementation to use is configurable.
  */
-public interface StoreOperations extends Closeable {
+public abstract class StoreOperations implements Closeable {
 
   /**
    * Bind to the filesystem.
@@ -46,7 +47,7 @@ public interface StoreOperations extends Closeable {
    * @param path actual path under FS.
    * @throws IOException if there are binding problems.
    */
-  default void bindToFileSystem(FileSystem fileSystem, Path path) throws IOException {
+  public void bindToFileSystem(FileSystem fileSystem, Path path) throws IOException {
 
   }
 
@@ -56,11 +57,11 @@ public interface StoreOperations extends Closeable {
    * @return status
    * @throws IOException failure.
    */
-  FileStatus getFileStatus(Path path) throws IOException;
+  public abstract FileStatus getFileStatus(Path path) throws IOException;
 
   /**
    * Is a path a file? Used during directory creation.
-   * The default is a copy & paste of FileSystem.isFile();
+   * The is a copy & paste of FileSystem.isFile();
    * {@code StoreOperationsThroughFileSystem} calls into
    * the FS direct so that stores which optimize their probes
    * can save on IO.
@@ -68,7 +69,7 @@ public interface StoreOperations extends Closeable {
    * @return true if the path exists and resolves to a file
    * @throws IOException failure other than FileNotFoundException
    */
-  default boolean isFile(Path path) throws IOException {
+  public boolean isFile(Path path) throws IOException {
     try {
       return getFileStatus(path).isFile();
     } catch (FileNotFoundException e) {
@@ -85,7 +86,7 @@ public interface StoreOperations extends Closeable {
    * @return true if the path was deleted.
    * @throws IOException failure.
    */
-  boolean delete(Path path, boolean recursive)
+  public abstract boolean delete(Path path, boolean recursive)
       throws IOException;
 
   /**
@@ -95,8 +96,7 @@ public interface StoreOperations extends Closeable {
    * @return true if the directory was created.
    * @throws IOException failure.
    */
-  boolean mkdirs(Path path)
-      throws IOException;
+  public abstract boolean mkdirs(Path path) throws IOException;
 
   /**
    * Forward to {@link FileSystem#rename(Path, Path)}.
@@ -106,19 +106,19 @@ public interface StoreOperations extends Closeable {
    * @return true if the directory was created.
    * @throws IOException failure.
    */
-  boolean renameFile(Path source, Path dest)
+  public abstract boolean renameFile(Path source, Path dest)
       throws IOException;
 
   /**
    * Commit one file.
-   * The default uses {@link #renameFile(Path, Path)}.
+   * The uses {@link #renameFile(Path, Path)}.
    * If etags were collected during task commit, these will be
    * in the entries passed in here.
    * @param entry entry to commit
    * @return the result of rename()
-   * @throws IOException
+   * @throws IOException failure.
    */
-  default boolean commitFile(FileOrDirEntry entry) throws IOException {
+  public boolean commitFile(FileOrDirEntry entry) throws IOException {
     return renameFile(entry.getSourcePath(), entry.getDestPath());
   }
 
@@ -128,7 +128,7 @@ public interface StoreOperations extends Closeable {
    * @return an iterator over the results.
    * @throws IOException any immediate failure.
    */
-  RemoteIterator<FileStatus> listStatusIterator(Path path)
+  public abstract RemoteIterator<FileStatus> listStatusIterator(Path path)
       throws IOException;
 
   /**
@@ -141,7 +141,7 @@ public interface StoreOperations extends Closeable {
    * @return the manifest
    * @throws IOException failure to load/parse
    */
-  TaskManifest loadTaskManifest(
+  public abstract TaskManifest loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException;
 
@@ -153,22 +153,24 @@ public interface StoreOperations extends Closeable {
    * @param overwrite should create(overwrite=true) be used?
    * @throws IOException failure to load/parse
    */
-  <T extends AbstractManifestData<T>> void save(T manifestData,
-      Path path, boolean overwrite) throws IOException;
+  public abstract <T extends AbstractManifestData<T>> void save(
+      T manifestData,
+      Path path,
+      boolean overwrite) throws IOException;
 
   /**
    * Is trash enabled for the given store.
    * @param path path to move, assumed to be _temporary
    * @return true iff trash is enabled.
    */
-  boolean isTrashEnabled(Path path);
+  public abstract boolean isTrashEnabled(Path path);
 
   /**
    * Make an msync() call; swallow when unsupported.
    * @param path path
    * @throws IOException IO failure
    */
-  void msync(Path path) throws IOException;
+  public abstract void msync(Path path) throws IOException;
 
   /**
    * Move a directory to trash, with the jobID as its name.
@@ -177,7 +179,7 @@ public interface StoreOperations extends Closeable {
    * @param path path to move, assumed to be _temporary
    * @return the outcome.
    */
-  MoveToTrashResult moveToTrash(String jobId, Path path);
+  public abstract MoveToTrashResult moveToTrash(String jobId, Path path);
 
   /**
    * Extract an etag from a status if the conditions are met.
@@ -192,12 +194,12 @@ public interface StoreOperations extends Closeable {
    * @param status status, which may be of any subclass of FileStatus.
    * @return either a valid etag, or null or "".
    */
-  String getEtag(FileStatus status);
+  public abstract String getEtag(FileStatus status);
 
   /**
    * Enum of outcomes.
    */
-  enum MoveToTrashOutcome {
+  public enum MoveToTrashOutcome {
     DISABLED("Disabled"),
     RENAMED_TO_TRASH("Renamed under trash"),
     FAILURE("Rename failed");
@@ -220,7 +222,7 @@ public interface StoreOperations extends Closeable {
    * Result.
    * if renamed == false then failureIOE must be non-null.
    */
-  final class MoveToTrashResult {
+  public static final class MoveToTrashResult {
 
     private final MoveToTrashOutcome outcome;
     private final IOException exception;

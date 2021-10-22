@@ -42,6 +42,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_TASK_ATTEMPT_SUBDIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_TASK_MANIFEST_SUBDIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.COUNTER_STATISTICS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.DURATION_STATISTICS;
@@ -148,26 +150,26 @@ public final class ManifestCommitterSupport {
 
   /**
    * Get the path in the job attempt dir for a manifest for a task.
-   * @param jobAttemptDir job attempt dir.
+   * @param manifestDir manifest directory
    * @param taskId taskID.
    * @return the final path to rename the manifest file to
    */
-  public static Path manifestPathForTask(Path jobAttemptDir, String taskId) {
+  public static Path manifestPathForTask(Path manifestDir, String taskId) {
 
-    return new Path(jobAttemptDir, taskId + MANIFEST_SUFFIX);
+    return new Path(manifestDir, taskId + MANIFEST_SUFFIX);
   }
 
   /**
    * Get the path in the job attempt dir for the temp path to save a
    * task attempt's manifest before renaming it to the
    * path defined by {@link #manifestPathForTask(Path, String)}.
-   * @param jobAttemptDir job attempt dir.
+   * @param manifestDir manifest directory
    * @param taskAttemptId task attempt ID.
    * @return the path to save/load the manifest.
    */
-  public static Path manifestTempPathForTaskAttempt(Path jobAttemptDir,
+  public static Path manifestTempPathForTaskAttempt(Path manifestDir,
       String taskAttemptId) {
-    return new Path(jobAttemptDir,
+    return new Path(manifestDir,
         taskAttemptId + MANIFEST_SUFFIX + TMP_SUFFIX);
   }
 
@@ -283,9 +285,14 @@ public final class ManifestCommitterSupport {
     private final Path jobAttemptTaskSubDir;
 
     /**
-     * temp directory under job test dir.
+     * temp directory under job dest dir.
      */
     private final Path outputTempSubDir;
+
+    /**
+     * Directory to save manifests into.
+     */
+    private final Path taskManifestDir;
 
     /**
      * Build the attempt directories.
@@ -309,7 +316,9 @@ public final class ManifestCommitterSupport {
           String.format(JOB_ATTEMPT_DIR_FORMAT_STR, jobAttemptNumber));
 
       // subdir for task attempts.
-      this.jobAttemptTaskSubDir = new Path(jobAttemptDir, PENDING_DIR_NAME);
+      this.jobAttemptTaskSubDir = new Path(jobAttemptDir, JOB_TASK_ATTEMPT_SUBDIR);
+
+      this.taskManifestDir = new Path(jobAttemptDir, JOB_TASK_MANIFEST_SUBDIR);
     }
 
     public Path getOutputPath() {
@@ -334,6 +343,10 @@ public final class ManifestCommitterSupport {
 
     public Path getOutputTempSubDir() {
       return outputTempSubDir;
+    }
+
+    public Path getTaskManifestDir() {
+      return taskManifestDir;
     }
   }
 }

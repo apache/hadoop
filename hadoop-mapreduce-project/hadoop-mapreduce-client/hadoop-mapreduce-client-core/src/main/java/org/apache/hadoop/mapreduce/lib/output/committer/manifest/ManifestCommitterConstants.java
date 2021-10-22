@@ -74,6 +74,17 @@ public final class ManifestCommitterConstants {
   public static final String JOB_ATTEMPT_DIR_FORMAT_STR = "%d";
 
   /**
+   * Name of directory under job attempt dir for manifests.
+   */
+  public static final String JOB_TASK_MANIFEST_SUBDIR = "manifests";
+
+  /**
+   * Name of directory under job attempt dir for task attempts.
+   */
+  public static final String JOB_TASK_ATTEMPT_SUBDIR = "tasks";
+
+
+  /**
    * Committer classname as recorded in the committer _SUCCESS file.
    */
   public static final String MANIFEST_COMMITTER_CLASSNAME =
@@ -156,26 +167,15 @@ public final class ManifestCommitterConstants {
   public static final int OPT_IO_PROCESSORS_DEFAULT = 64;
 
   /**
-   * Rate limit in operations/second for read operations.
+   * Rate limit in operations/second for IO operations.
    * Value: {@value}.
    */
-  public static final String OPT_IO_READ_RATE = OPT_PREFIX + "io.read.rate";
+  public static final String OPT_IO_RATE = OPT_PREFIX + "io.rate";
 
   /**
    * Default value:  {@value}.
    */
-  public static final int OPT_IO_READ_RATE_DEFAULT = 10000;
-
-  /**
-   * Rate limit in operations/second for write operations.
-   * Value: {@value}.
-   */
-  public static final String OPT_IO_WRITE_RATE = OPT_PREFIX + "io.write.rate";
-
-  /**
-   * Default value:  {@value}.
-   */
-  public static final int OPT_IO_WRITE_RATE_DEFAULT = 10000;
+  public static final int OPT_IO_RATE_DEFAULT = 10000;
 
   /**
    * Directory for saving job summary reports.

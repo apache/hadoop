@@ -52,6 +52,7 @@ public class SetupJobStage extends
     final Path path = getJobAttemptDir();
     LOG.info("{}: Creating Job Attempt directory {}", getName(), path);
     createNewDirectory("Job setup", path);
+    createNewDirectory("Creating task manifest dir", getTaskManifestDir());
     // delete any success marker if so instructed.
     if (deleteMarker) {
       delete(getStageConfig().getJobSuccessMarkerPath(), false);

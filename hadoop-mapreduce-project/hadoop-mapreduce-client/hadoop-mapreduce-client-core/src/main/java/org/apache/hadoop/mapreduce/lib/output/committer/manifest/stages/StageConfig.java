@@ -105,6 +105,17 @@ public class StageConfig {
   private Path taskAttemptDir;
 
   /**
+   * directory where task manifests must go.
+   */
+  private Path taskManifestDir;
+
+  /**
+   * Subdir under the job attempt dir where task
+   * attempts will have subdirectories.
+   */
+  private Path jobAttemptTaskSubDir;
+
+  /**
    * Callbacks to update store.
    * This is not made visible to the stages; they must
    * go through the superclass which
@@ -136,14 +147,15 @@ public class StageConfig {
       ThreadLocal.withInitial(TaskManifest::serializer);
 
   /**
-   * Rate limiter for read operations.
+   * Rate limiter for operations.
    */
-  private RateLimiting readLimiter = RateLimitingFactory.unlimitedRate();
+  private RateLimiting ioLimiter = RateLimitingFactory.unlimitedRate();
 
   /**
-   * Rate limiter for read operations.
+   * Delete target paths on commit? Stricter, but
+   * higher IO cost.
    */
-  private RateLimiting writeLimiter = RateLimitingFactory.unlimitedRate();
+  private boolean deleteTargetPaths = false;
 
   /**
    * Name for logging.
@@ -215,6 +227,44 @@ public class StageConfig {
   }
 
   /**
+   * Directory to put task manifests into.
+   * @return a path under the job attempt dir.
+   */
+  public Path getTaskManifestDir() {
+    return taskManifestDir;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withTaskManifestDir(Path value) {
+    checkOpen();
+    taskManifestDir = value;
+    return this;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withJobAttemptTaskSubDir(Path value) {
+    jobAttemptTaskSubDir = value;
+    return this;
+  }
+
+  /**
+   * Get the path to the subdirectory under $jobID where task
+   * attempts are. List this dir to find all task attempt dirs.
+   * @return a path under the job attempt dir.
+   */
+  public Path getJobAttemptTaskSubDir() {
+    return jobAttemptTaskSubDir;
+  }
+
+  /**
    * Set the job directories from the attempt directories
    * information. Does not set task attempt fields.
    * @param dirs source of directories.
@@ -225,8 +275,10 @@ public class StageConfig {
 
     checkOpen();
     withJobAttemptDir(dirs.getJobAttemptDir())
+        .withJobAttemptTaskSubDir(dirs.getJobAttemptTaskSubDir())
         .withDestinationDir(dirs.getOutputPath())
-        .withOutputTempSubDir(dirs.getOutputTempSubDir());
+        .withOutputTempSubDir(dirs.getOutputTempSubDir())
+        .withTaskManifestDir(dirs.getTaskManifestDir());
 
     return this;
   }
@@ -350,20 +402,9 @@ public class StageConfig {
    * @param value new value
    * @return the builder
    */
-  public StageConfig withReadLimiter(RateLimiting value) {
+  public StageConfig withIOLimiter(RateLimiting value) {
     checkOpen();
-    readLimiter = Objects.requireNonNull(value);
-    return this;
-  }
-
-  /**
-   * Set write limiter value.
-   * @param value new value
-   * @return the builder
-   */
-  public StageConfig withWriteLimiter(RateLimiting value) {
-    checkOpen();
-    writeLimiter = Objects.requireNonNull(value);
+    ioLimiter = Objects.requireNonNull(value);
     return this;
   }
 
@@ -490,15 +531,6 @@ public class StageConfig {
   }
 
   /**
-   * Get the path to the subdirectory under $jobID where task
-   * attempts are. List this dir to find all task attempt dirs.
-   * @return a path under the job attempt dir.
-   */
-  public Path getJobAttemptTaskSubDir() {
-    return new Path(jobAttemptDir, PENDING_DIR_NAME);
-  }
-
-  /**
    * Get a thread local task manifest serializer.
    * @return a serializer.
    */
@@ -507,19 +539,26 @@ public class StageConfig {
   }
 
   /**
-   * Read limiter.
-   * @return Read limiter.
+   * Set builder value.
+   * @param value new value
+   * @return the builder
    */
-  public RateLimiting getReadLimiter() {
-    return readLimiter;
+  public StageConfig withDeleteTargetPaths(boolean value) {
+    checkOpen();
+    deleteTargetPaths = value;
+    return this;
+  }
+
+  public boolean getDeleteTargetPaths() {
+    return deleteTargetPaths;
   }
 
   /**
-   * Write limiter.
-   * @return Write limiter.
+   * Read limiter.
+   * @return Read limiter.
    */
-  public RateLimiting getWriteLimiter() {
-    return writeLimiter;
+  public RateLimiting getIoLimiter() {
+    return ioLimiter;
   }
 
   /**
@@ -531,7 +570,7 @@ public class StageConfig {
    * @return delay in milliseconds; 0 if none.
    */
   public int acquireReadPermits(int permits) {
-    return readLimiter.acquire(permits);
+    return ioLimiter.acquire(permits);
   }
 
   /**
@@ -543,7 +582,7 @@ public class StageConfig {
    * @return delay in milliseconds; 0 if none.
    */
   public int acquireWritePermits(int permits) {
-    return writeLimiter.acquire(permits);
+    return acquireReadPermits(permits);
   }
 
   /**
