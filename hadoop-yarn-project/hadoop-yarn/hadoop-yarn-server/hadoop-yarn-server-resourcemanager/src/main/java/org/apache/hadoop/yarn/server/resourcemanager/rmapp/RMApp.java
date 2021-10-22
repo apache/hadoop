@@ -309,4 +309,6 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return True/False to confirm whether app is in final states
    */
   boolean isAppInCompletedStates();
+
+  String getRealUser();
 }

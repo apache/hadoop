@@ -92,9 +92,46 @@ public abstract class ApplicationStateData {
   
   public static ApplicationStateData newInstance(long submitTime,
       long startTime, ApplicationSubmissionContext context, String user) {
-    return newInstance(submitTime, startTime, context, user, null);
+    return newInstance(submitTime, startTime, context, user,
+        (CallerContext) null);
   }
-  
+
+  public static ApplicationStateData newInstance(long submitTime,
+      long startTime, String user, String realUser,
+      ApplicationSubmissionContext submissionContext, RMAppState state,
+      String diagnostics, long launchTime, long finishTime,
+      CallerContext callerContext) {
+    ApplicationStateData appState =
+        newInstance(submitTime, startTime, user, submissionContext, state,
+            diagnostics, launchTime, finishTime, callerContext);
+    if (realUser != null) {
+      appState.setRealUser(realUser);
+    }
+    return appState;
+  }
+
+  public static ApplicationStateData newInstance(long submitTime,
+      long startTime, String user, String realUser,
+      ApplicationSubmissionContext submissionContext, RMAppState state,
+      String diagnostics, long launchTime, long finishTime,
+      CallerContext callerContext,
+      Map<ApplicationTimeoutType, Long> applicationTimeouts) {
+    ApplicationStateData appState =
+        newInstance(submitTime, startTime, user, submissionContext, state,
+            diagnostics, launchTime, finishTime, callerContext, applicationTimeouts);
+    if (realUser != null) {
+      appState.setRealUser(realUser);
+    }
+    return appState;
+  }
+
+  public static ApplicationStateData newInstance(long submitTime,
+      long startTime, ApplicationSubmissionContext context, String user,
+      String realUser, CallerContext callerContext) {
+    return newInstance(submitTime, startTime, user, realUser, context, null, "",
+        0, 0, callerContext);
+  }
+
   public int getAttemptCount() {
     return attempts.size();
   }
@@ -213,4 +250,8 @@ public abstract class ApplicationStateData {
   @Public
   public abstract void setApplicationTimeouts(
       Map<ApplicationTimeoutType, Long> applicationTimeouts);
+
+  public abstract String getRealUser();
+
+  public abstract void setRealUser(String realUser);
 }

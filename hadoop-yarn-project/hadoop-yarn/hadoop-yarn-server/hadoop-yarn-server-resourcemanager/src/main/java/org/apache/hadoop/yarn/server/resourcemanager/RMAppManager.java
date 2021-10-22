@@ -322,16 +322,26 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  @SuppressWarnings("unchecked")
+  @VisibleForTesting
+  @Deprecated
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
       String user) throws YarnException {
+    submitApplication(submissionContext, submitTime,
+        UserGroupInformation.createRemoteUser(user));
+  }
+
+  @VisibleForTesting
+  @SuppressWarnings("unchecked")
+  protected void submitApplication(
+      ApplicationSubmissionContext submissionContext, long submitTime,
+      UserGroupInformation userUgi) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     // Passing start time as -1. It will be eventually set in RMAppImpl
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
-        submissionContext, submitTime, user, false, -1);
+        submissionContext, submitTime, userUgi, false, -1);
     try {
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
@@ -364,18 +374,30 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationSubmissionContext appContext =
         appState.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
+    UserGroupInformation userUgi = null;
+    if (appState.getRealUser() != null) {
+      UserGroupInformation realUserUgi = null;
+      realUserUgi =
+          UserGroupInformation.createRemoteUser(appState.getRealUser());
+      userUgi = UserGroupInformation.createProxyUser(appState.getUser(),
+          realUserUgi);
+    } else {
+      userUgi = UserGroupInformation.createRemoteUser(appState.getUser());
+    }
 
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true, appState.getStartTime());
+            userUgi, true, appState.getStartTime());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery, long startTime) throws YarnException {
+      UserGroupInformation userUgi, boolean isRecovery, long startTime)
+      throws YarnException {
+    String user = userUgi.getShortUserName();
     // Do queue mapping
     if (!isRecovery) {
       // Do queue mapping
@@ -395,7 +417,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
     // Verify and get the update application priority and set back to
     // submissionContext
-    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(user);
 
     // Application priority needed to be validated only while submitting. During
     // recovery, validated priority could be recovered from submission context.
@@ -437,7 +458,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Create RMApp
     RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
-            submissionContext.getApplicationName(), user,
+            submissionContext.getApplicationName(), userUgi,
             submissionContext.getQueue(),
             submissionContext, this.scheduler, this.masterService,
             submitTime, submissionContext.getApplicationType(),

@@ -133,6 +133,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final RMContext rmContext;
   private final Configuration conf;
   private final String user;
+  private final UserGroupInformation userUgi;
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
   private final Dispatcher dispatcher;
@@ -426,7 +427,18 @@ public class RMAppImpl implements RMApp, Recoverable {
       ApplicationMasterService masterService, long submitTime,
       String applicationType, Set<String> applicationTags,
       List<ResourceRequest> amReqs, long startTime) {
+    this(applicationId, rmContext, config, name,
+       (user != null ? UserGroupInformation.createRemoteUser(user) : null),
+        queue, submissionContext, scheduler, masterService, submitTime,
+        applicationType, applicationTags, amReqs, startTime);
+  }
 
+  public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
+      Configuration config, String name, UserGroupInformation userUgi, String queue,
+      ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime,
+      String applicationType, Set<String> applicationTags,
+      List<ResourceRequest> amReqs, long startTime) {
     this.systemClock = SystemClock.getInstance();
 
     this.applicationId = applicationId;
@@ -435,7 +447,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.dispatcher = rmContext.getDispatcher();
     this.handler = dispatcher.getEventHandler();
     this.conf = config;
-    this.user = user;
+    this.user = (userUgi != null) ? userUgi.getShortUserName() : null;
+    this.userUgi = userUgi;
     this.queue = queue;
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
@@ -1321,7 +1334,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     ApplicationStateData appState =
         ApplicationStateData.newInstance(this.submitTime, this.startTime,
-            this.user, this.submissionContext,
+            this.getUser(), this.getRealUser(), this.submissionContext,
             stateToBeStored, diags, this.launchTime, this.storedFinishTime,
             this.callerContext);
     appState.setApplicationTimeouts(this.applicationTimeouts);
@@ -2083,5 +2096,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   protected void onInvalidStateTransition(RMAppEventType rmAppEventType,
               RMAppState state){
       /* TODO fail the application on the failed transition */
+  }
+
+  @Override
+  public String getRealUser() {
+    UserGroupInformation realUserUgi = this.userUgi.getRealUser();
+    return (realUserUgi != null) ? realUserUgi.getShortUserName() : null;
   }
 }
