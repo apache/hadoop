@@ -176,7 +176,7 @@ public class CleanupJobStage extends
         }
       }
       // Now the top-level deletion; exception gets saved
-      exception = rmOneDir(baseDir);
+      exception = deleteOneDir(baseDir);
       if (exception != null) {
         // failure, report and continue
         LOG.warn("{}: Deleting job directory {} failed: moving to trash", getName(), baseDir);
@@ -256,18 +256,18 @@ public class CleanupJobStage extends
     updateAuditContext(stageName);
     // update the progress callback in case delete is really slow.
     progress();
-    rmOneDir(status.getPath());
+    deleteOneDir(status.getPath());
   }
 
   /**
-   * Remove a directory.
+   * Delete a directory.
    * The {@link #deleteFailureCount} counter.
    * is incremented on every failure.
    * @param dir directory
    * @throws IOException if an IOE was raised
    * @return any IOE raised.
    */
-  private IOException rmOneDir(final Path dir)
+  private IOException deleteOneDir(final Path dir)
       throws IOException {
 
     deleteDirCount.incrementAndGet();
@@ -340,6 +340,26 @@ public class CleanupJobStage extends
       this.moveToTrash = moveToTrash;
     }
 
+    public String getStatisticName() {
+      return statisticName;
+    }
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public boolean isDeleteTaskAttemptDirsInParallel() {
+      return deleteTaskAttemptDirsInParallel;
+    }
+
+    public boolean isSuppressExceptions() {
+      return suppressExceptions;
+    }
+
+    public boolean isMoveToTrash() {
+      return moveToTrash;
+    }
+
     @Override
     public String toString() {
       return "Arguments{" +
@@ -352,6 +372,15 @@ public class CleanupJobStage extends
           + '}';
     }
   }
+
+  /**
+   * Static disabled arguments.
+   */
+  public static final Arguments DISABLED = new Arguments(OP_STAGE_JOB_CLEANUP,
+      false,
+      false,
+      false,
+      false);
 
   /**
    * Build an options argument from a configuration, using the

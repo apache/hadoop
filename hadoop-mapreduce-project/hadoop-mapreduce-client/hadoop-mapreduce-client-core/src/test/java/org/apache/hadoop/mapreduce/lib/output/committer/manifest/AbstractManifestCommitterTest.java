@@ -73,6 +73,7 @@ import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig.createCloseableTaskSubmitter;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.NAME_FORMAT_JOB_ATTEMPT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_IO_RATE_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
@@ -215,6 +216,11 @@ public abstract class AbstractManifestCommitterTest
   private final AtomicLong totalDataSize = new AtomicLong();
 
   /**
+   * Where to move manifests; must be in target FS.
+   */
+  private Path manifestDir;
+
+  /**
    * Get the contract configuration.
    * @return the config used to create the FS.
    */
@@ -248,6 +254,20 @@ public abstract class AbstractManifestCommitterTest
 
   public long getTotalDataSize() {
     return totalDataSize.get();
+  }
+
+  public Path getManifestDir() {
+    return manifestDir;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public AbstractManifestCommitterTest withManifestDir(Path value) {
+    manifestDir = value;
+    return this;
   }
 
   /**
@@ -290,6 +310,8 @@ public abstract class AbstractManifestCommitterTest
     // superclass setup includes creating a filesystem instance
     // for the target store.
     super.setup();
+
+    manifestDir = path("manifests");
 
     // destination directory defaults to method path in
     // target FS
@@ -716,6 +738,12 @@ public abstract class AbstractManifestCommitterTest
     conf.setBoolean(SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, true);
     // and validate the output, for extra rigorousness
     conf.setBoolean(OPT_VALIDATE_OUTPUT, true);
+
+    // set the manifest rename dir if non-null
+    if (getManifestDir() != null) {
+      conf.set(OPT_DIAGNOSTICS_MANIFEST_DIR,
+          getManifestDir().toUri().toString());
+    }
 
     // and bind the report dir
     conf.set(OPT_SUMMARY_REPORT_DIR, getReportDirUri().toString());

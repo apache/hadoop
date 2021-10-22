@@ -50,11 +50,11 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJob
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageEventCallbacks;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.ValidateRenamedFilesStage;
 import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.updateCommonContextOnCommitterEntry;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage.cleanupStageOptionsFromConfig;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
@@ -364,38 +364,27 @@ public class ManifestCommitter extends PathOutputCommitter implements
           .withIOProcessors(ioProcs)
           .build();
 
-      // commit the the manifests
-      CommitJobStage.Result result = new CommitJobStage(stageConfig)
-          .apply(committerConfig.getCreateJobMarker());
+      // commit the job, including any cleanup and validation.
+      final Configuration conf = jobContext.getConfiguration();
+      CommitJobStage.Result result = new CommitJobStage(stageConfig).apply(
+          new CommitJobStage.Arguments(
+              committerConfig.getCreateJobMarker(),
+              committerConfig.getValidateOutput(),
+              conf.getTrimmed(OPT_DIAGNOSTICS_MANIFEST_DIR, ""),
+              cleanupStageOptionsFromConfig(
+                  OP_STAGE_JOB_CLEANUP, conf)
+          ));
       marker = result.getJobSuccessData();
       // update the cached success with the new report.
       setSuccessReport(marker);
 
-      // renember what the active stage is.
-      String stage = activeStage;
-
-      // clean up job attempt dir if not disabled
-      // note: it's a no-op if the options don't say "enabled"
-      new CleanupJobStage(stageConfig).apply(
-          cleanupStageOptionsFromConfig(
-              OP_STAGE_JOB_CLEANUP, jobContext.getConfiguration()));
-
-      // and then, after everything else: validate.
-
-      if (committerConfig.getValidateOutput()) {
-        // cache and restore the active stage field
-        LOG.info("{}: Validating output.", committerConfig.getName());
-        new ValidateRenamedFilesStage(stageConfig)
-            .apply(result.getManifests());
-      }
-      // restore the active stage so that when the report is saved
-      // it is declared as job commit, not cleanup or validate.
-      enterStage(stage);
     } catch (IOException e) {
-      // failure.
+      // failure. record it for the summary
       failure = e;
+      // rethrow
       throw e;
     } finally {
+      // save the report summary, even on failure
       maybeSaveSummary(activeStage,
           committerConfig,
           marker,

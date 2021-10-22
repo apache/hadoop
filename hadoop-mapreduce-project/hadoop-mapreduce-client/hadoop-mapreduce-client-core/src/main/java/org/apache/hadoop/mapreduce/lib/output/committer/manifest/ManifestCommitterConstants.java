@@ -187,7 +187,16 @@ public final class ManifestCommitterConstants {
       OPT_PREFIX + "summary.report.directory";
 
   /**
+   * Directory for moving manifests under for diagnostics.
+   * Value: {@value}.
+   */
+  public static final String OPT_DIAGNOSTICS_MANIFEST_DIR =
+      OPT_PREFIX + "diagnostics.manifest.directory";
+
+  /**
    * Should the output be validated?
+   * This will check expected vs actual file lengths, and,
+   * if etags can be obtained, etags.
    * Value: {@value}.
    */
   public static final String OPT_VALIDATE_OUTPUT = OPT_PREFIX + "validate.output";

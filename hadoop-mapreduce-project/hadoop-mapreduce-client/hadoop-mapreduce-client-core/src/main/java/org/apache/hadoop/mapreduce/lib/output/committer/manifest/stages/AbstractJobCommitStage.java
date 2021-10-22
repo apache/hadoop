@@ -648,6 +648,18 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       throws IOException {
     commitFile(new FileOrDirEntry(source, dest, 0, null), true, false);
   }
+  /**
+   * Rename a file from source to dest; if the underlying FS API call
+   * returned false that's escalated to an IOE.
+   * @param source source file.
+   * @param dest dest file
+   * @throws IOException failure
+   * @throws PathIOException if the rename() call returned false.
+   */
+  protected final void renameDir(final Path source, final Path dest)
+      throws IOException {
+    commitFile(new FileOrDirEntry(source, dest, 0, null), true, false);
+  }
 
   /**
    * Rename a file from source to dest; if the underlying FS API call
@@ -656,7 +668,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * @throws IOException failure
    * @throws PathIOException if the rename() call returned false.
    */
-  protected final void commitFile(FileOrDirEntry entry, boolean deleteDest, boolean isCommit)
+  protected final void commitFile(FileOrDirEntry entry,
+      boolean deleteDest,
+      boolean isCommit)
       throws IOException {
     final String operation = isCommit ? "commit" : "rename";
     final Path source = entry.getSourcePath();
@@ -703,7 +717,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   }
 
   /**
-   * Job ID: never null.
+   * Job attempt number.
    */
   protected final int getJobAttemptNumber() {
     return stageConfig.getJobAttemptNumber();

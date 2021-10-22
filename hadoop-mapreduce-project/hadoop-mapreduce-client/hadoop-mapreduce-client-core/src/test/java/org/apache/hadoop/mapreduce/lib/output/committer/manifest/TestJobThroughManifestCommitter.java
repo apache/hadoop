@@ -91,6 +91,7 @@ public class TestJobThroughManifestCommitter
   /**
    * To ensure that the local FS has a shared root path, this is static.
    */
+  @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
   private static Path sharedTestRoot = null;
 
   /**
@@ -459,7 +460,7 @@ public class TestJobThroughManifestCommitter
   public void test_0410_commitJob() throws Throwable {
     describe("Commit the job");
     CommitJobStage stage = new CommitJobStage(jobStageConfig);
-    stage.apply(true);
+    stage.apply(new CommitJobStage.Arguments(true, false));
   }
 
   /**

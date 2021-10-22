@@ -30,6 +30,10 @@ public final class DiagnosticKeys {
   public static final String EXCEPTION = "exception";
   public static final String STACKTRACE = "stacktrace";
 
+
+  /** Directory where manifests were renamed: {@value}. */
+  public static final String MANIFESTS = "manifests";
+
   private DiagnosticKeys() {
   }
 }
