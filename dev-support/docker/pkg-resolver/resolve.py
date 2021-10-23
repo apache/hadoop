@@ -20,7 +20,6 @@
 Platform package dependency resolver for building Apache Hadoop.
 """
 
-from __future__ import print_function
 import json
 import os
 import sys
@@ -59,4 +58,4 @@ if __name__ == '__main__':
                 PLATFORM_ARG, os.linesep))
         sys.exit(1)
 
-    print(' '.join(get_packages(PLATFORM_ARG)))
+    print ' '.join(get_packages(PLATFORM_ARG))
