@@ -281,7 +281,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * Check that "viewfs:/" paths without authority can work when the
    * default mount table name is set correctly.
    */
-  @Test(timeout = 30000)
+  @Test
   public void testAccessViewFsPathWithoutAuthority() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
