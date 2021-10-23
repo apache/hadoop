@@ -342,9 +342,7 @@ public class CapacityScheduler extends
         YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
     switch (confProviderStr) {
       case YarnConfiguration.FILE_CONFIGURATION_STORE:
-        this.csConfProvider =
-            new FileBasedCSConfigurationProvider(rmContext);
-        break;
+        return new FileBasedCSConfigurationProvider(rmContext);
       case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
       case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
       case YarnConfiguration.ZK_CONFIGURATION_STORE:
@@ -353,7 +351,6 @@ public class CapacityScheduler extends
       default:
         throw new IOException("Invalid configuration store class: " + confProviderStr);
     }
-    return null;
   }
 
   private ResourceCalculator initResourceCalculator() {
