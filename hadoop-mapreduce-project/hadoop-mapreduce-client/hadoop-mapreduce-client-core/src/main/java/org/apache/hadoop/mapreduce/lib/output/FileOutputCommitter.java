@@ -56,14 +56,15 @@ public class FileOutputCommitter extends PathOutputCommitter {
    * Name of directory where pending data is placed.  Data that has not been
    * committed yet.
    */
-  public static final String PENDING_DIR_NAME = "_temporary";
+  public static String PENDING_DIR_NAME = "_temporary";
+  public static final String FILEOUTPUTCOMMITTER_PENDING_DIR_NAME = "mapreduce.fileoutputcommitter.pending.dir";
   /**
    * Temporary directory name 
    *
    * The static variable to be compatible with M/R 1.x
    */
   @Deprecated
-  protected static final String TEMP_DIR_NAME = PENDING_DIR_NAME;
+  protected static String TEMP_DIR_NAME = PENDING_DIR_NAME;
   public static final String SUCCEEDED_FILE_NAME = "_SUCCESS";
   public static final String SUCCESSFUL_JOB_OUTPUT_DIR_MARKER =
       "mapreduce.fileoutputcommitter.marksuccessfuljobs";
@@ -157,6 +158,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
     LOG.info("FileOutputCommitter skip cleanup _temporary folders under " +
         "output directory:" + skipCleanup + ", ignore cleanup failures: " +
         ignoreCleanupFailures);
+
+    PENDING_DIR_NAME = conf.get(FILEOUTPUTCOMMITTER_PENDING_DIR_NAME, PENDING_DIR_NAME);
+    LOG.debug("Using {} as pending dir", PENDING_DIR_NAME);
 
     if (outputPath != null) {
       FileSystem fs = outputPath.getFileSystem(context.getConfiguration());
