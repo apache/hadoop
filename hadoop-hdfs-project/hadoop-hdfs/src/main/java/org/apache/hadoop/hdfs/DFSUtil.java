@@ -110,7 +110,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 @InterfaceAudience.Private
@@ -310,7 +310,11 @@ public class DFSUtil {
     // specifically not using StringBuilder to more efficiently build
     // string w/o excessive byte[] copies and charset conversions.
     final int range = offset + length;
-    Preconditions.checkPositionIndexes(offset, range, components.length);
+    if (offset < 0 || range < offset || range > components.length) {
+      throw new IndexOutOfBoundsException(
+          "Incorrect index [offset, range, size] ["
+              + offset + ", " + range + ", " + components.length + "]");
+    }
     if (length == 0) {
       return "";
     }

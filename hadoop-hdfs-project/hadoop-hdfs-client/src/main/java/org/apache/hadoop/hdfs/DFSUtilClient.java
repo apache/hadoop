@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.SignedBytes;
 import java.net.URISyntaxException;
@@ -145,7 +145,10 @@ public class DFSUtilClient {
    */
   public static byte[][] bytes2byteArray(byte[] bytes, int len,
       byte separator) {
-    Preconditions.checkPositionIndex(len, bytes.length);
+    if (len < 0 || len > bytes.length) {
+      throw new IndexOutOfBoundsException(
+          "Incorrect index [len, size] [" + len + ", " + bytes.length + "]");
+    }
     if (len == 0) {
       return new byte[][]{null};
     }
