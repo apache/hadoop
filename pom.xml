@@ -278,7 +278,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
-	          <exclude>**/build/**</exclude>
+            <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
