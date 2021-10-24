@@ -69,8 +69,8 @@ bool Chown::Initialize() {
 
   // An exception is thrown if these arguments are missing or if the arguments'
   // count doesn't tally.
-  pos_opt_desc_.add("file", 1);
   pos_opt_desc_.add("user-group", 1);
+  pos_opt_desc_.add("file", 1);
 
   po::store(po::command_line_parser(argc_, argv_)
                 .options(opt_desc_)

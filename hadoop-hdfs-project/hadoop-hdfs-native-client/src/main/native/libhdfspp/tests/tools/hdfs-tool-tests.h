@@ -106,7 +106,7 @@ template <class T> std::unique_ptr<T> PassOwnerAndAPath() {
   static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
 
   auto hdfs_tool = std::make_unique<T>(argc, argv);
-  hdfs_tool->SetExpectations(PassNOptAndAPath<T>, {arg1, arg2});
+  hdfs_tool->SetExpectations(PassOwnerAndAPath<T>, {arg1, arg2});
   return hdfs_tool;
 }
 
