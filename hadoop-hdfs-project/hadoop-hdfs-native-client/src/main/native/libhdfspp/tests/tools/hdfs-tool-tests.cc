@@ -21,6 +21,7 @@
 
 #include "hdfs-allow-snapshot-mock.h"
 #include "hdfs-cat-mock.h"
+#include "hdfs-chown-mock.h"
 #include "hdfs-create-snapshot-mock.h"
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-df-mock.h"
@@ -68,6 +69,11 @@ INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolBasicTest,
     testing::Values(CallHelp<hdfs::tools::test::DeleteSnapshotMock>,
                     Pass2Paths<hdfs::tools::test::DeleteSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChown, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::ChownMock>,
+                    PassOwnerAndAPath<hdfs::tools::test::ChownMock>));
 
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(

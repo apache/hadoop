@@ -40,6 +40,8 @@ struct Ownership {
     return group_;
   }
 
+  bool operator==(const Ownership &other) const;
+
 private:
   std::string user_;
   std::optional<std::string> group_;

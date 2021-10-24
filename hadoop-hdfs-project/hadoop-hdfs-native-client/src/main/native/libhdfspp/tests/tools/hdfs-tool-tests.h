@@ -97,4 +97,17 @@ template <class T> std::unique_ptr<T> PassNOptAndAPath() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassOwnerAndAPath() {
+  constexpr auto argc = 3;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("new_owner:new_group");
+  static std::string arg2("g/h/i");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassNOptAndAPath<T>, {arg1, arg2});
+  return hdfs_tool;
+}
+
 #endif

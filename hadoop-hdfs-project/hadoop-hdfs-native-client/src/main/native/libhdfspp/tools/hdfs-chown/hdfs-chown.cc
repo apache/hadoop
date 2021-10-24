@@ -40,6 +40,18 @@ Ownership::Ownership(const std::string &user_and_group) {
   group_ = user_and_group.substr(owner_end + 1);
 }
 
+bool Ownership::operator==(const Ownership &other) const {
+  const auto same_user = user_ == other.user_;
+  if (group_.has_value() && other.group_.has_value()) {
+    return same_user && group_.value() == other.group_.value();
+  }
+
+  if (!group_.has_value() && !other.group_.has_value()) {
+    return same_user;
+  }
+  return false;
+}
+
 Chown::Chown(const int argc, char **argv) : HdfsTool(argc, argv) {}
 
 bool Chown::Initialize() {
