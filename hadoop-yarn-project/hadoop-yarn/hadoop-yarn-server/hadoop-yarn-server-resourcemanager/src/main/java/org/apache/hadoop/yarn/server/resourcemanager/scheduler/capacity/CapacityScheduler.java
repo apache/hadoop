@@ -355,7 +355,7 @@ public class CapacityScheduler extends
 
   private ResourceCalculator initResourceCalculator() {
     ResourceCalculator resourceCalculator = this.conf.getResourceCalculator();
-    if (this.calculator instanceof DefaultResourceCalculator
+    if (resourceCalculator instanceof DefaultResourceCalculator
         && ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
       throw new YarnRuntimeException("RM uses DefaultResourceCalculator which"
           + " used only memory as resource-type but invalid resource-types"
