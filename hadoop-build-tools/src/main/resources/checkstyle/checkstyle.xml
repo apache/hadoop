@@ -121,6 +121,10 @@
 
         <!-- Checks for imports                              -->
         <!-- See http://checkstyle.sf.net/config_import.html -->
+        <module name="IllegalImport">
+            <property name="regexp" value="true"/>
+            <property name="illegalPkgs" value="sun"/>
+        </module>
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>
 
