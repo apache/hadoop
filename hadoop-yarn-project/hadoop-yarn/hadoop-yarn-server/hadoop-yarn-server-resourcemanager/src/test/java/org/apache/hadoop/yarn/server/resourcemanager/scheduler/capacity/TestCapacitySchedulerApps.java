@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSch
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
@@ -1100,6 +1101,157 @@ public class TestCapacitySchedulerApps {
     assertApps(scheduler, "b1");
 
     rm.stop();
+  }
+
+  @Test
+  public void testMoveAppWithActiveUsersWithOnlyPendingApps() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    CapacitySchedulerConfiguration newConf =
+        new CapacitySchedulerConfiguration(conf);
+
+    // Define top-level queues
+    newConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[]{"a", "b"});
+
+    newConf.setCapacity(A, 50);
+    newConf.setCapacity(B, 50);
+
+    // Define 2nd-level queues
+    newConf.setQueues(A, new String[]{"a1"});
+    newConf.setCapacity(A1, 100);
+    newConf.setUserLimitFactor(A1, 2.0f);
+    newConf.setMaximumAMResourcePercentPerPartition(A1, "", 0.1f);
+
+    newConf.setQueues(B, new String[]{"b1"});
+    newConf.setCapacity(B1, 100);
+    newConf.setUserLimitFactor(B1, 2.0f);
+
+    MockRM rm = new MockRM(newConf);
+    rm.start();
+
+    CapacityScheduler scheduler =
+        (CapacityScheduler) rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("h1:1234", 16 * GB);
+
+    // submit an app
+    MockRMAppSubmissionData data3 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("u1")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data3);
+    MockAM am1 = MockRM.launchAndRegisterAM(app, rm, nm1);
+
+    ApplicationAttemptId appAttemptId =
+        rm.getApplicationReport(app.getApplicationId())
+            .getCurrentApplicationAttemptId();
+
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u2")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data2);
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
+
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u3")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm, data1);
+
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("u4")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app4 = MockRMAppSubmitter.submit(rm, data);
+
+    // Each application asks 50 * 1GB containers
+    am1.allocate("*", 1 * GB, 50, null);
+    am2.allocate("*", 1 * GB, 50, null);
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    // check preconditions
+    assertApps(scheduler, "root",
+        app3.getCurrentAppAttempt().getAppAttemptId(),
+        app4.getCurrentAppAttempt().getAppAttemptId(),
+        appAttemptId,
+        app2.getCurrentAppAttempt().getAppAttemptId());
+    assertApps(scheduler, "a",
+        app3.getCurrentAppAttempt().getAppAttemptId(),
+        app4.getCurrentAppAttempt().getAppAttemptId(),
+        appAttemptId,
+        app2.getCurrentAppAttempt().getAppAttemptId());
+    assertApps(scheduler, "a1",
+        app3.getCurrentAppAttempt().getAppAttemptId(),
+        app4.getCurrentAppAttempt().getAppAttemptId(),
+        appAttemptId,
+        app2.getCurrentAppAttempt().getAppAttemptId());
+    assertApps(scheduler, "b");
+    assertApps(scheduler, "b1");
+
+    UsersManager um =
+        (UsersManager) scheduler.getQueue("a1").getAbstractUsersManager();
+
+    assertEquals(4, um.getNumActiveUsers());
+    assertEquals(2, um.getNumActiveUsersWithOnlyPendingApps());
+
+    // now move the app
+    scheduler.moveAllApps("a1", "b1");
+
+    //Triggering this event so that user limit computation can
+    //happen again
+    for (int i = 0; i < 10; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+      Thread.sleep(500);
+    }
+
+    // check post conditions
+    assertApps(scheduler, "root",
+        appAttemptId,
+        app2.getCurrentAppAttempt().getAppAttemptId(),
+        app3.getCurrentAppAttempt().getAppAttemptId(),
+        app4.getCurrentAppAttempt().getAppAttemptId());
+    assertApps(scheduler, "a");
+    assertApps(scheduler, "a1");
+    assertApps(scheduler, "b",
+        appAttemptId,
+        app2.getCurrentAppAttempt().getAppAttemptId(),
+        app3.getCurrentAppAttempt().getAppAttemptId(),
+        app4.getCurrentAppAttempt().getAppAttemptId());
+    assertApps(scheduler, "b1",
+        appAttemptId,
+        app2.getCurrentAppAttempt().getAppAttemptId(),
+        app3.getCurrentAppAttempt().getAppAttemptId(),
+        app4.getCurrentAppAttempt().getAppAttemptId());
+
+    UsersManager umB1 =
+        (UsersManager) scheduler.getQueue("b1").getAbstractUsersManager();
+
+    assertEquals(2, umB1.getNumActiveUsers());
+    assertEquals(2, umB1.getNumActiveUsersWithOnlyPendingApps());
+
+    rm.close();
   }
 
   @Test(timeout = 60000)
