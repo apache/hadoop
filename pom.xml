@@ -208,6 +208,55 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                       <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
                     </bannedImports>
                   </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>com.google.common package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>com.google.common.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>org.apache.hadoop.thirdparty.com.google.common.base.Optional package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Optional</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>org.apache.hadoop.thirdparty.com.google.common.base.Function package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Function</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>org.apache.hadoop.thirdparty.com.google.common.base.Predicate package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Predicate</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>org.apache.hadoop.thirdparty.com.google.common.base.Supplier package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Supplier</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                    <includeTestCode>true</includeTestCode>
+                    <reason>org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableListMultimap package usages are prohibited</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableListMultimap</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
                 </rules>
               </configuration>
             </execution>
