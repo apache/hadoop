@@ -336,20 +336,21 @@ public class CapacityScheduler extends
     }
   }
 
-  private CSConfigurationProvider getCsConfProvider(Configuration configuration) throws IOException {
+  private CSConfigurationProvider getCsConfProvider(Configuration configuration)
+      throws IOException {
     String confProviderStr = configuration.get(
         YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
     switch (confProviderStr) {
-      case YarnConfiguration.FILE_CONFIGURATION_STORE:
-        return new FileBasedCSConfigurationProvider(rmContext);
-      case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
-      case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
-      case YarnConfiguration.ZK_CONFIGURATION_STORE:
-      case YarnConfiguration.FS_CONFIGURATION_STORE:
-        return new MutableCSConfigurationProvider(rmContext);
-      default:
-        throw new IOException("Invalid configuration store class: " + confProviderStr);
+    case YarnConfiguration.FILE_CONFIGURATION_STORE:
+      return new FileBasedCSConfigurationProvider(rmContext);
+    case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
+    case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+    case YarnConfiguration.ZK_CONFIGURATION_STORE:
+    case YarnConfiguration.FS_CONFIGURATION_STORE:
+      return new MutableCSConfigurationProvider(rmContext);
+    default:
+      throw new IOException("Invalid configuration store class: " + confProviderStr);
     }
   }
 
