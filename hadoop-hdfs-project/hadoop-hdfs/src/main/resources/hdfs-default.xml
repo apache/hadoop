@@ -5057,6 +5057,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.with.remote.port</name>
+  <value>false</value>
+  <description>
+    If true, adds a port of RPC call to callerContext for all audit log events.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.available-space-block-placement-policy.balanced-space-preference-fraction</name>
   <value>0.6</value>
   <description>
