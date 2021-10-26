@@ -29,9 +29,12 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimite
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class RateLimitingFactory {
+public final class RateLimitingFactory {
 
   private static final RateLimiting UNLIMITED = new NoRateLimiting();
+
+  private RateLimitingFactory() {
+  }
 
   /**
    * No Rate Limiting.
@@ -50,7 +53,7 @@ public class RateLimitingFactory {
     private final RateLimiter limiter;
 
     /**
-     * Taking in a google rate limiter, so as to support sharing
+     * Constructor.
      * @param capacity capacity in permits/second.
      */
     private RestrictedRateLimiting(int capacity) {

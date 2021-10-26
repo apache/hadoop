@@ -381,6 +381,11 @@ public class UnreliableStoreOperations extends StoreOperations {
   }
 
   @Override
+  public boolean storePreservesEtagsThroughRenames(Path path) {
+    return wrappedOperations.storePreservesEtagsThroughRenames(path);
+  }
+
+  @Override
   public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
     if (trashDisabled) {
       // same exception as FS implementation.

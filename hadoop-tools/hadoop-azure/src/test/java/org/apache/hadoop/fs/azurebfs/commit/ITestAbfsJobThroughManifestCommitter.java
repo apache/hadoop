@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.TestJobThroughManifestCommitter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
@@ -67,6 +68,13 @@ public class ITestAbfsJobThroughManifestCommitter
     return new AbfsFileSystemContract(conf, binding.isSecureMode());
   }
 
+  /**
+   * Add read of manifest and validate of output's etags.
+   * @param attemptId attempt ID
+   * @param files files which were created.
+   * @param manifest manifest
+   * @throws IOException failure
+   */
   @Override
   protected void validateTaskAttemptManifest(String attemptId,
       List<Path> files,
@@ -79,7 +87,7 @@ public class ITestAbfsJobThroughManifestCommitter
           .describedAs("Etag of %s", entry)
           .isNotEmpty();
       final FileStatus sourceStatus = operations.getFileStatus(entry.getSourcePath());
-      final String etag = operations.getEtag(sourceStatus);
+      final String etag = ManifestCommitterSupport.getEtag(sourceStatus);
       Assertions.assertThat(etag)
           .describedAs("Etag of %s", sourceStatus)
           .isEqualTo(entry.getEtag());

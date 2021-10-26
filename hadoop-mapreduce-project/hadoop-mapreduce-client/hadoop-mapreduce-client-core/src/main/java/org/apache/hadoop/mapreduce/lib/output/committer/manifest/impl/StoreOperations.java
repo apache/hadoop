@@ -173,15 +173,6 @@ public abstract class StoreOperations implements Closeable {
   public abstract void msync(Path path) throws IOException;
 
   /**
-   * Move a directory to trash, with the jobID as its name.
-   * IOExceptions are caught and included in the outcome.
-   * @param jobId job ID.
-   * @param path path to move, assumed to be _temporary
-   * @return the outcome.
-   */
-  public abstract MoveToTrashResult moveToTrash(String jobId, Path path);
-
-  /**
    * Extract an etag from a status if the conditions are met.
    * If the conditions are not met, return null or ""; they will
    * both be treated as "no etags available"
@@ -191,10 +182,32 @@ public abstract class StoreOperations implements Closeable {
    *   2. After casting the etag field can be retrieved
    *   3. and that value is non-null/non-empty.
    * </pre>
-   * @param status status, which may be of any subclass of FileStatus.
+   * @param status status, which may be null of any subclass of FileStatus.
    * @return either a valid etag, or null or "".
    */
-  public abstract String getEtag(FileStatus status);
+  public String getEtag(FileStatus status) {
+    return ManifestCommitterSupport.getEtag(status);
+  }
+
+  /**
+   * Does the store preserve etags through renames.
+   * If true, and if the source listing entry has an etag,
+   * it will be used to attempt to validate a failed rename.
+   * @param path path to probe.
+   * @return true if etag comparison is a valid strategy.
+   */
+  public boolean storePreservesEtagsThroughRenames(Path path) {
+    return false;
+  }
+
+  /**
+   * Move a directory to trash, with the jobID as its name.
+   * IOExceptions are caught and included in the outcome.
+   * @param jobId job ID.
+   * @param path path to move, assumed to be _temporary
+   * @return the outcome.
+   */
+  public abstract MoveToTrashResult moveToTrash(String jobId, Path path);
 
   /**
    * Enum of outcomes.

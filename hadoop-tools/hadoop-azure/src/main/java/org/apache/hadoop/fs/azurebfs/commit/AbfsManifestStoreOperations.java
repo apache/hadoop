@@ -20,19 +20,27 @@ package org.apache.hadoop.fs.azurebfs.commit;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 
 /**
  * Extension of StoreOperationsThroughFileSystem with ABFS awareness.
+ * Currently there is no explicit handling other than a validation of
+ * the binding filesystem type.
+ * Declared public as job configurations can enable it.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSystem {
 
+  /**
+   * Classname, which can be declared in jpb configurations.
+   */
   public static final String NAME
       = "org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations";
 
@@ -45,8 +53,4 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
     super.bindToFileSystem(filesystem, path);
   }
 
-  @Override
-  public String getEtag(FileStatus status) {
-    return AzureBlobFileSystemStore.extractVersion(status);
-  }
 }

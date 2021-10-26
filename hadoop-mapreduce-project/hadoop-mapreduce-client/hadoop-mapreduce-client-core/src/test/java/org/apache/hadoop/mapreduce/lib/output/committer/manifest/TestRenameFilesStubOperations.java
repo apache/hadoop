@@ -24,19 +24,22 @@ import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations.SIMULATED_FAILURE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -45,9 +48,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Assertions on IOStats as well as verification that progress()
  * was called back.
  */
-public class TestRenameFilesStage extends AbstractManifestCommitterTest {
+public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest {
 
-  public static final String RENAME_FAILURES = OP_RENAME_FILE + ".failures";
+  /**
+   * Statistic to look for.
+   */
+  public static final String RENAME_FAILURES = OP_COMMIT_FILE_RENAME + ".failures";
+
   /**
    * Fault Injection.
    */
@@ -148,6 +155,57 @@ public class TestRenameFilesStage extends AbstractManifestCommitterTest {
         .isEqualTo(file500);
   }
 
+  @Test
+  public void testRenameEtagRecovery() throws Throwable {
+    describe("verify providing etags can recover from rename failuers");
+
+    // destination directory.
+    Path destDir = methodPath();
+    StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
+    Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
+
+    // create a manifest with a lot of files, but for
+    // which one of whose renames will fail
+    TaskManifest manifest = new TaskManifest();
+    int files = 10;
+    for (int i = 0; i < files; i++) {
+      String name = String.format("file%04d", i);
+      Path src = new Path(jobAttemptTaskSubDir, name);
+      Path dest = new Path(destDir, name);
+      final StoreOperations operations = getStoreOperations();
+      final FileStatus st = operations.getFileStatus(src);
+      final String etag = operations.getEtag(st);
+      Assertions.assertThat(etag)
+          .describedAs("Etag of %s", st)
+          .isNotEmpty();
+      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0, etag));
+      if (i == 1) {
+        failures.addRenameSourceFilesToFail(src);
+      }
+    }
+
+    List<TaskManifest> manifests = new ArrayList<>();
+    manifests.add(manifest);
+
+    // attempt 1: failing with an IOE.
+    final RenameFilesStage stage = new RenameFilesStage(stageConfig);
+    IOStatisticsStore iostatistics = stage.getIOStatistics();
+    long failures0 = iostatistics.counters().get(OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT);
+    failures.setRenameToFailWithException(true);
+    stage.apply(manifests);
+    assertThatStatisticCounter(iostatistics, OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT)
+        .isEqualTo(failures0 + 1);
+
+    // attempt 2: returning false
+    final RenameFilesStage stage2 = new RenameFilesStage(stageConfig);
+    long failures2 = iostatistics.counters().get(OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT);
+    failures.setRenameToFailWithException(false);
+    stage2.apply(manifests);
+    assertThatStatisticCounter(iostatistics, OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT)
+        .isEqualTo(failures2 + 1);
+
+  }
+
   /**
    * Execute rename, expecting a failure.
    * The number of files renamed MUST be less than the value of {@code files}
@@ -170,7 +228,7 @@ public class TestRenameFilesStage extends AbstractManifestCommitterTest {
 
     // rename MUST raise an exception.
     PathIOException ex = intercept(PathIOException.class, errorText, () ->
-            stage.apply(manifests));
+        stage.apply(manifests));
 
     // the IOStatistics record the rename as a failure.
     assertThatStatisticCounter(iostatistics, RENAME_FAILURES)

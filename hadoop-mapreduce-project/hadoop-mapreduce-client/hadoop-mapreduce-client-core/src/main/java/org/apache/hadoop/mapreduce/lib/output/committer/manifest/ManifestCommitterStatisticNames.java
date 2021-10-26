@@ -103,10 +103,22 @@ public final class ManifestCommitterStatisticNames {
       "committer_task_file_size";
 
   /** Time to acquire read permit {@value}. */
-  public static final String IO_ACQUIRE_READ_PERMIT = "io_acquire_read_permit";
+  public static final String IO_ACQUIRE_READ_PERMIT_BLOCKED = "io_acquire_read_permit_blocked";
 
   /** Time to acquire write permit {@value}. */
-  public static final String IO_ACQUIRE_WRITE_PERMIT = "io_acquire_write_permit";
+  public static final String IO_ACQUIRE_WRITE_PERMIT_BLOCKED = "io_acquire_write_permit_blocked";
+
+  /**
+   * A file renamed during the commit operation.
+   */
+  public static final String OP_COMMIT_FILE_RENAME =
+      "commit_file_rename";
+
+  /**
+   * Was a commit recovered by etag checking?
+   */
+  public static final String OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT =
+      "commit_file_rename_recovered_by_etag";
 
   /** Directory creation {@value}. */
   public static final String OP_CREATE_DIRECTORIES = "op_create_directories";

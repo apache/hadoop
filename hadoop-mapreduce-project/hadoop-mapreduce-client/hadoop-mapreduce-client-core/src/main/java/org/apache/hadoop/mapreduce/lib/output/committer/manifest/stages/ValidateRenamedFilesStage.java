@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.OutputValidationException;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -155,7 +156,7 @@ public class ValidateRenamedFilesStage extends
       // etags, if the source had one.
       final String sourceEtag = entry.getEtag();
       if (isNotBlank(sourceEtag)) {
-        final String destEtag = getEtag(destStatus);
+        final String destEtag = ManifestCommitterSupport.getEtag(destStatus);
         if (!sourceEtag.equals(destEtag)) {
           LOG.warn("Etag of dest file {}: {} does not match that of manifest entry {}",
               destPath, destStatus, entry);

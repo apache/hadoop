@@ -23,6 +23,8 @@ import java.time.ZonedDateTime;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.EtagFromFileStatus;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
@@ -229,6 +231,21 @@ public final class ManifestCommitterSupport {
   }
 
   /**
+   * Get an etag from a FileStatus which MUST BE
+   * an implementation of EtagFromFileStatus and
+   * whose etag MUST NOT BE null/empty.
+   * @param status the status; may be null.
+   * @return the etag or null if not provided
+   */
+  public static String getEtag(FileStatus status) {
+    if (status instanceof EtagFromFileStatus) {
+      return ((EtagFromFileStatus) status).getEtag();
+    } else {
+      return null;
+    }
+  }
+
+  /**
    * Create the store operations for the given FS.
    * This supports binding to custom filesystem handlers.
    * @param conf configuration.
@@ -241,7 +258,8 @@ public final class ManifestCommitterSupport {
       FileSystem filesystem,
       Path path) throws IOException {
     try {
-      final Class<? extends StoreOperations> storeClass = conf.getClass(OPT_STORE_OPERATIONS_CLASS,
+      final Class<? extends StoreOperations> storeClass = conf.getClass(
+          OPT_STORE_OPERATIONS_CLASS,
           StoreOperationsThroughFileSystem.class,
           StoreOperations.class);
       final StoreOperations operations = storeClass.newInstance();

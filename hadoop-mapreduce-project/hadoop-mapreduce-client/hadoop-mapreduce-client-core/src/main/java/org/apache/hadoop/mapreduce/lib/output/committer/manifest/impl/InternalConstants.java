@@ -26,43 +26,10 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_DIRECTOR
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_BYTES_COMMITTED_COUNT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_FILES_COMMITTED_COUNT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_COMPLETED_COUNT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASKS_FAILED_COUNT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_DIRECTORY_COUNT_MEAN;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_DIRECTORY_DEPTH_MEAN;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_COUNT_MEAN;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.COMMITTER_TASK_FILE_SIZE_MEAN;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_DIRECTORIES;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_CREATE_ONE_DIRECTORY;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_FILE_UNDER_DESTINATION;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DIRECTORY_SCAN;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_ALL_MANIFESTS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MKDIRS_RETURNED_FALSE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_PREPARE_DIR_ANCESTORS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_ABORT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CREATE_TARGET_DIRS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_LOAD_MANIFESTS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_RENAME_FILES;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_SAVE_SUCCESS;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_SETUP;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_VALIDATE_OUTPUT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_ABORT_TASK;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_COMMIT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SAVE_MANIFEST;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SCAN_DIRECTORY;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SETUP;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.*;
 
 public class InternalConstants {
+
   /**
    * Durations.
    */
@@ -89,6 +56,7 @@ public class InternalConstants {
 
 
       /* Lower level store/fs operations. */
+      OP_COMMIT_FILE_RENAME,
       OP_CREATE_DIRECTORIES,
       OP_CREATE_ONE_DIRECTORY,
       OP_DIRECTORY_SCAN,
@@ -110,14 +78,16 @@ public class InternalConstants {
       OBJECT_LIST_REQUEST,
       OBJECT_CONTINUE_LIST_REQUEST,
 
-      IO_ACQUIRE_READ_PERMIT,
-      IO_ACQUIRE_WRITE_PERMIT
+      IO_ACQUIRE_READ_PERMIT_BLOCKED,
+      IO_ACQUIRE_WRITE_PERMIT_BLOCKED
   };
+
   /**
    * Counters.
    */
   public static final String[] COUNTER_STATISTICS = {
       COMMITTER_BYTES_COMMITTED_COUNT,
+      OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT,
       COMMITTER_FILES_COMMITTED_COUNT,
       COMMITTER_TASKS_COMPLETED_COUNT,
       COMMITTER_TASKS_FAILED_COUNT,
@@ -126,42 +96,57 @@ public class InternalConstants {
       COMMITTER_TASK_FILE_COUNT_MEAN,
       COMMITTER_TASK_FILE_SIZE_MEAN,
   };
+
   /**
    * Read permit cost for any of the status probes: {@value}.
    */
   public static final int PERMIT_READ_GET_FILE_STATUS = 1;
+
   /**
    * Read permit cost for list operations: {@value}.
    */
   public static final int PERMIT_READ_LIST = 2;
+
   /**
    * Read permit cost for list operations: {@value}.
    */
   public static final int PERMIT_READ_OPEN_FILE = 2;
+
   /**
    * Write permit cost for delete(): {@value}.
    */
   public static final int PERMIT_WRITE_CREATE_FILE = 1;
+
+  /**
+   * Write permit cost for commit(): {@value}.
+   */
+  public static final int PERMIT_WRITE_COMMIT_FILE = 1;
+
   /**
    * Write permit cost for delete(): {@value}.
    */
   public static final int PERMIT_WRITE_DELETE = 1;
+
   /**
    * Write permit cost for mkdir(): {@value}.
    */
   public static final int PERMIT_WRITE_MKDIR = 1;
+
   /**
    * Write permit cost for rename(): {@value}.
    */
   public static final int PERMIT_WRITE_RENAME = 1;
+
   /**
    * Error string from ABFS connector on timeout.
    */
   public static final String OPERATION_TIMED_OUT = "OperationTimedOut";
+
   /**
    * Format string for task attempt names.
    */
   public static final String NAME_FORMAT_TASK_ATTEMPT = "[Task-Attempt %s]";
+
   /**
    * Format string for job attempt names.
    */

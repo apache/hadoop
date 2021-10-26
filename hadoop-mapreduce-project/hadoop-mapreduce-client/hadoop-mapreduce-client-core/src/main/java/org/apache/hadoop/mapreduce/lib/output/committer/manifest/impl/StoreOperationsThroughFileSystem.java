@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -152,6 +153,21 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
   }
 
   /**
+   * Probe filesystem capabilities.
+   * @param path path to probe.
+   * @return true if the FS declares its renames work.
+   */
+  @Override
+  public boolean storePreservesEtagsThroughRenames(Path path) {
+    try {
+      return fileSystem.hasPathCapability(path,
+          CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME);
+    } catch (IOException ignored) {
+      return false;
+    }
+  }
+
+  /**
    * Invokes FileSystem msync(); swallows UnsupportedOperationExceptions.
    * This ensures client metadata caches are in sync in an HDFS-HA deployment.
    * No other filesystems support this; in the absence of a hasPathCapability()
@@ -177,16 +193,6 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
       // set the unsupported flag so no future attempts are made.
       msyncUnsupported = true;
     }
-  }
-
-  /**
-   * etag extract is not available in the base store.
-   * @param status status, which may be of any subclass of FileStatus.
-   * @return null.
-   */
-  @Override
-  public String getEtag(FileStatus status) {
-    return null;
   }
 
   /**

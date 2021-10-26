@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 
+import org.apache.hadoop.fs.EtagFromFileStatus;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -32,13 +33,14 @@ import org.apache.hadoop.util.JsonSerialization;
 /**
  * Stub Store operations.
  * Everything "works" provided you don't look too close.
+ * Files have etags of their filename; if you move a file without changing its
+ * name, the etag is preserved.
  */
 public class StubStoreOperations extends StoreOperations {
 
-
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
-    return new FileStatus(0, false, 1, 1024, 0, path);
+    return new TaggedFileStatus(0, false, 1, 1024, 0, path);
   }
 
   @Override
@@ -87,12 +89,6 @@ public class StubStoreOperations extends StoreOperations {
 
   }
 
-
-  @Override
-  public String getEtag(FileStatus status) {
-    return null;
-  }
-
   @Override
   public MoveToTrashResult moveToTrash(final String jobId, final Path path) {
     return new MoveToTrashResult(MoveToTrashOutcome.RENAMED_TO_TRASH, null);
@@ -103,6 +99,15 @@ public class StubStoreOperations extends StoreOperations {
 
   }
 
+  @Override
+  public boolean storePreservesEtagsThroughRenames(final Path path) {
+    return true;
+  }
+
+  /**
+   * Always empty rempte iterator.
+   * @param <T> type of iterator.
+   */
   private static final class EmptyRemoteIterator<T>
       implements RemoteIterator<T> {
 
@@ -114,6 +119,22 @@ public class StubStoreOperations extends StoreOperations {
     @Override
     public T next() throws IOException {
       throw new NoSuchElementException();
+    }
+  }
+
+  private static final class TaggedFileStatus extends FileStatus implements EtagFromFileStatus {
+    public TaggedFileStatus(final long length,
+        final boolean isdir,
+        final int block_replication,
+        final long blocksize,
+        final long modification_time,
+        final Path path) {
+      super(length, isdir, block_replication, blocksize, modification_time, path);
+    }
+
+    @Override
+    public String getEtag() {
+      return getPath().getName();
     }
   }
 }
