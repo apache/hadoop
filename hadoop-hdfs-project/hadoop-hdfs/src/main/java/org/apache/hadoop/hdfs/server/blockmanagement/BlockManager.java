@@ -4265,7 +4265,8 @@ public class BlockManager implements BlockStatsMXBean {
     final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
     if (node == null || !node.isRegistered()) {
       blockLog.warn("BLOCK* processIncrementalBlockReport"
-              + " is received from dead or unregistered node {}", nodeID);
+              + " is received from dead or unregistered node {}",
+          nodeID.getXferAddrWithHostname());
       throw new IOException(
           "Got incremental block report from unregistered or dead node");
     }
