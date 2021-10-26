@@ -932,7 +932,7 @@ _nothing is being flushed or saved_.
   the stream to see if they are supported.
 * Or catch and downgrade `UnsupportedOperationException`.
 
-These recommendations _apply to all filesystems_. 
+These recommendations _apply to all filesystems_.
 
 For consistency with other filesystems, S3A output streams
 do not by default reject the `Syncable` calls -instead
