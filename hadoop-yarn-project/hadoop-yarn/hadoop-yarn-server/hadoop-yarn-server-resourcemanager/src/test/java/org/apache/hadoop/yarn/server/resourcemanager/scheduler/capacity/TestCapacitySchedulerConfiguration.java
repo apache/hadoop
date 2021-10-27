@@ -18,57 +18,68 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TestCapacitySchedulerConfiguration {
 
+  private CapacitySchedulerConfiguration createDefaultCsConf() {
+    return new CapacitySchedulerConfiguration(new Configuration(false), false);
+  }
+
+  private AccessControlList getSubmitAcl(CapacitySchedulerConfiguration csConf, String queue) {
+    return csConf.getAcl(queue, QueueACL.SUBMIT_APPLICATIONS);
+  }
+
+  private void setSubmitAppsConfig(CapacitySchedulerConfiguration csConf, String queue, String value) {
+    csConf.set(getSubmitAppsConfigKey(queue), value);
+  }
+
+  private String getSubmitAppsConfigKey(String queue) {
+    return getQueuePrefix(queue) + "acl_submit_applications";
+  }
+
   @Test
   public void testDefaultSubmitACLForRootAllAllowed() {
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration(new Configuration(false), false);
+    CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     AccessControlList acl = csConf.getAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS);
-    Assert.assertTrue(acl.getUsers().isEmpty());
-    Assert.assertTrue(acl.getGroups().isEmpty());
-    Assert.assertTrue(acl.isAllAllowed());
+    assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.getGroups().isEmpty());
+    assertTrue(acl.isAllAllowed());
   }
 
   @Test
   public void testDefaultSubmitACLForRootChildNoneAllowed() {
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration(new Configuration(false), false);
-    AccessControlList acl = csConf.getAcl(ROOT + ".test", QueueACL.SUBMIT_APPLICATIONS);
-    Assert.assertTrue(acl.getUsers().isEmpty());
-    Assert.assertTrue(acl.getGroups().isEmpty());
-    Assert.assertFalse(acl.isAllAllowed());
+    CapacitySchedulerConfiguration csConf = createDefaultCsConf();
+    AccessControlList acl = getSubmitAcl(csConf, ROOT + ".test");
+    assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.getGroups().isEmpty());
+    assertFalse(acl.isAllAllowed());
   }
 
   @Test
   public void testSpecifiedEmptySubmitACLForRoot() {
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration(new Configuration(false), false);
-    String configKey = getQueuePrefix(ROOT) + "acl_submit_applications";
-    csConf.set(configKey, "");
+    CapacitySchedulerConfiguration csConf = createDefaultCsConf();
+    setSubmitAppsConfig(csConf, ROOT, "");
     AccessControlList acl = csConf.getAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS);
-    Assert.assertTrue(acl.getUsers().isEmpty());
-    Assert.assertTrue(acl.getGroups().isEmpty());
-    Assert.assertFalse(acl.isAllAllowed());
+    assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.getGroups().isEmpty());
+    assertFalse(acl.isAllAllowed());
   }
 
   @Test
   public void testSpecifiedEmptySubmitACLForRootIsNotInherited() {
-    CapacitySchedulerConfiguration csConf =
-        new CapacitySchedulerConfiguration(new Configuration(false), false);
-    String configKey = getQueuePrefix(ROOT) + "acl_submit_applications";
-    csConf.set(configKey, "");
-    AccessControlList acl = csConf.getAcl(ROOT + ".test", QueueACL.SUBMIT_APPLICATIONS);
-    Assert.assertTrue(acl.getUsers().isEmpty());
-    Assert.assertTrue(acl.getGroups().isEmpty());
-    Assert.assertFalse(acl.isAllAllowed());
+    CapacitySchedulerConfiguration csConf = createDefaultCsConf();
+    setSubmitAppsConfig(csConf, ROOT, "");
+    AccessControlList acl = getSubmitAcl(csConf, ROOT + ".test");
+    assertTrue(acl.getUsers().isEmpty());
+    assertTrue(acl.getGroups().isEmpty());
+    assertFalse(acl.isAllAllowed());
   }
+  
 }
