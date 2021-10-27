@@ -2746,8 +2746,7 @@ public class BlockManager implements BlockStatsMXBean {
       node = datanodeManager.getDatanode(nodeID);
       if (node == null || !node.isRegistered()) {
         throw new IOException(
-            "ProcessReport from dead or unregistered node: " +
-                nodeID.getXferAddrWithHostname());
+            "ProcessReport from dead or unregistered node: " + nodeID);
       }
 
       // To minimize startup time, we discard any second (or later) block reports
@@ -2767,7 +2766,7 @@ public class BlockManager implements BlockStatsMXBean {
         blockLog.info("BLOCK* processReport 0x{}: "
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase",
-            strBlockReportId, nodeID.getXferAddrWithHostname());
+            strBlockReportId, nodeID);
         blockReportLeaseManager.removeLease(node);
         return !node.hasStaleStorages();
       }
@@ -2779,7 +2778,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "storage report for {} from datanode {}",
             strBlockReportId,
             storageInfo.getStorageID(),
-            nodeID.getXferAddrWithHostname());
+            nodeID);
         processFirstBlockReport(storageInfo, newReport);
       } else {
         // Block reports for provided storage are not
@@ -2810,7 +2809,7 @@ public class BlockManager implements BlockStatsMXBean {
     blockLog.info("BLOCK* processReport 0x{}: from storage {} node {}, " +
         "blocks: {}, hasStaleStorage: {}, processing time: {} msecs, " +
         "invalidatedBlocks: {}", strBlockReportId, storage.getStorageID(),
-        nodeID.getXferAddrWithHostname(), newReport.getNumberOfBlocks(),
+        nodeID, newReport.getNumberOfBlocks(),
         node.hasStaleStorages(), (endTime - startTime),
         invalidatedBlocks.size());
     return !node.hasStaleStorages();
@@ -4265,8 +4264,7 @@ public class BlockManager implements BlockStatsMXBean {
     final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
     if (node == null || !node.isRegistered()) {
       blockLog.warn("BLOCK* processIncrementalBlockReport"
-              + " is received from dead or unregistered node {}",
-          nodeID.getXferAddrWithHostname());
+              + " is received from dead or unregistered node {}", nodeID);
       throw new IOException(
           "Got incremental block report from unregistered or dead node");
     }
