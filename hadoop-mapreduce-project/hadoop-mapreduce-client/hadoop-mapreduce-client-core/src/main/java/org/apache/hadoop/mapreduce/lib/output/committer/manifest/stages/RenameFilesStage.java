@@ -140,7 +140,7 @@ public class RenameFilesStage extends
     // report progress back
     progress();
     // do the rename
-    commitFile(entry, getStageConfig().getDeleteTargetPaths(), true);
+    commitFile(entry, getStageConfig().getDeleteTargetPaths());
 
     // update the list and IOStats
     synchronized (this) {

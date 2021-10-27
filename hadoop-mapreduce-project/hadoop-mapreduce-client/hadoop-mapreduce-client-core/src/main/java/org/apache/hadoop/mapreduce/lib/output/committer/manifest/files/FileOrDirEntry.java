@@ -58,6 +58,9 @@ public final class FileOrDirEntry implements Serializable {
   @JsonProperty("etag")
   private String etag;
 
+  @JsonProperty("modified")
+  private long modified;
+
   public FileOrDirEntry() {
   }
 

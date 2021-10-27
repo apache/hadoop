@@ -22,9 +22,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -35,6 +38,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Unreliable
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
+import static org.apache.hadoop.fs.impl.ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT;
@@ -44,11 +48,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test rename files with fault injection.
- * This is done with a stub FS and no real file IO.
- * Assertions on IOStats as well as verification that progress()
- * was called back.
+ * Dest FS needs to support etags & ideally resilient renaming.
  */
-public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest {
+public class TestEtagRenameFailure extends AbstractManifestCommitterTest {
 
   /**
    * Statistic to look for.
@@ -59,12 +61,43 @@ public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest
    * Fault Injection.
    */
   private UnreliableStoreOperations failures;
+  private boolean resilientCommit;
+  private boolean etagsPreserved;
+  private boolean etagsSupported;
+
+  protected boolean isResilientCommit() {
+    return resilientCommit;
+  }
+
+  protected boolean isEtagsPreserved() {
+    return etagsPreserved;
+  }
+
+  protected boolean isEtagsSupported() {
+    return etagsSupported;
+  }
 
   @Override
   public void setup() throws Exception {
     super.setup();
+    final FileSystem fs = getFileSystem();
+    final Path methodPath = methodPath();
+    etagsSupported = fs.hasPathCapability(methodPath,
+        CommonPathCapabilities.ETAGS_AVAILABLE);
+    etagsPreserved = fs.hasPathCapability(methodPath,
+        CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME);
+    resilientCommit = fs.hasPathCapability(methodPath,
+        RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY);
+
+    StoreOperations wrappedOperations;
+    if (etagsSupported) {
+      wrappedOperations = getStoreOperations();
+    } else {
+      // store doesn't do etags, so create a stub store which does
+      wrappedOperations = new StubStoreOperations();
+    }
     failures
-        = new UnreliableStoreOperations(new StubStoreOperations());
+        = new UnreliableStoreOperations(wrappedOperations);
     setStoreOperations(failures);
   }
 
@@ -82,7 +115,7 @@ public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
     Path file500 = null;
-    int files = 1000;
+    int files = filesToCreate();
     for (int i = 0; i < files; i++) {
       String name = String.format("file%04d", i);
       Path src = new Path(jobAttemptTaskSubDir, name);
@@ -111,6 +144,10 @@ public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest
 
   }
 
+  protected int filesToCreate() {
+    return 1000;
+  }
+
   @Test
   public void testRenameReturnsFalse() throws Throwable {
     describe("rename where rename() returns false for one file." +
@@ -125,7 +162,7 @@ public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
     Path file500 = null;
-    int files = 1000;
+    int files = filesToCreate();
     for (int i = 0; i < files; i++) {
       String name = String.format("file%04d", i);
       Path src = new Path(jobAttemptTaskSubDir, name);
@@ -158,6 +195,8 @@ public class TestRenameFilesStubOperations extends AbstractManifestCommitterTest
   @Test
   public void testRenameEtagRecovery() throws Throwable {
     describe("verify providing etags can recover from rename failuers");
+    Assume.assumeTrue("Needs resilient commit in the filesystem", resilientCommit);
+
 
     // destination directory.
     Path destDir = methodPath();

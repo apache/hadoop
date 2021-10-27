@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -110,19 +112,6 @@ public abstract class StoreOperations implements Closeable {
       throws IOException;
 
   /**
-   * Commit one file.
-   * The uses {@link #renameFile(Path, Path)}.
-   * If etags were collected during task commit, these will be
-   * in the entries passed in here.
-   * @param entry entry to commit
-   * @return the result of rename()
-   * @throws IOException failure.
-   */
-  public boolean commitFile(FileOrDirEntry entry) throws IOException {
-    return renameFile(entry.getSourcePath(), entry.getDestPath());
-  }
-
-  /**
    * List the directory.
    * @param path path to list.
    * @return an iterator over the results.
@@ -198,6 +187,86 @@ public abstract class StoreOperations implements Closeable {
    */
   public boolean storePreservesEtagsThroughRenames(Path path) {
     return false;
+  }
+
+  /**
+   * Commit one file.
+   * The uses {@link #renameFile(Path, Path)}.
+   * If etags were collected during task commit, these will be
+   * in the entries passed in here.
+   * @param entry entry to commit
+   * @return the result of rename()
+   * @throws IOException failure.
+   */
+  public CommitFileResult commitFile(FileOrDirEntry entry) throws IOException {
+    return new CommitFileResult(renameFile(entry.getSourcePath(), entry.getDestPath()));
+  }
+
+  /**
+   * Outcome from the commit.
+   */
+  public static final class CommitFileResult implements IOStatisticsSource {
+
+    /** Was this committed through the resilient API? */
+    private final boolean committedByResilientOperation;
+
+    /** result of any rename() call. */
+    private final boolean renameOutcome;
+
+    /** The IOStatistics source from the resilient API. */
+    private final IOStatisticsSource source;
+
+    /**
+     * Create from a classic rename.
+     * @param renameOutcome the outcome
+     */
+    public CommitFileResult(final boolean renameOutcome) {
+      this.renameOutcome = renameOutcome;
+      this.committedByResilientOperation = false;
+      this.source = null;
+    }
+
+    /**
+     * Full commit result;
+     * @param committedByResilientOperation Was this committed through the resilient API?
+     * @param renameOutcome result of any rename() call.
+     * @param statisticsSource The IOStatistics source from the resilient API
+     */
+    public CommitFileResult(
+        final boolean committedByResilientOperation,
+        final boolean renameOutcome,
+        final IOStatisticsSource statisticsSource) {
+      this.renameOutcome = renameOutcome;
+      this.committedByResilientOperation = committedByResilientOperation;
+      this.source = statisticsSource;
+    }
+
+    public boolean isRenameOutcome() {
+      return renameOutcome;
+    }
+
+    public boolean isCommittedByResilientOperation() {
+      return committedByResilientOperation;
+    }
+
+    /**
+     * Get any IOStatistics from the commit result.
+     * @return null or IOStatistics.
+     */
+    @Override
+    public IOStatistics getIOStatistics() {
+      return source != null ? source.getIOStatistics() : null;
+    }
+
+    /**
+     * Successful?
+     * Implicit in a commit via the resilient API; for classic rename it's
+     * the boolean return value.
+     * @return true if the operation successfully moved the file.
+     */
+    public boolean success() {
+      return committedByResilientOperation || renameOutcome;
+    }
   }
 
   /**

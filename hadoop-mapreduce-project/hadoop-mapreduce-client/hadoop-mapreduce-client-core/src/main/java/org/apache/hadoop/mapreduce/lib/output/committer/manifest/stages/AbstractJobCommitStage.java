@@ -42,7 +42,6 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
@@ -53,7 +52,6 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTra
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_GET_FILE_STATUS;
@@ -642,7 +640,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
 
   /**
    * Get an etag from a FileStatus which MUST BE
-   * an implementation of EtagFromFileStatus and
+   * an implementation of EtagSource and
    * whose etag MUST NOT BE null/empty.
    * @param status the status; may be null.
    * @return the etag or null if not provided
@@ -661,8 +659,9 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final void renameFile(final Path source, final Path dest)
       throws IOException {
-    commitFile(new FileOrDirEntry(source, dest, 0, null), true, false);
+    commitFile(new FileOrDirEntry(source, dest, 0, null), true);
   }
+
   /**
    * Rename a file from source to dest; if the underlying FS API call
    * returned false that's escalated to an IOE.
@@ -673,17 +672,29 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final void renameDir(final Path source, final Path dest)
       throws IOException {
-    commitFile(new FileOrDirEntry(source, dest, 0, null), true, false);
+    commitOrRename(new FileOrDirEntry(source, dest, 0, null),
+        true, false);
   }
 
+  /**
+   * Commit a file from the manifest.
+   * @param entry entry from manifest
+   * @throws PathIOException if the rename() call returned false and was uprated.
+   * @throws IOException failure
+   */
+  protected final CommitOutcome commitFile(FileOrDirEntry entry,
+      boolean deleteDest)
+      throws IOException {
+    return commitOrRename(entry, deleteDest, true);
+  }
   /**
    * Rename a file from source to dest; if the underlying FS API call
    * returned false that's escalated to an IOE.
    * @param entry entry from manifest (or created just for this method call)
-   * @throws IOException failure
    * @throws PathIOException if the rename() call returned false.
+   * @throws IOException failure
    */
-  protected final CommitOutcome commitFile(FileOrDirEntry entry,
+  protected final CommitOutcome commitOrRename(FileOrDirEntry entry,
       boolean deleteDest,
       boolean isCommit)
       throws IOException {
@@ -713,60 +724,52 @@ public abstract class AbstractJobCommitStage<IN, OUT>
     // treated as failures from a statistics perspective.
     DurationTracker tracker = createTracker(getIOStatistics(), statistic);
     boolean renamed;
-    IOException caughtException = null;
     try {
-      renamed = operations.commitFile(entry);
+      // now use the rename or commit operations in the FS.
+      if (isCommit) {
+        final StoreOperations.CommitFileResult result = operations.commitFile(entry);
+        renamed = result.success();
+      } else {
+        renamed = operations.renameFile(entry.getSourcePath(), entry.getDestPath());
+      }
+      if (renamed) {
+        // successful
+        return new CommitOutcome();
+      } else {
+        // record failure in the tracker
+        tracker.failed();
+      }
     } catch (IOException e) {
       LOG.info("{}: {} {} raised an exception: {}", getName(), operation, entry, e.toString());
       LOG.debug("{}: {} stack trace", getName(), operation, e);
-      caughtException = e;
-      renamed = false;
-    }
-    if (renamed) {
+      tracker.failed();
+      throw e;
+    } finally {
       // success
       // update the tracker.
       tracker.close();
-      return new CommitOutcome();
-    }
-    // failure.
-    // record in the tracker
-    tracker.failed();
-    tracker.close();
-    // Start with etag checking of the source entry and
-    // the destination file status.
-    final FileStatus destStatus = getFileStatusOrNull(dest);
-    if (operations.storePreservesEtagsThroughRenames(source)) {
-      LOG.debug("{}: {} Failure, starting etag checking", getName(), operation);
-      String sourceEtag = entry.getEtag();
-      String destEtag = getEtag(destStatus);
-      if (!isEmpty(sourceEtag) && sourceEtag.equals(destEtag)) {
-        // rename reported a failure or an exception was thrown,
-        // but the etag comparision implies all was good.
-        LOG.info("{}: {} failed but etag comparison of" +
-                " source {} and destination status {} determined the rename had succeeded",
-            getName(), operation, entry, destStatus);
-        // add to the statistics
-        getIOStatistics().incrementCounter(OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT);
-
-        // and report
-        return new CommitOutcome(true, caughtException);
-      }
     }
 
-    // etag comparison failure/unsupported. Fail the operation.
-    // throw any caught exception
-    if (caughtException != null) {
-      throw caughtException;
-    }
+    // if we get here then rename returned false; try to debug
 
-    // no caught exception; generate one with status info.
     final FileStatus sourceStatus = getFileStatusOrNull(source);
+    final FileStatus destStatus = getFileStatusOrNull(dest);
 
+    // no exception, rename just returned false.
     LOG.error("{}: {} failure from file entry {} with" +
-        " source status {}" +
-        " and destination status {}",
+            " source status {}" +
+            " and destination status {}",
         getName(), operation,
         entry, sourceStatus, destStatus);
+
+    // sourceStatus == null. raise FNFE
+    if (sourceStatus == null) {
+      throw new FileNotFoundException(
+          String.format("Source file for %s not found: %s (entry %s)",
+              operation, source, entry));
+    }
+
+    // any other failure -> PathIOE
     throw new PathIOException(source.toString(),
         FAILED_TO_RENAME
             + operation
@@ -778,41 +781,7 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    * Outcome from the commit.
    */
   public static final class CommitOutcome {
-    /**
-     * Rename failed but etag checking concluded it finished.
-     */
-    private final boolean renameFailureResolvedThroughEtags;
 
-    /**
-     * Any exception caught before etag checking succeeded.
-     */
-    private final IOException caughtException;
-
-    public CommitOutcome() {
-      this(false, null);
-    }
-
-    public CommitOutcome(
-        boolean renameFailureResolvedThroughEtags,
-        IOException caughtException) {
-      this.renameFailureResolvedThroughEtags = renameFailureResolvedThroughEtags;
-      this.caughtException = caughtException;
-    }
-
-    public boolean isRenameFailureResolvedThroughEtags() {
-      return renameFailureResolvedThroughEtags;
-    }
-
-    public IOException getCaughtException() {
-      return caughtException;
-    }
-
-    @Override
-    public String toString() {
-      return "CommitOutcome{" +
-          "renameFailureResolvedThroughEtags=" + renameFailureResolvedThroughEtags +
-          '}';
-    }
   }
 
   /**

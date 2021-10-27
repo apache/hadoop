@@ -23,7 +23,7 @@ import java.time.ZonedDateTime;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.EtagFromFileStatus;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -232,14 +232,14 @@ public final class ManifestCommitterSupport {
 
   /**
    * Get an etag from a FileStatus which MUST BE
-   * an implementation of EtagFromFileStatus and
+   * an implementation of EtagSource and
    * whose etag MUST NOT BE null/empty.
    * @param status the status; may be null.
    * @return the etag or null if not provided
    */
   public static String getEtag(FileStatus status) {
-    if (status instanceof EtagFromFileStatus) {
-      return ((EtagFromFileStatus) status).getEtag();
+    if (status instanceof EtagSource) {
+      return ((EtagSource) status).getEtag();
     } else {
       return null;
     }
