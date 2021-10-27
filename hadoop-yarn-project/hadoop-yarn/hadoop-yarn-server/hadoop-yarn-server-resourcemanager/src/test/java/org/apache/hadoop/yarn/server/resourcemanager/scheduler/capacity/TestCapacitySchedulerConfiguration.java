@@ -51,7 +51,8 @@ public class TestCapacitySchedulerConfiguration {
     return csConf.getAcl(queue, QueueACL.SUBMIT_APPLICATIONS);
   }
 
-  private void setSubmitAppsConfig(CapacitySchedulerConfiguration csConf, String queue, String value) {
+  private void setSubmitAppsConfig(CapacitySchedulerConfiguration csConf, String queue,
+      String value) {
     csConf.set(getSubmitAppsConfigKey(queue), value);
   }
 
@@ -63,11 +64,13 @@ public class TestCapacitySchedulerConfiguration {
     testWithGivenAclNoOneHasAccessInternal(queue, queue, aclValue);
   }
 
-  private void testWithGivenAclNoOneHasAccess(String queueToSet, String queueToVerify, String aclValue) {
+  private void testWithGivenAclNoOneHasAccess(String queueToSet, String queueToVerify,
+      String aclValue) {
     testWithGivenAclNoOneHasAccessInternal(queueToSet, queueToVerify, aclValue);
   }
 
-  private void testWithGivenAclNoOneHasAccessInternal(String queueToSet, String queueToVerify, String aclValue) {
+  private void testWithGivenAclNoOneHasAccessInternal(String queueToSet, String queueToVerify,
+      String aclValue) {
     CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     setSubmitAppsConfig(csConf, queueToSet, aclValue);
     AccessControlList acl = getSubmitAcl(csConf, queueToVerify);
@@ -78,7 +81,8 @@ public class TestCapacitySchedulerConfiguration {
 
   private void testWithGivenAclCorrectUserAndGroupHasAccess(String queue, String aclValue,
       Set<String> expectedUsers, Set<String> expectedGroups) {
-    testWithGivenAclCorrectUserAndGroupHasAccessInternal(queue, queue, aclValue, expectedUsers, expectedGroups);
+    testWithGivenAclCorrectUserAndGroupHasAccessInternal(queue, queue, aclValue, expectedUsers,
+        expectedGroups);
   }
 
   private void testWithGivenAclCorrectUserAndGroupHasAccessInternal(String queueToSet,
@@ -136,7 +140,8 @@ public class TestCapacitySchedulerConfiguration {
   public void testSpecifiedSubmitACLForRoot() {
     Set<String> expectedUsers = Sets.newHashSet(USER1);
     Set<String> expectedGroups = Sets.newHashSet(GROUP1);
-    testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, ONE_USER_ONE_GROUP_ACL, expectedUsers, expectedGroups);
+    testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, ONE_USER_ONE_GROUP_ACL, expectedUsers,
+        expectedGroups);
   }
 
   @Test
@@ -148,7 +153,8 @@ public class TestCapacitySchedulerConfiguration {
   public void testSpecifiedSubmitACLTwoUsersTwoGroupsForRoot() {
     Set<String> expectedUsers = Sets.newHashSet(USER1, USER2);
     Set<String> expectedGroups = Sets.newHashSet(GROUP1, GROUP2);
-    testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, TWO_USERS_TWO_GROUPS_ACL, expectedUsers, expectedGroups);
+    testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, TWO_USERS_TWO_GROUPS_ACL, expectedUsers,
+        expectedGroups);
   }
 
 }
