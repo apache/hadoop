@@ -45,7 +45,6 @@ import com.aliyun.oss.model.UploadPartCopyRequest;
 import com.aliyun.oss.model.UploadPartCopyResult;
 import com.aliyun.oss.model.UploadPartRequest;
 import com.aliyun.oss.model.UploadPartResult;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -74,7 +73,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-import static com.aliyun.oss.model.BucketVersioningConfiguration.OFF;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
@@ -181,10 +179,6 @@ public class AliyunOSSFileSystemStore {
     useListV1 = (listVersion == 1);
   }
 
-  @VisibleForTesting
-  boolean isVersioningBucket() {
-    return !(ossClient.getBucketVersioning(bucketName).equals(OFF));
-  }
   /**
    * Delete an object, and update write operation statistics.
    *
