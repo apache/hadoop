@@ -141,7 +141,7 @@ public class DatanodeManager {
   private final boolean avoidStaleDataNodesForRead;
 
   /** Whether or not to avoid using slow DataNodes for reading. */
-  private final boolean avoidSlowDataNodesForRead;
+  private volatile boolean avoidSlowDataNodesForRead;
 
   /** Whether or not to consider lad for reading. */
   private final boolean readConsiderLoad;
@@ -217,7 +217,7 @@ public class DatanodeManager {
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
   private final int maxSlowPeerReportNodes;
-  private boolean excludeSlowNodesEnabled;
+  private static volatile boolean excludeSlowNodesEnabled;
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -270,7 +270,7 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
-    if (slowPeerTracker != null && excludeSlowNodesEnabled) {
+    if (slowPeerTracker != null) {
       startSlowPeerCollector();
     }
     this.slowDiskTracker = dataNodeDiskStatsEnabled ?
@@ -511,7 +511,29 @@ public class DatanodeManager {
   private boolean isSlowNode(String dnUuid) {
     return avoidSlowDataNodesForRead && slowNodesUuidSet.contains(dnUuid);
   }
-  
+
+  public void setAvoidSlowDataNodesForReadEnabled(boolean enable) {
+    this.avoidSlowDataNodesForRead = enable;
+  }
+
+  @VisibleForTesting
+  public boolean getEnableAvoidSlowDataNodesForRead() {
+    return this.avoidSlowDataNodesForRead;
+  }
+
+  public static boolean isExcludeSlowNodesForWrite(String dnUuid) {
+    return excludeSlowNodesEnabled && slowNodesUuidSet.contains(dnUuid);
+  }
+
+  public void setExcludeSlowNodesForWriteEnabled(boolean enable) {
+    excludeSlowNodesEnabled = enable;
+  }
+
+  @VisibleForTesting
+  public boolean getEnableExcludeSlowNodesForWrite() {
+    return excludeSlowNodesEnabled;
+  }
+
   /**
    * Sort the non-striped located blocks by the distance to the target host.
    *

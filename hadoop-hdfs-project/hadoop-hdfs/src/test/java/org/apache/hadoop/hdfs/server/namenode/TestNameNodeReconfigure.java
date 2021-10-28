@@ -51,6 +51,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_BACKOFF_ENABLE_DEFAULT;
 
 public class TestNameNodeReconfigure {
@@ -392,6 +394,33 @@ public class TestNameNodeReconfigure {
 
     // After reconfigured, enableParallelLoad is true
     assertEquals(true, FSImageFormatProtobuf.getEnableParallelLoad());
+  }
+
+  @Test
+  public void testEnableExcludeSlowNodesAfterReconfigured()
+        throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager = nameNode.namesystem
+        .getBlockManager().getDatanodeManager();
+
+    // By default, excludeSlowNodesEnabled is false
+    assertEquals(false, datanodeManager.getEnableExcludeSlowNodesForWrite());
+
+    nameNode.reconfigureProperty(
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
+        Boolean.toString(true));
+
+    // After reconfigured, excludeSlowNodesEnabled is true
+    assertEquals(true, datanodeManager.getEnableExcludeSlowNodesForWrite());
+
+    // By default, avoidSlowDataNodesForRead is false
+    assertEquals(false, datanodeManager.getEnableAvoidSlowDataNodesForRead());
+
+    nameNode.reconfigureProperty(
+        DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, Boolean.toString(true));
+
+    // After reconfigured, avoidSlowDataNodesForRead is true
+    assertEquals(true, datanodeManager.getEnableAvoidSlowDataNodesForRead());
   }
 
   @After
