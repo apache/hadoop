@@ -461,14 +461,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private void appendClientPortToCallerContextIfAbsent() {
-    String clientPortInfo = CLIENT_PORT_STR + ":" + Server.getRemotePort();
     final CallerContext ctx = CallerContext.getCurrent();
-    if (isClientPortInfoAbsent(clientPortInfo, ctx)) {
+    if (isClientPortInfoAbsent(CLIENT_PORT_STR + ":" + Server.getRemotePort(),
+        ctx)) {
       String origContext = ctx == null ? null : ctx.getContext();
       byte[] origSignature = ctx == null ? null : ctx.getSignature();
       CallerContext.setCurrent(
           new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(clientPortInfo)
+              .append(CLIENT_PORT_STR, String.valueOf(Server.getRemotePort()))
               .setSignature(origSignature)
               .build());
     }
