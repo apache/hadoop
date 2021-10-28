@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -30,8 +30,8 @@ def get_platforms():
     :return: A list of the supported platforms managed by pkg-resolver.
     """
 
-    with open('pkg-resolver/platforms.json', encoding='utf-8', mode='r') as platforms_file:
-        return json.loads(platforms_file.read())
+    with open('pkg-resolver/platforms.json', mode='rb') as platforms_file:
+        return json.loads(platforms_file.read().decode("UTF-8"))
 
 
 def is_supported_platform(platform):

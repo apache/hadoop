@@ -34,11 +34,13 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 # Install packages from yum
 ######
 # hadolint ignore=DL3008,SC2046
+# because python-pip not found at centos-release-scl repo, we need to install epel-release
 RUN yum update -y \
     && yum groupinstall -y "Development Tools" \
     && yum install -y \
         centos-release-scl \
-        python3 \
+        epel-release \
+        python \
     && yum install -y $(pkg-resolver/resolve.py centos:7)
 
 # Set GCC 9 as the default C/C++ compiler

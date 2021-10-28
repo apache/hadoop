@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -33,8 +33,8 @@ def get_packages(platform):
     :param platform: The platform for which the packages needs to be resolved.
     :return: A list of resolved packages to install.
     """
-    with open('pkg-resolver/packages.json', encoding='utf-8', mode='r') as pkg_file:
-        pkgs = json.loads(pkg_file.read())
+    with open('pkg-resolver/packages.json', mode='rb') as pkg_file:
+        pkgs = json.loads(pkg_file.read().decode("UTF-8"))
     packages = []
     for platforms in [x for x in pkgs.values() if x.get(platform) is not None]:
         if isinstance(platforms.get(platform), list):

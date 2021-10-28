@@ -19,4 +19,4 @@
 ######
 # Install pylint and python-dateutil
 ######
-pip3 install pylint==2.6.0 python-dateutil==2.8.1
+pip2 install configparser==4.0.2 pylint==1.9.2 isort==4.3.21 python-dateutil==2.7.3
