@@ -116,6 +116,64 @@ for both files and directories, MUST always return `true` to the `isEncrypted()`
 predicate. This can be done by setting the `encrypted` flag to true when creating
 the `FileStatus` instance.
 
+#### Interface `EtagFromFileStatus`
+
+FileSystem implementations MAY support querying HTTP etags from `FileStatus`
+entries. If so, the requirements are
+
+#### Etags MUST BE different for different file contents.
+
+Two different arrays of data written to the same path MUST have different etag
+values when probed.
+This is a requirement of the HTTP specification.
+
+##### Etags MUST BE Consistent across listing operations.
+
+The value of `EtagFromFileStatus.getEtag()` MUST be the same for list* queries as
+   for `getFileStatus()`.
+
+```java
+ ((EtagFromFileStatus)getFileStatus(path)).getEtag() == ((EtagFromFileStatus)listStatus(path)[0]).getEtag()
+```
+
++the same value is returned for `listFiles()`, `listStatusIncremental()` of the path
+and, when listing the parent path, of all files in the listing.
+
+##### Etags MUST BE preserved across rename operations
+
+The value of `EtagFromFileStatus.getEtag()` SHOULD be the same after a file is renamed.
+This is an implementation detail of the store; it does not hold for AWS S3.
+
+#### `FileStatus` subclass MUST BE `Serializable`; MAY BE `Writable`
+
+The base `FileStatus` class implements `Serializable` and  `Writable` and marshalls
+its fields appropriately.
+
+Subclasses MUST support java serialization (Some Apache Spark applications use it),
+preserving the etag. This is a matter of making the etag field non-static and
+adding a `serialVersionUID`.
+
+The `Writable` support was used for marshalling status data over Hadoop IPC calls;
+Now that is implemented through `org/apache/hadoop/fs/protocolPB/PBHelper.java`
+and the methods deprecated.
+Subclasses MAY override the deprecated methods to add etag marshalling -but there
+is no expectation of this.
+
+#### Appropriate etag Path Capabilities MUST BE declared
+
+1. `hasPathCapability(path, "fs.capability.etags.available")` MUST return true iff
+   the filesystem returns valid (non-empty etags).
+3. `hasPathCapability(path, "fs.capability.etags.consistent.across.rename")` MUST return true
+   if and only if etags are preserved across renames.
+
+
+#### Non-requirements of etag support
+
+* There is no requirement/expectation that `FileSystem.getFileChecksum(Path)` returns a
+  checksum value related to the etag of an object, if any value is returned.
+* If the same data is uploaded to the twice to the same or a different path,
+  the etag of the second upload MAY NOT metch that of the first upload.
+
 
 ### `msync()`
 
@@ -1240,7 +1298,7 @@ Renaming a file where the destination is a directory moves the file as a child
         FS' where:
             not exists(FS', src)
             and exists(FS', dest)
-            and data(FS', dest) == data (FS, dest)
+            and data(FS', dest) == data (FS, source)
         result = True
 
 

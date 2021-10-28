@@ -29,21 +29,19 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_FILE_IMPL_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createSubdirs;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.Assert;
 
@@ -52,9 +50,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
@@ -71,6 +71,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,54 +108,24 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   private Text key2 = new Text("key2");
   private Text val1 = new Text("val1");
   private Text val2 = new Text("val2");
-  private int mvThreads;
+  private final int mvThreads;
 
   public TestFileOutputCommitter(int threads) {
     this.mvThreads = threads;
   }
 
-  @Parameterized.Parameters(name="{0}")
+  /**
+   * Test parameters are on thread count and whether or not to
+   * use a resilient committer filesystem.
+   * Intermixed to avoid an explosion of test runs.
+   * @return test params
+   */
+  @Parameterized.Parameters(name="t-{0}")
   public static Collection getParameters() {
     // -1 is covered in separate test case
-    return Arrays.asList(new Object[] { 0, 1, 2, 4 });
+    return Arrays.asList(new Object[]{0, 1, 2, 4});
   }
 
-  @Test
-  public void testNegativeThreadCount() throws Exception {
-    Job job = Job.getInstance();
-    FileOutputFormat.setOutputPath(job, outDir);
-    Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, -1);
-    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
-    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
-    assertFalse("Threadpool disabled for v1 with -1 thread count",
-        committer.isParallelMoveEnabled());
-    assertEquals("Threadpool disabled for thread config of -1",
-        1, committer.moveThreads);
-  }
-
-  @Test
-  public void testThreadsWithAlgoV2() throws Exception {
-    testThreadsWithAlgoV2(mvThreads);
-  }
-
-  @Test
-  public void testNegativeThreadCountAlgoV2() throws Exception {
-    testThreadsWithAlgoV2(-1);
-  }
-
-  public void testThreadsWithAlgoV2(int threads) throws Exception {
-    Job job = Job.getInstance();
-    FileOutputFormat.setOutputPath(job, outDir);
-    Configuration conf = job.getConfiguration();
-
-    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 2);
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, threads);
-    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
-    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
-    assertFalse("Threadpool disabled for algo v2", committer.isParallelMoveEnabled());
-  }
-  
   private static void cleanup() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = outDir.getFileSystem(conf);
@@ -208,7 +180,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -267,6 +239,14 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     committer2.commitJob(jContext2);
     validateContent(outDir);
     FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+
+  /**
+   * Apply test parameters.
+   * @param conf configuration to patch.
+   */
+  private void applyParameters(final Configuration conf) {
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
   }
 
   @Test
@@ -344,7 +324,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -395,9 +375,45 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
+  @Test
+  public void testNegativeThreadCount() throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, -1);
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+    assertFalse("Threadpool disabled for v1 with -1 thread count",
+        committer.isParallelMoveEnabled());
+    assertEquals("Threadpool disabled for thread config of -1",
+        1, committer.getMoveThreads());
+  }
+
+  @Test
+  public void testThreadsWithAlgoV2() throws Exception {
+    testThreadsWithAlgoV2(mvThreads);
+  }
+
+  @Test
+  public void testNegativeThreadCountAlgoV2() throws Exception {
+    testThreadsWithAlgoV2(-1);
+  }
+
+  public void testThreadsWithAlgoV2(int threads) throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+
+    conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 2);
+    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, threads);
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+    assertFalse("Threadpool disabled for algo v2", committer.isParallelMoveEnabled());
+  }
+
   private void createAndCommitTask(Configuration conf, String attempt, TaskAttemptID tID,
       int version, boolean taskCleanup, final boolean setupJob) throws IOException, InterruptedException {
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
@@ -464,7 +480,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.setBoolean(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT, parallelCommit);
 
     // Create multiple tasks and commit
@@ -509,7 +525,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.setBoolean(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT, parallelCommit);
 
     // Create multiple tasks and commit
@@ -557,8 +573,8 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
 
     public void progress() {
       if (committer != null && committer.isParallelMoveEnabled()) {
-        throw new RuntimeException("Throwing exception during progress. mvThreads"
-            + committer.moveThreads);
+        throw new RuntimeException("Throwing exception during progress. moveThreads "
+            + committer.getMoveThreads());
       }
     }
 
@@ -572,7 +588,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 1);
@@ -653,7 +669,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -708,7 +724,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -753,7 +769,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         2);
@@ -794,7 +810,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -850,7 +866,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -899,7 +915,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION, 3);
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
@@ -921,7 +937,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
-    conf.setInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS, mvThreads);
+    applyParameters(conf);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
     conf.setInt(FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);

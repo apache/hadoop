@@ -124,10 +124,10 @@ public class FileOutputCommitter extends PathOutputCommitter {
   private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
-  @VisibleForTesting
-  final int moveThreads;
-  final AtomicInteger numberOfTasks = new AtomicInteger();
-  final boolean isParallelTaskCommitEnabled;
+  private final int moveThreads;
+  private final AtomicInteger numberOfTasks = new AtomicInteger();
+  private final boolean isParallelTaskCommitEnabled;
+  private ResilientCommitByRenameHelper resilientCommitHelper;
 
   /**
    * Create a file output committer
@@ -533,6 +533,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
     }
   }
 
+  @VisibleForTesting
+  public int getMoveThreads() {
+    return moveThreads;
+  }
+
   public boolean isParallelMoveEnabled() {
     // Only available for algo v1
     return (moveThreads > 1 && algorithmVersion == 1);
@@ -588,6 +593,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
     if (hasOutputPath()) {
       Path finalOutput = getOutputPath();
       FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
+      // created resilient commit helper bonded to the destination FS/path
+      resilientCommitHelper = new ResilientCommitByRenameHelper(fs);
+      if (resilientCommitHelper.resilientCommitAvailable(finalOutput)) {
+        LOG.info("Using resilient commit API to move files");
+      }
 
       // No need to check for algo ver=1, as this entire code path is for V1.
       try (DurationInfo d = new DurationInfo(LOG, true,
@@ -742,14 +752,13 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
       if (from.isFile()) {
         if (toStat != null) {
-          if (!fs.delete(to, true)) {
+          if (!fs.delete(to, true) && fs.exists(to)) {
             throw new IOException("Failed to delete " + to);
           }
         }
 
-        if (!fs.rename(from.getPath(), to)) {
-          throw new IOException("Failed to rename " + from.getPath() + " to " + to);
-        }
+        // do the rename
+        moveFileInParallelCommit(from, to);
       } else if (from.isDirectory()) {
         if (toStat != null) {
           if (!toStat.isDirectory()) {
@@ -773,6 +782,23 @@ public class FileOutputCommitter extends PathOutputCommitter {
         }
       }
     }
+  }
+
+  /**
+   * Rename the file via the resilient commit helper.
+   * Becquse any file at the destination will have been deleted,
+   * tell the commit helper that there is no need to probe the
+   * store for existance.
+   * This assumes that no two tasks created files with the same name,
+   * but so does any overwrite check performed nonatomically
+   * on the client.
+   * @param from source filestatus
+   * @param to destination path
+   * @throws IOException failure to commit or rename.
+   */
+  private void moveFileInParallelCommit(final FileStatus from, final Path to)
+      throws IOException {
+    resilientCommitHelper.commitFile(from, to);
   }
 
   /**
