@@ -349,6 +349,5 @@ int main(int argc, char *argv[]) {
 
   // Clean up static data and prevent valgrind memory leaks
   google::protobuf::ShutdownProtobufLibrary();
-
   return exit_code;
 }
