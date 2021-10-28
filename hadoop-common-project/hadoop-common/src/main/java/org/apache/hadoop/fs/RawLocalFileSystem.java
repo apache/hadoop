@@ -35,6 +35,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
@@ -45,9 +46,12 @@ import java.util.Optional;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.ResilientCommitByRename;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -76,7 +80,9 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
  *****************************************************************/
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class RawLocalFileSystem extends FileSystem {
+public class RawLocalFileSystem extends FileSystem
+    implements ResilientCommitByRename {
+
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
   private long defaultBlockSize;
@@ -503,6 +509,49 @@ public class RawLocalFileSystem extends FileSystem {
       LOG.debug("Falling through to a copy of " + src + " to " + dst);
     }
     return FileUtil.copy(this, src, this, dst, true, getConf());
+  }
+
+  /**
+   * Use java nio operations to fail meaningfully.
+   * {@inheritDoc}
+   */
+  @Override
+  public CommitByRenameOutcome commitSingleFileByRename(final Path source,
+      final Path dest,
+      @Nullable final String sourceEtag,
+      @Nullable final FileStatus sourceStatus)
+      throws IOException {
+    LOG.debug("commitSingleFileByRename src: {} dst: {}", source, dest);
+    Path qualifiedSourcePath = makeQualified(source);
+    Path qualifiedDestPath = makeQualified(dest);
+
+    // initial checks
+    if (qualifiedSourcePath.equals(qualifiedDestPath)) {
+      // rename to itself is forbidden
+      throw new PathIOException(qualifiedSourcePath.toString(), "cannot rename object onto self");
+    }
+    final File sourceFile = pathToFile(qualifiedSourcePath);
+    if (!sourceFile.exists()) {
+      throw new FileNotFoundException(qualifiedSourcePath.toString());
+    }
+    final File destFile = pathToFile(qualifiedDestPath);
+    if (destFile.exists()) {
+      throw new FileAlreadyExistsException(qualifiedDestPath.toString());
+    }
+    // do the move
+    try {
+      Files.move(sourceFile.toPath(),
+          destFile.toPath(),
+          StandardCopyOption.ATOMIC_MOVE);
+    } catch (UnsupportedOperationException e) {
+      // raised when flags are not supported
+      throw new PathIOException(qualifiedSourcePath.toString(),
+          e.toString(),
+          e);
+
+    }
+
+    return new CommitByRenameOutcome();
   }
 
   @VisibleForTesting
@@ -1183,6 +1232,7 @@ public class RawLocalFileSystem extends FileSystem {
     case CommonPathCapabilities.FS_PATHHANDLES:
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_TRUNCATE:
+    case RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY:
       return true;
     case CommonPathCapabilities.FS_SYMLINKS:
       return FileSystem.areSymlinksEnabled();

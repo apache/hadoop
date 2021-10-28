@@ -46,6 +46,7 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.fs.impl.ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
 
 /****************************************************************
@@ -929,6 +930,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
+    case RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY:
       return false;
     default:
       return super.hasPathCapability(p, capability);

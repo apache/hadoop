@@ -877,7 +877,22 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     client.breakLease(getRelativePath(path), tracingContext);
   }
 
-  public void rename(final Path source, final Path destination, TracingContext tracingContext) throws
+  /**
+   * Rename a file or dir.
+   * If the etag/source status are passed in and non-null.
+   * it is implicit that the source is a file, not a directory.
+   * @param source path to source file/dir
+   * @param destination destination of rename.
+   * @param tracingContext tracing
+   * @param sourceEtag etag of source file. may be null or empty
+   * @param sourceStatus nullable FileStatus of source
+   * @throws AzureBlobFileSystemException failure
+   */
+  public void rename(final Path source,
+      final Path destination,
+      final TracingContext tracingContext,
+      final String sourceEtag,
+      final FileStatus sourceStatus) throws
           AzureBlobFileSystemException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
@@ -975,7 +990,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final long blockSize = abfsConfiguration.getAzureBlockSize();
       final AbfsHttpOperation result = op.getResult();
 
-      final String eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+      String eTag = extractEtagHeader(result);
       final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
       final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
       final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
@@ -1733,7 +1748,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
   }
 
-  private static class VersionedFileStatus extends FileStatus {
+  public static class VersionedFileStatus extends FileStatus {
     private final String version;
 
     VersionedFileStatus(
@@ -1795,6 +1810,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
      */
     public String getVersion() {
       return this.version;
+    }
+
+    /**
+     * Returns the etag of this FileStatus
+     *
+     * @return an etag if known.
+     */
+    public String getEtag() {
+      return getVersion();
     }
 
     @Override
@@ -1901,5 +1925,31 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
     return true;
+  }
+
+  /**
+   * Get the etag header from a response, stripping any quotations.
+   * see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+   * @param result response to process.
+   * @return the quote-unwrapped etag.
+   */
+  private static String extractEtagHeader(AbfsHttpOperation result) {
+    String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+    if (etag != null) {
+      // strip out any wrapper "" quotes which come back, for consistency with
+      // list calls
+      if (etag.startsWith("W/\"")) {
+        // Weak etag
+        etag = etag.substring(3);
+      } else if (etag.startsWith("\"")) {
+        // strong etag
+        etag = etag.substring(1);
+      }
+      if (etag.endsWith("\"")) {
+        // trailing quote
+        etag = etag.substring(0, etag.length() - 1);
+      }
+    }
+    return etag;
   }
 }

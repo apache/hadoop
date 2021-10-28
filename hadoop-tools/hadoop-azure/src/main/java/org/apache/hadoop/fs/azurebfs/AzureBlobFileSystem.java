@@ -42,6 +42,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -84,6 +86,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.impl.ResilientCommitByRename;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -116,7 +119,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatistic
  */
 @InterfaceStability.Evolving
 public class AzureBlobFileSystem extends FileSystem
-    implements IOStatisticsSource {
+    implements IOStatisticsSource, ResilientCommitByRename {
   public static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystem.class);
   private URI uri;
   private Path workingDir;
@@ -433,7 +436,7 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null, null);
       return true;
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -447,6 +450,45 @@ public class AzureBlobFileSystem extends FileSystem
               AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
               AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
       return false;
+    }
+
+  }
+
+  @Override
+  public CommitByRenameOutcome commitSingleFileByRename(final Path src,
+      final Path dst,
+      @Nullable final String sourceEtag,
+      @Nullable final FileStatus sourceStatus) throws IOException {
+
+    LOG.debug("AzureBlobFileSystem.commitSingleFileByRename src: {} dst: {}", src, dst);
+    statIncrement(CALL_RENAME);
+
+    trailingPeriodCheck(dst);
+    Path qualifiedSrcPath = makeQualified(src);
+    Path qualifiedDstPath = makeQualified(dst);
+
+    TracingContext tracingContext = new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.RENAME, true, tracingHeaderFormat,
+        listener);
+
+    if (qualifiedSrcPath.equals(qualifiedDstPath)) {
+      // rename to itself is forbidden
+      throw new PathIOException(qualifiedSrcPath.toString(), "cannot rename object onto self");
+    }
+
+    // reject non-HNS operations for simplicity
+    if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
+      throw new ResilientCommitByRenameUnsupported(qualifiedSrcPath.toString());
+    }
+
+    try {
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, sourceEtag, sourceStatus);
+      return new CommitByRenameOutcome();
+    } catch(AzureBlobFileSystemException ex) {
+      LOG.debug("Rename operation failed. ", ex);
+      checkException(src, ex);
+      // never reached
+      return null;
     }
 
   }
@@ -1499,6 +1541,9 @@ public class AzureBlobFileSystem extends FileSystem
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
       return true;
+
+      // resilient commit is restricted to heirarchical storage.
+    case ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY:
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled(
           new TracingContext(clientCorrelationId, fileSystemId,
