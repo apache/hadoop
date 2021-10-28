@@ -33,8 +33,8 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 ######
 # Install packages from yum
 ######
-# hadolint ignore=DL3008,SC2046
 # because python-pip not found at centos-release-scl repo, we need to install epel-release
+# hadolint ignore=DL3008,SC2046
 RUN yum update -y \
     && yum groupinstall -y "Development Tools" \
     && yum install -y \
