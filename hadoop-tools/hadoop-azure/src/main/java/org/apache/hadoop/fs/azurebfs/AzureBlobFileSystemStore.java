@@ -878,7 +878,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     client.breakLease(getRelativePath(path), tracingContext);
   }
 
-  public void rename(final Path source, final Path destination, TracingContext tracingContext) throws
+  public void rename(final Path source,
+      final Path destination,
+      TracingContext tracingContext,
+      final String sourceEtag,
+      final FileStatus sourceStatus) throws
           AzureBlobFileSystemException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;

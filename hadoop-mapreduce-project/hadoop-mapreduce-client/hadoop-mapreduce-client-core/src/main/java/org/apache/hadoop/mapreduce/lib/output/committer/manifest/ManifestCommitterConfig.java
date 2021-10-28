@@ -211,7 +211,7 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
       taskAttemptId = "";
       taskAttemptDir = null;
       progressable = null;
-      name =  String.format(InternalConstants.NAME_FORMAT_JOB_ATTEMPT, jobAttemptId);
+      name = String.format(InternalConstants.NAME_FORMAT_JOB_ATTEMPT, jobAttemptId);
     }
   }
 
@@ -287,7 +287,6 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   public Path getTaskManifestDir() {
     return dirs.getTaskManifestDir();
   }
-
 
   public Configuration getConf() {
     return conf;

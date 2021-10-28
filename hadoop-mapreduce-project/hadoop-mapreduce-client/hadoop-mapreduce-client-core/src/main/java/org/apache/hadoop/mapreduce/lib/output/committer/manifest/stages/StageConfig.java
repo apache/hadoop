@@ -22,9 +22,9 @@ import java.util.Objects;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Progressable;
@@ -32,7 +32,6 @@ import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.TaskPool;
 
-import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.PENDING_DIR_NAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 
 /**

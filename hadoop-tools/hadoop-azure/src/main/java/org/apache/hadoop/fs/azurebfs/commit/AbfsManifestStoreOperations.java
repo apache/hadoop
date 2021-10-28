@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.impl.ResilientCommitByRename;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem;
 
 /**
@@ -46,7 +44,10 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
   public static final String NAME
       = "org.apache.hadoop.fs.azurebfs.commit.AbfsManifestStoreOperations";
 
-  private static AzureBlobFileSystem abfs;
+  @Override
+  public AzureBlobFileSystem getFileSystem() {
+    return (AzureBlobFileSystem) super.getFileSystem();
+  }
 
   @Override
   public void bindToFileSystem(FileSystem filesystem, Path path) throws IOException {
@@ -55,7 +56,6 @@ public class AbfsManifestStoreOperations extends StoreOperationsThroughFileSyste
           "Not an abfs filesystem: " + filesystem.getClass());
     }
     super.bindToFileSystem(filesystem, path);
-    abfs = (AzureBlobFileSystem) filesystem;
   }
 
 }

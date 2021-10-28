@@ -28,7 +28,12 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_MKDIRS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.*;
 
-public class InternalConstants {
+/**
+ * Constants internal to the manifest committer.
+ */
+public final class InternalConstants {
+  private InternalConstants() {
+  }
 
   /**
    * Durations.
@@ -87,7 +92,6 @@ public class InternalConstants {
    */
   public static final String[] COUNTER_STATISTICS = {
       COMMITTER_BYTES_COMMITTED_COUNT,
-      OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT,
       COMMITTER_FILES_COMMITTED_COUNT,
       COMMITTER_TASKS_COMPLETED_COUNT,
       COMMITTER_TASKS_FAILED_COUNT,

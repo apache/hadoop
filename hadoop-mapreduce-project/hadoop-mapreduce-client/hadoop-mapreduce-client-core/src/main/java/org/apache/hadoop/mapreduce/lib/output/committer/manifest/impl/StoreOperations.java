@@ -112,6 +112,20 @@ public abstract class StoreOperations implements Closeable {
       throws IOException;
 
   /**
+   * Rename a dir; defaults to invoking
+   * Forward to {@link #renameFile(Path, Path)}.
+   * Usual "what does 'false' mean" ambiguity.
+   * @param source source file
+   * @param dest destination path -which must not exist.
+   * @return true if the directory was created.
+   * @throws IOException failure.
+   */
+  public boolean renameDir(Path source, Path dest)
+      throws IOException {
+    return renameFile(source, dest);
+  }
+
+  /**
    * List the directory.
    * @param path path to list.
    * @return an iterator over the results.
@@ -227,7 +241,7 @@ public abstract class StoreOperations implements Closeable {
     }
 
     /**
-     * Full commit result;
+     * Full commit result.
      * @param committedByResilientOperation Was this committed through the resilient API?
      * @param renameOutcome result of any rename() call.
      * @param statisticsSource The IOStatistics source from the resilient API

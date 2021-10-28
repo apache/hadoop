@@ -108,7 +108,7 @@ public class CommitJobStage extends
           getJobId());
       LOG.info("Renaming manifests to {}", manifestRenamePath);
       try {
-        renameDir(getTaskAttemptDir(), manifestRenamePath);
+        renameDir(getTaskManifestDir(), manifestRenamePath);
 
         // save this path in the summary diagnostics
         successData.getDiagnostics().put(MANIFESTS, manifestRenamePath.toUri().toString());

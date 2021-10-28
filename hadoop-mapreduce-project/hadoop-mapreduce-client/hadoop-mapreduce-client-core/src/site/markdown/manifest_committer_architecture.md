@@ -539,12 +539,11 @@ directories.
 
 Rname: iterate through all manifests and queue their renames into a pool for
 renaming.
-There's likely little benefit from parallelising the queueing of each
-manifest, so it isn't.
 
 #### Thread pool lifetimes
 
-The lifespan of thread pools is constrained by the stage configuration; 
+The lifespan of thread pools is constrained to that of the stage configuration.
+This avoids the thread pool lifecycle problems of the S3A Committers.
 
 #### Scale issues similar to S3A HADOOP-16570.
 
@@ -615,8 +614,8 @@ The implementation architecture reflects lessons from the S3A Connector.
 
 1. Instrument using IOStatistics, tracking performance of every FS call made
    ( list, mkdir, rename...)
-1. execution of every stage to be collected in a statistic too.
-1. collect and aggregate IOStatistics published by FS class instances unique to
+1. Execution of every stage to be collected in a statistic too.
+1. Collect and aggregate IOStatistics published by FS class instances unique to
    individual threads (listing iterators in particular)
 1. include counts of files per task, number of tasks, number of directories
    created
@@ -642,5 +641,5 @@ as part of a stage's execution.
 Any store/FS which supports auditing is able to collect this data
 and include in their logs.
 
-To ease backporting, all audit integration SHALL BE in its own isolated class;
-easy to replace with no-op.
+To ease backporting, all audit integration is in the single class
+`org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration`.

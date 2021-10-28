@@ -36,15 +36,19 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * If you are in the hive team: do not use this as it lacks
  * spec, tests, stability, etc. if we find you using it we will change
  * the signature just to stop your code compiling.
+ * View this as a proof of concept of the functionality we'd want from a
+ * "modern" rename call, but not the API (which would be builder based,
+ * return a future, etc).
  */
-@InterfaceAudience.LimitedPrivate({"Filesystems", "MapReduce Committers"})
+@InterfaceAudience.LimitedPrivate({"Filesystems", "hadoop-mapreduce-client-core"})
 @InterfaceStability.Unstable
 public interface ResilientCommitByRename {
 
   /**
    * Path capability.
-   * FS Instances which support the operation must return
-   * true.
+   * FS Instances which support the operation MUST return
+   * true; FileSystem instances which do not
+   * MUST return false.
    */
   String RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY =
       "org.apache.hadoop.fs.impl.ResilientCommitByRename";
@@ -53,7 +57,9 @@ public interface ResilientCommitByRename {
    * Rename source file to dest path *Exactly*; no subdirectory games here.
    * if the op does not raise an exception,then
    * the data at dest is the data which was at source.
+   *
    * Requirements
+   *
    * <pre>
    *   exists(FS, source) else raise FileNotFoundException
    *   source != dest else raise PathIOException
@@ -68,8 +74,6 @@ public interface ResilientCommitByRename {
    *   <li>dest must not exist; </li>
    *   <li>dest.getParent() must be a dir</li>
    *   <li>if sourceEtag is non-empty, it MAY be used to qualify/validate the rename.</li>
-   *   <li>if last modified is geater than zero, it MAY be used to
-   *       qualify/validate the rename.</li>
    * </ol>
    *
    * The outcome of the operation is undefined if source is not a file, dest exists,
@@ -80,16 +84,15 @@ public interface ResilientCommitByRename {
    *
    * If sourceStatus is not null, its contents MAY be used to qualify the rename.
    * <ol>
-   *   <li>Values extracted from sourceStatus takes priority over
+   *   <li>Values extracted from sourceStatus SHALL take priority over
    *       sourceEtag/sourceLastModified parameter.</li>
    *   <li>sourceStatus.getPath().getName() MUST equal source.getName()</li>
-   *   <li>sourceStatus.getModificationTime() MAY be used as the value of sourceLastModified</li>
    *   <li>If store has a subclass of FileStatus and it is sourceStatus is of this type,
-   *       custom information may be used to qualify/validate the request.
-   *       For example, this can include etag extraction.</li>
+   *       custom information MAY be used to qualify/validate the request.
+   *       This MAY include etag or S3 version ID extraction,</li>
    * </ol>
    *
-   * Filesystems may support this call on an instance-by-instance basis, depending on
+   * Filesystems MAY support this call on an instance-by-instance basis, depending on
    * the nature of the remote store.
    * If not available the implementation MUST {@code ResilientCommitByRenameUnsupported}.
    * Callers SHOULD use a check of
@@ -111,22 +114,23 @@ public interface ResilientCommitByRename {
    * @param source path to source file
    * @param dest destination of rename.
    * @param sourceEtag etag of source file. may be null or empty
-   * @param sourceLastModified last modified timestamp, or 0 for don't know.
    * @param sourceStatus nullable FileStatus of source.
    * @throws FileNotFoundException source file not found
+   * @throws ResilientCommitByRenameUnsupported not available on this store.
    * @throws PathIOException failure, including source and dest being the same path
    * @throws IOException any other exception
    */
-  CommitByRenameOutcome commitSingleFileByRename(
+  default CommitByRenameOutcome commitSingleFileByRename(
       Path source,
       Path dest,
       @Nullable String sourceEtag,
-      long sourceLastModified,
       @Nullable FileStatus sourceStatus)
       throws FileNotFoundException,
         ResilientCommitByRenameUnsupported,
         PathIOException,
-      IOException;
+        IOException {
+    throw new ResilientCommitByRenameUnsupported(source.toString());
+  }
 
   /**
    * The outcome. This is always a success, but it
@@ -138,7 +142,7 @@ public interface ResilientCommitByRename {
 
   final class ResilientCommitByRenameUnsupported extends PathIOException {
     public ResilientCommitByRenameUnsupported(final String path) {
-      super(path, "commitSingleFileByRename not supported");
+      super(path, "ResilientCommit operations not supported");
     }
   }
 }

@@ -109,16 +109,10 @@ public final class ManifestCommitterStatisticNames {
   public static final String IO_ACQUIRE_WRITE_PERMIT_BLOCKED = "io_acquire_write_permit_blocked";
 
   /**
-   * A file renamed during the commit operation.
+   * A file renamed during the commit operation {@value}..
    */
   public static final String OP_COMMIT_FILE_RENAME =
       "commit_file_rename";
-
-  /**
-   * Was a commit recovered by etag checking?
-   */
-  public static final String OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT =
-      "commit_file_rename_recovered_by_etag";
 
   /** Directory creation {@value}. */
   public static final String OP_CREATE_DIRECTORIES = "op_create_directories";
@@ -170,6 +164,10 @@ public final class ManifestCommitterStatisticNames {
    * Probing for paths being files, and if true: deleting them.
    */
   public static final String OP_PREPARE_DIR_ANCESTORS = "op_prepare_dir_ancestors";
+
+  /** Rename a dir: {@value}. */
+  public static final String OP_RENAME_DIR = OP_RENAME;
+
 
   /** Rename a file: {@value}. */
   public static final String OP_RENAME_FILE = OP_RENAME;

@@ -18,30 +18,31 @@
 
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.CommonPathCapabilities;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.RenameFilesStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
 import static org.apache.hadoop.fs.impl.ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableStoreOperations.SIMULATED_FAILURE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.AbstractJobCommitStage.FAILED_TO_RENAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -50,12 +51,13 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Test rename files with fault injection.
  * Dest FS needs to support etags & ideally resilient renaming.
  */
-public class TestEtagRenameFailure extends AbstractManifestCommitterTest {
+public class TestRenameStageFailure extends AbstractManifestCommitterTest {
 
   /**
    * Statistic to look for.
    */
   public static final String RENAME_FAILURES = OP_COMMIT_FILE_RENAME + ".failures";
+  private static final int FAILING_FILE_INDEX = 5;
 
   /**
    * Fault Injection.
@@ -89,15 +91,8 @@ public class TestEtagRenameFailure extends AbstractManifestCommitterTest {
     resilientCommit = fs.hasPathCapability(methodPath,
         RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY);
 
-    StoreOperations wrappedOperations;
-    if (etagsSupported) {
-      wrappedOperations = getStoreOperations();
-    } else {
-      // store doesn't do etags, so create a stub store which does
-      wrappedOperations = new StubStoreOperations();
-    }
     failures
-        = new UnreliableStoreOperations(wrappedOperations);
+        = new UnreliableStoreOperations(getStoreOperations());
     setStoreOperations(failures);
   }
 
@@ -114,43 +109,52 @@ public class TestEtagRenameFailure extends AbstractManifestCommitterTest {
     // create a manifest with a lot of files, but for
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
-    Path file500 = null;
-    int files = filesToCreate();
-    for (int i = 0; i < files; i++) {
-      String name = String.format("file%04d", i);
-      Path src = new Path(jobAttemptTaskSubDir, name);
-      Path dest = new Path(destDir, name);
-      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0, null));
-      if (i == 500) {
-        // add file #500 to the failure list, and only that file.
-        file500 = src;
-        failures.addRenameSourceFilesToFail(src);
-      }
-    }
-
-    List<TaskManifest> manifests = new ArrayList<>();
-    manifests.add(manifest);
+    createFileset(destDir, jobAttemptTaskSubDir, manifest);
+    final List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
+    final FileOrDirEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
+    failures.addRenameSourceFilesToFail(entry.getSourcePath());
 
     // rename MUST fail
-    PathIOException ex = expectRenameFailure(
+    expectRenameFailure(
         new RenameFilesStage(stageConfig),
-        manifests,
-        files,
-        SIMULATED_FAILURE);
-
-    Assertions.assertThat(ex.getPath())
-        .describedAs("Path of exception %s", ex)
-        .isEqualTo(file500);
-
+        manifest,
+        filesToCommit.size(),
+        SIMULATED_FAILURE, PathIOException.class);
   }
 
+  /**
+   * Number of files to create; must be more than
+   * {@link #FAILING_FILE_INDEX}.
+   */
   protected int filesToCreate() {
-    return 1000;
+    return 100;
+  }
+
+  @Test
+  public void testCommitMissingFile() throws Throwable {
+    describe("commit a file which doesn't exist. Expect FNFE always");
+    // destination directory.
+    Path destDir = methodPath();
+    StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
+    Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
+    TaskManifest manifest = new TaskManifest();
+    final List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
+
+    Path source = new Path(jobAttemptTaskSubDir, "source.parquet");
+    Path dest = new Path(destDir, "destdir.parquet");
+    filesToCommit.add(new FileOrDirEntry(source, dest, 0, null));
+    final FileNotFoundException ex = expectRenameFailure(
+        new RenameFilesStage(stageConfig),
+        manifest,
+        0,
+        "",
+        FileNotFoundException.class);
+    LOG.info("Exception raised: {}", ex.toString());
   }
 
   @Test
   public void testRenameReturnsFalse() throws Throwable {
-    describe("rename where rename() returns false for one file." +
+    describe("commit where rename() returns false for one file." +
         " Expect failure to be escalated to an IOE");
 
     // destination directory.
@@ -161,88 +165,57 @@ public class TestEtagRenameFailure extends AbstractManifestCommitterTest {
     // create a manifest with a lot of files, but for
     // which one of whose renames will fail
     TaskManifest manifest = new TaskManifest();
-    Path file500 = null;
-    int files = filesToCreate();
-    for (int i = 0; i < files; i++) {
-      String name = String.format("file%04d", i);
-      Path src = new Path(jobAttemptTaskSubDir, name);
-      Path dest = new Path(destDir, name);
-      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0, null));
-      if (i == 500) {
-        // add file #500 to the failure list, and only that file.
-        file500 = src;
-        failures.addRenameSourceFilesToFail(src);
-      }
-    }
+    createFileset(destDir, jobAttemptTaskSubDir, manifest);
 
-    List<TaskManifest> manifests = new ArrayList<>();
-    manifests.add(manifest);
+    final List<FileOrDirEntry> filesToCommit = manifest.getFilesToCommit();
+    final FileOrDirEntry entry = filesToCommit.get(FAILING_FILE_INDEX);
+    failures.addRenameSourceFilesToFail(entry.getSourcePath());
 
     // switch to rename returning false.; again, this must
     // be escalated to a failure.
     failures.setRenameToFailWithException(false);
-    PathIOException ex = expectRenameFailure(
+    expectRenameFailure(
         new RenameFilesStage(stageConfig),
-        manifests,
-        files,
-        FAILED_TO_RENAME);
+        manifest,
 
-    Assertions.assertThat(ex.getPath())
-        .describedAs("Path of exception %s", ex)
-        .isEqualTo(file500);
+        filesToCommit.size(),
+        FAILED_TO_RENAME,
+        PathIOException.class);
+
   }
 
-  @Test
-  public void testRenameEtagRecovery() throws Throwable {
-    describe("verify providing etags can recover from rename failuers");
-    Assume.assumeTrue("Needs resilient commit in the filesystem", resilientCommit);
-
-
-    // destination directory.
-    Path destDir = methodPath();
-    StageConfig stageConfig = createStageConfigForJob(JOB1, destDir);
-    Path jobAttemptTaskSubDir = stageConfig.getJobAttemptTaskSubDir();
-
-    // create a manifest with a lot of files, but for
-    // which one of whose renames will fail
-    TaskManifest manifest = new TaskManifest();
-    int files = 10;
+  private void createFileset(final Path destDir,
+      final Path jobAttemptTaskSubDir,
+      final TaskManifest manifest) throws IOException {
+    int files = filesToCreate();
+    final FileSystem fs = getFileSystem();
     for (int i = 0; i < files; i++) {
       String name = String.format("file%04d", i);
       Path src = new Path(jobAttemptTaskSubDir, name);
       Path dest = new Path(destDir, name);
-      final StoreOperations operations = getStoreOperations();
-      final FileStatus st = operations.getFileStatus(src);
-      final String etag = operations.getEtag(st);
-      Assertions.assertThat(etag)
-          .describedAs("Etag of %s", st)
-          .isNotEmpty();
-      manifest.addFileToCommit(new FileOrDirEntry(src, dest, 0, etag));
-      if (i == 1) {
-        failures.addRenameSourceFilesToFail(src);
-      }
+      ContractTestUtils.touch(fs, src);
+      final FileOrDirEntry entry = createEntryWithEtag(src, dest);
+      manifest.addFileToCommit(entry);
     }
+  }
 
-    List<TaskManifest> manifests = new ArrayList<>();
-    manifests.add(manifest);
-
-    // attempt 1: failing with an IOE.
-    final RenameFilesStage stage = new RenameFilesStage(stageConfig);
-    IOStatisticsStore iostatistics = stage.getIOStatistics();
-    long failures0 = iostatistics.counters().get(OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT);
-    failures.setRenameToFailWithException(true);
-    stage.apply(manifests);
-    assertThatStatisticCounter(iostatistics, OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT)
-        .isEqualTo(failures0 + 1);
-
-    // attempt 2: returning false
-    final RenameFilesStage stage2 = new RenameFilesStage(stageConfig);
-    long failures2 = iostatistics.counters().get(OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT);
-    failures.setRenameToFailWithException(false);
-    stage2.apply(manifests);
-    assertThatStatisticCounter(iostatistics, OP_COMMIT_FILE_RENAME_RECOVERED_ETAG_COUNT)
-        .isEqualTo(failures2 + 1);
-
+  /**
+   * Create a manifest entry. If the FS supports etags, one is retrieved.
+   * @param src source
+   * @param dest dest
+   * @return entry
+   * @throws IOException if getFileStatus failed.
+   */
+  private FileOrDirEntry createEntryWithEtag(final Path src, final Path dest)
+      throws IOException {
+    final String etag;
+    if (etagsSupported) {
+      etag = ManifestCommitterSupport.getEtag(getFileSystem().getFileStatus(src));
+    } else {
+      etag = null;
+    }
+    final FileOrDirEntry entry = new FileOrDirEntry(src, dest, 0, etag);
+    return entry;
   }
 
   /**
@@ -252,40 +225,48 @@ public class TestEtagRenameFailure extends AbstractManifestCommitterTest {
    * @param manifests list of manifests
    * @param files number of files being renamed.
    * @param errorText text which must be in the exception string
+   * @param exceptionClass
    * @return the caught exception
    * @throws Exception if anything else went wrong, or no exception was raised.
    */
-  private PathIOException expectRenameFailure(
+  private <E extends Throwable> E expectRenameFailure(
       RenameFilesStage stage,
-      List<TaskManifest> manifests,
+      TaskManifest manifest,
       int files,
-      String errorText) throws Exception {
+      String errorText,
+      Class<E> exceptionClass) throws Exception {
+    List<TaskManifest> manifests = new ArrayList<>();
+    manifests.add(manifest);
     ProgressCounter progressCounter = getProgressCounter();
     progressCounter.reset();
     IOStatisticsStore iostatistics = stage.getIOStatistics();
     long failures0 = iostatistics.counters().get(RENAME_FAILURES);
 
     // rename MUST raise an exception.
-    PathIOException ex = intercept(PathIOException.class, errorText, () ->
+    E ex = intercept(exceptionClass, errorText, () ->
         stage.apply(manifests));
 
+    LOG.info("Statistics {}", ioStatisticsToPrettyString(iostatistics));
     // the IOStatistics record the rename as a failure.
     assertThatStatisticCounter(iostatistics, RENAME_FAILURES)
         .isEqualTo(failures0 + 1);
 
     // count of files committed MUST be less than expected.
-    Assertions.assertThat(stage.getFilesCommitted().size())
-        .describedAs("Files Committed by stage")
-        .isGreaterThan(0)
-        .isLessThan(files);
+    if (files > 0) {
 
-    // the progress counter will show that the rename did NOT complete,
-    // that is: work stopped partway through.
+      Assertions.assertThat(stage.getFilesCommitted().size())
+          .describedAs("Files Committed by stage")
+          .isGreaterThan(0)
+          .isLessThan(files);
+    }
+
+    // the progress counter will show that the rename did invoke it.
+    // there's no assertion on the actual value as it depends on
+    // execution time of the threads.
 
     Assertions.assertThat(progressCounter.value())
         .describedAs("Progress counter %s", progressCounter)
-        .isGreaterThan(0)
-        .isLessThan(files);
+        .isGreaterThan(0);
     return ex;
   }
 }

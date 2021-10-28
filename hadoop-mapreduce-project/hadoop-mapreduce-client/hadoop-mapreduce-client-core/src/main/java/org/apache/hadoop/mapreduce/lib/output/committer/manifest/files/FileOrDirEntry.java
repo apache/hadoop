@@ -58,9 +58,6 @@ public final class FileOrDirEntry implements Serializable {
   @JsonProperty("etag")
   private String etag;
 
-  @JsonProperty("modified")
-  private long modified;
-
   public FileOrDirEntry() {
   }
 
@@ -137,14 +134,8 @@ public final class FileOrDirEntry implements Serializable {
     return etag;
   }
 
-  /**
-   * Set builder value.
-   * @param value new value
-   * @return the builder
-   */
-  public FileOrDirEntry withEtag(String value) {
-    etag = value;
-    return this;
+  public void setEtag(final String etag) {
+    this.etag = etag;
   }
 
   public void validate() throws IOException {
@@ -164,7 +155,7 @@ public final class FileOrDirEntry implements Serializable {
     sb.append("source='").append(source).append('\'');
     sb.append(", dest='").append(dest).append('\'');
     sb.append(", size=").append(size);
-    sb.append(", etag='").append(etag).append('\'');;
+    sb.append(", etag='").append(etag).append('\'');
     sb.append('}');
     return sb.toString();
   }

@@ -248,9 +248,9 @@ throw a meaningful exception if that didn't work.
 # Rate Limiting
 
 To avoid triggering store throttling and backoff delays, the committer rate-limits read- and write
-operations per second. 
+operations per second.
 
-| Option | Meaning | 
+| Option | Meaning |
 |--------|---------|
 | `mapreduce.manifest.committer.io.rate` | Rate limit in operations/second for IO operations. |
 

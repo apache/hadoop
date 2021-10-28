@@ -441,7 +441,7 @@ public class AzureBlobFileSystem extends FileSystem
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, null, null);
       return true;
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -463,7 +463,6 @@ public class AzureBlobFileSystem extends FileSystem
   public CommitByRenameOutcome commitSingleFileByRename(final Path src,
       final Path dst,
       @Nullable final String sourceEtag,
-      final long sourceLastModified,
       @Nullable final FileStatus sourceStatus) throws IOException {
 
     LOG.debug("AzureBlobFileSystem.commitSingleFileByRename src: {} dst: {}", src, dst);
@@ -488,7 +487,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     try {
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, sourceEtag, sourceStatus);
       return new CommitByRenameOutcome();
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);

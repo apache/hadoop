@@ -224,8 +224,9 @@ public final class ManifestCommitterConstants {
    * Default classname of the store operations.
    * Value: {@value}.
    */
-  public static final String STORE_OPERATIONS_CLASS_DEFAULT
-      = "org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperationsThroughFileSystem";
+  public static final String STORE_OPERATIONS_CLASS_DEFAULT =
+      "org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl" +
+          ".StoreOperationsThroughFileSystem";
 
   /**
    * Stage attribute in audit context: {@value}.

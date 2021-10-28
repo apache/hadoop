@@ -93,7 +93,7 @@ public class StubStoreOperations extends StoreOperations {
     return new MoveToTrashResult(MoveToTrashOutcome.RENAMED_TO_TRASH, null);
   }
 
-    @Override
+  @Override
   public void close() throws IOException {
 
   }

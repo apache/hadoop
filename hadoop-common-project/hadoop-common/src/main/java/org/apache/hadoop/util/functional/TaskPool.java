@@ -289,13 +289,14 @@ public final class TaskPool {
               } catch (Exception e) {
                 taskFailed.set(true);
                 exceptions.add(e);
-                LOG.info("Task failed", e);
+                LOG.info("Task failed {}", e.toString());
+                LOG.debug("Task failed", e);
 
                 if (onFailure != null) {
                   try {
                     onFailure.run(item, e);
                   } catch (Exception failException) {
-                    LOG.error("Failed to clean up on failure", e);
+                    LOG.warn("Failed to clean up on failure", e);
                     // swallow the exception
                   }
                 }

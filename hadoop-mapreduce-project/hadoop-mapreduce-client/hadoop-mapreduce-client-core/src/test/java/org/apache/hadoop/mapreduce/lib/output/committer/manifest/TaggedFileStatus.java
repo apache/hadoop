@@ -33,12 +33,12 @@ public final class TaggedFileStatus extends FileStatus implements EtagSource {
 
   public TaggedFileStatus(final long length,
       final boolean isdir,
-      final int block_replication,
+      final int blockReplication,
       final long blocksize,
-      final long modification_time,
+      final long modificationTime,
       final Path path,
       final String etag) {
-    super(length, isdir, block_replication, blocksize, modification_time, path);
+    super(length, isdir, blockReplication, blocksize, modificationTime, path);
     this.etag = etag;
   }
 

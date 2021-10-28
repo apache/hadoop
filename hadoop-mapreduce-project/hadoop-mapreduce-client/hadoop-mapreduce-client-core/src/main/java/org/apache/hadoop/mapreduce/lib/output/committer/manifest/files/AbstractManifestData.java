@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Class for single/multiple commit data structures.
  */
@@ -60,7 +62,7 @@ public abstract class AbstractManifestData<T extends AbstractManifestData>
    */
   public static Path unmarshallPath(String path) {
     try {
-      return new Path(new URI(path));
+      return new Path(new URI(requireNonNull(path, "No path")));
     } catch (URISyntaxException e) {
       throw new RuntimeException(
           "Failed to parse \"" + path + "\" : " + e,

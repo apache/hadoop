@@ -49,7 +49,7 @@ public final class RateLimitingFactory {
   /**
    * Rate limiting restricted to that of a google rate limiter.
    */
-  private static class RestrictedRateLimiting implements RateLimiting {
+  private static final class RestrictedRateLimiting implements RateLimiting {
     private final RateLimiter limiter;
 
     /**

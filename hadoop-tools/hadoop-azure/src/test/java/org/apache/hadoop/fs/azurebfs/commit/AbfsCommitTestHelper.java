@@ -28,7 +28,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 /**
  * Helper methods for committer tests on ABFS.
  */
-class AbfsCommitTestHelper {
+final class AbfsCommitTestHelper {
   private AbfsCommitTestHelper() {
   }
 

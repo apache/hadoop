@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 
-
 /**
  * This is the committer factory to register as the source of committers
  * for the job/filesystem schema.

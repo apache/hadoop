@@ -160,7 +160,7 @@ public abstract class AbstractManifestCommitterTest
   /**
    * The thread leak tracker.
    */
-  private static final ThreadLeakTracker threadLeakTracker = new ThreadLeakTracker();
+  private static final ThreadLeakTracker THREAD_LEAK_TRACKER = new ThreadLeakTracker();
 
   /**
    * Submitter for tasks; may be null.
@@ -426,7 +426,7 @@ public abstract class AbstractManifestCommitterTest
    * @return the thread leak tracker.
    */
   protected static ThreadLeakTracker getThreadLeakTracker() {
-    return threadLeakTracker;
+    return THREAD_LEAK_TRACKER;
   }
 
   /**
@@ -434,7 +434,7 @@ public abstract class AbstractManifestCommitterTest
    */
   @AfterClass
   public static void threadLeakage() {
-    threadLeakTracker.assertNoThreadLeakage();
+    THREAD_LEAK_TRACKER.assertNoThreadLeakage();
   }
 
   /**

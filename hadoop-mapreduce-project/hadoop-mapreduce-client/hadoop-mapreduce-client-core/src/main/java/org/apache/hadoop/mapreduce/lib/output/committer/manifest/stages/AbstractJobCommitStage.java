@@ -21,8 +21,8 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,11 +33,13 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileOrDirEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.StoreOperations;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.util.OperationDuration;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.TaskPool;
 
@@ -51,9 +53,16 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTracker;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT_BLOCKED;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT_BLOCKED;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_DIR;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_GET_FILE_STATUS;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_LIST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_READ_OPEN_FILE;
@@ -62,12 +71,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Int
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_DELETE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_MKDIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.PERMIT_WRITE_RENAME;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_READ_PERMIT_BLOCKED;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.IO_ACQUIRE_WRITE_PERMIT_BLOCKED;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 
 /**
  * A Stage in Task/Job Commit.
@@ -659,7 +662,11 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final void renameFile(final Path source, final Path dest)
       throws IOException {
-    commitFile(new FileOrDirEntry(source, dest, 0, null), true);
+    maybeDeleteDest(true, dest);
+    executeRenamingOperation("renameFile", source, dest,
+        OP_RENAME_FILE, PERMIT_WRITE_RENAME, () ->
+            operations.renameFile(source, dest),
+        p -> p);
   }
 
   /**
@@ -672,8 +679,13 @@ public abstract class AbstractJobCommitStage<IN, OUT>
    */
   protected final void renameDir(final Path source, final Path dest)
       throws IOException {
-    commitOrRename(new FileOrDirEntry(source, dest, 0, null),
-        true, false);
+
+
+    maybeDeleteDest(true, dest);
+    executeRenamingOperation("renameDir", source, dest,
+        OP_RENAME_FILE, PERMIT_WRITE_RENAME, () ->
+        operations.renameDir(source, dest),
+        p -> p);
   }
 
   /**
@@ -685,24 +697,20 @@ public abstract class AbstractJobCommitStage<IN, OUT>
   protected final CommitOutcome commitFile(FileOrDirEntry entry,
       boolean deleteDest)
       throws IOException {
-    return commitOrRename(entry, deleteDest, true);
-  }
-  /**
-   * Rename a file from source to dest; if the underlying FS API call
-   * returned false that's escalated to an IOE.
-   * @param entry entry from manifest (or created just for this method call)
-   * @throws PathIOException if the rename() call returned false.
-   * @throws IOException failure
-   */
-  protected final CommitOutcome commitOrRename(FileOrDirEntry entry,
-      boolean deleteDest,
-      boolean isCommit)
-      throws IOException {
-    final String operation = isCommit ? "commit" : "rename";
+
     final Path source = entry.getSourcePath();
     final Path dest = entry.getDestPath();
-    LOG.debug("{}: {} '{}' to '{}')", getName(), operation, source, dest);
 
+    maybeDeleteDest(deleteDest, dest);
+    executeRenamingOperation("commitFile",
+        source, dest,
+        OP_COMMIT_FILE_RENAME, PERMIT_WRITE_COMMIT_FILE, () ->
+            operations.commitFile(entry),
+        StoreOperations.CommitFileResult::success);
+    return new CommitOutcome();
+  }
+
+  private void maybeDeleteDest(final boolean deleteDest, final Path dest) throws IOException {
     if (deleteDest) {
       // delete the destination, always, knowing that it's a no-op if
       // the data isn't there. Skipping the change saves one round trip
@@ -712,35 +720,51 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       // being needed.
       LOG.debug("{}: delete('{}') returned {}'", getName(), dest, deleted);
     }
+  }
 
-    // now do the rename.
-    // the uprating of a false to PathIOE is done in the duration
-    // tracker, so failures can be observed in the statistics.
-    final String statistic = isCommit? OP_COMMIT_FILE_RENAME : OP_RENAME_FILE;
-    acquireWritePermits(isCommit ? PERMIT_WRITE_COMMIT_FILE : PERMIT_WRITE_RENAME);
+  /**
+   * Execute an operation to rename a file/dir, commit a manifest entry.
+   * The statistic is tracked; returning false from the operation is considered
+   * a failure from the statistics perspective.
+   * @param operation operation name
+   * @param source source path
+   * @param dest dest path
+   * @param statistic statistic to track
+   * @param cost cost for write permits
+   * @param action callable of the operation
+   * @param validate validator predicate
+   * @param <R> result
+   * @return the result
+   * @throws IOException on any failure
+   */
+  private <R> R executeRenamingOperation(String operation, Path source, Path dest,
+      String statistic, int cost,
+      CallableRaisingIOE<R> action,
+      Function<R, Boolean> validate)
+    throws IOException {
+    LOG.debug("{}: {} '{}' to '{}')", getName(), operation, source, dest);
+    requireNonNull(source, "Null source");
+    requireNonNull(dest, "Null dest");
 
-    // duration tracking is a bit convoluted as it excludes all etag related
-    // recovery etc, but ensures that rename failures as well as IOEs are
+    // duration tracking is a bit convoluted as it
+    // ensures that rename failures as well as IOEs are
     // treated as failures from a statistics perspective.
+    acquireWritePermits(cost);
+
     DurationTracker tracker = createTracker(getIOStatistics(), statistic);
-    boolean renamed;
+    boolean success;
     try {
-      // now use the rename or commit operations in the FS.
-      if (isCommit) {
-        final StoreOperations.CommitFileResult result = operations.commitFile(entry);
-        renamed = result.success();
-      } else {
-        renamed = operations.renameFile(entry.getSourcePath(), entry.getDestPath());
-      }
-      if (renamed) {
-        // successful
-        return new CommitOutcome();
-      } else {
-        // record failure in the tracker
+      R result = action.apply();
+      success = validate.apply(result);
+
+      if (!success) {
+        // record failure in the tracker before closing it
         tracker.failed();
+      } else {
+        return result;
       }
-    } catch (IOException e) {
-      LOG.info("{}: {} {} raised an exception: {}", getName(), operation, entry, e.toString());
+    } catch (IOException | RuntimeException e) {
+      LOG.info("{}: {} raised an exception: {}", getName(), operation, e.toString());
       LOG.debug("{}: {} stack trace", getName(), operation, e);
       tracker.failed();
       throw e;
@@ -749,32 +773,41 @@ public abstract class AbstractJobCommitStage<IN, OUT>
       // update the tracker.
       tracker.close();
     }
+    // escalate the failure; this is done out of the duration tracker
+    // so its file status probes aren't included.
+    escalateRenameFailure(operation, source, dest);
+    return null;
+  }
 
-    // if we get here then rename returned false; try to debug
+  /**
+   * Escalate a rename failure to an exception.
+   * This never returns
+   * @param operation operation name
+   * @param source source path
+   * @param dest dest path
+   * @throws IOException always
+   */
+  private void escalateRenameFailure(String operation, Path source, Path dest)
+      throws IOException {
+    // rename just returned false.
+    // collect information for a meaningful error message
+    // and include in an exception raised.
 
-    final FileStatus sourceStatus = getFileStatusOrNull(source);
+    // get the source status; this will implicitly raise
+    // a FNFE.
+    final FileStatus sourceStatus = getFileStatus(source);
+
+    // and look to see if there is anything at the destination
     final FileStatus destStatus = getFileStatusOrNull(dest);
 
-    // no exception, rename just returned false.
-    LOG.error("{}: {} failure from file entry {} with" +
-            " source status {}" +
+    LOG.error("{}: failure to {} {} to {} with" +
+            " source status {} " +
             " and destination status {}",
-        getName(), operation,
-        entry, sourceStatus, destStatus);
+        getName(), operation, source, dest,
+        sourceStatus, destStatus);
 
-    // sourceStatus == null. raise FNFE
-    if (sourceStatus == null) {
-      throw new FileNotFoundException(
-          String.format("Source file for %s not found: %s (entry %s)",
-              operation, source, entry));
-    }
-
-    // any other failure -> PathIOE
     throw new PathIOException(source.toString(),
-        FAILED_TO_RENAME
-            + operation
-            + " " + entry);
-
+        FAILED_TO_RENAME + operation + " to " + dest);
   }
 
   /**

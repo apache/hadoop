@@ -81,6 +81,14 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
 
   }
 
+  /**
+   * Get the filesystem.
+   * @return the filesystem; null until bound.
+   */
+  public FileSystem getFileSystem() {
+    return fileSystem;
+  }
+
   @Override
   public void bindToFileSystem(FileSystem filesystem, Path path) throws IOException {
     fileSystem = filesystem;
@@ -141,7 +149,6 @@ public class StoreOperationsThroughFileSystem extends StoreOperations {
               entry.getSourcePath(),
               entry.getDestPath(),
               entry.getEtag(),
-              0,
               null);
 
       return new CommitFileResult(true, true, outcome);

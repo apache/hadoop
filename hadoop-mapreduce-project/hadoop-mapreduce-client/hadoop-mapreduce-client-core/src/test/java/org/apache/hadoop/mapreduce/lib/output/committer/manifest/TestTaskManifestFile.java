@@ -105,6 +105,12 @@ public class TestTaskManifestFile extends AbstractManifestCommitterTest {
     Assertions.assertThat(deser.getFilesToCommit())
         .hasSize(1)
         .allSatisfy(d -> assertFileOrDirEntryMatch(d, subfileS, subfileD, len));
+    final FileOrDirEntry entry = deser.getFilesToCommit().get(0);
+    assertFileOrDirEntryMatch(entry, subfileS, subfileD, len);
+    Assertions.assertThat(entry.getEtag())
+        .describedAs("etag of %s", entry)
+        .isEqualTo("etag");
+
   }
 
   /**
