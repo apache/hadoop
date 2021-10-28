@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * API version-independent container for OSS List responses.
  */
-public class OSSListResult {
+public final class OSSListResult {
   private ObjectListing v1Result;
   private ListObjectsV2Result v2Result;
 

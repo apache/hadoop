@@ -595,6 +595,16 @@ public class AliyunOSSFileSystemStore {
       }
 
       private boolean requestNextBatch() {
+        while (!meetEnd) {
+          if (continueListStatus()) {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      private boolean continueListStatus() {
         if (meetEnd) {
           return false;
         }
