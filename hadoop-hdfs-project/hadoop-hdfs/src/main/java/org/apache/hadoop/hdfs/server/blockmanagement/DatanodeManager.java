@@ -217,7 +217,6 @@ public class DatanodeManager {
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
   private final int maxSlowPeerReportNodes;
-  private static volatile boolean excludeSlowNodesEnabled;
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -260,9 +259,6 @@ public class DatanodeManager {
     final Timer timer = new Timer();
     this.slowPeerTracker = dataNodePeerStatsEnabled ?
         new SlowPeerTracker(conf, timer) : null;
-    this.excludeSlowNodesEnabled = conf.getBoolean(
-        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
-        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT);
     this.maxSlowPeerReportNodes = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT);
@@ -519,19 +515,6 @@ public class DatanodeManager {
   @VisibleForTesting
   public boolean getEnableAvoidSlowDataNodesForRead() {
     return this.avoidSlowDataNodesForRead;
-  }
-
-  public static boolean isExcludeSlowNodesForWrite(String dnUuid) {
-    return excludeSlowNodesEnabled && slowNodesUuidSet.contains(dnUuid);
-  }
-
-  public void setExcludeSlowNodesForWriteEnabled(boolean enable) {
-    excludeSlowNodesEnabled = enable;
-  }
-
-  @VisibleForTesting
-  public boolean getEnableExcludeSlowNodesForWrite() {
-    return excludeSlowNodesEnabled;
   }
 
   /**

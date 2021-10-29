@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -100,6 +102,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private boolean considerLoadByStorageType;
   protected double considerLoadFactor;
   private boolean preferLocalNode;
+  private boolean dataNodePeerStatsEnabled;
+  private boolean excludeSlowNodesEnabled;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
   private FSClusterStats stats;
@@ -145,6 +149,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
             DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_KEY,
         DFSConfigKeys.
             DFS_NAMENODE_BLOCKPLACEMENTPOLICY_DEFAULT_PREFER_LOCAL_NODE_DEFAULT);
+    this.dataNodePeerStatsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY,
+        DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_DEFAULT);
+    this.excludeSlowNodesEnabled = conf.getBoolean(
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
+        DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT);
   }
 
   @Override
@@ -1093,9 +1103,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
 
     // check if the target is a slow node
-    if (DatanodeManager.isExcludeSlowNodesForWrite(node.getDatanodeUuid())) {
-      logNodeIsNotChosen(node, NodeNotChosenReason.NODE_SLOW);
-      return false;
+    if (dataNodePeerStatsEnabled && excludeSlowNodesEnabled) {
+      Set<String> slowNodesUuidSet = DatanodeManager.getSlowNodesUuidSet();
+      if (slowNodesUuidSet.contains(node.getDatanodeUuid())) {
+        logNodeIsNotChosen(node, NodeNotChosenReason.NODE_SLOW);
+        return false;
+      }
     }
 
     return true;
