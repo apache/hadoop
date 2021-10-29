@@ -32,6 +32,7 @@ import java.util.Map;
 public class QueueBranchContext {
   private final Map<String, ResourceVector> remainingResourceByLabel = new HashMap<>();
   private final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
+  private final Map<String, Map<String, Float>> sumMaxWeightsPerLabel = new HashMap<>();
   private boolean isUpdated = false;
 
   public void incrementWeight(String label, String resourceName, float value) {
@@ -42,6 +43,16 @@ public class QueueBranchContext {
 
   public float getSumWeightsByResource(String label, String resourceName) {
     return sumWeightsPerLabel.get(label).get(resourceName);
+  }
+
+  public void incrementMaxWeight(String label, String resourceName, float value) {
+    sumMaxWeightsPerLabel.putIfAbsent(label, new HashMap<>());
+    sumMaxWeightsPerLabel.get(label).put(resourceName,
+        sumMaxWeightsPerLabel.get(label).getOrDefault(resourceName, 0f) + value);
+  }
+
+  public float getSumMaxWeightsByResource(String label, String resourceName) {
+    return sumMaxWeightsPerLabel.get(label).get(resourceName);
   }
 
   public void setRemainingResource(String label, ResourceVector resource) {

@@ -371,6 +371,12 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public ReentrantReadWriteLock.ReadLock getReadLock();
 
   /**
+   * Get writeLock associated with the Queue.
+   * @return writeLock of corresponding queue.
+   */
+  ReentrantReadWriteLock.WriteLock getWriteLock();
+
+  /**
    * Validate submitApplication api so that moveApplication do a pre-check.
    * @param applicationId Application ID
    * @param userName User Name
@@ -415,12 +421,21 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   Resource getEffectiveCapacity(String label);
 
   /**
-   * Get configured capacity resource vector parsed from the capacity config
+   * Get configured capacity vector parsed from the capacity config
    * of the queue.
    * @param label node label (partition)
    * @return capacity resource vector
    */
   QueueCapacityVector getConfiguredCapacityVector(String label);
+
+  /**
+   * Get configured maximum capacity vector parsed from the capacity config
+   * of the queue.
+   * @param label node label (partition)
+   * @return capacity resource vector
+   */
+  QueueCapacityVector getConfiguredMaximumCapacityVector(String label);
+
 
   Set<String> getConfiguredNodeLabels();
 

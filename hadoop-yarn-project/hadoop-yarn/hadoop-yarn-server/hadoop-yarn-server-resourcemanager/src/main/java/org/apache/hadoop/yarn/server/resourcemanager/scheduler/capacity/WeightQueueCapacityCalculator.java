@@ -11,50 +11,68 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
   protected void calculateResourcePrerequisites(QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
     super.calculateResourcePrerequisites(updateContext, parentQueue);
 
-      for (CSQueue childQueue : parentQueue.getChildQueues()) {
-        for (String label : childQueue.getConfiguredNodeLabels()) {
+    for (CSQueue childQueue : parentQueue.getChildQueues()) {
+      for (String label : childQueue.getConfiguredNodeLabels()) {
         for (String resourceName : childQueue.getConfiguredCapacityVector(label)
             .getResourceNamesByCapacityType(getCapacityType())) {
           updateContext.getQueueBranchContext(parentQueue.getQueuePath())
-              .incrementWeight(label, resourceName, childQueue.getConfiguredCapacityVector(label).getResource(resourceName).getResourceValue());
+              .incrementWeight(label, resourceName, childQueue.getConfiguredCapacityVector(label)
+                  .getResource(resourceName).getResourceValue());
+          updateContext.getQueueBranchContext(parentQueue.getQueuePath()).incrementMaxWeight(
+              label, resourceName, childQueue.getConfiguredMaximumCapacityVector(label)
+                  .getResource(resourceName).getResourceValue());
         }
       }
     }
   }
 
   @Override
-  protected long calculateMinimumResource(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+  protected float calculateMinimumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
     CSQueue parentQueue = childQueue.getParent();
     String resourceName = capacityVectorEntry.getResourceName();
     float normalizedWeight = capacityVectorEntry.getResourceValue()
         / updateContext.getQueueBranchContext(parentQueue.getQueuePath())
         .getSumWeightsByResource(label, resourceName);
 
-    float remainingPerEffectiveResourceRatio = updateContext.getQueueBranchContext(
+    float remainingResource = updateContext.getQueueBranchContext(
             parentQueue.getQueuePath()).getRemainingResource(label)
-        .getValue(resourceName) / parentQueue.getEffectiveCapacity(label)
-        .getResourceValue(resourceName);
+        .getValue(resourceName);
+    float remainingPerEffectiveResourceRatio = remainingResource / parentQueue.getEffectiveCapacity(
+        label).getResourceValue(resourceName);
 
-    float parentAbsoluteCapacity = updateContext.getRelativeResourceRatio(
+    float parentAbsoluteCapacity = updateContext.getAbsoluteMinCapacity(
         parentQueue.getQueuePath(), label).getValue(resourceName);
     float queueAbsoluteCapacity = parentAbsoluteCapacity *
         remainingPerEffectiveResourceRatio * normalizedWeight;
-    long resource = (long) Math.floor(updateContext.getUpdatedClusterResource(label)
-        .getResourceValue(resourceName)
-        * queueAbsoluteCapacity);
 
-    updateContext.getRelativeResourceRatio(childQueue.getQueuePath(), label)
-        .setValue(capacityVectorEntry.getResourceName(),
-            queueAbsoluteCapacity);
+    // Due to rounding loss it is better to use all remaining resources
+    // if no other resource uses weight
+    if (normalizedWeight == 1) {
+      return remainingResource;
+    }
 
-    return resource;
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName)
+        * queueAbsoluteCapacity;
   }
 
   @Override
-  protected long calculateMaximumResource(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
-    return 0;
+  protected float calculateMaximumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
+    CSQueue parentQueue = childQueue.getParent();
+    String resourceName = capacityVectorEntry.getResourceName();
+    float normalizedMaxWeight = capacityVectorEntry.getResourceValue()
+        / updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+        .getSumMaxWeightsByResource(label, resourceName);
+
+    float parentAbsoluteMaxCapacity = updateContext.getAbsoluteMaxCapacity(
+        parentQueue.getQueuePath(), label).getValue(resourceName);
+    float absoluteMaxCapacity = parentAbsoluteMaxCapacity * normalizedMaxWeight;
+
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName)
+        * absoluteMaxCapacity;
   }
 
   @Override
@@ -72,7 +90,7 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
                          CSQueue queue, String label) {
     float sumNormalizedWeight = 0;
     for (String resourceName : getResourceNames(queue, label)) {
-      sumNormalizedWeight += updateContext.getRelativeResourceRatio(
+      sumNormalizedWeight += updateContext.getAbsoluteMinCapacity(
           queue.getQueuePath(), label).getValue(resourceName);
     }
 

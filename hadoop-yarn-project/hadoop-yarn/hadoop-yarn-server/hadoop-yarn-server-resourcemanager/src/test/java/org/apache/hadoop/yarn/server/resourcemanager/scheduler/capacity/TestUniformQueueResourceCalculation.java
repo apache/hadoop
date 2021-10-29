@@ -29,13 +29,17 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.T
 public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueCalculationTestBase {
 
   private static final Resource QUEUE_A_RES = Resource.newInstance(80 * GB,
-      15);
+      10);
   private static final Resource QUEUE_B_RES = Resource.newInstance( 170 * GB,
-      25);
+      30);
   private static final Resource QUEUE_A1_RES = Resource.newInstance(50 * GB,
-      5);
+      4);
   private static final Resource QUEUE_A2_RES = Resource.newInstance(30 * GB,
-      5);
+      6);
+  private static final Resource QUEUE_A11_RES = Resource.newInstance(40 * GB,
+      2);
+  private static final Resource QUEUE_A12_RES = Resource.newInstance(10 * GB,
+      2);
   private static final Resource UPDATE_RES = Resource.newInstance(250 * GB, 40);
   private static final Resource PERCENTAGE_ALL_RES = Resource.newInstance(10 * GB, 20);
   private static final Resource WEIGHT_ALL_RES = Resource.newInstance(10 * GB, 20);
@@ -56,6 +60,8 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
     csConf.setCapacity("root.a", 30);
     csConf.setCapacity("root.b", 70);
     csConf.setCapacity("root.a.a1", 17);
+    csConf.setCapacity("root.a.a1.a11", 25);
+    csConf.setCapacity("root.a.a1.a12", 75);
     csConf.setCapacity("root.a.a2", 83);
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
@@ -90,6 +96,22 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
         .assertCapacity()
         .toExpect(0.3f * 0.83f)
         .assertAbsoluteCapacity()
+
+        .withQueue("root.a.a1.a11")
+        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, 0.25f * 0.3f * 0.17f))
+        .assertEffectiveMinResource()
+        .toExpect(0.25f)
+        .assertCapacity()
+        .toExpect(0.25f * 0.3f * 0.17f)
+        .assertAbsoluteCapacity()
+
+        .withQueue("root.a.a1.a12")
+        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, 0.75f * 0.3f * 0.17f))
+        .assertEffectiveMinResource()
+        .toExpect(0.75f)
+        .assertCapacity()
+        .toExpect(0.75f * 0.3f * 0.17f)
+        .assertAbsoluteCapacity()
         .build();
 
     update(queueAssertionBuilder, PERCENTAGE_ALL_RES);
@@ -101,22 +123,27 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
     csConf.setMinimumResourceRequirement("", "root.b", QUEUE_B_RES);
     csConf.setMinimumResourceRequirement("", "root.a.a1", QUEUE_A1_RES);
     csConf.setMinimumResourceRequirement("", "root.a.a2", QUEUE_A2_RES);
+    csConf.setMinimumResourceRequirement("", "root.a.a1.a11", QUEUE_A11_RES);
+    csConf.setMinimumResourceRequirement("", "root.a.a1.a12", QUEUE_A12_RES);
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
         .withQueue("root.a")
         .toExpect(QUEUE_A_RES)
         .assertEffectiveMinResource()
-
         .withQueue("root.b")
         .toExpect(QUEUE_B_RES)
         .assertEffectiveMinResource()
-
         .withQueue("root.a.a1")
         .toExpect(QUEUE_A1_RES)
         .assertEffectiveMinResource()
-
         .withQueue("root.a.a2")
         .toExpect(QUEUE_A2_RES)
+        .assertEffectiveMinResource()
+        .withQueue("root.a.a1.a11")
+        .toExpect(QUEUE_A11_RES)
+        .assertEffectiveMinResource()
+        .withQueue("root.a.a1.a12")
+        .toExpect(QUEUE_A12_RES)
         .assertEffectiveMinResource()
         .build();
 
@@ -126,17 +153,20 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
         .withQueue("root.a")
         .toExpect(ResourceUtils.multiply(QUEUE_A_RES, 0.5f))
         .assertEffectiveMinResource()
-
         .withQueue("root.b")
         .toExpect(ResourceUtils.multiply(QUEUE_B_RES, 0.5f))
         .assertEffectiveMinResource()
-
         .withQueue("root.a.a1")
         .toExpect(ResourceUtils.multiply(QUEUE_A1_RES, 0.5f))
         .assertEffectiveMinResource()
-
         .withQueue("root.a.a2")
         .toExpect(ResourceUtils.multiply(QUEUE_A2_RES, 0.5f))
+        .assertEffectiveMinResource()
+        .withQueue("root.a.a1.a11")
+        .toExpect(ResourceUtils.multiply(QUEUE_A11_RES, 0.5f))
+        .assertEffectiveMinResource()
+        .withQueue("root.a.a1.a12")
+        .toExpect(ResourceUtils.multiply(QUEUE_A12_RES, 0.5f))
         .assertEffectiveMinResource()
         .build();
 

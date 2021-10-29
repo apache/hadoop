@@ -42,7 +42,9 @@ public class QueueHierarchyUpdateContext {
       createLazyResourceVector();
   private Map<String, Map<String, ResourceVector>> relativeResourceRatio =
       createLazyResourceVector();
-  private List<QueueUpdateWarning> warnings = new ArrayList<>();
+  private Map<String, Map<String, ResourceVector>> relativeMaxResourceRatio =
+      createLazyResourceVector();
+  private List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
 
   public QueueHierarchyUpdateContext(
       Resource updatedClusterResource,
@@ -105,9 +107,18 @@ public class QueueHierarchyUpdateContext {
    * @param label node label
    * @return resource ratio
    */
-  public ResourceVector getRelativeResourceRatio(
-      String queuePath, String label) {
+  public ResourceVector getAbsoluteMinCapacity(String queuePath, String label) {
     return relativeResourceRatio.get(queuePath).get(label);
+  }
+
+  /**
+   * Returns the ratio of a child queue and its parent's maximum resource.
+   * @param queuePath queue path
+   * @param label node label
+   * @return resource ratio
+   */
+  public ResourceVector getAbsoluteMaxCapacity(String queuePath, String label) {
+    return relativeMaxResourceRatio.get(queuePath).get(label);
   }
 
   public void addUpdateWarning(QueueUpdateWarning warning) {

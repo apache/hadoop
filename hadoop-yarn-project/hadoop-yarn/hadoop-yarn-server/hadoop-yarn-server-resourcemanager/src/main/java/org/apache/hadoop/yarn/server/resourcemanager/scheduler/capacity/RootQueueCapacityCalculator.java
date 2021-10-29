@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.PERCENTAGE;
@@ -30,6 +28,7 @@ public class RootQueueCapacityCalculator extends
   @Override
   public void setup(CSQueue queue, String label) {
     queue.getQueueCapacities().setCapacity(label, 100f);
+    queue.getQueueCapacities().setMaximumCapacity(label, 100f);
   }
 
   @Override
@@ -37,12 +36,17 @@ public class RootQueueCapacityCalculator extends
       QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
     for (String label : parentQueue.getConfiguredNodeLabels()) {
       for (QueueCapacityVectorEntry capacityVectorEntry : parentQueue.getConfiguredCapacityVector(label)) {
-        updateContext.getRelativeResourceRatio(ROOT, label).setValue(
+        updateContext.getAbsoluteMinCapacity(ROOT, label).setValue(
             capacityVectorEntry.getResourceName(), 1);
 
-        long minimumResource = calculateMinimumResource(updateContext, parentQueue, label, capacityVectorEntry);
+        float minimumResource = calculateMinimumResource(updateContext, parentQueue, label, capacityVectorEntry);
+        float maximumResource = calculateMinimumResource(updateContext, parentQueue, label, capacityVectorEntry);
+        long roundedMinResource = (long) Math.floor(minimumResource);
+        long roundedMaxResource = (long) Math.floor(maximumResource);
         parentQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-            .setResourceValue(capacityVectorEntry.getResourceName(), minimumResource);
+            .setResourceValue(capacityVectorEntry.getResourceName(), roundedMinResource);
+        parentQueue.getQueueResourceQuotas().getEffectiveMaxResource(label)
+            .setResourceValue(capacityVectorEntry.getResourceName(), roundedMaxResource);
       }
     }
 
@@ -50,13 +54,13 @@ public class RootQueueCapacityCalculator extends
   }
 
   @Override
-  protected long calculateMinimumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+  protected float calculateMinimumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
     return updateContext.getUpdatedClusterResource(label).getResourceValue(capacityVectorEntry.getResourceName());
   }
 
   @Override
-  protected long calculateMaximumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
-    return 0;
+  protected float calculateMaximumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(capacityVectorEntry.getResourceName());
   }
 
   @Override

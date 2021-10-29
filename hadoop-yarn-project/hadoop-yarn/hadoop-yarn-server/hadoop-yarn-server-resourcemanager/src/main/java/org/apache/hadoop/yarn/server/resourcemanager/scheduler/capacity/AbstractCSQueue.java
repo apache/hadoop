@@ -25,6 +25,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -141,6 +142,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       CapacityConfigType.NONE;
 
   protected Map<String, QueueCapacityVector> configuredCapacityVectors;
+  protected Map<String, QueueCapacityVector> configuredMaximumCapacityVectors;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -403,6 +405,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath, configuredNodeLabels);
+      configuredMaximumCapacityVectors = configuration
+          .parseConfiguredMaximumCapacityVector(queuePath, configuredNodeLabels);
 
       // After we setup labels, we can setup capacities
       setupConfigurableCapacities(configuration);
@@ -715,6 +719,12 @@ public abstract class AbstractCSQueue implements CSQueue {
     return configuredCapacityVectors.get(label);
   }
 
+  @Override
+  public QueueCapacityVector getConfiguredMaximumCapacityVector(
+      String label) {
+    return configuredCapacityVectors.get(label);
+  }
+
   private void initializeQueueState(QueueState previousState,
       QueueState configuredState, QueueState parentState) {
     // verify that we can not any value for State other than RUNNING/STOPPED
@@ -935,6 +945,11 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public ReentrantReadWriteLock.ReadLock getReadLock() {
     return readLock;
+  }
+
+  @Override
+  public ReentrantReadWriteLock.WriteLock getWriteLock() {
+    return writeLock;
   }
 
   /**

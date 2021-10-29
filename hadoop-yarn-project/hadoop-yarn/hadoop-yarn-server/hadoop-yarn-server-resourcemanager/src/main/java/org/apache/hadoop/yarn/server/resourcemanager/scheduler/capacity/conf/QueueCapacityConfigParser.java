@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
@@ -49,6 +50,7 @@ public class QueueCapacityConfigParser {
 
   private static final Pattern RESOURCE_PATTERN = Pattern.compile(RESOURCE_REGEX);
   private static final Pattern UNIFORM_PATTERN = Pattern.compile(UNIFORM_REGEX);
+  public static final String FLOAT_DIGIT_REGEX = "[0-9.]";
 
   private final List<Parser> parsers = new ArrayList<>();
 
@@ -60,25 +62,21 @@ public class QueueCapacityConfigParser {
   /**
    * Creates a {@code QueueCapacityVector} parsed from the capacity configuration
    * property set for a queue.
-   * @param conf configuration object
+   * @param capacityString capacity string to parse
    * @param queuePath queue for which the capacity property is parsed
-   * @param label node label
    * @return a parsed capacity vector
    */
-  public QueueCapacityVector parse(CapacitySchedulerConfiguration conf,
-                                   String queuePath, String label) {
+  public QueueCapacityVector parse(String capacityString, String queuePath) {
 
     if (queuePath.equals(CapacitySchedulerConfiguration.ROOT)) {
       return QueueCapacityVector.of(100f, QueueCapacityType.PERCENTAGE);
     }
 
-    String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
-        queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
-    String capacityString = conf.get(propertyName);
-
     if (capacityString == null) {
       return new QueueCapacityVector();
     }
+    // Trim all spaces from capacity string
+    capacityString = capacityString.replaceAll(" ", "");
 
     for (Parser parser : parsers) {
       Matcher matcher = parser.regex.matcher(capacityString);
@@ -164,12 +162,11 @@ public class QueueCapacityConfigParser {
     QueueCapacityType capacityType = QueueCapacityType.ABSOLUTE;
 
     // Extract suffix from a value e.g. for 6w extract w
-    String suffix = resourceValue.replaceAll("[0-9]", "");
+    String suffix = resourceValue.replaceAll(FLOAT_DIGIT_REGEX, "");
     if (!resourceValue.endsWith(suffix)) {
       return;
     }
 
-    String cleanResourceName = resourceName.replaceAll(" ", "");
     float parsedResourceValue = Float.parseFloat(resourceValue.substring(
         0, resourceValue.length() - suffix.length()));
     float convertedValue = parsedResourceValue;
@@ -185,7 +182,7 @@ public class QueueCapacityConfigParser {
       }
     }
 
-    resource.setResource(cleanResourceName, convertedValue, capacityType);
+    resource.setResource(resourceName, convertedValue, capacityType);
   }
 
   /**

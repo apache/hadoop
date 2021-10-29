@@ -186,6 +186,9 @@ public class CapacitySchedulerQueueCalculationTestBase {
     csConf.setNonLabeledQueueWeight("root.b", 4f);
     csConf.setQueues("root.a", new String[]{"a1", "a2"});
     csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
+    csConf.setQueues("root.a.a1", new String[]{"a11", "a12"});
+    csConf.setNonLabeledQueueWeight("root.a.a1.a11", 1f);
+    csConf.setNonLabeledQueueWeight("root.a.a1.a12", 1f);
 
     mgr = new NullRMNodeLabelsManager();
     mgr.init(csConf);

@@ -7,27 +7,21 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCap
 public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  protected long calculateMinimumResource(
+  protected float calculateMinimumResource(
       QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
       QueueCapacityVectorEntry capacityVectorEntry) {
     String resourceName = capacityVectorEntry.getResourceName();
     ResourceVector ratio = updateContext.getNormalizedMinResourceRatio(
         childQueue.getParent().getQueuePath(), label);
 
-    long resource = (long) Math.floor(ratio.getValue(resourceName)
-        * capacityVectorEntry.getResourceValue());
-
-    float absolutePercentage = (float) resource
-        / updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName);
-
-    updateContext.getRelativeResourceRatio(childQueue.getQueuePath(),
-        label).setValue(resourceName, absolutePercentage);
-    return resource;
+    return ratio.getValue(resourceName) * capacityVectorEntry.getResourceValue();
   }
 
   @Override
-  protected long calculateMaximumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
-    return 0;
+  protected float calculateMaximumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
+    return capacityVectorEntry.getResourceValue();
   }
 
   @Override
@@ -60,7 +54,7 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
           resourceName).getResourceValue() / queue.getParent()
           .getQueueResourceQuotas().getEffectiveMinResource(label)
           .getResourceValue(resourceName);
-      sumAbsoluteCapacity += updateContext.getRelativeResourceRatio(
+      sumAbsoluteCapacity += updateContext.getAbsoluteMinCapacity(
           queue.getQueuePath(), label).getValue(resourceName);
     }
 

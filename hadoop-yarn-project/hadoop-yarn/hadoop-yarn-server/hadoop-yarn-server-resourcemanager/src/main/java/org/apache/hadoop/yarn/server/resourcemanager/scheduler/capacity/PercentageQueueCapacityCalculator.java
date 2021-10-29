@@ -18,34 +18,40 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
   }
 
   @Override
-  protected long calculateMinimumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
+  protected float calculateMinimumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
     CSQueue parentQueue = childQueue.getParent();
     String resourceName = capacityVectorEntry.getResourceName();
 
-    float parentAbsoluteCapacity = updateContext.getRelativeResourceRatio(
+    float parentAbsoluteCapacity = updateContext.getAbsoluteMinCapacity(
         parentQueue.getQueuePath(), label).getValue(resourceName);
     float remainingPerEffectiveResourceRatio = updateContext.getQueueBranchContext(
             parentQueue.getQueuePath()).getRemainingResource(label)
         .getValue(resourceName) / parentQueue.getEffectiveCapacity(label)
         .getResourceValue(resourceName);
-    float queueAbsoluteCapacity = parentAbsoluteCapacity *
+    float absoluteCapacity = parentAbsoluteCapacity *
         remainingPerEffectiveResourceRatio
         * capacityVectorEntry.getResourceValue() / 100;
 
-    long resource = (long) Math.floor(updateContext.getUpdatedClusterResource(label)
-        .getResourceValue(capacityVectorEntry.getResourceName())
-        * queueAbsoluteCapacity);
-
-    updateContext.getRelativeResourceRatio(childQueue.getQueuePath(), label)
-        .setValue(capacityVectorEntry.getResourceName(),
-            queueAbsoluteCapacity);
-
-    return resource;
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName)
+        * absoluteCapacity;
 }
 
   @Override
-  protected long calculateMaximumResource(QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
-    return 0;
+  protected float calculateMaximumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
+    CSQueue parentQueue = childQueue.getParent();
+    String resourceName = capacityVectorEntry.getResourceName();
+
+    float parentAbsoluteMaxCapacity = updateContext.getAbsoluteMaxCapacity(
+        parentQueue.getQueuePath(), label).getValue(resourceName);
+    float absoluteMaxCapacity = parentAbsoluteMaxCapacity
+        * capacityVectorEntry.getResourceValue() / 100;
+
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(
+        capacityVectorEntry.getResourceName()) * absoluteMaxCapacity;
   }
 
   @Override
@@ -54,7 +60,7 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
     float sumAbsoluteCapacity = 0f;
     Set<String> resources = getResourceNames(queue, label);
     for (String resourceName : resources) {
-      sumAbsoluteCapacity += updateContext.getRelativeResourceRatio(
+      sumAbsoluteCapacity += updateContext.getAbsoluteMinCapacity(
           queue.getQueuePath(), label).getValue(resourceName);
     }
 

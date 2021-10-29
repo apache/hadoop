@@ -311,7 +311,8 @@ public class ParentQueue extends AbstractCSQueue {
         // We don't allow any mixed absolute + {weight, percentage} between
         // children and parent
         if (childrenCapacityType != parentCapacityType && !this.getQueuePath()
-            .equals(CapacitySchedulerConfiguration.ROOT)) {
+            .equals(CapacitySchedulerConfiguration.ROOT)
+            && csContext.getConfiguration().isLegacyQueueMode()) {
           throw new IOException("Parent=" + this.getQueuePath()
               + ": When absolute minResource is used, we must make sure both "
               + "parent and child all use absolute minResource");

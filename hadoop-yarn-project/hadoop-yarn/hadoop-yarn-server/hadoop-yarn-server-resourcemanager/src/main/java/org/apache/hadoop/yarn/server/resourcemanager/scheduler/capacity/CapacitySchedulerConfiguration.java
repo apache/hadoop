@@ -410,6 +410,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   private static final QueueCapacityConfigParser queueCapacityConfigParser
       = new QueueCapacityConfigParser();
+  private static final String LEGACY_QUEUE_MODE_ENABLED = PREFIX + "legacy-queue-mode.enabled";
+  public static final boolean DEFAULT_LEGACY_QUEUE_MODE = true;
 
   private ConfigurationProperties configurationProperties;
 
@@ -2578,7 +2580,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       String queuePath, Set<String> labels) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.CAPACITY;
+      String capacityString = get(propertyName);
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
+    }
+
+    return queueResourceVectors;
+  }
+
+  public Map<String, QueueCapacityVector> parseConfiguredMaximumCapacityVector(
+      String queuePath, Set<String> labels) {
+    Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
+    for (String label : labels) {
+      String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
+          queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+      String capacityString = get(propertyName);
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
     }
 
     return queueResourceVectors;
@@ -2768,6 +2786,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     return normalizePolicyName(policyClassName.trim());
+  }
+
+  public boolean isLegacyQueueMode() {
+    return getBoolean(LEGACY_QUEUE_MODE_ENABLED, DEFAULT_LEGACY_QUEUE_MODE);
+  }
+
+  public void setLegacyQueueModeEnabled(boolean value) {
+    setBoolean(LEGACY_QUEUE_MODE_ENABLED, false);
   }
 
   public boolean getMultiNodePlacementEnabled() {

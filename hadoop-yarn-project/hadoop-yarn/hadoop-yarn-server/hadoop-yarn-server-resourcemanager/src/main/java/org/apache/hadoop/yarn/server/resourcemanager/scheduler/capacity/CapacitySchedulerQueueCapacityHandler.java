@@ -23,6 +23,7 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,7 +121,7 @@ public class CapacitySchedulerQueueCapacityHandler {
       if (!queueHierarchyContext.getQueueBranchContext(parent.getQueuePath())
           .getRemainingResource(label).equals(ResourceVector.newInstance())) {
         queueHierarchyContext.addUpdateWarning(
-            QueueUpdateWarning.BRANCH_UNDERUTILIZED.ofQueue(
+            QueueUpdateWarningType.BRANCH_UNDERUTILIZED.ofQueue(
                 parent.getQueuePath()));
       }
     }
