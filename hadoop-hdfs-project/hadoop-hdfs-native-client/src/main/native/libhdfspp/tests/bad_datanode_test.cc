@@ -347,6 +347,7 @@ int main(int argc, char *argv[]) {
   ::testing::InitGoogleMock(&argc, argv);
   int exit_code = RUN_ALL_TESTS();
 
+
   // Clean up static data and prevent valgrind memory leaks
   google::protobuf::ShutdownProtobufLibrary();
   return exit_code;
