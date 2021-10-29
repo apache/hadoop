@@ -37,7 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.util.JsonSerialization;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.aggregateMaps;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotMap;

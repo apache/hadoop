@@ -119,6 +119,11 @@ public class RequestFactoryImpl implements RequestFactory {
   private final PrepareRequest requestPreparer;
 
   /**
+   * Content encoding (null for none).
+   */
+  private final String contentEncoding;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -130,6 +135,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.multipartPartCountLimit = builder.multipartPartCountLimit;
     this.requesterPays = builder.requesterPays;
     this.requestPreparer = builder.requestPreparer;
+    this.contentEncoding = builder.contentEncoding;
   }
 
   /**
@@ -194,6 +200,15 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   /**
+   * Get the content encoding (e.g. gzip) or return null if none.
+   * @return content encoding
+   */
+  @Override
+  public String getContentEncoding() {
+    return contentEncoding;
+  }
+
+  /**
    * Sets server side encryption parameters to the part upload
    * request when encryption is enabled.
    * @param request upload part request
@@ -236,12 +251,17 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * Set the optional metadata for an object being created or copied.
    * @param metadata to update.
+   * @param isDirectoryMarker is this for a directory marker?
    */
-  protected void setOptionalObjectMetadata(ObjectMetadata metadata) {
+  protected void setOptionalObjectMetadata(ObjectMetadata metadata,
+      boolean isDirectoryMarker) {
     final S3AEncryptionMethods algorithm
         = getServerSideEncryptionAlgorithm();
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       metadata.setSSEAlgorithm(algorithm.getMethod());
+    }
+    if (contentEncoding != null && !isDirectoryMarker) {
+      metadata.setContentEncoding(contentEncoding);
     }
   }
 
@@ -255,8 +275,21 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   @Override
   public ObjectMetadata newObjectMetadata(long length) {
+    return createObjectMetadata(length, false);
+  }
+
+  /**
+   * Create a new object metadata instance.
+   * Any standard metadata headers are added here, for example:
+   * encryption.
+   *
+   * @param length length of data to set in header; Ignored if negative
+   * @param isDirectoryMarker is this for a directory marker?
+   * @return a new metadata instance
+   */
+  private ObjectMetadata createObjectMetadata(long length, boolean isDirectoryMarker) {
     final ObjectMetadata om = new ObjectMetadata();
-    setOptionalObjectMetadata(om);
+    setOptionalObjectMetadata(om, isDirectoryMarker);
     if (length >= 0) {
       om.setContentLength(length);
     }
@@ -271,7 +304,7 @@ public class RequestFactoryImpl implements RequestFactory {
         new CopyObjectRequest(getBucket(), srcKey, getBucket(), dstKey);
     ObjectMetadata dstom = newObjectMetadata(srcom.getContentLength());
     HeaderProcessing.cloneObjectMetadata(srcom, dstom);
-    setOptionalObjectMetadata(dstom);
+    setOptionalObjectMetadata(dstom, false);
     copyEncryptionParameters(srcom, copyObjectRequest);
     copyObjectRequest.setCannedAccessControlList(cannedACL);
     copyObjectRequest.setNewObjectMetadata(dstom);
@@ -371,7 +404,7 @@ public class RequestFactoryImpl implements RequestFactory {
       }
     };
     // preparation happens in here
-    final ObjectMetadata md = newObjectMetadata(0L);
+    final ObjectMetadata md = createObjectMetadata(0L, true);
     md.setContentType(HeaderProcessing.CONTENT_TYPE_X_DIRECTORY);
     PutObjectRequest putObjectRequest =
         newPutObjectRequest(key, md, im);
@@ -586,6 +619,9 @@ public class RequestFactoryImpl implements RequestFactory {
     /** Requester Pays flag. */
     private boolean requesterPays = false;
 
+    /** Content Encoding. */
+    private String contentEncoding;
+
     /**
      * Multipart limit.
      */
@@ -605,6 +641,16 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     public RequestFactory build() {
       return new RequestFactoryImpl(this);
+    }
+
+    /**
+     * Content encoding.
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withContentEncoding(final String value) {
+      contentEncoding = value;
+      return this;
     }
 
     /**

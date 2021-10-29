@@ -50,7 +50,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A {@link org.apache.hadoop.io.retry.FailoverProxyProvider} implementation
@@ -84,7 +84,7 @@ public class ObserverReadProxyProvider<T>
 
   /** Configuration key for {@link #observerProbeRetryPeriodMs}. */
   static final String OBSERVER_PROBE_RETRY_PERIOD_KEY =
-      "dfs.client.failover.observer.probe.retry.period";
+      HdfsClientConfigKeys.Failover.PREFIX + "observer.probe.retry.period";
   /** Observer probe retry period default to 10 min. */
   static final long OBSERVER_PROBE_RETRY_PERIOD_DEFAULT = 60 * 10 * 1000;
 

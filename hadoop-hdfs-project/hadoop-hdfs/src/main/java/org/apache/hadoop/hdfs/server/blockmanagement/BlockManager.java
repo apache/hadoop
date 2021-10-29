@@ -125,8 +125,8 @@ import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2778,7 +2778,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "storage report for {} from datanode {}",
             strBlockReportId,
             storageInfo.getStorageID(),
-            nodeID.getDatanodeUuid());
+            nodeID);
         processFirstBlockReport(storageInfo, newReport);
       } else {
         // Block reports for provided storage are not
@@ -3647,7 +3647,7 @@ public class BlockManager implements BlockStatsMXBean {
   /*
    * Stop the ongoing initialisation of reconstruction queues
    */
-  private void stopReconstructionInitializer() {
+  public void stopReconstructionInitializer() {
     if (reconstructionQueuesInitializer != null) {
       reconstructionQueuesInitializer.interrupt();
       try {
@@ -5189,6 +5189,8 @@ public class BlockManager implements BlockStatsMXBean {
       try {
         processQueue();
       } catch (Throwable t) {
+        LOG.error("Error while processing the block report, terminating the "
+            + "process", t);
         ExitUtil.terminate(1,
             getName() + " encountered fatal exception: " + t);
       }

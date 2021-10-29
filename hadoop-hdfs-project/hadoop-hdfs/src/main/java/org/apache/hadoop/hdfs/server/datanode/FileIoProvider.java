@@ -513,6 +513,7 @@ public class FileIoProvider {
     try {
       faultInjectorEventHook.beforeMetadataOp(volume, DELETE);
       boolean deleted = FileUtil.fullyDelete(dir);
+      LOG.trace("Deletion of dir {} {}", dir, deleted ? "succeeded" : "failed");
       profilingEventHook.afterMetadataOp(volume, DELETE, begin);
       return deleted;
     } catch(Exception e) {

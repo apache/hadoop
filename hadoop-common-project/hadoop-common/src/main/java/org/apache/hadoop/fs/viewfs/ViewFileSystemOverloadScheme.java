@@ -347,12 +347,15 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       res = fsState.resolve(getUriPath(path), true);
       FileSystem fs = res.isInternalDir() ?
           (fsState.getRootFallbackLink() != null ?
-              ((ChRootedFileSystem) fsState
-                  .getRootFallbackLink().getTargetFileSystem()).getMyFs() :
+              fsState.getRootFallbackLink().getTargetFileSystem() :
               fsGetter().get(path.toUri(), conf)) :
-          ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
-      return new MountPathInfo<FileSystem>(res.remainingPath, res.resolvedPath,
-          fs);
+          res.targetFileSystem;
+      if (fs instanceof ChRootedFileSystem) {
+        ChRootedFileSystem chFs = (ChRootedFileSystem) fs;
+        return new MountPathInfo<>(chFs.fullPath(res.remainingPath),
+            chFs.getMyFs());
+      }
+      return new MountPathInfo<FileSystem>(res.remainingPath, fs);
     } catch (FileNotFoundException e) {
       // No link configured with passed path.
       throw new NotInMountpointException(path,
@@ -368,7 +371,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     private Path pathOnTarget;
     private T targetFs;
 
-    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs) {
+    public MountPathInfo(Path pathOnTarget, T targetFs) {
       this.pathOnTarget = pathOnTarget;
       this.targetFs = targetFs;
     }

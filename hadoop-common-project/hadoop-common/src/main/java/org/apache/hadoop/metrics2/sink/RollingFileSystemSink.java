@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.sink;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;

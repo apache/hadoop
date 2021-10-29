@@ -84,7 +84,7 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,6 +187,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -215,10 +216,15 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_S3GUARD_INCOMPATIBLE;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_S3GUARD_INCOMPATIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
@@ -273,6 +279,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Invoker s3guardInvoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
       Invoker.LOG_EVENT);
   private final Retried onRetry = this::operationRetried;
+
+  /**
+   * Represents bucket name for all S3 operations. If per bucket override for
+   * {@link InternalConstants#ARN_BUCKET_OPTION} property  is set, then the bucket is updated to
+   * point to the configured Arn.
+   */
   private String bucket;
   private int maxKeys;
   private Listing listing;
@@ -366,13 +378,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private boolean isCSEEnabled;
 
+  /**
+   * Bucket AccessPoint.
+   */
+  private ArnResource accessPoint;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
     Configuration.DeprecationDelta[] deltas = {
         new Configuration.DeprecationDelta(
             FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS,
-            FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS)
+            FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS),
+        new Configuration.DeprecationDelta(
+            SERVER_SIDE_ENCRYPTION_ALGORITHM,
+            S3_ENCRYPTION_ALGORITHM),
+        new Configuration.DeprecationDelta(
+            SERVER_SIDE_ENCRYPTION_KEY,
+            S3_ENCRYPTION_KEY)
     };
 
     if (deltas.length > 0) {
@@ -401,6 +424,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
+      // HADOOP-17894. remove references to s3a stores in JCEKS credentials.
+      conf = ProviderUtils.excludeIncompatibleCredentialProviders(
+          conf, S3AFileSystem.class);
+      String arn = String.format(ARN_BUCKET_OPTION, bucket);
+      String configuredArn = conf.getTrimmed(arn, "");
+      if (!configuredArn.isEmpty()) {
+        accessPoint = ArnResource.accessPointFromArn(configuredArn);
+        LOG.info("Using AccessPoint ARN \"{}\" for bucket {}", configuredArn, bucket);
+        bucket = accessPoint.getFullArn();
+      } else if (conf.getBoolean(AWS_S3_ACCESSPOINT_REQUIRED, false)) {
+        LOG.warn("Access Point usage is required because \"{}\" is enabled," +
+            " but not configured for the bucket: {}", AWS_S3_ACCESSPOINT_REQUIRED, bucket);
+        throw new PathIOException(bucket, AP_REQUIRED_EXCEPTION);
+      }
+
       // fix up the classloader of the configuration to be whatever
       // classloader loaded this filesystem.
       // See: HADOOP-17372
@@ -421,16 +459,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // look for encryption data
       // DT Bindings may override this
-      setEncryptionSecrets(new EncryptionSecrets(
-          getEncryptionAlgorithm(bucket, conf),
-          getS3EncryptionKey(bucket, getConf())));
+      setEncryptionSecrets(
+          buildEncryptionSecrets(bucket, conf));
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
       initializeStatisticsBinding();
       // If CSE-KMS method is set then CSE is enabled.
-      isCSEEnabled = S3AUtils.lookupPassword(conf,
-          SERVER_SIDE_ENCRYPTION_ALGORITHM, null) != null;
+      isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
+          .equals(getS3EncryptionAlgorithm().getMethod());
       LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
       setCSEGauge();
       // Username is the current user at the time the FS was instantiated.
@@ -466,6 +503,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             "version 2", listVersion);
       }
       useListV1 = (listVersion == 1);
+      if (accessPoint != null && useListV1) {
+        LOG.warn("V1 list configured in fs.s3a.list.version. This is not supported in by" +
+            " access points. Upgrading to V2");
+        useListV1 = false;
+      }
 
       signerManager = new SignerManager(bucket, this, conf, owner);
       signerManager.initCustomSigners();
@@ -542,6 +584,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
         if (isCSEEnabled) {
           throw new PathIOException(uri.toString(), CSE_S3GUARD_INCOMPATIBLE);
+        }
+        if (accessPoint != null) {
+          throw new PathIOException(uri.toString(), AP_S3GUARD_INCOMPATIBLE);
         }
       }
 
@@ -730,11 +775,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryTranslated
   protected void verifyBucketExistsV2()
-          throws UnknownStoreException, IOException {
+      throws UnknownStoreException, IOException {
     if (!invoker.retry("doesBucketExistV2", bucket, true,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
-            () -> s3.doesBucketExistV2(bucket)))) {
+            () -> {
+              // Bug in SDK always returns `true` for AccessPoint ARNs with `doesBucketExistV2()`
+              // expanding implementation to use ARNs and buckets correctly
+              try {
+                s3.getBucketAcl(bucket);
+              } catch (AmazonServiceException ex) {
+                int statusCode = ex.getStatusCode();
+                if (statusCode == SC_404 ||
+                    (statusCode == SC_403 && ex.getMessage().contains(AP_INACCESSIBLE))) {
+                  return false;
+                }
+              }
+
+              return true;
+            }))) {
       throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
           + "not exist");
     }
@@ -822,10 +881,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
 
+    String endpoint = accessPoint == null
+        ? conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)
+        : accessPoint.getEndpoint();
+
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
-        .withEndpoint(conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT))
+        .withEndpoint(endpoint)
         .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
         .withUserAgentSuffix(uaSuffix)
@@ -925,12 +988,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // request factory.
     initCannedAcls(getConf());
 
+    // Any encoding type
+    String contentEncoding = getConf().getTrimmed(CONTENT_ENCODING, null);
+
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
         .withCannedACL(getCannedACL())
         .withEncryptionSecrets(requireNonNull(encryptionSecrets))
         .withMultipartPartCountLimit(partCountLimit)
         .withRequestPreparer(getAuditManager()::requestCreated)
+        .withContentEncoding(contentEncoding)
         .build();
   }
 
@@ -1154,7 +1221,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final String region = trackDurationAndSpan(
         STORE_EXISTS_PROBE, bucketName, null, () ->
             invoker.retry("getBucketLocation()", bucketName, true, () ->
-                s3.getBucketLocation(bucketName)));
+                // If accessPoint then region is known from Arn
+                accessPoint != null
+                    ? accessPoint.getRegion()
+                    : s3.getBucketLocation(bucketName)));
     return fixBucketRegion(region);
   }
 
@@ -4537,6 +4607,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           .append("}");
     }
     sb.append(", ClientSideEncryption=").append(isCSEEnabled);
+
+    if (accessPoint != null) {
+      sb.append(", arnForBucket=").append(accessPoint.getFullArn());
+    }
     sb.append('}');
     return sb.toString();
   }

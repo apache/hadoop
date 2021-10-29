@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 import java.util.StringJoiner;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Immutable tag for metrics (for grouping on host/queue/username etc.)

@@ -70,7 +70,7 @@ public class TestConfigurationMutationACLPolicies {
     QueueInfo queueInfo = QueueInfo.
         newInstance(queueName, queuePath, 0, 0,
             0, null, null,
-        null, null, null, null, false, -1.0f, null, false);
+        null, null, null, null, false, -1.0f, 10, null, false);
     when(confScheduler.getQueueInfo(eq(queueName), anyBoolean(), anyBoolean()))
         .thenReturn(queueInfo);
     Queue queue = mock(Queue.class);

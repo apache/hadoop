@@ -162,7 +162,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
@@ -234,6 +234,7 @@ public class CapacityScheduler extends
   private boolean multiNodePlacementEnabled;
 
   private boolean printedVerboseLoggingForAsyncScheduling;
+  private boolean appShouldFailFast;
 
   /**
    * EXPERT
@@ -301,38 +302,13 @@ public class CapacityScheduler extends
       IOException, YarnException {
     writeLock.lock();
     try {
-      String confProviderStr = configuration.get(
-          YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-          YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
-      switch (confProviderStr) {
-      case YarnConfiguration.FILE_CONFIGURATION_STORE:
-        this.csConfProvider =
-            new FileBasedCSConfigurationProvider(rmContext);
-        break;
-      case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
-      case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
-      case YarnConfiguration.ZK_CONFIGURATION_STORE:
-      case YarnConfiguration.FS_CONFIGURATION_STORE:
-        this.csConfProvider = new MutableCSConfigurationProvider(rmContext);
-        break;
-      default:
-        throw new IOException("Invalid configuration store class: " +
-            confProviderStr);
-      }
+      this.csConfProvider = getCsConfProvider(configuration);
       this.csConfProvider.init(configuration);
       this.conf = this.csConfProvider.loadConfiguration(configuration);
       validateConf(this.conf);
       this.minimumAllocation = super.getMinimumAllocation();
       initMaximumResourceCapability(super.getMaximumAllocation());
-      this.calculator = this.conf.getResourceCalculator();
-      if (this.calculator instanceof DefaultResourceCalculator
-          && ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
-        throw new YarnRuntimeException("RM uses DefaultResourceCalculator which"
-            + " used only memory as resource-type but invalid resource-types"
-            + " specified " + ResourceUtils.getResourceTypes() + ". Use"
-            + " DominantResourceCalculator instead to make effective use of"
-            + " these resource-types");
-      }
+      this.calculator = initResourceCalculator();
       this.usePortForNodeName = this.conf.getUsePortForNodeName();
       this.applications = new ConcurrentHashMap<>();
       this.labelManager = rmContext.getNodeLabelManager();
@@ -340,66 +316,107 @@ public class CapacityScheduler extends
       this.queueManager = new CapacitySchedulerQueueManager(yarnConf,
           this.labelManager, this.appPriorityACLManager);
       this.queueManager.setCapacitySchedulerContext(this);
-
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
-
       this.activitiesManager = new ActivitiesManager(rmContext);
       activitiesManager.init(conf);
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
-
-      scheduleAsynchronously = this.conf.getScheduleAynschronously();
-      asyncScheduleInterval = this.conf.getLong(ASYNC_SCHEDULER_INTERVAL,
-          DEFAULT_ASYNC_SCHEDULER_INTERVAL);
-
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
       this.maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
-
-      // number of threads for async scheduling
-      int maxAsyncSchedulingThreads = this.conf.getInt(
-          CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD,
-          1);
-      maxAsyncSchedulingThreads = Math.max(maxAsyncSchedulingThreads, 1);
-
-      if (scheduleAsynchronously) {
-        asyncSchedulerThreads = new ArrayList<>();
-        for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
-          asyncSchedulerThreads.add(new AsyncScheduleThread(this));
-        }
-        resourceCommitterService = new ResourceCommitterService(this);
-        asyncMaxPendingBacklogs = this.conf.getInt(
-            CapacitySchedulerConfiguration.
-                SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS,
-            CapacitySchedulerConfiguration.
-                DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS);
-      }
+      this.appShouldFailFast = CapacitySchedulerConfiguration.shouldAppFailFast(getConfig());
+      initAsyncSchedulingProperties();
 
       // Setup how many containers we can allocate for each round
       offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
 
-      // Register CS specific multi-node policies to common MultiNodeManager
-      // which will add to a MultiNodeSorter which gives a pre-sorted list of
-      // nodes to scheduler's allocation.
-      multiNodePlacementEnabled = this.conf.getMultiNodePlacementEnabled();
-      if(rmContext.getMultiNodeSortingManager() != null) {
-        rmContext.getMultiNodeSortingManager().registerMultiNodePolicyNames(
-            multiNodePlacementEnabled,
-            this.conf.getMultiNodePlacementPolicies());
-      }
-
-      LOG.info("Initialized CapacityScheduler with " + "calculator="
-          + getResourceCalculator().getClass() + ", " + "minimumAllocation="
-          + getMinimumResourceCapability() + ", " + "maximumAllocation="
-          + getMaximumResourceCapability() + ", " + "asynchronousScheduling="
-          + scheduleAsynchronously + ", " + "asyncScheduleInterval="
-          + asyncScheduleInterval + "ms" + ",multiNodePlacementEnabled="
-          + multiNodePlacementEnabled + ", " + "assignMultipleEnabled="
-          + assignMultipleEnabled + ", " + "maxAssignPerHeartbeat="
-          + maxAssignPerHeartbeat + ", " + "offswitchPerHeartbeatLimit="
-          + offswitchPerHeartbeatLimit);
+      initMultiNodePlacement();
+      printSchedulerInitialized();
     } finally {
       writeLock.unlock();
     }
+  }
+
+  private CSConfigurationProvider getCsConfProvider(Configuration configuration)
+      throws IOException {
+    String confProviderStr = configuration.get(
+        YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.DEFAULT_CONFIGURATION_STORE);
+    switch (confProviderStr) {
+    case YarnConfiguration.FILE_CONFIGURATION_STORE:
+      return new FileBasedCSConfigurationProvider(rmContext);
+    case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
+    case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+    case YarnConfiguration.ZK_CONFIGURATION_STORE:
+    case YarnConfiguration.FS_CONFIGURATION_STORE:
+      return new MutableCSConfigurationProvider(rmContext);
+    default:
+      throw new IOException("Invalid configuration store class: " + confProviderStr);
+    }
+  }
+
+  private ResourceCalculator initResourceCalculator() {
+    ResourceCalculator resourceCalculator = this.conf.getResourceCalculator();
+    if (resourceCalculator instanceof DefaultResourceCalculator
+        && ResourceUtils.getNumberOfKnownResourceTypes() > 2) {
+      throw new YarnRuntimeException("RM uses DefaultResourceCalculator which"
+          + " used only memory as resource-type but invalid resource-types"
+          + " specified " + ResourceUtils.getResourceTypes() + ". Use"
+          + " DominantResourceCalculator instead to make effective use of"
+          + " these resource-types");
+    }
+    return resourceCalculator;
+  }
+
+  private void initAsyncSchedulingProperties() {
+    scheduleAsynchronously = this.conf.getScheduleAynschronously();
+    asyncScheduleInterval = this.conf.getLong(ASYNC_SCHEDULER_INTERVAL,
+        DEFAULT_ASYNC_SCHEDULER_INTERVAL);
+
+    // number of threads for async scheduling
+    int maxAsyncSchedulingThreads = this.conf.getInt(
+        CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_THREAD, 1);
+    maxAsyncSchedulingThreads = Math.max(maxAsyncSchedulingThreads, 1);
+
+    if (scheduleAsynchronously) {
+      asyncSchedulerThreads = new ArrayList<>();
+      for (int i = 0; i < maxAsyncSchedulingThreads; i++) {
+        asyncSchedulerThreads.add(new AsyncScheduleThread(this));
+      }
+      resourceCommitterService = new ResourceCommitterService(this);
+      asyncMaxPendingBacklogs = this.conf.getInt(
+          CapacitySchedulerConfiguration.
+              SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS,
+          CapacitySchedulerConfiguration.
+              DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS);
+    }
+  }
+
+  private void initMultiNodePlacement() {
+    // Register CS specific multi-node policies to common MultiNodeManager
+    // which will add to a MultiNodeSorter which gives a pre-sorted list of
+    // nodes to scheduler's allocation.
+    multiNodePlacementEnabled = this.conf.getMultiNodePlacementEnabled();
+    if (rmContext.getMultiNodeSortingManager() != null) {
+      rmContext.getMultiNodeSortingManager().registerMultiNodePolicyNames(
+          multiNodePlacementEnabled,
+          this.conf.getMultiNodePlacementPolicies());
+    }
+  }
+
+  private void printSchedulerInitialized() {
+    LOG.info("Initialized CapacityScheduler with calculator={}, minimumAllocation={}, " +
+            "maximumAllocation={}, asynchronousScheduling={}, asyncScheduleInterval={} ms, " +
+            "multiNodePlacementEnabled={}, assignMultipleEnabled={}, maxAssignPerHeartbeat={}, " +
+            "offswitchPerHeartbeatLimit={}",
+        getResourceCalculator().getClass(),
+        getMinimumResourceCapability(),
+        getMaximumResourceCapability(),
+        scheduleAsynchronously,
+        asyncScheduleInterval,
+        multiNodePlacementEnabled,
+        assignMultipleEnabled,
+        maxAssignPerHeartbeat,
+        offswitchPerHeartbeatLimit);
   }
 
   private void startSchedulerThreads() {
@@ -491,6 +508,8 @@ public class CapacityScheduler extends
         assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
         maxAssignPerHeartbeat = this.conf.getMaxAssignPerHeartbeat();
         offswitchPerHeartbeatLimit = this.conf.getOffSwitchPerHeartbeatLimit();
+        appShouldFailFast = CapacitySchedulerConfiguration.shouldAppFailFast(
+            getConfig());
 
         LOG.info("assignMultipleEnabled = " + assignMultipleEnabled + "\n" +
             "maxAssignPerHeartbeat = " + maxAssignPerHeartbeat + "\n" +
@@ -880,7 +899,7 @@ public class CapacityScheduler extends
       if (queue == null) {
         //During a restart, this indicates a queue was removed, which is
         //not presently supported
-        if (!getConfiguration().shouldAppFailFast(getConfig())) {
+        if (!appShouldFailFast) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
                   "Application killed on recovery as it"
@@ -901,7 +920,7 @@ public class CapacityScheduler extends
       if (!(queue instanceof LeafQueue)) {
         // During RM restart, this means leaf queue was converted to a parent
         // queue, which is not supported for running apps.
-        if (!getConfiguration().shouldAppFailFast(getConfig())) {
+        if (!appShouldFailFast) {
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppEvent(applicationId, RMAppEventType.KILL,
                   "Application killed on recovery as it was "
@@ -931,6 +950,10 @@ public class CapacityScheduler extends
       } catch (AccessControlException ace) {
         // Ignore the exception for recovered app as the app was previously
         // accepted.
+        LOG.warn("AccessControlException received when trying to recover "
+            + applicationId + " in queue " + queueName  + " for user " + user
+            + ". Since the app was in the queue prior to recovery, the Capacity"
+            + " Scheduler will recover the app anyway.", ace);
       }
       queue.getMetrics().submitApp(user, unmanagedAM);
 
@@ -951,73 +974,83 @@ public class CapacityScheduler extends
       applicationId, String user, String queueName,
       ApplicationPlacementContext placementContext,
       boolean isRecovery) {
-
     CSQueue queue = getQueue(queueName);
-    ApplicationPlacementContext fallbackContext = placementContext;
+    QueuePath queuePath = new QueuePath(queueName);
 
-    if (queue == null) {
-      // Even if placement rules are turned off, we still have the opportunity
-      // to auto create a queue.
-      if (placementContext == null) {
-        fallbackContext = CSQueueUtils.extractQueuePath(queueName);
-      }
-
-      //we need to make sure there is no empty path parts present
-      String path = fallbackContext.getFullQueuePath();
-      String[] pathParts = path.split("\\.");
-      for (int i = 0; i < pathParts.length; i++) {
-        if ("".equals(pathParts[i])) {
-          LOG.error("Application submitted to invalid path: '{}'", path);
-          return null;
-        }
-      }
-
-      if (fallbackContext.hasParentQueue()) {
-        try {
-          writeLock.lock();
-          return queueManager.createQueue(fallbackContext);
-        } catch (YarnException | IOException e) {
-          // A null queue is expected if the placementContext is null. In order
-          // not to disrupt the control flow, if we fail to auto create a queue,
-          // we fall back to the original logic.
-          if (placementContext == null) {
-            LOG.error("Could not auto-create leaf queue " + queueName +
-                " due to : ", e);
-            return null;
-          }
-          if (isRecovery) {
-            if (!getConfiguration().shouldAppFailFast(getConfig())) {
-              LOG.error("Could not auto-create leaf queue " + queueName +
-                  " due to : ", e);
-              this.rmContext.getDispatcher().getEventHandler().handle(
-                  new RMAppEvent(applicationId, RMAppEventType.KILL,
-                      "Application killed on recovery"
-                          + " as it was submitted to queue " + queueName
-                          + " which could not be auto-created"));
-            } else{
-              String queueErrorMsg =
-                  "Queue named " + queueName + " could not be "
-                      + "auto-created during application recovery.";
-              LOG.error(FATAL, queueErrorMsg, e);
-              throw new QueueInvalidException(queueErrorMsg);
-            }
-          } else{
-            LOG.error("Could not auto-create leaf queue due to : ", e);
-            final String message =
-                "Application " + applicationId + " submission by user : "
-                    + user
-                    + " to  queue : " + queueName + " failed : " + e
-                    .getMessage();
-            this.rmContext.getDispatcher().getEventHandler().handle(
-                new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
-                    message));
-          }
-        } finally {
-          writeLock.unlock();
-        }
-      }
+    if (queue != null) {
+      return queue;
     }
-    return queue;
+
+    if (isAmbiguous(queueName)) {
+      return null;
+    }
+
+    if (placementContext != null) {
+      queuePath = new QueuePath(placementContext.getFullQueuePath());
+    }
+
+    //we need to make sure there are no empty path parts present
+    if (queuePath.hasEmptyPart()) {
+      LOG.error("Application submitted to invalid path due to empty parts: " +
+          "'{}'", queuePath);
+      return null;
+    }
+
+    if (!queuePath.hasParent()) {
+      LOG.error("Application submitted to a queue without parent" +
+          " '{}'", queuePath);
+      return null;
+    }
+
+    try {
+      writeLock.lock();
+      return queueManager.createQueue(queuePath);
+    } catch (YarnException | IOException e) {
+      // A null queue is expected if the placementContext is null. In order
+      // not to disrupt the control flow, if we fail to auto create a queue,
+      // we fall back to the original logic.
+      if (placementContext == null) {
+        LOG.error("Could not auto-create leaf queue " + queueName +
+            " due to : ", e);
+        return null;
+      }
+      handleQueueCreationError(applicationId, user, queueName, isRecovery, e);
+    } finally {
+      writeLock.unlock();
+    }
+    return null;
+  }
+
+  private void handleQueueCreationError(
+      ApplicationId applicationId, String user, String queueName,
+      boolean isRecovery, Exception e) {
+    if (isRecovery) {
+      if (!appShouldFailFast) {
+        LOG.error("Could not auto-create leaf queue " + queueName +
+            " due to : ", e);
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppEvent(applicationId, RMAppEventType.KILL,
+                "Application killed on recovery"
+                    + " as it was submitted to queue " + queueName
+                    + " which did not exist and could not be auto-created"));
+      } else {
+        String queueErrorMsg =
+            "Queue named " + queueName + " could not be "
+                + "auto-created during application recovery.";
+        LOG.error(FATAL, queueErrorMsg, e);
+        throw new QueueInvalidException(queueErrorMsg);
+      }
+    } else {
+      LOG.error("Could not auto-create leaf queue due to : ", e);
+      final String message =
+          "Application " + applicationId + " submission by user : "
+              + user
+              + " to  queue : " + queueName + " failed : " + e
+              .getMessage();
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppEvent(applicationId, RMAppEventType.APP_REJECTED,
+              message));
+    }
   }
 
   private void addApplication(ApplicationId applicationId, String queueName,
@@ -2932,7 +2965,7 @@ public class CapacityScheduler extends
       ApplicationStateData appState = ApplicationStateData.newInstance(
           rmApp.getSubmitTime(), rmApp.getStartTime(),
           rmApp.getApplicationSubmissionContext(), rmApp.getUser(),
-          rmApp.getCallerContext());
+          rmApp.getRealUser(), rmApp.getCallerContext());
       appState.setApplicationTimeouts(rmApp.getApplicationTimeouts());
       appState.setLaunchTime(rmApp.getLaunchTime());
       rmContext.getStateStore().updateApplicationStateSynchronously(appState,

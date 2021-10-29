@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
@@ -127,6 +127,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   public static final String USER_SETTINGS = "user-settings";
+
+  @Private
+  public static final String USER_WEIGHT_REGEX = "\\S+\\." + USER_WEIGHT;
+
+  @Private
+  public static final Pattern USER_WEIGHT_PATTERN = Pattern.compile(
+      USER_WEIGHT_REGEX);
 
   @Private
   public static final float DEFAULT_USER_WEIGHT = 1.0f;
@@ -461,6 +468,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
   }
 
+  public void setMaximumSystemApplications(int numMaxApps) {
+    setInt(MAXIMUM_SYSTEM_APPLICATIONS, numMaxApps);
+  }
+
   public int getMaximumSystemApplications() {
     int maxApplications =
       getInt(MAXIMUM_SYSTEM_APPLICATIONS, DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS);
@@ -647,8 +658,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public float getUserLimit(String queue) {
+    float defaultUserLimit = getFloat(PREFIX + USER_LIMIT, DEFAULT_USER_LIMIT);
     float userLimit = getFloat(getQueuePrefix(queue) + USER_LIMIT,
-        DEFAULT_USER_LIMIT);
+        defaultUserLimit);
     return userLimit;
   }
 
@@ -696,21 +708,32 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return orderingPolicy;
   }
 
-    public void setUserLimit(String queue, float userLimit) {
+  public void setUserLimit(String queue, float userLimit) {
     setFloat(getQueuePrefix(queue) + USER_LIMIT, userLimit);
     LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
         getQueuePrefix(queue), getUserLimit(queue));
   }
 
+  @VisibleForTesting
+  public void setDefaultUserLimit(float defaultUserLimit) {
+    setFloat(PREFIX + USER_LIMIT, defaultUserLimit);
+  }
+
   public float getUserLimitFactor(String queue) {
+    float defaultUserLimitFactor = getFloat(PREFIX + USER_LIMIT_FACTOR, DEFAULT_USER_LIMIT_FACTOR);
     float userLimitFactor =
         getFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR,
-            DEFAULT_USER_LIMIT_FACTOR);
+            defaultUserLimitFactor);
     return userLimitFactor;
   }
 
   public void setUserLimitFactor(String queue, float userLimitFactor) {
     setFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR, userLimitFactor);
+  }
+
+  @VisibleForTesting
+  public void setDefaultUserLimitFactor(float defaultUserLimitFactor) {
+    setFloat(PREFIX + USER_LIMIT_FACTOR, defaultUserLimitFactor);
   }
 
   public QueueState getConfiguredState(String queue) {
@@ -1614,8 +1637,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    */
   public Map<String, Set<String>> getConfiguredNodeLabelsByQueue() {
     Map<String, Set<String>> labelsByQueue = new HashMap<>();
-    Map<String, String> schedulerEntries = getPropsWithPrefix(
-        CapacitySchedulerConfiguration.PREFIX);
+    Map<String, String> schedulerEntries =
+        getConfigurationProperties().getPropertiesWithPrefix(
+            CapacitySchedulerConfiguration.PREFIX);
 
     for (Map.Entry<String, String> propertyEntry
         : schedulerEntries.entrySet()) {
@@ -1666,7 +1690,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getBoolean(LAZY_PREEMPTION_ENABLED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 
-  public boolean shouldAppFailFast(Configuration conf) {
+  public static boolean shouldAppFailFast(Configuration conf) {
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 
@@ -2042,25 +2066,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * Get the weights of all users at this queue level from the configuration.
    * Used in computing user-specific user limit, relative to other users.
    * @param queuePath full queue path
-   * @return map of user weights, if they exists. Otherwise, return empty map.
+   * @return map of user weights, if they exist. Otherwise, return empty map.
    */
-  public Map<String, Float> getAllUserWeightsForQueue(String queuePath) {
-    Map <String, Float> userWeights = new HashMap <String, Float>();
-    String qPathPlusPrefix =
-        getQueuePrefix(queuePath).replaceAll("\\.", "\\\\.")
-        + USER_SETTINGS + "\\.";
-    String weightKeyRegex =
-        qPathPlusPrefix + "\\S+\\." + USER_WEIGHT;
-    Map<String, String> props = getValByRegex(weightKeyRegex);
-    for (Entry<String, String> e : props.entrySet()) {
-      String userName =
-          e.getKey().replaceFirst(qPathPlusPrefix, "")
-          .replaceFirst("\\." + USER_WEIGHT, "");
-      if (userName != null && !userName.isEmpty()) {
-        userWeights.put(userName, new Float(e.getValue()));
-      }
-    }
-    return userWeights;
+  public UserWeights getAllUserWeightsForQueue(String queuePath) {
+    return UserWeights.createByConfig(this, getConfigurationProperties(), queuePath);
   }
 
   public boolean getAssignMultipleEnabled() {

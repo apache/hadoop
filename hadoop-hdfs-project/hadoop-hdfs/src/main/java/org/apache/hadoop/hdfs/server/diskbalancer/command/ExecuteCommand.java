@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 
 import java.io.IOException;
-
+import java.nio.charset.StandardCharsets;
 
 /**
  * executes a given plan.
@@ -69,7 +69,7 @@ public class ExecuteCommand extends Command {
 
     String planData = null;
     try (FSDataInputStream plan = open(planFile)) {
-      planData = IOUtils.toString(plan);
+      planData = IOUtils.toString(plan, StandardCharsets.UTF_8);
     }
 
     boolean skipDateCheck = false;

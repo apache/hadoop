@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 
 import java.io.IOException;
@@ -40,7 +39,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /** <p>The balancer is a tool that balances disk space usage on an HDFS cluster
  * when some datanodes become full or when new empty nodes join the cluster.
@@ -226,6 +227,7 @@ public class Balancer {
   private final long maxSizeToMove;
   private final long defaultBlockSize;
   private final boolean sortTopNodes;
+  private final BalancerMetrics metrics;
 
   // all data node lists
   private final Collection<Source> overUtilized = new LinkedList<Source>();
@@ -357,6 +359,7 @@ public class Balancer {
     this.defaultBlockSize = getLongBytes(conf,
         DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+    this.metrics = BalancerMetrics.create(this);
   }
   
   private static long getCapacity(DatanodeStorageReport report, StorageType t) {
@@ -454,6 +457,8 @@ public class Balancer {
     }
 
     logUtilizationCollections();
+    metrics.setNumOfOverUtilizedNodes(overUtilized.size());
+    metrics.setNumOfUnderUtilizedNodes(underUtilized.size());
     
     Preconditions.checkState(dispatcher.getStorageGroupMap().size()
         == overUtilized.size() + underUtilized.size() + aboveAvgUtilized.size()
@@ -636,7 +641,11 @@ public class Balancer {
     this.belowAvgUtilized.clear();
     this.underUtilized.clear();
     this.policy.reset();
-    dispatcher.reset(conf);;
+    dispatcher.reset(conf);
+  }
+
+  NameNodeConnector getNnc() {
+    return nnc;
   }
 
   static class Result {
@@ -710,8 +719,10 @@ public class Balancer {
   /** Run an iteration for all datanodes. */
   Result runOneIteration() {
     try {
+      metrics.setIterateRunning(true);
       final List<DatanodeStorageReport> reports = dispatcher.init();
       final long bytesLeftToMove = init(reports);
+      metrics.setBytesLeftToMove(bytesLeftToMove);
       if (bytesLeftToMove == 0) {
         return newResult(ExitStatus.SUCCESS, bytesLeftToMove, 0);
       } else {
@@ -766,6 +777,7 @@ public class Balancer {
       System.out.println(e + ".  Exiting ...");
       return newResult(ExitStatus.INTERRUPTED);
     } finally {
+      metrics.setIterateRunning(false);
       dispatcher.shutdownNow();
     }
   }
@@ -848,6 +860,10 @@ public class Balancer {
   static int run(Collection<URI> namenodes, Collection<String> nsIds,
       final BalancerParameters p, Configuration conf)
       throws IOException, InterruptedException {
+    DefaultMetricsSystem.initialize("Balancer");
+    JvmMetrics.create("Balancer",
+        conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+        DefaultMetricsSystem.instance());
     if (!p.getRunAsService()) {
       return doBalance(namenodes, nsIds, p, conf);
     }
@@ -893,6 +909,8 @@ public class Balancer {
           time2Str(scheduleInterval));
       Thread.sleep(scheduleInterval);
     }
+    DefaultMetricsSystem.shutdown();
+
     // normal stop
     return 0;
   }
@@ -979,7 +997,7 @@ public class Balancer {
         try {
           for(int i = 0; i < args.length; i++) {
             if ("-threshold".equalsIgnoreCase(args[i])) {
-              checkArgument(++i < args.length,
+              Preconditions.checkArgument(++i < args.length,
                 "Threshold value is missing: args = " + Arrays.toString(args));
               try {
                 double threshold = Double.parseDouble(args[i]);
@@ -996,7 +1014,7 @@ public class Balancer {
                 throw e;
               }
             } else if ("-policy".equalsIgnoreCase(args[i])) {
-              checkArgument(++i < args.length,
+              Preconditions.checkArgument(++i < args.length,
                 "Policy value is missing: args = " + Arrays.toString(args));
               try {
                 b.setBalancingPolicy(BalancingPolicy.parse(args[i]));
@@ -1017,7 +1035,7 @@ public class Balancer {
               i = processHostList(args, i, "source", sourceNodes);
               b.setSourceNodes(sourceNodes);
             } else if ("-blockpools".equalsIgnoreCase(args[i])) {
-              checkArgument(
+              Preconditions.checkArgument(
                   ++i < args.length,
                   "blockpools value is missing: args = "
                       + Arrays.toString(args));
@@ -1026,7 +1044,7 @@ public class Balancer {
                   + blockpools.toString());
               b.setBlockpools(blockpools);
             } else if ("-idleiterations".equalsIgnoreCase(args[i])) {
-              checkArgument(++i < args.length,
+              Preconditions.checkArgument(++i < args.length,
                   "idleiterations value is missing: args = " + Arrays
                       .toString(args));
               int maxIdleIteration = Integer.parseInt(args[i]);
@@ -1042,7 +1060,7 @@ public class Balancer {
               b.setRunAsService(true);
               LOG.info("Balancer will run as a long running service");
             } else if ("-hotBlockTimeInterval".equalsIgnoreCase(args[i])) {
-              checkArgument(++i < args.length,
+              Preconditions.checkArgument(++i < args.length,
                   "hotBlockTimeInterval value is missing: args = "
                   + Arrays.toString(args));
               long hotBlockTimeInterval = Long.parseLong(args[i]);
@@ -1058,7 +1076,7 @@ public class Balancer {
                   + Arrays.toString(args));
             }
           }
-          checkArgument(excludedNodes == null || includedNodes == null,
+          Preconditions.checkArgument(excludedNodes == null || includedNodes == null,
               "-exclude and -include options cannot be specified together.");
         } catch(RuntimeException e) {
           printUsage(System.err);

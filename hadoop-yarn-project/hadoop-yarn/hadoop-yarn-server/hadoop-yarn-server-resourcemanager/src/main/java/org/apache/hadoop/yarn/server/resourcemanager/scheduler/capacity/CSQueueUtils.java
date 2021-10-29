@@ -92,15 +92,6 @@ public class CSQueueUtils {
         queueCapacities.setWeight(label,
             csConf.getLabeledQueueWeight(queuePath, label));
       }
-
-      /*float absCapacity = queueCapacities.getCapacity(label);
-      float absMaxCapacity = queueCapacities.getMaximumCapacity(label);
-      if (absCapacity > absMaxCapacity) {
-        throw new IllegalArgumentException("Illegal queue capacity setting "
-            + "(abs-capacity=" + absCapacity + ") > (abs-maximum-capacity="
-            + absMaxCapacity + ") for queue=["
-            + queuePath + "],label=[" + label + "]");
-      }*/
     }
   }
 

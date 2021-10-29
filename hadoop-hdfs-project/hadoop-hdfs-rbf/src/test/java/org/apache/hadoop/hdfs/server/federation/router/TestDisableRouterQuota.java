@@ -70,15 +70,21 @@ public class TestDisableRouterQuota {
   public void testSetQuota() throws Exception {
     long nsQuota = 1024;
     long ssQuota = 1024;
+    Quota quotaModule = router.getRpcServer().getQuotaModule();
 
-    try {
-      Quota quotaModule = router.getRpcServer().getQuotaModule();
-      quotaModule.setQuota("/test", nsQuota, ssQuota, null, false);
-      fail("The setQuota call should fail.");
-    } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains(
-          "The quota system is disabled in Router.", ioe);
-    }
+    // don't checkMountEntry called by RouterAdminServer#synchronizeQuota
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "The quota system is disabled in Router.",
+        "The setQuota call should fail.",
+        () -> quotaModule.setQuota("/test", nsQuota, ssQuota, null, false));
+
+    // do checkMountEntry called by RouterClientProtocol#setQuota
+    LambdaTestUtils.intercept(
+        IOException.class,
+        "The quota system is disabled in Router.",
+        "The setQuota call should fail.",
+        () -> quotaModule.setQuota("/test", nsQuota, ssQuota, null, true));
   }
 
   @Test

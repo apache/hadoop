@@ -118,7 +118,7 @@ public class KMSWebServer {
         .setName(NAME)
         .setConf(conf)
         .setSSLConf(sslConf)
-        .authFilterConfigurationPrefix(KMSAuthenticationFilter.CONFIG_PREFIX)
+        .setAuthFilterConfigurationPrefix(KMSAuthenticationFilter.CONFIG_PREFIX)
         .setACL(new AccessControlList(conf.get(
             KMSConfiguration.HTTP_ADMINS_KEY, " ")))
         .addEndpoint(endpoint)

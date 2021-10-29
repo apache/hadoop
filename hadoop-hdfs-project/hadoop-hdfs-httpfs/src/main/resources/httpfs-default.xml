@@ -158,8 +158,8 @@
       If multiple HttpFS servers are used in a load-balancer/round-robin fashion,
       they should share the secret file.
 
-      If the secret file specified here does not exist, random secret is
-      generated at startup time.
+      If the secret file specified here does not exist or it is empty, a random
+      secret is generated at startup time.
 
       httpfs.authentication.signature.secret.file is deprecated. Instead use
       hadoop.http.authentication.signature.secret.file.

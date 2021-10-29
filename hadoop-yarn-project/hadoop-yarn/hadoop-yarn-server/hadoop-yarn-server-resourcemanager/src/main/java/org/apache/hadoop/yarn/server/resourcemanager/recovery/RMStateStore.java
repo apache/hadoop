@@ -39,7 +39,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import javax.crypto.SecretKey;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 
 import org.slf4j.Logger;
@@ -937,7 +937,8 @@ public abstract class RMStateStore extends AbstractService {
     assert context instanceof ApplicationSubmissionContextPBImpl;
     ApplicationStateData appState =
         ApplicationStateData.newInstance(app.getSubmitTime(),
-            app.getStartTime(), context, app.getUser(), app.getCallerContext());
+            app.getStartTime(), context, app.getUser(), app.getRealUser(),
+            app.getCallerContext());
     appState.setApplicationTimeouts(app.getApplicationTimeouts());
     getRMStateStoreEventHandler().handle(new RMStateStoreAppEvent(appState));
   }
@@ -1170,7 +1171,7 @@ public abstract class RMStateStore extends AbstractService {
     ApplicationStateData appState =
         ApplicationStateData.newInstance(app.getSubmitTime(),
             app.getStartTime(), app.getApplicationSubmissionContext(),
-            app.getUser(), app.getCallerContext());
+            app.getUser(), app.getRealUser(), app.getCallerContext());
     for(RMAppAttempt appAttempt : app.getAppAttempts().values()) {
       appState.attempts.put(appAttempt.getAppAttemptId(), null);
     }
