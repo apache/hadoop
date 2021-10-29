@@ -2696,7 +2696,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "storage report for {} from datanode {}",
             strBlockReportId,
             storageInfo.getStorageID(),
-            nodeID.getDatanodeUuid());
+            nodeID);
         processFirstBlockReport(storageInfo, newReport);
       } else {
         // Block reports for provided storage are not
