@@ -301,11 +301,13 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
       }
     } catch (AccessControlException ace) {
-      if (!ace.getClass().equals(AccessControlException.class)) {
-        // Only form a new ACE for subclasses
-        throw new AccessControlException(ace);
+      Class<?> exceptionClass = ace.getClass();
+      if (exceptionClass.equals(AccessControlException.class)
+          || exceptionClass.equals(TraverseAccessControlException.class)) {
+        throw ace;
       }
-      throw ace;
+      // Only form a new ACE for subclasses which come from external enforcers
+      throw new AccessControlException(ace);
     }
 
   }
