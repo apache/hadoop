@@ -2201,7 +2201,7 @@ public class NameNode extends ReconfigurableBase implements
     } else if (property.equals(DFS_IMAGE_PARALLEL_LOAD_KEY)) {
       return reconfigureParallelLoad(newVal);
     } else if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY)) {
-          return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
+      return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));

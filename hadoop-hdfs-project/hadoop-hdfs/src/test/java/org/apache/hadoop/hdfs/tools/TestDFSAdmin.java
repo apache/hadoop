@@ -432,9 +432,6 @@ public class TestDFSAdmin {
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
     assertEquals(14, outs.size());
-    for (String out : outs) {
-        System.out.println("out:" + out);
-    }
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, outs.get(2));
     assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(3));
