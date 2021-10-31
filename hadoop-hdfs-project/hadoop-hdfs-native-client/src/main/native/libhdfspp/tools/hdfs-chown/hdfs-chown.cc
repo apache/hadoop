@@ -61,8 +61,7 @@ bool Chown::Initialize() {
       "Change the owner and/or group of each FILE to OWNER and/or GROUP.");
   add_options("file", po::value<std::string>(),
               "The path to the file whose ownership needs to be modified");
-  add_options("recursive,R", po::value<std::string>(),
-              "Operate on files and directories recursively");
+  add_options("recursive,R", "Operate on files and directories recursively");
   add_options(
       "user-group", po::value<std::string>(),
       "The user:group to which the file's ownership needs to be changed to");

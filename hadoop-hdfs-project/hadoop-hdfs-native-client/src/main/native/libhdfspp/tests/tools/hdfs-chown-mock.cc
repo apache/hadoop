@@ -54,5 +54,14 @@ void ChownMock::SetExpectations(
         .Times(1)
         .WillOnce(testing::Return(true));
   }
+
+  if (*test_case_func == &PassRecursiveOwnerAndAPath<ChownMock>) {
+    const auto arg1 = args[1];
+    const auto arg2 = args[2];
+    const Ownership ownership(arg1);
+    EXPECT_CALL(*this, HandlePath(ownership, true, arg2))
+        .Times(1)
+        .WillOnce(testing::Return(true));
+  }
 }
 } // namespace hdfs::tools::test

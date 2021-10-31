@@ -73,7 +73,8 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsChown, HdfsToolBasicTest,
     testing::Values(CallHelp<hdfs::tools::test::ChownMock>,
-                    PassOwnerAndAPath<hdfs::tools::test::ChownMock>));
+                    PassOwnerAndAPath<hdfs::tools::test::ChownMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::ChownMock>));
 
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
@@ -105,3 +106,11 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolNegativeTestNoThrow,
     testing::Values(PassAPath<hdfs::tools::test::DeleteSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChown, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::ChownMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChown, HdfsToolNegativeTestThrows,
+    testing::Values(PassNOptAndAPath<hdfs::tools::test::ChownMock>));
