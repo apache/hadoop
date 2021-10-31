@@ -18,12 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
-
-import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.commons.collections.list.TreeList;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -107,8 +104,6 @@ import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
-import org.apache.hadoop.hdfs.client.impl.SnapshotDiffReportGenerator;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -116,7 +111,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
-import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -2298,8 +2292,8 @@ public class DistributedFileSystem extends FileSystem
       @Override
       public RemoteIterator<SnapshotDiffReportListing> doCall(final Path p)
           throws IOException {
-        if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(
-            toSnapshot)) {
+        if (!DFSUtilClient.isValidSnapshotName(fromSnapshot) ||
+            !DFSUtilClient.isValidSnapshotName(toSnapshot)) {
           throw new UnsupportedOperationException("Remote Iterator is"
               + "supported for snapshotDiffReport between two snapshots");
         }
@@ -2364,52 +2358,11 @@ public class DistributedFileSystem extends FileSystem
     }
   }
 
-  private boolean isValidSnapshotName(String snapshotName) {
-    // If any of the snapshots specified in the getSnapshotDiffReport call
-    // is null or empty, it points to the current tree.
-    return (snapshotName != null && !snapshotName.isEmpty());
-  }
-
   private SnapshotDiffReport getSnapshotDiffReportInternal(
       final String snapshotDir, final String fromSnapshot,
       final String toSnapshot) throws IOException {
-    // In case the diff needs to be computed between a snapshot and the current
-    // tree, we should not do iterative diffReport computation as the iterative
-    // approach might fail if in between the rpc calls the current tree
-    // changes in absence of the global fsn lock.
-    if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(
-        toSnapshot)) {
-      return dfs.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
-    }
-    byte[] startPath = DFSUtilClient.EMPTY_BYTES;
-    int index = -1;
-    SnapshotDiffReportGenerator snapshotDiffReport;
-    List<DiffReportListingEntry> modifiedList = new TreeList();
-    List<DiffReportListingEntry> createdList = new ChunkedArrayList<>();
-    List<DiffReportListingEntry> deletedList = new ChunkedArrayList<>();
-    SnapshotDiffReportListing report;
-    do {
-      try {
-        report = dfs.getSnapshotDiffReportListing(snapshotDir, fromSnapshot,
-            toSnapshot, startPath, index);
-      } catch (RpcNoSuchMethodException e) {
-        // In case the server doesn't support getSnapshotDiffReportListing,
-        // fallback to getSnapshotDiffReport.
-        DFSClient.LOG.warn(
-            "Falling back to getSnapshotDiffReport {}", e.getMessage());
-        return dfs.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
-      }
-      startPath = report.getLastPath();
-      index = report.getLastIndex();
-      modifiedList.addAll(report.getModifyList());
-      createdList.addAll(report.getCreateList());
-      deletedList.addAll(report.getDeleteList());
-    } while (!(Arrays.equals(startPath, DFSUtilClient.EMPTY_BYTES)
-        && index == -1));
-    snapshotDiffReport =
-        new SnapshotDiffReportGenerator(snapshotDir, fromSnapshot, toSnapshot,
-            report.getIsFromEarlier(), modifiedList, createdList, deletedList);
-    return snapshotDiffReport.generateReport();
+    return  DFSUtilClient.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot,
+        dfs::getSnapshotDiffReport, dfs::getSnapshotDiffReportListing);
   }
 
   /**

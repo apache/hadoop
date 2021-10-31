@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.commons.collections.list.TreeList;
+import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
@@ -30,6 +32,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.impl.SnapshotDiffReportGenerator;
 import org.apache.hadoop.hdfs.net.BasicInetPeer;
 import org.apache.hadoop.hdfs.net.NioInetPeer;
 import org.apache.hadoop.hdfs.net.Peer;
@@ -43,8 +46,11 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -55,6 +61,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
@@ -358,6 +365,13 @@ public class DFSUtilClient {
       }
     }
     return path;
+  }
+
+  /**
+   * Given a list of path components returns a string.
+   */
+  public static String byteArray2String(byte[][] pathComponents) {
+    return bytes2String(byteArray2bytes(pathComponents));
   }
 
   /**
@@ -1128,5 +1142,69 @@ public class DFSUtilClient {
       UserGroupInformation ugi) {
     return (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
         + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
+  }
+
+  /**
+   * Returns true if the name of snapshot is vlaid.
+   * @param snapshotName name of the snapshot.
+   * @return true if the name of snapshot is vlaid.
+   */
+  public static boolean isValidSnapshotName(String snapshotName) {
+    // If any of the snapshots specified in the getSnapshotDiffReport call
+    // is null or empty, it points to the current tree.
+    return (snapshotName != null && !snapshotName.isEmpty());
+  }
+
+  public static SnapshotDiffReport getSnapshotDiffReport(
+      String snapshotDir, String fromSnapshot, String toSnapshot,
+      SnapshotDiffReportFunction withoutListing,
+      SnapshotDiffReportListingFunction withListing) throws IOException {
+    // In case the diff needs to be computed between a snapshot and the current
+    // tree, we should not do iterative diffReport computation as the iterative
+    // approach might fail if in between the rpc calls the current tree
+    // changes in absence of the global fsn lock.
+    if (!isValidSnapshotName(fromSnapshot) || !isValidSnapshotName(toSnapshot)) {
+      return withoutListing.apply(snapshotDir, fromSnapshot, toSnapshot);
+    }
+    byte[] startPath = EMPTY_BYTES;
+    int index = -1;
+    SnapshotDiffReportGenerator snapshotDiffReport;
+    List<DiffReportListingEntry> modifiedList = new TreeList();
+    List<DiffReportListingEntry> createdList = new ChunkedArrayList<>();
+    List<DiffReportListingEntry> deletedList = new ChunkedArrayList<>();
+    SnapshotDiffReportListing report;
+    do {
+      try {
+        report = withListing.apply(snapshotDir, fromSnapshot, toSnapshot, startPath, index);
+      } catch (RpcNoSuchMethodException|UnsupportedOperationException e) {
+        // In case the server doesn't support getSnapshotDiffReportListing,
+        // fallback to getSnapshotDiffReport.
+        LOG.warn("Falling back to getSnapshotDiffReport {}", e.getMessage());
+        return withoutListing.apply(snapshotDir, fromSnapshot, toSnapshot);
+      }
+      startPath = report.getLastPath();
+      index = report.getLastIndex();
+      modifiedList.addAll(report.getModifyList());
+      createdList.addAll(report.getCreateList());
+      deletedList.addAll(report.getDeleteList());
+    } while (!(Arrays.equals(startPath, EMPTY_BYTES)
+        && index == -1));
+    snapshotDiffReport =
+        new SnapshotDiffReportGenerator(snapshotDir, fromSnapshot, toSnapshot,
+            report.getIsFromEarlier(), modifiedList, createdList, deletedList);
+    return snapshotDiffReport.generateReport();
+  }
+
+  @FunctionalInterface
+  public interface SnapshotDiffReportFunction {
+    SnapshotDiffReport apply(String snapshotDir, String fromSnapshot, String toSnapshot)
+        throws IOException;
+  }
+
+  @FunctionalInterface
+  public interface SnapshotDiffReportListingFunction {
+    SnapshotDiffReportListing apply(String snapshotDir, String fromSnapshot, String toSnapshot,
+        byte[] startPath, int index)
+        throws IOException;
   }
 }
