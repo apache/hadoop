@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.impl.ResilientCommitByRename;
 import org.apache.hadoop.fs.impl.ResilientCommitByRenameHelper;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
@@ -125,11 +126,10 @@ public class FileOutputCommitter extends PathOutputCommitter {
   private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
-  @VisibleForTesting
-  final int moveThreads;
-  final AtomicInteger numberOfTasks = new AtomicInteger();
-  final boolean isParallelTaskCommitEnabled;
-  ResilientCommitByRenameHelper resilientCommitHelper;
+  private final int moveThreads;
+  private final AtomicInteger numberOfTasks = new AtomicInteger();
+  private final boolean isParallelTaskCommitEnabled;
+  private ResilientCommitByRenameHelper resilientCommitHelper;
 
   /**
    * Create a file output committer
@@ -535,6 +535,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
     }
   }
 
+  @VisibleForTesting
+  public int getMoveThreads() {
+    return moveThreads;
+  }
+
   public boolean isParallelMoveEnabled() {
     // Only available for algo v1
     return (moveThreads > 1 && algorithmVersion == 1);
@@ -782,14 +787,21 @@ public class FileOutputCommitter extends PathOutputCommitter {
   }
 
   /**
-   * Rename the file via the resilient operation if available/
+   * Rename the file via the resilient commit helper.
+   * Becquse any file at the destination will have been deleted,
+   * tell the commit helper that there is no need to probe the
+   * store for existance.
+   * This assumes that no two tasks created files with the same name,
+   * but so does any overwrite check performed nonatomically
+   * on the client.
    * @param from source filestatus
    * @param to destination path
    * @throws IOException failure to commit or rename.
    */
   private void moveFileInParallelCommit(final FileStatus from, final Path to)
       throws IOException {
-    resilientCommitHelper.commitFile(from, to);
+    resilientCommitHelper.commitFile(from, to,
+        ResilientCommitByRename.CommitFlqgs.DESTINATION_DOES_NOT_EXIST);
   }
 
   /**

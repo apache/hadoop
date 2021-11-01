@@ -18,14 +18,22 @@
 
 package org.apache.hadoop.fs.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.util.DurationInfo;
@@ -35,13 +43,24 @@ import static java.util.Objects.requireNonNull;
 /**
  * Support for committing work through {@link ResilientCommitByRename}
  * where present.
+ * This is for internal use only and will be removed when there is a
+ * public rename operation which takes etags and FileStatus entries.
  */
+@InterfaceAudience.LimitedPrivate({"Filesystems", "hadoop-mapreduce-client-core"})
+@InterfaceStability.Unstable
 public class ResilientCommitByRenameHelper {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ResilientCommitByRenameHelper.class);
 
+  /**
+   * Target FS.
+   */
   private final FileSystem fileSystem;
+
+  /**
+   * Was one more commits through the new API rejected?
+   */
   private final AtomicBoolean commitRejected;
 
   /**
@@ -59,10 +78,25 @@ public class ResilientCommitByRenameHelper {
    * @return true if the resilient commit API can b eused
    */
   public boolean resilientCommitAvailable(Path sourcePath) {
+    if (commitRejected.get()) {
+      return false;
+    }
+    final FileSystem fs = this.fileSystem;
+    return filesystemHasResilientCommmit(fs, sourcePath);
+  }
+
+  /**
+   * What is the resilence of this filesystem?
+   * @param fs filesystem
+   * @param sourcePath path to use
+   * @return true if the conditions of use are met.
+   */
+  public static boolean filesystemHasResilientCommmit(
+      final FileSystem fs,
+      final Path sourcePath) {
     try {
-      return !commitRejected.get()
-          && fileSystem instanceof ResilientCommitByRename
-          && fileSystem.hasPathCapability(sourcePath,
+      return fs instanceof ResilientCommitByRename
+          && fs.hasPathCapability(sourcePath,
           ResilientCommitByRename.RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY);
     } catch (IOException e) {
       return false;
@@ -75,35 +109,56 @@ public class ResilientCommitByRenameHelper {
    * its API is used to commit the file, passing in the etag.
    * @param sourceStatus source status file
    * @param dest destination path
-   * @return true if the file was committed through the new API.
-   * @throws IOException any failure in resilient commit, some failures in classic rename.
+   * @param options rename flags
+   * @return the outcome
+   * @throws IOException any failure in resilient commit other than rejection
+   * of the operation, and/or classic rename failed.
    */
-  public boolean commitFile(FileStatus sourceStatus, Path dest) throws IOException {
+  public ResilientCommitByRename.CommitByRenameOutcome commitFile(
+      final FileStatus sourceStatus, final Path dest,
+      final ResilientCommitByRename.CommitFlqgs... options)
+      throws IOException {
     final Path sourcePath = sourceStatus.getPath();
+    boolean rejected = false;
     if (resilientCommitAvailable(sourcePath)) {
 
       // use the better file rename operation.
       try (DurationInfo du = new DurationInfo(LOG, "commit(%s, %s) with status %s",
           sourcePath, dest, sourceStatus)) {
-        ((ResilientCommitByRename) fileSystem).commitSingleFileByRename(
+        return ((ResilientCommitByRename) fileSystem).commitSingleFileByRename(
             sourcePath,
             dest,
             null,
-            sourceStatus);
-        return true;
+            sourceStatus,
+            options);
       } catch (ResilientCommitByRename.ResilientCommitByRenameUnsupported
           | UnsupportedOperationException e) {
         commitWasRejected(sourcePath, e);
+        rejected = true;
       }
     }
     // fall back to rename.
     try (DurationInfo du = new DurationInfo(LOG, "rename(%s, %s)",
         sourcePath, dest, sourceStatus)) {
+      Set<ResilientCommitByRename.CommitFlqgs> flags = new HashSet<>(Arrays.asList(options));
+      if (!flags.contains(ResilientCommitByRename.CommitFlqgs.DESTINATION_DOES_NOT_EXIST)) {
+        try {
+          final FileStatus destStatus = fileSystem.getFileStatus(dest);
+          if (!flags.contains(ResilientCommitByRename.CommitFlqgs.OVERWRITE)
+              || destStatus.isDirectory()) {
+            // don't support renaming over a dir or, if not overwriting, a file
+            throw new FileAlreadyExistsException(dest.toUri().toString());
+          }
+        } catch (FileNotFoundException ignored) {
+
+        }
+      }
+
       if (!fileSystem.rename(sourcePath, dest)) {
         escalateRenameFailure(sourcePath, dest);
       }
     }
-    return false;
+    return new ResilientCommitByRename.CommitByRenameOutcome(false, rejected,true);
   }
 
   /**

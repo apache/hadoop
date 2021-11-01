@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
@@ -119,6 +120,7 @@ public interface ResilientCommitByRename {
    * @param dest destination of rename.
    * @param sourceEtag etag of source file. may be null or empty
    * @param sourceStatus nullable FileStatus of source.
+   * @param options rename flags
    * @throws FileNotFoundException source file not found
    * @throws ResilientCommitByRenameUnsupported not available on this store.
    * @throws PathIOException failure, including source and dest being the same path
@@ -128,7 +130,8 @@ public interface ResilientCommitByRename {
       Path source,
       Path dest,
       @Nullable String sourceEtag,
-      @Nullable FileStatus sourceStatus)
+      @Nullable FileStatus sourceStatus,
+      ResilientCommitByRename.CommitFlqgs... options)
       throws FileNotFoundException,
         ResilientCommitByRenameUnsupported,
         PathIOException,
@@ -140,13 +143,67 @@ public interface ResilientCommitByRename {
    * The outcome. This is always a success, but it
    * may include some information about what happened.
    */
-  class CommitByRenameOutcome implements IOStatisticsSource {
+  class CommitByRenameOutcome {
 
+    /* Throttling encountered and recovered from. */
+    private boolean throttlingEncountered;
+
+    /* The new commit operation has been rejected; falling back. */
+    private boolean commitRejected;
+
+    /* Classic rename was used. */
+    private boolean classicRenameUsed;
+
+    public CommitByRenameOutcome() {
+    }
+
+    public CommitByRenameOutcome(
+        final boolean throttlingEncountered,
+        final boolean commitRejected,
+        final boolean classicRenameUsed) {
+      this.throttlingEncountered = throttlingEncountered;
+      this.commitRejected = commitRejected;
+      this.classicRenameUsed = classicRenameUsed;
+    }
+
+    public boolean isThrottlingEncountered() {
+      return throttlingEncountered;
+    }
+
+    public void setThrottlingEncountered(final boolean throttlingEncountered) {
+      this.throttlingEncountered = throttlingEncountered;
+    }
+
+    public boolean isCommitRejected() {
+      return commitRejected;
+    }
+
+    public void setCommitRejected(final boolean commitRejected) {
+      this.commitRejected = commitRejected;
+    }
+
+    public boolean isClassicRenameUsed() {
+      return classicRenameUsed;
+    }
+
+    public void setClassicRenameUsed(final boolean classicRenameUsed) {
+      this.classicRenameUsed = classicRenameUsed;
+    }
   }
 
   final class ResilientCommitByRenameUnsupported extends PathIOException {
     public ResilientCommitByRenameUnsupported(final String path) {
       super(path, "ResilientCommit operations not supported");
     }
+  }
+
+  /**
+   * Enum of options.
+   */
+  enum CommitFlqgs {
+    NONE, // No options
+    OVERWRITE, // Overwrite the rename destination
+    DESTINATION_DOES_NOT_EXIST; // dest known to have been deleted
+
   }
 }

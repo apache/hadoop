@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.ResilientCommitByRename;
 import org.apache.hadoop.fs.impl.ResilientCommitByRenameHelper;
@@ -55,49 +56,98 @@ public abstract class AbstractContractResilientCommitByRenameTest extends
     super.setup();
     final FileSystem fs = getFileSystem();
     final Path path = methodPath();
+    committer = new ResilientCommitByRenameHelper(fs);
+    if (isResilient()) {
+      assertIsResilient(path);
+    } else {
+      assertNotResilient(path);
+    }
+  }
+
+  /**
+   * Is this expected to be resilient?
+   * @return true iff the FS should be resilient
+   */
+  public boolean isResilient() {
+    return true;
+  }
+
+  private void assertIsResilient(final Path path) throws IOException {
+    final FileSystem fs = getFileSystem();
+
     Assertions.assertThat(fs)
         .describedAs("FS %s", fs)
         .isInstanceOf(ResilientCommitByRename.class);
     Assertions.assertThat(fs.hasPathCapability(path,
             RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY))
-        .describedAs("FS %s path capability %s", fs, RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY)
+        .describedAs("FS %s path capability %s", fs,
+            RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY)
         .isTrue();
 
-    committer = new ResilientCommitByRenameHelper(fs);
     Assertions.assertThat(committer.resilientCommitAvailable(path))
         .describedAs("resilient commit available")
         .isTrue();
   }
 
-  private void commit(final Path src, final Path dst) throws IOException {
-    committer.commitFile(getFileSystem().getFileStatus(src), dst);
+  private void assertNotResilient(final Path path) throws IOException {
+    final FileSystem fs = getFileSystem();
+
+    Assertions.assertThat(fs)
+        .describedAs("FS %s", fs)
+        .isNotInstanceOf(ResilientCommitByRename.class);
+    Assertions.assertThat(fs.hasPathCapability(path,
+            RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY))
+        .describedAs("FS %s path capability %s", fs,
+            RESILIENT_COMMIT_BY_RENAME_PATH_CAPABILITY)
+        .isFalse();
+
+    Assertions.assertThat(committer.resilientCommitAvailable(path))
+        .describedAs("resilient commit available")
+        .isFalse();
+  }
+
+  /**
+   * Commit a file.
+   * @param source source
+   * @param dest dest path
+   * @param options rename options
+   * @return the outcome
+   * @throws IOException failure
+   */
+  protected ResilientCommitByRename.CommitByRenameOutcome commit(
+      final Path source,
+      final Path dest,
+      final ResilientCommitByRename.CommitFlqgs... options) throws IOException {
+    return committer.commitFile(getFileSystem().getFileStatus(source), dest, options);
   }
 
   @Test
   public void testCommitNewFileSameDir() throws Throwable {
     describe("rename a file into a new file in the same directory");
-    Path source = path("rename_src");
-    Path target = path("rename_dest");
+    Path base = methodPath();
+    Path source = new Path(base, "src");
+    Path dest = new Path(base, "dest");
     byte[] data = dataset(256, 'a', 'z');
     final FileSystem fs = getFileSystem();
     writeDataset(fs, source,
         data, data.length, 1024 * 1024, false);
-    commit(source, target);
+    commit(source, dest);
 
     assertListStatusFinds(fs,
-        target.getParent(), target);
-    verifyFileContents(fs, target, data);
+        dest.getParent(), dest);
+    verifyFileContents(fs, dest, data);
   }
 
   @Test
-  public void testCommitNonexistentFile() throws Throwable {
-    describe("trying to commit a nonexistent file raises FNFE");
-    Path source = path("testCommitNonexistentFileSrc");
+  public void testCommitMissingFile() throws Throwable {
+    describe("trying to commit a missing file raises FNFE");
+    Path base = methodPath();
+    Path source = new Path(base, "src");
     final FileSystem fs = getFileSystem();
     ContractTestUtils.touch(fs, source);
     final FileStatus status = fs.getFileStatus(source);
     fs.delete(source, false);
-    Path dest = path("testCommitNonexistentFileDest");
+    Path dest = new Path(base, "dest");
     intercept(FileNotFoundException.class,
         () -> committer.commitFile(status, dest));
     assertPathDoesNotExist("rename nonexistent file created a destination file",
@@ -105,22 +155,39 @@ public abstract class AbstractContractResilientCommitByRenameTest extends
   }
 
   /**
-   * Its an error if the destination exists.
+   * It is an error if the destination exists.
    */
   @Test
-  public void testCommitFileOverExistingFile() throws Throwable {
+  public void testCommitExistingFileNoOverwrite() throws Throwable {
     describe("overwrite in commit is forbidden");
-    Path source = path("source-256.txt");
+    Path base = methodPath();
+    Path source = new Path(base, "source-256.txt");
     byte[] sourceData = dataset(256, 'a', 'z');
     final FileSystem fs = getFileSystem();
     writeDataset(fs, source, sourceData, sourceData.length, 1024, false);
-    Path dest = path("dest-512.txt");
+    Path dest = new Path(base, "dest-512.txt");
     byte[] destData = dataset(512, 'A', 'Z');
     writeDataset(fs, dest, destData, destData.length, 1024, false);
-    assertIsFile(dest);
     final IOException exception = intercept(FileAlreadyExistsException.class, () ->
-        commit(source, dest));
+        commit(source, dest, ResilientCommitByRename.CommitFlqgs.NONE));
     LOG.info("caught exception", exception);
+  }
+
+  /**
+   * It is an error if the destination exists.
+   */
+  @Test
+  public void testCommitExistingFileWithOverwrite() throws Throwable {
+    describe("overwrite in commit is allowed when requested");
+    Path base = methodPath();
+    Path source = new Path(base, "source-256.txt");
+    byte[] sourceData = dataset(256, 'a', 'z');
+    final FileSystem fs = getFileSystem();
+    writeDataset(fs, source, sourceData, sourceData.length, 1024, false);
+    Path dest = new Path(base, "dest-512.txt");
+    byte[] destData = dataset(512, 'A', 'Z');
+    writeDataset(fs, dest, destData, destData.length, 1024, false);
+    commit(source, dest, ResilientCommitByRename.CommitFlqgs.OVERWRITE);
 
   }
 
@@ -160,7 +227,8 @@ public abstract class AbstractContractResilientCommitByRenameTest extends
     writeDataset(fs, renameSrc, data, data.length, 1024 * 1024,
         true);
 
-    IOException exception = intercept(IOException.class, () -> commit(renameSrc, renameTarget));
+    IOException exception = intercept(IOException.class, () ->
+        commit(renameSrc, renameTarget));
     LOG.info("caught exception", exception);
     assertPathDoesNotExist("after failure ", renameTarget);
     assertPathExists(action, renameSrc);

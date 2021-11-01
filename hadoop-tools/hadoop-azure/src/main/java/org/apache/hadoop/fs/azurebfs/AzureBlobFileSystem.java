@@ -27,6 +27,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -458,7 +461,8 @@ public class AzureBlobFileSystem extends FileSystem
   public CommitByRenameOutcome commitSingleFileByRename(final Path src,
       final Path dst,
       @Nullable final String sourceEtag,
-      @Nullable final FileStatus sourceStatus) throws IOException {
+      @Nullable final FileStatus sourceStatus,
+      final ResilientCommitByRename.CommitFlqgs... options) throws IOException {
 
     LOG.debug("AzureBlobFileSystem.commitSingleFileByRename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
@@ -480,10 +484,16 @@ public class AzureBlobFileSystem extends FileSystem
     if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
       throw new ResilientCommitByRenameUnsupported(qualifiedSrcPath.toString());
     }
+    Set<CommitFlqgs> flags = new HashSet<>(Arrays.asList(options));
 
+    if (!flags.contains(ResilientCommitByRename.CommitFlqgs.DESTINATION_DOES_NOT_EXIST)
+        && flags.contains(CommitFlqgs.OVERWRITE)) {
+      // nonrecursive delete the path at the destination as this FS is strict.
+      abfsStore.delete(qualifiedDstPath, false, tracingContext);
+    }
     try {
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, tracingContext, sourceEtag, sourceStatus);
-      return new CommitByRenameOutcome();
+      return new CommitByRenameOutcome(false, false, false);
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
       checkException(src, ex);

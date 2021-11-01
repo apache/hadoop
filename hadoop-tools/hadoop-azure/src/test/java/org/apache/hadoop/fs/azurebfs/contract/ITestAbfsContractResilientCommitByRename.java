@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractResilientCommitByRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.rawlocal.RawlocalFSContract;
 
 /**
  * ABFS FS does resilient commit by rename.

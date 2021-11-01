@@ -41,8 +41,10 @@ import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -519,7 +521,8 @@ public class RawLocalFileSystem extends FileSystem
   public CommitByRenameOutcome commitSingleFileByRename(final Path source,
       final Path dest,
       @Nullable final String sourceEtag,
-      @Nullable final FileStatus sourceStatus)
+      @Nullable final FileStatus sourceStatus,
+      final CommitFlqgs... options)
       throws IOException {
     LOG.debug("commitSingleFileByRename src: {} dst: {}", source, dest);
     Path qualifiedSourcePath = makeQualified(source);
@@ -535,8 +538,15 @@ public class RawLocalFileSystem extends FileSystem
       throw new FileNotFoundException(qualifiedSourcePath.toString());
     }
     final File destFile = pathToFile(qualifiedDestPath);
-    if (destFile.exists()) {
-      throw new FileAlreadyExistsException(qualifiedDestPath.toString());
+    Set<CommitFlqgs> flags = new HashSet<>(Arrays.asList(options));
+    if (!flags.contains(CommitFlqgs.DESTINATION_DOES_NOT_EXIST) && destFile.exists()) {
+      // dest exists reject dirs; files allowed if overwrite is true.
+      if (!flags.contains(CommitFlqgs.OVERWRITE) && destFile.isFile()) {
+        throw new FileAlreadyExistsException(qualifiedDestPath.toString());
+      }
+      if (destFile.isDirectory()) {
+        throw new FileAlreadyExistsException(qualifiedDestPath.toString());
+      }
     }
     // do the move
     try {
@@ -551,7 +561,7 @@ public class RawLocalFileSystem extends FileSystem
 
     }
 
-    return new CommitByRenameOutcome();
+    return new CommitByRenameOutcome(false, false, false);
   }
 
   @VisibleForTesting
