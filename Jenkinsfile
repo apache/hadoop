@@ -62,10 +62,7 @@ pipeline {
                 withCredentials(
                     [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
                                   passwordVariable: 'GITHUB_TOKEN',
-                                  usernameVariable: 'GITHUB_USER'),
-                    usernamePassword(credentialsId: 'hadoopqa-at-asf-jira',
-                                        passwordVariable: 'JIRA_PASSWORD',
-                                        usernameVariable: 'JIRA_USER')]) {
+                                  usernameVariable: 'GITHUB_USER')]) {
                         sh '''#!/usr/bin/env bash
 
                         set -e
@@ -107,10 +104,6 @@ pipeline {
                         # enable writing back to Github
                         YETUS_ARGS+=(--github-token="${GITHUB_TOKEN}")
 
-                        # enable writing back to ASF JIRA
-                        YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
-                        YETUS_ARGS+=(--jira-user="${JIRA_USER}")
-
                         # auto-kill any surefire stragglers during unit test runs
                         YETUS_ARGS+=("--reapermode=kill")
 
@@ -131,7 +124,7 @@ pipeline {
                         YETUS_ARGS+=("--build-url-artifacts=artifact/out")
 
                         # plugins to enable
-                        YETUS_ARGS+=("--plugins=all")
+                        YETUS_ARGS+=("--plugins=all,-jira")
 
                         # use Hadoop's bundled shelldocs
                         YETUS_ARGS+=("--shelldocs=/testptch/hadoop/dev-support/bin/shelldocs")
