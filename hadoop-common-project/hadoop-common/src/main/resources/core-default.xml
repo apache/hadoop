@@ -2205,7 +2205,16 @@
   </description>
 </property>
 
-<!-- Azure file system properties -->
+<property>
+  <name>fs.s3a.downgrade.syncable.exceptions</name>
+  <value>true</value>
+  <description>
+    Warn but continue when applications use Syncable.hsync when writing
+    to S3A.
+  </description>
+</property>
+
+  <!-- Azure file system properties -->
 <property>
   <name>fs.AbstractFileSystem.wasb.impl</name>
   <value>org.apache.hadoop.fs.azure.Wasb</value>
