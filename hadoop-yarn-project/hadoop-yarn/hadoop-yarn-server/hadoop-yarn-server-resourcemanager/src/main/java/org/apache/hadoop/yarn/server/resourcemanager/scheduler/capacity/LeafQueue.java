@@ -2007,7 +2007,12 @@ public class LeafQueue extends AbstractCSQueue {
 
   public void incAMUsedResource(String nodeLabel, Resource resourceToInc,
       SchedulerApplicationAttempt application) {
-    getUser(application.getUser()).getResourceUsage().incAMUsed(nodeLabel,
+    User user = getUser(application.getUser());
+    if (user == null) {
+      return;
+    }
+
+    user.getResourceUsage().incAMUsed(nodeLabel,
         resourceToInc);
     // ResourceUsage has its own lock, no addition lock needs here.
     usageTracker.getQueueUsage().incAMUsed(nodeLabel, resourceToInc);
@@ -2015,7 +2020,12 @@ public class LeafQueue extends AbstractCSQueue {
 
   public void decAMUsedResource(String nodeLabel, Resource resourceToDec,
       SchedulerApplicationAttempt application) {
-    getUser(application.getUser()).getResourceUsage().decAMUsed(nodeLabel,
+    User user = getUser(application.getUser());
+    if (user == null) {
+      return;
+    }
+
+    user.getResourceUsage().decAMUsed(nodeLabel,
         resourceToDec);
     // ResourceUsage has its own lock, no addition lock needs here.
     usageTracker.getQueueUsage().decAMUsed(nodeLabel, resourceToDec);
@@ -2103,7 +2113,7 @@ public class LeafQueue extends AbstractCSQueue {
       for (FiCaSchedulerApp app : getApplications()) {
         String userName = app.getUser();
         if (!userNameToHeadroom.containsKey(userName)) {
-          User user = getUser(userName);
+          User user = getUsersManager().getUserAndAddIfAbsent(userName);
           Resource headroom = Resources.subtract(
               getResourceLimitForActiveUsers(app.getUser(), clusterResources,
                   partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
