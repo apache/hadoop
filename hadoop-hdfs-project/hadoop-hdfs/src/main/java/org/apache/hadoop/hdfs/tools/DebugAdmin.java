@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
+import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
@@ -426,7 +427,7 @@ public class DebugAdmin extends Configured implements Tool {
     private CachingStrategy cachingStrategy;
     private int stripedReadBufferSize;
     private CompletionService<Integer> readService;
-    private RawErasureDecoder decoder;
+    private RawErasureEncoder encoder;
     private BlockReader[] blockReaders;
 
 
@@ -479,7 +480,7 @@ public class DebugAdmin extends Configured implements Tool {
       this.dataBlkNum = ecPolicy.getNumDataUnits();
       this.parityBlkNum = ecPolicy.getNumParityUnits();
       this.cellSize = ecPolicy.getCellSize();
-      this.decoder = CodecUtil.createRawDecoder(getConf(), ecPolicy.getCodecName(),
+      this.encoder = CodecUtil.createRawEncoder(getConf(), ecPolicy.getCodecName(),
           new ErasureCoderOptions(
               ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits()));
       int blockNum = dataBlkNum + parityBlkNum;
@@ -550,7 +551,7 @@ public class DebugAdmin extends Configured implements Tool {
       }
       long positionInBlock = 0L;
       while (positionInBlock < maxBlockLen) {
-        final int toReconstructLen = (int) Math.min(bufferSize, maxBlockLen - positionInBlock);
+        final int toVerifyLen = (int) Math.min(bufferSize, maxBlockLen - positionInBlock);
         List<Future<Integer>> futures = new ArrayList<>(dataBlkNum + parityBlkNum);
         for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
           final int fi = i;
@@ -558,7 +559,7 @@ public class DebugAdmin extends Configured implements Tool {
             BlockReader blockReader = blockReaders[fi];
             ByteBuffer buffer = buffers[fi];
             buffer.clear();
-            buffer.limit(toReconstructLen);
+            buffer.limit(toVerifyLen);
             int readLen = 0;
             if (blockReader != null) {
               int toRead = buffer.remaining();
@@ -580,21 +581,19 @@ public class DebugAdmin extends Configured implements Tool {
         for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
           futures.get(i).get(1, TimeUnit.MINUTES);
         }
-        ByteBuffer[] inputs = new ByteBuffer[dataBlkNum + parityBlkNum];
-        int[] erasedIndices = new int[parityBlkNum];
+        ByteBuffer[] inputs = new ByteBuffer[dataBlkNum];
         System.arraycopy(buffers, 0, inputs, 0, dataBlkNum);
         for (int i = 0; i < parityBlkNum; i++) {
-          erasedIndices[i] = dataBlkNum + i;
           outputs[i].clear();
-          outputs[i].limit(buffers[0].limit());
+          outputs[i].limit(toVerifyLen);
         }
-        this.decoder.decode(inputs, erasedIndices, outputs);
+        this.encoder.encode(inputs, outputs);
         for (int i = 0; i < parityBlkNum; i++) {
           if (!buffers[dataBlkNum + i].equals(outputs[i])) {
             throw new Exception("EC compute result not match.");
           }
         }
-        positionInBlock += toReconstructLen;
+        positionInBlock += toVerifyLen;
       }
     }
 
