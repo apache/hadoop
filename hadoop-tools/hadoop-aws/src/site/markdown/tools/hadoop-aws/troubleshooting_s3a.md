@@ -924,7 +924,7 @@ connector isn't saving any data at all. The `Syncable` API, especially the
 `hsync()` call, are critical for applications such as HBase to safely
 persist data.
 
-When configured to do so, the S3A connector throws an `UnsupportedOperationException` 
+When configured to do so, the S3A connector throws an `UnsupportedOperationException`
 when these API calls are made, because the API guarantees absolutely cannot be met:
 _nothing is being flushed or saved_.
 
