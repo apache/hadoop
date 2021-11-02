@@ -387,7 +387,7 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT =
-      false;
+      true;
 
   /**
    * The capacity of executor queues for operations other than block
