@@ -519,6 +519,11 @@ public class LeafQueue extends AbstractCSQueue {
     return usersManager.getUser(userName);
   }
 
+  @VisibleForTesting
+  public User getOrCreateUser(String userName) {
+    return usersManager.getUserAndAddIfAbsent(userName);
+  }
+
   @Private
   public List<AppPriorityACLGroup> getPriorityACLs() {
     readLock.lock();

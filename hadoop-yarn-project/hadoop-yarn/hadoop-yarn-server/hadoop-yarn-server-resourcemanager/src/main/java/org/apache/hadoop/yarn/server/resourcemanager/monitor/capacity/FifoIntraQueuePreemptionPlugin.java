@@ -423,7 +423,7 @@ public class FifoIntraQueuePreemptionPlugin
       if (tmpUser == null) {
         // User might have already been removed, but preemption still accounts for this app,
         // therefore reinserting the user will not cause a memory leak
-        User  user = tq.leafQueue.getUsersManager().getUserAndAddIfAbsent(userName);
+        User  user = tq.leafQueue.getOrCreateUser(userName);
         ResourceUsage userResourceUsage = user.getResourceUsage();
 
         // perUserAMUsed was populated with running apps, now we are looping
