@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.ResilientCommitByRename;
 import org.apache.hadoop.fs.impl.ResilientCommitByRenameHelper;
@@ -117,7 +116,7 @@ public abstract class AbstractContractResilientCommitByRenameTest extends
   protected ResilientCommitByRename.CommitByRenameOutcome commit(
       final Path source,
       final Path dest,
-      final ResilientCommitByRename.CommitFlqgs... options) throws IOException {
+      final ResilientCommitByRename.CommitFlags... options) throws IOException {
     return committer.commitFile(getFileSystem().getFileStatus(source), dest, options);
   }
 
@@ -169,7 +168,7 @@ public abstract class AbstractContractResilientCommitByRenameTest extends
     byte[] destData = dataset(512, 'A', 'Z');
     writeDataset(fs, dest, destData, destData.length, 1024, false);
     final IOException exception = intercept(FileAlreadyExistsException.class, () ->
-        commit(source, dest, ResilientCommitByRename.CommitFlqgs.NONE));
+        commit(source, dest, ResilientCommitByRename.CommitFlags.NONE));
     LOG.info("caught exception", exception);
   }
 
@@ -187,7 +186,7 @@ public abstract class AbstractContractResilientCommitByRenameTest extends
     Path dest = new Path(base, "dest-512.txt");
     byte[] destData = dataset(512, 'A', 'Z');
     writeDataset(fs, dest, destData, destData.length, 1024, false);
-    commit(source, dest, ResilientCommitByRename.CommitFlqgs.OVERWRITE);
+    commit(source, dest, ResilientCommitByRename.CommitFlags.OVERWRITE);
 
   }
 

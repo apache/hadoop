@@ -33,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.util.DurationInfo;
@@ -81,8 +80,7 @@ public class ResilientCommitByRenameHelper {
     if (commitRejected.get()) {
       return false;
     }
-    final FileSystem fs = this.fileSystem;
-    return filesystemHasResilientCommmit(fs, sourcePath);
+    return filesystemHasResilientCommmit(this.fileSystem, sourcePath);
   }
 
   /**
@@ -116,7 +114,7 @@ public class ResilientCommitByRenameHelper {
    */
   public ResilientCommitByRename.CommitByRenameOutcome commitFile(
       final FileStatus sourceStatus, final Path dest,
-      final ResilientCommitByRename.CommitFlqgs... options)
+      final ResilientCommitByRename.CommitFlags... options)
       throws IOException {
     final Path sourcePath = sourceStatus.getPath();
     boolean rejected = false;
@@ -140,16 +138,17 @@ public class ResilientCommitByRenameHelper {
     // fall back to rename.
     try (DurationInfo du = new DurationInfo(LOG, "rename(%s, %s)",
         sourcePath, dest, sourceStatus)) {
-      Set<ResilientCommitByRename.CommitFlqgs> flags = new HashSet<>(Arrays.asList(options));
-      if (!flags.contains(ResilientCommitByRename.CommitFlqgs.DESTINATION_DOES_NOT_EXIST)) {
+      Set<ResilientCommitByRename.CommitFlags> flags = new HashSet<>(Arrays.asList(options));
+      if (!flags.contains(ResilientCommitByRename.CommitFlags.DESTINATION_DOES_NOT_EXIST)) {
         try {
           final FileStatus destStatus = fileSystem.getFileStatus(dest);
-          if (!flags.contains(ResilientCommitByRename.CommitFlqgs.OVERWRITE)
+          if (!flags.contains(ResilientCommitByRename.CommitFlags.OVERWRITE)
               || destStatus.isDirectory()) {
             // don't support renaming over a dir or, if not overwriting, a file
             throw new FileAlreadyExistsException(dest.toUri().toString());
           }
         } catch (FileNotFoundException ignored) {
+          // dest doesn't exist.
 
         }
       }

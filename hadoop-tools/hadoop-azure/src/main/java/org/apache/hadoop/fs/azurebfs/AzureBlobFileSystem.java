@@ -462,7 +462,7 @@ public class AzureBlobFileSystem extends FileSystem
       final Path dst,
       @Nullable final String sourceEtag,
       @Nullable final FileStatus sourceStatus,
-      final ResilientCommitByRename.CommitFlqgs... options) throws IOException {
+      final CommitFlags... options) throws IOException {
 
     LOG.debug("AzureBlobFileSystem.commitSingleFileByRename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
@@ -484,10 +484,10 @@ public class AzureBlobFileSystem extends FileSystem
     if (!abfsStore.getIsNamespaceEnabled(tracingContext)) {
       throw new ResilientCommitByRenameUnsupported(qualifiedSrcPath.toString());
     }
-    Set<CommitFlqgs> flags = new HashSet<>(Arrays.asList(options));
+    Set<CommitFlags> flags = new HashSet<>(Arrays.asList(options));
 
-    if (!flags.contains(ResilientCommitByRename.CommitFlqgs.DESTINATION_DOES_NOT_EXIST)
-        && flags.contains(CommitFlqgs.OVERWRITE)) {
+    if (!flags.contains(CommitFlags.DESTINATION_DOES_NOT_EXIST)
+        && flags.contains(CommitFlags.OVERWRITE)) {
       // nonrecursive delete the path at the destination as this FS is strict.
       abfsStore.delete(qualifiedDstPath, false, tracingContext);
     }

@@ -515,14 +515,19 @@ public class RawLocalFileSystem extends FileSystem
 
   /**
    * Use java nio operations to fail meaningfully.
+   * This is here to test the API without requiring an object
+   * store which implements it.
+   * It also provides the reference "what should happen here"
+   * semantics.
    * {@inheritDoc}
    */
   @Override
+  @VisibleForTesting
   public CommitByRenameOutcome commitSingleFileByRename(final Path source,
       final Path dest,
       @Nullable final String sourceEtag,
       @Nullable final FileStatus sourceStatus,
-      final CommitFlqgs... options)
+      final CommitFlags... options)
       throws IOException {
     LOG.debug("commitSingleFileByRename src: {} dst: {}", source, dest);
     Path qualifiedSourcePath = makeQualified(source);
@@ -538,10 +543,10 @@ public class RawLocalFileSystem extends FileSystem
       throw new FileNotFoundException(qualifiedSourcePath.toString());
     }
     final File destFile = pathToFile(qualifiedDestPath);
-    Set<CommitFlqgs> flags = new HashSet<>(Arrays.asList(options));
-    if (!flags.contains(CommitFlqgs.DESTINATION_DOES_NOT_EXIST) && destFile.exists()) {
+    Set<CommitFlags> flags = new HashSet<>(Arrays.asList(options));
+    if (!flags.contains(CommitFlags.DESTINATION_DOES_NOT_EXIST) && destFile.exists()) {
       // dest exists reject dirs; files allowed if overwrite is true.
-      if (!flags.contains(CommitFlqgs.OVERWRITE) && destFile.isFile()) {
+      if (!flags.contains(CommitFlags.OVERWRITE) && destFile.isFile()) {
         throw new FileAlreadyExistsException(qualifiedDestPath.toString());
       }
       if (destFile.isDirectory()) {
@@ -558,7 +563,6 @@ public class RawLocalFileSystem extends FileSystem
       throw new PathIOException(qualifiedSourcePath.toString(),
           e.toString(),
           e);
-
     }
 
     return new CommitByRenameOutcome(false, false, false);

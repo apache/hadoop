@@ -111,8 +111,8 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   private Text val1 = new Text("val1");
   private Text val2 = new Text("val2");
   private final int mvThreads;
+  /** Use the raw local FS which implements resilient rename. */
   private final boolean useRawLocalFS;
-
 
 
   public TestFileOutputCommitter(int threads, final boolean useRawLocalFS) {

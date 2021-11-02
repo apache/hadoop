@@ -801,7 +801,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
   private void moveFileInParallelCommit(final FileStatus from, final Path to)
       throws IOException {
     resilientCommitHelper.commitFile(from, to,
-        ResilientCommitByRename.CommitFlqgs.DESTINATION_DOES_NOT_EXIST);
+        ResilientCommitByRename.CommitFlags.DESTINATION_DOES_NOT_EXIST);
   }
 
   /**

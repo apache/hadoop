@@ -26,10 +26,8 @@ import javax.annotation.Nullable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * This is something internal to make our rename-based job committers
@@ -131,7 +129,7 @@ public interface ResilientCommitByRename {
       Path dest,
       @Nullable String sourceEtag,
       @Nullable FileStatus sourceStatus,
-      ResilientCommitByRename.CommitFlqgs... options)
+      CommitFlags... options)
       throws FileNotFoundException,
         ResilientCommitByRenameUnsupported,
         PathIOException,
@@ -200,7 +198,7 @@ public interface ResilientCommitByRename {
   /**
    * Enum of options.
    */
-  enum CommitFlqgs {
+  enum CommitFlags {
     NONE, // No options
     OVERWRITE, // Overwrite the rename destination
     DESTINATION_DOES_NOT_EXIST; // dest known to have been deleted
