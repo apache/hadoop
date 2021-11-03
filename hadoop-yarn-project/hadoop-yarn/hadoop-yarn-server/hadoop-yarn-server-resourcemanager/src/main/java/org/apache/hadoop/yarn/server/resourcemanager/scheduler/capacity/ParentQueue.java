@@ -545,20 +545,20 @@ public class ParentQueue extends AbstractCSQueue {
                 + " and number of child queues is: " + childQueues.size());
       }
 
-      // First, check if we allow creation or not
-      boolean weightsAreUsed = false;
-      try {
-        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
-            == QueueCapacityType.WEIGHT;
-      } catch (IOException e) {
-        LOG.warn("Caught Exception during auto queue creation", e);
-      }
-      if (!weightsAreUsed) {
-        throw new SchedulerDynamicEditException(
-            "Trying to create new queue=" + childQueuePath
-                + " but not all the queues under parent=" + this.getQueuePath()
-                + " are using weight-based capacity. Failed to created queue");
-      }
+//      // First, check if we allow creation or not
+//      boolean weightsAreUsed = false;
+//      try {
+//        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
+//            == QueueCapacityType.WEIGHT;
+//      } catch (IOException e) {
+//        LOG.warn("Caught Exception during auto queue creation", e);
+//      }
+//      if (!weightsAreUsed) {
+//        throw new SchedulerDynamicEditException(
+//            "Trying to create new queue=" + childQueuePath
+//                + " but not all the queues under parent=" + this.getQueuePath()
+//                + " are using weight-based capacity. Failed to created queue");
+//      }
 
       CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
       this.childQueues.add(newQueue);
@@ -1221,93 +1221,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   @Override
   public void updateClusterResource(Resource clusterResource,
-      ResourceLimits resourceLimits) {
-    writeLock.lock();
-    try {
-      // Special handle root queue
-      if (rootQueue) {
-        for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
-          if (queueCapacities.getWeight(nodeLabel) > 0) {
-            queueCapacities.setNormalizedWeight(nodeLabel, 1f);
-          }
-        }
-      }
-
-      // Update absolute capacities of this queue, this need to happen before
-      // below calculation for effective capacities
-      updateAbsoluteCapacities();
-
-      // Normalize all dynamic queue queue's weight to 1 for all accessible node
-      // labels, this is important because existing node labels could keep
-      // changing when new node added, or node label mapping changed. We need
-      // this to ensure auto created queue can access all labels.
-      for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
-        for (CSQueue queue : childQueues) {
-          // For dynamic queue, we will set weight to 1 every time, because it
-          // is possible new labels added to the parent.
-          if (((AbstractCSQueue) queue).isDynamicQueue()) {
-            if (queue.getQueueCapacities().getWeight(nodeLabel) == -1f) {
-              queue.getQueueCapacities().setWeight(nodeLabel, 1f);
-            }
-          }
-        }
-      }
-
-      // Normalize weight of children
-      if (getCapacityConfigurationTypeForQueues(childQueues)
-          == QueueCapacityType.WEIGHT) {
-        for (String nodeLabel : queueCapacities.getExistingNodeLabels()) {
-          float sumOfWeight = 0;
-
-          for (CSQueue queue : childQueues) {
-            if (queue.getQueueCapacities().getExistingNodeLabels()
-                .contains(nodeLabel)) {
-              float weight = Math.max(0,
-                  queue.getQueueCapacities().getWeight(nodeLabel));
-              sumOfWeight += weight;
-            }
-          }
-          // When sum of weight == 0, skip setting normalized_weight (so
-          // normalized weight will be 0).
-          if (Math.abs(sumOfWeight) > 1e-6) {
-            for (CSQueue queue : childQueues) {
-              if (queue.getQueueCapacities().getExistingNodeLabels()
-                  .contains(nodeLabel)) {
-                queue.getQueueCapacities().setNormalizedWeight(nodeLabel,
-                    queue.getQueueCapacities().getWeight(nodeLabel) /
-                        sumOfWeight);
-              }
-            }
-          }
-        }
-      }
-
-      // Update effective capacity in all parent queue.
-      for (String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
-        calculateEffectiveResourcesAndCapacity(label, clusterResource);
-      }
-
-      // Update all children
-      for (CSQueue childQueue : childQueues) {
-        // Get ResourceLimits of child queue before assign containers
-        ResourceLimits childLimits = getResourceLimitsOfChild(childQueue,
-            clusterResource, resourceLimits,
-            RMNodeLabelsManager.NO_LABEL, false);
-        childQueue.updateClusterResource(clusterResource, childLimits);
-      }
-
-      CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          this, labelManager, null);
-      // Update configured capacity/max-capacity for default partition only
-      CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
-          labelManager.getResourceByLabel(null, clusterResource),
-          RMNodeLabelsManager.NO_LABEL, this);
-    } catch (IOException e) {
-      LOG.error("Fatal issue found: e", e);
-      throw new YarnRuntimeException("Fatal issue during scheduling", e);
-    } finally {
-      writeLock.unlock();
-    }
+                                    ResourceLimits resourceLimits) {
+    csContext.getCapacitySchedulerQueueManager().getQueueCapacityHandler().update(clusterResource, this);
   }
 
   @Override

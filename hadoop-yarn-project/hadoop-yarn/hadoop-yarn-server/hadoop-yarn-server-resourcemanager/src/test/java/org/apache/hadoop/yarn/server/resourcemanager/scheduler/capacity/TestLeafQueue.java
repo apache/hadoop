@@ -158,6 +158,7 @@ public class TestLeafQueue {
   
   private final ResourceCalculator dominantResourceCalculator =
       new DominantResourceCalculator();
+  private CapacitySchedulerQueueCapacityHandler capacityHandler;
 
   @Before
   public void setUp() throws Exception {
@@ -228,6 +229,11 @@ public class TestLeafQueue {
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
+    CapacitySchedulerQueueManager mockCsQm = mock(CapacitySchedulerQueueManager.class);
+    capacityHandler =
+        new CapacitySchedulerQueueCapacityHandler(csContext.getRMContext().getNodeLabelManager());
+    when(mockCsQm.getQueueCapacityHandler()).thenReturn(capacityHandler);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(mockCsQm);
 
     root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
@@ -2068,6 +2074,7 @@ public class TestLeafQueue {
         mockQueueStateManager);
     when(csContext.getCapacitySchedulerQueueManager()).thenReturn(
         mockCapacitySchedulerQueueManager);
+    when(mockCapacitySchedulerQueueManager.getQueueCapacityHandler()).thenReturn(capacityHandler);
 
     //our test plan contains three cases
     //1. single user dominate the queue, we test the headroom
@@ -4039,6 +4046,9 @@ public class TestLeafQueue {
         100 * 32);
     CapacitySchedulerContext csContext = mockCSContext(csConf, clusterResource);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    CapacitySchedulerQueueManager mockCsQm = mock(CapacitySchedulerQueueManager.class);
+    when(mockCsQm.getQueueCapacityHandler()).thenReturn(capacityHandler);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(mockCsQm);
     csConf.setFloat(
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         0.1f);
@@ -5122,6 +5132,7 @@ public class TestLeafQueue {
       LeafQueue leafQueue = new LeafQueue(csContext, conf,
           leafQueueName, cs.getRootQueue(),
           null);
+      ((ParentQueue)cs.getRootQueue()).childQueues.add(leafQueue);
 
       leafQueue.updateClusterResource(Resource.newInstance(0, 0),
           new ResourceLimits(Resource.newInstance(0, 0)));

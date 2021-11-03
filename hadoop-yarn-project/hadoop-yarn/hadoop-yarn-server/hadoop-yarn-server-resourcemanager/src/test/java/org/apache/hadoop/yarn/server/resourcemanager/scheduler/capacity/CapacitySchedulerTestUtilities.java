@@ -22,14 +22,25 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.junit.Assert;
 
 import java.util.Set;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public final class CapacitySchedulerTestUtilities {
   public static final int GB = 1024;
 
   private CapacitySchedulerTestUtilities() {
+  }
+
+  public static void setQueueHandler(CapacitySchedulerContext cs) {
+    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(
+        cs.getConfiguration(), cs.getRMContext().getNodeLabelManager(),
+        new AppPriorityACLsManager(cs.getConfiguration()));
+    when(cs.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
   }
 
   @SuppressWarnings("unchecked")

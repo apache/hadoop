@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -777,6 +778,7 @@ public class TestApplicationLimitsByPartition {
     when(spyRMContext.getNodeLabelManager()).thenReturn(mgr);
     when(csContext.getRMContext()).thenReturn(spyRMContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    setQueueHandler(csContext);
 
     mgr.activateNode(NodeId.newInstance("h0", 0),
         Resource.newInstance(160 * GB, 16)); // default Label

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -77,6 +78,7 @@ public class TestReservationQueue {
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     RMContext mockRMContext = TestUtils.getMockRMContext();
     when(csContext.getRMContext()).thenReturn(mockRMContext);
+    setQueueHandler(csContext);
 
     // create a queue
     planQueue = new PlanQueue(csContext, "root", null, null);

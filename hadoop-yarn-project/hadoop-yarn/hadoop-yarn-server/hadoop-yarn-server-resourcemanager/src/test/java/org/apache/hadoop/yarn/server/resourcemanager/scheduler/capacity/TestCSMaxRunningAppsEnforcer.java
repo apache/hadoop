@@ -95,6 +95,7 @@ public class TestCSMaxRunningAppsEnforcer {
     queueManager = new CapacitySchedulerQueueManager(csConfig, labelManager,
         appPriorityACLManager);
     queueManager.setCapacitySchedulerContext(scheduler);
+    when(scheduler.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
     queueManager.initializeQueues(csConfig);
   }
 

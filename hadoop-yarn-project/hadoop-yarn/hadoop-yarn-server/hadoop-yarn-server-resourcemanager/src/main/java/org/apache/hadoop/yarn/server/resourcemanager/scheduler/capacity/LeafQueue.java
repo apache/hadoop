@@ -1962,7 +1962,7 @@ public class LeafQueue extends AbstractCSQueue {
     // Update configured capacity/max-capacity for default partition only
     CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
         labelManager.getResourceByLabel(null, clusterResource),
-        NO_LABEL, this);
+        RMNodeLabelsManager.NO_LABEL, this);
 
     // queue metrics are updated, more resource may be available
     // activate the pending applications if possible
@@ -1976,62 +1976,16 @@ public class LeafQueue extends AbstractCSQueue {
     for (FiCaSchedulerApp application : orderingPolicy
         .getSchedulableEntities()) {
       computeUserLimitAndSetHeadroom(application, clusterResource,
-          NO_LABEL,
+          RMNodeLabelsManager.NO_LABEL,
           SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
 
     }
   }
 
-  @Override
-  public void updateClusterResource(Resource clusterResource,
+    @Override
+    public void updateClusterResource(Resource clusterResource,
       ResourceLimits currentResourceLimits) {
-    writeLock.lock();
-    try {
-      lastClusterResource = clusterResource;
-
-      updateAbsoluteCapacities();
-
-      super.updateEffectiveResources(clusterResource);
-
-      // Update maximum applications for the queue and for users
-      updateMaximumApplications(csContext.getConfiguration());
-
-      updateCurrentResourceLimits(currentResourceLimits, clusterResource);
-
-      // Update headroom info based on new cluster resource value
-      // absoluteMaxCapacity now,  will be replaced with absoluteMaxAvailCapacity
-      // during allocation
-      setQueueResourceLimitsInfo(clusterResource);
-
-      // Update user consumedRatios
-      recalculateQueueUsageRatio(clusterResource, null);
-
-      // Update metrics
-      CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
-          this, labelManager, null);
-      // Update configured capacity/max-capacity for default partition only
-      CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
-          labelManager.getResourceByLabel(null, clusterResource),
-          RMNodeLabelsManager.NO_LABEL, this);
-
-      // queue metrics are updated, more resource may be available
-      // activate the pending applications if possible
-      activateApplications();
-
-      // In case of any resource change, invalidate recalculateULCount to clear
-      // the computed user-limit.
-      usersManager.userLimitNeedsRecompute();
-
-      // Update application properties
-      for (FiCaSchedulerApp application : orderingPolicy
-          .getSchedulableEntities()) {
-        computeUserLimitAndSetHeadroom(application, clusterResource,
-            RMNodeLabelsManager.NO_LABEL,
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
-      }
-    } finally {
-      writeLock.unlock();
-    }
+    csContext.getCapacitySchedulerQueueManager().getQueueCapacityHandler().update(clusterResource, this);
   }
 
   @Override

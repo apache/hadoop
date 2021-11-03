@@ -85,7 +85,8 @@ public class TestParentQueue {
 
   private final ResourceCalculator resourceComparator =
       new DefaultResourceCalculator();
-  
+  private CapacitySchedulerQueueCapacityHandler capacityHandler;
+
   @Before
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
@@ -105,6 +106,12 @@ public class TestParentQueue {
     when(csContext.getResourceCalculator()).
         thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    CapacitySchedulerQueueManager mockCsQm = mock(CapacitySchedulerQueueManager.class);
+    capacityHandler =
+        new CapacitySchedulerQueueCapacityHandler(csContext.getRMContext().getNodeLabelManager());
+    when(mockCsQm.getQueueCapacityHandler()).thenReturn(capacityHandler);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(mockCsQm);
+
   }
   
   private static final String A = "a";
@@ -1067,8 +1074,8 @@ public class TestParentQueue {
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    Resource QUEUE_B_RESOURCE_70PERC = Resource.newInstance(7 * 1024, 27);
-    Resource QUEUE_A_RESOURCE_30PERC = Resource.newInstance(3 * 1024, 12);
+    Resource QUEUE_B_RESOURCE_70PERC = Resource.newInstance(7 * 1024, 22);
+    Resource QUEUE_A_RESOURCE_30PERC = Resource.newInstance(3 * 1024, 10);
     assertEquals(a.getQueueResourceQuotas().getConfiguredMinResource(),
         QUEUE_A_RESOURCE);
     assertEquals(b.getQueueResourceQuotas().getConfiguredMinResource(),

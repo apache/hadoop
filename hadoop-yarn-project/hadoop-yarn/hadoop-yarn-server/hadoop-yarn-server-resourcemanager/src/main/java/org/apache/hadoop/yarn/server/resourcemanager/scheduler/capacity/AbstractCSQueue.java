@@ -74,6 +74,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 public abstract class AbstractCSQueue implements CSQueue {
@@ -303,6 +304,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
       queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
+      configuredMaximumCapacityVectors.put(NO_LABEL, QueueCapacityVector.of(
+          maximumCapacity * 100, QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
     } finally {
       writeLock.unlock();
     }
@@ -427,9 +430,18 @@ public abstract class AbstractCSQueue implements CSQueue {
           .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
           .getLabelsByQueue(parentTemplate);
 
-      if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
-        csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
-            .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
+      if (parentNodeLabels != null) {
+        if (parentNodeLabels.size() > 1) {
+          csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+              .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
+        }
+          // Default to weight 1
+          for (String label : parentNodeLabels) {
+            float weightByLabel = configuration.getLabeledQueueWeight(queuePath.getFullPath(), label);
+            if (weightByLabel == -1) {
+              configuration.setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
+          }
+        }
       }
     }
   }
