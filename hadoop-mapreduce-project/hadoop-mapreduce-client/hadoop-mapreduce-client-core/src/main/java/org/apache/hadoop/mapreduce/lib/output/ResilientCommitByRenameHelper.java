@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,10 @@ public class ResilientCommitByRenameHelper {
    */
   private final boolean renameRecoveryAvailable;
 
+  private final AtomicInteger recoveryCount = new AtomicInteger();
+
+
+
   /**
    * Instantiate.
    * @param fileSystem filesystem to work with.
@@ -63,7 +68,8 @@ public class ResilientCommitByRenameHelper {
    * @param attemptRecovery attempt recovery if the store has etags.
    */
   public ResilientCommitByRenameHelper(final FileSystem fileSystem,
-      final Path finalOutput, final boolean attemptRecovery) {
+      final Path finalOutput,
+      final boolean attemptRecovery) {
     this(new FileSystemOperations(requireNonNull(fileSystem)),
         finalOutput, attemptRecovery);
   }
@@ -92,6 +98,14 @@ public class ResilientCommitByRenameHelper {
   public boolean isRenameRecoveryAvailable() {
 
     return renameRecoveryAvailable;
+  }
+
+  /**
+   * get count of rename failures recovered from.
+   * @return count of recoveries.
+   */
+  public int getRecoveryCount() {
+    return recoveryCount.get();
   }
 
   /**
@@ -151,7 +165,7 @@ public class ResilientCommitByRenameHelper {
       if (renameRecoveryAvailable && !isEmpty(sourceEtag)) {
         LOG.info("{} Failure, starting etag checking with source etag {}",
             operation, sourceEtag);
-        final FileStatus currentSourceStatus = operations.getFileStatusOrNull(dest);
+        final FileStatus currentSourceStatus = operations.getFileStatusOrNull(source);
         if (currentSourceStatus != null) {
           // source is still there so whatever happened, the rename
           // hasn't taken place.
@@ -164,6 +178,7 @@ public class ResilientCommitByRenameHelper {
         // probe for a destination
         LOG.debug("{}: source is missing; checking destination", operation);
 
+        // get the destination status and its etag, if any.
         final FileStatus destStatus = operations.getFileStatusOrNull(dest);
         String destEtag = getEtag(destStatus);
         if (sourceEtag.equals(destEtag)) {
@@ -173,8 +188,9 @@ public class ResilientCommitByRenameHelper {
                   " source {} and destination status {} determined the rename had succeeded",
               operation, sourceStatus, destStatus);
 
-          // and so return successfully but with a report which can be used by
+          // and so return successfully with a report which can be used by
           // the committer for its statistics
+          recoveryCount.incrementAndGet();
           return new CommitOutcome(true, caughtException);
         } else {
           // failure of etag checking, either dest is absent
@@ -195,8 +211,7 @@ public class ResilientCommitByRenameHelper {
   }
 
   /**
-   * Get an etag from a FileStatus if it
-   * provides one.
+   * Get an etag from a FileStatus if it provides one.
    * @param status the status; may be null.
    * @return the etag or null/empty if not provided
    */
@@ -236,10 +251,19 @@ public class ResilientCommitByRenameHelper {
         "Failed to rename to " + dest);
   }
 
+  @Override
+  public String toString() {
+    return "ResilientCommitByRenameHelper{" +
+        "renameRecoveryAvailable=" + renameRecoveryAvailable +
+        ", recoveries=" + recoveryCount.get() +
+        '}';
+  }
+
+
   /**
    * Outcome from the commit.
    */
-  static final class CommitOutcome {
+  public static final class CommitOutcome {
     /**
      * Rename failed but etag checking concluded it finished.
      */
@@ -261,11 +285,11 @@ public class ResilientCommitByRenameHelper {
       this.caughtException = caughtException;
     }
 
-    boolean isRenameFailureResolvedThroughEtags() {
+    public boolean isRenameFailureResolvedThroughEtags() {
       return renameFailureResolvedThroughEtags;
     }
 
-    IOException getCaughtException() {
+    public IOException getCaughtException() {
       return caughtException;
     }
 
@@ -315,7 +339,7 @@ public class ResilientCommitByRenameHelper {
      * @param path path
      * @return status or null
      */
-    public FileStatus getFileStatusOrNull(final Path path){
+    public FileStatus getFileStatusOrNull(final Path path) {
       try {
         return getFileStatus(path);
       } catch (IOException e) {

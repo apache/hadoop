@@ -449,6 +449,9 @@ public class AzureBlobFileSystem extends FileSystem
             AzureServiceErrorCode.INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE,
             AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND,
             AzureServiceErrorCode.INTERNAL_OPERATION_ABORT);
+      } else {
+        // all exceptions are raised.
+        checkException(src, ex);
       }
       return false;
     }

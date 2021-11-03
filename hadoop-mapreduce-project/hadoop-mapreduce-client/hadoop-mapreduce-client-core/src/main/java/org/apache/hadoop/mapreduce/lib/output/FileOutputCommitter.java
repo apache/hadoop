@@ -124,7 +124,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
    */
   public static final String FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY =
       "mapreduce.fileoutputcommitter.algorithm.version.v1.experimental.parallel.rename.recovery";
-  public static final boolean FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY_DEFAULT = true;
+  public static final boolean FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY_DEFAULT = false;
 
   private Path outputPath = null;
   private Path workPath = null;
@@ -614,6 +614,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
       try (DurationInfo d = new DurationInfo(LOG, true,
           "Merging data from committed tasks %s", finalOutput)) {
         mergeCommittedTasksInParallel(fs, context, finalOutput);
+      }
+
+      if (resilientCommitHelper.isRenameRecoveryAvailable()) {
+        LOG.info("Number of rename recoveries: {}",
+            resilientCommitHelper.getRecoveryCount());
       }
 
       if (skipCleanup) {

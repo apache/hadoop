@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -114,9 +113,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   }
 
   /**
-   * Test parameters are on thread count and whether or not to
-   * use a resilient committer filesystem.
-   * Intermixed to avoid an explosion of test runs.
+   * Test parameter is thread count.
    * @return test params
    */
   @Parameterized.Parameters(name="t-{0}")
