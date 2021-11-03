@@ -70,9 +70,4 @@ public final class CodecConstants {
    * Default extension for {@link org.apache.hadoop.io.compress.LzoCodec}.
    */
   public static final String LZO_CODEC_EXTENSION = ".lzo_deflate";
-
-  /**
-   * Default extension for {@link org.apache.hadoop.io.compress.LzopCodec}.
-   */
-  public static final String LZOP_CODEC_EXTENSION = ".lzo";
 }

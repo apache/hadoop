@@ -177,12 +177,6 @@ public class TestCodec {
   }
 
   @Test
-  public void testLzopCodec() throws IOException {
-    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzopCodec");
-    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
-  }
-
-  @Test
   public void testGzipCodecWithParam() throws IOException {
     Configuration conf = new Configuration(this.conf);
     ZlibFactory.setCompressionLevel(conf, CompressionLevel.BEST_COMPRESSION);
