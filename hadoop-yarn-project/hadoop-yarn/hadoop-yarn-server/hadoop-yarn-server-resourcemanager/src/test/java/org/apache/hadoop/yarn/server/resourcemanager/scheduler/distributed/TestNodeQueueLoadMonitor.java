@@ -72,8 +72,8 @@ public class TestNodeQueueLoadMonitor {
 
   @Test
   public void testWaitTimeSort() {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_WAIT_TIME);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_WAIT_TIME);
     selector.updateNode(createRMNode("h1", 1, 15, 10));
     selector.updateNode(createRMNode("h2", 2, 5, 10));
     selector.updateNode(createRMNode("h3", 3, 10, 10));
@@ -123,8 +123,8 @@ public class TestNodeQueueLoadMonitor {
 
   @Test
   public void testQueueLengthSort() {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
     selector.updateNode(createRMNode("h1", 1, -1, 15));
     selector.updateNode(createRMNode("h2", 2, -1, 5));
     selector.updateNode(createRMNode("h3", 3, -1, 10));
@@ -188,8 +188,8 @@ public class TestNodeQueueLoadMonitor {
 
   @Test
   public void testContainerQueuingLimit() {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
     selector.updateNode(createRMNode("h1", 1, -1, 15));
     selector.updateNode(createRMNode("h2", 2, -1, 5));
     selector.updateNode(createRMNode("h3", 3, -1, 10));
@@ -236,8 +236,8 @@ public class TestNodeQueueLoadMonitor {
    */
   @Test
   public void testSelectLocalNode() {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
 
     RMNode h1 = createRMNode("h1", 1, -1, 2, 5);
     RMNode h2 = createRMNode("h2", 2, -1, 5, 5);
@@ -275,8 +275,8 @@ public class TestNodeQueueLoadMonitor {
    */
   @Test
   public void testSelectRackLocalNode() {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
 
     RMNode h1 = createRMNode("h1", 1, "rack1", -1, 2, 5);
     RMNode h2 = createRMNode("h2", 2, "rack2", -1, 5, 5);
@@ -315,8 +315,8 @@ public class TestNodeQueueLoadMonitor {
    */
   @Test
   public void testSelectAnyNode() {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
 
     RMNode h1 = createRMNode("h1", 1, "rack1", -1, 2, 5);
     RMNode h2 = createRMNode("h2", 2, "rack2", -1, 5, 5);

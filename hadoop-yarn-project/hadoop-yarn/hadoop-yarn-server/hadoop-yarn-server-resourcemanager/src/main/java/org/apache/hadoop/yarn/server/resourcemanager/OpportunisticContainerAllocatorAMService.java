@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.CentralizedOpportunisticContainerAllocator;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.LoadComparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -98,7 +100,7 @@ public class OpportunisticContainerAllocatorAMService
   private static final Logger LOG =
       LoggerFactory.getLogger(OpportunisticContainerAllocatorAMService.class);
 
-  private final NodeQueueLoadMonitor nodeMonitor;
+  private final ClusterMonitor nodeMonitor;
   private final OpportunisticContainerAllocator oppContainerAllocator;
 
   private final int numNodes;
@@ -241,15 +243,14 @@ public class OpportunisticContainerAllocatorAMService
             DEFAULT_NM_CONTAINER_QUEUING_SORTING_NODES_INTERVAL_MS);
     this.cacheRefreshInterval = nodeSortInterval;
     this.lastCacheUpdateTime = System.currentTimeMillis();
-    NodeQueueLoadMonitor.LoadComparator comparator =
-        NodeQueueLoadMonitor.LoadComparator.valueOf(
-            rmContext.getYarnConfiguration().get(
-                YarnConfiguration.NM_CONTAINER_QUEUING_LOAD_COMPARATOR,
+    LoadComparator comparator = LoadComparator.valueOf(
+        rmContext.getYarnConfiguration()
+            .get(YarnConfiguration.NM_CONTAINER_QUEUING_LOAD_COMPARATOR,
                 YarnConfiguration.
                     DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR));
 
-    NodeQueueLoadMonitor topKSelector =
-        new NodeQueueLoadMonitor(nodeSortInterval, comparator, numNodes);
+    ClusterMonitor topKSelector =
+        createClusterMonitor(rmContext.getYarnConfiguration(), comparator);
 
     float sigma = rmContext.getYarnConfiguration()
         .getFloat(YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV,
@@ -257,7 +258,7 @@ public class OpportunisticContainerAllocatorAMService
 
     int limitMin, limitMax;
 
-    if (comparator == NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH) {
+    if (comparator == LoadComparator.QUEUE_LENGTH) {
       limitMin = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH,
               YarnConfiguration.
@@ -285,6 +286,26 @@ public class OpportunisticContainerAllocatorAMService
         new CentralizedOpportunisticContainerAllocator(
             rmContext.getContainerTokenSecretManager(),
             maxAllocationsPerAMHeartbeat, nodeMonitor);
+  }
+
+  private ClusterMonitor createClusterMonitor(Configuration conf,
+      LoadComparator comparator) {
+    String clusterMonitorClass = rmContext.getYarnConfiguration()
+        .get(YarnConfiguration.OPP_CONTAINER_CLUSTER_MONITOR,
+            YarnConfiguration.DEFAULT_OPP_CONTAINER_CLUSTER_MONITOR);
+    LOG.info("Using clusterMonitor: " + clusterMonitorClass);
+    try {
+      Class<?> clusterMonitorClazz = Class.forName(clusterMonitorClass);
+      if (clusterMonitorClazz.isInstance(NodeQueueLoadMonitor.class)) {
+        return new NodeQueueLoadMonitor(this.cacheRefreshInterval, comparator,
+            numNodes);
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate clusterMonitor: " + clusterMonitorClass, e);
+    }
+    return new NodeQueueLoadMonitor(this.cacheRefreshInterval, comparator,
+        numNodes);
   }
 
   @Override

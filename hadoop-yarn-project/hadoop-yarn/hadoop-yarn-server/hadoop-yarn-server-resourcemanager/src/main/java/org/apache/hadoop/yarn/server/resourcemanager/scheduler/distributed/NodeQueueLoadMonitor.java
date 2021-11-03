@@ -59,47 +59,6 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
   protected int numNodesForAnyAllocation =
       DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED;
 
-  /**
-   * The comparator used to specify the metric against which the load
-   * of two Nodes are compared.
-   */
-  public enum LoadComparator implements Comparator<ClusterNode> {
-    QUEUE_LENGTH,
-    QUEUE_WAIT_TIME;
-
-    @Override
-    public int compare(ClusterNode o1, ClusterNode o2) {
-      if (getMetric(o1) == getMetric(o2)) {
-        return (int)(o2.getTimestamp() - o1.getTimestamp());
-      }
-      return getMetric(o1) - getMetric(o2);
-    }
-
-    public int getMetric(ClusterNode c) {
-      return (this == QUEUE_LENGTH) ?
-          c.getQueueLength().get() : c.getQueueWaitTime().get();
-    }
-
-    /**
-     * Increment the metric by a delta if it is below the threshold.
-     * @param c ClusterNode
-     * @param incrementSize increment size
-     * @return true if the metric was below threshold and was incremented.
-     */
-    public boolean compareAndIncrement(ClusterNode c, int incrementSize) {
-      if(this == QUEUE_LENGTH) {
-        int ret = c.getQueueLength().addAndGet(incrementSize);
-        if (ret <= c.getQueueCapacity()) {
-          return true;
-        }
-        c.getQueueLength().addAndGet(-incrementSize);
-        return false;
-      }
-      // for queue wait time, we don't have any threshold.
-      return true;
-    }
-  }
-
   private final ScheduledExecutorService scheduledExecutor;
 
   protected final List<NodeId> sortedNodes;
@@ -345,6 +304,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     }
   }
 
+  @Override
   public RMNode selectLocalNode(String hostName, Set<String> blacklist) {
     if (blacklist.contains(hostName)) {
       return null;
@@ -359,6 +319,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     return null;
   }
 
+  @Override
   public RMNode selectRackLocalNode(String rackName, Set<String> blacklist) {
     Set<NodeId> nodesOnRack = nodeIdsByRack.get(rackName);
     if (nodesOnRack != null) {
