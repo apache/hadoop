@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import java.nio.charset.StandardCharsets;
 
 import com.hadoop.compression.lzo.LzoCodec;
 import org.apache.commons.codec.binary.Base64;
@@ -1446,11 +1445,6 @@ public class TestCodec {
 
       checkCompressedOutput(outputBuffer, compressedSize, b, inputSize, codec);
       checkCompressedOutput(outputBuffer2, compressedSize2, b, inputSize, codec);
-
-      final byte[] dataRead = Arrays.copyOf(outputBuffer.getData(), outputBuffer.getLength());
-      final byte[] dataRead2 = Arrays.copyOf(outputBuffer2.getData(), outputBuffer2.getLength());
-
-      assertArrayEquals(dataRead, dataRead2);
     }
   }
 }
