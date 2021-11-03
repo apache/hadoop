@@ -177,6 +177,15 @@ public class TestRouterHandlersFairness {
       }
       overloadException.get();
     }
+    int totalRejectedPermits = 0;
+    for (String ns : cluster.getNameservices()) {
+      totalRejectedPermits += routerContext.getRouter().getRpcServer()
+              .getRPCClient().getRejectedPermitForNs(ns);
+    }
+    totalRejectedPermits += routerContext.getRouter().getRpcServer()
+            .getRPCClient().getRejectedPermitForNs("concurrent");
+
+    assertEquals(totalRejectedPermits, overloadException.get());
 
     if (fairness) {
       assertTrue(overloadException.get() > 0);
