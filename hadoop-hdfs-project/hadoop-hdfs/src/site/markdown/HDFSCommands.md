@@ -708,6 +708,16 @@ Usage: `hdfs debug recoverLease -path <path> [-retries <num-retries>]`
 
 Recover the lease on the specified path. The path must reside on an HDFS file system. The default number of retries is 1.
 
+### `verifyEC`
+
+Usage: `hdfs debug verifyEC -file <file>`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| [`-file` *EC-file*] | HDFS EC file to be verified. |
+
+Verify the correctness of erasure coding on an erasure coded file.
+
 dfsadmin with ViewFsOverloadScheme
 ----------------------------------
 
