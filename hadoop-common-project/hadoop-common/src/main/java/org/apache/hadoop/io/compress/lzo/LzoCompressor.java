@@ -121,9 +121,8 @@ public class LzoCompressor implements Compressor {
     // 1. there still are compressed output in buffer, or
     // 2. input buffer is full, or
     // 3. there is direct input (the input cannot put into input buffer).
-    // But if `finish()` is called, this compressor does not need input after all.
-    return !((outputBufferLen - outputBufferOffset > 0) ||
-            (inputBufferMaxLen - inputBufferOffset == 0) || inputLength > 0) && !finish;
+    return !((outputBufferLen > 0) ||
+            (inputBufferMaxLen - inputBufferOffset == 0) || inputLength > 0);
   }
 
   /**
@@ -148,7 +147,7 @@ public class LzoCompressor implements Compressor {
     // 1. `finish()` is called, and
     // 2. all input are consumed, and
     // 3. no compressed data is in buffer.
-    return finish && finished && (outputBufferLen - outputBufferOffset == 0);
+    return finish && finished && (outputBufferLen == 0);
   }
 
   /**
@@ -198,15 +197,14 @@ public class LzoCompressor implements Compressor {
       inputSize = inputBufferLen;
     }
 
-    System.out.println("inputBufferOffset: " + inputBufferOffset + " inputSize: " + inputSize);
     // Compress input and write to output buffer.
-    int compressedSize = compressor.compress(inputBuffer, inputBufferOffset, inputSize,
-            outputBuffer, outputBufferOffset, outputBufferMaxLen);
-    inputBufferOffset += inputSize;
-    inputBufferLen -= inputSize;
+    int compressedSize = compressor.compress(inputBuffer, 0, inputSize,
+            outputBuffer, 0, outputBufferMaxLen);
+    // lzo consumes all buffer input
+    inputBufferOffset = 0;
+    inputBufferLen = 0;
 
-    outputBufferLen += compressedSize;
-    System.out.println("compressedSize: " + compressedSize + " outputBufferLen: " + outputBufferLen);
+    outputBufferLen = compressedSize;
 
     if (inputLength == 0) {
       finished = true;
@@ -215,10 +213,9 @@ public class LzoCompressor implements Compressor {
     // Copy from compressed data buffer to user buffer.
     int copiedSize = Math.min(compressedSize, len);
     bytesWritten += copiedSize;
-    System.arraycopy(outputBuffer, outputBufferOffset, b, off, copiedSize);
+    System.arraycopy(outputBuffer, 0, b, off, copiedSize);
     outputBufferOffset += copiedSize;
     outputBufferLen -= copiedSize;
-    System.out.println("copiedSize: " + copiedSize + " outputBufferOffset: " + outputBufferOffset + " outputBufferLen: " + outputBufferLen);
 
     return copiedSize;
   }
@@ -231,10 +228,11 @@ public class LzoCompressor implements Compressor {
       return 0;
     }
 
-    int inputSize = Math.min(inputLength,  inputBufferMaxLen);
+    finished = false;
+
+    int inputSize = Math.min(inputLength,  inputBufferMaxLen - inputBufferOffset);
     System.arraycopy(input, inputOffset, inputBuffer, inputBufferOffset, inputSize);
 
-    inputBufferOffset += inputSize;
     inputBufferLen += inputSize;
 
     inputOffset += inputSize;
