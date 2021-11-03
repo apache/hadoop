@@ -323,7 +323,7 @@ public class RouterRpcClient {
   }
 
   /**
-   * JSON representation of the rejected permits for each nameservice
+   * JSON representation of the rejected permits for each nameservice.
    *
    * @return String representation of the rejected permits for each nameservice.
    */
