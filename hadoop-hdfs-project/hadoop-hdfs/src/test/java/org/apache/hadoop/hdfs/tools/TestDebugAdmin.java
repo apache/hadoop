@@ -239,6 +239,12 @@ public class TestDebugAdmin {
     DFSTestUtil.createFile(fs, new Path(ecDir, "foo_5m"), 5 * m, repl, seed);
     assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_5m"})
         .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_6m"), (int) k, 6 * m, m, repl, seed);
+    assertEquals("ret: 0, Checking EC block group: blk_x;Status: OK" +
+            "Checking EC block group: blk_x;Status: OK" +
+            "All EC block group status: OK",
+        runCmd(new String[]{"verifyEC", "-file", "/ec/foo_6m"})
+            .replaceAll("blk_-[0-9]+", "blk_x;"));
 
     Path corruptFile = new Path(ecDir, "foo_corrupt");
     DFSTestUtil.createFile(fs, corruptFile, 5841961, repl, seed);
