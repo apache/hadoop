@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_FILE_IMPL_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createSubdirs;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT;
@@ -411,10 +410,12 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
     assertFalse("Threadpool disabled for algo v2", committer.isParallelMoveEnabled());
   }
 
-  private void createAndCommitTask(Configuration conf, String attempt, TaskAttemptID tID,
-      int version, boolean taskCleanup, final boolean setupJob) throws IOException, InterruptedException {
+  private void createAndCommitTask(Configuration conf, String attemptId, TaskAttemptID tID,
+      int version, boolean taskCleanup, final boolean setupJob)
+      throws IOException, InterruptedException {
+
     applyParameters(conf);
-    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attemptId);
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
@@ -469,9 +470,9 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   private void createNTasks(Configuration conf, int version, boolean taskCleanup)
       throws IOException, InterruptedException {
     for (int i = 0; i <= 9; i++) {
-      String attempt = String.format("attempt_200707121733_0001_m_%03d_0", i);
-      TaskAttemptID taskID = TaskAttemptID.forName(attempt);
-      createAndCommitTask(conf, attempt, taskID, version, taskCleanup, i == 0);
+      String attemptId = String.format("attempt_200707121733_0001_m_%03d_0", i);
+      TaskAttemptID tid = TaskAttemptID.forName(attemptId);
+      createAndCommitTask(conf, attemptId, tid, version, taskCleanup, i == 0);
     }
   }
 
@@ -565,9 +566,9 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   }
 
   static class CustomJobContextImpl extends JobContextImpl implements Progressable {
-    FileOutputCommitter committer;
+    private FileOutputCommitter committer;
 
-    public CustomJobContextImpl(Configuration conf, JobID jobId) {
+    CustomJobContextImpl(Configuration conf, JobID jobId) {
       super(conf, jobId);
     }
 
@@ -928,8 +929,8 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
   }
 
   private void verifyNumScheduledTasks(FileOutputCommitter committer) {
-      assertEquals("Scheduled tasks should have been 0 after shutting down thread pool",
-          0, committer.getNumCompletedTasks());
+    assertEquals("Scheduled tasks should have been 0 after shutting down thread pool",
+        0, committer.getNumCompletedTasks());
   }
 
   private void testAbortInternal(int version)

@@ -40,42 +40,71 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
  * Support for committing work using etags to recover from failure.
  * This is for internal use only.
  */
-class ResilientCommitByRenameHelper {
+@VisibleForTesting
+public class ResilientCommitByRenameHelper {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ResilientCommitByRenameHelper.class);
 
+  /**
+   * IO callbacks.
+   */
   private final FileSystemOperations operations;
+
+  /**
+   * Is attempt recovery enabled?
+   */
+  private final boolean renameRecoveryAvailable;
 
   /**
    * Instantiate.
    * @param fileSystem filesystem to work with.
+   * @param finalOutput output path under which renames take place
+   * @param attemptRecovery attempt recovery if the store has etags.
    */
-  ResilientCommitByRenameHelper(final FileSystem fileSystem) {
-    this.operations = new FileSystemOperations(requireNonNull(fileSystem));
+  public ResilientCommitByRenameHelper(final FileSystem fileSystem,
+      final Path finalOutput, final boolean attemptRecovery) {
+    this(new FileSystemOperations(requireNonNull(fileSystem)),
+        finalOutput, attemptRecovery);
   }
 
   /**
-   * Is resilient commit available on this filesystem/path?
-   * @param sourcePath path to commit under.
-   * @return true if the resilient commit API can b eused
+   * Instantiate.
+   * @param operations store operations
+   * @param finalOutput output path under which renames take place
+   * @param attemptRecovery attempt recovery if the store has etags.
    */
-  boolean resilientCommitAvailable(Path sourcePath) {
+  @VisibleForTesting
+  public ResilientCommitByRenameHelper(
+      final FileSystemOperations operations,
+      final Path finalOutput,
+      final boolean attemptRecovery) {
+    this.operations = operations;
+    // enable recovery if requested and the store supports it.
+    this.renameRecoveryAvailable = attemptRecovery
+        && operations.storePreservesEtagsThroughRenames(finalOutput);
+  }
 
-    return operations.storePreservesEtagsThroughRenames(sourcePath);
+  /**
+   * Is resilient commit available?
+   * @return true if the resilient commit API can be used
+   */
+  public boolean isRenameRecoveryAvailable() {
+
+    return renameRecoveryAvailable;
   }
 
   /**
    * What is the resilence of this filesystem?
    * @param fs filesystem
-   * @param sourcePath path to use
+   * @param path path to use
    * @return true if the conditions of use are met.
    */
-  static boolean filesystemHasResilientCommmit(
+  public static boolean filesystemHasResilientCommmit(
       final FileSystem fs,
-      final Path sourcePath) {
+      final Path path) {
     try {
-      return fs.hasPathCapability(sourcePath,
+      return fs.hasPathCapability(path,
           CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME);
     } catch (IOException ignored) {
       return false;
@@ -92,68 +121,86 @@ class ResilientCommitByRenameHelper {
    * @throws IOException failure
    * @throws PathIOException if the rename() call returned false.
    */
-  CommitOutcome commitFile(
+  public CommitOutcome commitFile(
       final FileStatus sourceStatus, final Path dest)
       throws IOException {
     final Path source = sourceStatus.getPath();
     String operation = String.format("rename(%s, %s)", source, dest);
     LOG.debug("{}", operation);
 
-    boolean renamed;
-    IOException caughtException = null;
     try (DurationInfo du = new DurationInfo(LOG, "%s with status %s",
         operation, sourceStatus)) {
-      renamed = operations.renameFile(source, dest);
-    } catch (IOException e) {
-      LOG.info("{} raised an exception: {}", operation, e.toString());
-      LOG.debug("{} stack trace", operation, e);
-      caughtException = e;
-      renamed = false;
-    }
-    if (renamed) {
-      // success
-      return new CommitOutcome();
-    }
-    // failure.
-    // Start with etag checking of the source entry and
-    // the destination file status.
-    final FileStatus destStatus = operations.getFileStatusOrNull(dest);
-    if (operations.storePreservesEtagsThroughRenames(source)) {
-      LOG.debug("{} Failure, starting etag checking", operation);
-      String sourceEtag = getEtag(sourceStatus);
-      String destEtag = getEtag(destStatus);
-      if (!isEmpty(sourceEtag) && sourceEtag.equals(destEtag)) {
-        // rename reported a failure or an exception was thrown,
-        // but the etag comparision implies all was good.
-        LOG.info("{} failed but etag comparison of" +
-                " source {} and destination status {} determined the rename had succeeded",
-            operation, sourceStatus, destStatus);
-
-        // and report
-        return new CommitOutcome(true, caughtException);
+      if (operations.renameFile(source, dest)) {
+        // success
+        return new CommitOutcome();
+      } else {
+        // no caught exception; generate one with status info.
+        // if this triggers a FNFE from the missing source,
+        throw escalateRenameFailure(source, dest);
       }
-    }
+    } catch (FileNotFoundException caughtException) {
+      // any other IOE is passed up;
+      // recovery only cares about reporting of
+      // missing files
+      LOG.debug("{} raised a FileNotFoundException", operation, caughtException);
+      // failure.
+      // Start with etag checking of the source entry and
+      // the destination file status.
+      String sourceEtag = getEtag(sourceStatus);
 
-    // etag comparison failure/unsupported. Fail the operation.
-    // throw any caught exception
-    if (caughtException != null) {
+      if (renameRecoveryAvailable && !isEmpty(sourceEtag)) {
+        LOG.info("{} Failure, starting etag checking with source etag {}",
+            operation, sourceEtag);
+        final FileStatus currentSourceStatus = operations.getFileStatusOrNull(dest);
+        if (currentSourceStatus != null) {
+          // source is still there so whatever happened, the rename
+          // hasn't taken place.
+          // (for example, dest parent path not present)
+          LOG.info("{}: source is still present; not checking destination", operation);
+          throw caughtException;
+        }
+
+        // the source is missing, we have an etag passed down, so
+        // probe for a destination
+        LOG.debug("{}: source is missing; checking destination", operation);
+
+        final FileStatus destStatus = operations.getFileStatusOrNull(dest);
+        String destEtag = getEtag(destStatus);
+        if (sourceEtag.equals(destEtag)) {
+          // rename failed somehow
+          // but the etag comparision implies all was good.
+          LOG.info("{} failed but etag comparison of" +
+                  " source {} and destination status {} determined the rename had succeeded",
+              operation, sourceStatus, destStatus);
+
+          // and so return successfully but with a report which can be used by
+          // the committer for its statistics
+          return new CommitOutcome(true, caughtException);
+        } else {
+          // failure of etag checking, either dest is absent
+          // or the tags don't match. report and fall through
+          // to the exception rethrow
+
+          LOG.info("{}: etag comparison of" +
+                  " source {} and destination status {} did not match; failing",
+              operation, sourceStatus, destStatus);
+        }
+      }
+
+      // etag comparison failure/unsupported. Fail the operation.
+      // throw the caught exception
       throw caughtException;
     }
 
-    // no caught exception; generate one with status info.
-    escalateRenameFailure(source, dest, destStatus);
-    // never reached.
-    return null;
   }
 
   /**
-   * Get an etag from a FileStatus which MUST BE
-   * an implementation of EtagFromFileStatus and
-   * whose etag MUST NOT BE null/empty.
+   * Get an etag from a FileStatus if it
+   * provides one.
    * @param status the status; may be null.
-   * @return the etag or null if not provided
+   * @return the etag or null/empty if not provided
    */
-  static String getEtag(FileStatus status) {
+  private String getEtag(FileStatus status) {
     if (status instanceof EtagSource) {
       return ((EtagSource) status).getEtag();
     } else {
@@ -166,9 +213,11 @@ class ResilientCommitByRenameHelper {
    * This never returns
    * @param source source path
    * @param dest dest path
-   * @throws IOException always
+   * @return an exception to throw
+   * @throws FileNotFoundException if source is absent
+   * @throws IOException other getFileStatus failure
    */
-  private void escalateRenameFailure(Path source, Path dest, FileStatus destStatus)
+  private PathIOException escalateRenameFailure(Path source, Path dest)
       throws IOException {
     // rename just returned false.
     // collect information for a meaningful error message
@@ -179,12 +228,11 @@ class ResilientCommitByRenameHelper {
     final FileStatus sourceStatus = operations.getFileStatus(source);
 
     LOG.error("Failure to rename {} to {} with" +
-            " source status {} " +
-            " and destination status {}",
+            " source status {}",
         source, dest,
-        sourceStatus, destStatus);
+        sourceStatus);
 
-    throw new PathIOException(source.toString(),
+    return new PathIOException(source.toString(),
         "Failed to rename to " + dest);
   }
 
@@ -225,6 +273,7 @@ class ResilientCommitByRenameHelper {
     public String toString() {
       return "CommitOutcome{" +
           "renameFailureResolvedThroughEtags=" + renameFailureResolvedThroughEtags +
+          ", caughtException=" + caughtException +
           '}';
     }
   }
@@ -241,8 +290,12 @@ class ResilientCommitByRenameHelper {
      */
     private final FileSystem fileSystem;
 
-    FileSystemOperations(final FileSystem fileSystem) {
+    public FileSystemOperations(final FileSystem fileSystem) {
       this.fileSystem = fileSystem;
+    }
+
+    public FileSystem getFileSystem() {
+      return fileSystem;
     }
 
     /**
@@ -251,22 +304,21 @@ class ResilientCommitByRenameHelper {
      * @return status
      * @throws IOException failure.
      */
-    FileStatus getFileStatus(Path path) throws IOException {
+    public FileStatus getFileStatus(Path path) throws IOException {
       return fileSystem.getFileStatus(path);
     }
 
     /**
-     * Get a file status value or, if the path doesn't exist, return null.
+     * Get a file status value or, if the operation failed
+     * for any reason, return null.
+     * This is used for reporting/probing the files.
      * @param path path
      * @return status or null
-     * @throws IOException IO Failure.
      */
-    final FileStatus getFileStatusOrNull(
-        final Path path)
-        throws IOException {
+    public FileStatus getFileStatusOrNull(final Path path){
       try {
         return getFileStatus(path);
-      } catch (FileNotFoundException e) {
+      } catch (IOException e) {
         return null;
       }
     }
@@ -279,7 +331,7 @@ class ResilientCommitByRenameHelper {
      * @return true if the file was renamed.
      * @throws IOException failure.
      */
-    boolean renameFile(Path source, Path dest)
+    public boolean renameFile(Path source, Path dest)
         throws IOException {
       return fileSystem.rename(source, dest);
     }
@@ -289,7 +341,7 @@ class ResilientCommitByRenameHelper {
      * @param path path to probe.
      * @return true if the FS declares its renames work.
      */
-    boolean storePreservesEtagsThroughRenames(Path path) {
+    public boolean storePreservesEtagsThroughRenames(Path path) {
       return filesystemHasResilientCommmit(fileSystem, path);
     }
 

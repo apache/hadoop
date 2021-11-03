@@ -306,6 +306,11 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_RENAME_RAISES_EXCEPTIONS,
+      DefaultValue = DEFAULT_FS_AZURE_RENAME_RAISES_EXCEPTIONS)
+  private boolean renameRaisesExceptions;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -777,6 +782,13 @@ public class AbfsConfiguration{
    */
   public boolean shouldTrackLatency() {
     return this.trackLatency;
+  }
+
+  /**
+   * Should rename raise meaningful exceptions on failure?
+   */
+  public boolean getRenameRaisesExceptions() {
+    return renameRaisesExceptions;
   }
 
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {

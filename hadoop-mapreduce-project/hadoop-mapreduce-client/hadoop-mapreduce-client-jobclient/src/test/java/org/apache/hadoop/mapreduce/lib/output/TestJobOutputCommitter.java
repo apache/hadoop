@@ -61,11 +61,11 @@ public class TestJobOutputCommitter extends HadoopTestCase {
   public static Collection<Object[]> getParameters() {
     // CLUSTER_MR, LOCAL_FS, taskTrackers, dataNodes, mvThreads
     return Arrays.asList(new Object[][] {
-        { 2, 4, 1, 1, 1 },
-        { 2, 4, 1, 1, 2 },
-        { 2, 4, 1, 1, 4 },
-        { 2, 4, 1, 1, 8 },
-        { 2, 4, 1, 1, 10 },
+        {2, 4, 1, 1, 1},
+        {2, 4, 1, 1, 2},
+        {2, 4, 1, 1, 4},
+        {2, 4, 1, 1, 8},
+        {2, 4, 1, 1, 10},
     });
   }
 

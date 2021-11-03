@@ -246,5 +246,14 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+
+  /**
+   * Should rename raise meaningful exceptions on failure?
+   * This is good for reporting and error handling -but it
+   * does diverge from what HDFS does.
+   */
+  public static final String FS_AZURE_RENAME_RAISES_EXCEPTIONS = "fs.azure.rename.raises.exceptions";
+  public static final boolean DEFAULT_FS_AZURE_RENAME_RAISES_EXCEPTIONS = true;
+
   private ConfigurationKeys() {}
 }

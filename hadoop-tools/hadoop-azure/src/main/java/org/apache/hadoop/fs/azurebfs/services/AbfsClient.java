@@ -507,26 +507,8 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders);
-    Instant renameRequestStartTime = Instant.now();
-    try {
-      op.execute(tracingContext);
-    } catch (AzureBlobFileSystemException e) {
-        // If we have no HTTP response, throw the original exception.
-        if (!op.hasResult()) {
-          throw e;
-        }
-        final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
-            renameRequestStartTime, op, destination, tracingContext);
-        if (idempotencyOp.getResult().getStatusCode()
-            == op.getResult().getStatusCode()) {
-          // idempotency did not return different result
-          // throw back the exception
-          throw e;
-        } else {
-          return idempotencyOp;
-        }
-    }
-
+    // no attempt at recovery using timestamps as it was not reliable.
+    op.execute(tracingContext);
     return op;
   }
 
@@ -545,6 +527,7 @@ public class AbfsClient implements Closeable {
    * @return REST operation response post idempotency check
    * @throws AzureBlobFileSystemException if GetFileStatus hits any exception
    */
+  @Deprecated
   public AbfsRestOperation renameIdempotencyCheckOp(
       final Instant renameRequestStartTime,
       final AbfsRestOperation op,

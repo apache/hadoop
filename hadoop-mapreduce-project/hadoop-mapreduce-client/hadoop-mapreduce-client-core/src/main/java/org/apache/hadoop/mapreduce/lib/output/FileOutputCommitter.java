@@ -117,7 +117,14 @@ public class FileOutputCommitter extends PathOutputCommitter {
   public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT =
       "mapreduce.fileoutputcommitter.algorithm.version.v1.experimental.parallel.task.commit";
   public static final boolean
-      FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT_DEFAULT = true;
+      FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT_DEFAULT = false;
+
+  /**
+   * Attemt to recover from rename failures if the store supports etags.
+   */
+  public static final String FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY =
+      "mapreduce.fileoutputcommitter.algorithm.version.v1.experimental.parallel.rename.recovery";
+  public static final boolean FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY_DEFAULT = true;
 
   private Path outputPath = null;
   private Path workPath = null;
@@ -592,10 +599,14 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
     if (hasOutputPath()) {
       Path finalOutput = getOutputPath();
-      FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
+      final Configuration conf = context.getConfiguration();
+      FileSystem fs = finalOutput.getFileSystem(conf);
       // created resilient commit helper bonded to the destination FS/path
-      resilientCommitHelper = new ResilientCommitByRenameHelper(fs);
-      if (resilientCommitHelper.resilientCommitAvailable(finalOutput)) {
+      resilientCommitHelper = new ResilientCommitByRenameHelper(fs,
+          finalOutput,
+          conf.getBoolean(FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY,
+              FILEOUTPUTCOMMITTER_PARALLEL_RENAME_RECOVERY_DEFAULT));
+      if (resilientCommitHelper.isRenameRecoveryAvailable()) {
         LOG.info("Using resilient commit API to move files");
       }
 
@@ -625,7 +636,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
       }
       // True if the job requires output.dir marked on successful job.
       // Note that by default it is set to true.
-      if (context.getConfiguration().getBoolean(
+      if (conf.getBoolean(
           SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, true)) {
         Path markerPath = new Path(outputPath, SUCCEEDED_FILE_NAME);
         // If job commit is repeatable and previous/another AM could write
