@@ -143,7 +143,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
         throws IOException {
       this(protocol, Client.ConnectionId.getConnectionId(
-          addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf),
+          addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf, fallbackToSimpleAuth),
           conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
       this.alignmentContext = alignmentContext;

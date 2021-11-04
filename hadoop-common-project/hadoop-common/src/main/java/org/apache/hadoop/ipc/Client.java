@@ -1679,11 +1679,13 @@ public class Client implements AutoCloseable {
     private final boolean doPing; //do we need to send ping message
     private final int pingInterval; // how often sends ping to the server in msecs
     private String saslQop; // here for testing
+    private final AtomicBoolean fallbackToSimpleAuth;
     private final Configuration conf; // used to get the expected kerberos principal name
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
                  UserGroupInformation ticket, int rpcTimeout,
-                 RetryPolicy connectionRetryPolicy, Configuration conf) {
+                 RetryPolicy connectionRetryPolicy, Configuration conf,
+                 AtomicBoolean fallbackToSimpleAuth) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
@@ -1710,6 +1712,7 @@ public class Client implements AutoCloseable {
           CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
           CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT);
       this.pingInterval = (doPing ? Client.getPingInterval(conf) : 0);
+      this.fallbackToSimpleAuth = fallbackToSimpleAuth;
       this.conf = conf;
     }
     
@@ -1772,12 +1775,14 @@ public class Client implements AutoCloseable {
      * @param ticket UGI
      * @param rpcTimeout timeout
      * @param conf Configuration object
+     * @param fallbackToSimpleAuth AtomicBoolean configuring auth fallback behaviour in rpc calls
      * @return A ConnectionId instance
      * @throws IOException
      */
     static ConnectionId getConnectionId(InetSocketAddress addr,
         Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
-        RetryPolicy connectionRetryPolicy, Configuration conf) throws IOException {
+        RetryPolicy connectionRetryPolicy, Configuration conf,
+        AtomicBoolean fallbackToSimpleAuth) throws IOException {
 
       if (connectionRetryPolicy == null) {
         final int max = conf.getInt(
@@ -1793,11 +1798,11 @@ public class Client implements AutoCloseable {
       }
 
       return new ConnectionId(addr, protocol, ticket, rpcTimeout,
-          connectionRetryPolicy, conf);
+          connectionRetryPolicy, conf, fallbackToSimpleAuth);
     }
     
     static boolean isEqual(Object a, Object b) {
-      return a == null ? b == null : a.equals(b);
+      return Objects.equals(a, b);
     }
 
     @Override
@@ -1815,7 +1820,8 @@ public class Client implements AutoCloseable {
             && isEqual(this.protocol, that.protocol)
             && this.rpcTimeout == that.rpcTimeout
             && this.tcpNoDelay == that.tcpNoDelay
-            && isEqual(this.ticket, that.ticket);
+            && isEqual(this.ticket, that.ticket)
+            && isEqual(this.fallbackToSimpleAuth, that.fallbackToSimpleAuth);
       }
       return false;
     }
@@ -1831,6 +1837,8 @@ public class Client implements AutoCloseable {
       result = PRIME * result + rpcTimeout;
       result = PRIME * result + (tcpNoDelay ? 1231 : 1237);
       result = PRIME * result + ((ticket == null) ? 0 : ticket.hashCode());
+      result = PRIME * result
+          + (fallbackToSimpleAuth == null ? 0 : fallbackToSimpleAuth.hashCode());
       return result;
     }
     

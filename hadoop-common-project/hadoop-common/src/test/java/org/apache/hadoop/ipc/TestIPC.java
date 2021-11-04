@@ -142,7 +142,7 @@ public class TestIPC {
   static ConnectionId getConnectionId(InetSocketAddress addr, int rpcTimeout,
       Configuration conf) throws IOException {
     return ConnectionId.getConnectionId(addr, null,
-        UserGroupInformation.getCurrentUser(), rpcTimeout, null, conf);
+        UserGroupInformation.getCurrentUser(), rpcTimeout, null, conf, null);
   }
 
   static Writable call(Client client, InetSocketAddress addr,
@@ -1707,7 +1707,7 @@ public class TestIPC {
       final LongWritable param = new LongWritable(RANDOM.nextLong());
       final ConnectionId remoteId = new ConnectionId(
           sockAddr, TestBindingProtocol.class, ugi, 0,
-          RetryPolicies.TRY_ONCE_THEN_FAIL, conf);
+          RetryPolicies.TRY_ONCE_THEN_FAIL, conf, null);
       client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, null);
       fail("call didn't throw connect exception");
     } catch (SocketException se) {

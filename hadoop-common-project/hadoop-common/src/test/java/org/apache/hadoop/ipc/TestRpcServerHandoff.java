@@ -200,9 +200,8 @@ public class TestRpcServerHandoff {
       Writable param = new BytesWritable(requestBytes);
       final Client.ConnectionId remoteId =
           Client.ConnectionId.getConnectionId(address, null,
-              null, 0, null, conf);
-      Writable result = client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId,
-          new AtomicBoolean(false));
+              null, 0, null, conf, null);
+      Writable result = client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId, null);
       return result;
     }
   }

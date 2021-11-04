@@ -223,7 +223,7 @@ public class WritableRpcEngine implements RpcEngine {
                    AlignmentContext alignmentContext)
         throws IOException {
       this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
-          ticket, rpcTimeout, null, conf);
+          ticket, rpcTimeout, null, conf, fallbackToSimpleAuth);
       this.client = CLIENTS.getClient(conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
       this.alignmentContext = alignmentContext;

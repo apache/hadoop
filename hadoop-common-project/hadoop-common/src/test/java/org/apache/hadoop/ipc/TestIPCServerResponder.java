@@ -71,7 +71,7 @@ public class TestIPCServerResponder {
   static Writable call(Client client, Writable param,
       InetSocketAddress address) throws IOException {
     final ConnectionId remoteId = ConnectionId.getConnectionId(address, null,
-        null, 0, null, conf);
+        null, 0, null, conf, null);
     return client.call(RpcKind.RPC_BUILTIN, param, remoteId,
         RPC.RPC_SERVICE_CLASS_DEFAULT, null);
   }
