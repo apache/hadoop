@@ -252,8 +252,9 @@ public final class ConfigurationKeys {
    * This is good for reporting and error handling -but it
    * does diverge from what HDFS does.
    */
-  public static final String FS_AZURE_RENAME_RAISES_EXCEPTIONS = "fs.azure.rename.raises.exceptions";
-  public static final boolean DEFAULT_FS_AZURE_RENAME_RAISES_EXCEPTIONS = true;
+  public static final String FS_AZURE_RENAME_RAISES_EXCEPTIONS =
+      "fs.azure.rename.raises.exceptions";
+  public static final boolean DEFAULT_FS_AZURE_RENAME_RAISES_EXCEPTIONS = false;
 
   private ConfigurationKeys() {}
 }

@@ -70,6 +70,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -90,6 +91,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
 
   private final static String SUB_DIR = "SUB_DIR";
   private final static Path OUT_SUB_DIR = new Path(outDir, SUB_DIR);
+  static final String EXCEPTION_DURING_PROGRESS = "Throwing exception during progress";
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFileOutputCommitter.class);
@@ -571,7 +573,8 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
 
     public void progress() {
       if (committer != null && committer.isParallelMoveEnabled()) {
-        throw new RuntimeException("Throwing exception during progress. moveThreads "
+        throw new RuntimeException(EXCEPTION_DURING_PROGRESS +
+            ". moveThreads "
             + committer.getMoveThreads());
       }
     }
@@ -628,8 +631,7 @@ public class TestFileOutputCommitter extends AbstractHadoopTestBase {
       }
     } catch(IOException e) {
       if (committer.isParallelMoveEnabled()) {
-        assertTrue("Exception from getProgress should have been caught",
-            e.getMessage().contains("Throwing exception during progress"));
+        GenericTestUtils.assertExceptionContains(EXCEPTION_DURING_PROGRESS, e);
       }
     }
 

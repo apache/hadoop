@@ -106,7 +106,7 @@ public class ITestAzureBlobFileSystemResilientCommit
     outputPath = path(getMethodName());
     sourcePath = new Path(outputPath, "source");
     destPath = new Path(outputPath, "dest");
-    targetFS.mkdirs(outputPath );
+    targetFS.mkdirs(outputPath);
 
     commitHelper = new ResilientCommitByRenameHelper(
         targetFS,

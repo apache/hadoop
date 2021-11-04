@@ -786,6 +786,7 @@ public class AbfsConfiguration{
 
   /**
    * Should rename raise meaningful exceptions on failure?
+   * @return true if rename is to fail meaningfully
    */
   public boolean getRenameRaisesExceptions() {
     return renameRaisesExceptions;

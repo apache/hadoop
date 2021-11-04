@@ -797,6 +797,8 @@ public class FileOutputCommitter extends PathOutputCommitter {
           mergePathsInParallel(fs, from, to, context, pool, futures);
         }
       }
+    } catch (RuntimeException e) {
+      throw new IOException(e);
     }
   }
 

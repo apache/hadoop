@@ -307,7 +307,7 @@ public class ResilientCommitByRenameHelper {
    * for tests simulating etag mismatch.
    */
   @VisibleForTesting
-  static class FileSystemOperations {
+  public static class FileSystemOperations {
 
     /**
      * Target FS.

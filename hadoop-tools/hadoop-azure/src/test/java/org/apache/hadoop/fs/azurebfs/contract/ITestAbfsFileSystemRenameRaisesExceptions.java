@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,10 +25,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.contract.AbstractContractRenameTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractOptions;
-
-import static org.apache.hadoop.fs.contract.ContractOptions.RENAME_RETURNS_FALSE_IF_DEST_EXISTS;
-import static org.apache.hadoop.fs.contract.ContractOptions.RENAME_RETURNS_FALSE_IF_SOURCE_MISSING;
 
 /**
  * Contract test for rename operation  with abfs set to raise exceptions.
