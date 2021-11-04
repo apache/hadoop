@@ -215,11 +215,10 @@ public class TestRouterHandlersFairness {
   private int getTotalRejectedPermits(RouterContext routerContext) {
     int totalRejectedPermits = 0;
     for (String ns : cluster.getNameservices()) {
-      totalRejectedPermits += routerContext.getRouter().getRpcServer()
-          .getRPCClient().getRejectedPermitForNs(ns);
+      totalRejectedPermits += routerContext.getRouterRpcClient()
+          .getRejectedPermitForNs(ns);
     }
-    totalRejectedPermits += routerContext.getRouter().getRpcServer()
-        .getRPCClient()
+    totalRejectedPermits += routerContext.getRouterRpcClient()
         .getRejectedPermitForNs(RouterRpcFairnessConstants.CONCURRENT_NS);
     return totalRejectedPermits;
   }
