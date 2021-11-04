@@ -1383,7 +1383,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * This method starts the data node with the specified conf.
    * 
-   * If conf's CONFIG_PROPERTY_SIMULATED property is set
+   * If conf's DFS_DATANODE_FSDATASET_FACTORY_KEY property is set
    * then a simulated storage based data node is created.
    * 
    * @param dataDirectories - only for a non-simulated storage data node
