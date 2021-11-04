@@ -901,33 +901,37 @@ public class Client implements AutoCloseable {
 
     private void setFallBackToSimpleAuth(AtomicBoolean fallbackToSimpleAuth)
         throws AccessControlException {
+      if (authMethod == null || authProtocol != AuthProtocol.SASL) {
+        if (authProtocol == AuthProtocol.SASL) {
+          LOG.trace("Auth method is not set, yield from setting auth fallback.");
+        }
+        return;
+      }
       if (fallbackToSimpleAuth == null) {
-        LOG.trace("Connection {} skips setting fallbackToSimpleAuth as it is null.", remoteId);
-        return;
+        LOG.trace("Connection {} will skip to set fallbackToSimpleAuth as it is null.", remoteId);
+      } else {
+        LOG.trace("Connection {} sets fallbackToSimpleAuth.", remoteId);
       }
-      if (authMethod == null) {
-        // setupIOStreams() will set up authMethod first, then call this method again.
-        return;
-      }
-      LOG.trace(
-          "Setting fallbackToSimpleAuth. AuthMethod is {}. Fallback allowed by configuration: {}. "
-              + "Security is {}.",
-          authMethod, fallbackAllowed,
-          UserGroupInformation.isSecurityEnabled() ? "enabled" : "disabled");
+      LOG.trace("AuthMethod is {}. Fallback allowed by configuration: {}. Security is {}.",
+            authMethod, fallbackAllowed,
+            UserGroupInformation.isSecurityEnabled() ? "enabled" : "disabled");
       if (authMethod != AuthMethod.SIMPLE) {
-        LOG.trace("Disabling fallbackToSimpleAuth target does not require SIMPLE authentication.");
-        fallbackToSimpleAuth.set(false);
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Disabling fallbackToSimpleAuth, target does not use SIMPLE authentication.");
+          fallbackToSimpleAuth.set(false);
+        }
       } else if (UserGroupInformation.isSecurityEnabled()) {
         if (!fallbackAllowed) {
-          throw new AccessControlException("Server asks us to fall back to SIMPLE auth, but this"
+          throw new AccessControlException("Server asks us to fall back to SIMPLE auth, but this "
               + "client is configured to only allow secure connections.");
         }
-        LOG.trace("Enable fallbackToSimpleAuth for target, as we are allowed to fall back to "
-            + "SIMPLE authentication.");
-        fallbackToSimpleAuth.set(true);
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Enabling fallbackToSimpleAuth for target, as we are allowed to fall back.");
+          fallbackToSimpleAuth.set(true);
+        }
       }
     }
-    
+
     private void closeConnection() {
       if (socket == null) {
         return;
