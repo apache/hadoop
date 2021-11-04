@@ -83,7 +83,9 @@ public class AbstractRouterRpcFairnessPolicyController
     JSONObject json = new JSONObject();
     for (Map.Entry<String, Semaphore> entry : permits.entrySet()) {
       try {
-        json.put(entry.getKey(), entry.getValue().availablePermits());
+        String nsId = entry.getKey();
+        int availableHandler = entry.getValue().availablePermits();
+        json.put(nsId, availableHandler);
       } catch (JSONException e) {
         LOG.warn("Cannot put {} into JSONObject", entry.getKey(), e);
       }

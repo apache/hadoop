@@ -114,6 +114,15 @@ public class TestRouterRpcFairnessPolicyController {
   }
 
   @Test
+  public void testGetAvailableHandlerOnPerNsForNoFairness() {
+    Configuration conf = new Configuration();
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =
+        FederationUtil.newFairnessPolicyController(conf);
+    assertEquals("N/A",
+        routerRpcFairnessPolicyController.getAvailableHandlerOnPerNs());
+  }
+
+  @Test
   public void testAllocationErrorForLowPreconfiguredHandlers() {
     Configuration conf = createConf(1);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "ns1", 2);
