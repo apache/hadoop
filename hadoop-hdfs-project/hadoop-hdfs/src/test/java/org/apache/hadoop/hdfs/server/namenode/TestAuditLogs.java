@@ -90,9 +90,9 @@ public class TestAuditLogs {
   // allowed=(true|false) ugi=name ip=/address cmd={cmd} src={path} dst=null perm=null
   static final Pattern auditPattern = Pattern.compile(
       "allowed=.*?\\s" +
-      "ugi=.*?\\s" + 
-      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
-      "cmd=.*?\\ssrc=.*?\\sdst=null\\s" + 
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
       "perm=.*?");
   static final Pattern successPattern = Pattern.compile(
       ".*allowed=true.*");
