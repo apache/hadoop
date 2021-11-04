@@ -55,7 +55,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -136,7 +136,7 @@ public class RouterRpcClient {
 
   /** Fairness manager to control handlers assigned per NS. */
   private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
-  private Map<String, AtomicLong> rejectedPermitsPerNs = new ConcurrentHashMap<>();
+  private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -1591,12 +1591,11 @@ public class RouterRpcClient {
   }
 
   private void incrRejectedPermitForNs(String ns) {
-    rejectedPermitsPerNs.putIfAbsent(ns, new AtomicLong(0));
-    rejectedPermitsPerNs.get(ns).incrementAndGet();
+    rejectedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
   }
 
   public Long getRejectedPermitForNs(String ns) {
     return rejectedPermitsPerNs.containsKey(ns) ?
-        rejectedPermitsPerNs.get(ns).get() : 0L;
+        rejectedPermitsPerNs.get(ns).longValue() : 0L;
   }
 }
