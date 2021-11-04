@@ -133,6 +133,7 @@ public class NamenodeWebHdfsMethods {
   private String scheme;
   private Principal userPrincipal;
   private String remoteAddr;
+  private int remotePort;
 
   private @Context ServletContext context;
   private @Context HttpServletResponse response;
@@ -147,6 +148,7 @@ public class NamenodeWebHdfsMethods {
     // get the remote address, if coming in via a trusted proxy server then
     // the address with be that of the proxied client
     remoteAddr = JspHelper.getRemoteAddr(request);
+    remotePort = JspHelper.getRemotePort(request);
     supportEZ =
         Boolean.valueOf(request.getHeader(WebHdfsFileSystem.EZ_HEADER));
   }
@@ -225,6 +227,10 @@ public class NamenodeWebHdfsMethods {
         return getRemoteAddr();
       }
       @Override
+      public int getRemotePort() {
+        return getRemotePortFromJSPHelper();
+      }
+      @Override
       public InetAddress getHostInetAddress() {
         try {
           return InetAddress.getByName(getHostAddress());
@@ -253,6 +259,10 @@ public class NamenodeWebHdfsMethods {
 
   protected String getRemoteAddr() {
     return remoteAddr;
+  }
+
+  protected int getRemotePortFromJSPHelper() {
+    return remotePort;
   }
 
   protected void queueExternalCall(ExternalCall call)
