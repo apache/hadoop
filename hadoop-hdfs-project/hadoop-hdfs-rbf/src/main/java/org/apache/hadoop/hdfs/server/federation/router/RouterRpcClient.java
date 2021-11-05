@@ -47,6 +47,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -54,6 +55,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -134,6 +136,7 @@ public class RouterRpcClient {
 
   /** Fairness manager to control handlers assigned per NS. */
   private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
+  private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -317,6 +320,15 @@ public class RouterRpcClient {
     info.put("total", executorService.getPoolSize());
     info.put("max", executorService.getMaximumPoolSize());
     return JSON.toString(info);
+  }
+
+  /**
+   * JSON representation of the rejected permits for each nameservice.
+   *
+   * @return String representation of the rejected permits for each nameservice.
+   */
+  public String getRejectedPermitsPerNsJSON() {
+    return JSON.toString(rejectedPermitsPerNs);
   }
 
   /**
@@ -1544,6 +1556,7 @@ public class RouterRpcClient {
       if (rpcMonitor != null) {
         rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
       }
+      incrRejectedPermitForNs(nsId);
       LOG.debug("Permit denied for ugi: {} for method: {}",
           ugi, m.getMethodName());
       String msg =
@@ -1575,5 +1588,14 @@ public class RouterRpcClient {
       getRouterRpcFairnessPolicyController() {
     return (AbstractRouterRpcFairnessPolicyController
           )routerRpcFairnessPolicyController;
+  }
+
+  private void incrRejectedPermitForNs(String ns) {
+    rejectedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
+  }
+
+  public Long getRejectedPermitForNs(String ns) {
+    return rejectedPermitsPerNs.containsKey(ns) ?
+        rejectedPermitsPerNs.get(ns).longValue() : 0L;
   }
 }

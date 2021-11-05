@@ -146,6 +146,7 @@ public class TestRouterHandlersFairness {
     Configuration conf = new HdfsConfiguration();
     final int numOps = 10;
     final AtomicInteger overloadException = new AtomicInteger();
+    int originalRejectedPermits = getTotalRejectedPermits(routerContext);
 
     for (int i = 0; i < numOps; i++) {
       DFSClient routerClient = null;
@@ -177,6 +178,9 @@ public class TestRouterHandlersFairness {
       }
       overloadException.get();
     }
+    int latestRejectedPermits = getTotalRejectedPermits(routerContext);
+    assertEquals(latestRejectedPermits - originalRejectedPermits,
+        overloadException.get());
 
     if (fairness) {
       assertTrue(overloadException.get() > 0);
@@ -208,4 +212,14 @@ public class TestRouterHandlersFairness {
     routerProto.renewLease(clientName);
   }
 
+  private int getTotalRejectedPermits(RouterContext routerContext) {
+    int totalRejectedPermits = 0;
+    for (String ns : cluster.getNameservices()) {
+      totalRejectedPermits += routerContext.getRouterRpcClient()
+          .getRejectedPermitForNs(ns);
+    }
+    totalRejectedPermits += routerContext.getRouterRpcClient()
+        .getRejectedPermitForNs(RouterRpcFairnessConstants.CONCURRENT_NS);
+    return totalRejectedPermits;
+  }
 }
