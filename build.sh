@@ -18,7 +18,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 set -e
 mkdir -p build
 if [ ! -d "$DIR/build/apache-rat-0.13" ]; then
-   wget "https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz" -O "$DIR/build/apache-rat.tar.gz"
+	curl -LSs https://dlcdn.apache.org/creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz -o "$DIR/build/apache-rat.tar.gz"
 	cd $DIR/build
 	tar zvxf apache-rat.tar.gz
 	cd -
