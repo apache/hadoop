@@ -22,7 +22,6 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 import java.io.IOException;
 import java.net.URI;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,10 +137,5 @@ public final class CustomTokenProviderAdapter extends AccessTokenProvider
   public String getUserAgentSuffix() {
     String suffix = ExtensionHelper.getUserAgentSuffix(adaptee, "");
     return suffix != null ? suffix : "";
-  }
-
-  @VisibleForTesting
-  protected CustomTokenProviderAdaptee getCustomTokenProviderAdaptee() {
-    return adaptee;
   }
 }

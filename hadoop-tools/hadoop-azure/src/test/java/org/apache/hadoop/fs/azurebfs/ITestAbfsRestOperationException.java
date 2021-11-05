@@ -111,10 +111,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config);
-    RetryTestTokenProvider retryTestTokenProvider
-        = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
-        getAccessTokenProvider(fs1));
-    retryTestTokenProvider.resetStatusToFirstTokenFetch();
+    RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
 
     intercept(Exception.class,
         ()-> {
@@ -122,10 +119,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         });
 
     // Number of retries done should be as configured
-    Assert.assertEquals(
-        "Number of token fetch retries done does not match with fs.azure"
-            + ".custom.token.fetch.retry.count configured", numOfRetries,
-        retryTestTokenProvider.getRetryCount());
+    Assert.assertTrue(
+        "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
+            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
+            + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
   }
 
   @Test
