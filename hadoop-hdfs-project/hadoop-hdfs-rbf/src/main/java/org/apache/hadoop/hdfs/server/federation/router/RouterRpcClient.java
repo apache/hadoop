@@ -1558,22 +1558,23 @@ public class RouterRpcClient {
   private void acquirePermit(
       final String nsId, final UserGroupInformation ugi, final RemoteMethod m)
       throws IOException {
-    if (routerRpcFairnessPolicyController != null
-        && !routerRpcFairnessPolicyController.acquirePermit(nsId)) {
-      // Throw StandByException,
-      // Clients could fail over and try another router.
-      if (rpcMonitor != null) {
-        rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+    if (routerRpcFairnessPolicyController != null) {
+      if (!routerRpcFairnessPolicyController.acquirePermit(nsId)) {
+        // Throw StandByException,
+        // Clients could fail over and try another router.
+        if (rpcMonitor != null) {
+          rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+        }
+        incrRejectedPermitForNs(nsId);
+        LOG.debug("Permit denied for ugi: {} for method: {}",
+            ugi, m.getMethodName());
+        String msg =
+            "Router " + router.getRouterId() +
+                " is overloaded for NS: " + nsId;
+        throw new StandbyException(msg);
       }
-      incrRejectedPermitForNs(nsId);
-      LOG.debug("Permit denied for ugi: {} for method: {}",
-          ugi, m.getMethodName());
-      String msg =
-          "Router " + router.getRouterId() +
-              " is overloaded for NS: " + nsId;
-      throw new StandbyException(msg);
+      incrAcceptedPermitForNs(nsId);
     }
-    incrAcceptedPermitForNs(nsId);
   }
 
   /**
