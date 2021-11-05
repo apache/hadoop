@@ -37,11 +37,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -241,9 +239,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
-  public AccessTokenProvider getAccessTokenProvider(final AzureBlobFileSystem fs) {
-    return TestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
-  }
 
   public void loadConfiguredFileSystem() throws Exception {
       // disable auto-creation of filesystem
