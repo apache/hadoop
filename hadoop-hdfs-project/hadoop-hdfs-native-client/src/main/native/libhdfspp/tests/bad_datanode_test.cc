@@ -227,6 +227,7 @@ TEST(BadDataNodeTest, NNEventCallback) {
   ASSERT_EQ(2, callbacks.size());
   ASSERT_EQ(FILE_DN_CONNECT_EVENT, callbacks[0]);
   ASSERT_EQ(FILE_DN_READ_EVENT, callbacks[1]);
+
 }
 
 
