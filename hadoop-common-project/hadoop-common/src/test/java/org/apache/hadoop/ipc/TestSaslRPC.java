@@ -616,7 +616,7 @@ public class TestSaslRPC extends TestRpcBase {
           assertEquals(clientUgi.getUserName(),
               proxy2.getAuthUser(null, newEmptyRequest()).getUser());
           AuthMethod authMethod2 =
-              convert(proxy2.getAuthMethod(null, newEmptyRequest()));q
+              convert(proxy2.getAuthMethod(null, newEmptyRequest()));
           assertAuthEquals(SIMPLE, authMethod2.toString());
         } finally {
           if (proxy1 != null) {
