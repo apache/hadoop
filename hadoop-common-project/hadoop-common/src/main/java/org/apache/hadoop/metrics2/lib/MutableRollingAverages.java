@@ -167,7 +167,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   }
 
   @Override
-  public void snapshot(MetricsRecordBuilder builder, boolean all) {
+  public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
       for (final Entry<String, LinkedBlockingDeque<SumAndCount>> entry
           : averages.entrySet()) {
@@ -179,8 +179,11 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
         long totalCount = 0;
 
         for (final SumAndCount sumAndCount : entry.getValue()) {
-          totalCount += sumAndCount.getCount();
-          totalSum += sumAndCount.getSum();
+          if (Time.monotonicNow() - sumAndCount.getSnapshotTimeStamp()
+              < recordValidityMs) {
+            totalCount += sumAndCount.getCount();
+            totalSum += sumAndCount.getSum();
+          }
         }
 
         if (totalCount != 0) {
