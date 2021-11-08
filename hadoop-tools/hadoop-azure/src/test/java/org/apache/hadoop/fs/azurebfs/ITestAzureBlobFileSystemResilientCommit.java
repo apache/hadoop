@@ -43,7 +43,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.toAsciiByteArray;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test the commit helper; parameterized on whether or not the FS
+ * Test the {@link ResilientCommitByRenameHelper}.
+ * Parameterized on whether or not the FS
  * raises exceptions on rename failures.
  * The outcome must be the same through the commit helper;
  * exceptions and error messages will be different.
@@ -134,7 +135,7 @@ public class ITestAzureBlobFileSystemResilientCommit
   }
 
   /**
-   * make sure the filesystem resilience matches the text
+   * Make sure the filesystem resilience matches the text
    * expectations.
    */
   @Test
@@ -184,9 +185,9 @@ public class ITestAzureBlobFileSystemResilientCommit
   }
 
   /**
-   * commit a file twice.
+   * Commit a file twice.
    * the second time the source file is missing but the dest file
-   * has the same etag. as a result, this is considered a success.
+   * has the same etag. As a result, this is considered a success.
    */
   @Test
   public void testDoubleCommitTriggersRecovery() throws Throwable {
@@ -234,9 +235,9 @@ public class ITestAzureBlobFileSystemResilientCommit
   }
 
   /**
-   * commit a file, then
-   * expectone with a filestatus with a different source etag,
-   * to fail
+   * Commit a file, then
+   * try to commit again with a filestatus with a different source etag.
+   * Recovery will not report success.
    */
   @Test
   public void testDoubleCommitDifferentFiles2() throws Throwable {
@@ -246,23 +247,29 @@ public class ITestAzureBlobFileSystemResilientCommit
     // its status will not match that of the dest
     final FileStatus status2 = file(sourcePath, DATA2);
 
+    // overwrite with dataset 1; this will have a different
+    // etag
     final FileStatus status = file(sourcePath, DATA);
-    commit(status, false);
 
-    // ioe raised; type will depend on whether or not FS
-    // is raising exceptions.
+    // commit the data1 dataset, which works
+    commit(status,  false);
+
+    // now attempt to commit with the file status of
+    // dataset 2. this is the file which was overwritten,
+    // so the etag at the dest path does not match it.
+    // expect a failure.
     intercept(IOException.class, () ->
         commit(status2, false));
   }
 
   /**
-   * commit a file twice.
-   * the second time the source file is missing but the dest file
-   * has the same etag. as a result, this is considered a success.
+   * try to commit a file to a path where the destination
+   * directory does not exist -expect an exception to
+   * be raised.
    */
   @Test
   public void testCommitMissingDestDir() throws Throwable {
-    describe("commit a file twice; expect the second to be recovery");
+    describe("commit a file under a nonexistent dir; expect an IOE");
     final FileStatus status = file(sourcePath, DATA);
     final Path subpath = new Path(destPath, "subpath");
     intercept(IOException.class, () ->
@@ -280,7 +287,15 @@ public class ITestAzureBlobFileSystemResilientCommit
         () -> commit(status, false));
   }
 
-  private ResilientCommitByRenameHelper.CommitOutcome commit(final FileStatus status,
+  /**
+   * Try to commit a file.
+   * @param status source status
+   * @param expectRecovery expect the operation to have required failure recovery.
+   * @return the outcome
+   * @throws IOException any failure to rename the file
+   */
+  private ResilientCommitByRenameHelper.CommitOutcome commit(
+      final FileStatus status,
       boolean expectRecovery)
       throws IOException {
     final ResilientCommitByRenameHelper.CommitOutcome outcome = commitHelper.commitFile(

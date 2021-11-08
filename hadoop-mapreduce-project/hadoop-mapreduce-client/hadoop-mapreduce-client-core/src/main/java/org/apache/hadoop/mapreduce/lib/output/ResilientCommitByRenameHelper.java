@@ -57,9 +57,10 @@ public class ResilientCommitByRenameHelper {
    */
   private final boolean renameRecoveryAvailable;
 
+  /**
+   * Counter of times recovery took place.
+   */
   private final AtomicInteger recoveryCount = new AtomicInteger();
-
-
 
   /**
    * Instantiate.
