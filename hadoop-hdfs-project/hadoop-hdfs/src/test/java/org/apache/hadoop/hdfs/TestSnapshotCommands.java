@@ -224,7 +224,7 @@ public class TestSnapshotCommands {
     fs.delete(new Path("/Fully/QPath"), true);
   }
 
-  @Test (timeout=60000)
+  @Test (timeout=120000)
   public void testSnapshotDiff()throws Exception {
     Configuration config = new HdfsConfiguration();
     Path snapDirPath = new Path(fs.getUri().toString() + "/snap_dir");

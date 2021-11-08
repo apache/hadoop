@@ -62,8 +62,8 @@ public interface SchedulerQueue<T extends SchedulerQueue> extends Queue {
   void stopQueue();
 
   /**
-   * Active the queue.
+   * Activate the queue.
    * @throws YarnException if the queue can not be activated.
    */
-  void activeQueue() throws YarnException;
+  void activateQueue() throws YarnException;
 }

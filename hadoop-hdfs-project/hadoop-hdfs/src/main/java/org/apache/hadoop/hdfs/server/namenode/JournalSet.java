@@ -45,7 +45,7 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is

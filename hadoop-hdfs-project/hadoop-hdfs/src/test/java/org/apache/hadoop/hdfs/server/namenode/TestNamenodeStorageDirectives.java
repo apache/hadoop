@@ -192,7 +192,7 @@ public class TestNamenodeStorageDirectives {
    * Types.
    * @throws IOException
    */
-  @Test(timeout=60000)
+  @Test(timeout=120000)
   public void testTargetStorageTypes() throws ReconfigurationException,
       InterruptedException, TimeoutException, IOException {
     // DISK and not anything else.

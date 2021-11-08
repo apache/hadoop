@@ -470,8 +470,8 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <includeTestCode>true</includeTestCode>
                   <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
                   <bannedImports>
-                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
-                    <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
+                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
+                    <bannedImport>com.google.common.base.Preconditions</bannedImport>
                   </bannedImports>
                 </restrictImports>
               </rules>

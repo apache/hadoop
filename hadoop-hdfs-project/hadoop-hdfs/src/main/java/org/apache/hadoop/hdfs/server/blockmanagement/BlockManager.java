@@ -126,7 +126,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -2778,7 +2778,7 @@ public class BlockManager implements BlockStatsMXBean {
             + "storage report for {} from datanode {}",
             strBlockReportId,
             storageInfo.getStorageID(),
-            nodeID.getDatanodeUuid());
+            nodeID);
         processFirstBlockReport(storageInfo, newReport);
       } else {
         // Block reports for provided storage are not

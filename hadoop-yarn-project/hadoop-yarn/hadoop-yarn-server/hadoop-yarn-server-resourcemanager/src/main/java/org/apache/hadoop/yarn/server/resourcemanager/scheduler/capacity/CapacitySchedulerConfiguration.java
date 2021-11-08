@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,9 +74,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Set;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
@@ -413,6 +414,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
+
+  private static final QueueCapacityConfigParser queueCapacityConfigParser
+      = new QueueCapacityConfigParser();
+
   private ConfigurationProperties configurationProperties;
 
   /**
@@ -454,11 +459,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return PREFIX + "user." + user + DOT;
   }
 
-  private String getNodeLabelPrefix(String queue, String label) {
+  public static String getNodeLabelPrefix(String queue, String label) {
     if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
       return getQueuePrefix(queue);
     }
     return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
+  }
+
+  public void setMaximumSystemApplications(int numMaxApps) {
+    setInt(MAXIMUM_SYSTEM_APPLICATIONS, numMaxApps);
   }
 
   public int getMaximumSystemApplications() {
@@ -2565,6 +2574,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void setMaximumResourceRequirement(String label, String queue,
       Resource resource) {
     updateMinMaxResourceToConf(label, queue, resource, MAXIMUM_CAPACITY);
+  }
+
+  public Map<String, QueueCapacityVector> parseConfiguredResourceVector(
+      String queuePath, Set<String> labels) {
+    Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
+    for (String label : labels) {
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+    }
+
+    return queueResourceVectors;
   }
 
   private void updateMinMaxResourceToConf(String label, String queue,
