@@ -1415,11 +1415,11 @@ public class AzureBlobFileSystem extends FileSystem
     if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
       try {
         this.createFileSystem(tracingContext);
+      } catch (AzureBlobFileSystemException ex) {
+        checkException(null, (AzureBlobFileSystemException) ex,
+            AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
       } catch (IOException ex) {
-        if (ex instanceof AzureBlobFileSystemException) {
-          checkException(null, (AzureBlobFileSystemException) ex,
-              AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
-        } else if (ex.getCause() != null && ex.getCause() instanceof AzureBlobFileSystemException) {
+        if (ex.getCause() instanceof AzureBlobFileSystemException) {
           checkException(null, (AzureBlobFileSystemException) ex.getCause(),
               AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
         } else {

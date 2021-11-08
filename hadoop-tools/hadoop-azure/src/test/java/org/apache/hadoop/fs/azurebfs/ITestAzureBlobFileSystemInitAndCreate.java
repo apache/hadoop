@@ -59,15 +59,17 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
   @Test
   public void ensureFilesystemWillBeCreatedIfCreationConfigIsSet() throws Exception {
-    final AzureBlobFileSystem fs = createFileSystem();
-    Configuration config = getRawConfiguration();
-    fs.initialize(FileSystem.getDefaultUri(config), config);
+    try (AzureBlobFileSystem fs = createFileSystem()) {
+      Configuration config = getRawConfiguration();
+      fs.initialize(FileSystem.getDefaultUri(config), config);
 
-    // Make sure createFileSystemIfNotExists is working as intended.
-    final MockAzureBlobFileSystemStore store = new MockAzureBlobFileSystemStore(config);
-    fs.setAbfsStore(store);
-    fs.createFileSystemIfNotExist(getTestTracingContext(fs, true));
-    assert(store.isCreateFileSystemCalled);
+      // Make sure createFileSystemIfNotExists is working as intended.
+      final MockAzureBlobFileSystemStore store = new MockAzureBlobFileSystemStore(config);
+      fs.setAbfsStore(store);
+      fs.createFileSystemIfNotExist(getTestTracingContext(fs, true));
+      assertTrue("Expected AzureBlobFileSystemStore.createFilesystem to be called",
+          store.isCreateFileSystemCalled);
+    }
   }
 
   /**
