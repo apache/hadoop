@@ -63,8 +63,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
@@ -79,6 +81,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderExcept
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsLocatedFileStatus;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
@@ -109,6 +112,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.B
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -1196,6 +1201,36 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Incremental listing of located status entries,
+   * preserving etags.
+   * @param path path to list
+   * @param filter a path filter
+   * @return iterator of results.
+   * @throws FileNotFoundException source path not found.
+   * @throws IOException other values.
+   */
+  @Override
+  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(
+      final Path path,
+      final PathFilter filter)
+      throws FileNotFoundException, IOException {
+
+    LOG.debug("AzureBlobFileSystem.listStatusIterator path : {}", path);
+    // get a paged iterator over the source data, filtering out non-matching
+    // entries.
+    final RemoteIterator<FileStatus> sourceEntries = filteringRemoteIterator(
+        listStatusIterator(path),
+        (st) -> filter.accept(st.getPath()));
+    // and then map that to a remote iterator of located file status
+    // entries, propagating any etags.
+    return mappingRemoteIterator(sourceEntries,
+        st -> new AbfsLocatedFileStatus(st,
+            st.isFile()
+                ? getFileBlockLocations(st, 0, st.getLen())
+                : null));
+  }
+
   private FileStatus tryGetFileStatus(final Path f, TracingContext tracingContext) {
     try {
       return getFileStatus(f, tracingContext);
@@ -1498,6 +1533,8 @@ public class AzureBlobFileSystem extends FileSystem
     switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.ETAGS_AVAILABLE:
+    case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:
       return true;
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled(

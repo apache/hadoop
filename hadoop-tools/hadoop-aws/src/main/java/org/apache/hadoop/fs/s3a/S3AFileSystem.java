@@ -5242,7 +5242,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
 
-    /*
+    // etags are avaialable in listings, but they
+    // are not consistent across renames.
+    // therefore, only availability is declared
+    case CommonPathCapabilities.ETAGS_AVAILABLE:
+      return true;
+
+      /*
      * Marker policy capabilities are handed off.
      */
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:

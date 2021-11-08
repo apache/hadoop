@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.LocatedFileStatus;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -26,7 +27,7 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
 /**
  * {@link LocatedFileStatus} extended to also carry ETag and object version ID.
  */
-public class S3ALocatedFileStatus extends LocatedFileStatus {
+public class S3ALocatedFileStatus extends LocatedFileStatus implements EtagSource {
 
   private static final long serialVersionUID = 3597192103662929338L;
 
@@ -42,7 +43,18 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
     isEmptyDirectory = status.isEmptyDirectory();
   }
 
+  /**
+   * @return the S3 object eTag when available, else null.
+   * @deprecated use {@link EtagSource#getEtag()} for
+   * public access.
+   */
+  @Deprecated
   public String getETag() {
+    return getEtag();
+  }
+
+  @Override
+  public String getEtag() {
     return eTag;
   }
 
@@ -77,7 +89,7 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
         getModificationTime(),
         getBlockSize(),
         getOwner(),
-        getETag(),
+        getEtag(),
         getVersionId());
   }
 
