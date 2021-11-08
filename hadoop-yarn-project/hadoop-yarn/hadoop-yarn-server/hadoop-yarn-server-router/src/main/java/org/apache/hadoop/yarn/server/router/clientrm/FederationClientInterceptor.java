@@ -610,8 +610,8 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(request.getApplicationId());
     } catch (YarnException e) {
       routerMetrics.incrAppsFailedRetrieved();
-      String errMsg = "Application" + request.getApplicationId()
-          + "does not exist in FederationStateStore";
+      String errMsg = "Application " + request.getApplicationId()
+          + " does not exist in FederationStateStore";
       RouterAuditLogger.logFailure(user.toString(),
           RouterAuditLogger.AuditConstants.GET_APP_REPORT, "UNKNOWN",
           "RouterClientRMService", errMsg, request.getApplicationId());

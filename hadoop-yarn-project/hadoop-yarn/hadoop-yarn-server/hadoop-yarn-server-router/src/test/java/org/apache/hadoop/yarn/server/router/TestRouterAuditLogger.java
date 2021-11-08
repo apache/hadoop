@@ -47,12 +47,13 @@ public class TestRouterAuditLogger {
   /**
    * Test the AuditLog format with key-val pair.
    */
-  @Test public void testKeyValLogFormat() throws Exception {
+  @Test
+  public void testKeyValLogFormat() throws Exception {
     StringBuilder actLog = new StringBuilder();
     StringBuilder expLog = new StringBuilder();
 
     // add the first k=v pair and check
-    // RouterAuditLogger.start(RouterAuditLogger.Keys.USER, USER, actLog);
+    RouterAuditLogger.start(RouterAuditLogger.Keys.USER, USER, actLog);
     expLog.append("USER=test");
     assertEquals(expLog.toString(), actLog.toString());
 
