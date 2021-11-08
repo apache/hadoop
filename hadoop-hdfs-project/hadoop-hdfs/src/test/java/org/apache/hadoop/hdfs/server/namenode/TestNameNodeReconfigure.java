@@ -402,13 +402,13 @@ public class TestNameNodeReconfigure {
     final DatanodeManager datanodeManager = nameNode.namesystem
         .getBlockManager().getDatanodeManager();
 
-    // By default, avoidSlowDataNodesForRead is false
+    // By default, avoidSlowDataNodesForRead is false.
     assertEquals(false, datanodeManager.getEnableAvoidSlowDataNodesForRead());
 
     nameNode.reconfigureProperty(
         DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, Boolean.toString(true));
 
-    // After reconfigured, avoidSlowDataNodesForRead is true
+    // After reconfigured, avoidSlowDataNodesForRead is true.
     assertEquals(true, datanodeManager.getEnableAvoidSlowDataNodesForRead());
   }
 
