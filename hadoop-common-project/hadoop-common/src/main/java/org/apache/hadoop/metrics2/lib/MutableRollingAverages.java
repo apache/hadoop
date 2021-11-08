@@ -179,8 +179,11 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
         long totalCount = 0;
 
         for (final SumAndCount sumAndCount : entry.getValue()) {
-          totalCount += sumAndCount.getCount();
-          totalSum += sumAndCount.getSum();
+          if (Time.monotonicNow() - sumAndCount.getSnapshotTimeStamp()
+              < recordValidityMs) {
+            totalCount += sumAndCount.getCount();
+            totalSum += sumAndCount.getSum();
+          }
         }
 
         if (totalCount != 0) {
