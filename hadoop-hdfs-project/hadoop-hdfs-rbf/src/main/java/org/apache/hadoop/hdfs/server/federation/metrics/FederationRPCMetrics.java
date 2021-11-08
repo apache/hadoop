@@ -297,4 +297,9 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   public String getProxyOpPermitRejectedPerNs() {
     return rpcServer.getRPCClient().getRejectedPermitsPerNsJSON();
   }
+
+  @Override
+  public String getProxyOpPermitAcceptedPerNs() {
+    return rpcServer.getRPCClient().getAcceptedPermitsPerNsJSON();
+  }
 }

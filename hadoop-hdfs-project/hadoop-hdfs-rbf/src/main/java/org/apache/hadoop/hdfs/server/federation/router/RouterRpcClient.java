@@ -136,6 +136,7 @@ public class RouterRpcClient {
   /** Fairness manager to control handlers assigned per NS. */
   private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
   private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
+  private Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -330,6 +331,14 @@ public class RouterRpcClient {
     return JSON.toString(rejectedPermitsPerNs);
   }
 
+  /**
+   * JSON representation of the accepted permits for each nameservice.
+   *
+   * @return String representation of the accepted permits for each nameservice.
+   */
+  public String getAcceptedPermitsPerNsJSON() {
+    return JSON.toString(acceptedPermitsPerNs);
+  }
   /**
    * Get ClientProtocol proxy client for a NameNode. Each combination of user +
    * NN must use a unique proxy client. Previously created clients are cached
@@ -1548,20 +1557,22 @@ public class RouterRpcClient {
   private void acquirePermit(
       final String nsId, final UserGroupInformation ugi, final RemoteMethod m)
       throws IOException {
-    if (routerRpcFairnessPolicyController != null
-        && !routerRpcFairnessPolicyController.acquirePermit(nsId)) {
-      // Throw StandByException,
-      // Clients could fail over and try another router.
-      if (rpcMonitor != null) {
-        rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+    if (routerRpcFairnessPolicyController != null) {
+      if (!routerRpcFairnessPolicyController.acquirePermit(nsId)) {
+        // Throw StandByException,
+        // Clients could fail over and try another router.
+        if (rpcMonitor != null) {
+          rpcMonitor.getRPCMetrics().incrProxyOpPermitRejected();
+        }
+        incrRejectedPermitForNs(nsId);
+        LOG.debug("Permit denied for ugi: {} for method: {}",
+            ugi, m.getMethodName());
+        String msg =
+            "Router " + router.getRouterId() +
+                " is overloaded for NS: " + nsId;
+        throw new StandbyException(msg);
       }
-      incrRejectedPermitForNs(nsId);
-      LOG.debug("Permit denied for ugi: {} for method: {}",
-          ugi, m.getMethodName());
-      String msg =
-          "Router " + router.getRouterId() +
-              " is overloaded for NS: " + nsId;
-      throw new StandbyException(msg);
+      incrAcceptedPermitForNs(nsId);
     }
   }
 
@@ -1595,5 +1606,14 @@ public class RouterRpcClient {
   public Long getRejectedPermitForNs(String ns) {
     return rejectedPermitsPerNs.containsKey(ns) ?
         rejectedPermitsPerNs.get(ns).longValue() : 0L;
+  }
+
+  private void incrAcceptedPermitForNs(String ns) {
+    acceptedPermitsPerNs.computeIfAbsent(ns, k -> new LongAdder()).increment();
+  }
+
+  public Long getAcceptedPermitForNs(String ns) {
+    return acceptedPermitsPerNs.containsKey(ns) ?
+        acceptedPermitsPerNs.get(ns).longValue() : 0L;
   }
 }

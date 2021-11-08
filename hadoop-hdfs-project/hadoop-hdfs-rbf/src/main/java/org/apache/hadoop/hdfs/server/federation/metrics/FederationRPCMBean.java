@@ -132,4 +132,10 @@ public interface FederationRPCMBean {
    * @return Number of operations rejected due to lack of permits of each namespace.
    */
   String getProxyOpPermitRejectedPerNs();
+
+  /**
+   * Get the number of operations accepted of each namespace.
+   * @return Number of operations accepted of each namespace.
+   */
+  String getProxyOpPermitAcceptedPerNs();
 }
