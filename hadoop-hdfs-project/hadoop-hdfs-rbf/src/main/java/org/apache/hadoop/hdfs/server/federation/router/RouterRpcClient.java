@@ -64,7 +64,6 @@ import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
-import org.apache.hadoop.hdfs.server.federation.fairness.AbstractRouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessPolicyController;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
@@ -1584,10 +1583,9 @@ public class RouterRpcClient {
   }
 
   @VisibleForTesting
-  public AbstractRouterRpcFairnessPolicyController
+  public RouterRpcFairnessPolicyController
       getRouterRpcFairnessPolicyController() {
-    return (AbstractRouterRpcFairnessPolicyController
-          )routerRpcFairnessPolicyController;
+    return routerRpcFairnessPolicyController;
   }
 
   private void incrRejectedPermitForNs(String ns) {

@@ -110,6 +110,12 @@ public interface FederationRPCMBean {
   String getRpcClientConnections();
 
   /**
+   * JSON representation of the available handler per Ns.
+   * @return JSON string representation.
+   */
+  String getAvailableHandlerOnPerNs();
+
+  /**
    * Get the JSON representation of the async caller thread pool.
    * @return JSON string representation of the async caller thread pool.
    */
