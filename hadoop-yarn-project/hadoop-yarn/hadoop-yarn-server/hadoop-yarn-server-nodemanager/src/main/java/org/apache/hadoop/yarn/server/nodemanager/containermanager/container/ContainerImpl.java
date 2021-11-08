@@ -1187,10 +1187,10 @@ public class ContainerImpl implements Container {
       if (container.recoveredStatus == RecoveredContainerStatus.COMPLETED) {
         container.sendFinishedEvents();
         return ContainerState.DONE;
-      } else if (container.recoveredStatus == RecoveredContainerStatus.QUEUED) {
-        return ContainerState.SCHEDULED;
-      } else if (container.recoveredAsKilled &&
-          container.recoveredStatus == RecoveredContainerStatus.REQUESTED) {
+      } else if (container.recoveredAsKilled && (
+          container.recoveredStatus == RecoveredContainerStatus.REQUESTED
+              || container.recoveredStatus
+              == RecoveredContainerStatus.QUEUED)) {
         // container was killed but never launched
         container.metrics.killedContainer();
         NMAuditLogger.logSuccess(container.user,
@@ -1201,6 +1201,8 @@ public class ContainerImpl implements Container {
             container.containerTokenIdentifier.getResource());
         container.sendFinishedEvents();
         return ContainerState.DONE;
+      } else if (container.recoveredStatus == RecoveredContainerStatus.QUEUED) {
+        return ContainerState.SCHEDULED;
       }
 
       final ContainerLaunchContext ctxt = container.launchContext;
