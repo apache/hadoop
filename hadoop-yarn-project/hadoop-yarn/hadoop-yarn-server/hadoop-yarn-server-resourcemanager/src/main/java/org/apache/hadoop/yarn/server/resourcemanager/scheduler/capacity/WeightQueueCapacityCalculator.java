@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+<<<<<<< HEAD
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
+=======
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
+>>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
 
 import java.util.Collection;
 
@@ -66,20 +71,46 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
     float queueAbsoluteCapacity = parentAbsoluteCapacity *
         remainingPerEffectiveResourceRatio * normalizedWeight;
 
+<<<<<<< HEAD
     // Weight capacity types are the last to consider, therefore it is safe to assign all remaining
     // effective resources between queues. The strategy is to round values to the closest whole
     // number.
     float resource = resourceCalculationDriver.getUpdateContext()
         .getUpdatedClusterResource(label).getResourceValue(resourceName) * queueAbsoluteCapacity;
+=======
+    // Due to rounding loss it is better to use all remaining resources if no other resource uses
+    // weight
+    if (normalizedWeight == 1) {
+      return remainingResource;
+    }
+>>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
 
     return Math.round(resource);
   }
 
   @Override
+<<<<<<< HEAD
   public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
                                         String label) {
     throw new IllegalStateException("Resource " + resourceCalculationDriver.getCurrentMinimumCapacityEntry(
         label).getResourceName() + " has " + "WEIGHT maximum capacity type, which is not supported");
+=======
+  protected float calculateMaximumResource(
+      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+      QueueCapacityVectorEntry capacityVectorEntry) {
+    CSQueue parentQueue = childQueue.getParent();
+    String resourceName = capacityVectorEntry.getResourceName();
+    float normalizedMaxWeight = capacityVectorEntry.getResourceValue()
+        / updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+        .getSumMaxWeightsByResource(label, resourceName);
+
+    float parentAbsoluteMaxCapacity = parentQueue.getOrCreateAbsoluteMaxCapacityVector(label)
+        .getValue(resourceName);
+    float absoluteMaxCapacity = parentAbsoluteMaxCapacity * normalizedMaxWeight;
+
+    return updateContext.getUpdatedClusterResource(label).getResourceValue(resourceName)
+        * absoluteMaxCapacity;
+>>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
   }
 
   @Override
@@ -94,6 +125,7 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
     Collection<String> resourceNames = getResourceNames(resourceCalculationDriver.getCurrentChild(), label);
     for (String resourceName : resourceNames) {
+<<<<<<< HEAD
       float sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
       float capacity =  resourceCalculationDriver.getCurrentChild().getConfiguredCapacityVector(
           label).getResource(resourceName).getResourceValue() / sumBranchWeight;
@@ -103,5 +135,23 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
     resourceCalculationDriver.getCurrentChild().getQueueCapacities().setNormalizedWeight(label,
         sumCapacityPerResource / resourceNames.size());
     ((AbstractCSQueue) resourceCalculationDriver.getCurrentChild()).updateAbsoluteCapacities();
+=======
+      float sumBranchWeight = updateContext.getQueueBranchContext(queue.getParent().getQueuePath())
+          .getSumWeightsByResource(label, resourceName);
+      float capacity =  queue.getConfiguredCapacityVector(label).getResource(
+          resourceName).getResourceValue() / sumBranchWeight;
+      sumCapacityPerResource += capacity;
+    }
+
+    queue.getQueueCapacities().setNormalizedWeight(label, sumCapacityPerResource
+        / resourceNames.size());
+    ((AbstractCSQueue) queue).updateAbsoluteCapacities();
+  }
+
+  @Override
+  public void setup(CSQueue queue, String label) {
+    queue.getQueueCapacities().setWeight(label, sumCapacityValues(queue, label) /
+        getResourceNames(queue, label).size());
+>>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
   }
 }

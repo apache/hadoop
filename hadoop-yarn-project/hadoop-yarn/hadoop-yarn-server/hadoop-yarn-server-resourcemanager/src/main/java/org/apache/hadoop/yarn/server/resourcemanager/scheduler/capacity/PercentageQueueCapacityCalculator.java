@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+<<<<<<< HEAD
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 
+=======
+>>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
 public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
@@ -30,11 +33,21 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
 
     float parentAbsoluteCapacity = parentQueue.getOrCreateAbsoluteMinCapacityVector(label).getValue(
         resourceName);
+<<<<<<< HEAD
     float remainingPerEffectiveResourceRatio = resourceCalculationDriver.getBatchRemainingResource(
         label).getValue(resourceName) / parentQueue.getEffectiveCapacity(label).getResourceValue(
             resourceName);
     float absoluteCapacity = parentAbsoluteCapacity * remainingPerEffectiveResourceRatio
         * resourceCalculationDriver.getCurrentMinimumCapacityEntry(label).getResourceValue() / 100;
+=======
+    float remainingPerEffectiveResourceRatio = updateContext.getQueueBranchContext(
+            parentQueue.getQueuePath()).getRemainingResources(label)
+        .getValue(resourceName) / parentQueue.getEffectiveCapacity(label)
+        .getResourceValue(resourceName);
+    float absoluteCapacity = parentAbsoluteCapacity *
+        remainingPerEffectiveResourceRatio
+        * capacityVectorEntry.getResourceValue() / 100;
+>>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
 
     return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
         .getResourceValue(resourceName) * absoluteCapacity;

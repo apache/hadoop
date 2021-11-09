@@ -418,7 +418,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected void setDynamicQueueProperties(
       CapacitySchedulerConfiguration configuration) {
     // Set properties from parent template
-    if (parent instanceof ParentQueue) {
+    if (parent instanceof ParentQueue && isDynamicQueue()) {
       ((ParentQueue) parent).getAutoCreatedQueueTemplate()
           .setTemplateEntriesForChild(configuration, getQueuePath());
 
