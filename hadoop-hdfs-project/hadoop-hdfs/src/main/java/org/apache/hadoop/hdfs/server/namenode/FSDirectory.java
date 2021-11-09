@@ -918,7 +918,7 @@ public class FSDirectory implements Closeable {
         if (Quota.isViolated(nsQuota, nsConsumed)) {
           LOG.warn("Namespace quota violation in image for "
               + dir.getFullPathName()
-              + " quota = " + nsQuota + " < consumed = " + nsConsumed);
+              + " quota = " + nsQuota + " <= consumed = " + nsConsumed);
         }
 
         final long ssConsumed = myCounts.getStorageSpace();
@@ -926,7 +926,7 @@ public class FSDirectory implements Closeable {
         if (Quota.isViolated(ssQuota, ssConsumed)) {
           LOG.warn("Storagespace quota violation in image for "
               + dir.getFullPathName()
-              + " quota = " + ssQuota + " < consumed = " + ssConsumed);
+              + " quota = " + ssQuota + " <= consumed = " + ssConsumed);
         }
 
         final EnumCounters<StorageType> tsConsumed = myCounts.getTypeSpaces();
@@ -937,7 +937,7 @@ public class FSDirectory implements Closeable {
             LOG.warn("Storage type quota violation in image for "
                 + dir.getFullPathName()
                 + " type = " + t.toString() + " quota = "
-                + typeQuota + " < consumed " + typeSpace);
+                + typeQuota + " <= consumed " + typeSpace);
           }
         }
         if (LOG.isDebugEnabled()) {
