@@ -38,7 +38,7 @@ public class S3ALocatedFileStatus extends LocatedFileStatus implements EtagSourc
 
   public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations) {
     super(checkNotNull(status), locations);
-    this.eTag = status.getETag();
+    this.eTag = status.getEtag();
     this.versionId = status.getVersionId();
     isEmptyDirectory = status.isEmptyDirectory();
   }

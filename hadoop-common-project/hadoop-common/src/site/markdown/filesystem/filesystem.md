@@ -1775,7 +1775,7 @@ However -but there is no expectation of this and such marshalling is unlikely to
 
 ### Appropriate etag Path Capabilities SHOULD BE declared
 
-1. `hasPathCapability(path, "fs.capability.etags.available")` MUST return true iff 
+1. `hasPathCapability(path, "fs.capability.etags.available")` MUST return true iff
     the filesystem returns valid (non-empty etags) on file status/listing operations.
 2. `hasPathCapability(path, "fs.capability.etags.consistent.across.rename")` MUST return
    true if and only if etags are preserved across renames.
@@ -1784,6 +1784,6 @@ However -but there is no expectation of this and such marshalling is unlikely to
 
 * There is no requirement/expectation that `FileSystem.getFileChecksum(Path)` returns
   a checksum value related to the etag of an object, if any value is returned.
-* If the same data is uploaded to the twice to the same or a different path, 
+* If the same data is uploaded to the twice to the same or a different path,
   the etag of the second upload MAY NOT match that of the first upload.
 

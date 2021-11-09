@@ -144,6 +144,8 @@ public abstract class AbstractContractEtagTest extends
     ContractTestUtils.createFile(fs, src, true,
         "sample data".getBytes(StandardCharsets.UTF_8));
     final FileStatus srcStatus = fs.getFileStatus(src);
+    LOG.info("located file status string value " + srcStatus);
+
     final String srcTag = etagFromStatus(srcStatus);
     LOG.info("etag of short file is \"{}\"", srcTag);
 
@@ -179,6 +181,7 @@ public abstract class AbstractContractEtagTest extends
     final FileStatus srcStatus = fs.getFileStatus(src);
     final String srcTag = etagFromStatus(srcStatus);
     final LocatedFileStatus entry = fs.listLocatedStatus(path).next();
+    LOG.info("located file status string value " + entry);
     final String listTag = etagFromStatus(entry);
     Assertions.assertThat(listTag)
         .describedAs("etag of listLocatedStatus (%s) compared to HEAD value of %s",
