@@ -284,6 +284,6 @@ public class DataNodeVolumeMetrics {
 
   public void addFileIoError(final long latency) {
     totalFileIoErrors.incr();
-    metadataOperationRate.add(latency);
+    fileIoErrorRate.add(latency);
   }
 }
