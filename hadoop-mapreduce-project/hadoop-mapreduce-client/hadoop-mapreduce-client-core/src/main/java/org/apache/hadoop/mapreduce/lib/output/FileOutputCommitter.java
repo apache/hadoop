@@ -804,12 +804,6 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
   /**
    * Rename the file via the resilient commit helper.
-   * Becquse any file at the destination will have been deleted,
-   * tell the commit helper that there is no need to probe the
-   * store for existance.
-   * This assumes that no two tasks created files with the same name,
-   * but so does any overwrite check performed nonatomically
-   * on the client.
    * @param from source filestatus
    * @param to destination path
    * @throws IOException failure to commit or rename.

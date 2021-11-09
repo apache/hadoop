@@ -58,6 +58,9 @@ public class ITestAzureBlobFileSystemResilientCommit
   private static final byte[] DATA = toAsciiByteArray("hello");
   private static final byte[] DATA2 = toAsciiByteArray("world");
 
+  /**
+   * is the test FS set up to raise exceptions on rename failures?
+   */
   private final boolean raiseExceptions;
 
   /**
@@ -160,7 +163,6 @@ public class ITestAzureBlobFileSystemResilientCommit
           E_NO_SOURCE,
           () -> targetFS.rename(sourcePath, destPath));
     } else {
-
       Assertions.assertThat(targetFS.rename(sourcePath, destPath))
           .describedAs("return value of rename")
           .isFalse();
@@ -177,7 +179,6 @@ public class ITestAzureBlobFileSystemResilientCommit
           E_NO_SOURCE,
           () -> targetFS.rename(sourcePath, destPath));
     } else {
-
       Assertions.assertThat(targetFS.rename(sourcePath, destPath))
           .describedAs("return value of rename")
           .isFalse();
@@ -235,9 +236,9 @@ public class ITestAzureBlobFileSystemResilientCommit
   }
 
   /**
-   * Commit a file, then
-   * try to commit again with a filestatus with a different source etag.
-   * Recovery will not report success.
+   * Commit a file, then try to commit again with a
+   * filestatus with a different source etag.
+   * Recovery MUST fail
    */
   @Test
   public void testDoubleCommitDifferentFiles2() throws Throwable {
@@ -263,7 +264,7 @@ public class ITestAzureBlobFileSystemResilientCommit
   }
 
   /**
-   * try to commit a file to a path where the destination
+   * Try to commit a file to a path where the destination
    * directory does not exist -expect an exception to
    * be raised.
    */
@@ -276,6 +277,10 @@ public class ITestAzureBlobFileSystemResilientCommit
         commitHelper.commitFile(status, subpath));
   }
 
+  /**
+   * If there is no source and no destination, recovery
+   * MUST fail.
+   */
   @Test
   public void testCommitNoSource() throws Throwable {
     describe("delete the source file, expect commit to fail");

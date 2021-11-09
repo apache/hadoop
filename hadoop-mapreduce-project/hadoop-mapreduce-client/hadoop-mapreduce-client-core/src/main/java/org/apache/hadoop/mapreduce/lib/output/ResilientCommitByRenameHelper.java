@@ -102,7 +102,7 @@ public class ResilientCommitByRenameHelper {
   }
 
   /**
-   * get count of rename failures recovered from.
+   * Get count of rename failures recovered from.
    * @return count of recoveries.
    */
   public int getRecoveryCount() {
@@ -128,8 +128,9 @@ public class ResilientCommitByRenameHelper {
 
   /**
    * Commit a file.
-   * Rename a file from source to dest; if the underlying FS API call
-   * returned false that's escalated to an IOE.
+   * Rename a file from source to dest with recovery attempted
+   * if the operation raises an exception/returns false, and
+   * recovery is enabled.
    * @param sourceStatus source status file
    * @param dest destination path
    * @return the outcome
@@ -141,10 +142,9 @@ public class ResilientCommitByRenameHelper {
       throws IOException {
     final Path source = sourceStatus.getPath();
     String operation = String.format("rename(%s, %s)", source, dest);
-    LOG.debug("{}", operation);
 
-    try (DurationInfo du = new DurationInfo(LOG, "%s with status %s",
-        operation, sourceStatus)) {
+    try (DurationInfo du = new DurationInfo(LOG, false,
+        "%s with status %s", operation, sourceStatus)) {
       if (operations.renameFile(source, dest)) {
         // success
         return new CommitOutcome();
@@ -226,7 +226,6 @@ public class ResilientCommitByRenameHelper {
 
   /**
    * Escalate a rename failure to an exception.
-   * This never returns
    * @param source source path
    * @param dest dest path
    * @return an exception to throw
@@ -265,6 +264,7 @@ public class ResilientCommitByRenameHelper {
    * Outcome from the commit.
    */
   public static final class CommitOutcome {
+
     /**
      * Rename failed but etag checking concluded it finished.
      */
@@ -275,10 +275,18 @@ public class ResilientCommitByRenameHelper {
      */
     private final IOException caughtException;
 
+    /**
+     * Success constructor.
+     */
     CommitOutcome() {
       this(false, null);
     }
 
+    /**
+     * Full constructor; used on failures.
+     * @param renameFailureResolvedThroughEtags was a rename failure recovered?
+     * @param caughtException Any exception caught before etag checking succeeded.
+     */
     CommitOutcome(
         boolean renameFailureResolvedThroughEtags,
         IOException caughtException) {
@@ -315,6 +323,10 @@ public class ResilientCommitByRenameHelper {
      */
     private final FileSystem fileSystem;
 
+    /**
+     * Constructor.
+     * @param fileSystem filesystem to invoke.
+     */
     public FileSystemOperations(final FileSystem fileSystem) {
       this.fileSystem = fileSystem;
     }
