@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -26,6 +28,7 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcMonitor;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -61,6 +64,8 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /** JMX interface to monitor the RPC metrics. */
   private FederationRPCMetrics metrics;
+  /** JMX interface to monitor the SubCluster RPC metrics. */
+  private Map<String, SubClusterRPCMetrics> subClusterMetrics = new ConcurrentHashMap<>();
   private ObjectName registeredBean;
 
   /** Thread pool for logging stats. */
@@ -77,6 +82,11 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
     // Create metrics
     this.metrics = FederationRPCMetrics.create(conf, server);
+    for (String ns : FederationUtil.getAllConfiguredNS(conf)) {
+      LOG.info("Create SubCluster Metrics for " + ns);
+      this.subClusterMetrics.computeIfAbsent(ns,
+          k -> SubClusterRPCMetrics.create(conf, k, server));
+    }
 
     // Create thread pool
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
@@ -136,26 +146,37 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpComplete(boolean success) {
+  public void proxyOpComplete(boolean success, String ns) {
     if (success) {
       long proxyTime = getProxyTime();
-      if (metrics != null && proxyTime >= 0) {
-        metrics.addProxyTime(proxyTime);
+      if (proxyTime >= 0) {
+        if (metrics != null) {
+          metrics.addProxyTime(proxyTime);
+        }
+        if (subClusterMetrics != null) {
+          subClusterMetrics.get(ns).addProxyTime(proxyTime);
+        }
       }
     }
   }
 
   @Override
-  public void proxyOpFailureStandby() {
+  public void proxyOpFailureStandby(String ns) {
     if (metrics != null) {
       metrics.incrProxyOpFailureStandby();
+    }
+    if (subClusterMetrics != null && subClusterMetrics.containsKey(ns)) {
+      subClusterMetrics.get(ns).incrProxyOpFailureStandby();
     }
   }
 
   @Override
-  public void proxyOpFailureCommunicate() {
+  public void proxyOpFailureCommunicate(String ns) {
     if (metrics != null) {
       metrics.incrProxyOpFailureCommunicate();
+    }
+    if (subClusterMetrics != null && subClusterMetrics.containsKey(ns)) {
+      subClusterMetrics.get(ns).incrProxyOpFailureCommunicate();
     }
   }
 
@@ -181,9 +202,12 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpNoNamenodes() {
+  public void proxyOpNoNamenodes(String ns) {
     if (metrics != null) {
       metrics.incrProxyOpNoNamenodes();
+    }
+    if (subClusterMetrics != null && subClusterMetrics.containsKey(ns)) {
+      subClusterMetrics.get(ns).incrProxyOpNoNamenodes();
     }
   }
 
