@@ -166,7 +166,7 @@ public class TestDataNodeVolumeMetrics {
     LOG.info("syncIoMean : " + metrics.getSyncIoMean());
     LOG.info("syncIoStdDev : " + metrics.getSyncIoStdDev());
 
-    LOG.info("readIoSampleCount : " + metrics.getReadIoMean());
+    LOG.info("readIoSampleCount : " + metrics.getReadIoSampleCount());
     LOG.info("readIoMean : " + metrics.getReadIoMean());
     LOG.info("readIoStdDev : " + metrics.getReadIoStdDev());
 
