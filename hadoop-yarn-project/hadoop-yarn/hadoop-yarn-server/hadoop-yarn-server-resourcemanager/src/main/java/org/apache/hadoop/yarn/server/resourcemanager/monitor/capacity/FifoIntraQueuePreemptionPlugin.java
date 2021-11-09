@@ -30,7 +30,6 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
