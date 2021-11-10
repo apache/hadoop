@@ -41,8 +41,8 @@ public class QueueHierarchyUpdateContext {
       = LazyMap.decorate(new HashMap<String, QueueBranchContext>(),
       QueueBranchContext::new);
   private final RMNodeLabelsManager labelsManager;
-  private Map<String, Map<String, ResourceVector>> normalizedResourceRatios =
-      createLazyResourceVector(1);
+  private Map<String, Map<String, ResourceVector>> normalizedResourceRatios = new HashMap<>();
+
   private List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
 
   public QueueHierarchyUpdateContext(Resource updatedClusterResource,
