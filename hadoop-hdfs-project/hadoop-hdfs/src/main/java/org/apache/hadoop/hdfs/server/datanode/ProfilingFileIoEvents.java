@@ -79,7 +79,7 @@ class ProfilingFileIoEvents {
     if (isEnabled) {
       DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
       if (metrics != null) {
-        metrics.addMetadastaOperationLatency(Time.monotonicNow() - begin);
+        metrics.addMetadataOperationLatency(Time.monotonicNow() - begin);
       }
     }
   }

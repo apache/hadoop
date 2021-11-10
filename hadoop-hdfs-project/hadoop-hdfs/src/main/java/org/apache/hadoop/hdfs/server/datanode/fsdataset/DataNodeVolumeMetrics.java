@@ -197,7 +197,7 @@ public class DataNodeVolumeMetrics {
       int interval = intervals[i];
       metadataOperationLatencyQuantiles[i] = registry.newQuantiles(
           "metadataOperationLatency" + interval + "s",
-          "Meatadata Operation Latency in ms", "ops", "latency", interval);
+          "Metadata Operation Latency in ms", "ops", "latency", interval);
       dataFileIoLatencyQuantiles[i] = registry.newQuantiles(
           "dataFileIoLatency" + interval + "s",
           "Data File Io Latency in ms", "ops", "latency", interval);
@@ -238,7 +238,7 @@ public class DataNodeVolumeMetrics {
     ms.unregisterSource(name);
   }
 
-  public void addMetadastaOperationLatency(final long latency) {
+  public void addMetadataOperationLatency(final long latency) {
     totalMetadataOperations.incr();
     metadataOperationRate.add(latency);
     for (MutableQuantiles q : metadataOperationLatencyQuantiles) {
