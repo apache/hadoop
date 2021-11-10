@@ -315,7 +315,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   // 5. Check if all running containers are recovered,
   // 6. Verify the scheduler state like attempt info,
   // 7. Verify the queue/user metrics for the dynamic reservable queue.
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testDynamicQueueRecovery() throws Exception {
     conf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
     conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,

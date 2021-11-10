@@ -65,6 +65,10 @@ public class QueueHierarchyUpdateContext {
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource(String label) {
+    if (label.equals(NO_LABEL)) {
+      return updatedClusterResource;
+    }
+
     return labelsManager.getResourceByLabel(label, updatedClusterResource);
   }
 
@@ -73,7 +77,7 @@ public class QueueHierarchyUpdateContext {
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource() {
-    return labelsManager.getResourceByLabel(NO_LABEL, updatedClusterResource);
+    return updatedClusterResource;
   }
 
   /**

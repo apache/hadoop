@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -96,8 +97,8 @@ public class TestApplicationLimits {
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
 
   RMContext rmContext = null;
+  private CapacitySchedulerContext csContext;
 
-  
   @Before
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
@@ -122,6 +123,7 @@ public class TestApplicationLimits {
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     setQueueHandler(csContext);
+    this.csContext = csContext;
     
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
@@ -204,6 +206,8 @@ public class TestApplicationLimits {
     Resource clusterResource = Resource.newInstance(80 * GB, 40);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
+    LeafQueue queue = (LeafQueue) root.getChildQueues().stream().filter(
+        child -> child.getQueueName().equals(A)).findFirst().orElseThrow(NoSuchElementException::new);
     queue.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
     
