@@ -63,6 +63,18 @@ public class OpportunisticSchedulerMetrics {
     return INSTANCE;
   }
 
+  @VisibleForTesting
+  public static void resetMetrics() {
+    synchronized (OpportunisticSchedulerMetrics.class) {
+      isInitialized.set(false);
+      INSTANCE = null;
+      MetricsSystem ms = DefaultMetricsSystem.instance();
+      if (ms != null) {
+        ms.unregisterSource("OpportunisticSchedulerMetrics");
+      }
+    }
+  }
+
   private static void registerMetrics() {
     registry = new MetricsRegistry(RECORD_INFO);
     registry.tag(RECORD_INFO, "ResourceManager");

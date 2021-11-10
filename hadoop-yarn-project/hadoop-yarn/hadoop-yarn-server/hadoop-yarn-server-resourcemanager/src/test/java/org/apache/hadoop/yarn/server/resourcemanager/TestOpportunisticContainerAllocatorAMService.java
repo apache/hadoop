@@ -173,6 +173,8 @@ public class TestOpportunisticContainerAllocatorAMService {
     if (rm != null) {
       rm.stop();
     }
+
+    OpportunisticSchedulerMetrics.resetMetrics();
   }
 
   @Test(timeout = 600000)
@@ -833,46 +835,120 @@ public class TestOpportunisticContainerAllocatorAMService {
   @Test
   public void testMetricsRetainsAllocatedOpportunisticAfterRMRestart()
       throws Exception {
-    HashMap<NodeId, MockNM> nodes = new HashMap<>();
-    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
-    nodes.put(nm1.getNodeId(), nm1);
-    final RMApp app = MockRMAppSubmitter.submit(rm,
+    final MockRMAppSubmissionData appSubmissionData =
         MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
             .withAppName("app")
             .withUser("user")
             .withAcls(null)
             .withQueue("default")
-            .build());
+            .build();
+
+    MockNM nm1 = new MockNM("h:1234", 4096, rm.getResourceTrackerService());
+    nm1.registerNode();
+
+    final RMApp app = MockRMAppSubmitter.submit(rm, appSubmissionData);
 
     final ApplicationAttemptId appAttemptId =
         app.getCurrentAppAttempt().getAppAttemptId();
 
-    final ContainerId recoverContainerId = ContainerId.newContainerId(
+    MockRM.launchAndRegisterAM(app, rm, nm1);
+
+    final OpportunisticSchedulerMetrics metrics =
+        OpportunisticSchedulerMetrics.getMetrics();
+
+    // We start with ID 2, since AMContainer is ID 1
+    final ContainerId recoverOContainerId2 = ContainerId.newContainerId(
         appAttemptId, 2);
 
     final Resource fakeResource = Resource.newInstance(1024, 1);
     final String fakeDiagnostics = "recover container";
     final Priority fakePriority = Priority.newInstance(0);
 
-    final NMContainerStatus recoverContainerReport =
+    final NMContainerStatus recoverOContainerReport1 =
         NMContainerStatus.newInstance(
-            recoverContainerId, 0, ContainerState.RUNNING,
+            recoverOContainerId2, 0, ContainerState.RUNNING,
+            fakeResource, fakeDiagnostics, 0,
+            fakePriority, 0, null,
+            ExecutionType.OPPORTUNISTIC, -1);
+
+    // Make sure that numbers start with 0
+    Assert.assertEquals(0, metrics.getAllocatedContainers());
+
+    // Recover one OContainer only
+    rm.registerNode("h2:1234", 4096, 1,
+        Collections.singletonList(
+            appAttemptId.getApplicationId()),
+        Collections.singletonList(recoverOContainerReport1));
+
+    Assert.assertEquals(1, metrics.getAllocatedContainers());
+
+    // Recover two OContainers at once
+    final ContainerId recoverOContainerId3 = ContainerId.newContainerId(
+        appAttemptId, 3);
+
+    final ContainerId recoverOContainerId4 = ContainerId.newContainerId(
+        appAttemptId, 4);
+
+    final NMContainerStatus recoverOContainerReport2 =
+        NMContainerStatus.newInstance(
+            recoverOContainerId2, 0, ContainerState.RUNNING,
+            fakeResource, fakeDiagnostics, 0,
+            fakePriority, 0, null,
+            ExecutionType.OPPORTUNISTIC, -1);
+
+    final NMContainerStatus recoverOContainerReport3 =
+        NMContainerStatus.newInstance(
+            recoverOContainerId3, 0, ContainerState.RUNNING,
             fakeResource, fakeDiagnostics, 0,
             fakePriority, 0, null,
             ExecutionType.OPPORTUNISTIC, -1);
 
     rm.registerNode(
-        "h1:1234", 4096, 1,
+        "h3:1234", 4096, 10,
         Collections.singletonList(
             appAttemptId.getApplicationId()),
-        Collections.singletonList(recoverContainerReport));
+        Arrays.asList(recoverOContainerReport2, recoverOContainerReport3));
 
-    OpportunisticSchedulerMetrics metrics =
-        OpportunisticSchedulerMetrics.getMetrics();
-    Assert.assertEquals(1,
-        metrics.getAllocatedContainers());
+    Assert.assertEquals(3, metrics.getAllocatedContainers());
 
-    rm.close();
+    // Make sure that the recovered GContainer
+    // does not increment OContainer count
+    final ContainerId recoverGContainerId = ContainerId.newContainerId(
+        appAttemptId, 5);
+
+    final NMContainerStatus recoverGContainerReport =
+        NMContainerStatus.newInstance(
+            recoverGContainerId, 0, ContainerState.RUNNING,
+            fakeResource, fakeDiagnostics, 0,
+            fakePriority, 0, null,
+            ExecutionType.GUARANTEED, -1);
+
+    rm.registerNode(
+        "h4:1234", 4096, 10,
+        Collections.singletonList(
+            appAttemptId.getApplicationId()),
+        Collections.singletonList(recoverGContainerReport));
+
+    Assert.assertEquals(3, metrics.getAllocatedContainers());
+
+    final ContainerId completedOContainerId = ContainerId.newContainerId(
+        appAttemptId, 6);
+
+    final NMContainerStatus completedOContainerReport =
+        NMContainerStatus.newInstance(
+            completedOContainerId, 0, ContainerState.COMPLETE,
+            fakeResource, fakeDiagnostics, 0,
+            fakePriority, 0, null,
+            ExecutionType.OPPORTUNISTIC, -1);
+
+    // Tests that completed containers are not recorded
+    rm.registerNode(
+        "h5:1234", 4096, 10,
+        Collections.singletonList(
+            appAttemptId.getApplicationId()),
+        Collections.singletonList(completedOContainerReport));
+
+    Assert.assertEquals(3, metrics.getAllocatedContainers());
   }
 
   @Test(timeout = 60000)
