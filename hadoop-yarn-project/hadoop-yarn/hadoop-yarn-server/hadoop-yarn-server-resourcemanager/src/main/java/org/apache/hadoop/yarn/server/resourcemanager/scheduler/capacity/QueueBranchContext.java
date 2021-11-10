@@ -63,7 +63,7 @@ public class QueueBranchContext {
    * @param label node label
    * @return remaining resources
    */
-  public ResourceVector getRemainingResources(String label) {
+  public ResourceVector getBatchRemainingResources(String label) {
     return remainingResourceByLabel.getOrDefault(label, ResourceVector.newInstance());
   }
 }

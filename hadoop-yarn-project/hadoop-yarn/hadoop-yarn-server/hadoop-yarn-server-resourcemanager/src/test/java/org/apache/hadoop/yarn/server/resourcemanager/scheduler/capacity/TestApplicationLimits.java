@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -120,6 +121,7 @@ public class TestApplicationLimits {
         thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    setQueueHandler(csContext);
     
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
@@ -290,6 +292,7 @@ public class TestApplicationLimits {
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    setQueueHandler(csContext);
     
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = 
@@ -599,7 +602,8 @@ public class TestApplicationLimits {
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
-    
+    setQueueHandler(csContext);
+
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
@@ -965,6 +969,7 @@ public class TestApplicationLimits {
         thenReturn(new DominantResourceCalculator());
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    setQueueHandler(csContext);
 
     // Total cluster resources.
     Resource clusterResource = Resources.createResource(100 * GB, 1000);
