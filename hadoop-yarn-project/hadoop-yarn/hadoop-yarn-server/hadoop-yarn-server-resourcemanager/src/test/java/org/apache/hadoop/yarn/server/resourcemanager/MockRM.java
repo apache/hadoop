@@ -534,6 +534,17 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
+  public MockNM registerNode(String nodeIdStr, int memory, int vCores,
+      List<ApplicationId> runningApplications,
+      List<NMContainerStatus> containerStatuses) throws Exception {
+    MockNM nm =
+        new MockNM(nodeIdStr, memory, vCores, getResourceTrackerService(),
+            YarnVersionInfo.getVersion());
+    nm.registerNode(containerStatuses, runningApplications);
+    drainEventsImplicitly();
+    return nm;
+  }
+
   public MockNM registerNode(String nodeIdStr, Resource nodeCapability)
       throws Exception {
     MockNM nm = new MockNM(nodeIdStr, nodeCapability,

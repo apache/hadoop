@@ -584,8 +584,14 @@ public abstract class AbstractYarnScheduler
             rmContainer);
 
         // recover scheduler attempt
-        schedulerAttempt.recoverContainer(schedulerNode, rmContainer);
+        final boolean recovered = schedulerAttempt.recoverContainer(
+            schedulerNode, rmContainer);
 
+        if (recovered && rmContainer.getExecutionType() ==
+            ExecutionType.OPPORTUNISTIC) {
+          OpportunisticSchedulerMetrics.getMetrics()
+              .incrAllocatedOppContainers(1);
+        }
         // set master container for the current running AMContainer for this
         // attempt.
         RMAppAttempt appAttempt = rmApp.getCurrentAppAttempt();
@@ -720,7 +726,10 @@ public abstract class AbstractYarnScheduler
       SchedulerApplicationAttempt schedulerAttempt =
           getCurrentAttemptForContainer(containerId);
       if (schedulerAttempt != null) {
-        schedulerAttempt.removeRMContainer(containerId);
+        if (schedulerAttempt.removeRMContainer(containerId)) {
+          OpportunisticSchedulerMetrics.getMetrics()
+              .incrReleasedOppContainers(1);
+        }
       }
       LOG.debug("Completed container: {} in state: {} event:{}",
           rmContainer.getContainerId(), rmContainer.getState(), event);
@@ -729,7 +738,6 @@ public abstract class AbstractYarnScheduler
       if (node != null) {
         node.releaseContainer(rmContainer.getContainerId(), false);
       }
-      OpportunisticSchedulerMetrics.getMetrics().incrReleasedOppContainers(1);
     }
 
     // If the container is getting killed in ACQUIRED state, the requester (AM
@@ -1411,6 +1419,8 @@ public abstract class AbstractYarnScheduler
             RMContainer demotedRMContainer =
                 createDemotedRMContainer(appAttempt, oppCntxt, rmContainer);
             if (demotedRMContainer != null) {
+              OpportunisticSchedulerMetrics.getMetrics()
+                  .incrAllocatedOppContainers(1);
               appAttempt.addToNewlyDemotedContainers(
                       uReq.getContainerId(), demotedRMContainer);
             }
