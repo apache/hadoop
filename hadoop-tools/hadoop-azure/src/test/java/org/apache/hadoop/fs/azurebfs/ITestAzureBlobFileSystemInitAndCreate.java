@@ -77,9 +77,9 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
    * exception when calling createFileSystem command.
    */
   static class MockAzureBlobFileSystemStore extends AzureBlobFileSystemStore {
-    boolean isCreateFileSystemCalled = false;
+    private boolean isCreateFileSystemCalled = false;
 
-    public MockAzureBlobFileSystemStore(Configuration config) throws IOException {
+    MockAzureBlobFileSystemStore(Configuration config) throws IOException {
       super(FileSystem.getDefaultUri(config), true, config, null);
     }
 
