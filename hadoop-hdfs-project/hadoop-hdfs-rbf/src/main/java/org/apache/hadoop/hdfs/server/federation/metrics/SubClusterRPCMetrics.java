@@ -36,12 +36,9 @@ import java.util.concurrent.ThreadLocalRandom;
     context = "dfs")
 public class SubClusterRPCMetrics implements SubClusterRPCMBean {
 
-  private final MetricsRegistry registry = new MetricsRegistry("router");
-
   public final static String SUB_CLUSTER_RPC_METRICS_PREFIX = "SubClusterActivity-";
 
-  private String name;
-  private RouterRpcServer rpcServer;
+  private final String name;
 
   @Metric("Time for the Router to proxy an operation to the Nameservice")
   private MutableRate proxy;
@@ -55,20 +52,18 @@ public class SubClusterRPCMetrics implements SubClusterRPCMBean {
   @Metric("Number of operations to hit no namenodes available")
   private MutableCounterLong proxyOpNoNamenodes;
 
-  public SubClusterRPCMetrics(Configuration conf, String name,
-      RouterRpcServer rpcServer) {
+  public SubClusterRPCMetrics(Configuration conf, String name) {
     this.name = name;
-    this.rpcServer = rpcServer;
   }
 
   public static SubClusterRPCMetrics create(Configuration conf,
-      String subClusterName, RouterRpcServer rpcServer) {
+      String subClusterName) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     String name = SUB_CLUSTER_RPC_METRICS_PREFIX + (subClusterName.isEmpty()
         ? "UndefinedSubClusterName"+ ThreadLocalRandom.current().nextInt()
         : subClusterName);
     return ms.register(name, "HDFS Federation SubCluster RPC Metrics",
-        new SubClusterRPCMetrics(conf, name, rpcServer));
+        new SubClusterRPCMetrics(conf, name));
   }
 
   public void incrProxyOpFailureStandby() {
@@ -117,5 +112,9 @@ public class SubClusterRPCMetrics implements SubClusterRPCMBean {
   @Override
   public long getProxyOps() {
     return proxyOp.value();
+  }
+
+  public String getName() {
+    return name;
   }
 }

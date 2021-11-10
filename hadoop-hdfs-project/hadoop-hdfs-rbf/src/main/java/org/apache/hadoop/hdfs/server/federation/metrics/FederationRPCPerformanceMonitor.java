@@ -82,10 +82,10 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
     // Create metrics
     this.metrics = FederationRPCMetrics.create(conf, server);
-    for (String ns : FederationUtil.getAllConfiguredNS(conf)) {
-      LOG.info("Create SubCluster Metrics for " + ns);
-      this.subClusterMetrics.computeIfAbsent(ns,
-          k -> SubClusterRPCMetrics.create(conf, k, server));
+    for (String subClusterName : FederationUtil.getAllConfiguredNS(conf)) {
+      LOG.info("Create SubCluster Metrics for " + subClusterName);
+      this.subClusterMetrics.computeIfAbsent(subClusterName,
+          k -> SubClusterRPCMetrics.create(conf, k));
     }
 
     // Create thread pool
@@ -146,7 +146,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpComplete(boolean success, String ns) {
+  public void proxyOpComplete(boolean success, String subClusterName) {
     if (success) {
       long proxyTime = getProxyTime();
       if (proxyTime >= 0) {
@@ -154,29 +154,29 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
           metrics.addProxyTime(proxyTime);
         }
         if (subClusterMetrics != null) {
-          subClusterMetrics.get(ns).addProxyTime(proxyTime);
+          subClusterMetrics.get(subClusterName).addProxyTime(proxyTime);
         }
       }
     }
   }
 
   @Override
-  public void proxyOpFailureStandby(String ns) {
+  public void proxyOpFailureStandby(String subClusterName) {
     if (metrics != null) {
       metrics.incrProxyOpFailureStandby();
     }
-    if (subClusterMetrics != null && subClusterMetrics.containsKey(ns)) {
-      subClusterMetrics.get(ns).incrProxyOpFailureStandby();
+    if (subClusterMetrics != null && subClusterMetrics.containsKey(subClusterName)) {
+      subClusterMetrics.get(subClusterName).incrProxyOpFailureStandby();
     }
   }
 
   @Override
-  public void proxyOpFailureCommunicate(String ns) {
+  public void proxyOpFailureCommunicate(String subClusterName) {
     if (metrics != null) {
       metrics.incrProxyOpFailureCommunicate();
     }
-    if (subClusterMetrics != null && subClusterMetrics.containsKey(ns)) {
-      subClusterMetrics.get(ns).incrProxyOpFailureCommunicate();
+    if (subClusterMetrics != null && subClusterMetrics.containsKey(subClusterName)) {
+      subClusterMetrics.get(subClusterName).incrProxyOpFailureCommunicate();
     }
   }
 
@@ -202,12 +202,12 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpNoNamenodes(String ns) {
+  public void proxyOpNoNamenodes(String subClusterName) {
     if (metrics != null) {
       metrics.incrProxyOpNoNamenodes();
     }
-    if (subClusterMetrics != null && subClusterMetrics.containsKey(ns)) {
-      subClusterMetrics.get(ns).incrProxyOpNoNamenodes();
+    if (subClusterMetrics != null && subClusterMetrics.containsKey(subClusterName)) {
+      subClusterMetrics.get(subClusterName).incrProxyOpNoNamenodes();
     }
   }
 
