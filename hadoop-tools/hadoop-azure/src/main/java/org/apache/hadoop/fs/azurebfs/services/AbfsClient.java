@@ -238,10 +238,10 @@ public class AbfsClient implements Closeable {
       if (isCreateFileRequest) {
         // get new context for create file request
         SecretKey encryptionContext =
-            encryptionAdapter.fetchEncryptionContextAndComputeKeys();
+            encryptionAdapter.createEncryptionContext();
+        encryptionAdapter.computeKeys();
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-            new String(encryptionContext.getEncoded(),
-                StandardCharsets.UTF_8)));
+            new String(encryptionContext.getEncoded(), StandardCharsets.UTF_8)));
         try {
           encryptionContext.destroy();
         } catch (DestroyFailedException e) {
@@ -250,11 +250,22 @@ public class AbfsClient implements Closeable {
         }
       } else if (encryptionAdapter == null) {
         // get encryption context from GetPathStatus response header
-        encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
-            new Path(path).toUri().getPath(),
-            getPathStatus(path, false, tracingContext).getResult()
-                .getResponseHeader(X_MS_ENCRYPTION_CONTEXT)
-                .getBytes(StandardCharsets.UTF_8));
+        byte[] encryptionContext;
+        try {
+          encryptionContext = getPathStatus(path, false, tracingContext)
+              .getResult().getResponseHeader(X_MS_ENCRYPTION_CONTEXT)
+              .getBytes(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+          LOG.debug("GetPathStatus call to retrieve encryptionContext failed.");
+          throw e;
+        }
+        try {
+          encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
+              new Path(path).toUri().getPath(), encryptionContext);
+        } catch (IOException e) {
+          LOG.debug("Could not initialize EncryptionAdapter");
+          throw e;
+        }
       }
       // else use cached encryption keys from input/output streams
       encodedKey = encryptionAdapter.getEncodedKey();

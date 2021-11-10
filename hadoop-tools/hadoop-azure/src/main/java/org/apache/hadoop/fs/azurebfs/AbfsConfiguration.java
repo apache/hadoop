@@ -907,7 +907,7 @@ public class AbfsConfiguration{
     }
   }
 
-  public EncryptionContextProvider initializeEncryptionContextProvider() {
+  public EncryptionContextProvider createEncryptionContextProvider() {
 
     try {
       String configKey = FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;

@@ -1621,7 +1621,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     EncryptionContextProvider encryptionContextProvider = null;
     if (isSecure) {
       encryptionContextProvider =
-          abfsConfiguration.initializeEncryptionContextProvider();
+          abfsConfiguration.createEncryptionContextProvider();
       if (encryptionContextProvider != null) {
         if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
           throw new IOException(

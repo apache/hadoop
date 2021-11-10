@@ -66,14 +66,16 @@ public class EncryptionAdapter implements Destroyable {
     return encryptionKey;
   }
 
-  public SecretKey fetchEncryptionContextAndComputeKeys() throws IOException {
+  public SecretKey createEncryptionContext() throws IOException {
     encryptionContext = provider.getEncryptionContext(path);
-    computeKeys();
+    Preconditions.checkNotNull(encryptionContext,
+        "Encryption context should not be null.");
     return encryptionContext;
   }
 
   public void computeKeys() throws IOException {
     SecretKey key = getEncryptionKey();
+    Preconditions.checkNotNull(key, "Encryption key should not be null.");
     encodedKey = getBase64EncodedString(new String(key.getEncoded(),
         StandardCharsets.UTF_8));
     encodedKeySHA = getBase64EncodedString(getSHA256Hash(new String(key.getEncoded(),
