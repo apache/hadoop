@@ -779,6 +779,7 @@ public class TestApplicationLimitsByPartition {
     when(csContext.getRMContext()).thenReturn(spyRMContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
     setQueueHandler(csContext);
+    csContext.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(csConf);
 
     mgr.activateNode(NodeId.newInstance("h0", 0),
         Resource.newInstance(160 * GB, 16)); // default Label
