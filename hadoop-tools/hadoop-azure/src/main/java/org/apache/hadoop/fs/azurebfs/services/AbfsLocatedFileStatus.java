@@ -53,9 +53,8 @@ public class AbfsLocatedFileStatus extends LocatedFileStatus implements EtagSour
 
   @Override
   public String toString() {
-    return "AbfsLocatedFileStatus{" +
-        "etag='" + etag + '\'' +
-        "} "
+    return "AbfsLocatedFileStatus{"
+        + "etag='" + etag + '\'' + "} "
         + super.toString();
   }
   // equals() and hashCode() overridden to avoid FindBugs warning.
