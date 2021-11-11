@@ -30,11 +30,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Q
 
 public class RootQueueCapacityCalculator extends
     AbstractQueueCapacityCalculator {
-  @Override
-  public void setup(CSQueue queue, String label) {
-    queue.getQueueCapacities().setCapacity(label, 100f);
-    queue.getQueueCapacities().setMaximumCapacity(label, 100f);
-  }
 
   @Override
   public void calculateChildQueueResources(
