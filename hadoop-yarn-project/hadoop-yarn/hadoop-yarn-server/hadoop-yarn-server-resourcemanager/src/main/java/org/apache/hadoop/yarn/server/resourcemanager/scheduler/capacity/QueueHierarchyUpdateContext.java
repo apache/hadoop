@@ -41,7 +41,6 @@ public class QueueHierarchyUpdateContext {
       = LazyMap.decorate(new HashMap<String, QueueBranchContext>(),
       QueueBranchContext::new);
   private final RMNodeLabelsManager labelsManager;
-  private Map<String, Map<String, ResourceVector>> normalizedResourceRatios = new HashMap<>();
 
   private List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
 
@@ -51,24 +50,11 @@ public class QueueHierarchyUpdateContext {
     this.labelsManager = labelsManager;
   }
 
-  private static Map<String, Map<String, ResourceVector>>
-  createLazyResourceVector(float value) {
-    return LazyMap.decorate(
-        new HashMap<String, Map<String, ResourceVector>>(),
-        () -> LazyMap.decorate(
-            new HashMap<String, ResourceVector>(),
-            () -> ResourceVector.of(value)));
-  }
-
   /**
    * Returns the overall cluster resource available for the update phase.
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource(String label) {
-    if (label.equals(NO_LABEL)) {
-      return updatedClusterResource;
-    }
-
     return labelsManager.getResourceByLabel(label, updatedClusterResource);
   }
 
@@ -77,7 +63,7 @@ public class QueueHierarchyUpdateContext {
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource() {
-    return updatedClusterResource;
+    return getUpdatedClusterResource(NO_LABEL);
   }
 
   /**
@@ -88,17 +74,6 @@ public class QueueHierarchyUpdateContext {
    */
   public QueueBranchContext getQueueBranchContext(String queuePath) {
     return queueBranchContext.get(queuePath);
-  }
-
-  /**
-   * Returns the normalized resource ratio calculated for a queue.
-   * @param queuePath queue path
-   * @param label node label
-   * @return normalized resource ratio
-   */
-  public ResourceVector getNormalizedMinResourceRatio(
-      String queuePath, String label) {
-    return normalizedResourceRatios.get(queuePath).get(label);
   }
 
   public void addUpdateWarning(QueueUpdateWarning warning) {
