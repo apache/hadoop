@@ -228,6 +228,26 @@ public final class CallerContext {
       return this;
     }
 
+    /**
+     * Append new field which contains key and value to the context
+     * if the key("key:") is absent.
+     * @param key the key of field.
+     * @param value the value of field.
+     * @return the builder.
+     */
+    public Builder appendIfAbsent(String key, String value) {
+      if (sb.toString().contains(key + KEY_VALUE_SEPARATOR)) {
+        return this;
+      }
+      if (isValid(key) && isValid(value)) {
+        if (sb.length() > 0) {
+          sb.append(fieldSeparator);
+        }
+        sb.append(key).append(KEY_VALUE_SEPARATOR).append(value);
+      }
+      return this;
+    }
+
     public CallerContext build() {
       return new CallerContext(this);
     }
