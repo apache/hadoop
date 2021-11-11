@@ -233,6 +233,24 @@ public class TestRMNodeTransitions {
     return event;
   }
 
+  private static ContainerStatus getMockContainerStatus(
+      final ContainerId containerId, final Resource capability,
+      final ContainerState containerState) {
+    return getMockContainerStatus(containerId, capability, containerState,
+        ExecutionType.GUARANTEED);
+  }
+
+  private static ContainerStatus getMockContainerStatus(
+      final ContainerId containerId, final Resource capability,
+      final ContainerState containerState, final ExecutionType executionType) {
+    final ContainerStatus containerStatus = mock(ContainerStatus.class);
+    doReturn(containerId).when(containerStatus).getContainerId();
+    doReturn(containerState).when(containerStatus).getState();
+    doReturn(capability).when(containerStatus).getCapability();
+    doReturn(executionType).when(containerStatus).getExecutionType();
+    return containerStatus;
+  }
+
   @Test (timeout = 5000)
   public void testExpiredContainer() {
     NodeStatus mockNodeStatus = createMockNodeStatus();
@@ -250,8 +268,8 @@ public class TestRMNodeTransitions {
     // Now verify that scheduler isn't notified of an expired container
     // by checking number of 'completedContainers' it got in the previous event
     RMNodeStatusEvent statusEvent = getMockRMNodeStatusEvent(null);
-    ContainerStatus containerStatus = mock(ContainerStatus.class);
-    doReturn(completedContainerId).when(containerStatus).getContainerId();
+    ContainerStatus containerStatus = getMockContainerStatus(
+        completedContainerId, null, ContainerState.COMPLETE);
     doReturn(Collections.singletonList(containerStatus)).
         when(statusEvent).getContainers();
     node.handle(statusEvent);
@@ -323,12 +341,13 @@ public class TestRMNodeTransitions {
     RMNodeStatusEvent statusEventFromNode2_1 = getMockRMNodeStatusEvent(null);
     RMNodeStatusEvent statusEventFromNode2_2 = getMockRMNodeStatusEvent(null);
 
-    ContainerStatus containerStatusFromNode1 = mock(ContainerStatus.class);
-    ContainerStatus containerStatusFromNode2_1 = mock(ContainerStatus.class);
-    ContainerStatus containerStatusFromNode2_2 = mock(ContainerStatus.class);
+    ContainerStatus containerStatusFromNode1 = getMockContainerStatus(
+        completedContainerIdFromNode1, null, ContainerState.COMPLETE);
+    ContainerStatus containerStatusFromNode2_1 = getMockContainerStatus(
+        completedContainerIdFromNode2_1, null, ContainerState.COMPLETE);
+    ContainerStatus containerStatusFromNode2_2 = getMockContainerStatus(
+        completedContainerIdFromNode2_2, null, ContainerState.COMPLETE);
 
-    doReturn(completedContainerIdFromNode1).when(containerStatusFromNode1)
-        .getContainerId();
     doReturn(Collections.singletonList(containerStatusFromNode1))
         .when(statusEventFromNode1).getContainers();
     node.handle(statusEventFromNode1);
@@ -338,13 +357,9 @@ public class TestRMNodeTransitions {
 
     completedContainers.clear();
 
-    doReturn(completedContainerIdFromNode2_1).when(containerStatusFromNode2_1)
-        .getContainerId();
     doReturn(Collections.singletonList(containerStatusFromNode2_1))
         .when(statusEventFromNode2_1).getContainers();
 
-    doReturn(completedContainerIdFromNode2_2).when(containerStatusFromNode2_2)
-        .getContainerId();
     doReturn(Collections.singletonList(containerStatusFromNode2_2))
         .when(statusEventFromNode2_2).getContainers();
 
@@ -372,80 +387,105 @@ public class TestRMNodeTransitions {
     //Start the node
     node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
 
-    NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
+    // Make sure that the node starts with no allocated resources
+    Assert.assertEquals(node.getAllocatedContainerResource(), Resources.none());
 
     ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
-    ContainerId newContainerId = BuilderUtils.newContainerId(
+    final ContainerId newContainerId = BuilderUtils.newContainerId(
         BuilderUtils.newApplicationAttemptId(app0, 0), 0);
-    ContainerId runningContainerId = BuilderUtils.newContainerId(
+    final ContainerId runningContainerId = BuilderUtils.newContainerId(
         BuilderUtils.newApplicationAttemptId(app0, 0), 1);
-    ContainerId newOppContainerId = BuilderUtils.newContainerId(
-        BuilderUtils.newApplicationAttemptId(app0, 0), 2);
-    ContainerId runningOppContainerId = BuilderUtils.newContainerId(
-        BuilderUtils.newApplicationAttemptId(app0, 0), 3);
 
     rmContext.getRMApps().put(app0, Mockito.mock(RMApp.class));
 
     RMNodeStatusEvent statusEventFromNode1 = getMockRMNodeStatusEvent(null);
-    ContainerStatus newContainerStatusFromNode = mock(ContainerStatus.class);
-    ContainerStatus runningContainerStatusFromNode =
-        mock(ContainerStatus.class);
 
+    final List<ContainerStatus> containerStatuses = new ArrayList<>();
+
+    // Use different memory and VCores for new and running state containers
+    // to test that they add up correctly
     final Resource newContainerCapability =
         Resource.newInstance(100, 1);
     final Resource runningContainerCapability =
         Resource.newInstance(200, 2);
-    doReturn(newContainerId).when(newContainerStatusFromNode)
-        .getContainerId();
-    doReturn(ContainerState.NEW).when(newContainerStatusFromNode)
-        .getState();
-    doReturn(newContainerCapability).when(newContainerStatusFromNode)
-        .getCapability();
-    doReturn(runningContainerId).when(runningContainerStatusFromNode)
-        .getContainerId();
-    doReturn(ContainerState.RUNNING).when(runningContainerStatusFromNode)
-        .getState();
-    doReturn(runningContainerCapability).when(runningContainerStatusFromNode)
-        .getCapability();
-    doReturn(Arrays.asList(
-        newContainerStatusFromNode, runningContainerStatusFromNode))
-        .when(statusEventFromNode1).getContainers();
-    node.handle(statusEventFromNode1);
-    Assert.assertTrue(Resources.equals(
-        node.getAllocatedContainerResource(),
-        Resource.newInstance(300, 3)));
+    final Resource completedContainerCapability =
+        Resource.newInstance(50, 3);
+    final ContainerStatus newContainerStatusFromNode = getMockContainerStatus(
+        newContainerId, newContainerCapability, ContainerState.NEW);
+    final ContainerStatus runningContainerStatusFromNode =
+        getMockContainerStatus(runningContainerId, runningContainerCapability,
+            ContainerState.RUNNING);
 
+    containerStatuses.addAll(Arrays.asList(
+        newContainerStatusFromNode, runningContainerStatusFromNode));
+    doReturn(containerStatuses).when(statusEventFromNode1).getContainers();
+    node.handle(statusEventFromNode1);
+    Assert.assertEquals(node.getAllocatedContainerResource(),
+        Resource.newInstance(300, 3));
+
+    final ContainerId newOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 2);
+    final ContainerId runningOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 3);
+
+    // Use the same resource capability as in previous for opportunistic case
     RMNodeStatusEvent statusEventFromNode2 = getMockRMNodeStatusEvent(null);
-    ContainerStatus newOppContainerStatusFromNode = mock(ContainerStatus.class);
-    ContainerStatus runningOppContainerStatusFromNode =
-        mock(ContainerStatus.class);
-    doReturn(newOppContainerId).when(newOppContainerStatusFromNode)
-        .getContainerId();
-    doReturn(ContainerState.NEW).when(newOppContainerStatusFromNode)
-        .getState();
-    doReturn(newContainerCapability).when(newOppContainerStatusFromNode)
-        .getCapability();
-    doReturn(ExecutionType.OPPORTUNISTIC)
-        .when(newOppContainerStatusFromNode)
-        .getExecutionType();
-    doReturn(runningOppContainerId).when(runningOppContainerStatusFromNode)
-        .getContainerId();
-    doReturn(ContainerState.RUNNING).when(runningOppContainerStatusFromNode)
-        .getState();
-    doReturn(runningContainerCapability).when(runningOppContainerStatusFromNode)
-        .getCapability();
-    doReturn(ExecutionType.OPPORTUNISTIC)
-        .when(runningOppContainerStatusFromNode)
-        .getExecutionType();
-    doReturn(Arrays.asList(
-        newContainerStatusFromNode, runningContainerStatusFromNode,
-        newOppContainerStatusFromNode, runningOppContainerStatusFromNode))
-        .when(statusEventFromNode2).getContainers();
+    final ContainerStatus newOppContainerStatusFromNode =
+        getMockContainerStatus(newOppContainerId, newContainerCapability,
+            ContainerState.NEW, ExecutionType.OPPORTUNISTIC);
+    final ContainerStatus runningOppContainerStatusFromNode =
+        getMockContainerStatus(runningOppContainerId,
+            runningContainerCapability, ContainerState.RUNNING,
+            ExecutionType.OPPORTUNISTIC);
+
+    containerStatuses.addAll(Arrays.asList(
+        newOppContainerStatusFromNode, runningOppContainerStatusFromNode));
+
+    // Pass in both guaranteed and opportunistic container statuses
+    doReturn(containerStatuses).when(statusEventFromNode2).getContainers();
 
     node.handle(statusEventFromNode2);
-    Assert.assertTrue(Resources.equals(
-        node.getAllocatedContainerResource(),
-        Resource.newInstance(600, 6)));
+
+    // The result here should be double the first check,
+    // since allocated resources are doubled, just
+    // with different execution types
+    Assert.assertEquals(node.getAllocatedContainerResource(),
+        Resource.newInstance(600, 6));
+
+    RMNodeStatusEvent statusEventFromNode3 = getMockRMNodeStatusEvent(null);
+    final ContainerId completedContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 4);
+    final ContainerId completedOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 5);
+    final ContainerStatus completedContainerStatusFromNode =
+        getMockContainerStatus(completedContainerId, completedContainerCapability,
+            ContainerState.COMPLETE, ExecutionType.OPPORTUNISTIC);
+    final ContainerStatus completedOppContainerStatusFromNode =
+        getMockContainerStatus(completedOppContainerId,
+            completedContainerCapability, ContainerState.COMPLETE,
+            ExecutionType.OPPORTUNISTIC);
+
+    containerStatuses.addAll(Arrays.asList(
+        completedContainerStatusFromNode, completedOppContainerStatusFromNode));
+
+    doReturn(containerStatuses).when(statusEventFromNode3).getContainers();
+    node.handle(statusEventFromNode3);
+
+    // Adding completed containers should not have changed
+    // the resources allocated
+    Assert.assertEquals(node.getAllocatedContainerResource(),
+        Resource.newInstance(600, 6));
+
+    RMNodeStatusEvent emptyStatusEventFromNode =
+        getMockRMNodeStatusEvent(null);
+
+    doReturn(Collections.emptyList())
+        .when(emptyStatusEventFromNode).getContainers();
+    node.handle(emptyStatusEventFromNode);
+
+    // Passing an empty containers list should yield no resources allocated
+    Assert.assertEquals(node.getAllocatedContainerResource(),
+        Resources.none());
   }
 
   @Test (timeout = 5000)
@@ -466,14 +506,14 @@ public class TestRMNodeTransitions {
     RMNodeStatusEvent statusEvent1 = getMockRMNodeStatusEvent(null);
     RMNodeStatusEvent statusEvent2 = getMockRMNodeStatusEvent(null);
 
-    ContainerStatus containerStatus1 = mock(ContainerStatus.class);
-    ContainerStatus containerStatus2 = mock(ContainerStatus.class);
+    ContainerStatus containerStatus1 = getMockContainerStatus(
+        completedContainerId1, null, null);
+    ContainerStatus containerStatus2 = getMockContainerStatus(
+        completedContainerId2, null, null);
 
-    doReturn(completedContainerId1).when(containerStatus1).getContainerId();
     doReturn(Collections.singletonList(containerStatus1))
         .when(statusEvent1).getContainers();
      
-    doReturn(completedContainerId2).when(containerStatus2).getContainerId();
     doReturn(Collections.singletonList(containerStatus2))
         .when(statusEvent2).getContainers();
 
@@ -1243,9 +1283,9 @@ public class TestRMNodeTransitions {
 
     RMNodeStatusEvent statusEvent1 = getMockRMNodeStatusEvent(null);
 
-    ContainerStatus containerStatus1 = mock(ContainerStatus.class);
+    ContainerStatus containerStatus1 = getMockContainerStatus(
+        completedContainerId1, null, ContainerState.COMPLETE);
 
-    doReturn(completedContainerId1).when(containerStatus1).getContainerId();
     doReturn(Collections.singletonList(containerStatus1)).when(statusEvent1)
         .getContainers();
 
