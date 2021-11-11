@@ -328,6 +328,8 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
       queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
+      configuredMaximumCapacityVectors.put(nodeLabel, QueueCapacityVector.of(
+          maximumCapacity * 100, QueueCapacityVector.QueueCapacityType.PERCENTAGE));
     } finally {
       writeLock.unlock();
     }
