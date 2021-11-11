@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * Node managers information on available resources 
@@ -103,6 +104,14 @@ public interface RMNode {
    * @return the total available resource.
    */
   public Resource getTotalCapability();
+
+  /**
+   * the total allocated resources to containers.
+   * @return the total allocated resources.
+   */
+  default Resource getAllocatedContainerResource() {
+    return Resources.none();
+  }
 
   /**
    * If the total available resources has been updated.

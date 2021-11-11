@@ -128,6 +128,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* Snapshot of total resources before receiving decommissioning command */
   private volatile Resource originalTotalCapability;
   private volatile Resource totalCapability;
+  private volatile Resource allocatedContainerResource =
+      Resource.newInstance(Resources.none());
   private volatile boolean updatedCapability = false;
   private final Node node;
 
@@ -462,6 +464,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @Override
   public Resource getTotalCapability() {
     return this.totalCapability;
+  }
+
+  @Override
+  public Resource getAllocatedContainerResource() {
+    return this.allocatedContainerResource;
   }
 
   @Override
@@ -1554,6 +1561,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     List<Map.Entry<ApplicationId, ContainerStatus>> needUpdateContainers =
         new ArrayList<Map.Entry<ApplicationId, ContainerStatus>>();
     int numRemoteRunningContainers = 0;
+    final Resource allocatedResource = Resource.newInstance(Resources.none());
+
     for (ContainerStatus remoteContainer : containerStatuses) {
       ContainerId containerId = remoteContainer.getContainerId();
 
@@ -1622,7 +1631,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         containerAllocationExpirer
             .unregister(new AllocationExpirationInfo(containerId));
       }
+
+      if ((remoteContainer.getState() == ContainerState.RUNNING ||
+          remoteContainer.getState() == ContainerState.NEW) &&
+          remoteContainer.getCapability() != null) {
+        Resources.addTo(allocatedResource, remoteContainer.getCapability());
+      }
     }
+
+    allocatedContainerResource = allocatedResource;
 
     List<ContainerStatus> lostContainers =
         findLostContainers(numRemoteRunningContainers, containerStatuses);

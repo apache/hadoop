@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -79,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -356,6 +358,94 @@ public class TestRMNodeTransitions {
         .getContainerId()); 
     Assert.assertEquals(completedContainerIdFromNode2_2,completedContainers.get(1)
         .getContainerId());
+  }
+
+  /**
+   * Tests that allocated container resources are counted correctly in
+   * {@link org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode}
+   * upon a node update. Resources should be counted for both GUARANTEED
+   * and OPPORTUNISTIC containers.
+   */
+  @Test (timeout = 5000)
+  public void testAllocatedContainerUpdate() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    //Start the node
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
+
+    NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
+
+    ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
+    ContainerId newContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 0);
+    ContainerId runningContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 1);
+    ContainerId newOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 2);
+    ContainerId runningOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 3);
+
+    rmContext.getRMApps().put(app0, Mockito.mock(RMApp.class));
+
+    RMNodeStatusEvent statusEventFromNode1 = getMockRMNodeStatusEvent(null);
+    ContainerStatus newContainerStatusFromNode = mock(ContainerStatus.class);
+    ContainerStatus runningContainerStatusFromNode =
+        mock(ContainerStatus.class);
+
+    final Resource newContainerCapability =
+        Resource.newInstance(100, 1);
+    final Resource runningContainerCapability =
+        Resource.newInstance(200, 2);
+    doReturn(newContainerId).when(newContainerStatusFromNode)
+        .getContainerId();
+    doReturn(ContainerState.NEW).when(newContainerStatusFromNode)
+        .getState();
+    doReturn(newContainerCapability).when(newContainerStatusFromNode)
+        .getCapability();
+    doReturn(runningContainerId).when(runningContainerStatusFromNode)
+        .getContainerId();
+    doReturn(ContainerState.RUNNING).when(runningContainerStatusFromNode)
+        .getState();
+    doReturn(runningContainerCapability).when(runningContainerStatusFromNode)
+        .getCapability();
+    doReturn(Arrays.asList(
+        newContainerStatusFromNode, runningContainerStatusFromNode))
+        .when(statusEventFromNode1).getContainers();
+    node.handle(statusEventFromNode1);
+    Assert.assertTrue(Resources.equals(
+        node.getAllocatedContainerResource(),
+        Resource.newInstance(300, 3)));
+
+    RMNodeStatusEvent statusEventFromNode2 = getMockRMNodeStatusEvent(null);
+    ContainerStatus newOppContainerStatusFromNode = mock(ContainerStatus.class);
+    ContainerStatus runningOppContainerStatusFromNode =
+        mock(ContainerStatus.class);
+    doReturn(newOppContainerId).when(newOppContainerStatusFromNode)
+        .getContainerId();
+    doReturn(ContainerState.NEW).when(newOppContainerStatusFromNode)
+        .getState();
+    doReturn(newContainerCapability).when(newOppContainerStatusFromNode)
+        .getCapability();
+    doReturn(ExecutionType.OPPORTUNISTIC)
+        .when(newOppContainerStatusFromNode)
+        .getExecutionType();
+    doReturn(runningOppContainerId).when(runningOppContainerStatusFromNode)
+        .getContainerId();
+    doReturn(ContainerState.RUNNING).when(runningOppContainerStatusFromNode)
+        .getState();
+    doReturn(runningContainerCapability).when(runningOppContainerStatusFromNode)
+        .getCapability();
+    doReturn(ExecutionType.OPPORTUNISTIC)
+        .when(runningOppContainerStatusFromNode)
+        .getExecutionType();
+    doReturn(Arrays.asList(
+        newContainerStatusFromNode, runningContainerStatusFromNode,
+        newOppContainerStatusFromNode, runningOppContainerStatusFromNode))
+        .when(statusEventFromNode2).getContainers();
+
+    node.handle(statusEventFromNode2);
+    Assert.assertTrue(Resources.equals(
+        node.getAllocatedContainerResource(),
+        Resource.newInstance(600, 6)));
   }
 
   @Test (timeout = 5000)
