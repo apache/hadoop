@@ -23,7 +23,7 @@
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
     <version>3.4.0-SNAPSHOT</version>
-    <relativePath>../../hadoop-project</relativePath>
+    <relativePath>../../hadoop-project/pom.xml</relativePath>
   </parent>
   <artifactId>hadoop-benchmark</artifactId>
   <version>3.4.0-SNAPSHOT</version>
@@ -31,12 +31,6 @@
 
   <name>Apache Hadoop Common Benchmark</name>
   <description>Apache Hadoop Common Benchmark</description>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.useIncrementalCompilation>false</maven.compiler.useIncrementalCompilation>
-    <jmh.version>1.20</jmh.version>
-  </properties>
 
   <dependencies>
     <dependency>
@@ -46,12 +40,10 @@
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-core</artifactId>
-      <version>${jmh.version}</version>
     </dependency>
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
-      <version>${jmh.version}</version>
     </dependency>
   </dependencies>
 
@@ -62,7 +54,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>org.apache.hadoop.benchmark.AsyncBenchmark</mainClass>
+              <mainClass>org.apache.hadoop.benchmark.VectoredReadBenchmark</mainClass>
             </manifest>
           </archive>
           <descriptors>
