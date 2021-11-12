@@ -257,7 +257,7 @@ public class DFSInputStream extends FSInputStream
         // locations will not be available with NN for getting the length. Lets
         // retry for 3 times to get the length.
         if (lastBlockBeingWrittenLength == -1) {
-          DFSClient.LOG.warn("Last block locations " + getCurrentBlock() +" not available. "
+          DFSClient.LOG.warn("Last block locations " + getCurrentBlock() + " not available. "
               + "Datanodes might not have reported blocks completely."
               + " Will retry for " + retriesForLastBlockLength + " times");
           waitFor(conf.getRetryIntervalForGetLastBlockLength());
