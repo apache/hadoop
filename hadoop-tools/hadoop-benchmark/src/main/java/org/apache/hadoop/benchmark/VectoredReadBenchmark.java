@@ -18,14 +18,6 @@
 
 package org.apache.hadoop.benchmark;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileRangeImpl;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -41,7 +33,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.EOFException;
 import java.io.IOException;
-
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -52,9 +43,17 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.FileRangeImpl;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-public class AsyncBenchmark {
+public class VectoredReadBenchmark {
 
   static final Path DATA_PATH = getTestDataPath();
   static final String DATA_PATH_PROPERTY = "bench.data";
@@ -233,7 +232,7 @@ public class AsyncBenchmark {
    */
   public static void main(String[] args) throws Exception {
     OptionsBuilder opts = new OptionsBuilder();
-    opts.include("AsyncBenchmark");
+    opts.include("VectoredReadBenchmark");
     opts.jvmArgs("-server", "-Xms256m", "-Xmx2g",
         "-D" + DATA_PATH_PROPERTY + "=" + args[0]);
     opts.forks(1);
