@@ -51,8 +51,8 @@ public class TestCallerContext {
     Assert.assertEquals("key1:value1",
         builder.build().getContext());
 
-    // Append an existed key.
-    builder.appendIfAbsent("key1", "value1");
+    // Append an existed key with different value.
+    builder.appendIfAbsent("key1", "value2");
     String[] items = context.getContext().split("\\$");
     Assert.assertEquals(1, items.length);
     Assert.assertEquals("key1:value1",
