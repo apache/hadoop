@@ -1238,11 +1238,6 @@ public class TestFsDatasetImpl {
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
       ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
       fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
-
-      final FsVolumeSpi volume = fsDataSetImpl.getVolume(block);
-      DataNodeVolumeMetrics metrics = volume.getMetrics();
-      System.out.println(metrics); // nativecopy
-
     } catch (Exception ex) {
       LOG.info("Exception in testMoveBlockSuccess ", ex);
       fail("MoveBlock operation should succeed");
