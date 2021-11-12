@@ -112,6 +112,24 @@ public abstract class OpportunisticContainersStatus {
   public abstract void setQueuedOpportContainers(int queuedOpportContainers);
 
   /**
+   * Returns the number of paused opportunistic containers on the node.
+   *
+   * @return number of paused opportunistic containers.
+   */
+  @Private
+  @Unstable
+  public abstract int getPausedOpportContainers();
+
+  /**
+   * Sets the number of paused opportunistic containers on the node.
+   *
+   * @param pausedOpportContainers number of queued opportunistic containers.
+   */
+  @Private
+  @Unstable
+  public abstract void setPausedOpportContainers(int pausedOpportContainers);
+
+  /**
    * Returns the length of the containers queue on the node.
    *
    * @return length of the containers queue.

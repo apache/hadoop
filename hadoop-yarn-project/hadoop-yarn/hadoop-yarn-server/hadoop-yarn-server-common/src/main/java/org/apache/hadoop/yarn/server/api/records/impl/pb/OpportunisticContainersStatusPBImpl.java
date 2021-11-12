@@ -112,6 +112,19 @@ public class OpportunisticContainersStatusPBImpl
   }
 
   @Override
+  public int getPausedOpportContainers() {
+    YarnServerCommonProtos.OpportunisticContainersStatusProtoOrBuilder p =
+        viaProto ? proto : builder;
+    return p.getPausedOpportContainers();
+  }
+
+  @Override
+  public void setPausedOpportContainers(int pausedOpportContainers) {
+    maybeInitBuilder();
+    builder.setQueuedOpportContainers(pausedOpportContainers);
+  }
+
+  @Override
   public int getWaitQueueLength() {
     YarnServerCommonProtos.OpportunisticContainersStatusProtoOrBuilder p =
         viaProto ? proto : builder;

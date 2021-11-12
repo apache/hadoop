@@ -336,6 +336,8 @@ public class ContainerScheduler extends AbstractService implements
         metrics.getRunningOpportunisticContainers());
     this.opportunisticContainersStatus.setOpportQueueCapacity(
         getOpportunisticQueueCapacity());
+    this.opportunisticContainersStatus.setPausedOpportContainers(
+        metrics.getPausedContainers());
     return this.opportunisticContainersStatus;
   }
 
