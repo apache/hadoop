@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.PERCENTAGE;
+
 /**
  * Leaf queues which are auto created by an underlying implementation of
  * AbstractManagedParentQueue. Eg: PlanQueue for reservations or
@@ -99,6 +101,8 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
           .getMaximumCapacity(nodeLabel));
       queueCapacities.setAbsoluteMaximumCapacity(nodeLabel, capacities
           .getAbsoluteMaximumCapacity(nodeLabel));
+      setConfiguredMinCapacityVector(nodeLabel, QueueCapacityVector.of(capacities.getCapacity(nodeLabel) * 100, PERCENTAGE));
+      setConfiguredMaxCapacityVector(nodeLabel, QueueCapacityVector.of(capacities.getMaximumCapacity(nodeLabel) * 100, PERCENTAGE));
 
       Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
           csContext.getClusterResource());

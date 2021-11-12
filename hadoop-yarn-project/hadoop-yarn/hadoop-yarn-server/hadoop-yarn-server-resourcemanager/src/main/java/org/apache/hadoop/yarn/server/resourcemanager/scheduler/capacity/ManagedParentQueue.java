@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.PERCENTAGE;
+
 /**
  * Auto Creation enabled Parent queue. This queue initially does not have any
  * children to start with and all child
@@ -245,6 +247,9 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       queueCapacities.setAbsoluteMaximumCapacity(label,
           queueCapacities.getMaximumCapacity(label)
           * getQueueCapacities().getAbsoluteMaximumCapacity(label));
+
+      setConfiguredMinCapacityVector(label, QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100, PERCENTAGE));
+      setConfiguredMaxCapacityVector(label, QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100, PERCENTAGE));
     }
   }
 
