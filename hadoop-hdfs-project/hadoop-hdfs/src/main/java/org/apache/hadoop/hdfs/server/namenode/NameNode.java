@@ -186,6 +186,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -327,7 +329,8 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
           DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
           DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY,
-          DFS_IMAGE_PARALLEL_LOAD_KEY));
+          DFS_IMAGE_PARALLEL_LOAD_KEY,
+          DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2193,6 +2196,8 @@ public class NameNode extends ReconfigurableBase implements
       return newVal;
     } else if (property.equals(DFS_IMAGE_PARALLEL_LOAD_KEY)) {
       return reconfigureParallelLoad(newVal);
+    } else if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY)) {
+      return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2377,6 +2382,27 @@ public class NameNode extends ReconfigurableBase implements
     }
     FSImageFormatProtobuf.refreshParallelSaveAndLoad(enableParallelLoad);
     return Boolean.toString(enableParallelLoad);
+  }
+
+  String reconfigureSlowNodesParameters(final DatanodeManager datanodeManager,
+      final String property, final String newVal) throws ReconfigurationException {
+    namesystem.writeLock();
+    boolean enable;
+    try {
+      if (newVal == null) {
+        enable = DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT;
+      } else {
+        enable = Boolean.parseBoolean(newVal);
+      }
+      datanodeManager.setAvoidSlowDataNodesForReadEnabled(enable);
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return Boolean.toString(enable);
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(
+          property), e);
+    } finally {
+      namesystem.writeUnlock();
+    }
   }
 
   @Override  // ReconfigurableBase
