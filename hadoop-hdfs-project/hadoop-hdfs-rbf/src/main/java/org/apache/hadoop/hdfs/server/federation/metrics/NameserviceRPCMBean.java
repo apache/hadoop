@@ -21,12 +21,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * JMX interface for the RPC server of sub cluster.
- * TODO use the default RPC MBean.
+ * JMX interface for the RPC server of Nameservice.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface SubClusterRPCMBean {
+public interface NameserviceRPCMBean {
 
   long getProxyOps();
 

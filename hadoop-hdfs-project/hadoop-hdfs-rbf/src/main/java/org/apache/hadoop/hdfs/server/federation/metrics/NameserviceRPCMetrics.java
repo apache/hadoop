@@ -28,19 +28,19 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Implementation of the RPC metrics collector.
+ * Implementation of the Nameservice RPC metrics collector.
  */
-@Metrics(name = "SubClusterRPCActivity", about = "SubCluster RPC Activity",
+@Metrics(name = "NameserviceRPCActivity", about = "Nameservice RPC Activity",
     context = "dfs")
-public class SubClusterRPCMetrics implements SubClusterRPCMBean {
+public class NameserviceRPCMetrics implements NameserviceRPCMBean {
 
-  public final static String SUB_CLUSTER_RPC_METRICS_PREFIX = "SubClusterActivity-";
+  public final static String NAMESERVICE_RPC_METRICS_PREFIX = "NameserviceActivity-";
 
   private final String name;
 
   @Metric("Time for the Router to proxy an operation to the Nameservice")
   private MutableRate proxy;
-  @Metric("Number of operations the Router proxied to a Nameservice")
+  @Metric("Number of operations the Router proxied to a NameService")
   private MutableCounterLong proxyOp;
 
   @Metric("Number of operations to hit a standby NN")
@@ -50,18 +50,18 @@ public class SubClusterRPCMetrics implements SubClusterRPCMBean {
   @Metric("Number of operations to hit no namenodes available")
   private MutableCounterLong proxyOpNoNamenodes;
 
-  public SubClusterRPCMetrics(Configuration conf, String name) {
+  public NameserviceRPCMetrics(Configuration conf, String name) {
     this.name = name;
   }
 
-  public static SubClusterRPCMetrics create(Configuration conf,
-      String subClusterName) {
+  public static NameserviceRPCMetrics create(Configuration conf,
+      String nameService) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    String name = SUB_CLUSTER_RPC_METRICS_PREFIX + (subClusterName.isEmpty()
-        ? "UndefinedSubClusterName"+ ThreadLocalRandom.current().nextInt()
-        : subClusterName);
-    return ms.register(name, "HDFS Federation SubCluster RPC Metrics",
-        new SubClusterRPCMetrics(conf, name));
+    String name = NAMESERVICE_RPC_METRICS_PREFIX + (nameService.isEmpty()
+        ? "UndefinedNameService"+ ThreadLocalRandom.current().nextInt()
+        : nameService);
+    return ms.register(name, "HDFS Federation NameService RPC Metrics",
+        new NameserviceRPCMetrics(conf, name));
   }
 
   public void incrProxyOpFailureStandby() {

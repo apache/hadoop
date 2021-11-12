@@ -64,8 +64,9 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   /** JMX interface to monitor the RPC metrics. */
   private FederationRPCMetrics metrics;
-  /** JMX interface to monitor the SubCluster RPC metrics. */
-  private Map<String, SubClusterRPCMetrics> subClusterMetrics = new ConcurrentHashMap<>();
+  /** JMX interface to monitor each Nameservice RPC metrics. */
+  private Map<String, NameserviceRPCMetrics> nameserviceRPCMetricsMap =
+      new ConcurrentHashMap<>();
   private ObjectName registeredBean;
 
   /** Thread pool for logging stats. */
@@ -82,10 +83,10 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
     // Create metrics
     this.metrics = FederationRPCMetrics.create(conf, server);
-    for (String subClusterName : FederationUtil.getAllConfiguredNS(conf)) {
-      LOG.info("Create SubCluster Metrics for " + subClusterName);
-      this.subClusterMetrics.computeIfAbsent(subClusterName,
-          k -> SubClusterRPCMetrics.create(conf, k));
+    for (String nameservice : FederationUtil.getAllConfiguredNS(conf)) {
+      LOG.info("Create Nameservice RPC Metrics for " + nameservice);
+      this.nameserviceRPCMetricsMap.computeIfAbsent(nameservice,
+          k -> NameserviceRPCMetrics.create(conf, k));
     }
 
     // Create thread pool
@@ -146,37 +147,40 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpComplete(boolean success, String subClusterName) {
+  public void proxyOpComplete(boolean success, String nameservice) {
     if (success) {
       long proxyTime = getProxyTime();
       if (proxyTime >= 0) {
         if (metrics != null) {
           metrics.addProxyTime(proxyTime);
         }
-        if (subClusterMetrics != null) {
-          subClusterMetrics.get(subClusterName).addProxyTime(proxyTime);
+        if (nameserviceRPCMetricsMap != null &&
+            nameserviceRPCMetricsMap.containsKey(nameservice)) {
+          nameserviceRPCMetricsMap.get(nameservice).addProxyTime(proxyTime);
         }
       }
     }
   }
 
   @Override
-  public void proxyOpFailureStandby(String subClusterName) {
+  public void proxyOpFailureStandby(String nameservice) {
     if (metrics != null) {
       metrics.incrProxyOpFailureStandby();
     }
-    if (subClusterMetrics != null && subClusterMetrics.containsKey(subClusterName)) {
-      subClusterMetrics.get(subClusterName).incrProxyOpFailureStandby();
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nameservice)) {
+      nameserviceRPCMetricsMap.get(nameservice).incrProxyOpFailureStandby();
     }
   }
 
   @Override
-  public void proxyOpFailureCommunicate(String subClusterName) {
+  public void proxyOpFailureCommunicate(String nameservice) {
     if (metrics != null) {
       metrics.incrProxyOpFailureCommunicate();
     }
-    if (subClusterMetrics != null && subClusterMetrics.containsKey(subClusterName)) {
-      subClusterMetrics.get(subClusterName).incrProxyOpFailureCommunicate();
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nameservice)) {
+      nameserviceRPCMetricsMap.get(nameservice).incrProxyOpFailureCommunicate();
     }
   }
 
@@ -202,12 +206,13 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpNoNamenodes(String subClusterName) {
+  public void proxyOpNoNamenodes(String nameservice) {
     if (metrics != null) {
       metrics.incrProxyOpNoNamenodes();
     }
-    if (subClusterMetrics != null && subClusterMetrics.containsKey(subClusterName)) {
-      subClusterMetrics.get(subClusterName).incrProxyOpNoNamenodes();
+    if (nameserviceRPCMetricsMap != null &&
+        nameserviceRPCMetricsMap.containsKey(nameservice)) {
+      nameserviceRPCMetricsMap.get(nameservice).incrProxyOpNoNamenodes();
     }
   }
 

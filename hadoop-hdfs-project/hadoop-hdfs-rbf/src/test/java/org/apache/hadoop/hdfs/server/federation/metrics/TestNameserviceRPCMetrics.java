@@ -33,14 +33,14 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.hdfs.server.federation.metrics.SubClusterRPCMetrics.SUB_CLUSTER_RPC_METRICS_PREFIX;
+import static org.apache.hadoop.hdfs.server.federation.metrics.NameserviceRPCMetrics.NAMESERVICE_RPC_METRICS_PREFIX;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 
 /**
  * Test case for RouterClientMetrics.
  */
-public class TestSubClusterRPCMetrics {
+public class TestNameserviceRPCMetrics {
   private static final Configuration CONF = new HdfsConfiguration();
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
@@ -123,15 +123,15 @@ public class TestSubClusterRPCMetrics {
   public void testProxyOp() throws IOException {
     routerFS.listStatus(new Path("/target-ns0"));
     assertCounter("ProxyOp", 1L,
-        getMetrics(SUB_CLUSTER_RPC_METRICS_PREFIX + "ns0"));
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns0"));
     assertCounter("ProxyOp", 0L,
-        getMetrics(SUB_CLUSTER_RPC_METRICS_PREFIX + "ns1"));
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns1"));
 
     routerFS.listStatus(new Path("/target-ns1"));
     assertCounter("ProxyOp", 1L,
-        getMetrics(SUB_CLUSTER_RPC_METRICS_PREFIX + "ns0"));
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns0"));
     assertCounter("ProxyOp", 1L,
-        getMetrics(SUB_CLUSTER_RPC_METRICS_PREFIX + "ns1"));
+        getMetrics(NAMESERVICE_RPC_METRICS_PREFIX + "ns1"));
   }
 
 }
