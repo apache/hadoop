@@ -688,11 +688,27 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     LeafQueue a2 = createQueue("root.a.a-auto.a2");
     Assert.assertEquals("weight is not set by template", 6f,
         a2.getQueueCapacities().getWeight(), 1e-6);
+    Assert.assertEquals("user limit factor should be disabled with dynamic queues",
+        -1f, a2.getUserLimitFactor(), 1e-6);
+    Assert.assertEquals("maximum AM resource percent should be 1 with dynamic queues",
+        1f, a2.getMaxAMResourcePerQueuePercent(), 1e-6);
+
+    // Set the user-limit-factor and maximum-am-resource-percent via templates to ensure their
+    // modified defaults are indeed overridden
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.a.*") + "user-limit-factor", "10");
+    csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
+        "root.a.*") + "maximum-am-resource-percent", "0.8");
 
     cs.reinitialize(csConf, mockRM.getRMContext());
     a2 = (LeafQueue) cs.getQueue("root.a.a-auto.a2");
     Assert.assertEquals("weight is overridden", 6f,
         a2.getQueueCapacities().getWeight(), 1e-6);
+    Assert.assertEquals("user limit factor should be modified by templates",
+        10f, a2.getUserLimitFactor(), 1e-6);
+    Assert.assertEquals("maximum AM resource percent should be modified by templates",
+        0.8f, a2.getMaxAMResourcePerQueuePercent(), 1e-6);
+
 
     csConf.setNonLabeledQueueWeight("root.a.a-auto.a2", 4f);
     cs.reinitialize(csConf, mockRM.getRMContext());
