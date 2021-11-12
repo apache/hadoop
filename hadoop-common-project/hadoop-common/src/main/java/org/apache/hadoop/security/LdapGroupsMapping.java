@@ -849,7 +849,7 @@ public class LdapGroupsMapping
         password = new String(passchars);
       }
     } catch (IOException ioe) {
-      LOG.warn("Exception while trying to get password for alias {}: {}",
+      LOG.warn("Exception while trying to get password for alias {}: ",
           alias, ioe);
     }
     return password;
