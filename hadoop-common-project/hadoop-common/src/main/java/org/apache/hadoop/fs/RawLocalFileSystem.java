@@ -20,6 +20,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.AsyncReaderUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -294,9 +295,11 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public void readVectored(List<? extends FileRange> ranges,
-                             IntFunction<ByteBuffer> allocate) {
+                             IntFunction<ByteBuffer> allocate) throws IOException {
+
       // Set up all of the futures, so that we can use them if things fail
       for(FileRange range: ranges) {
+        AsyncReaderUtils.validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
       try {
@@ -309,7 +312,7 @@ public class RawLocalFileSystem extends FileSystem {
           channel.read(buffers[i], range.getOffset(), i, asyncHandler);
         }
       } catch (IOException ioe) {
-        LOG.info("Can't get async channel", ioe);
+        LOG.error("Exception occurred during vectored read ", ioe);
         for(FileRange range: ranges) {
           range.getData().completeExceptionally(ioe);
         }
@@ -356,6 +359,7 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public void failed(Throwable exc, Integer r) {
+      LOG.error("Failed while reading range {} ", r, exc);
       ranges.get(r).getData().completeExceptionally(exc);
     }
   }

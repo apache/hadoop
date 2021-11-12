@@ -108,7 +108,7 @@ public class AsyncBenchmark {
       FileRangeImpl range = new FileRangeImpl(m * 1024L * 1024, 64 * 1024);
       ranges.add(range);
     }
-    stream.readAsync(ranges, bufferChoice.allocate);
+    stream.readVectored(ranges, bufferChoice.allocate);
     for(FileRange range: ranges) {
       blackhole.consume(range.getData().get());
     }

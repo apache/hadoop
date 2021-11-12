@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.impl;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -30,8 +31,32 @@ import java.util.function.IntFunction;
 import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.util.Preconditions;
 
 public class AsyncReaderUtils {
+
+  /**
+   * @param range
+   * @throws EOFException
+   */
+  public static void validateRangeRequest(FileRange range)
+          throws EOFException {
+
+    Preconditions.checkArgument(range.getLength() >= 0, "length is negative");
+    if (range.getOffset() < 0) {
+      throw new EOFException("position is negative");
+    }
+  }
+
+  public static void validateVectoredReadRanges(List<? extends FileRange> ranges)
+          throws EOFException {
+    for (FileRange range : ranges) {
+      validateRangeRequest(range);
+    }
+  }
+
+
+
   /**
    * Read fully a list of file ranges asynchronously from this file.
    * The default iterates through the ranges to read each synchronously, but
