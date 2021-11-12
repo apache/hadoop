@@ -47,13 +47,13 @@ public class TestCallerContext {
     Configuration conf = new Configuration();
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "$");
     CallerContext.Builder builder = new CallerContext.Builder(null, conf);
-    CallerContext context = builder.append("key1", "value1").build();
+    builder.append("key1", "value1");
     Assert.assertEquals("key1:value1",
         builder.build().getContext());
 
     // Append an existed key with different value.
     builder.appendIfAbsent("key1", "value2");
-    String[] items = context.getContext().split("\\$");
+    String[] items = builder.build().getContext().split("\\$");
     Assert.assertEquals(1, items.length);
     Assert.assertEquals("key1:value1",
         builder.build().getContext());
