@@ -3074,13 +3074,11 @@ public class CapacityScheduler extends
           long commitSuccess = System.nanoTime() - commitStart;
           CapacitySchedulerMetrics.getMetrics()
               .addCommitSuccess(commitSuccess);
-          LOG.info("Allocation proposal accepted");
           isSuccess = true;
         } else{
           long commitFailed = System.nanoTime() - commitStart;
           CapacitySchedulerMetrics.getMetrics()
               .addCommitFailure(commitFailed);
-          LOG.info("Failed to accept allocation proposal");
         }
 
         if (LOG.isDebugEnabled()) {
