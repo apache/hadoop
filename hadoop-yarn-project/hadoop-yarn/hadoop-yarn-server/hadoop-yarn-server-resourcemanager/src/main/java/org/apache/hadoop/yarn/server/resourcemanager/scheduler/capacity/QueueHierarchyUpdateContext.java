@@ -63,7 +63,7 @@ public class QueueHierarchyUpdateContext {
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource() {
-    return getUpdatedClusterResource(NO_LABEL);
+    return updatedClusterResource;
   }
 
   /**
