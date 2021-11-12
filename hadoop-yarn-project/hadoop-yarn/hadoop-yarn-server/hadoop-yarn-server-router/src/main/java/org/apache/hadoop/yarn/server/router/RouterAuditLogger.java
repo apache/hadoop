@@ -240,36 +240,4 @@ public class RouterAuditLogger {
     b.append(AuditConstants.PAIR_SEPARATOR).append(key.name())
         .append(AuditConstants.KEY_VAL_SEPARATOR).append(value);
   }
-
-  /**
-   * Appends the key-val pair to the passed builder in the following format
-   * <pair-delim>key=value.
-   */
-  static void add(ArgsBuilder args, StringBuilder b) {
-    b.append(AuditConstants.PAIR_SEPARATOR).append(args.getArgs());
-  }
-
-  /**
-   * Builder to create and pass a list of arbitrary key value pairs for logging.
-   */
-  public static class ArgsBuilder {
-    private StringBuilder b;
-
-    public ArgsBuilder() {
-      b = new StringBuilder();
-    }
-
-    public ArgsBuilder append(Keys key, String value) {
-      if (b.length() != 0) {
-        b.append(AuditConstants.PAIR_SEPARATOR);
-      }
-      b.append(key.name()).append(AuditConstants.KEY_VAL_SEPARATOR)
-          .append(value);
-      return this;
-    }
-
-    public StringBuilder getArgs() {
-      return b;
-    }
-  }
 }
