@@ -331,6 +331,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
       // adding NP check as this proposal could not be allocated from reserved
       // container in async-scheduling mode
       if (allocation.getAllocateFromReservedContainer() == null) {
+        LOG.debug("Trying to allocate from reserved container in async scheduling mode");
         return false;
       }
       RMContainer fromReservedContainer =
@@ -536,6 +537,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
         // request without locking the scheduler, hence we need to check
         if (getOutstandingAsksCount(schedulerContainer.getSchedulerRequestKey())
                 <= 0) {
+          LOG.debug("Rejecting appliance of allocation due to existing pending allocation " +
+              "request for " + schedulerContainer);
           return false;
         }
 
@@ -617,10 +620,12 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               schedulerContainer.getRmContainer().getContainer(),
               reReservation);
 
-          LOG.info("Reserved container=" + rmContainer.getContainerId()
-              + ", on node=" + schedulerContainer.getSchedulerNode()
-              + " with resource=" + rmContainer
-              .getAllocatedOrReservedResource());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Reserved container=" + rmContainer.getContainerId()
+                + ", on node=" + schedulerContainer.getSchedulerNode()
+                + " with resource=" + rmContainer
+                .getAllocatedOrReservedResource());
+          }
         }
       }
     } finally {
