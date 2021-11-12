@@ -32,6 +32,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.function.IntFunction;
 import java.util.zip.CRC32;
 
@@ -381,6 +382,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
       // If the stream doesn't have checksums, just delegate.
+      AsyncReaderUtils.validateVectoredReadRanges(ranges);
       if (sums == null) {
         datas.readVectored(ranges, allocate);
         return;
@@ -394,6 +396,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
           bytesPerSum, minSeek, maxSize);
       sums.readVectored(checksumRanges, allocate);
       datas.readVectored(dataRanges, allocate);
+      // Data read is correct. I have verified content of dataRanges.
+      // There is some bug below here as test (testVectoredReadMultipleRanges)
+      // is failing, should be
+      // somewhere while slicing the merged data into smaller user ranges.
+      // Spend some time figuring out but it is a complex code.
       for(CombinedFileRange checksumRange: checksumRanges) {
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum

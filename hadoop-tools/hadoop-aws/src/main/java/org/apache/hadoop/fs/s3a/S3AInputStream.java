@@ -26,6 +26,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.impl.AsyncReaderUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -815,16 +816,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * Should I move this for FSInputStream for subclasses to use?
-   * I think so. Pls comment.
+   * Validates range parameters.
    * @param range
    * @throws EOFException
    */
   private void validateRangeRequest(FileRange range) throws EOFException {
-
-    Preconditions.checkArgument(range.getLength() >= 0, "length is negative");
-    if (range.getOffset() < 0) {
-      throw new EOFException("position is negative");
+    AsyncReaderUtils.validateRangeRequest(range);
+    if(range.getOffset() + range.getLength() > contentLength) {
+      throw new EOFException("Requested range is beyond EOF");
     }
   }
 
@@ -844,9 +843,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
               "readAsync", uri, position);
       S3Object object = Invoker.once(text, uri,
               () -> client.getObject(request));
-      object.getObjectContent().read(buffer.array(), buffer.arrayOffset(), range.getLength());
+      S3ObjectInputStream objectContent = object.getObjectContent();
+      if (buffer.isDirect()) {
+        byte[] tmp = new byte[length];
+        objectContent.read(tmp, 0, length);
+        buffer.put(tmp);
+        buffer.flip();
+      } else {
+        objectContent.read(buffer.array(), buffer.arrayOffset(), range.getLength());
+      }
       range.getData().complete(buffer);
     } catch (IOException ex) {
+      LOG.error("Exception while reading a range {} ", range, ex);
       range.getData().completeExceptionally(ex);
     }
   }
