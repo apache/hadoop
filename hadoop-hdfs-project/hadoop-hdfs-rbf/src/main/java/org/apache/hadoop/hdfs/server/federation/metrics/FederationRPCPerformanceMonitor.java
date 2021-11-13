@@ -147,7 +147,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpComplete(boolean success, String nameservice) {
+  public void proxyOpComplete(boolean success, String nsId) {
     if (success) {
       long proxyTime = getProxyTime();
       if (proxyTime >= 0) {
@@ -155,32 +155,32 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
           metrics.addProxyTime(proxyTime);
         }
         if (nameserviceRPCMetricsMap != null &&
-            nameserviceRPCMetricsMap.containsKey(nameservice)) {
-          nameserviceRPCMetricsMap.get(nameservice).addProxyTime(proxyTime);
+            nameserviceRPCMetricsMap.containsKey(nsId)) {
+          nameserviceRPCMetricsMap.get(nsId).addProxyTime(proxyTime);
         }
       }
     }
   }
 
   @Override
-  public void proxyOpFailureStandby(String nameservice) {
+  public void proxyOpFailureStandby(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpFailureStandby();
     }
     if (nameserviceRPCMetricsMap != null &&
-        nameserviceRPCMetricsMap.containsKey(nameservice)) {
-      nameserviceRPCMetricsMap.get(nameservice).incrProxyOpFailureStandby();
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpFailureStandby();
     }
   }
 
   @Override
-  public void proxyOpFailureCommunicate(String nameservice) {
+  public void proxyOpFailureCommunicate(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpFailureCommunicate();
     }
     if (nameserviceRPCMetricsMap != null &&
-        nameserviceRPCMetricsMap.containsKey(nameservice)) {
-      nameserviceRPCMetricsMap.get(nameservice).incrProxyOpFailureCommunicate();
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpFailureCommunicate();
     }
   }
 
@@ -206,13 +206,13 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpNoNamenodes(String nameservice) {
+  public void proxyOpNoNamenodes(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpNoNamenodes();
     }
     if (nameserviceRPCMetricsMap != null &&
-        nameserviceRPCMetricsMap.containsKey(nameservice)) {
-      nameserviceRPCMetricsMap.get(nameservice).incrProxyOpNoNamenodes();
+        nameserviceRPCMetricsMap.containsKey(nsId)) {
+      nameserviceRPCMetricsMap.get(nsId).incrProxyOpNoNamenodes();
     }
   }
 

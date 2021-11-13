@@ -36,7 +36,7 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
 
   public final static String NAMESERVICE_RPC_METRICS_PREFIX = "NameserviceActivity-";
 
-  private final String name;
+  private final String nsId;
 
   @Metric("Time for the Router to proxy an operation to the Nameservice")
   private MutableRate proxy;
@@ -50,8 +50,8 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   @Metric("Number of operations to hit no namenodes available")
   private MutableCounterLong proxyOpNoNamenodes;
 
-  public NameserviceRPCMetrics(Configuration conf, String name) {
-    this.name = name;
+  public NameserviceRPCMetrics(Configuration conf, String nsId) {
+    this.nsId = nsId;
   }
 
   public static NameserviceRPCMetrics create(Configuration conf,
@@ -112,7 +112,7 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
     return proxyOp.value();
   }
 
-  public String getName() {
-    return name;
+  public String getNsId() {
+    return this.nsId;
   }
 }

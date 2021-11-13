@@ -62,18 +62,18 @@ public interface RouterRpcMonitor {
    * Mark a proxy operation as completed.
    * @param success If the operation was successful.
    */
-  void proxyOpComplete(boolean success, String ns);
+  void proxyOpComplete(boolean success, String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because it was in standby.
    */
-  void proxyOpFailureStandby(String ns);
+  void proxyOpFailureStandby(String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because of an unexpected
    * exception.
    */
-  void proxyOpFailureCommunicate(String ns);
+  void proxyOpFailureCommunicate(String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because the client was
@@ -95,7 +95,7 @@ public interface RouterRpcMonitor {
   /**
    * Failed to proxy an operation because of no namenodes available.
    */
-  void proxyOpNoNamenodes(String ns);
+  void proxyOpNoNamenodes(String nsId);
 
   /**
    * If the Router cannot contact the State Store in an operation.
