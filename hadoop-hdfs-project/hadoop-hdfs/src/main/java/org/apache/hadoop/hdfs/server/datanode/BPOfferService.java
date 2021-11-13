@@ -853,4 +853,12 @@ class BPOfferService {
     return isAlive();
   }
 
+  boolean isSlownode() {
+    for (BPServiceActor actor : bpServices) {
+      if (actor.isSlownode()) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

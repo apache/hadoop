@@ -4422,8 +4422,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           haContext.getState().getServiceState(),
           getFSImage().getCorrectLastAppliedOrWrittenTxId());
 
+      Set<String> slownodes = DatanodeManager.getSlowNodesUuidSet();
+      boolean isSlownode = slownodes.contains(nodeReg.getDatanodeUuid());
+
       return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo,
-          blockReportLeaseId);
+          blockReportLeaseId, isSlownode);
     } finally {
       readUnlock("handleHeartbeat");
     }
