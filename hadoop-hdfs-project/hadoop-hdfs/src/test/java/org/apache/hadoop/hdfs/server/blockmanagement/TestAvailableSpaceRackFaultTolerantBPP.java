@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -65,7 +66,7 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
   public static void setupCluster() throws Exception {
     conf = new HdfsConfiguration();
     conf.setFloat(
-        DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
+        DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         0.6f);
     String[] racks = new String[NUM_RACKS];
     for (int i = 0; i < NUM_RACKS; i++) {
@@ -187,6 +188,13 @@ public class TestAvailableSpaceRackFaultTolerantBPP {
     } catch (NullPointerException npe) {
       Assert.fail("NPE should not be thrown");
     }
+  }
+
+  @Test
+  public void testDefaultConfigValue() {
+    Assert.assertEquals(
+            conf.get("DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY")
+            ,0.6f);
   }
 
   /**
