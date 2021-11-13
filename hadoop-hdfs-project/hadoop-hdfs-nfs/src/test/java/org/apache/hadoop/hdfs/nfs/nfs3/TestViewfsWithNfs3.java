@@ -317,9 +317,7 @@ public class TestViewfsWithNfs3 {
     Assert.assertEquals(statusBeforeRename.isDirectory(), false);
 
     Path successFilePath = new Path("/user1/renameSingleNNSucess");
-    if (hdfs1.exists(successFilePath)) {
-      hdfs1.delete(successFilePath, false);
-    }
+    hdfs1.delete(successFilePath, false);
     testNfsRename(fromHandle, "renameSingleNN",
         fromHandle, "renameSingleNNSucess", Nfs3Status.NFS3_OK);
 
