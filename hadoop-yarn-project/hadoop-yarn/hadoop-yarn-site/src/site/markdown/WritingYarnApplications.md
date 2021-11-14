@@ -282,7 +282,7 @@ ApplicationReport report = yarnClient.getApplicationReport(appId);
 
 >> * *Application tracking information*: If the application supports some form of progress tracking, it can set a tracking url which is available via `ApplicationReport`'s `getTrackingUrl()` method that a client can look at to monitor progress.
 
->> * *Application status*: The state of the application as seen by the ResourceManager is available via `ApplicationReport#getYarnApplicationState`. If the `YarnApplicationState` is set to `FINISHED`, the client should refer to `ApplicationReport#getFinalApplicationStatus` to check for the actual success/failure of the application task itself. In case of failures, `ApplicationReport#getDiagnostics` may be useful to shed some more light on the the failure.
+>> * *Application status*: The state of the application as seen by the ResourceManager is available via `ApplicationReport#getYarnApplicationState`. If the `YarnApplicationState` is set to `FINISHED`, the client should refer to `ApplicationReport#getFinalApplicationStatus` to check for the actual success/failure of the application task itself. In case of failures, `ApplicationReport#getDiagnostics` may be useful to shed some more light on the failure.
 
 > * If the ApplicationMaster supports it, a client can directly query the AM itself for progress updates via the host:rpcport information obtained from the application report. It can also use the tracking url obtained from the report if available.
 
@@ -416,7 +416,7 @@ private ContainerRequest setupContainerAskForRM() {
 }
 ```
 
-* After container allocation requests have been sent by the application manager, contailers will be launched asynchronously, by the event handler of the `AMRMClientAsync` client. The handler should implement `AMRMClientAsync.CallbackHandler` interface.
+* After container allocation requests have been sent by the application manager, containers will be launched asynchronously, by the event handler of the `AMRMClientAsync` client. The handler should implement `AMRMClientAsync.CallbackHandler` interface.
 
 > * When there are containers allocated, the handler sets up a thread that runs the code to launch containers. Here we use the name `LaunchContainerRunnable` to demonstrate. We will talk about the `LaunchContainerRunnable` class in the following part of this article.
 
@@ -556,7 +556,7 @@ The `ApplicationAttemptId` will be passed to the AM via the environment and the 
 
 ### Why my container is killed by the NodeManager?
 
-This is likely due to high memory usage exceeding your requested container memory size. There are a number of reasons that can cause this. First, look at the process tree that the NodeManager dumps when it kills your container. The two things you're interested in are physical memory and virtual memory. If you have exceeded physical memory limits your app is using too much physical memory. If you're running a Java app, you can use -hprof to look at what is taking up space in the heap. If you have exceeded virtual memory, you may need to increase the value of the the cluster-wide configuration variable `yarn.nodemanager.vmem-pmem-ratio`.
+This is likely due to high memory usage exceeding your requested container memory size. There are a number of reasons that can cause this. First, look at the process tree that the NodeManager dumps when it kills your container. The two things you're interested in are physical memory and virtual memory. If you have exceeded physical memory limits your app is using too much physical memory. If you're running a Java app, you can use -hprof to look at what is taking up space in the heap. If you have exceeded virtual memory, you may need to increase the value of the cluster-wide configuration variable `yarn.nodemanager.vmem-pmem-ratio`.
 
 ### How do I include native libraries?
 
