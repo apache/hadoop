@@ -1238,6 +1238,7 @@ public class TestFsDatasetImpl {
       FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
       ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
       fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
+
     } catch (Exception ex) {
       LOG.info("Exception in testMoveBlockSuccess ", ex);
       fail("MoveBlock operation should succeed");
@@ -1832,20 +1833,18 @@ public class TestFsDatasetImpl {
   }
 
   @Test(timeout = 30000)
-  public void testTransferAndNativeCopyMetrics() {
+  public void testTransferAndNativeCopyMetrics() throws IOException {
     Configuration config = new HdfsConfiguration();
     config.setInt(
         DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
         100);
     config.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY,
         "60,300,1500");
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(config)
-          .numDataNodes(1)
-          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
-          .storagesPerDatanode(2)
-          .build();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(1)
+        .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+        .storagesPerDatanode(2)
+        .build()) {
       FileSystem fs = cluster.getFileSystem();
       DataNode dataNode = cluster.getDataNodes().get(0);
 
@@ -1875,13 +1874,6 @@ public class TestFsDatasetImpl {
       assertEquals(3, metrics.getTransferIoQuantiles().length);
       assertEquals(2, metrics.getNativeCopyIoSampleCount());
       assertEquals(3, metrics.getNativeCopyIoQuantiles().length);
-    } catch (Exception ex) {
-      LOG.info("Exception in testTransferAndNativeCopyMetrics ", ex);
-      fail("MoveBlock operation should succeed");
-    } finally {
-      if (cluster.isClusterUp()) {
-        cluster.shutdown();
-      }
     }
   }
 }
