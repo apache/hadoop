@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +32,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_HTTP_READ_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
@@ -229,4 +235,37 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     FileStatus fileStatus = fs.getFileStatus(testFilePath);
     assertEquals(1, fileStatus.getLen());
   }
+
+  @Test
+  public void testHttpConnectionTimeout() throws Exception {
+    // Not seeing connection failures while testing with
+    // 1 ms connection timeout
+    testHttpTimeouts(1, 30000);
+  }
+
+  @Test(expected = InvalidAbfsRestOperationException.class)
+  public void testHttpReadTimeout() throws Exception {
+    // Seeing consistent connection failures with small read timeout
+    testHttpTimeouts(30000, 1);
+  }
+
+  public void testHttpTimeouts(int connectionTimeoutMs, int readTimeoutMs)
+      throws Exception {
+    Configuration conf = this.getRawConfiguration();
+    // set to small values that will cause timeouts
+    conf.setInt(AZURE_HTTP_CONNECTION_TIMEOUT, connectionTimeoutMs);
+    conf.setInt(AZURE_HTTP_READ_TIMEOUT, readTimeoutMs);
+    // Reduce retry count to reduce test run time
+    conf.setInt(AZURE_MAX_IO_RETRIES, 1);
+    final AzureBlobFileSystem fs = getFileSystem(conf);
+    Assertions.assertThat(fs.getAbfsStore().getAbfsConfiguration().getHttpConnectionTimeout())
+        .describedAs("HTTP connection time should be picked from config")
+        .isEqualTo(connectionTimeoutMs);
+    Assertions.assertThat(fs.getAbfsStore().getAbfsConfiguration().getHttpReadTimeout())
+        .describedAs("HTTP Read time should be picked from config")
+        .isEqualTo(readTimeoutMs);
+    Path testPath = path(methodName.getMethodName());
+    ContractTestUtils.createFile(fs, testPath, false, new byte[0]);
+  }
+
 }

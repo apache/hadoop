@@ -244,7 +244,9 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders,
+          client.getAbfsConfiguration().getHttpConnectionTimeout(),
+          client.getAbfsConfiguration().getHttpReadTimeout());
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 

@@ -43,6 +43,8 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
+  public static final int DEFAULT_HTTP_CONNECTION_TIMEOUT = 30 * 1000; // 30 secs
+  public static final int DEFAULT_HTTP_READ_TIMEOUT = 30 * 1000; // 30 secs
 
   // Retry parameter defaults.
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
