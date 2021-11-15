@@ -239,8 +239,6 @@ public class ViewFileSystem extends FileSystem {
   Path homeDir = null;
   private boolean enableInnerCache = false;
   private InnerCache cache;
-  private Boolean setVerifyChecksum = null;
-  private Boolean setWriteChecksum = null;
   // Default to rename within same mountpoint
   private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
@@ -340,12 +338,6 @@ public class ViewFileSystem extends FileSystem {
                     }
                   }
                 });
-                if (setVerifyChecksum != null) {
-                  fs.setVerifyChecksum(setVerifyChecksum);
-                }
-                if (setWriteChecksum != null) {
-                  fs.setWriteChecksum(setWriteChecksum);
-                }
                 return new ChRootedFileSystem(fs, uri);
               } catch (IOException | InterruptedException ex) {
                 LOG.error("Could not initialize the underlying FileSystem "
@@ -926,13 +918,8 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public void setVerifyChecksum(final boolean verifyChecksum) {
-    //Set the value for filesystems to be lazily initialized later l
-    setVerifyChecksum = verifyChecksum;
-    // Set verifyChecksum for filesystems already initialized before
-    // This will only work if the inner cache is enabled
-    for (FileSystem childFileSystems : cache.map.values()) {
-      childFileSystems.setVerifyChecksum(verifyChecksum);
-    }
+    // This is a file system level operations, however ViewFileSystem
+    // points to many file systems. Noop for ViewFileSystem.
   }
 
   /**
@@ -1029,13 +1016,8 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public void setWriteChecksum(final boolean writeChecksum) {
-    //Set the value for filesystems to be lazily initialized later
-    setWriteChecksum = writeChecksum;
-    // Set verifyChecksum for filesystems already initialized before
-    // This will only work if the inner cache is enabled
-    for (FileSystem childFileSystem : cache.map.values()) {
-      childFileSystem.setWriteChecksum(writeChecksum);
-    }
+    // This is a file system level operations, however ViewFileSystem
+    // points to many file systems. Noop for ViewFileSystem.
   }
 
   @Override
