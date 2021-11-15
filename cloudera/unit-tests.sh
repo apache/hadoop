@@ -12,7 +12,7 @@ MAVEN_SETTINGS="${MAVEN_SETTINGS:-"${SCRIPT_DIR}/settings.xml"}"
 MAIN_POM="${SCRIPT_DIR}/../pom.xml"
 POM_FILE="${POM_FILE:-$MAIN_POM}"
 
-SONAR_URL="${SONAR_URL:-http://localhost:9000}"
+SONAR_URL="${SONAR_URL:-https://sonarqube.infra.cloudera.com}"
 SONAR_LOGIN="${SONAR_LOGIN:-}"
 SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-}"
 SONAR_PROJECT_NAME="${SONAR_PROJECT_NAME:-}"
