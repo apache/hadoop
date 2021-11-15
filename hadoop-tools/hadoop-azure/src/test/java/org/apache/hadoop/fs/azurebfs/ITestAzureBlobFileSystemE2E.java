@@ -241,19 +241,30 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testHttpConnectionTimeout() throws Exception {
+<<<<<<< HEAD
     // Not seeing connection failures while testing with 1 ms connection
     // timeout itself and on repeated TPCDS runs when cluster
     // and account are in same region, 10 ms is seen stable.
     // 500 ms is seen stable for cross region.
     testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
         TEST_STABLE_DEFAULT_READ_TIMEOUT_MS);
+=======
+    // Not seeing connection failures while testing with
+    // 1 ms connection timeout
+    testHttpTimeouts(1, 30000);
+>>>>>>> Configurable HTTP connection and read timeouts
   }
 
   @Test(expected = InvalidAbfsRestOperationException.class)
   public void testHttpReadTimeout() throws Exception {
+<<<<<<< HEAD
     // Small read timeout is bound to make the request fail.
     testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
         TEST_UNSTABLE_READ_TIMEOUT_MS);
+=======
+    // Seeing consistent connection failures with small read timeout
+    testHttpTimeouts(30000, 1);
+>>>>>>> Configurable HTTP connection and read timeouts
   }
 
   public void testHttpTimeouts(int connectionTimeoutMs, int readTimeoutMs)
@@ -265,12 +276,19 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     // Reduce retry count to reduce test run time
     conf.setInt(AZURE_MAX_IO_RETRIES, 1);
     final AzureBlobFileSystem fs = getFileSystem(conf);
+<<<<<<< HEAD
     Assertions.assertThat(
             fs.getAbfsStore().getAbfsConfiguration().getHttpConnectionTimeout())
         .describedAs("HTTP connection time should be picked from config")
         .isEqualTo(connectionTimeoutMs);
     Assertions.assertThat(
             fs.getAbfsStore().getAbfsConfiguration().getHttpReadTimeout())
+=======
+    Assertions.assertThat(fs.getAbfsStore().getAbfsConfiguration().getHttpConnectionTimeout())
+        .describedAs("HTTP connection time should be picked from config")
+        .isEqualTo(connectionTimeoutMs);
+    Assertions.assertThat(fs.getAbfsStore().getAbfsConfiguration().getHttpReadTimeout())
+>>>>>>> Configurable HTTP connection and read timeouts
         .describedAs("HTTP Read time should be picked from config")
         .isEqualTo(readTimeoutMs);
     Path testPath = path(methodName.getMethodName());
