@@ -275,7 +275,7 @@ public class DFSInputStream extends FSInputStream
     }
   }
 
-it  private void waitFor(int waitTime) throws IOException {
+  private void waitFor(int waitTime) throws IOException {
     try {
       Thread.sleep(waitTime);
     } catch (InterruptedException e) {
