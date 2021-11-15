@@ -608,7 +608,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public float getNonLabeledQueueMaximumCapacity(String queue) {
     String configuredCapacity = get(getQueuePrefix(queue) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
-        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find()
+        || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity);
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
@@ -806,6 +807,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setCapacityVector(String queuePath, String label, String capacityVector) {
     String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + CAPACITY;
+    set(capacityPropertyName, capacityVector);
+  }
+
+  public void setMaximumCapacityVector(String queuePath, String label, String capacityVector) {
+    String capacityPropertyName = getNodeLabelPrefix(queuePath, label) + MAXIMUM_CAPACITY;
     set(capacityPropertyName, capacityVector);
   }
 
@@ -2599,13 +2605,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public Map<String, QueueCapacityVector> parseConfiguredMaximumCapacityVector(
-      String queuePath, Set<String> labels) {
+      String queuePath, Set<String> labels, QueueCapacityVector defaultVector) {
     Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
     for (String label : labels) {
       String propertyName = CapacitySchedulerConfiguration.getNodeLabelPrefix(
           queuePath, label) + CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
       String capacityString = get(propertyName);
-      queueResourceVectors.put(label, queueCapacityConfigParser.parse(capacityString, queuePath));
+      QueueCapacityVector capacityVector = queueCapacityConfigParser.parse(capacityString, queuePath);
+      if (capacityVector.isEmpty()) {
+        capacityVector = defaultVector;
+      }
+      queueResourceVectors.put(label, capacityVector);
     }
 
     return queueResourceVectors;

@@ -78,6 +78,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
+
 @Private
 @Unstable
 public class LeafQueue extends AbstractCSQueue {
@@ -1938,6 +1941,48 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Override
+  public void refreshAfterResourceCalculation(Resource clusterResource, ResourceLimits resourceLimits) {
+    lastClusterResource = clusterResource;
+    // Update maximum applications for the queue and for users
+    updateMaximumApplications(csContext.getConfiguration());
+
+    updateCurrentResourceLimits(resourceLimits, clusterResource);
+
+    // Update headroom info based on new cluster resource value
+    // absoluteMaxCapacity now,  will be replaced with absoluteMaxAvailCapacity
+    // during allocation
+    setQueueResourceLimitsInfo(clusterResource);
+
+    // Update user consumedRatios
+    recalculateQueueUsageRatio(clusterResource, null);
+
+    // Update metrics
+    CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
+        this, labelManager, null);
+    // Update configured capacity/max-capacity for default partition only
+    CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
+        labelManager.getResourceByLabel(null, clusterResource),
+        NO_LABEL, this);
+
+    // queue metrics are updated, more resource may be available
+    // activate the pending applications if possible
+    activateApplications();
+
+    // In case of any resource change, invalidate recalculateULCount to clear
+    // the computed user-limit.
+    usersManager.userLimitNeedsRecompute();
+
+    // Update application properties
+    for (FiCaSchedulerApp application : orderingPolicy
+        .getSchedulableEntities()) {
+      computeUserLimitAndSetHeadroom(application, clusterResource,
+          NO_LABEL,
+          SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
+
+    }
+  }
+
+  @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits currentResourceLimits) {
     writeLock.lock();
@@ -2217,10 +2262,12 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   public void setCapacity(float capacity) {
+    configuredCapacityVectors.put(NO_LABEL, QueueCapacityVector.of(capacity * 100, PERCENTAGE));
     queueCapacities.setCapacity(capacity);
   }
 
   public void setCapacity(String nodeLabel, float capacity) {
+    configuredCapacityVectors.put(nodeLabel, QueueCapacityVector.of(capacity * 100, PERCENTAGE));
     queueCapacities.setCapacity(nodeLabel, capacity);
   }
 

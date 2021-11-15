@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 
 /**
  * A strategy class to encapsulate queue capacity setup and resource calculation
@@ -36,78 +41,62 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 public abstract class AbstractQueueCapacityCalculator {
 
   /**
-   * Sets all field of the queue based on its configurations.
-   *
-   * @param queue queue to setup
-   * @param label node label
-   */
-  public abstract void setup(CSQueue queue, String label);
-
-  /**
-   * Sets the metrics and statistics after effective resource calculation.
+   * Sets the metrics and statistics after effective resource values calculation.
    *
    * @param updateContext context of the current update phase
    * @param queue         queue to update
    * @param label         node label
    */
-  public abstract void setMetrics(QueueHierarchyUpdateContext updateContext, CSQueue queue,
-                                  String label);
+  public abstract void updateCapacitiesAfterCalculation(
+      QueueCapacityUpdateContext updateContext, CSQueue queue, String label);
 
-  /**
-   * Calculate the effective resource for a specific resource.
-   *
-   * @param updateContext context of the current update phase
-   * @param parentQueue   the parent whose children will be updated
-   */
-  public void calculateChildQueueResources(QueueHierarchyUpdateContext updateContext,
-                                           CSQueue parentQueue) {
-    calculateResourcePrerequisites(updateContext, parentQueue);
-
-    Map<String, ResourceVector> aggregatedResources = new HashMap<>();
-    for (CSQueue childQueue : parentQueue.getChildQueues()) {
-      childQueue.getWriteLock().lock();
-      try {
-        for (String label : childQueue.getConfiguredNodeLabels()) {
-          ResourceVector aggregatedUsedResource = aggregatedResources.getOrDefault(label,
-              ResourceVector.newInstance());
-          calculateResources(updateContext, childQueue, label, aggregatedUsedResource);
-          aggregatedResources.put(label, aggregatedUsedResource);
-        }
-      } finally {
-        childQueue.getWriteLock().unlock();
-      }
-    }
-
-    for (Map.Entry<String, ResourceVector> entry : aggregatedResources.entrySet()) {
-      updateContext.getQueueBranchContext(parentQueue.getQueuePath()).getRemainingResource(
-          entry.getKey()).subtract(entry.getValue());
-    }
-  }
 
   /**
    * Returns the capacity type the calculator could handle.
    *
    * @return capacity type
    */
-  protected abstract QueueCapacityType getCapacityType();
+  public abstract ResourceUnitCapacityType getCapacityType();
 
-  protected abstract float calculateMinimumResource(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+  /**
+   * Calculates the minimum effective resource.
+   *
+   * @param updateContext context of the current update phase
+   * @param childQueue    queue to update
+   * @param label         node label
+   * @param capacityVectorEntry resource unit for which the calculation is executed
+   * @return minimum effective resource
+   */
+  public abstract float calculateMinimumResource(
+      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
       QueueCapacityVectorEntry capacityVectorEntry);
 
-  protected abstract float calculateMaximumResource(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
+  /**
+   * Calculates the maximum effective resource.
+   *
+   * @param updateContext context of the current update phase
+   * @param childQueue    queue to update
+   * @param label         node label
+   * @param capacityVectorEntry resource unit for which the calculation is executed
+   * @return minimum effective resource
+   */
+  public abstract float calculateMaximumResource(
+      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
       QueueCapacityVectorEntry capacityVectorEntry);
 
-  protected void calculateResourcePrerequisites(QueueHierarchyUpdateContext updateContext,
-                                                CSQueue parentQueue) {
+  /**
+   * Executes all logic that must be called prior to the effective resource value calculations.
+   *
+   * @param updateContext context of the current update phase
+   * @param parentQueue parent for which the prerequisite actions must be executed
+   */
+  public void calculateResourcePrerequisites(QueueCapacityUpdateContext updateContext,
+                                             CSQueue parentQueue) {
     for (String label : parentQueue.getConfiguredNodeLabels()) {
       // We need to set normalized resource ratio only once per parent
-      if (!updateContext.getQueueBranchContext(parentQueue.getQueuePath())
-          .isParentAlreadyUpdated()) {
+      if (updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+          .getNormalizedResourceRatios().isEmpty()) {
         setNormalizedResourceRatio(updateContext, parentQueue, label);
-        updateContext.getQueueBranchContext(parentQueue.getQueuePath())
-            .setUpdateFlag();
       }
     }
   }
@@ -133,22 +122,70 @@ public abstract class AbstractQueueCapacityCalculator {
    * @return resource names
    */
   protected Set<String> getResourceNames(CSQueue queue, String label,
-                                         QueueCapacityType capacityType) {
+                                         ResourceUnitCapacityType capacityType) {
     return queue.getConfiguredCapacityVector(label)
         .getResourceNamesByCapacityType(capacityType);
   }
 
-  protected float sumCapacityValues(CSQueue queue, String label) {
-    float sumValue = 0f;
-    QueueCapacityVector capacityVector = queue.getConfiguredCapacityVector(label);
-    for (String resourceName : getResourceNames(queue, label)) {
-      sumValue += capacityVector.getResource(resourceName).getResourceValue();
+  /**
+   * Sets capacity and absolute capacity values based on minimum and maximum effective resources.
+   *
+   * @param clusterResource cluster resource for the corresponding label
+   * @param queue child queue for which the capacities are set
+   * @param label node label
+   */
+  public static void setQueueCapacities(
+      Resource clusterResource, CSQueue queue, String label) {
+    if (!(queue instanceof AbstractCSQueue)) {
+      return;
     }
-    return sumValue;
+
+    AbstractCSQueue csQueue = (AbstractCSQueue) queue;
+    ResourceCalculator resourceCalculator = csQueue.resourceCalculator;
+
+    CSQueue parent = queue.getParent();
+    if (parent == null) {
+      return;
+    }
+    // Update capacity with a float calculated from the parent's minResources
+    // and the recently changed queue minResources.
+    // capacity = effectiveMinResource / {parent's effectiveMinResource}
+    float result = resourceCalculator.divide(clusterResource,
+        queue.getQueueResourceQuotas().getEffectiveMinResource(label),
+        parent.getQueueResourceQuotas().getEffectiveMinResource(label));
+    queue.getQueueCapacities().setCapacity(label,
+        Float.isInfinite(result) ? 0 : result);
+
+    // Update maxCapacity with a float calculated from the parent's maxResources
+    // and the recently changed queue maxResources.
+    // maxCapacity = effectiveMaxResource / parent's effectiveMaxResource
+    result = resourceCalculator.divide(clusterResource,
+        queue.getQueueResourceQuotas().getEffectiveMaxResource(label),
+        parent.getQueueResourceQuotas().getEffectiveMaxResource(label));
+    queue.getQueueCapacities().setMaximumCapacity(label,
+        Float.isInfinite(result) ? 0 : result);
+
+    csQueue.updateAbsoluteCapacities();
   }
 
+  /**
+   * Calculates the normalized resource ratio of a parent queue, under which children are defined
+   * with absolute capacity type. If the effective resource of the parent is less, than the
+   * aggregated configured absolute resource of its children, the resource ratio will be less,
+   * than 1.
+   *
+   * @param updateContext context of the current update phase
+   * @param parentQueue   parent for which the normalized ratio is defined
+   * @param label         node label
+   */
   private void setNormalizedResourceRatio(
-      QueueHierarchyUpdateContext updateContext, CSQueue parentQueue, String label) {
+      QueueCapacityUpdateContext updateContext, CSQueue parentQueue, String label) {
+    // ManagedParents assign zero capacity to queues in case of overutilization, downscaling is
+    // turned off for their children
+    if (parentQueue instanceof ManagedParentQueue) {
+      return;
+    }
+
     for (QueueCapacityVectorEntry capacityVectorEntry : parentQueue.getConfiguredCapacityVector(
         label)) {
       String resourceName = capacityVectorEntry.getResourceName();
@@ -159,13 +196,15 @@ public abstract class AbstractQueueCapacityCalculator {
       // Total configured min resources of direct children of this given parent
       // queue
       for (CSQueue childQueue : parentQueue.getChildQueues()) {
+        if (!childQueue.getConfiguredNodeLabels().contains(label)) {
+          continue;
+        }
         QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
-        if (capacityVector.isResourceOfType(resourceName, QueueCapacityType.ABSOLUTE)) {
+        if (capacityVector.isResourceOfType(resourceName, ResourceUnitCapacityType.ABSOLUTE)) {
           childrenConfiguredResource += capacityVector.getResource(resourceName).getResourceValue();
         }
       }
-      // If no children is using ABSOLUTE capacity type, normalization is
-      // not needed
+      // If no children is using ABSOLUTE capacity type, normalization is not needed
       if (childrenConfiguredResource == 0) {
         continue;
       }
@@ -186,69 +225,12 @@ public abstract class AbstractQueueCapacityCalculator {
               .getUnits(), childrenConfiguredResource);
 
       if (convertedValue != 0) {
-        updateContext.getNormalizedMinResourceRatio(parentQueue.getQueuePath(), label).setValue(
-            resourceName, numeratorForMinRatio / convertedValue);
+        Map<String, ResourceVector> normalizedResourceRatios = updateContext.getQueueBranchContext(
+            parentQueue.getQueuePath()).getNormalizedResourceRatios();
+        normalizedResourceRatios.putIfAbsent(label, ResourceVector.newInstance());
+        normalizedResourceRatios.get(label).setValue(resourceName, numeratorForMinRatio /
+            convertedValue);
       }
-    }
-  }
-
-  private void calculateResources(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
-      ResourceVector aggregatedUsedResource) {
-    CSQueue parentQueue = childQueue.getParent();
-    for (String resourceName : getResourceNames(childQueue, label)) {
-      long clusterResource = updateContext.getUpdatedClusterResource(label).getResourceValue(
-          resourceName);
-      float minimumResource = calculateMinimumResource(updateContext, childQueue, label,
-          childQueue.getConfiguredCapacityVector(label).getResource(resourceName));
-      long parentMinimumResource = parentQueue.getEffectiveCapacity(label).getResourceValue(
-          resourceName);
-
-      long parentMaximumResource = parentQueue.getEffectiveMaxCapacity(label).getResourceValue(
-          resourceName);
-      float maximumResource = calculateMaximumResource(updateContext, childQueue, label,
-          childQueue.getConfiguredMaximumCapacityVector(label).getResource(resourceName));
-
-      if (maximumResource != 0 && maximumResource > parentMaximumResource) {
-        updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT.ofQueue(
-            childQueue.getQueuePath()));
-      }
-      maximumResource = maximumResource == 0 ? parentMaximumResource
-          : Math.min(maximumResource, parentMaximumResource);
-
-      if (maximumResource < minimumResource) {
-        updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE.ofQueue(
-            childQueue.getQueuePath()));
-        minimumResource = maximumResource;
-      }
-
-      if (minimumResource > parentMinimumResource) {
-        updateContext.addUpdateWarning(
-            QueueUpdateWarningType.QUEUE_OVERUTILIZED.ofQueue(childQueue.getQueuePath()).withInfo(
-                "Resource name: " + resourceName + " resource value: " + minimumResource));
-        minimumResource = parentMinimumResource;
-      }
-
-      if (minimumResource == 0) {
-        updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_ZERO_RESOURCE.ofQueue(
-            childQueue.getQueuePath()).withInfo("Resource name: " + resourceName));
-      }
-
-      float absoluteMinCapacity = minimumResource / clusterResource;
-      float absoluteMaxCapacity = maximumResource / clusterResource;
-      updateContext.getAbsoluteMinCapacity(childQueue.getQueuePath(), label).setValue(resourceName,
-          absoluteMinCapacity);
-      updateContext.getAbsoluteMaxCapacity(childQueue.getQueuePath(), label).setValue(resourceName,
-          absoluteMaxCapacity);
-
-      long roundedMinResource = (long) Math.floor(minimumResource);
-      long roundedMaxResource = (long) Math.floor(maximumResource);
-      childQueue.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
-          resourceName, roundedMinResource);
-      childQueue.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
-          resourceName, roundedMaxResource);
-
-      aggregatedUsedResource.increment(resourceName, roundedMinResource);
     }
   }
 }

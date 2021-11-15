@@ -8,12 +8,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabels
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.junit.Assert;
 import org.junit.Before;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +24,24 @@ import java.util.function.Supplier;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.GB;
 
 public class CapacitySchedulerQueueCalculationTestBase {
+  protected static final String A = "root.a";
+  protected static final String A1 = "root.a.a1";
+  protected static final String A11 = "root.a.a1.a11";
+  protected static final String A12 = "root.a.a1.a12";
+  protected static final String A2 = "root.a.a2";
+  protected static final String B = "root.b";
+  protected static final String B1 = "root.b.b1";
+  protected static final String C = "root.c";
+
+  protected static final String CAPACITY_VECTOR_TEMPLATE = "[memory=%s, vcores=%s]";
+
+  protected ResourceCalculator resourceCalculator;
 
   protected static class QueueAssertionBuilder {
+    public static final String EFFECTIVE_MAX_RES_INFO = "Effective Maximum Resource";
+    public static final Function<QueueResourceQuotas, Resource> EFFECTIVE_MAX_RES =
+        QueueResourceQuotas::getEffectiveMaxResource;
+
     public static final String EFFECTIVE_MIN_RES_INFO = "Effective Minimum Resource";
     public static final Function<QueueResourceQuotas, Resource> EFFECTIVE_MIN_RES =
         QueueResourceQuotas::getEffectiveMinResource;
@@ -63,6 +79,10 @@ public class CapacitySchedulerQueueCalculationTestBase {
 
         ValueAssertion(Resource expectedResource) {
           this.expectedResource = expectedResource;
+        }
+
+        public QueueAssertion assertEffectiveMaxResource() {
+          return withResourceSupplier(EFFECTIVE_MAX_RES, EFFECTIVE_MAX_RES_INFO);
         }
 
         public QueueAssertion assertEffectiveMinResource() {
@@ -181,14 +201,13 @@ public class CapacitySchedulerQueueCalculationTestBase {
         ResourceScheduler.class);
 
     csConf.setQueues("root", new String[]{"a", "b"});
-    csConf.setNonLabeledQueueWeight("root", 1f);
-    csConf.setNonLabeledQueueWeight("root.a", 6f);
-    csConf.setNonLabeledQueueWeight("root.b", 4f);
+    csConf.setCapacity("root.a", 50f);
+    csConf.setCapacity("root.b", 50f);
     csConf.setQueues("root.a", new String[]{"a1", "a2"});
-    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
+    csConf.setCapacity("root.a.a1", 100f);
     csConf.setQueues("root.a.a1", new String[]{"a11", "a12"});
-    csConf.setNonLabeledQueueWeight("root.a.a1.a11", 1f);
-    csConf.setNonLabeledQueueWeight("root.a.a1.a12", 1f);
+    csConf.setCapacity("root.a.a1.a11", 50f);
+    csConf.setCapacity("root.a.a1.a12", 50f);
 
     mgr = new NullRMNodeLabelsManager();
     mgr.init(csConf);
@@ -203,21 +222,18 @@ public class CapacitySchedulerQueueCalculationTestBase {
     mockRM.start();
     cs.start();
     mockRM.registerNode("h1:1234", 10 * GB); // label = x
+    resourceCalculator = cs.getResourceCalculator();
   }
 
-  protected QueueHierarchyUpdateContext update(
+  protected QueueCapacityUpdateContext update(
       QueueAssertionBuilder assertions, Resource resource) throws IOException {
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     CapacitySchedulerQueueCapacityHandler queueController =
         new CapacitySchedulerQueueCapacityHandler(mgr);
     mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, resource);
-    for (String queueToAssert : assertions.getQueues()) {
-      CSQueue queue = cs.getQueue(queueToAssert);
-      queueController.setup(queue);
-    }
 
-    QueueHierarchyUpdateContext updateContext =
+    QueueCapacityUpdateContext updateContext =
         queueController.update(resource, cs.getQueue("root"));
 
     assertions.finishAssertion();
@@ -227,5 +243,25 @@ public class CapacitySchedulerQueueCalculationTestBase {
 
   protected QueueAssertionBuilder createAssertionBuilder() {
     return new QueueAssertionBuilder(cs);
+  }
+
+  protected String createMemoryVcoresVector(Object memory, Object vcores) {
+    return String.format(CAPACITY_VECTOR_TEMPLATE, memory, vcores);
+  }
+
+  protected static String absolute(double value) {
+    return String.valueOf((long) value);
+  }
+
+  protected static String weight(float value) {
+    return value + "w";
+  }
+
+  protected static String percentage(float value) {
+    return value + "%";
+  }
+
+  protected static Resource createResource(double memory, double vcores) {
+    return Resource.newInstance((int) memory, (int) vcores);
   }
 }

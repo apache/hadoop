@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -824,6 +825,17 @@ public class ResourceUtils {
     for (ResourceInformation resourceInformation : lhs.getResources()) {
       newResource.setResourceValue(resourceInformation.getName(),
           (long) Math.floor(resourceInformation.getValue() * rhs));
+    }
+
+    return newResource;
+  }
+
+  public static Resource multiplyRound(Resource lhs, float rhs) {
+    Resource newResource = Resource.newInstance(0, 0);
+
+    for (ResourceInformation resourceInformation : lhs.getResources()) {
+      newResource.setResourceValue(resourceInformation.getName(),
+          Math.round(resourceInformation.getValue() * rhs));
     }
 
     return newResource;

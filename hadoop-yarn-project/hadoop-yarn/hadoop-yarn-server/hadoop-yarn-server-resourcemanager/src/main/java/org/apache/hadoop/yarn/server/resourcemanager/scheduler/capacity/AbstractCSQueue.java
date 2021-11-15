@@ -197,6 +197,20 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
+  public ResourceVector getOrCreateAbsoluteMinCapacityVector(String label) {
+    usageTracker.getAbsoluteMinCapacityVector().putIfAbsent(label, ResourceVector.newInstance());
+
+    return usageTracker.getAbsoluteMinCapacityVector().get(label);
+  }
+
+  @Override
+  public ResourceVector getOrCreateAbsoluteMaxCapacityVector(String label) {
+    usageTracker.getAbsoluteMaxCapacityVector().putIfAbsent(label, ResourceVector.newInstance());
+
+    return usageTracker.getAbsoluteMaxCapacityVector().get(label);
+  }
+
+  @Override
   public float getAbsoluteMaximumCapacity() {
     return queueCapacities.getAbsoluteMaximumCapacity();
   }
@@ -368,11 +382,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.reservationsContinueLooking =
           configuration.getReservationContinueLook();
 
-      this.configuredCapacityVectors = csContext.getConfiguration()
+      this.configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
       this.configuredMaximumCapacityVectors = configuration
-          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(), this.queueNodeLabelsSettings.getConfiguredNodeLabels());
+          .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(), this.queueNodeLabelsSettings.getConfiguredNodeLabels(), QueueCapacityVector.newInstance());
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
@@ -567,7 +581,17 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public QueueCapacityVector getConfiguredMaximumCapacityVector(String label) {
-    return configuredCapacityVectors.get(label);
+    return configuredMaximumCapacityVectors.get(label);
+  }
+
+  @Override
+  public void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector) {
+    configuredCapacityVectors.put(label, minCapacityVector);
+  }
+
+  @Override
+  public void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector) {
+    configuredMaximumCapacityVectors.put(label, maxCapacityVector);
   }
 
   private void initializeQueueState(CapacitySchedulerConfiguration configuration) {

@@ -108,7 +108,11 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    *         cumulative capacity in the cluster
    */
   public float getAbsoluteCapacity();
-  
+
+  public ResourceVector getOrCreateAbsoluteMinCapacityVector(String label);
+
+  public ResourceVector getOrCreateAbsoluteMaxCapacityVector(String label);
+
   /**
    * Get the configured maximum-capacity of the queue. 
    * @return the configured maximum-capacity of the queue
@@ -256,6 +260,9 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
   throws IOException;
+
+  public void refreshAfterResourceCalculation(
+      Resource clusterResource, ResourceLimits resourceLimits);
 
    /**
    * Update the cluster resource for queues as we add/remove nodes
@@ -441,6 +448,19 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   QueueCapacityVector getConfiguredMaximumCapacityVector(String label);
 
+  /**
+   * Sets the configured minimum capacity vector to a specific value
+   * @param label node label (partition)
+   * @param minCapacityVector capacity vector
+   */
+  void setConfiguredMinCapacityVector(String label, QueueCapacityVector minCapacityVector);
+
+  /**
+   * Sets the configured maximum capacity vector to a specific value
+   * @param label node label (partition)
+   * @param maxCapacityVector capacity vector
+   */
+  void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector);
 
   Set<String> getConfiguredNodeLabels();
 

@@ -22,9 +22,11 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Represents a simple resource floating point value storage
@@ -97,12 +99,33 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
     setValue(resourceName, getValue(resourceName) + value);
   }
 
-  public Float getValue(String resourceName) {
+  /**
+   * Gets the average of all resource unit values.
+   * @return average of resource unit values
+   */
+  public float getAverageValue() {
+    return (float) resourcesByName.values().stream().mapToDouble(value -> value).average()
+        .orElse(0);
+  }
+
+  public float getMaxValue() {
+    return resourcesByName.values().stream().max(Comparator.naturalOrder()).orElse(0f);
+  }
+
+  public float getValue(String resourceName) {
     return resourcesByName.get(resourceName);
   }
 
   public void setValue(String resourceName, float value) {
     resourcesByName.put(resourceName, value);
+  }
+
+  public boolean isEmpty() {
+    return resourcesByName.isEmpty();
+  }
+
+  public Set<String> getResourceNames() {
+    return resourcesByName.keySet();
   }
 
   @Override

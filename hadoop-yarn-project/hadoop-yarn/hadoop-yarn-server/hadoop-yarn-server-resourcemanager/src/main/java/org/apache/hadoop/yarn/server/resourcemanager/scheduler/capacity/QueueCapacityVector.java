@@ -39,9 +39,9 @@ public class QueueCapacityVector implements
   private static final String VALUE_DELIMITER = "=";
 
   private final ResourceVector resource;
-  private final Map<String, QueueCapacityType> capacityTypes
+  private final Map<String, ResourceUnitCapacityType> capacityTypes
       = new HashMap<>();
-  private final Map<QueueCapacityType, Set<String>> capacityTypePerResource
+  private final Map<ResourceUnitCapacityType, Set<String>> capacityTypePerResource
       = new HashMap<>();
 
   public QueueCapacityVector() {
@@ -63,7 +63,7 @@ public class QueueCapacityVector implements
         new QueueCapacityVector(ResourceVector.newInstance());
     for (Map.Entry<String, Float> resourceEntry : newCapacityVector.resource) {
       newCapacityVector.storeResourceType(resourceEntry.getKey(),
-          QueueCapacityType.ABSOLUTE);
+          ResourceUnitCapacityType.ABSOLUTE);
     }
 
     return newCapacityVector;
@@ -78,7 +78,7 @@ public class QueueCapacityVector implements
    * @return uniform capacity vector
    */
   public static QueueCapacityVector of(
-      float value, QueueCapacityType capacityType) {
+      float value, ResourceUnitCapacityType capacityType) {
     QueueCapacityVector newCapacityVector =
         new QueueCapacityVector(ResourceVector.of(value));
     for (Map.Entry<String, Float> resourceEntry : newCapacityVector.resource) {
@@ -110,7 +110,7 @@ public class QueueCapacityVector implements
    * @param capacityType type of the resource
    */
   public void setResource(String resourceName, float value,
-                          QueueCapacityType capacityType) {
+                          ResourceUnitCapacityType capacityType) {
     // Necessary due to backward compatibility (memory = memory-mb)
     String convertedResourceName = resourceName;
     if (resourceName.equals("memory")) {
@@ -129,6 +129,10 @@ public class QueueCapacityVector implements
     return resource.getValue(ResourceInformation.MEMORY_URI);
   }
 
+  public boolean isEmpty() {
+    return resource.isEmpty() && capacityTypePerResource.isEmpty() && capacityTypes.isEmpty();
+  }
+
   /**
    * Returns the name of all resources that are defined in the given capacity
    * type.
@@ -137,13 +141,20 @@ public class QueueCapacityVector implements
    * @return all resource names for the given capacity type
    */
   public Set<String> getResourceNamesByCapacityType(
-      QueueCapacityType capacityType) {
-    return capacityTypePerResource.getOrDefault(capacityType,
-        Collections.emptySet());
+      ResourceUnitCapacityType capacityType) {
+    return new HashSet<>(capacityTypePerResource.getOrDefault(capacityType,
+        Collections.emptySet()));
   }
 
+  /**
+   * Checks whether a resource unit is defined as a specific type.
+   *
+   * @param resourceName resource unit name
+   * @param capacityType capacity type
+   * @return true, if resource unit is defined as the given type
+   */
   public boolean isResourceOfType(
-      String resourceName, QueueCapacityType capacityType) {
+      String resourceName, ResourceUnitCapacityType capacityType) {
     return capacityTypes.containsKey(resourceName) &&
         capacityTypes.get(resourceName).equals(capacityType);
   }
@@ -172,16 +183,29 @@ public class QueueCapacityVector implements
   }
 
   /**
-   * Returns a set of all capacity type defined for this vector.
+   * Returns a set of all capacity types defined for this vector.
    *
    * @return capacity types
    */
-  public Set<QueueCapacityType> getDefinedCapacityTypes() {
+  public Set<ResourceUnitCapacityType> getDefinedCapacityTypes() {
     return capacityTypePerResource.keySet();
   }
 
+  /**
+   * Checks whether the vector is a mixed capacity vector (more than one capacity type is used,
+   * therefore it is not uniform).
+   * @return true, if the vector is mixed
+   */
+  public boolean isMixedCapacityVector() {
+    return getDefinedCapacityTypes().size() > 1;
+  }
+
+  public Set<String> getResourceNames() {
+    return resource.getResourceNames();
+  }
+
   private void storeResourceType(
-      String resourceName, QueueCapacityType resourceType) {
+      String resourceName, ResourceUnitCapacityType resourceType) {
     if (capacityTypes.get(resourceName) != null
         && !capacityTypes.get(resourceName).equals(resourceType)) {
       capacityTypePerResource.get(capacityTypes.get(resourceName))
@@ -218,11 +242,11 @@ public class QueueCapacityVector implements
   /**
    * Represents a capacity type associated with its syntax postfix.
    */
-  public enum QueueCapacityType {
+  public enum ResourceUnitCapacityType {
     PERCENTAGE("%"), ABSOLUTE(""), WEIGHT("w");
     private final String postfix;
 
-    QueueCapacityType(String postfix) {
+    ResourceUnitCapacityType(String postfix) {
       this.postfix = postfix;
     }
 
@@ -232,18 +256,18 @@ public class QueueCapacityVector implements
   }
 
   public static class QueueCapacityVectorEntry {
-    private final QueueCapacityType vectorResourceType;
+    private final ResourceUnitCapacityType vectorResourceType;
     private final float resourceValue;
     private final String resourceName;
 
-    public QueueCapacityVectorEntry(QueueCapacityType vectorResourceType,
+    public QueueCapacityVectorEntry(ResourceUnitCapacityType vectorResourceType,
                                     String resourceName, float resourceValue) {
       this.vectorResourceType = vectorResourceType;
       this.resourceValue = resourceValue;
       this.resourceName = resourceName;
     }
 
-    public QueueCapacityType getVectorResourceType() {
+    public ResourceUnitCapacityType getVectorResourceType() {
       return vectorResourceType;
     }
 

@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
-
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,49 +27,54 @@ import java.util.Map;
  */
 public class QueueBranchContext {
   private final Map<String, ResourceVector> remainingResourceByLabel = new HashMap<>();
+  private final Map<String, ResourceVector> normalizedResourceRatio = new HashMap<>();
   private final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
-  private final Map<String, Map<String, Float>> sumMaxWeightsPerLabel = new HashMap<>();
-  private boolean isUpdated = false;
 
+  /**
+   * Increments the aggregated weight.
+   * @param label node label
+   * @param resourceName resource unit name
+   * @param value weight value
+   */
   public void incrementWeight(String label, String resourceName, float value) {
     sumWeightsPerLabel.putIfAbsent(label, new HashMap<>());
     sumWeightsPerLabel.get(label).put(resourceName,
         sumWeightsPerLabel.get(label).getOrDefault(resourceName, 0f) + value);
   }
 
+  /**
+   * Returns the aggregated children weights.
+   * @param label node label
+   * @param resourceName resource unit name
+   * @return aggregated weights of children
+   */
   public float getSumWeightsByResource(String label, String resourceName) {
     return sumWeightsPerLabel.get(label).get(resourceName);
   }
 
-  public void incrementMaxWeight(String label, String resourceName, float value) {
-    sumMaxWeightsPerLabel.putIfAbsent(label, new HashMap<>());
-    sumMaxWeightsPerLabel.get(label).put(resourceName,
-        sumMaxWeightsPerLabel.get(label).getOrDefault(resourceName, 0f) + value);
-  }
-
-  public float getSumMaxWeightsByResource(String label, String resourceName) {
-    return sumMaxWeightsPerLabel.get(label).get(resourceName);
-  }
-
-  public void setRemainingResource(String label, ResourceVector resource) {
+  /**
+   * Sets the overall remaining resource under a parent that is available for its children to
+   * occupy.
+   *
+   * @param label node label
+   * @param resource resource vector
+   */
+  public void setBatchRemainingResource(String label, ResourceVector resource) {
     remainingResourceByLabel.put(label, resource);
+  }
+
+  public Map<String, ResourceVector> getNormalizedResourceRatios() {
+    return normalizedResourceRatio;
   }
 
   /**
    * Returns the remaining resources of a parent that is still available for its
-   * children.
+   * children. Decremented only after the calculator is finished its work on the corresponding
+   * resources.
    * @param label node label
    * @return remaining resources
    */
-  public ResourceVector getRemainingResource(String label) {
-    return remainingResourceByLabel.get(label);
-  }
-
-  public void setUpdateFlag() {
-    isUpdated = true;
-  }
-
-  public boolean isParentAlreadyUpdated() {
-    return isUpdated;
+  public ResourceVector getBatchRemainingResources(String label) {
+    return remainingResourceByLabel.getOrDefault(label, ResourceVector.newInstance());
   }
 }

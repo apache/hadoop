@@ -29,47 +29,22 @@ import java.util.Map;
 
 /**
  * A storage that encapsulates intermediate calculation values throughout a
- * full queue update phase.
+ * full queue capacity update phase.
  */
-public class QueueHierarchyUpdateContext {
+public class QueueCapacityUpdateContext {
   private final Resource updatedClusterResource;
 
   private final Map<String, QueueBranchContext> queueBranchContext
       = LazyMap.decorate(new HashMap<String, QueueBranchContext>(),
       QueueBranchContext::new);
   private final RMNodeLabelsManager labelsManager;
-  private Map<String, Map<String, ResourceVector>> normalizedResourceRatios =
-      createLazyResourceVector();
-  private Map<String, Map<String, ResourceVector>> relativeResourceRatio =
-      createLazyResourceVector();
-  private Map<String, Map<String, ResourceVector>> relativeMaxResourceRatio =
-      createLazyResourceVector();
+
   private List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
 
-  public QueueHierarchyUpdateContext(
-      Resource updatedClusterResource,
-      QueueHierarchyUpdateContext queueHierarchyUpdateContext) {
-    this.updatedClusterResource = updatedClusterResource;
-    this.normalizedResourceRatios = queueHierarchyUpdateContext
-        .normalizedResourceRatios;
-    this.relativeResourceRatio = queueHierarchyUpdateContext
-        .relativeResourceRatio;
-    this.labelsManager = queueHierarchyUpdateContext.labelsManager;
-  }
-
-  public QueueHierarchyUpdateContext(Resource updatedClusterResource,
-                                     RMNodeLabelsManager labelsManager) {
+  public QueueCapacityUpdateContext(Resource updatedClusterResource,
+                                    RMNodeLabelsManager labelsManager) {
     this.updatedClusterResource = updatedClusterResource;
     this.labelsManager = labelsManager;
-  }
-
-  private static Map<String, Map<String, ResourceVector>>
-  createLazyResourceVector() {
-    return LazyMap.decorate(
-        new HashMap<String, Map<String, ResourceVector>>(),
-        () -> LazyMap.decorate(
-            new HashMap<String, ResourceVector>(),
-            ResourceVector::newInstance));
   }
 
   /**
@@ -78,6 +53,14 @@ public class QueueHierarchyUpdateContext {
    */
   public Resource getUpdatedClusterResource(String label) {
     return labelsManager.getResourceByLabel(label, updatedClusterResource);
+  }
+
+  /**
+   * Returns the overall cluster resource available for the update phase.
+   * @return cluster resource
+   */
+  public Resource getUpdatedClusterResource() {
+    return updatedClusterResource;
   }
 
   /**
@@ -91,40 +74,17 @@ public class QueueHierarchyUpdateContext {
   }
 
   /**
-   * Returns the normalized resource ratio calculated for a queue.
-   * @param queuePath queue path
-   * @param label node label
-   * @return normalized resource ratio
+   * Adds an update warning to the context.
+   * @param warning warning during update phase
    */
-  public ResourceVector getNormalizedMinResourceRatio(
-      String queuePath, String label) {
-    return normalizedResourceRatios.get(queuePath).get(label);
-  }
-
-  /**
-   * Returns the ratio of a child queue and its parent's resource.
-   * @param queuePath queue path
-   * @param label node label
-   * @return resource ratio
-   */
-  public ResourceVector getAbsoluteMinCapacity(String queuePath, String label) {
-    return relativeResourceRatio.get(queuePath).get(label);
-  }
-
-  /**
-   * Returns the ratio of a child queue and its parent's maximum resource.
-   * @param queuePath queue path
-   * @param label node label
-   * @return resource ratio
-   */
-  public ResourceVector getAbsoluteMaxCapacity(String queuePath, String label) {
-    return relativeMaxResourceRatio.get(queuePath).get(label);
-  }
-
   public void addUpdateWarning(QueueUpdateWarning warning) {
     warnings.add(warning);
   }
 
+  /**
+   * Returns all update warnings occurred in this update phase.
+   * @return update warnings
+   */
   public List<QueueUpdateWarning> getUpdateWarnings() {
     return warnings;
   }

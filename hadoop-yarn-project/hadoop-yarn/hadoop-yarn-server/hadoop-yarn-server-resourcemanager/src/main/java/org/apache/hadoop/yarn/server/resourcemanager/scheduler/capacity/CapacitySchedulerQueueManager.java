@@ -80,6 +80,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   private CSQueue root;
   private final RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
+  private CapacitySchedulerQueueCapacityHandler queueCapacityHandler;
 
   private QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       queueStateManager;
@@ -99,6 +100,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     this.queueStateManager = new QueueStateManager<>();
     this.appPriorityACLManager = appPriorityACLManager;
     this.configuredNodeLabels = new ConfiguredNodeLabels();
+    this.queueCapacityHandler = new CapacitySchedulerQueueCapacityHandler(labelManager);
   }
 
   @Override
@@ -442,6 +444,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   public QueueStateManager<CSQueue, CapacitySchedulerConfiguration>
       getQueueStateManager() {
     return this.queueStateManager;
+  }
+
+  public CapacitySchedulerQueueCapacityHandler getQueueCapacityHandler() {
+    return queueCapacityHandler;
   }
 
   /**

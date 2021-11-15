@@ -23,7 +23,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -73,10 +73,10 @@ public class TestQueueCapacityConfigParser {
     QueueCapacityVectorEntry memory = percentageCapacityVector.getResource(MEMORY_URI);
     QueueCapacityVectorEntry vcore = percentageCapacityVector.getResource(VCORES_URI);
 
-    Assert.assertEquals(QueueCapacityType.PERCENTAGE, memory.getVectorResourceType());
+    Assert.assertEquals(ResourceUnitCapacityType.PERCENTAGE, memory.getVectorResourceType());
     Assert.assertEquals(PERCENTAGE_VALUE, memory.getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.PERCENTAGE, vcore.getVectorResourceType());
+    Assert.assertEquals(ResourceUnitCapacityType.PERCENTAGE, vcore.getVectorResourceType());
     Assert.assertEquals(PERCENTAGE_VALUE, vcore.getResourceValue(), EPSILON);
 
     QueueCapacityVector rootCapacityVector = capacityConfigParser.parse(Float.toString(PERCENTAGE_VALUE),
@@ -85,10 +85,10 @@ public class TestQueueCapacityConfigParser {
     QueueCapacityVectorEntry memoryRoot = rootCapacityVector.getResource(MEMORY_URI);
     QueueCapacityVectorEntry vcoreRoot = rootCapacityVector.getResource(VCORES_URI);
 
-    Assert.assertEquals(QueueCapacityType.PERCENTAGE, memoryRoot.getVectorResourceType());
+    Assert.assertEquals(ResourceUnitCapacityType.PERCENTAGE, memoryRoot.getVectorResourceType());
     Assert.assertEquals(100f, memoryRoot.getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.PERCENTAGE, vcoreRoot.getVectorResourceType());
+    Assert.assertEquals(ResourceUnitCapacityType.PERCENTAGE, vcoreRoot.getVectorResourceType());
     Assert.assertEquals(100f, vcoreRoot.getResourceValue(), EPSILON);
   }
 
@@ -99,10 +99,10 @@ public class TestQueueCapacityConfigParser {
     QueueCapacityVectorEntry memory = weightCapacityVector.getResource(MEMORY_URI);
     QueueCapacityVectorEntry vcore = weightCapacityVector.getResource(VCORES_URI);
 
-    Assert.assertEquals(QueueCapacityType.WEIGHT, memory.getVectorResourceType());
+    Assert.assertEquals(ResourceUnitCapacityType.WEIGHT, memory.getVectorResourceType());
     Assert.assertEquals(WEIGHT_VALUE, memory.getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.WEIGHT, vcore.getVectorResourceType());
+    Assert.assertEquals(ResourceUnitCapacityType.WEIGHT, vcore.getVectorResourceType());
     Assert.assertEquals(WEIGHT_VALUE, vcore.getResourceValue(), EPSILON);
   }
 
@@ -116,17 +116,17 @@ public class TestQueueCapacityConfigParser {
 
     QueueCapacityVector absoluteCapacityVector = capacityConfigParser.parse(ABSOLUTE_RESOURCE, QUEUE);
 
-    Assert.assertEquals(QueueCapacityType.ABSOLUTE, absoluteCapacityVector.getResource(MEMORY_URI)
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE, absoluteCapacityVector.getResource(MEMORY_URI)
         .getVectorResourceType());
     Assert.assertEquals(12 * GB, absoluteCapacityVector.getResource(MEMORY_URI)
         .getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.ABSOLUTE, absoluteCapacityVector.getResource(VCORES_URI)
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE, absoluteCapacityVector.getResource(VCORES_URI)
         .getVectorResourceType());
     Assert.assertEquals(VCORE_ABSOLUTE, absoluteCapacityVector.getResource(VCORES_URI)
         .getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.ABSOLUTE, absoluteCapacityVector.getResource(GPU_URI)
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE, absoluteCapacityVector.getResource(GPU_URI)
         .getVectorResourceType());
     Assert.assertEquals(GPU_ABSOLUTE, absoluteCapacityVector.getResource(GPU_URI)
         .getResourceValue(), EPSILON);
@@ -146,17 +146,17 @@ public class TestQueueCapacityConfigParser {
     QueueCapacityVector mixedCapacityVector =
         capacityConfigParser.parse(MIXED_RESOURCE, QUEUE);
 
-    Assert.assertEquals(QueueCapacityType.ABSOLUTE,
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE,
         mixedCapacityVector.getResource(MEMORY_URI).getVectorResourceType());
     Assert.assertEquals(MEMORY_MIXED, mixedCapacityVector.getResource(MEMORY_URI)
         .getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.PERCENTAGE,
+    Assert.assertEquals(ResourceUnitCapacityType.PERCENTAGE,
         mixedCapacityVector.getResource(VCORES_URI).getVectorResourceType());
     Assert.assertEquals(PERCENTAGE_VALUE,
         mixedCapacityVector.getResource(VCORES_URI).getResourceValue(), EPSILON);
 
-    Assert.assertEquals(QueueCapacityType.WEIGHT,
+    Assert.assertEquals(ResourceUnitCapacityType.WEIGHT,
         mixedCapacityVector.getResource(GPU_URI).getVectorResourceType());
     Assert.assertEquals(WEIGHT_VALUE,
         mixedCapacityVector.getResource(GPU_URI).getResourceValue(), EPSILON);
@@ -164,7 +164,7 @@ public class TestQueueCapacityConfigParser {
     // Test undefined capacity type default value
     QueueCapacityVector mixedCapacityVectorWithGpuUndefined =
         capacityConfigParser.parse(ABSOLUTE_RESOURCE_MEMORY_VCORE, QUEUE);
-    Assert.assertEquals(QueueCapacityType.ABSOLUTE,
+    Assert.assertEquals(ResourceUnitCapacityType.ABSOLUTE,
         mixedCapacityVectorWithGpuUndefined.getResource(MEMORY_URI).getVectorResourceType());
     Assert.assertEquals(0, mixedCapacityVectorWithGpuUndefined.getResource(GPU_URI)
         .getResourceValue(), EPSILON);

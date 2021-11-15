@@ -21,6 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class CSQueueUsageTracker {
   private final CSQueueMetrics metrics;
   private int numContainers;
@@ -37,6 +40,9 @@ public class CSQueueUsageTracker {
   private final ResourceUsage queueUsage;
 
   private final QueueResourceQuotas queueResourceQuotas;
+
+  private final Map<String, ResourceVector> absoluteMinCapacityVector = new HashMap<>();
+  private final Map<String, ResourceVector> absoluteMaxCapacityVector = new HashMap<>();
 
   public CSQueueUsageTracker(CSQueueMetrics metrics) {
     this.metrics = metrics;
@@ -74,5 +80,13 @@ public class CSQueueUsageTracker {
 
   public QueueResourceQuotas getQueueResourceQuotas() {
     return queueResourceQuotas;
+  }
+
+  public Map<String, ResourceVector> getAbsoluteMinCapacityVector() {
+    return absoluteMinCapacityVector;
+  }
+
+  public Map<String, ResourceVector> getAbsoluteMaxCapacityVector() {
+    return absoluteMaxCapacityVector;
   }
 }
