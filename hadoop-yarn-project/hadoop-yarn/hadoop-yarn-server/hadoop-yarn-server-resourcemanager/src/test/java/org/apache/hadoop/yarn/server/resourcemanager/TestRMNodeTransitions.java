@@ -388,7 +388,7 @@ public class TestRMNodeTransitions {
     node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
 
     // Make sure that the node starts with no allocated resources
-    Assert.assertEquals(node.getAllocatedContainerResource(), Resources.none());
+    Assert.assertEquals(Resources.none(), node.getAllocatedContainerResource());
 
     ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
     final ContainerId newContainerId = BuilderUtils.newContainerId(
@@ -420,8 +420,8 @@ public class TestRMNodeTransitions {
         newContainerStatusFromNode, runningContainerStatusFromNode));
     doReturn(containerStatuses).when(statusEventFromNode1).getContainers();
     node.handle(statusEventFromNode1);
-    Assert.assertEquals(node.getAllocatedContainerResource(),
-        Resource.newInstance(300, 3));
+    Assert.assertEquals(Resource.newInstance(300, 3),
+        node.getAllocatedContainerResource());
 
     final ContainerId newOppContainerId = BuilderUtils.newContainerId(
         BuilderUtils.newApplicationAttemptId(app0, 0), 2);
@@ -449,8 +449,8 @@ public class TestRMNodeTransitions {
     // The result here should be double the first check,
     // since allocated resources are doubled, just
     // with different execution types
-    Assert.assertEquals(node.getAllocatedContainerResource(),
-        Resource.newInstance(600, 6));
+    Assert.assertEquals(Resource.newInstance(600, 6),
+        node.getAllocatedContainerResource());
 
     RMNodeStatusEvent statusEventFromNode3 = getMockRMNodeStatusEvent(null);
     final ContainerId completedContainerId = BuilderUtils.newContainerId(
@@ -473,8 +473,8 @@ public class TestRMNodeTransitions {
 
     // Adding completed containers should not have changed
     // the resources allocated
-    Assert.assertEquals(node.getAllocatedContainerResource(),
-        Resource.newInstance(600, 6));
+    Assert.assertEquals(Resource.newInstance(600, 6),
+        node.getAllocatedContainerResource());
 
     RMNodeStatusEvent emptyStatusEventFromNode =
         getMockRMNodeStatusEvent(null);
@@ -484,8 +484,8 @@ public class TestRMNodeTransitions {
     node.handle(emptyStatusEventFromNode);
 
     // Passing an empty containers list should yield no resources allocated
-    Assert.assertEquals(node.getAllocatedContainerResource(),
-        Resources.none());
+    Assert.assertEquals(Resources.none(),
+        node.getAllocatedContainerResource());
   }
 
   @Test (timeout = 5000)
