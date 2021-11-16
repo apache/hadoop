@@ -24,7 +24,8 @@ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayDeque;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import java.util.Queue;
 
 /**
@@ -35,12 +36,19 @@ import java.util.Queue;
 public abstract class DatanodeAdminMonitorBase
     implements DatanodeAdminMonitorInterface, Configurable {
 
+  // Sort by lastUpdate time descending order, such that unhealthy
+  // nodes are de-prioritized given they cannot be decommissioned.
+  public static final Comparator<DatanodeDescriptor> PENDING_NODES_QUEUE_COMPARATOR =
+      (dn1, dn2) -> Long.compare(dn2.getLastUpdate(), dn1.getLastUpdate());
+
   protected BlockManager blockManager;
   protected Namesystem namesystem;
   protected DatanodeAdminManager dnAdmin;
   protected Configuration conf;
 
-  protected final Queue<DatanodeDescriptor> pendingNodes = new ArrayDeque<>();
+  private final PriorityQueue<DatanodeDescriptor> pendingNodes = new PriorityQueue<>(
+      DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT,
+      PENDING_NODES_QUEUE_COMPARATOR);
 
   /**
    * The maximum number of nodes to track in outOfServiceNodeBlocks.

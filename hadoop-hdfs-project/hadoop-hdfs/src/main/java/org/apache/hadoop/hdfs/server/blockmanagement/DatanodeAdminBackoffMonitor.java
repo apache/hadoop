@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.stream.Collectors;
 
 /**
  * This class implements the logic to track decommissioning and entering
@@ -149,7 +150,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    */
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
-    pendingNodes.remove(dn);
+    getPendingNodes().remove(dn);
     cancelledNodes.add(dn);
   }
 
@@ -189,6 +190,46 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
          * node will be removed from tracking by the pending cancel.
          */
         processCancelledNodes();
+
+        // Having more nodes decommissioning than can be tracked will impact decommissioning
+        // performance due to queueing delay
+        int numTrackedNodes = outOfServiceNodeBlocks.size();
+        int numQueuedNodes = getPendingNodes().size();
+        int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+        if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+          LOG.warn(
+              "There are {} nodes decommissioning but only {} nodes will be tracked at a time. "
+                  + "{} nodes are currently queued waiting to be decommissioned.",
+              numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+          final List<DatanodeDescriptor> unhealthyDns = outOfServiceNodeBlocks.keySet().stream()
+              .filter(dn -> !blockManager.isNodeHealthyForDecommissionOrMaintenance(dn))
+              .collect(Collectors.toList());
+
+          // If node "is dead while in Decommission In Progress", it cannot be decommissioned
+          // until it becomes healthy again. If there are more pendingNodes than can be tracked
+          // & some unhealthy tracked nodes, then re-queue the unhealthy tracked nodes
+          // to avoid blocking decommissioning of healthy nodes.
+          if (!unhealthyDns.isEmpty()) {
+            // Compute the number of unhealthy nodes to re-queue
+            final int numUnhealthyNodesToRequeue =
+                Math.min(numDecommissioningNodes - maxConcurrentTrackedNodes, unhealthyDns.size());
+
+            LOG.warn("{} limit has been reached, re-queueing {} "
+                    + "nodes which are dead while in Decommission In Progress.",
+                DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+                numUnhealthyNodesToRequeue);
+
+            // Order unhealthy nodes by lastUpdate descending such that nodes
+            // which have been unhealthy the longest are preferred to be re-queued
+            unhealthyDns.stream().sorted(PENDING_NODES_QUEUE_COMPARATOR.reversed())
+                .limit(numUnhealthyNodesToRequeue).forEach(dn -> {
+                  getPendingNodes().add(dn);
+                  outOfServiceNodeBlocks.remove(dn);
+                });
+          }
+        }
+
         processPendingNodes();
       } finally {
         namesystem.writeUnlock();
@@ -207,7 +248,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       LOG.info("Checked {} blocks this tick. {} nodes are now " +
           "in maintenance or transitioning state. {} nodes pending. {} " +
           "nodes waiting to be cancelled.",
-          numBlocksChecked, outOfServiceNodeBlocks.size(), pendingNodes.size(),
+          numBlocksChecked, outOfServiceNodeBlocks.size(), getPendingNodes().size(),
           cancelledNodes.size());
     }
   }
@@ -220,10 +261,10 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * the pendingNodes list from being modified externally.
    */
   private void processPendingNodes() {
-    while (!pendingNodes.isEmpty() &&
+    while (!getPendingNodes().isEmpty() &&
         (maxConcurrentTrackedNodes == 0 ||
             outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
-      outOfServiceNodeBlocks.put(pendingNodes.poll(), null);
+      outOfServiceNodeBlocks.put(getPendingNodes().poll(), null);
     }
   }
 
