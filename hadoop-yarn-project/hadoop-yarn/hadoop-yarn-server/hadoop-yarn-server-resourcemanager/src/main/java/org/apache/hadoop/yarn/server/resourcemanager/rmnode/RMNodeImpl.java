@@ -959,13 +959,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           ClusterMetrics.getMetrics().decrDecommisionedNMs();
         }
         containers = startEvent.getNMContainerStatuses();
+        final Resource allocatedResource = Resource.newInstance(
+            Resources.none());
         if (containers != null && !containers.isEmpty()) {
           for (NMContainerStatus container : containers) {
-            if (container.getContainerState() == ContainerState.RUNNING) {
-              rmNode.launchedContainers.add(container.getContainerId());
+            if (container.getContainerState() == ContainerState.NEW ||
+                container.getContainerState() == ContainerState.RUNNING) {
+              Resources.addTo(allocatedResource,
+                  container.getAllocatedResource());
+              if (container.getContainerState() == ContainerState.RUNNING) {
+                rmNode.launchedContainers.add(container.getContainerId());
+              }
             }
           }
         }
+
+        rmNode.allocatedContainerResource = allocatedResource;
       }
 
       if (null != startEvent.getRunningApplications()) {

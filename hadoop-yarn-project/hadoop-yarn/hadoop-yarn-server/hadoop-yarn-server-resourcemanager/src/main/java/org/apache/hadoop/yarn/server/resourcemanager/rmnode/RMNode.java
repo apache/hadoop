@@ -106,8 +106,11 @@ public interface RMNode {
   public Resource getTotalCapability();
 
   /**
-   * the total allocated resources to containers.
-   * @return the total allocated resources.
+   * The total allocated resources to containers.
+   * This will include the sum of Guaranteed and Opportunistic
+   * containers queued + running + paused on the node.
+   * @return the total allocated resources, including all Guaranteed and
+   * Opportunistic containers in queued, running and paused states.
    */
   default Resource getAllocatedContainerResource() {
     return Resources.none();

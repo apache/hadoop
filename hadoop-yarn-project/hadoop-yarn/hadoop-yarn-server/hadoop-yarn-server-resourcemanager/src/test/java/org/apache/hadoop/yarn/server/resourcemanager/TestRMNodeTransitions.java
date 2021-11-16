@@ -46,11 +46,14 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -251,6 +254,14 @@ public class TestRMNodeTransitions {
     return containerStatus;
   }
 
+  private static NMContainerStatus createNMContainerStatus(
+      final ContainerId containerId, final ExecutionType executionType,
+      final ContainerState containerState, final Resource capability) {
+    return NMContainerStatus.newInstance(containerId, 0, containerState,
+        capability, "", 0, Priority.newInstance(0), 0,
+        CommonNodeLabelsManager.NO_LABEL, executionType, -1);
+  }
+
   @Test (timeout = 5000)
   public void testExpiredContainer() {
     NodeStatus mockNodeStatus = createMockNodeStatus();
@@ -373,6 +384,68 @@ public class TestRMNodeTransitions {
         .getContainerId()); 
     Assert.assertEquals(completedContainerIdFromNode2_2,completedContainers.get(1)
         .getContainerId());
+  }
+
+  /**
+   * Tests that allocated resources are counted correctly on new nodes
+   * that are added to the cluster.
+   */
+  @Test
+  public void testAddWithAllocatedContainers() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    RMNodeImpl node = getNewNode();
+    ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
+
+    // Independently computed expected allocated resource to verify against
+    final Resource expectedResource = Resource.newInstance(Resources.none());
+
+    // Guaranteed containers
+    final ContainerId newContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 0);
+    final Resource newContainerCapability =
+        Resource.newInstance(100, 1);
+    Resources.addTo(expectedResource, newContainerCapability);
+    final NMContainerStatus newContainerStatus = createNMContainerStatus(
+        newContainerId, ExecutionType.GUARANTEED,
+        ContainerState.NEW, newContainerCapability);
+
+    final ContainerId runningContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 1);
+    final Resource runningContainerCapability =
+        Resource.newInstance(200, 2);
+    Resources.addTo(expectedResource, runningContainerCapability);
+    final NMContainerStatus runningContainerStatus = createNMContainerStatus(
+        runningContainerId, ExecutionType.GUARANTEED,
+        ContainerState.RUNNING, runningContainerCapability);
+
+    // Opportunistic containers
+    final ContainerId newOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 2);
+    final Resource newOppContainerCapability =
+        Resource.newInstance(300, 3);
+    Resources.addTo(expectedResource, newOppContainerCapability);
+    final NMContainerStatus newOppContainerStatus = createNMContainerStatus(
+        newOppContainerId, ExecutionType.OPPORTUNISTIC,
+        ContainerState.NEW, newOppContainerCapability);
+
+    final ContainerId runningOppContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(app0, 0), 3);
+    final Resource runningOppContainerCapability =
+        Resource.newInstance(400, 4);
+    Resources.addTo(expectedResource, runningOppContainerCapability);
+    final NMContainerStatus runningOppContainerStatus = createNMContainerStatus(
+        runningOppContainerId, ExecutionType.OPPORTUNISTIC,
+        ContainerState.RUNNING, runningOppContainerCapability);
+
+    node.handle(new RMNodeStartedEvent(node.getNodeID(),
+        Arrays.asList(newContainerStatus, runningContainerStatus,
+            newOppContainerStatus, runningOppContainerStatus),
+        null, mockNodeStatus));
+    Assert.assertEquals(NodeState.RUNNING, node.getState());
+    Assert.assertNotNull(nodesListManagerEvent);
+    Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
+        nodesListManagerEvent.getType());
+    Assert.assertEquals(expectedResource, node.getAllocatedContainerResource());
   }
 
   /**
