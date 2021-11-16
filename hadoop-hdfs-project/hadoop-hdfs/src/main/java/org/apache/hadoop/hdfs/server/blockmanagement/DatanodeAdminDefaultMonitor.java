@@ -169,7 +169,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   }
 
   /**
-   * Pop datanodes off the pending list and into decomNodeBlocks,
+   * Pop datanodes off the pending priority queue and into decomNodeBlocks,
    * subject to the maxConcurrentTrackedNodes limit.
    */
   private void processPendingNodes() {
@@ -185,6 +185,8 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         it = new CyclicIteration<>(outOfServiceNodeBlocks,
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
+    final List<DatanodeDescriptor> toRequeue = new ArrayList<>();
+    final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
         .isRunning()) {
@@ -221,6 +223,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
           pruneReliableBlocks(dn, blocks);
         }
+        final boolean isHealthy = blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
+        if (!isHealthy) {
+          unhealthyDns.add(dn);
+        }
         if (blocks.size() == 0) {
           if (!fullScan) {
             // If we didn't just do a full scan, need to re-check with the
@@ -236,8 +242,6 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           }
           // If the full scan is clean AND the node liveness is okay,
           // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
-          final boolean isHealthy =
-              blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
           if (blocks.size() == 0 && isHealthy) {
             if (dn.isDecommissionInProgress()) {
               dnAdmin.setDecommissioned(dn);
@@ -270,12 +274,53 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // an invalid state.
         LOG.warn("DatanodeAdminMonitor caught exception when processing node "
             + "{}.", dn, e);
-        pendingNodes.add(dn);
-        toRemove.add(dn);
+        toRequeue.add(dn);
       } finally {
         iterkey = dn;
       }
     }
+
+    // Having more nodes decommissioning than can be tracked will impact decommissioning
+    // performance due to queueing delay
+    int numTrackedNodes = outOfServiceNodeBlocks.size() - toRemove.size() - toRequeue.size();
+    int numQueuedNodes = pendingNodes.size() + toRequeue.size();
+    int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+    if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+      LOG.warn(
+          "There are {} nodes decommissioning but only {} nodes will be tracked at a time. "
+              + "{} nodes are currently queued waiting to be decommissioned.",
+          numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+      // If node "is dead while in Decommission In Progress", it cannot be decommissioned
+      // until it becomes healthy again. If there are more pendingNodes than can be tracked
+      // & some unhealthy tracked nodes, then re-queue the unhealthy tracked nodes
+      // to avoid blocking decommissioning of healthy nodes.
+      if (!unhealthyDns.isEmpty()) {
+        // Compute the number of unhealthy nodes to re-queue
+        final int numUnhealthyNodesToRequeue =
+            Math.min(numDecommissioningNodes - maxConcurrentTrackedNodes, unhealthyDns.size());
+
+        LOG.warn("{} limit has been reached, re-queueing {} "
+                + "nodes which are dead while in Decommission In Progress.",
+            DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+            numUnhealthyNodesToRequeue);
+
+        // Order unhealthy nodes by lastUpdate descending such that nodes
+        // which have been unhealthy the longest are preferred to be re-queued
+        unhealthyDns.stream().sorted(PENDING_NODES_QUEUE_COMPARATOR.reversed())
+            .limit(numUnhealthyNodesToRequeue).forEach(dn -> {
+          toRequeue.add(dn);
+        });
+      }
+    }
+
+    // In some cases, datanodes are removed from the tracked nodes set
+    // and re-queued to be decommissioned at a later time
+    for (DatanodeDescriptor dn : toRequeue) {
+      pendingNodes.add(dn);
+      outOfServiceNodeBlocks.remove(dn);
+    }
+
     // Remove the datanodes that are DECOMMISSIONED or in service after
     // maintenance expiration.
     for (DatanodeDescriptor dn : toRemove) {
