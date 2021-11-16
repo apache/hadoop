@@ -40,10 +40,10 @@ import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.CuratorCache;
-import org.apache.curator.framework.recipes.cache.CuratorCacheBridge;
-import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
-import org.apache.curator.framework.recipes.shared.SharedCount;
+//import org.apache.curator.framework.recipes.cache.CuratorCache;
+//import org.apache.curator.framework.recipes.cache.CuratorCacheBridge;
+//import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+//import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.utils.EnsurePath;
@@ -136,10 +136,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   private final boolean isExternalClient;
   protected final CuratorFramework zkClient;
-  private SharedCount delTokSeqCounter;
-  private SharedCount keyIdSeqCounter;
-  private CuratorCacheBridge keyCache;
-  private CuratorCacheBridge tokenCache;
+//  private SharedCount delTokSeqCounter;
+//  private SharedCount keyIdSeqCounter;
+//  private CuratorCacheBridge keyCache;
+//  private CuratorCacheBridge tokenCache;
   private final int seqNumBatchSize;
   private int currentSeqNum;
   private int currentMaxSeqNum;
@@ -310,108 +310,108 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   public void startThreads() throws IOException {
-    if (!isExternalClient) {
-      try {
-        zkClient.start();
-      } catch (Exception e) {
-        throw new IOException("Could not start Curator Framework", e);
-      }
-    } else {
-      // If namespace parents are implicitly created, they won't have ACLs.
-      // So, let's explicitly create them.
-      CuratorFramework nullNsFw = zkClient.usingNamespace(null);
-      EnsurePath ensureNs =
-        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
-      try {
-        ensureNs.ensure(nullNsFw.getZookeeperClient());
-      } catch (Exception e) {
-        throw new IOException("Could not create namespace", e);
-      }
-    }
-    try {
-      delTokSeqCounter = new SharedCount(zkClient, ZK_DTSM_SEQNUM_ROOT, 0);
-      if (delTokSeqCounter != null) {
-        delTokSeqCounter.start();
-      }
-      // the first batch range should be allocated during this starting window
-      // by calling the incrSharedCount
-      currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-      currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-      LOG.info("Fetched initial range of seq num, from {} to {} ",
-          currentSeqNum+1, currentMaxSeqNum);
-    } catch (Exception e) {
-      throw new IOException("Could not start Sequence Counter", e);
-    }
-    try {
-      keyIdSeqCounter = new SharedCount(zkClient, ZK_DTSM_KEYID_ROOT, 0);
-      if (keyIdSeqCounter != null) {
-        keyIdSeqCounter.start();
-      }
-    } catch (Exception e) {
-      throw new IOException("Could not start KeyId Counter", e);
-    }
-    try {
-      createPersistentNode(ZK_DTSM_MASTER_KEY_ROOT);
-      createPersistentNode(ZK_DTSM_TOKENS_ROOT);
-    } catch (Exception e) {
-      throw new RuntimeException("Could not create ZK paths");
-    }
-    try {
-      keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT)
-          .build();
-      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
-          .forCreatesAndChanges((oldNode, node) -> {
-            try {
-              processKeyAddOrUpdate(node.getData());
-            } catch (IOException e) {
-              LOG.error("Error while processing Curator keyCacheListener "
-                  + "NODE_CREATED / NODE_CHANGED event");
-              throw new UncheckedIOException(e);
-            }
-          })
-          .forDeletes(childData -> processKeyRemoved(childData.getPath()))
-          .build();
-      keyCache.listenable().addListener(keyCacheListener);
-      keyCache.start();
-      loadFromZKCache(false);
-    } catch (Exception e) {
-      throw new IOException("Could not start Curator keyCacheListener for keys",
-          e);
-    }
-    if (isTokenWatcherEnabled) {
-      LOG.info("TokenCache is enabled");
-      try {
-        tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT)
-            .build();
-        CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
-            .forCreatesAndChanges((oldNode, node) -> {
-              try {
-                processTokenAddOrUpdate(node.getData());
-              } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_CREATED / NODE_CHANGED event");
-                throw new UncheckedIOException(e);
-              }
-            })
-            .forDeletes(childData -> {
-              try {
-                processTokenRemoved(childData);
-              } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener "
-                    + "NODE_DELETED event");
-                throw new UncheckedIOException(e);
-              }
-            })
-            .build();
-        tokenCache.listenable().addListener(tokenCacheListener);
-        tokenCache.start();
-        loadFromZKCache(true);
-      } catch (Exception e) {
-        throw new IOException(
-            "Could not start Curator tokenCacheListener for tokens", e);
-      }
-    }
-    super.startThreads();
+//    if (!isExternalClient) {
+//      try {
+//        zkClient.start();
+//      } catch (Exception e) {
+//        throw new IOException("Could not start Curator Framework", e);
+//      }
+//    } else {
+//      // If namespace parents are implicitly created, they won't have ACLs.
+//      // So, let's explicitly create them.
+//      CuratorFramework nullNsFw = zkClient.usingNamespace(null);
+//      EnsurePath ensureNs =
+//        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
+//      try {
+//        ensureNs.ensure(nullNsFw.getZookeeperClient());
+//      } catch (Exception e) {
+//        throw new IOException("Could not create namespace", e);
+//      }
+//    }
+//    try {
+//      delTokSeqCounter = new SharedCount(zkClient, ZK_DTSM_SEQNUM_ROOT, 0);
+//      if (delTokSeqCounter != null) {
+//        delTokSeqCounter.start();
+//      }
+//      // the first batch range should be allocated during this starting window
+//      // by calling the incrSharedCount
+//      currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+//      currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+//      LOG.info("Fetched initial range of seq num, from {} to {} ",
+//          currentSeqNum+1, currentMaxSeqNum);
+//    } catch (Exception e) {
+//      throw new IOException("Could not start Sequence Counter", e);
+//    }
+//    try {
+//      keyIdSeqCounter = new SharedCount(zkClient, ZK_DTSM_KEYID_ROOT, 0);
+//      if (keyIdSeqCounter != null) {
+//        keyIdSeqCounter.start();
+//      }
+//    } catch (Exception e) {
+//      throw new IOException("Could not start KeyId Counter", e);
+//    }
+//    try {
+//      createPersistentNode(ZK_DTSM_MASTER_KEY_ROOT);
+//      createPersistentNode(ZK_DTSM_TOKENS_ROOT);
+//    } catch (Exception e) {
+//      throw new RuntimeException("Could not create ZK paths");
+//    }
+//    try {
+////      keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT)
+////          .build();
+////      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
+////          .forCreatesAndChanges((oldNode, node) -> {
+////            try {
+////              processKeyAddOrUpdate(node.getData());
+////            } catch (IOException e) {
+////              LOG.error("Error while processing Curator keyCacheListener "
+////                  + "NODE_CREATED / NODE_CHANGED event");
+////              throw new UncheckedIOException(e);
+////            }
+////          })
+////          .forDeletes(childData -> processKeyRemoved(childData.getPath()))
+////          .build();
+////      keyCache.listenable().addListener(keyCacheListener);
+////      keyCache.start();
+//      loadFromZKCache(false);
+//    } catch (Exception e) {
+//      throw new IOException("Could not start Curator keyCacheListener for keys",
+//          e);
+//    }
+//    if (isTokenWatcherEnabled) {
+//      LOG.info("TokenCache is enabled");
+//      try {
+////        tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT)
+////            .build();
+////        CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
+////            .forCreatesAndChanges((oldNode, node) -> {
+////              try {
+////                processTokenAddOrUpdate(node.getData());
+////              } catch (IOException e) {
+////                LOG.error("Error while processing Curator tokenCacheListener "
+////                    + "NODE_CREATED / NODE_CHANGED event");
+////                throw new UncheckedIOException(e);
+////              }
+////            })
+////            .forDeletes(childData -> {
+////              try {
+////                processTokenRemoved(childData);
+////              } catch (IOException e) {
+////                LOG.error("Error while processing Curator tokenCacheListener "
+////                    + "NODE_DELETED event");
+////                throw new UncheckedIOException(e);
+////              }
+////            })
+////            .build();
+////        tokenCache.listenable().addListener(tokenCacheListener);
+////        tokenCache.start();
+//        loadFromZKCache(true);
+//      } catch (Exception e) {
+//        throw new IOException(
+//            "Could not start Curator tokenCacheListener for tokens", e);
+//      }
+//    }
+//    super.startThreads();
   }
 
   /**
@@ -424,27 +424,27 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     final String cacheName = isTokenCache ? "token" : "key";
     LOG.info("Starting to load {} cache.", cacheName);
     final Stream<ChildData> children;
-    if (isTokenCache) {
-      children = tokenCache.stream();
-    } else {
-      children = keyCache.stream();
-    }
+//    if (isTokenCache) {
+//      children = tokenCache.stream();
+//    } else {
+//      children = keyCache.stream();
+//    }
 
     final AtomicInteger count = new AtomicInteger(0);
-    children.forEach(childData -> {
-      try {
-        if (isTokenCache) {
-          processTokenAddOrUpdate(childData.getData());
-        } else {
-          processKeyAddOrUpdate(childData.getData());
-        }
-      } catch (Exception e) {
-        LOG.info("Ignoring node {} because it failed to load.",
-            childData.getPath());
-        LOG.debug("Failure exception:", e);
-        count.getAndIncrement();
-      }
-    });
+//    children.forEach(childData -> {
+//      try {
+//        if (isTokenCache) {
+//          processTokenAddOrUpdate(childData.getData());
+//        } else {
+//          processKeyAddOrUpdate(childData.getData());
+//        }
+//      } catch (Exception e) {
+//        LOG.info("Ignoring node {} because it failed to load.",
+//            childData.getPath());
+//        LOG.debug("Failure exception:", e);
+//        count.getAndIncrement();
+//      }
+//    });
     if (isTokenCache) {
       syncTokenOwnerStats();
     }
@@ -504,41 +504,41 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   public void stopThreads() {
     super.stopThreads();
-    try {
-      if (tokenCache != null) {
-        tokenCache.close();
-      }
-    } catch (Exception e) {
-      LOG.error("Could not stop Delegation Token Cache", e);
-    }
-    try {
-      if (delTokSeqCounter != null) {
-        delTokSeqCounter.close();
-      }
-    } catch (Exception e) {
-      LOG.error("Could not stop Delegation Token Counter", e);
-    }
-    try {
-      if (keyIdSeqCounter != null) {
-        keyIdSeqCounter.close();
-      }
-    } catch (Exception e) {
-      LOG.error("Could not stop Key Id Counter", e);
-    }
-    try {
-      if (keyCache != null) {
-        keyCache.close();
-      }
-    } catch (Exception e) {
-      LOG.error("Could not stop KeyCache", e);
-    }
-    try {
-      if (!isExternalClient && (zkClient != null)) {
-        zkClient.close();
-      }
-    } catch (Exception e) {
-      LOG.error("Could not stop Curator Framework", e);
-    }
+//    try {
+//      if (tokenCache != null) {
+//        tokenCache.close();
+//      }
+//    } catch (Exception e) {
+//      LOG.error("Could not stop Delegation Token Cache", e);
+//    }
+//    try {
+//      if (delTokSeqCounter != null) {
+//        delTokSeqCounter.close();
+//      }
+//    } catch (Exception e) {
+//      LOG.error("Could not stop Delegation Token Counter", e);
+//    }
+//    try {
+//      if (keyIdSeqCounter != null) {
+//        keyIdSeqCounter.close();
+//      }
+//    } catch (Exception e) {
+//      LOG.error("Could not stop Key Id Counter", e);
+//    }
+//    try {
+//      if (keyCache != null) {
+//        keyCache.close();
+//      }
+//    } catch (Exception e) {
+//      LOG.error("Could not stop KeyCache", e);
+//    }
+//    try {
+//      if (!isExternalClient && (zkClient != null)) {
+//        zkClient.close();
+//      }
+//    } catch (Exception e) {
+//      LOG.error("Could not stop Curator Framework", e);
+//    }
   }
 
   private void createPersistentNode(String nodePath) throws Exception {
@@ -553,42 +553,43 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   protected int getDelegationTokenSeqNum() {
-    return delTokSeqCounter.getCount();
+    //return delTokSeqCounter.getCount();
+    return 0;
   }
 
-  private int incrSharedCount(SharedCount sharedCount, int batchSize)
-      throws Exception {
-    while (true) {
-      // Loop until we successfully increment the counter
-      VersionedValue<Integer> versionedValue = sharedCount.getVersionedValue();
-      if (sharedCount.trySetCount(
-          versionedValue, versionedValue.getValue() + batchSize)) {
-        return versionedValue.getValue();
-      }
-    }
-  }
+//  private int incrSharedCount(SharedCount sharedCount, int batchSize)
+//      throws Exception {
+//    while (true) {
+//      // Loop until we successfully increment the counter
+//      VersionedValue<Integer> versionedValue = sharedCount.getVersionedValue();
+//      if (sharedCount.trySetCount(
+//          versionedValue, versionedValue.getValue() + batchSize)) {
+//        return versionedValue.getValue();
+//      }
+//    }
+//  }
 
   @Override
   protected int incrementDelegationTokenSeqNum() {
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
-    if (currentSeqNum >= currentMaxSeqNum) {
-      try {
-        // after a successful batch request, we can get the range starting point
-        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
-        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-        LOG.info("Fetched new range of seq num, from {} to {} ",
-            currentSeqNum+1, currentMaxSeqNum);
-      } catch (InterruptedException e) {
-        // The ExpirationThread is just finishing.. so dont do anything..
-        LOG.debug(
-            "Thread interrupted while performing token counter increment", e);
-        Thread.currentThread().interrupt();
-      } catch (Exception e) {
-        throw new RuntimeException("Could not increment shared counter !!", e);
-      }
-    }
+//    if (currentSeqNum >= currentMaxSeqNum) {
+//      try {
+//        // after a successful batch request, we can get the range starting point
+//        //currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+//        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+//        LOG.info("Fetched new range of seq num, from {} to {} ",
+//            currentSeqNum+1, currentMaxSeqNum);
+//      } catch (InterruptedException e) {
+//        // The ExpirationThread is just finishing.. so dont do anything..
+//        LOG.debug(
+//            "Thread interrupted while performing token counter increment", e);
+//        Thread.currentThread().interrupt();
+//      } catch (Exception e) {
+//        throw new RuntimeException("Could not increment shared counter !!", e);
+//      }
+//    }
 
     return ++currentSeqNum;
   }
@@ -596,7 +597,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   protected void setDelegationTokenSeqNum(int seqNum) {
     try {
-      delTokSeqCounter.setCount(seqNum);
+     // delTokSeqCounter.setCount(seqNum);
     } catch (Exception e) {
       throw new RuntimeException("Could not set shared counter !!", e);
     }
@@ -604,21 +605,23 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   @Override
   protected int getCurrentKeyId() {
-    return keyIdSeqCounter.getCount();
+//    return keyIdSeqCounter.getCount();
+    return 0;
   }
 
   @Override
   protected int incrementCurrentKeyId() {
-    try {
-      incrSharedCount(keyIdSeqCounter, 1);
-    } catch (InterruptedException e) {
-      // The ExpirationThread is just finishing.. so dont do anything..
-      LOG.debug("Thread interrupted while performing keyId increment", e);
-      Thread.currentThread().interrupt();
-    } catch (Exception e) {
-      throw new RuntimeException("Could not increment shared keyId counter !!", e);
-    }
-    return keyIdSeqCounter.getCount();
+//    try {
+//      //incrSharedCount(keyIdSeqCounter, 1);
+//    } catch (InterruptedException e) {
+//      // The ExpirationThread is just finishing.. so dont do anything..
+//      LOG.debug("Thread interrupted while performing keyId increment", e);
+//      Thread.currentThread().interrupt();
+//    } catch (Exception e) {
+//      throw new RuntimeException("Could not increment shared keyId counter !!", e);
+//    }
+//    return keyIdSeqCounter.getCount();
+      return 0;
   }
 
   @Override

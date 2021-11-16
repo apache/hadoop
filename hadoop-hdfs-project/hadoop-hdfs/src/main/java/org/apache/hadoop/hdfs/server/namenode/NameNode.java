@@ -2238,7 +2238,7 @@ public class NameNode extends ReconfigurableBase implements
         newSetting = bm.getBlocksReplWorkMultiplier();
       } else {
         throw new IllegalArgumentException("Unexpected property " +
-            property + "in reconfReplicationParameters");
+            property + " in reconfReplicationParameters");
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newSetting);
       return String.valueOf(newSetting);
@@ -2410,7 +2410,7 @@ public class NameNode extends ReconfigurableBase implements
         bm.setExculeSlowDataNodesForWriteEnabled(enable);
       } else {
         throw new IllegalArgumentException("Unexpected property " +
-            property + "in reconfReplicationParameters");
+            property + " in reconfigureSlowNodesParameters");
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return Boolean.toString(enable);
