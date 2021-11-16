@@ -1105,13 +1105,21 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     stateChangeLog
         .debug("*DIR* NameNode.truncate: " + src + " to " + newLength);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return true; // Return previous result
+    }
+    
     String clientMachine = getClientMachine();
+    boolean ret = false;
     try {
-      return namesystem.truncate(
+      ret = namesystem.truncate(
           src, newLength, clientName, clientMachine, now());
     } finally {
+      RetryCache.setState(cacheEntry, ret);
       metrics.incrFilesTruncated();
     }
+    return ret;
   }
 
   @Override // ClientProtocol
