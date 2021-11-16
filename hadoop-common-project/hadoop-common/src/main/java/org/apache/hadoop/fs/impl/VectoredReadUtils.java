@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.util.Preconditions;
 
-public class AsyncReaderUtils {
+public class VectoredReadUtils {
 
   /**
    * @param range
@@ -68,11 +68,11 @@ public class AsyncReaderUtils {
    * @param minimumSeek the minimum number of bytes to seek over
    * @param maximumRead the largest number of bytes to combine into a single read
    */
-  public static void readAsync(PositionedReadable stream,
-                               List<? extends FileRange> ranges,
-                               IntFunction<ByteBuffer> allocate,
-                               int minimumSeek,
-                               int maximumRead) {
+  public static void readVectored(PositionedReadable stream,
+                                  List<? extends FileRange> ranges,
+                                  IntFunction<ByteBuffer> allocate,
+                                  int minimumSeek,
+                                  int maximumRead) {
     if (isOrderedDisjoint(ranges, 1, minimumSeek)) {
       for(FileRange range: ranges) {
         range.setData(readRangeFrom(stream, range, allocate));
@@ -109,23 +109,34 @@ public class AsyncReaderUtils {
             buffer);
         buffer.flip();
       } else {
-        if (buffer.isDirect()) {
-          // if we need to read data from a direct buffer and the stream doesn't
-          // support it, we allocate a byte array to use.
-          byte[] tmp = new byte[range.getLength()];
-          stream.readFully(range.getOffset(), tmp, 0, tmp.length);
-          buffer.put(tmp);
-          buffer.flip();
-        } else {
-          stream.readFully(range.getOffset(), buffer.array(),
-              buffer.arrayOffset(), range.getLength());
-        }
+        readNonByteBufferPositionedReadable(stream, range, buffer);
       }
       result.complete(buffer);
     } catch (IOException ioe) {
       result.completeExceptionally(ioe);
     }
     return result;
+  }
+
+  private static void readNonByteBufferPositionedReadable(PositionedReadable stream,
+                                                          FileRange range,
+                                                          ByteBuffer buffer) throws IOException {
+    if (buffer.isDirect()) {
+      buffer.put(readInDirectBuffer(stream, range));
+      buffer.flip();
+    } else {
+      stream.readFully(range.getOffset(), buffer.array(),
+              buffer.arrayOffset(), range.getLength());
+    }
+  }
+
+  private static byte[] readInDirectBuffer(PositionedReadable stream,
+                                           FileRange range) throws IOException {
+    // if we need to read data from a direct buffer and the stream doesn't
+    // support it, we allocate a byte array to use.
+    byte[] tmp = new byte[range.getLength()];
+    stream.readFully(range.getOffset(), tmp, 0, tmp.length);
+    return tmp;
   }
 
   /**
@@ -236,7 +247,7 @@ public class AsyncReaderUtils {
     return readData;
   }
 
-  private AsyncReaderUtils() {
+  private VectoredReadUtils() {
     throw new UnsupportedOperationException();
   }
 }

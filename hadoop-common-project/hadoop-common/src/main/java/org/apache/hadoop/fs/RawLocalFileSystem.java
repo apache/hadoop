@@ -20,7 +20,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.impl.AsyncReaderUtils;
+import org.apache.hadoop.fs.impl.VectoredReadUtils;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -284,11 +284,12 @@ public class RawLocalFileSystem extends FileSystem {
       return ioStatistics;
     }
 
-    // QQ: Should we make this synchronized?
     AsynchronousFileChannel getAsyncChannel() throws IOException {
       if (asyncChannel == null) {
-        asyncChannel = AsynchronousFileChannel.open(name.toPath(),
-            StandardOpenOption.READ);
+        synchronized (this) {
+          asyncChannel = AsynchronousFileChannel.open(name.toPath(),
+                  StandardOpenOption.READ);
+        }
       }
       return asyncChannel;
     }
@@ -299,7 +300,7 @@ public class RawLocalFileSystem extends FileSystem {
 
       // Set up all of the futures, so that we can use them if things fail
       for(FileRange range: ranges) {
-        AsyncReaderUtils.validateRangeRequest(range);
+        VectoredReadUtils.validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
       try {
@@ -312,7 +313,7 @@ public class RawLocalFileSystem extends FileSystem {
           channel.read(buffers[i], range.getOffset(), i, asyncHandler);
         }
       } catch (IOException ioe) {
-        LOG.error("Exception occurred during vectored read ", ioe);
+        LOG.debug("Exception occurred during vectored read ", ioe);
         for(FileRange range: ranges) {
           range.getData().completeExceptionally(ioe);
         }
@@ -359,7 +360,7 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public void failed(Throwable exc, Integer r) {
-      LOG.error("Failed while reading range {} ", r, exc);
+      LOG.debug("Failed while reading range {} ", r, exc);
       ranges.get(r).getData().completeExceptionally(exc);
     }
   }

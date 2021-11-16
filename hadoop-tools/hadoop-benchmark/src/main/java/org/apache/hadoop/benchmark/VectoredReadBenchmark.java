@@ -57,6 +57,9 @@ public class VectoredReadBenchmark {
 
   static final Path DATA_PATH = getTestDataPath();
   static final String DATA_PATH_PROPERTY = "bench.data";
+  static final int READ_SIZE = 64 * 1024;
+  static final long SEEK_SIZE = 1024L * 1024;
+
 
   static Path getTestDataPath() {
     String value = System.getProperty(DATA_PATH_PROPERTY);
@@ -104,7 +107,7 @@ public class VectoredReadBenchmark {
     FSDataInputStream stream = fsChoice.fs.open(DATA_PATH);
     List<FileRange> ranges = new ArrayList<>();
     for(int m=0; m < 100; ++m) {
-      FileRangeImpl range = new FileRangeImpl(m * 1024L * 1024, 64 * 1024);
+      FileRangeImpl range = new FileRangeImpl(m * SEEK_SIZE, READ_SIZE);
       ranges.add(range);
     }
     stream.readVectored(ranges, bufferChoice.allocate);
@@ -199,11 +202,10 @@ public class VectoredReadBenchmark {
     AsynchronousFileChannel channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
     List<FileRangeImpl> ranges = new ArrayList<>();
     Joiner joiner = new Joiner(100);
-    final int SIZE = 64 * 1024;
     for(int m=0; m < 100; ++m) {
-      ByteBuffer buffer = bufferChoice.allocate.apply(SIZE);
-      FileRangeCallback range = new FileRangeCallback(channel, m * 1024L * 1024,
-          SIZE, joiner, buffer);
+      ByteBuffer buffer = bufferChoice.allocate.apply(READ_SIZE);
+      FileRangeCallback range = new FileRangeCallback(channel, m * SEEK_SIZE,
+          READ_SIZE, joiner, buffer);
       ranges.add(range);
       channel.read(buffer, range.getOffset(), range, range);
     }
@@ -218,8 +220,8 @@ public class VectoredReadBenchmark {
     FSDataInputStream stream = fsChoice.fs.open(DATA_PATH);
     List<byte[]> result = new ArrayList<>();
     for(int m=0; m < 100; ++m) {
-      byte[] buffer = new byte[64 * 1024];
-      stream.readFully(m * 1024L * 1024, buffer);
+      byte[] buffer = new byte[READ_SIZE];
+      stream.readFully(m * SEEK_SIZE, buffer);
       result.add(buffer);
     }
     blackhole.consume(result);
