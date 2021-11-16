@@ -91,25 +91,21 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   }
 
   /**
+   * Subtracts the given resource by the specified value.
+   * @param resourceName name of the resource
+   * @param value value to be subtracted from the resource's current value
+   */
+  public void subtract(String resourceName, float value) {
+    setValue(resourceName, getValue(resourceName) - value);
+  }
+
+  /**
    * Increments the given resource by the specified value.
    * @param resourceName name of the resource
    * @param value value to be added to the resource's current value
    */
   public void increment(String resourceName, float value) {
     setValue(resourceName, getValue(resourceName) + value);
-  }
-
-  /**
-   * Gets the average of all resource unit values.
-   * @return average of resource unit values
-   */
-  public float getAverageValue() {
-    return (float) resourcesByName.values().stream().mapToDouble(value -> value).average()
-        .orElse(0);
-  }
-
-  public float getMaxValue() {
-    return resourcesByName.values().stream().max(Comparator.naturalOrder()).orElse(0f);
   }
 
   public float getValue(String resourceName) {

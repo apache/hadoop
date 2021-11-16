@@ -32,8 +32,8 @@ public class PercentageQueueCapacityCalculator extends AbstractQueueCapacityCalc
 
     float parentAbsoluteCapacity = parentQueue.getOrCreateAbsoluteMinCapacityVector(label).getValue(
         resourceName);
-    float remainingPerEffectiveResourceRatio = updateContext.getQueueBranchContext(
-            parentQueue.getQueuePath()).getBatchRemainingResources(label)
+    float remainingPerEffectiveResourceRatio = updateContext.getOrCreateQueueBranchContext(
+            parentQueue.getQueuePath()).getPostCalculatorRemainingResource(label)
         .getValue(resourceName) / parentQueue.getEffectiveCapacity(label)
         .getResourceValue(resourceName);
     float absoluteCapacity = parentAbsoluteCapacity *

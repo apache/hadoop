@@ -28,14 +28,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 
@@ -53,14 +58,13 @@ public class CapacitySchedulerQueueCapacityHandler {
           ResourceUnitCapacityType.ABSOLUTE,
           ResourceUnitCapacityType.PERCENTAGE,
           ResourceUnitCapacityType.WEIGHT);
-  public static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0);
-
   private final Map<ResourceUnitCapacityType, AbstractQueueCapacityCalculator>
       calculators;
   private final AbstractQueueCapacityCalculator rootCalculator =
       new RootQueueCapacityCalculator();
   private final RMNodeLabelsManager labelsManager;
-  private QueueResourceRoundingStrategy roundingStrategy =
+  private final Collection<String> definedResources = new LinkedHashSet<>();
+  private final QueueResourceRoundingStrategy roundingStrategy =
       new DefaultQueueResourceRoundingStrategy();
 
   public CapacitySchedulerQueueCapacityHandler(RMNodeLabelsManager labelsManager) {
@@ -73,6 +77,8 @@ public class CapacitySchedulerQueueCapacityHandler {
         new PercentageQueueCapacityCalculator());
     this.calculators.put(ResourceUnitCapacityType.WEIGHT,
         new WeightQueueCapacityCalculator());
+
+    loadResourceNames();
   }
 
   /**
@@ -124,7 +130,6 @@ public class CapacitySchedulerQueueCapacityHandler {
     queue.refreshAfterResourceCalculation(newContext.getUpdatedClusterResource(), resourceLimits);
   }
 
-
   private void updateChildren(
       CSQueue parent, QueueCapacityUpdateContext updateContext,
       ResourceLimits resourceLimits) {
@@ -133,152 +138,134 @@ public class CapacitySchedulerQueueCapacityHandler {
     }
 
     for (String label : parent.getConfiguredNodeLabels()) {
-      updateContext.getQueueBranchContext(parent.getQueuePath()).setBatchRemainingResource(label,
+      updateContext.getOrCreateQueueBranchContext(parent.getQueuePath()).setPostCalculatorRemainingResource(label,
           ResourceVector.of(parent.getEffectiveCapacity(label)));
+      updateContext.getOrCreateQueueBranchContext(parent.getQueuePath()).setOverallRemainingResource(label,
+          ResourceVector.of(parent.getEffectiveCapacity(label)));
+    }
+
+    for (AbstractQueueCapacityCalculator capacityCalculator : calculators.values()) {
+      capacityCalculator.calculateResourcePrerequisites(updateContext, parent);
     }
 
     calculateChildrenResources(updateContext, parent);
 
     for (String label : parent.getConfiguredNodeLabels()) {
-      if (!updateContext.getQueueBranchContext(parent.getQueuePath()).getBatchRemainingResources(
+      if (!updateContext.getOrCreateQueueBranchContext(parent.getQueuePath()).getPostCalculatorRemainingResource(
           label).equals(ResourceVector.newInstance())) {
         updateContext.addUpdateWarning(QueueUpdateWarningType.BRANCH_UNDERUTILIZED.ofQueue(
             parent.getQueuePath()));
       }
     }
 
-    for (CSQueue childQueue : parent.getChildQueues()) {
-      for (String label : childQueue.getConfiguredNodeLabels()) {
-        updateChildCapacities(updateContext, childQueue, label);
-      }
-
-      ResourceLimits childLimit = ((ParentQueue) parent).getResourceLimitsOfChild(
-          childQueue, updateContext.getUpdatedClusterResource(), resourceLimits, NO_LABEL, false);
-      childQueue.refreshAfterResourceCalculation(updateContext.getUpdatedClusterResource(),
-          childLimit);
-      updateChildren(childQueue, updateContext, childLimit);
-    }
-  }
-
-  private void updateChildCapacities(
-      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label) {
-    QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
-    if (capacityVector.isMixedCapacityVector()) {
-      // Post update capacities based on the calculated effective resource values
-      AbstractQueueCapacityCalculator.setQueueCapacities(updateContext.getUpdatedClusterResource(
-          label), childQueue, label);
-    } else {
-      // Update capacities according to the legacy logic
-      for (ResourceUnitCapacityType capacityType :
-          childQueue.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
-        AbstractQueueCapacityCalculator calculator = calculators.get(capacityType);
-        calculator.updateCapacitiesAfterCalculation(updateContext, childQueue, label);
-      }
-    }
-
-    // If memory is zero, all other resource units should be considered zero as well.
-    if (childQueue.getEffectiveCapacity(label).getMemorySize() == 0) {
-      childQueue.getQueueResourceQuotas().setEffectiveMinResource(label, ZERO_RESOURCE);
-    }
-
-    if (childQueue.getEffectiveMaxCapacity(label).getMemorySize() == 0) {
-      childQueue.getQueueResourceQuotas().setEffectiveMaxResource(label, ZERO_RESOURCE);
-    }
+    updateChildrenAfterCalculation(parent, updateContext, resourceLimits);
   }
 
   private void calculateChildrenResources(
       QueueCapacityUpdateContext updateContext, CSQueue parent) {
-    for (ResourceUnitCapacityType capacityType : CALCULATOR_PRECEDENCE) {
-      Map<String, ResourceVector> aggregatedResources = new HashMap<>();
-      AbstractQueueCapacityCalculator capacityCalculator = calculators.get(capacityType);
-      capacityCalculator.calculateResourcePrerequisites(updateContext, parent);
-
-      for (CSQueue childQueue : parent.getChildQueues()) {
-        childQueue.getWriteLock().lock();
-        try {
-          for (String label : childQueue.getConfiguredNodeLabels()) {
-            ResourceVector aggregatedUsedResource = aggregatedResources.getOrDefault(label,
-                ResourceVector.newInstance());
-            setChildResources(updateContext, childQueue, label, aggregatedUsedResource, capacityCalculator);
-            aggregatedResources.put(label, aggregatedUsedResource);
+    for (String resourceName : definedResources) {
+      for (ResourceUnitCapacityType capacityType : CALCULATOR_PRECEDENCE) {
+        Map<String, Float> effectiveResourceUsedByLabel = new HashMap<>();
+        for (CSQueue childQueue : parent.getChildQueues()) {
+          childQueue.getWriteLock().lock();
+          try {
+            for (String label : childQueue.getConfiguredNodeLabels()) {
+              QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
+              if (!childQueue.getConfiguredCapacityVector(label).isResourceOfType(
+                  resourceName, capacityType)) {
+                continue;
+              }
+              float aggregatedUsedResource = effectiveResourceUsedByLabel.getOrDefault(label,
+                  0f);
+              float usedResourceByChild = setChildResources(updateContext, childQueue, label,
+                  capacityVector.getResource(resourceName));
+              float resourceUsedByLabel = aggregatedUsedResource + usedResourceByChild;
+              updateContext.getOrCreateQueueBranchContext(parent.getQueuePath())
+                  .getOverallRemainingResource(label).subtract(resourceName, usedResourceByChild);
+              effectiveResourceUsedByLabel.put(label, resourceUsedByLabel);
+            }
+          } finally {
+            childQueue.getWriteLock().unlock();
           }
-        } finally {
-          childQueue.getWriteLock().unlock();
         }
-      }
 
-      for (Map.Entry<String, ResourceVector> entry : aggregatedResources.entrySet()) {
-        updateContext.getQueueBranchContext(parent.getQueuePath()).getBatchRemainingResources(
-            entry.getKey()).subtract(entry.getValue());
+        // Only decrement post calculator remaining resource at the end of each calculator phase
+        for (Map.Entry<String, Float> entry : effectiveResourceUsedByLabel.entrySet()) {
+          updateContext.getOrCreateQueueBranchContext(parent.getQueuePath()).getPostCalculatorRemainingResource(
+              entry.getKey()).subtract(resourceName, entry.getValue());
+        }
       }
     }
   }
 
-  private void setChildResources(
+  private float setChildResources(
       QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
-      ResourceVector usedResourcesOfCalculator, AbstractQueueCapacityCalculator capacityCalculator) {
-    for (String resourceName : capacityCalculator.getResourceNames(childQueue, label)) {
-      long clusterResource = updateContext.getUpdatedClusterResource(label).getResourceValue(
-          resourceName);
-      QueueCapacityVectorEntry capacityVectorEntry = childQueue.getConfiguredCapacityVector(label)
-          .getResource(resourceName);
-      QueueCapacityVectorEntry maximumCapacityVectorEntry = childQueue
-          .getConfiguredMaximumCapacityVector(label).getResource(resourceName);
-      AbstractQueueCapacityCalculator maximumCapacityCalculator = calculators.get(
-          maximumCapacityVectorEntry.getVectorResourceType());
+      QueueCapacityVectorEntry capacityVectorEntry) {
+    AbstractQueueCapacityCalculator capacityCalculator = calculators.get(
+        capacityVectorEntry.getVectorResourceType());
+    String resourceName = capacityVectorEntry.getResourceName();
+    long clusterResource = updateContext.getUpdatedClusterResource(label).getResourceValue(
+        resourceName);
+    QueueCapacityVectorEntry maximumCapacityVectorEntry = childQueue
+        .getConfiguredMaximumCapacityVector(label).getResource(resourceName);
+    AbstractQueueCapacityCalculator maximumCapacityCalculator = calculators.get(
+        maximumCapacityVectorEntry.getVectorResourceType());
 
-      float minimumResource = capacityCalculator.calculateMinimumResource(
-          updateContext, childQueue, label, capacityVectorEntry);
-      float maximumResource = maximumCapacityCalculator.calculateMaximumResource(
-          updateContext, childQueue, label, maximumCapacityVectorEntry);
+    float minimumResource = capacityCalculator.calculateMinimumResource(
+        updateContext, childQueue, label, capacityVectorEntry);
+    float maximumResource = maximumCapacityCalculator.calculateMaximumResource(
+        updateContext, childQueue, label, maximumCapacityVectorEntry);
 
-      minimumResource = roundingStrategy.getRoundedResource(minimumResource, capacityVectorEntry);
-      maximumResource = roundingStrategy.getRoundedResource(maximumResource,
-          maximumCapacityVectorEntry);
-      Pair<Float, Float> resources = validateCalculatedResources(updateContext, childQueue, resourceName, label,
-          usedResourcesOfCalculator, new ImmutablePair<>(minimumResource, maximumResource));
-      minimumResource = resources.getLeft();
-      maximumResource = resources.getRight();
+    minimumResource = roundingStrategy.getRoundedResource(minimumResource, capacityVectorEntry);
+    maximumResource = roundingStrategy.getRoundedResource(maximumResource,
+        maximumCapacityVectorEntry);
+    Pair<Float, Float> resources = validateCalculatedResources(updateContext, childQueue,
+        resourceName, label, new ImmutablePair<>(minimumResource, maximumResource));
+    minimumResource = resources.getLeft();
+    maximumResource = resources.getRight();
 
-      float absoluteMinCapacity = minimumResource / clusterResource;
-      float absoluteMaxCapacity = maximumResource / clusterResource;
-      childQueue.getOrCreateAbsoluteMinCapacityVector(label).setValue(
-          resourceName, absoluteMinCapacity);
-      childQueue.getOrCreateAbsoluteMaxCapacityVector(label).setValue(
-          resourceName, absoluteMaxCapacity);
+    float absoluteMinCapacity = minimumResource / clusterResource;
+    float absoluteMaxCapacity = maximumResource / clusterResource;
+    childQueue.getOrCreateAbsoluteMinCapacityVector(label).setValue(
+        resourceName, absoluteMinCapacity);
+    childQueue.getOrCreateAbsoluteMaxCapacityVector(label).setValue(
+        resourceName, absoluteMaxCapacity);
 
-      childQueue.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
-          resourceName, (long) minimumResource);
-      childQueue.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
-          resourceName, (long) maximumResource);
+    childQueue.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
+        resourceName, (long) minimumResource);
+    childQueue.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
+        resourceName, (long) maximumResource);
 
-      usedResourcesOfCalculator.increment(resourceName, minimumResource);
-    }
+    return minimumResource;
   }
 
   private Pair<Float, Float> validateCalculatedResources(
       QueueCapacityUpdateContext updateContext, CSQueue childQueue, String resourceName,
-      String label, ResourceVector usedResourcesOfCalculator, Pair<Float, Float> calculatedResources) {
+      String label, Pair<Float, Float> calculatedResources) {
     CSQueue parentQueue = childQueue.getParent();
 
     float minimumResource = calculatedResources.getLeft();
     long minimumMemoryResource = childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
         .getMemorySize();
 
-    float remainingResourceUnderParent = updateContext.getQueueBranchContext(
-        parentQueue.getQueuePath()).getBatchRemainingResources(label).getValue(resourceName)
-        - usedResourcesOfCalculator.getValue(resourceName);
+    float remainingResourceUnderParent = updateContext.getOrCreateQueueBranchContext(
+        parentQueue.getQueuePath()).getOverallRemainingResource(label).getValue(resourceName);
 
     long parentMaximumResource = parentQueue.getEffectiveMaxCapacity(label).getResourceValue(
         resourceName);
     float maximumResource = calculatedResources.getRight();
 
+    // Memory is the primary resource, if its zero, all other resource units are zero as well.
+    if (!resourceName.equals(MEMORY_URI) && minimumMemoryResource == 0) {
+      minimumResource = 0;
+    }
+
     if (maximumResource != 0 && maximumResource > parentMaximumResource) {
       updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT.ofQueue(
           childQueue.getQueuePath()));
     }
-    maximumResource = maximumResource == 0 ? parentMaximumResource
-        : Math.min(maximumResource, parentMaximumResource);
+    maximumResource = maximumResource == 0 ? parentMaximumResource : Math.min(maximumResource,
+        parentMaximumResource);
 
     if (maximumResource < minimumResource) {
       updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE.ofQueue(
@@ -304,5 +291,51 @@ public class CapacitySchedulerQueueCapacityHandler {
     }
 
     return new ImmutablePair<>(minimumResource, maximumResource);
+  }
+
+  private void updateChildrenAfterCalculation(
+      CSQueue parent, QueueCapacityUpdateContext updateContext, ResourceLimits resourceLimits) {
+    for (CSQueue childQueue : parent.getChildQueues()) {
+      updateChildCapacities(updateContext, childQueue);
+      ResourceLimits childLimit = ((ParentQueue) parent).getResourceLimitsOfChild(
+          childQueue, updateContext.getUpdatedClusterResource(), resourceLimits, NO_LABEL, false);
+      childQueue.refreshAfterResourceCalculation(updateContext.getUpdatedClusterResource(),
+          childLimit);
+      updateChildren(childQueue, updateContext, childLimit);
+    }
+  }
+
+  private void updateChildCapacities(
+      QueueCapacityUpdateContext updateContext, CSQueue childQueue) {
+    for (String label : childQueue.getConfiguredNodeLabels()) {
+      QueueCapacityVector capacityVector = childQueue.getConfiguredCapacityVector(label);
+      if (capacityVector.isMixedCapacityVector()) {
+        // Post update capacities based on the calculated effective resource values
+        AbstractQueueCapacityCalculator.setQueueCapacities(updateContext.getUpdatedClusterResource(
+            label), childQueue, label);
+      } else {
+        // Update capacities according to the legacy logic
+        for (ResourceUnitCapacityType capacityType :
+            childQueue.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
+          AbstractQueueCapacityCalculator calculator = calculators.get(capacityType);
+          calculator.updateCapacitiesAfterCalculation(updateContext, childQueue, label);
+        }
+      }
+    }
+  }
+
+  private void loadResourceNames() {
+    Set<String> resources = new HashSet<>(ResourceUtils.getResourceTypes().keySet());
+    if (resources.contains(MEMORY_URI)) {
+      resources.remove(MEMORY_URI);
+      definedResources.add(MEMORY_URI);
+    }
+
+    if (resources.contains(VCORES_URI)) {
+      resources.remove(VCORES_URI);
+      definedResources.add(VCORES_URI);
+    }
+
+    definedResources.addAll(resources);
   }
 }

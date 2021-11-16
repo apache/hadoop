@@ -28,7 +28,7 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
       QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
       QueueCapacityVectorEntry capacityVectorEntry) {
     String resourceName = capacityVectorEntry.getResourceName();
-    ResourceVector ratio = updateContext.getQueueBranchContext(childQueue.getParent().getQueuePath())
+    ResourceVector ratio = updateContext.getOrCreateQueueBranchContext(childQueue.getParent().getQueuePath())
         .getNormalizedResourceRatios().getOrDefault(label, ResourceVector.of(1));
 
     return ratio.getValue(resourceName) * capacityVectorEntry.getResourceValue();

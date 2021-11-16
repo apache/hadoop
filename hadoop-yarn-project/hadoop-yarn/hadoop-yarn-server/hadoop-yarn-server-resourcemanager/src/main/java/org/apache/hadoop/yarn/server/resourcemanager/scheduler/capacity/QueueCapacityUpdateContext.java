@@ -33,13 +33,10 @@ import java.util.Map;
  */
 public class QueueCapacityUpdateContext {
   private final Resource updatedClusterResource;
-
-  private final Map<String, QueueBranchContext> queueBranchContext
-      = LazyMap.decorate(new HashMap<String, QueueBranchContext>(),
-      QueueBranchContext::new);
   private final RMNodeLabelsManager labelsManager;
 
-  private List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
+  private final Map<String, QueueBranchContext> queueBranchContext = new HashMap<>();
+  private final List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
 
   public QueueCapacityUpdateContext(Resource updatedClusterResource,
                                     RMNodeLabelsManager labelsManager) {
@@ -69,7 +66,8 @@ public class QueueCapacityUpdateContext {
    * @param queuePath queue path of the parent
    * @return queue branch context
    */
-  public QueueBranchContext getQueueBranchContext(String queuePath) {
+  public QueueBranchContext getOrCreateQueueBranchContext(String queuePath) {
+    queueBranchContext.putIfAbsent(queuePath, new QueueBranchContext());
     return queueBranchContext.get(queuePath);
   }
 

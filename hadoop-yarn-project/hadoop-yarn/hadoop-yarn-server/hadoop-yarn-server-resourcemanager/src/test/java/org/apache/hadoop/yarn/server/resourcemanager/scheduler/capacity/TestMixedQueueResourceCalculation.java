@@ -47,11 +47,11 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
   public static final Resource B1_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(8095, 3);
   public static final Resource C_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(5803, 4);
 
-  public static final Resource B_WARNING_RESOURCE = Resource.newInstance(8096, 3);
+  public static final Resource B_WARNING_RESOURCE = Resource.newInstance(8096, 4);
   public static final Resource B1_WARNING_RESOURCE = Resource.newInstance(8096, 3);
-  public static final Resource A_WARNING_RESOURCE = Resource.newInstance(8288, 9);
+  public static final Resource A_WARNING_RESOURCE = Resource.newInstance(8288, 12);
   public static final Resource A1_WARNING_RESOURCE = Resource.newInstance(2048, 4);
-  public static final Resource A2_WARNING_RESOURCE = Resource.newInstance(2048, 5);
+  public static final Resource A2_WARNING_RESOURCE = Resource.newInstance(2048, 8);
   public static final Resource A12_WARNING_RESOURCE = Resource.newInstance(2048, 4);
 
   @Override
@@ -165,20 +165,18 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.BRANCH_DOWNSCALED, B);
     Optional<QueueUpdateWarning> queueA11ZeroResourceWarning = getSpecificWarning(
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_ZERO_RESOURCE, A11);
-    Optional<QueueUpdateWarning> queueA12ZeroResourceWarning = getSpecificWarning(
-        updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_ZERO_RESOURCE, A12);
 
     Assert.assertTrue(queueCZeroResourceWarning.isPresent());
     Assert.assertTrue(queueARemainingResourceWarning.isPresent());
     Assert.assertTrue(queueBDownscalingWarning.isPresent());
     Assert.assertTrue(queueA11ZeroResourceWarning.isPresent());
-    Assert.assertTrue(queueA12ZeroResourceWarning.isPresent());
   }
 
   @Test
   public void testZeroResourceIfNoMemory() throws IOException {
     csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(100), weight(6)));
-    csConf.setCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY), absolute(VCORES * 0.5)));
+    csConf.setCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY),
+        absolute(VCORES * 0.5)));
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A)
@@ -200,10 +198,13 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
   @Test
   public void testDifferentMinimumAndMaximumCapacityTypes() throws IOException {
-    csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(50), absolute(VCORES * 0.5)));
-    csConf.setMaximumCapacityVector(A, "", createMemoryVcoresVector(absolute(MEMORY), percentage(80)));
+    csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(50),
+        absolute(VCORES * 0.5)));
+    csConf.setMaximumCapacityVector(A, "", createMemoryVcoresVector(absolute(MEMORY),
+        percentage(80)));
     csConf.setCapacityVector(B, "", createMemoryVcoresVector(weight(6), percentage(100)));
-    csConf.setMaximumCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY), absolute(VCORES * 0.5)));
+    csConf.setMaximumCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY),
+        absolute(VCORES * 0.5)));
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A)
@@ -226,17 +227,20 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     try {
       cs.reinitialize(csConf, mockRM.getRMContext());
       update(assertionBuilder, UPDATE_RESOURCE);
-      Assert.fail("WEIGHT maximum capacity type is not supported, an error should be thrown when set up");
+      Assert.fail("WEIGHT maximum capacity type is not supported, an error should be thrown when " +
+          "set up");
     } catch (IllegalStateException ignored) {
     }
   }
 
   @Test
   public void testMaximumResourceWarnings() throws IOException {
-    csConf.setMaximumCapacityVector(A1, "", createMemoryVcoresVector(absolute(MEMORY * 0.5), percentage(100)));
+    csConf.setMaximumCapacityVector(A1, "", createMemoryVcoresVector(absolute(MEMORY * 0.5),
+        percentage(100)));
     csConf.setCapacityVector(A11, "", createMemoryVcoresVector(percentage(50), percentage(100)));
     csConf.setCapacityVector(A12, "", createMemoryVcoresVector(percentage(50), percentage(0)));
-    csConf.setMaximumCapacityVector(A11, "", createMemoryVcoresVector(absolute(MEMORY), percentage(10)));
+    csConf.setMaximumCapacityVector(A11, "", createMemoryVcoresVector(absolute(MEMORY),
+        percentage(10)));
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A11)
@@ -253,7 +257,8 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
     QueueCapacityUpdateContext updateContext = update(assertionBuilder, UPDATE_RESOURCE);
     Optional<QueueUpdateWarning> queueA11ExceedsParentMaxResourceWarning = getSpecificWarning(
-        updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT, A11);
+        updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT,
+        A11);
     Optional<QueueUpdateWarning> queueA11MinExceedsMaxWarning = getSpecificWarning(
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE, A11);
     Assert.assertTrue(queueA11ExceedsParentMaxResourceWarning.isPresent());
@@ -288,7 +293,8 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
     csConf.setState(B, QueueState.RUNNING);
     csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(100), weight(6)));
-    csConf.setCapacityVector(A1, "", createMemoryVcoresVector(absolute(2048), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A1, "", createMemoryVcoresVector(absolute(2048),
+        absolute(VCORES * 0.25)));
     csConf.setCapacityVector(A11, "", createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
     csConf.setCapacityVector(A12, "", createMemoryVcoresVector(percentage(100), percentage(100)));
     csConf.setCapacityVector(A2, "", createMemoryVcoresVector(absolute(2048), percentage(100)));
@@ -308,7 +314,7 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
   private Optional<QueueUpdateWarning> getSpecificWarning(
       Collection<QueueUpdateWarning> warnings, QueueUpdateWarningType warningTypeToSelect,
       String queue) {
-    return warnings.stream().filter((w) -> w.getWarningType().equals(warningTypeToSelect) && w.getQueue().equals(
-        queue)).findFirst();
+    return warnings.stream().filter((w) -> w.getWarningType().equals(warningTypeToSelect)
+        && w.getQueue().equals(queue)).findFirst();
   }
 }

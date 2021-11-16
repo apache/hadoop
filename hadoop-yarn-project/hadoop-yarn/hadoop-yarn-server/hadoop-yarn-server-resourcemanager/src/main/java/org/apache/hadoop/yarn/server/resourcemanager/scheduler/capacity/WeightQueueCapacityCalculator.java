@@ -36,7 +36,7 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
       for (String label : childQueue.getConfiguredNodeLabels()) {
         for (String resourceName : childQueue.getConfiguredCapacityVector(label)
             .getResourceNamesByCapacityType(getCapacityType())) {
-          updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+          updateContext.getOrCreateQueueBranchContext(parentQueue.getQueuePath())
               .incrementWeight(label, resourceName, childQueue.getConfiguredCapacityVector(label)
                   .getResource(resourceName).getResourceValue());
         }
@@ -51,11 +51,11 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
     CSQueue parentQueue = childQueue.getParent();
     String resourceName = capacityVectorEntry.getResourceName();
     float normalizedWeight = capacityVectorEntry.getResourceValue()
-        / updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+        / updateContext.getOrCreateQueueBranchContext(parentQueue.getQueuePath())
         .getSumWeightsByResource(label, resourceName);
 
-    float remainingResource = updateContext.getQueueBranchContext(
-            parentQueue.getQueuePath()).getBatchRemainingResources(label)
+    float remainingResource = updateContext.getOrCreateQueueBranchContext(
+            parentQueue.getQueuePath()).getPostCalculatorRemainingResource(label)
         .getValue(resourceName);
 
     // Due to rounding loss it is better to use all remaining resources if no other resource uses
@@ -101,7 +101,7 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
     Collection<String> resourceNames = getResourceNames(queue, label);
     for (String resourceName : resourceNames) {
-      float sumBranchWeight = updateContext.getQueueBranchContext(queue.getParent().getQueuePath())
+      float sumBranchWeight = updateContext.getOrCreateQueueBranchContext(queue.getParent().getQueuePath())
           .getSumWeightsByResource(label, resourceName);
       float capacity =  queue.getConfiguredCapacityVector(label).getResource(
           resourceName).getResourceValue() / sumBranchWeight;

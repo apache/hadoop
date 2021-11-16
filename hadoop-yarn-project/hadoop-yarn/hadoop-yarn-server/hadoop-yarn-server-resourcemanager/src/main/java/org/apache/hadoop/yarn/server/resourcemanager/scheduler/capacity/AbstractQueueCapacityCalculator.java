@@ -25,14 +25,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpd
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
-import static org.apache.hadoop.yarn.api.records.ResourceInformation.VCORES_URI;
 
 /**
  * A strategy class to encapsulate queue capacity setup and resource calculation
@@ -94,7 +90,7 @@ public abstract class AbstractQueueCapacityCalculator {
                                              CSQueue parentQueue) {
     for (String label : parentQueue.getConfiguredNodeLabels()) {
       // We need to set normalized resource ratio only once per parent
-      if (updateContext.getQueueBranchContext(parentQueue.getQueuePath())
+      if (updateContext.getOrCreateQueueBranchContext(parentQueue.getQueuePath())
           .getNormalizedResourceRatios().isEmpty()) {
         setNormalizedResourceRatio(updateContext, parentQueue, label);
       }
@@ -225,7 +221,7 @@ public abstract class AbstractQueueCapacityCalculator {
               .getUnits(), childrenConfiguredResource);
 
       if (convertedValue != 0) {
-        Map<String, ResourceVector> normalizedResourceRatios = updateContext.getQueueBranchContext(
+        Map<String, ResourceVector> normalizedResourceRatios = updateContext.getOrCreateQueueBranchContext(
             parentQueue.getQueuePath()).getNormalizedResourceRatios();
         normalizedResourceRatios.putIfAbsent(label, ResourceVector.newInstance());
         normalizedResourceRatios.get(label).setValue(resourceName, numeratorForMinRatio /

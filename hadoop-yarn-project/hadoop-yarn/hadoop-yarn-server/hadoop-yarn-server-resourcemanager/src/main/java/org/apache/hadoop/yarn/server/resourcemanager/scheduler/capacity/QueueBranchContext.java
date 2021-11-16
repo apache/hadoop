@@ -28,6 +28,7 @@ import java.util.Map;
 public class QueueBranchContext {
   private final Map<String, ResourceVector> remainingResourceByLabel = new HashMap<>();
   private final Map<String, ResourceVector> normalizedResourceRatio = new HashMap<>();
+  private final Map<String, ResourceVector> overallRemainingResource = new HashMap<>();
   private final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
 
   /**
@@ -53,13 +54,13 @@ public class QueueBranchContext {
   }
 
   /**
-   * Sets the overall remaining resource under a parent that is available for its children to
+   * Sets the remaining resource under a parent that is available for its children to
    * occupy.
    *
    * @param label node label
    * @param resource resource vector
    */
-  public void setBatchRemainingResource(String label, ResourceVector resource) {
+  public void setPostCalculatorRemainingResource(String label, ResourceVector resource) {
     remainingResourceByLabel.put(label, resource);
   }
 
@@ -69,12 +70,36 @@ public class QueueBranchContext {
 
   /**
    * Returns the remaining resources of a parent that is still available for its
-   * children. Decremented only after the calculator is finished its work on the corresponding
-   * resources.
+   * children.
+   *
    * @param label node label
    * @return remaining resources
    */
-  public ResourceVector getBatchRemainingResources(String label) {
-    return remainingResourceByLabel.getOrDefault(label, ResourceVector.newInstance());
+  public ResourceVector getOverallRemainingResource(String label) {
+    overallRemainingResource.putIfAbsent(label, ResourceVector.newInstance());
+    return overallRemainingResource.get(label);
+  }
+  
+  /**
+   * Sets the remaining resources of a parent that is still available for its children.
+   *
+   * @param label node label
+   * @param resourceVector resource vector
+   */
+  public void setOverallRemainingResource(String label, ResourceVector resourceVector) {
+    overallRemainingResource.put(label, resourceVector);
+  }
+
+  /**
+   * Returns the remaining resources of a parent that is still available for its
+   * children. Decremented only after the calculator is finished its work on the corresponding
+   * resources.
+   *
+   * @param label node label
+   * @return remaining resources
+   */
+  public ResourceVector getPostCalculatorRemainingResource(String label) {
+    remainingResourceByLabel.putIfAbsent(label, ResourceVector.newInstance());
+    return remainingResourceByLabel.get(label);
   }
 }
