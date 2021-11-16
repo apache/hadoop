@@ -191,6 +191,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Mock delete response to 404
     when(op.getResult()).thenReturn(http404Op);
+    when(op.hasResult()).thenReturn(true);
 
     Assertions.assertThat(testClient.deleteIdempotencyCheckOp(op)
         .getResult()
@@ -206,6 +207,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Mock delete response to 400
     when(op.getResult()).thenReturn(http400Op);
+    when(op.hasResult()).thenReturn(true);
 
     Assertions.assertThat(testClient.deleteIdempotencyCheckOp(op)
         .getResult()
