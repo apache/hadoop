@@ -26,7 +26,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.impl.AsyncReaderUtils;
+import org.apache.hadoop.fs.impl.VectoredReadUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -809,7 +809,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws EOFException
    */
   private void validateRangeRequest(FileRange range) throws EOFException {
-    AsyncReaderUtils.validateRangeRequest(range);
+    VectoredReadUtils.validateRangeRequest(range);
     if(range.getOffset() + range.getLength() > contentLength) {
       throw new EOFException("Requested range is beyond EOF");
     }

@@ -32,7 +32,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
 import java.util.function.IntFunction;
 import java.util.zip.CRC32;
 
@@ -41,7 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
-import org.apache.hadoop.fs.impl.AsyncReaderUtils;
+import org.apache.hadoop.fs.impl.VectoredReadUtils;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -382,7 +381,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
       // If the stream doesn't have checksums, just delegate.
-      AsyncReaderUtils.validateVectoredReadRanges(ranges);
+      VectoredReadUtils.validateVectoredReadRanges(ranges);
       if (sums == null) {
         datas.readVectored(ranges, allocate);
         return;
@@ -390,7 +389,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       int minSeek = minSeekForVectorReads();
       int maxSize = maxReadSizeForVectorReads();
       List<CombinedFileRange> dataRanges =
-          AsyncReaderUtils.sortAndMergeRanges(ranges, bytesPerSum,
+          VectoredReadUtils.sortAndMergeRanges(ranges, bytesPerSum,
               minSeek, maxReadSizeForVectorReads());
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
@@ -412,7 +411,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
           // Now, slice the read data range to the user's ranges
           for(FileRange original: ((CombinedFileRange) dataRange).getUnderlying()) {
             original.setData(result.thenApply(
-                (b) -> AsyncReaderUtils.sliceTo(b, dataRange.getOffset(), original)));
+                (b) -> VectoredReadUtils.sliceTo(b, dataRange.getOffset(), original)));
           }
         }
       }

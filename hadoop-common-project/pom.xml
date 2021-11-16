@@ -56,13 +56,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>benchmark</id>
-      <modules>
-        <module>benchmark</module>
-      </modules>
-    </profile>
-  </profiles>
 </project>

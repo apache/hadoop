@@ -23,6 +23,8 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileRangeImpl;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.junit.Test;
+
+import org.apache.hadoop.test.HadoopTestBase;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -34,6 +36,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
+import org.assertj.core.api.Assertions;
+
+import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionaly;
+import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -41,9 +47,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test behavior of {@link AsyncReaderUtils}.
+ * Test behavior of {@link VectoredReadUtils}.
  */
-public class TestAsyncReaderUtils  {
+public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testSliceTo() {
@@ -55,19 +61,28 @@ public class TestAsyncReaderUtils  {
       intBuffer.put(i);
     }
     // ensure we don't make unnecessary slices
-    ByteBuffer slice = AsyncReaderUtils.sliceTo(buffer, 100,
+    ByteBuffer slice = VectoredReadUtils.sliceTo(buffer, 100,
         new FileRangeImpl(100, SIZE));
-    assertSame(buffer, slice);
+    Assertions.assertThat(buffer)
+            .describedAs("Slicing on the same offset shouldn't " +
+                    "create a new buffer")
+            .isEqualTo(slice);
 
     // try slicing a range
     final int OFFSET = 100;
     final int SLICE_START = 1024;
     final int SLICE_LENGTH = 16 * 1024;
-    slice = AsyncReaderUtils.sliceTo(buffer, OFFSET,
+    slice = VectoredReadUtils.sliceTo(buffer, OFFSET,
         new FileRangeImpl(OFFSET + SLICE_START, SLICE_LENGTH));
     // make sure they aren't the same, but use the same backing data
-    assertNotSame(buffer, slice);
-    assertSame(buffer.array(), slice.array());
+    Assertions.assertThat(buffer)
+            .describedAs("Slicing on new offset should " +
+                    "create a new buffer")
+            .isNotEqualTo(slice);
+    Assertions.assertThat(buffer.array())
+            .describedAs("Slicing should use the same underlying " +
+                    "data")
+            .isEqualTo(slice.array());
     // test the contents of the slice
     intBuffer = slice.asIntBuffer();
     for(int i=0; i < SLICE_LENGTH / Integer.BYTES; ++i) {
@@ -78,11 +93,11 @@ public class TestAsyncReaderUtils  {
   @Test
   public void testRounding() {
     for(int i=5; i < 10; ++i) {
-      assertEquals("i = "+ i, 5, AsyncReaderUtils.roundDown(i, 5));
-      assertEquals("i = "+ i, 10, AsyncReaderUtils.roundUp(i+1, 5));
+      assertEquals("i = "+ i, 5, VectoredReadUtils.roundDown(i, 5));
+      assertEquals("i = "+ i, 10, VectoredReadUtils.roundUp(i+1, 5));
     }
-    assertEquals(13, AsyncReaderUtils.roundDown(13, 1));
-    assertEquals(13, AsyncReaderUtils.roundUp(13, 1));
+    assertEquals(13, VectoredReadUtils.roundDown(13, 1));
+    assertEquals(13, VectoredReadUtils.roundUp(13, 1));
   }
 
   @Test
@@ -129,39 +144,39 @@ public class TestAsyncReaderUtils  {
         new FileRangeImpl(2100, 100),
         new FileRangeImpl(1000, 100)
         );
-    assertFalse(AsyncReaderUtils.isOrderedDisjoint(input, 100, 800));
-    List<CombinedFileRange> outputList = AsyncReaderUtils.sortAndMergeRanges(
+    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
+    List<CombinedFileRange> outputList = VectoredReadUtils.sortAndMergeRanges(
         input, 100, 1001, 2500);
     assertEquals(1, outputList.size());
     CombinedFileRange output = outputList.get(0);
     assertEquals(3, output.getUnderlying().size());
     assertEquals("range[1000,3100)", output.toString());
-    assertTrue(AsyncReaderUtils.isOrderedDisjoint(outputList, 100, 800));
+    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
 
     // the minSeek doesn't allow the first two to merge
-    assertFalse(AsyncReaderUtils.isOrderedDisjoint(input, 100, 1000));
-    outputList = AsyncReaderUtils.sortAndMergeRanges(input, 100, 1000, 2100);
+    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 1000));
+    outputList = VectoredReadUtils.sortAndMergeRanges(input, 100, 1000, 2100);
     assertEquals(2, outputList.size());
     assertEquals("range[1000,1100)", outputList.get(0).toString());
     assertEquals("range[2100,3100)", outputList.get(1).toString());
-    assertTrue(AsyncReaderUtils.isOrderedDisjoint(outputList, 100, 1000));
+    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 100, 1000));
 
     // the maxSize doesn't allow the third range to merge
-    assertFalse(AsyncReaderUtils.isOrderedDisjoint(input, 100, 800));
-    outputList = AsyncReaderUtils.sortAndMergeRanges(input, 100, 1001, 2099);
+    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
+    outputList = VectoredReadUtils.sortAndMergeRanges(input, 100, 1001, 2099);
     assertEquals(2, outputList.size());
     assertEquals("range[1000,2200)", outputList.get(0).toString());
     assertEquals("range[3000,3100)", outputList.get(1).toString());
-    assertTrue(AsyncReaderUtils.isOrderedDisjoint(outputList, 100, 800));
+    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
 
     // test the round up and round down (the maxSize doesn't allow any merges)
-    assertFalse(AsyncReaderUtils.isOrderedDisjoint(input, 16, 700));
-    outputList = AsyncReaderUtils.sortAndMergeRanges(input, 16, 1001, 100);
+    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 16, 700));
+    outputList = VectoredReadUtils.sortAndMergeRanges(input, 16, 1001, 100);
     assertEquals(3, outputList.size());
     assertEquals("range[992,1104)", outputList.get(0).toString());
     assertEquals("range[2096,2208)", outputList.get(1).toString());
     assertEquals("range[2992,3104)", outputList.get(2).toString());
-    assertTrue(AsyncReaderUtils.isOrderedDisjoint(outputList, 16, 700));
+    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 16, 700));
   }
 
   interface Stream extends PositionedReadable, ByteBufferPositionedReadable {
@@ -184,9 +199,9 @@ public class TestAsyncReaderUtils  {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
                               ArgumentMatchers.any(ByteBuffer.class));
     CompletableFuture<ByteBuffer> result =
-        AsyncReaderUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
         ByteBuffer::allocate);
-    assertTrue(result.isDone());
+    assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
     assertEquals(100, buffer.remaining());
     byte b = 0;
@@ -200,9 +215,9 @@ public class TestAsyncReaderUtils  {
         .when(stream).readFully(ArgumentMatchers.anyLong(),
                                 ArgumentMatchers.any(ByteBuffer.class));
     result =
-        AsyncReaderUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
             ByteBuffer::allocate);
-    assertTrue(result.isCompletedExceptionally());
+    assertFutureFailedExceptionaly(result);
   }
 
   static void runReadRangeFromPositionedReadable(IntFunction<ByteBuffer> allocate) throws Exception {
@@ -218,10 +233,9 @@ public class TestAsyncReaderUtils  {
         ArgumentMatchers.any(), ArgumentMatchers.anyInt(),
         ArgumentMatchers.anyInt());
     CompletableFuture<ByteBuffer> result =
-        AsyncReaderUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
             allocate);
-    assertTrue(result.isDone());
-    assertFalse(result.isCompletedExceptionally());
+    assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
     assertEquals(100, buffer.remaining());
     byte b = 0;
@@ -236,9 +250,9 @@ public class TestAsyncReaderUtils  {
         ArgumentMatchers.any(), ArgumentMatchers.anyInt(),
         ArgumentMatchers.anyInt());
     result =
-        AsyncReaderUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, new FileRangeImpl(1000, 100),
             ByteBuffer::allocate);
-    assertTrue(result.isCompletedExceptionally());
+    assertFutureFailedExceptionaly(result);
   }
 
   @Test
@@ -271,7 +285,7 @@ public class TestAsyncReaderUtils  {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(ByteBuffer.class));
     // should not merge the ranges
-    AsyncReaderUtils.readAsync(stream, input, ByteBuffer::allocate, 100, 100);
+    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate, 100, 100);
     Mockito.verify(stream, Mockito.times(3))
         .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
     for(int b=0; b < input.size(); ++b) {
@@ -291,7 +305,7 @@ public class TestAsyncReaderUtils  {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(ByteBuffer.class));
     // should merge the ranges into a single read
-    AsyncReaderUtils.readAsync(stream, input, ByteBuffer::allocate, 1000, 2100);
+    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate, 1000, 2100);
     Mockito.verify(stream, Mockito.times(1))
         .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
     for(int b=0; b < input.size(); ++b) {
