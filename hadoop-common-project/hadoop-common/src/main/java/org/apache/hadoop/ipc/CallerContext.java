@@ -43,6 +43,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
+  public static final String CLIENT_IP_STR = "realClientIp";
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in

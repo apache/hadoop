@@ -300,7 +300,35 @@ public class NetUtils {
     }
     return addr;
   }
-  
+
+  /**
+   * @return true if the given string is a Ipv4
+   * false otherwise
+   */
+  public static boolean isValidIPv4(String ip) {
+    if (ip.length() < 7) return false;
+    if (ip.charAt(0) == '.') return false;
+    if (ip.charAt(ip.length() - 1) == '.') return false;
+    String[] tokens = ip.split("\\.");
+    if (tokens.length != 4) return false;
+    for (String token : tokens) {
+      if (!isValidIPv4Token(token)) return false;
+    }
+    return true;
+  }
+
+  public static boolean isValidIPv4Token(String token) {
+    if (token.startsWith("0") && token.length() > 1) return false;
+    try {
+      int parsedInt = Integer.parseInt(token);
+      if (parsedInt < 0 || parsedInt > 255) return false;
+      if (parsedInt == 0 && token.charAt(0) != '0') return false;
+    } catch (NumberFormatException nfe) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Resolve the uri's hostname and add the default port if not in the uri
    * @param uri to resolve
