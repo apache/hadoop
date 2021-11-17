@@ -83,12 +83,6 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
     assertEquals(new URI("fs2:/").getAuthority(), fs2.getUri().getAuthority());
   }
   
-  @Test
-  public void testVerifyChecksum() throws Exception {
-    checkVerifyChecksum(false);
-    checkVerifyChecksum(true);
-  }
-
   /**
    * Tests that ViewFileSystem dispatches calls for every ACL method through the
    * mount table to the correct underlying FileSystem with all Path arguments
@@ -142,12 +136,6 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
     verify(mockFs1).getAclStatus(mockFsPath1);
     viewFs.getAclStatus(viewFsPath2);
     verify(mockFs2).getAclStatus(mockFsPath2);
-  }
-
-  void checkVerifyChecksum(boolean flag) {
-    viewFs.setVerifyChecksum(flag);
-    assertEquals(flag, fs1.getVerifyChecksum());
-    assertEquals(flag, fs2.getVerifyChecksum());
   }
 
   static class FakeFileSystem extends LocalFileSystem {
