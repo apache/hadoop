@@ -1172,6 +1172,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
+  public void renewLease(String clientName, String nsId) throws IOException {
+    renewLease(clientName);
+  }
+
+  @Override // ClientProtocol
   public DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException {
     checkNNStartup();

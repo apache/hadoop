@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
+
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
@@ -291,13 +293,17 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteLocation createLocation = null;
     try {
       createLocation = rpcServer.getCreateLocation(src, locations);
-      return rpcClient.invokeSingle(createLocation, method,
+      HdfsFileStatus stats = rpcClient.invokeSingle(createLocation, method,
           HdfsFileStatus.class);
+      stats.setNsId(createLocation.getNameserviceId()); // Set since HdfsFileStatus from a legacy NN doesn't have NsId
+      return stats;
     } catch (IOException ioe) {
       final List<RemoteLocation> newLocations = checkFaultTolerantRetry(
           method, src, ioe, createLocation, locations);
-      return rpcClient.invokeSequential(
+      HdfsFileStatus stats = rpcClient.invokeSequential(
           newLocations, method, HdfsFileStatus.class, null);
+      stats.setNsId(createLocation.getNameserviceId()); // Set since HdfsFileStatus from a legacy NN doesn't have NsId
+      return stats;
     }
   }
 
@@ -769,6 +775,19 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcClient.invokeConcurrent(nss, method, false, false);
   }
 
+  @Override // ClientProtocol
+  public void renewLease(String clientName, String nsId) throws IOException {
+    if (Strings.isNullOrEmpty(nsId)) {
+      renewLease(clientName);
+      return;
+    }
+
+    rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
+
+    RemoteMethod method = new RemoteMethod("renewLease",
+            new Class<?>[] {String.class, String.class}, clientName, nsId);
+    rpcClient.invokeSingle(nsId, method);
+  }
   @Override
   public DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException {

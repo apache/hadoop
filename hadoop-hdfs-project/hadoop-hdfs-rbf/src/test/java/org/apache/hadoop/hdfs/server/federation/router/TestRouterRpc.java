@@ -35,9 +35,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,9 +61,11 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -67,11 +76,14 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -114,6 +126,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
@@ -1966,5 +1979,38 @@ public class TestRouterRpc {
     GenericTestUtils.waitFor(() ->  {
       return datanodes.get(0).getBalancerBandwidth() == newBandwidth;
     }, 100, 60 * 1000);
+  }
+
+  @Test
+  public void testRenewLease() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    String ns = "router-ns";
+    conf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, ns);
+    conf.set(HdfsClientConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns, "nn");
+    conf.set(HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn",
+            "localhost:" + router.getRpcPort());
+    conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + ns,
+            ConfiguredFailoverProxyProvider.class.getName());
+    FileSystem fs = FileSystem.get(new URI("hdfs://" + ns + "/test1"), conf);
+    FSDataOutputStream stream = fs.create(new Path("/test1"));
+    assertEquals("ns0", ((DFSOutputStream) stream.getWrappedStream()).getNsId());
+
+    RouterRpcClient spyRpcClient = spy(cluster.getRouters().get(0)
+            .getRouter().getRpcServer().getRPCClient());
+    FieldUtils.writeField(cluster.getRouters().get(0).getRouter().getRpcServer(),
+           "rpcClient", spyRpcClient, true);
+    FieldUtils.writeField(cluster.getRouters().get(1).getRouter().getRpcServer(),
+           "rpcClient", spyRpcClient, true);
+
+    DFSClient client = ((DistributedFileSystem) fs).getClient();
+    client.renewLease();
+    stream.close();
+
+    verify(spyRpcClient, times(1))
+            .invokeSingle(eq("ns0"), any(RemoteMethod.class));
+    verify(spyRpcClient, never())
+            .invokeSingle(eq("ns1"), any(RemoteMethod.class));
+    verify(spyRpcClient, never())
+            .invokeConcurrent(any(), any(RemoteMethod.class), eq(false), eq(false));
   }
 }

@@ -37,6 +37,7 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
   private byte[] uPath;
   private byte[] uSymlink; // symlink target encoded in java UTF8/null
   private final long fileId;
+  private String nsId;
   private final FileEncryptionInfo feInfo;
   private final ErasureCodingPolicy ecPolicy;
 
@@ -58,6 +59,7 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
    * @param symlink symlink target encoded in java UTF8 or null
    * @param path the local name in java UTF8 encoding the same as that in-memory
    * @param fileId the file id
+   * @param nsId name service id the file is on
    * @param childrenNum the number of children. Used by directory.
    * @param feInfo the file's encryption info
    * @param storagePolicy ID which specifies storage policy
@@ -67,7 +69,8 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
                       long blocksize, long mtime, long atime,
                       FsPermission permission, Set<Flags> flags,
                       String owner, String group,
-                      byte[] symlink, byte[] path, long fileId,
+                      byte[] symlink, byte[] path,
+                      long fileId, String nsId,
                       int childrenNum, FileEncryptionInfo feInfo,
                       byte storagePolicy, ErasureCodingPolicy ecPolicy) {
     super(length, isdir, replication, blocksize, mtime, atime,
@@ -77,6 +80,7 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
     this.uSymlink = symlink;
     this.uPath = path;
     this.fileId = fileId;
+    this.nsId = nsId;
     this.childrenNum = childrenNum;
     this.feInfo = feInfo;
     this.storagePolicy = storagePolicy;
@@ -137,6 +141,16 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
   @Override
   public long getFileId() {
     return fileId;
+  }
+
+  @Override
+  public String getNsId() {
+    return nsId;
+  }
+
+  @Override
+  public void setNsId(String nsId) {
+    this.nsId = nsId;
   }
 
   @Override

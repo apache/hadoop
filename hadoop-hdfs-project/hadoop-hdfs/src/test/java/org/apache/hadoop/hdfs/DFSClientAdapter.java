@@ -54,8 +54,8 @@ public class DFSClientAdapter {
     return dfs.dfs;
   }
 
-  public static ExtendedBlock getPreviousBlock(DFSClient client, long fileId) {
-    return client.getPreviousBlock(fileId);
+  public static ExtendedBlock getPreviousBlock(DFSClient client, long fileId, String nsId) {
+    return client.getPreviousBlock(fileId, nsId);
   }
 
   public static long getFileId(DFSOutputStream out) {

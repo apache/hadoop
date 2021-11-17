@@ -1782,6 +1782,7 @@ public class PBHelperClient {
         .fileId(fs.hasFileId()
             ? fs.getFileId()
             : HdfsConstants.GRANDFATHER_INODE_ID)
+        .nsId(fs.getNsId())
         .locations(fs.hasLocations() ? convert(fs.getLocations()) : null)
         .children(fs.hasChildrenNum() ? fs.getChildrenNum() : -1)
         .feInfo(fs.hasFileEncryptionInfo()
@@ -2399,6 +2400,9 @@ public class PBHelperClient {
     flags |= fs.isSnapshotEnabled() ? HdfsFileStatusProto.Flags
         .SNAPSHOT_ENABLED_VALUE : 0;
     builder.setFlags(flags);
+    if (fs.getNsId() != null) {
+      builder.setNsId(fs.getNsId());
+    }
     return builder.build();
   }
 

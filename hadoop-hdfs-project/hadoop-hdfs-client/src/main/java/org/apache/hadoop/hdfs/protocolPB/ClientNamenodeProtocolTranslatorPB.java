@@ -754,6 +754,19 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
+  public void renewLease(String clientName, String nsId) throws IOException {
+    RenewLeaseRequestProto req = RenewLeaseRequestProto.newBuilder()
+            .setClientName(clientName)
+            .setNsId(nsId)
+            .build();
+    try {
+      rpcProxy.renewLease(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public boolean recoverLease(String src, String clientName)
       throws IOException {
     RecoverLeaseRequestProto req = RecoverLeaseRequestProto.newBuilder()
