@@ -151,7 +151,7 @@ public class TestDataNodeVolumeMetrics {
     LOG.info("MetadataOperationSampleCount : " +
         metrics.getMetadataOperationSampleCount());
     LOG.info("MetadataOperationMean : " + metrics.getMetadataOperationMean());
-    LOG.info("MetadataFileIoStdDev : " +
+    LOG.info("MetadataOperationStdDev : " +
         metrics.getMetadataOperationStdDev());
 
     LOG.info("DataFileIoSampleCount : " + metrics.getDataFileIoSampleCount());
@@ -173,6 +173,15 @@ public class TestDataNodeVolumeMetrics {
     LOG.info("writeIoSampleCount : " + metrics.getWriteIoSampleCount());
     LOG.info("writeIoMean : " + metrics.getWriteIoMean());
     LOG.info("writeIoStdDev : " + metrics.getWriteIoStdDev());
+
+    LOG.info("transferIoSampleCount : " + metrics.getTransferIoSampleCount());
+    LOG.info("transferIoMean : " + metrics.getTransferIoMean());
+    LOG.info("transferIoStdDev : " + metrics.getTransferIoStdDev());
+
+    LOG.info("nativeCopyIoSampleCount : " +
+        metrics.getNativeCopyIoSampleCount());
+    LOG.info("nativeCopyIoMean : " + metrics.getNativeCopyIoMean());
+    LOG.info("nativeCopyIoStdDev : " + metrics.getNativeCopyIoStdDev());
 
     LOG.info("fileIoErrorSampleCount : "
         + metrics.getFileIoErrorSampleCount());

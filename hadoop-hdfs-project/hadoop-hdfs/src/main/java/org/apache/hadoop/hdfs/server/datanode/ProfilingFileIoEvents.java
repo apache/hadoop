@@ -116,6 +116,12 @@ class ProfilingFileIoEvents {
         case WRITE:
           metrics.addWriteIoLatency(latency);
           break;
+        case TRANSFER:
+          metrics.addTransferIoLatency(latency);
+          break;
+        case NATIVE_COPY:
+          metrics.addNativeCopyIoLatency(latency);
+          break;
         default:
         }
       }

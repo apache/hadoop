@@ -71,6 +71,14 @@ public class DataNodeVolumeMetrics {
   private MutableRate writeIoRate;
   private MutableQuantiles[] writeIoLatencyQuantiles;
 
+  @Metric("file io transfer rate")
+  private MutableRate transferIoRate;
+  private MutableQuantiles[] transferIoLatencyQuantiles;
+
+  @Metric("file io nativeCopy rate")
+  private MutableRate nativeCopyIoRate;
+  private MutableQuantiles[] nativeCopyIoLatencyQuantiles;
+
   @Metric("number of file io errors")
   private MutableCounterLong totalFileIoErrors;
   @Metric("file io error rate")
@@ -162,6 +170,40 @@ public class DataNodeVolumeMetrics {
     return writeIoRate.lastStat().stddev();
   }
 
+  // Based on transferIoRate
+  public long getTransferIoSampleCount() {
+    return transferIoRate.lastStat().numSamples();
+  }
+
+  public double getTransferIoMean() {
+    return transferIoRate.lastStat().mean();
+  }
+
+  public double getTransferIoStdDev() {
+    return transferIoRate.lastStat().stddev();
+  }
+
+  public MutableQuantiles[] getTransferIoQuantiles() {
+    return transferIoLatencyQuantiles;
+  }
+
+  // Based on nativeCopyIoRate
+  public long getNativeCopyIoSampleCount() {
+    return nativeCopyIoRate.lastStat().numSamples();
+  }
+
+  public double getNativeCopyIoMean() {
+    return nativeCopyIoRate.lastStat().mean();
+  }
+
+  public double getNativeCopyIoStdDev() {
+    return nativeCopyIoRate.lastStat().stddev();
+  }
+
+  public MutableQuantiles[] getNativeCopyIoQuantiles() {
+    return nativeCopyIoLatencyQuantiles;
+  }
+
   public long getTotalFileIoErrors() {
     return totalFileIoErrors.value();
   }
@@ -193,6 +235,8 @@ public class DataNodeVolumeMetrics {
     syncIoLatencyQuantiles = new MutableQuantiles[len];
     readIoLatencyQuantiles = new MutableQuantiles[len];
     writeIoLatencyQuantiles = new MutableQuantiles[len];
+    transferIoLatencyQuantiles = new MutableQuantiles[len];
+    nativeCopyIoLatencyQuantiles = new MutableQuantiles[len];
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
       metadataOperationLatencyQuantiles[i] = registry.newQuantiles(
@@ -213,6 +257,12 @@ public class DataNodeVolumeMetrics {
       writeIoLatencyQuantiles[i] = registry.newQuantiles(
           "writeIoLatency" + interval + "s",
           "Data write Io Latency in ms", "ops", "latency", interval);
+      transferIoLatencyQuantiles[i] = registry.newQuantiles(
+          "transferIoLatency" + interval + "s",
+          "Data transfer Io Latency in ms", "ops", "latency", interval);
+      nativeCopyIoLatencyQuantiles[i] = registry.newQuantiles(
+          "nativeCopyIoLatency" + interval + "s",
+          "Data nativeCopy Io Latency in ms", "ops", "latency", interval);
     }
   }
 
@@ -278,6 +328,20 @@ public class DataNodeVolumeMetrics {
   public void addWriteIoLatency(final long latency) {
     writeIoRate.add(latency);
     for (MutableQuantiles q: writeIoLatencyQuantiles) {
+      q.add(latency);
+    }
+  }
+
+  public void addTransferIoLatency(final long latency) {
+    transferIoRate.add(latency);
+    for (MutableQuantiles q: transferIoLatencyQuantiles) {
+      q.add(latency);
+    }
+  }
+
+  public void addNativeCopyIoLatency(final long latency) {
+    nativeCopyIoRate.add(latency);
+    for (MutableQuantiles q: nativeCopyIoLatencyQuantiles) {
       q.add(latency);
     }
   }
