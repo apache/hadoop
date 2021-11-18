@@ -989,7 +989,7 @@ public class DiskBalancer {
         try {
           iter.close();
         } catch (IOException ex) {
-          LOG.error("Error closing a block pool iter. ex: {}", ex);
+          LOG.error("Error closing a block pool iter. ex: ", ex);
         }
       }
     }
@@ -1124,7 +1124,7 @@ public class DiskBalancer {
                 startTime);
             item.setSecondsElapsed(secondsElapsed);
           } catch (IOException ex) {
-            LOG.error("Exception while trying to copy blocks. error: {}", ex);
+            LOG.error("Exception while trying to copy blocks. error: ", ex);
             item.incErrorCount();
           } catch (InterruptedException e) {
             LOG.error("Copy Block Thread interrupted, exiting the copy.");
@@ -1133,7 +1133,7 @@ public class DiskBalancer {
             this.setExitFlag();
           } catch (RuntimeException ex) {
             // Exiting if any run time exceptions.
-            LOG.error("Got an unexpected Runtime Exception {}", ex);
+            LOG.error("Got an unexpected Runtime Exception ", ex);
             item.incErrorCount();
             this.setExitFlag();
           }
