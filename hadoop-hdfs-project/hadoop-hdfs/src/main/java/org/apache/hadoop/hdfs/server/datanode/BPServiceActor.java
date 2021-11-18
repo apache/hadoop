@@ -1190,7 +1190,7 @@ class BPServiceActor implements Runnable {
 
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
-    private final long blockReportIntervalMs;
+    private volatile long blockReportIntervalMs;
     private final long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
@@ -1344,6 +1344,14 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     void setNextBlockReportTime(long nextBlockReportTime) {
       this.nextBlockReportTime.getAndSet(nextBlockReportTime);
+    }
+
+    long getBlockReportIntervalMs() {
+      return this.blockReportIntervalMs;
+    }
+
+    void setBlockReportIntervalMs(long intervalMs) {
+      this.blockReportIntervalMs = intervalMs;
     }
 
     /**
