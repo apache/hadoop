@@ -297,7 +297,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   @VisibleForTesting
-  int getReferenceCount() {
+  public int getReferenceCount() {
     return this.reference.getReferenceCount();
   }
 
