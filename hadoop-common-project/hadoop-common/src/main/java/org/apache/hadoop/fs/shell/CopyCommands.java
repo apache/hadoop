@@ -219,7 +219,7 @@ class CopyCommands {
             + "  -ignoreCrc : Skip CRC checks on the file(s) downloaded."
             + "  -t <thread count> : Number of threads to be used,"
             + " default is 1.\n"
-            + "  -q <thread pool queue size> : ThreadPool queue size to be"
+            + "  -q <thread pool queue size> : Thread pool queue size to be"
             + " used, default is 1024.\n";
 
     @Override
@@ -257,7 +257,7 @@ class CopyCommands {
         "  -p : Preserves timestamps, ownership and the mode.\n" +
         "  -f : Overwrites the destination if it already exists.\n" +
         "  -t <thread count> : Number of threads to be used, default is 1.\n" +
-        "  -q <thread pool queue size> : ThreadPool queue size to be used, " +
+        "  -q <thread pool queue size> : Thread pool queue size to be used, " +
         "default is 1024.\n" +
         "  -l : Allow DataNode to lazily persist the file to disk. Forces" +
         "  replication factor of 1. This flag will result in reduced" +
