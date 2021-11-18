@@ -36,9 +36,9 @@ public class RootQueueCapacityCalculator extends
   @Override
   public void updateCapacitiesAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, String label) {
-    resourceCalculationDriver.getCurrentChild().getQueueCapacities().setAbsoluteCapacity(label, 1);
-    if (resourceCalculationDriver.getCurrentChild().getQueueCapacities().getWeight(label) == 1) {
-      resourceCalculationDriver.getCurrentChild().getQueueCapacities().setNormalizedWeight(label, 1);
+    resourceCalculationDriver.getParent().getQueueCapacities().setAbsoluteCapacity(label, 1);
+    if (resourceCalculationDriver.getParent().getQueueCapacities().getWeight(label) == 1) {
+      resourceCalculationDriver.getParent().getQueueCapacities().setNormalizedWeight(label, 1);
     }
   }
 

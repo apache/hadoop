@@ -19,28 +19,23 @@ public final class RootCalculationDriver extends ResourceCalculationDriver {
 
   @Override
   public void calculateResources() {
-    setCurrentChild(parent);
-
     for (String label : parent.getConfiguredNodeLabels()) {
       for (QueueCapacityVector.QueueCapacityVectorEntry capacityVectorEntry : parent.getConfiguredCapacityVector(label)) {
         currentResourceName = capacityVectorEntry.getResourceName();
-        parent.getOrCreateAbsoluteMinCapacityVector(label).setValue(
-            capacityVectorEntry.getResourceName(), 1);
-        parent.getOrCreateAbsoluteMaxCapacityVector(label).setValue(
-            capacityVectorEntry.getResourceName(), 1);
+        parent.getOrCreateAbsoluteMinCapacityVector(label).setValue(currentResourceName, 1);
+        parent.getOrCreateAbsoluteMaxCapacityVector(label).setValue(currentResourceName, 1);
 
         float minimumResource = rootCalculator.calculateMinimumResource(this, label);
         float maximumResource = rootCalculator.calculateMaximumResource(this, label);
         long roundedMinResource = (long) Math.floor(minimumResource);
         long roundedMaxResource = (long) Math.floor(maximumResource);
-        parent.getQueueResourceQuotas().getEffectiveMinResource(label)
-            .setResourceValue(capacityVectorEntry.getResourceName(), roundedMinResource);
-        parent.getQueueResourceQuotas().getEffectiveMaxResource(label)
-            .setResourceValue(capacityVectorEntry.getResourceName(), roundedMaxResource);
+        parent.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
+            currentResourceName, roundedMinResource);
+        parent.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
+            currentResourceName, roundedMaxResource);
       }
       rootCalculator.updateCapacitiesAfterCalculation(this, label);
     }
-
 
     rootCalculator.calculateResourcePrerequisites(this);
   }
