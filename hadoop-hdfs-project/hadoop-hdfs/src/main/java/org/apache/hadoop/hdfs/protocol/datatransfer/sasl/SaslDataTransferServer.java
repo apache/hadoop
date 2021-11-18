@@ -444,9 +444,9 @@ public class SaslDataTransferServer {
         // connecting to this DN.
         sendInvalidKeySaslErrorMessage(out, ioe.getCause().getMessage());
       } else if (ioe instanceof SaslException &&
-                 ioe.getCause() != null &&
-                 (ioe.getCause() instanceof InvalidBlockTokenException ||
-                  ioe.getCause() instanceof SecretManager.InvalidToken)) {
+          ioe.getCause() != null &&
+          (ioe.getCause() instanceof InvalidBlockTokenException ||
+              ioe.getCause() instanceof SecretManager.InvalidToken)) {
         // This could be because the client is long-lived and block token is expired
         // The client will get new block token from the NN, upon receiving this error
         // and retry connecting to this DN
@@ -474,13 +474,13 @@ public class SaslDataTransferServer {
   /**
    * Sends a SASL negotiation message indicating an invalid token error.
    *
-   * @param out stream to receive message
+   * @param out     stream to receive message
    * @param message to send
    * @throws IOException for any error
    */
   private static void sendInvalidTokenSaslErrorMessage(DataOutputStream out,
-                                                       String message) throws IOException {
+      String message) throws IOException {
     sendSaslMessage(out, DataTransferEncryptorStatus.ERROR_ACCESS_TOKEN, null,
-                    message);
+        message);
   }
 }
