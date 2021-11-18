@@ -38,6 +38,7 @@ message DataTransferEncryptorMessageProto {
     SUCCESS = 0;
     ERROR_UNKNOWN_KEY = 1;
     ERROR = 2;
+    ERROR_ACCESS_TOKEN = 3;
   }
   required DataTransferEncryptorStatus status = 1;
   optional bytes payload = 2;

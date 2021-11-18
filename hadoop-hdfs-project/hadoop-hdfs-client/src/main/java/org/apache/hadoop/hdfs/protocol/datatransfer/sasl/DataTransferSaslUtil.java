@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncr
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.HandshakeSecretProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer.QualityOfProtection;
 import org.slf4j.Logger;
@@ -216,6 +217,8 @@ public final class DataTransferSaslUtil {
         DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
     if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
       throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_ACCESS_TOKEN) {
+      throw new InvalidBlockTokenException(proto.getMessage());
     } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
       throw new IOException(proto.getMessage());
     } else {
@@ -237,6 +240,8 @@ public final class DataTransferSaslUtil {
         DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
     if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
       throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_ACCESS_TOKEN) {
+      throw new InvalidBlockTokenException(proto.getMessage());
     } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
       throw new IOException(proto.getMessage());
     } else {
@@ -280,6 +285,8 @@ public final class DataTransferSaslUtil {
         DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
     if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
       throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_ACCESS_TOKEN) {
+      throw new InvalidBlockTokenException(proto.getMessage());
     } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
       throw new IOException(proto.getMessage());
     } else {
@@ -471,6 +478,8 @@ public final class DataTransferSaslUtil {
         DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
     if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
       throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_ACCESS_TOKEN) {
+      throw new InvalidBlockTokenException(proto.getMessage());
     } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
       throw new IOException(proto.getMessage());
     } else {
