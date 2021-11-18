@@ -18,29 +18,27 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
-
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 public class RootQueueCapacityCalculator extends
     AbstractQueueCapacityCalculator {
 
   @Override
-  public float calculateMinimumResource(QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
-    return updateContext.getUpdatedClusterResource(label).getResourceValue(capacityVectorEntry.getResourceName());
+  public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver, String label) {
+    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(resourceCalculationDriver.getCurrentResourceName());
   }
 
   @Override
-  public float calculateMaximumResource(QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label, QueueCapacityVectorEntry capacityVectorEntry) {
-    return updateContext.getUpdatedClusterResource(label).getResourceValue(capacityVectorEntry.getResourceName());
+  public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver, String label) {
+    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(resourceCalculationDriver.getCurrentResourceName());
   }
 
   @Override
   public void updateCapacitiesAfterCalculation(
-      QueueCapacityUpdateContext updateContext, CSQueue queue, String label) {
-    queue.getQueueCapacities().setAbsoluteCapacity(label, 1);
-    if (queue.getQueueCapacities().getWeight(label) == 1) {
-      queue.getQueueCapacities().setNormalizedWeight(label, 1);
+      ResourceCalculationDriver resourceCalculationDriver, String label) {
+    resourceCalculationDriver.getCurrentChild().getQueueCapacities().setAbsoluteCapacity(label, 1);
+    if (resourceCalculationDriver.getCurrentChild().getQueueCapacities().getWeight(label) == 1) {
+      resourceCalculationDriver.getCurrentChild().getQueueCapacities().setNormalizedWeight(label, 1);
     }
   }
 

@@ -35,16 +35,15 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
  * logic.
  */
 public abstract class AbstractQueueCapacityCalculator {
+  private static final String MB_UNIT = "Mi";
 
   /**
    * Sets the metrics and statistics after effective resource values calculation.
    *
-   * @param updateContext context of the current update phase
-   * @param queue         queue to update
    * @param label         node label
    */
   public abstract void updateCapacitiesAfterCalculation(
-      QueueCapacityUpdateContext updateContext, CSQueue queue, String label);
+      ResourceCalculationDriver resourceCalculationDriver, String label);
 
 
   /**
@@ -57,42 +56,36 @@ public abstract class AbstractQueueCapacityCalculator {
   /**
    * Calculates the minimum effective resource.
    *
-   * @param updateContext context of the current update phase
-   * @param childQueue    queue to update
+   * @param resourceCalculationDriver driver that contains the current resource unit and child to
+   *                                  process
    * @param label         node label
-   * @param capacityVectorEntry resource unit for which the calculation is executed
    * @return minimum effective resource
    */
-  public abstract float calculateMinimumResource(
-      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
-      QueueCapacityVectorEntry capacityVectorEntry);
+  public abstract float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                                 String label);
 
   /**
    * Calculates the maximum effective resource.
    *
-   * @param updateContext context of the current update phase
-   * @param childQueue    queue to update
+   * @param resourceCalculationDriver driver that contains the current resource unit and child to
+   *                                  process
    * @param label         node label
-   * @param capacityVectorEntry resource unit for which the calculation is executed
    * @return minimum effective resource
    */
-  public abstract float calculateMaximumResource(
-      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
-      QueueCapacityVectorEntry capacityVectorEntry);
+  public abstract float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                                 String label);
 
   /**
    * Executes all logic that must be called prior to the effective resource value calculations.
    *
-   * @param updateContext context of the current update phase
-   * @param parentQueue parent for which the prerequisite actions must be executed
+   * @param resourceCalculationDriver driver that contains the parent queue on which the prerequisite
+   *                                  calculation should be made
    */
-  public void calculateResourcePrerequisites(QueueCapacityUpdateContext updateContext,
-                                             CSQueue parentQueue) {
-    for (String label : parentQueue.getConfiguredNodeLabels()) {
+  public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
+    for (String label : resourceCalculationDriver.getParent().getConfiguredNodeLabels()) {
       // We need to set normalized resource ratio only once per parent
-      if (updateContext.getOrCreateQueueBranchContext(parentQueue.getQueuePath())
-          .getNormalizedResourceRatios().isEmpty()) {
-        setNormalizedResourceRatio(updateContext, parentQueue, label);
+      if (resourceCalculationDriver.getNormalizedResourceRatios().isEmpty()) {
+        setNormalizedResourceRatio(resourceCalculationDriver, label);
       }
     }
   }
@@ -170,14 +163,15 @@ public abstract class AbstractQueueCapacityCalculator {
    * aggregated configured absolute resource of its children, the resource ratio will be less,
    * than 1.
    *
-   * @param updateContext context of the current update phase
-   * @param parentQueue   parent for which the normalized ratio is defined
    * @param label         node label
    */
   private void setNormalizedResourceRatio(
-      QueueCapacityUpdateContext updateContext, CSQueue parentQueue, String label) {
+      ResourceCalculationDriver resourceCalculationDriver, String label) {
     // ManagedParents assign zero capacity to queues in case of overutilization, downscaling is
     // turned off for their children
+    CSQueue parentQueue = resourceCalculationDriver.getParent();
+    QueueCapacityUpdateContext updateContext = resourceCalculationDriver.getUpdateContext();
+
     if (parentQueue instanceof ManagedParentQueue) {
       return;
     }
@@ -215,14 +209,14 @@ public abstract class AbstractQueueCapacityCalculator {
             parentQueue.getQueuePath()));
       }
 
-      String unit = resourceName.equals(MEMORY_URI) ? "Mi" : "";
+      String unit = resourceName.equals(MEMORY_URI) ? MB_UNIT : "";
       long convertedValue = UnitsConversionUtil.convert(unit,
           updateContext.getUpdatedClusterResource(label).getResourceInformation(resourceName)
               .getUnits(), childrenConfiguredResource);
 
       if (convertedValue != 0) {
-        Map<String, ResourceVector> normalizedResourceRatios = updateContext.getOrCreateQueueBranchContext(
-            parentQueue.getQueuePath()).getNormalizedResourceRatios();
+        Map<String, ResourceVector> normalizedResourceRatios = resourceCalculationDriver
+            .getNormalizedResourceRatios();
         normalizedResourceRatios.putIfAbsent(label, ResourceVector.newInstance());
         normalizedResourceRatios.get(label).setValue(resourceName, numeratorForMinRatio /
             convertedValue);

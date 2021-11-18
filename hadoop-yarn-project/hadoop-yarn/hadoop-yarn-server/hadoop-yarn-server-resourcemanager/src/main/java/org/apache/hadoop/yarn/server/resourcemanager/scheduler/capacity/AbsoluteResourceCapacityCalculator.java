@@ -19,32 +19,31 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 
 public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
   public float calculateMinimumResource(
-      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
-      QueueCapacityVectorEntry capacityVectorEntry) {
-    String resourceName = capacityVectorEntry.getResourceName();
-    ResourceVector ratio = updateContext.getOrCreateQueueBranchContext(childQueue.getParent().getQueuePath())
-        .getNormalizedResourceRatios().getOrDefault(label, ResourceVector.of(1));
+       ResourceCalculationDriver resourceCalculationDriver, String label) {
+    String resourceName = resourceCalculationDriver.getCurrentResourceName();
+    ResourceVector ratio = resourceCalculationDriver.getNormalizedResourceRatios().getOrDefault(
+        label, ResourceVector.of(1));
 
-    return ratio.getValue(resourceName) * capacityVectorEntry.getResourceValue();
+    return ratio.getValue(resourceName) * resourceCalculationDriver.getCurrentMinimumCapacityEntry(label)
+        .getResourceValue();
   }
 
   @Override
   public float calculateMaximumResource(
-      QueueCapacityUpdateContext updateContext, CSQueue childQueue, String label,
-      QueueCapacityVectorEntry capacityVectorEntry) {
-    return capacityVectorEntry.getResourceValue();
+       ResourceCalculationDriver resourceCalculationDriver, String label) {
+    return resourceCalculationDriver.getCurrentMaximumCapacityEntry(label).getResourceValue();
   }
 
   @Override
   public void updateCapacitiesAfterCalculation(
-      QueueCapacityUpdateContext updateContext, CSQueue queue, String label) {
-    setQueueCapacities(updateContext.getUpdatedClusterResource(label), queue, label);
+      ResourceCalculationDriver resourceCalculationDriver, String label) {
+    setQueueCapacities(resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(
+        label), resourceCalculationDriver.getCurrentChild(), label);
   }
 
   @Override

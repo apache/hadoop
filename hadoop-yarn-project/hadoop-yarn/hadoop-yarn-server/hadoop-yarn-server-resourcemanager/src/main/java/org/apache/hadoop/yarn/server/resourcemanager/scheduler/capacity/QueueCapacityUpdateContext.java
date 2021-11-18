@@ -35,7 +35,6 @@ public class QueueCapacityUpdateContext {
   private final Resource updatedClusterResource;
   private final RMNodeLabelsManager labelsManager;
 
-  private final Map<String, QueueBranchContext> queueBranchContext = new HashMap<>();
   private final List<QueueUpdateWarning> warnings = new ArrayList<QueueUpdateWarning>();
 
   public QueueCapacityUpdateContext(Resource updatedClusterResource,
@@ -58,17 +57,6 @@ public class QueueCapacityUpdateContext {
    */
   public Resource getUpdatedClusterResource() {
     return updatedClusterResource;
-  }
-
-  /**
-   * Returns the context for a queue branch, which is identified by the path of
-   * the parent.
-   * @param queuePath queue path of the parent
-   * @return queue branch context
-   */
-  public QueueBranchContext getOrCreateQueueBranchContext(String queuePath) {
-    queueBranchContext.putIfAbsent(queuePath, new QueueBranchContext());
-    return queueBranchContext.get(queuePath);
   }
 
   /**
