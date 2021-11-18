@@ -53,9 +53,6 @@ public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestC
   private MiniDFSCluster cluster;
 
   @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Rule
   public Timeout timeout = new Timeout(60, TimeUnit.SECONDS);
 
   @Before
