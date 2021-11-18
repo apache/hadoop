@@ -63,9 +63,6 @@ public abstract class AbstractContractEtagTest extends
 
     final FileStatus st = fs.getFileStatus(path);
     final String etag = etagFromStatus(st);
-    Assertions.assertThat(etag)
-        .describedAs("Etag of %s", st)
-        .isNotBlank();
     LOG.info("etag of empty file is \"{}\"", etag);
 
     final FileStatus[] statuses = fs.listStatus(path);
