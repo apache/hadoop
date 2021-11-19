@@ -47,7 +47,7 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.OperationDuration;
 
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BLOCK_SIZE;
 import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
