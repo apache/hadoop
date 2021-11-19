@@ -587,7 +587,7 @@ public class FSImage implements Closeable {
     
     if (checkpointEditsDirs == null || checkpointEditsDirs.isEmpty()) {
       throw new IOException("Cannot import image from a checkpoint. "
-                            + "\"dfs.namenode.checkpoint.dir\" is not set." );
+                            + "\"dfs.namenode.checkpoint.edits.dir\" is not set." );
     }
 
     FSImage realImage = target.getFSImage();
