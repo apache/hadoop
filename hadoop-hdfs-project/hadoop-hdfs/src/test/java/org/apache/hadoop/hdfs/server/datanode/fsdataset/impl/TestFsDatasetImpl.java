@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaHandler;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.DataNodeVolumeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -1828,6 +1829,51 @@ public class TestFsDatasetImpl {
       assertEquals(beforeCnt, afterCnt);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testTransferAndNativeCopyMetrics() throws IOException {
+    Configuration config = new HdfsConfiguration();
+    config.setInt(
+        DFSConfigKeys.DFS_DATANODE_FILEIO_PROFILING_SAMPLING_PERCENTAGE_KEY,
+        100);
+    config.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY,
+        "60,300,1500");
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config)
+        .numDataNodes(1)
+        .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+        .storagesPerDatanode(2)
+        .build()) {
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      // Create file that has one block with one replica.
+      Path filePath = new Path(name.getMethodName());
+      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+
+      // Copy a new replica to other volume.
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      ReplicaInfo newReplicaInfo = createNewReplicaObj(block, fsDataSetImpl);
+      fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block);
+
+      // Get the volume where the original replica resides.
+      FsVolumeSpi volume = null;
+      for (FsVolumeSpi fsVolumeReference :
+          fsDataSetImpl.getFsVolumeReferences()) {
+        if (!fsVolumeReference.getStorageID()
+            .equals(newReplicaInfo.getStorageUuid())) {
+          volume = fsVolumeReference;
+        }
+      }
+
+      // Assert metrics.
+      DataNodeVolumeMetrics metrics = volume.getMetrics();
+      assertEquals(2, metrics.getTransferIoSampleCount());
+      assertEquals(3, metrics.getTransferIoQuantiles().length);
+      assertEquals(2, metrics.getNativeCopyIoSampleCount());
+      assertEquals(3, metrics.getNativeCopyIoQuantiles().length);
     }
   }
 }
