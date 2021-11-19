@@ -41,7 +41,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 
 public class TestSaslDataTransferExpiredBlockToken extends SaslDataTransferTestCase {
