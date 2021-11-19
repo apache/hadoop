@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkState;
 import static org.apache.hadoop.yarn.util.StringHelper.djoin;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.pjoin;
