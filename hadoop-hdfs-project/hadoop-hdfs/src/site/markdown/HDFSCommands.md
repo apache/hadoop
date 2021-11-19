@@ -750,7 +750,7 @@ Mount link:
        mount target uri for /user: hdfs://MyCluster2/user -->
 </property>
 ```
-    
+
 If user wants to talk to `hdfs://MyCluster2/`, then they can pass -fs option (`-fs hdfs://MyCluster1/user`)
 Since /user was mapped to a cluster `hdfs://MyCluster2/user`, dfsadmin resolve the passed (`-fs hdfs://MyCluster1/user`) to target fs (`hdfs://MyCluster2/user`).
 This way users can get the access to all hdfs child file systems in ViewFsOverloadScheme.
