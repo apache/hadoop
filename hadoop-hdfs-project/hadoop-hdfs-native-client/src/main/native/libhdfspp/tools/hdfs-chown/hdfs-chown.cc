@@ -29,29 +29,6 @@
 #include "tools_common.h"
 
 namespace hdfs::tools {
-Ownership::Ownership(const std::string &user_and_group) {
-  const auto owner_end = user_and_group.find(':');
-  if (owner_end == std::string::npos) {
-    user_ = user_and_group;
-    return;
-  }
-
-  user_ = user_and_group.substr(0, owner_end);
-  group_ = user_and_group.substr(owner_end + 1);
-}
-
-bool Ownership::operator==(const Ownership &other) const {
-  const auto same_user = user_ == other.user_;
-  if (group_.has_value() && other.group_.has_value()) {
-    return same_user && group_.value() == other.group_.value();
-  }
-
-  if (!group_.has_value() && !other.group_.has_value()) {
-    return same_user;
-  }
-  return false;
-}
-
 Chown::Chown(const int argc, char **argv) : HdfsTool(argc, argv) {}
 
 bool Chown::Initialize() {
@@ -161,8 +138,7 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
 
   // Wrap async FileSystem::SetOwner with promise to make it a blocking call
   auto promise = std::make_shared<std::promise<hdfs::Status>>();
-  std::future future(promise->get_future());
-
+  auto future(promise->get_future());
   auto handler = [promise](const hdfs::Status &s) { promise->set_value(s); };
 
   if (!recursive) {
@@ -180,9 +156,9 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
 
     /**
      * Keep requesting more from Find until we process the entire listing. Call
-     * handler when Find is done and reques counter is 0. Find guarantees that
+     * handler when Find is done and request counter is 0. Find guarantees that
      * the handler will only be called once at a time so we do not need locking
-     * in handlerFind.
+     * in handler_find.
      */
     auto handler_find = [fs,
                          state](const hdfs::Status &status_find,
@@ -191,7 +167,7 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
       /**
        * For each result returned by Find we call async SetOwner with the
        * handler below. SetOwner DOES NOT guarantee that the handler will only
-       * be called once at a time, so we DO need locking in handlerSetOwner.
+       * be called once at a time, so we DO need locking in handler_set_owner.
        */
       auto handler_set_owner = [state](const hdfs::Status &status_set_owner) {
         std::lock_guard guard(state->lock);

@@ -19,68 +19,14 @@
 #ifndef LIBHDFSPP_TOOLS_HDFS_CHOWN
 #define LIBHDFSPP_TOOLS_HDFS_CHOWN
 
-#include <functional>
-#include <mutex>
-#include <optional>
 #include <string>
-#include <utility>
 
 #include <boost/program_options.hpp>
 
+#include "hdfs-ownership.h"
 #include "hdfs-tool.h"
-#include "hdfspp/status.h"
 
 namespace hdfs::tools {
-struct Ownership {
-  explicit Ownership(const std::string &user_and_group);
-
-  [[nodiscard]] const std::string &GetUser() const { return user_; }
-
-  [[nodiscard]] const std::optional<std::string> &GetGroup() const {
-    return group_;
-  }
-
-  bool operator==(const Ownership &other) const;
-
-private:
-  std::string user_;
-  std::optional<std::string> group_;
-};
-
-struct OwnerState {
-  OwnerState(std::string username, std::string group,
-             std::function<void(const hdfs::Status &)> handler,
-             const uint64_t request_counter, const bool find_is_done)
-      : user{std::move(username)}, group{std::move(group)}, handler{std::move(
-                                                                handler)},
-        request_counter{request_counter}, find_is_done{find_is_done} {}
-
-  const std::string user;
-  const std::string group;
-  const std::function<void(const hdfs::Status &)> handler;
-
-  /**
-   * The request counter is incremented once every time SetOwner async call is
-   * made.
-   */
-  uint64_t request_counter;
-
-  /**
-   * This boolean will be set when find returns the last result.
-   */
-  bool find_is_done{false};
-
-  /**
-   * Final status to be returned.
-   */
-  hdfs::Status status{};
-
-  /**
-   * Shared variables will need protection with a lock.
-   */
-  std::mutex lock;
-};
-
 /**
  * {@class Chown} is an {@class HdfsTool} that changes the owner and/or group of
  * each file to owner and/or group.

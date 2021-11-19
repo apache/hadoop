@@ -28,13 +28,14 @@ link_directories( ${LIBHDFSPP_DIR}/lib )
 add_library(tools_common_obj OBJECT tools_common.cc)
 add_library(tools_common $<TARGET_OBJECTS:tools_common_obj>)
 
+add_library(hdfs_ownership_obj OBJECT hdfs-ownership.cc)
+
 add_library(hdfs_tool_obj OBJECT hdfs-tool.cc)
 target_include_directories(hdfs_tool_obj PRIVATE ../tools)
 
 add_subdirectory(hdfs-cat)
 
-add_executable(hdfs_chgrp hdfs_chgrp.cc)
-target_link_libraries(hdfs_chgrp tools_common hdfspp_static)
+add_subdirectory(hdfs-chgrp)
 
 add_subdirectory(hdfs-chown)
 
