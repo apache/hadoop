@@ -255,9 +255,10 @@ public class AbfsClient implements Closeable {
           encryptionContext = getPathStatus(path, false, tracingContext)
               .getResult().getResponseHeader(X_MS_ENCRYPTION_CONTEXT)
               .getBytes(StandardCharsets.UTF_8);
-        } catch (IOException e) {
-          LOG.debug("GetPathStatus call to retrieve encryptionContext failed.");
-          throw e;
+        } catch (NullPointerException e) {
+          LOG.debug("EncryptionContext not present in GetPathStatus response.");
+          throw new IOException(
+              "EncryptionContext not present in GetPathStatus response", e);
         }
         try {
           encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,

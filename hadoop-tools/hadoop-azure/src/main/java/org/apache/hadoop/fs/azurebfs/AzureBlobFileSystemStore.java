@@ -788,10 +788,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          encryptionAdapter = new EncryptionAdapter(
-              client.getEncryptionContextProvider(), getRelativePath(path),
-              op.getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
-                  .getBytes(StandardCharsets.UTF_8));
+          try {
+            encryptionAdapter = new EncryptionAdapter(
+                client.getEncryptionContextProvider(), getRelativePath(path),
+                op.getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
+                    .getBytes(StandardCharsets.UTF_8));
+          } catch (NullPointerException ex) {
+            LOG.debug("EncryptionContext missing in GetPathStatus response");
+            throw new IOException(
+                "EncryptionContext not present in GetPathStatus response headers", ex);
+          }
         }
       }
 
@@ -870,12 +876,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
-      byte[] encryptionContext = op.getResult()
-          .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
-          .getBytes(StandardCharsets.UTF_8);
-      EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
-          client.getEncryptionContextProvider(), getRelativePath(path),
-          encryptionContext);
+      EncryptionAdapter encryptionAdapter = null;
+      if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+        byte[] encryptionContext = op.getResult()
+            .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
+            .getBytes(StandardCharsets.UTF_8);
+        encryptionAdapter = new EncryptionAdapter(
+            client.getEncryptionContextProvider(), getRelativePath(path),
+            encryptionContext);
+      }
 
       return new AbfsOutputStream(
           populateAbfsOutputStreamContext(

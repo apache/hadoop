@@ -23,12 +23,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.UUID;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
-  private String dummyKey = "12345678901234567890123456789012";
   private HashMap<String, String> pathToContextMap = new HashMap<>();
   private HashMap<String, Key> contextToKeyMap = new HashMap<>();
   @Override
@@ -39,11 +40,10 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   @Override
   public SecretKey getEncryptionContext(String path)
       throws IOException {
-    String newContext = "context";
+    String newContext = UUID.randomUUID().toString();
     pathToContextMap.put(path, newContext);
-    // String key = UUID.randomUUID().toString();
-    Key key = new Key(dummyKey.getBytes(StandardCharsets.UTF_8));
-    // replace dummyKey with key above once server supports
+    String keyString = RandomStringUtils.random(32, true, true);
+    Key key = new Key(keyString.getBytes(StandardCharsets.UTF_8));
     contextToKeyMap.put(newContext, key);
     return new Key(newContext.getBytes(StandardCharsets.UTF_8));
   }

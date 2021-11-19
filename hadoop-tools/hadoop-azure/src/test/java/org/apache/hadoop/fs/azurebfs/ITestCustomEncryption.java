@@ -211,7 +211,8 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
       if (fileEncryptionType == ENCRYPTION_CONTEXT) {
         encryptionAdapter = new EncryptionAdapter(ecp,
             fs.getAbfsStore().getRelativePath(testPath),
-            "context".getBytes(StandardCharsets.UTF_8));
+            ((MockEncryptionContextProvider) ecp).getEncryptionContextForTest(testPath.toString())
+            .getBytes(StandardCharsets.UTF_8));
       }
       String path = testPath.toString();
       switch (operation) {
