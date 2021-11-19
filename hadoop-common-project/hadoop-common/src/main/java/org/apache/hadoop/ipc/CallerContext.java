@@ -43,6 +43,14 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
+
+  /**
+   * The illegal characters include '\t', '\n', '='.
+   * User should not set illegal characters to the context.
+   */
+  private static final Set<String> ILLEGAL_CHARACTERS =
+      Collections.unmodifiableSet(new HashSet<>(Arrays.asList("\t", "\n", "=")));
+
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in
@@ -74,9 +82,24 @@ public final class CallerContext {
         null : Arrays.copyOf(signature, signature.length);
   }
 
+  /**
+   * Whether the context is valid.
+   * The context should not contain '\t', '\n', '='.
+   * Because the context could be written to audit log.
+   */
   @InterfaceAudience.Private
   public boolean isContextValid() {
-    return context != null && !context.isEmpty();
+    if (context == null || context.isEmpty()) {
+      return false;
+    }
+
+    for (String str: ILLEGAL_CHARACTERS) {
+      if (context.contains(str)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @Override
@@ -117,13 +140,6 @@ public final class CallerContext {
   /** The caller context builder. */
   public static final class Builder {
     private static final String KEY_VALUE_SEPARATOR = ":";
-    /**
-     * The illegal separators include '\t', '\n', '='.
-     * User should not set illegal separator.
-     */
-    private static final Set<String> ILLEGAL_SEPARATORS =
-        Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList("\t", "\n", "=")));
     private final String fieldSeparator;
     private final StringBuilder sb = new StringBuilder();
     private byte[] signature;
@@ -156,7 +172,7 @@ public final class CallerContext {
      * @param separator the separator of fields.
      */
     private void checkFieldSeparator(String separator) {
-      if (ILLEGAL_SEPARATORS.contains(separator)) {
+      if (ILLEGAL_CHARACTERS.contains(separator)) {
         throw new IllegalArgumentException("Illegal field separator: "
             + separator);
       }
@@ -164,8 +180,6 @@ public final class CallerContext {
 
     /**
      * Whether the field is valid.
-     * The field should not contain '\t', '\n', '='.
-     * Because the context could be written to audit log.
      * @param field one of the fields in context.
      * @return true if the field is not null or empty.
      */

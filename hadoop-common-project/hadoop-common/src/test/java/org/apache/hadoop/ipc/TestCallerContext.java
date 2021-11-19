@@ -31,8 +31,7 @@ public class TestCallerContext {
     CallerContext.Builder builder = new CallerContext.Builder(null, conf);
     CallerContext context = builder.append("context1")
         .append("context2").append("key3", "value3").build();
-    Assert.assertEquals(true,
-        context.getContext().contains("$"));
+    Assert.assertTrue(context.getContext().contains("$"));
     String[] items = context.getContext().split("\\$");
     Assert.assertEquals(3, items.length);
     Assert.assertEquals("key3:value3", items[2]);
@@ -74,11 +73,24 @@ public class TestCallerContext {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testNewBuilder() {
+  public void testIllegalSeparator() {
     Configuration conf = new Configuration();
     // Set illegal separator.
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "\t");
     CallerContext.Builder builder = new CallerContext.Builder(null, conf);
     builder.build();
+  }
+
+  @Test
+  public void testValidateCallerContext() {
+    // CallerContext should not contain '\t', '\n', '='.
+    CallerContext context = new CallerContext.Builder("context1\ncontext2").build();
+    Assert.assertFalse(context.isContextValid());
+
+    context = new CallerContext.Builder("context1\tcontext2").build();
+    Assert.assertFalse(context.isContextValid());
+
+    context = new CallerContext.Builder("context1=context2").build();
+    Assert.assertFalse(context.isContextValid());
   }
 }
