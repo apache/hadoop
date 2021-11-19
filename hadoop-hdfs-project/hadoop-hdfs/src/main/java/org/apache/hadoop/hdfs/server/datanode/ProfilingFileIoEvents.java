@@ -80,7 +80,7 @@ class ProfilingFileIoEvents {
     if (isEnabled) {
       DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
       if (metrics != null) {
-        metrics.addMetadastaOperationLatency(Time.monotonicNow() - begin);
+        metrics.addMetadataOperationLatency(Time.monotonicNow() - begin);
       }
     }
   }
@@ -115,6 +115,12 @@ class ProfilingFileIoEvents {
           break;
         case WRITE:
           metrics.addWriteIoLatency(latency);
+          break;
+        case TRANSFER:
+          metrics.addTransferIoLatency(latency);
+          break;
+        case NATIVE_COPY:
+          metrics.addNativeCopyIoLatency(latency);
           break;
         default:
         }

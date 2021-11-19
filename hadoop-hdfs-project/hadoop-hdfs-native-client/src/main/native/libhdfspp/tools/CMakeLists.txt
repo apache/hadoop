@@ -60,8 +60,7 @@ target_link_libraries(hdfs_stat tools_common hdfspp_static)
 add_executable(hdfs_count hdfs_count.cc)
 target_link_libraries(hdfs_count tools_common hdfspp_static)
 
-add_executable(hdfs_df hdfs_df.cc)
-target_link_libraries(hdfs_df tools_common hdfspp_static)
+add_subdirectory(hdfs-df)
 
 add_executable(hdfs_du hdfs_du.cc)
 target_link_libraries(hdfs_du tools_common hdfspp_static)
@@ -80,17 +79,13 @@ target_link_libraries(hdfs_setrep tools_common hdfspp_static)
 
 add_subdirectory(hdfs-allow-snapshot)
 
-add_executable(hdfs_disallowSnapshot hdfs_disallowSnapshot.cc)
-target_link_libraries(hdfs_disallowSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-disallow-snapshot)
 
-add_executable(hdfs_createSnapshot hdfs_createSnapshot.cc)
-target_link_libraries(hdfs_createSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-create-snapshot)
 
-add_executable(hdfs_renameSnapshot hdfs_renameSnapshot.cc)
-target_link_libraries(hdfs_renameSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-rename-snapshot)
 
-add_executable(hdfs_deleteSnapshot hdfs_deleteSnapshot.cc)
-target_link_libraries(hdfs_deleteSnapshot tools_common hdfspp_static)
+add_subdirectory(hdfs-delete-snapshot)
 
 add_executable(hdfs_tail hdfs_tail.cc)
 target_link_libraries(hdfs_tail tools_common hdfspp_static)

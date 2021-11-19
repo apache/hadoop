@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.Groups;
@@ -133,7 +133,7 @@ public class CSMappingPlacementRule extends PlacementRule {
     overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
 
     if (groups == null) {
-      groups = Groups.getUserToGroupsMappingService(conf);
+      groups = Groups.getUserToGroupsMappingService(csContext.getConf());
     }
 
     MappingRuleValidationContext validationContext = buildValidationContext();
@@ -534,5 +534,10 @@ public class CSMappingPlacementRule extends PlacementRule {
     } else {
       return name;
     }
+  }
+
+  @VisibleForTesting
+  public Groups getGroups() {
+    return groups;
   }
 }

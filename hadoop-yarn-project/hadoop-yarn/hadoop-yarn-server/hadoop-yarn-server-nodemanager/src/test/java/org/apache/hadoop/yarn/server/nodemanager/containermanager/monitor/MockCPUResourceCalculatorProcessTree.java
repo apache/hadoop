@@ -57,6 +57,16 @@ public class MockCPUResourceCalculatorProcessTree
   }
 
   @Override
+  public long getVirtualMemorySize(int olderThanAge) {
+    return 0;
+  }
+
+  @Override
+  public long getRssMemorySize(int olderThanAge) {
+    return 0;
+  }
+
+  @Override
   public float getCpuUsagePercent() {
     long cpu = this.cpuPercentage;
     // First getter call will be returned with -1, and other calls will

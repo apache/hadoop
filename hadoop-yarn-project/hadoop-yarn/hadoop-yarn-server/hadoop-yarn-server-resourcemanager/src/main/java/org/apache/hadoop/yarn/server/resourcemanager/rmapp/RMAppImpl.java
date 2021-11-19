@@ -111,7 +111,7 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class RMAppImpl implements RMApp, Recoverable {
@@ -134,6 +134,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final RMContext rmContext;
   private final Configuration conf;
   private final String user;
+  private final UserGroupInformation userUgi;
   private final String name;
   private final ApplicationSubmissionContext submissionContext;
   private final Dispatcher dispatcher;
@@ -421,7 +422,19 @@ public class RMAppImpl implements RMApp, Recoverable {
       String applicationType, Set<String> applicationTags,
       List<ResourceRequest> amReqs, ApplicationPlacementContext
       placementContext, long startTime) {
+    this(applicationId, rmContext, config, name,
+        (user != null ? UserGroupInformation.createRemoteUser(user) : null),
+        queue, submissionContext, scheduler, masterService, submitTime,
+        applicationType, applicationTags, amReqs, placementContext, startTime);
+  }
 
+  public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
+      Configuration config, String name, UserGroupInformation userUgi,
+      String queue, ApplicationSubmissionContext submissionContext,
+      YarnScheduler scheduler, ApplicationMasterService masterService,
+      long submitTime, String applicationType, Set<String> applicationTags,
+      List<ResourceRequest> amReqs, ApplicationPlacementContext
+      placementContext, long startTime) {
     this.systemClock = SystemClock.getInstance();
 
     this.applicationId = applicationId;
@@ -430,7 +443,9 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.dispatcher = rmContext.getDispatcher();
     this.handler = dispatcher.getEventHandler();
     this.conf = config;
-    this.user = StringInterner.weakIntern(user);
+    this.user = StringInterner.weakIntern(
+        (userUgi != null) ? userUgi.getShortUserName() : null);
+    this.userUgi = userUgi;
     this.queue = queue;
     this.submissionContext = submissionContext;
     this.scheduler = scheduler;
@@ -1313,7 +1328,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     ApplicationStateData appState =
         ApplicationStateData.newInstance(this.submitTime, this.startTime,
-            this.user, this.submissionContext,
+            this.getUser(), this.getRealUser(), this.submissionContext,
             stateToBeStored, diags, this.launchTime, this.storedFinishTime,
             this.callerContext);
     appState.setApplicationTimeouts(this.applicationTimeouts);
@@ -1901,5 +1916,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   Clock getSystemClock() {
     return systemClock;
+  }
+
+  @Override
+  public String getRealUser() {
+    UserGroupInformation realUserUgi = this.userUgi.getRealUser();
+    return (realUserUgi != null) ? realUserUgi.getShortUserName() : null;
   }
 }

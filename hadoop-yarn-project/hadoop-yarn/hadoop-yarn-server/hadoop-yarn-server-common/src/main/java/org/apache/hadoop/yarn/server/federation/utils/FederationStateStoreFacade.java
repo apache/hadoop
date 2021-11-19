@@ -69,7 +69,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationH
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
 
 /**

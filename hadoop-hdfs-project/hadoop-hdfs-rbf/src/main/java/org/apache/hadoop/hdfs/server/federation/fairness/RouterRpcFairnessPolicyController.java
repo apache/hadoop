@@ -62,4 +62,9 @@ public interface RouterRpcFairnessPolicyController {
    * Shutdown steps to stop accepting new permission requests and clean-up.
    */
   void shutdown();
+
+  /**
+   * Returns the JSON string of the available handler for each Ns.
+   */
+  String getAvailableHandlerOnPerNs();
 }

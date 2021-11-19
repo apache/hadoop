@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.webapp;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -54,7 +54,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -420,7 +420,7 @@ public class LogServlet extends Configured {
 
   private static StreamingOutput createEmptyStream() {
     return outputStream -> outputStream.write(
-        "".getBytes(Charset.defaultCharset()));
+        "".getBytes(StandardCharsets.UTF_8));
   }
 
   /**

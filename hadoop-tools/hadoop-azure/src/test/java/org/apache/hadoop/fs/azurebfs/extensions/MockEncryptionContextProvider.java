@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
   private HashMap<String, String> pathToContextMap = new HashMap<>();

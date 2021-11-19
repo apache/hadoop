@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * {@link UsersManager} tracks users in the system and its respective data
@@ -817,6 +817,7 @@ public class UsersManager implements AbstractUsersManager {
             lQueue.getMinimumAllocation());
 
     if (LOG.isDebugEnabled()) {
+      float weight = lQueue.getUserWeights().getByUser(userName);
       LOG.debug("User limit computation for " + userName
           + ",  in queue: " + lQueue.getQueuePath()
           + ",  userLimitPercent=" + lQueue.getUserLimit()
@@ -834,7 +835,7 @@ public class UsersManager implements AbstractUsersManager {
           + ",  Partition=" + nodePartition
           + ",  resourceUsed=" + resourceUsed
           + ",  maxUserLimit=" + maxUserLimit
-          + ",  userWeight=" + getUser(userName).getWeight()
+          + ",  userWeight=" + weight
       );
     }
     return userLimitResource;

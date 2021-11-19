@@ -234,6 +234,12 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   }
 
   @Override
+  public String getAvailableHandlerOnPerNs() {
+    return rpcServer.getRPCClient().
+        getRouterRpcFairnessPolicyController().getAvailableHandlerOnPerNs();
+  }
+
+  @Override
   public String getAsyncCallerPool() {
     return rpcServer.getRPCClient().getAsyncCallerPoolJson();
   }
@@ -285,5 +291,15 @@ public class FederationRPCMetrics implements FederationRPCMBean {
   @Override
   public long getProxyOpPermitRejected() {
     return proxyOpPermitRejected.value();
+  }
+
+  @Override
+  public String getProxyOpPermitRejectedPerNs() {
+    return rpcServer.getRPCClient().getRejectedPermitsPerNsJSON();
+  }
+
+  @Override
+  public String getProxyOpPermitAcceptedPerNs() {
+    return rpcServer.getRPCClient().getAcceptedPermitsPerNsJSON();
   }
 }

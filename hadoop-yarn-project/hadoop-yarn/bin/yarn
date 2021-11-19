@@ -175,6 +175,10 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     router)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
+      # Backwards compatibility
+      if [[ -n "${YARN_ROUTER_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${YARN_ROUTER_HEAPSIZE}"
+      fi
     ;;
     schedulerconf)
     HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'
