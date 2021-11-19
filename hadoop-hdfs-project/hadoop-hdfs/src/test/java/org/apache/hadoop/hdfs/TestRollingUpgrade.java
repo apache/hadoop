@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeoutException;
 
 import javax.management.AttributeNotFoundException;
 import javax.management.InstanceNotFoundException;
@@ -325,7 +326,7 @@ public class TestRollingUpgrade {
       out.write(data, 0, data.length);
       out.close();
 
-      checkMxBeanIsNull();
+      waitForNullMxBean();
       startRollingUpgrade(foo, bar, file, data, cluster);
       checkMxBean();
       cluster.getFileSystem().rollEdits();
@@ -354,6 +355,18 @@ public class TestRollingUpgrade {
     } finally {
       if(cluster != null) cluster.shutdown();
     }
+  }
+
+  private void waitForNullMxBean() throws TimeoutException, InterruptedException {
+    GenericTestUtils.waitFor(() -> {
+      try {
+        checkMxBeanIsNull();
+        return true;
+      } catch (Throwable t) {
+        LOG.error("Something went wrong.", t);
+        return false;
+      }
+    }, 100, 8000, "RollingUpgradeStatus is already set");
   }
 
   private static void startRollingUpgrade(Path foo, Path bar,
