@@ -211,12 +211,12 @@ class CopyCommands {
             + " [-q <thread pool queue size>] <src> ... <localdst>";
     public static final String DESCRIPTION =
         "Copy files that match the file pattern <src> to the local name. "
-            + "<src> is kept.  When copying multiple files, the destination"
+            + "<src> is kept.\nWhen copying multiple files, the destination"
             + " must be a directory.\nFlags:\n"
             + "  -p : Preserves timestamps, ownership and the mode.\n"
             + "  -f : Overwrites the destination if it already exists.\n"
-            + "  -crc : write CRC checksums for the files downloaded."
-            + "  -ignoreCrc : Skip CRC checks on the file(s) downloaded."
+            + "  -crc : write CRC checksums for the files downloaded.\n"
+            + "  -ignoreCrc : Skip CRC checks on the file(s) downloaded.\n"
             + "  -t <thread count> : Number of threads to be used,"
             + " default is 1.\n"
             + "  -q <thread pool queue size> : Thread pool queue size to be"
@@ -259,9 +259,9 @@ class CopyCommands {
         "  -t <thread count> : Number of threads to be used, default is 1.\n" +
         "  -q <thread pool queue size> : Thread pool queue size to be used, " +
         "default is 1024.\n" +
-        "  -l : Allow DataNode to lazily persist the file to disk. Forces" +
-        "  replication factor of 1. This flag will result in reduced" +
-        "  durability. Use with care.\n" +
+        "  -l : Allow DataNode to lazily persist the file to disk. Forces " +
+        "replication factor of 1. This flag will result in reduced " +
+        "durability. Use with care.\n" +
         "  -d : Skip creation of temporary file(<dst>._COPYING_).\n";
 
     @Override

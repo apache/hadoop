@@ -23,6 +23,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -48,6 +49,9 @@ public class TestCopyFromLocal {
   private static FileSystem fs;
   private static Path testDir;
   private static Configuration conf;
+
+  private Path dir = null;
+  private int numFiles = 0;
 
   public static int initialize(Path dir) throws Exception {
     fs.mkdirs(dir);
@@ -97,47 +101,36 @@ public class TestCopyFromLocal {
     fs.close();
   }
 
+  @Before
+  public void initDirectory() throws Exception {
+    dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
+    numFiles = initialize(dir);
+  }
+
+
   private void run(CommandWithDestination cmd, String... args) {
     cmd.setConf(conf);
     assertEquals(0, cmd.run(args));
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocal() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    TestCopyFromLocal.initialize(dir);
+  public void testCopyFromLocal() {
     run(new TestMultiThreadedCopy(1, 0),
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocalWithThreads() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    int numFiles = TestCopyFromLocal.initialize(dir);
-    int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
-    int randThreads = RandomUtils.nextInt(0, maxThreads - 1) + 1;
-    String numThreads = Integer.toString(randThreads);
-    run(new TestMultiThreadedCopy(randThreads, randThreads == 1 ? 0 : numFiles),
-        "-t", numThreads, new Path(dir, FROM_DIR_NAME).toString(),
-        new Path(dir, TO_DIR_NAME).toString());
-  }
-
-  @Test(timeout = 10000)
-  public void testCopyFromLocalWithThreadWrong() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    int numFiles = TestCopyFromLocal.initialize(dir);
-    int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
-    String numThreads = Integer.toString(maxThreads * 2);
-    run(new TestMultiThreadedCopy(maxThreads, numFiles), "-t", numThreads,
+  public void testCopyFromLocalWithThreads(){
+    int threads = Runtime.getRuntime().availableProcessors() * 2 + 1;
+    run(new TestMultiThreadedCopy(threads, numFiles),
+        "-t", Integer.toString(threads),
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocalWithZeroThreads() throws Exception {
-    Path dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
-    TestCopyFromLocal.initialize(dir);
+  public void testCopyFromLocalWithThreadWrong(){
     run(new TestMultiThreadedCopy(1, 0), "-t", "0",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());

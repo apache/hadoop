@@ -24,9 +24,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
@@ -40,28 +37,28 @@ public abstract class CopyCommandWithMultiThread
   private int threadPoolQueueSize = DEFAULT_QUEUE_SIZE;
 
   public static final int DEFAULT_QUEUE_SIZE = 1024;
-  public static final int MAX_THREAD_COUNT =
-      Runtime.getRuntime().availableProcessors() * 2;
 
-  public static final Logger LOG =
-      LoggerFactory.getLogger(CopyCommandWithMultiThread.class);
-
+  /**
+   * set thread count by option value, if the value <= 1, use 1 instead.
+   *
+   * @param optValue option value
+   */
   protected void setThreadCount(String optValue) {
     if (optValue != null) {
-      int count = Integer.parseInt(optValue);
-      threadCount = count < 1 ? 1 : Math.min(count, MAX_THREAD_COUNT);
+      threadCount = Math.max(Integer.parseInt(optValue), 1);
     }
   }
 
+  /**
+   * set thread pool queue size by option value, if the value < 1,
+   * use DEFAULT_QUEUE_SIZE instead.
+   *
+   * @param optValue option value
+   */
   protected void setThreadPoolQueueSize(String optValue) {
     if (optValue != null) {
       int size = Integer.parseInt(optValue);
-      if (size < 1) {
-        LOG.warn("The value of the thread pool queue size can't be less than "
-            + "1, and the default value {} is used here.", DEFAULT_QUEUE_SIZE);
-      } else {
-        threadPoolQueueSize = size;
-      }
+      threadPoolQueueSize = size < 1 ? DEFAULT_QUEUE_SIZE : size;
     }
   }
 
