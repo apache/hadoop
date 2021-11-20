@@ -972,7 +972,7 @@ public class DiskBalancer {
           item.setErrMsg("No source blocks found to move.");
           LOG.error("No movable source blocks found. {}", item.toJson());
         } catch (IOException e) {
-          LOG.error("Unable to get json from Item.",e);
+          LOG.error("Unable to get json from Item.", e);
         }
       }
       return block;
