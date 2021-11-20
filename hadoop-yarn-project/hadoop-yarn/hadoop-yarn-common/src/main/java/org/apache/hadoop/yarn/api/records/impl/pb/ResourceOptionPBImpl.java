@@ -24,8 +24,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceOptionProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceOptionProtoOrBuilder;
 
-import org.apache.hadoop.util.Preconditions;
-
 public class ResourceOptionPBImpl extends ResourceOption {
 
   ResourceOptionProto proto = ResourceOptionProto.getDefaultInstance();
