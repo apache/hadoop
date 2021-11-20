@@ -114,6 +114,17 @@ public class KMS {
         .build(domain, KMSRESTConstants.KEY_RESOURCE, keyName);
   }
 
+  private void throwKMSIllegalArgumentException(){
+    StringBuilder error= new StringBuilder("IllegalArgumentException Wrong ");
+    error.append(KMSRESTConstants.EEK_OP)
+            .append(" value, it must be ")
+            .append(KMSRESTConstants.EEK_GENERATE)
+            .append(" or ")
+            .append(KMSRESTConstants.EEK_DECRYPT);
+    LOG.error(error.toString());
+    throw new IllegalArgumentException(error.toString());
+  }
+
   @POST
   @Path(KMSRESTConstants.KEYS_RESOURCE)
   @Consumes(MediaType.APPLICATION_JSON)
@@ -531,15 +542,8 @@ public class KMS {
           ((ArrayList) retJSON).add(KMSUtil.toJSON(edek));
         }
       } else {
-        StringBuilder error;
-        error = new StringBuilder("IllegalArgumentException Wrong ");
-        error.append(KMSRESTConstants.EEK_OP);
-        error.append(" value, it must be ");
-        error.append(KMSRESTConstants.EEK_GENERATE);
-        error.append(" or ");
-        error.append(KMSRESTConstants.EEK_DECRYPT);
-        LOG.error(error.toString());
-        throw new IllegalArgumentException(error.toString());
+        retJSON=null;
+        throwKMSIllegalArgumentException();
       }
       KMSWebApp.getGenerateEEKCallsMeter().mark();
       LOG.trace("Exiting generateEncryptedKeys method.");
@@ -678,15 +682,8 @@ public class KMS {
         retJSON = KMSUtil.toJSON(retEncryptedKeyVersion);
         kmsAudit.ok(user, KMSOp.REENCRYPT_EEK, keyName, "");
       } else {
-        StringBuilder error;
-        error = new StringBuilder("IllegalArgumentException Wrong ");
-        error.append(KMSRESTConstants.EEK_OP);
-        error.append(" value, it must be ");
-        error.append(KMSRESTConstants.EEK_GENERATE);
-        error.append(" or ");
-        error.append(KMSRESTConstants.EEK_DECRYPT);
-        LOG.error(error.toString());
-        throw new IllegalArgumentException(error.toString());
+        retJSON=null;
+        throwKMSIllegalArgumentException();
       }
       LOG.trace("Exiting handleEncryptedKeyOp method.");
       return Response.ok().type(MediaType.APPLICATION_JSON).entity(retJSON)
