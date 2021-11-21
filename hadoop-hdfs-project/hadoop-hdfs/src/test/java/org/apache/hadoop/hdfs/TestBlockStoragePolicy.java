@@ -1291,6 +1291,9 @@ public class TestBlockStoragePolicy {
         new HashSet<Node>(), 0, policy2, null);
     System.out.println(Arrays.asList(targets));
     Assert.assertEquals(3, targets.length);
+    if (namenode != null) {
+      namenode.stop();
+    }
   }
 
   @Test
@@ -1335,6 +1338,9 @@ public class TestBlockStoragePolicy {
     Assert.assertEquals(2, targets.length);
     Assert.assertEquals(StorageType.SSD, targets[0].getStorageType());
     Assert.assertEquals(StorageType.DISK, targets[1].getStorageType());
+    if (namenode != null) {
+      namenode.stop();
+    }
   }
 
   /**
@@ -1388,6 +1394,9 @@ public class TestBlockStoragePolicy {
         null, chsenDs, true,
         new HashSet<Node>(), 0, policy, null);
     Assert.assertEquals(3, targets.length);
+    if (namenode != null) {
+      namenode.stop();
+    }
   }
 
   @Test
