@@ -391,6 +391,7 @@ public class TestBlockManagerSafeMode {
     waitForExtensionPeriod();
     assertFalse(bmSafeMode.isInSafeMode());
   }
+
   /**
    * Test block manager won't leave safe mode if datanode threshold is not met.
    */
