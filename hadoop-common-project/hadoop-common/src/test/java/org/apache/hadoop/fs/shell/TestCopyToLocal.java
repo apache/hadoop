@@ -35,14 +35,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.CopyCommands.CopyFromLocal;
+import org.apache.hadoop.fs.shell.CopyCommands.CopyToLocal;
 
+import static org.apache.hadoop.fs.shell.CopyCommandWithMultiThread.DEFAULT_QUEUE_SIZE;
 import static org.junit.Assert.assertEquals;
 
-/**
- * Test for copyFromLocal.
- */
-public class TestCopyFromLocal {
+public class TestCopyToLocal {
+
   private static final String FROM_DIR_NAME = "fromDir";
   private static final String TO_DIR_NAME = "toDir";
 
@@ -53,7 +52,7 @@ public class TestCopyFromLocal {
   private Path dir = null;
   private int numFiles = 0;
 
-  public static int initialize(Path dir) throws Exception {
+  private static int initialize(Path dir) throws Exception {
     fs.mkdirs(dir);
     Path fromDirPath = new Path(dir, FROM_DIR_NAME);
     fs.mkdirs(fromDirPath);
@@ -101,56 +100,96 @@ public class TestCopyFromLocal {
     fs.close();
   }
 
+  private void run(CopyCommandWithMultiThread cmd, String... args) {
+    cmd.setConf(conf);
+    assertEquals(0, cmd.run(args));
+  }
+
   @Before
   public void initDirectory() throws Exception {
     dir = new Path("dir" + RandomStringUtils.randomNumeric(4));
     numFiles = initialize(dir);
   }
 
-
-  private void run(CommandWithDestination cmd, String... args) {
-    cmd.setConf(conf);
-    assertEquals(0, cmd.run(args));
+  @Test(timeout = 10000)
+  public void testCopy() throws Exception {
+    MultiThreadedCopy copy = new MultiThreadedCopy(1, DEFAULT_QUEUE_SIZE, 0);
+    run(copy, new Path(dir, FROM_DIR_NAME).toString(),
+        new Path(dir, TO_DIR_NAME).toString());
+    assert copy.getExecutor() == null;
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocal() {
-    run(new TestMultiThreadedCopy(1, 0),
+  public void testCopyWithThreads() {
+    run(new MultiThreadedCopy(5, DEFAULT_QUEUE_SIZE, numFiles), "-t", "5",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocalWithThreads(){
-    int threads = Runtime.getRuntime().availableProcessors() * 2 + 1;
-    run(new TestMultiThreadedCopy(threads, numFiles),
-        "-t", Integer.toString(threads),
+  public void testCopyWithThreadWrong() {
+    run(new MultiThreadedCopy(1, DEFAULT_QUEUE_SIZE, 0), "-t", "0",
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
   @Test(timeout = 10000)
-  public void testCopyFromLocalWithThreadWrong(){
-    run(new TestMultiThreadedCopy(1, 0), "-t", "0",
+  public void testCopyWithThreadsAndQueueSize() {
+    int queueSize = 256;
+    run(new MultiThreadedCopy(5, queueSize, numFiles), "-t", "5", "-q",
+        Integer.toString(queueSize),
         new Path(dir, FROM_DIR_NAME).toString(),
         new Path(dir, TO_DIR_NAME).toString());
   }
 
-  private class TestMultiThreadedCopy extends CopyFromLocal {
-    public static final String NAME = "testCopyFromLocal";
-    private int expectedThreads;
-    private int expectedCompletedTaskCount;
+  @Test(timeout = 10000)
+  public void testCopyWithThreadsAndQueueSizeWrong() {
+    int queueSize = 0;
+    run(new MultiThreadedCopy(5, DEFAULT_QUEUE_SIZE, numFiles), "-t", "5", "-q",
+        Integer.toString(queueSize),
+        new Path(dir, FROM_DIR_NAME).toString(),
+        new Path(dir, TO_DIR_NAME).toString());
+  }
 
-    TestMultiThreadedCopy(int expectedThreads, int expectedCompletedTaskCount) {
+  @Test(timeout = 10000)
+  public void testCopySingleFile() throws Exception {
+    Path fromDirPath = new Path(dir, FROM_DIR_NAME);
+    Path subFile = new Path(fromDirPath, "file0");
+    fs.createNewFile(subFile);
+    FSDataOutputStream output = fs.create(subFile, true);
+    for (int i = 0; i < 100; ++i) {
+      output.writeInt(i);
+      output.writeChar('\n');
+    }
+    output.close();
+
+    MultiThreadedCopy copy = new MultiThreadedCopy(5, DEFAULT_QUEUE_SIZE, 0);
+    run(copy, "-t", "5", subFile.toString(),
+        new Path(dir, TO_DIR_NAME).toString());
+    assert copy.getExecutor() == null;
+  }
+
+  private static class MultiThreadedCopy extends CopyToLocal {
+    public static final String NAME = "multiThreadCopy";
+    private final int expectedThreads;
+    private final int expectedQueuePoolSize;
+    private final int expectedCompletedTaskCount;
+
+    MultiThreadedCopy(int expectedThreads, int expectedQueuePoolSize,
+        int expectedCompletedTaskCount) {
       this.expectedThreads = expectedThreads;
+      this.expectedQueuePoolSize = expectedQueuePoolSize;
       this.expectedCompletedTaskCount = expectedCompletedTaskCount;
     }
 
     @Override
     protected void processArguments(LinkedList<PathData> args)
         throws IOException {
-      // Check if the correct number of threads are spawned
+      // Check if the number of threads are same as expected
       Assert.assertEquals(expectedThreads, getThreadCount());
+      // Check if the queue pool size of executor is same as expected
+      Assert.assertEquals(expectedQueuePoolSize, getThreadPoolQueueSize());
+
       super.processArguments(args);
 
       if (isMultiThreadNecessary(args)) {

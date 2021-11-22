@@ -323,26 +323,32 @@ Returns 0 on success and -1 on error.
 get
 ---
 
-Usage: `hadoop fs -get [-ignorecrc] [-crc] [-p] [-f] <src> <localdst> `
+Usage: `hadoop fs -get [-ignorecrc] [-crc] [-p] [-f] [-t <thread count>] [-q <thread pool queue size>] <src> ... <localdst> `
 
 Copy files to the local file system. Files that fail the CRC check may be copied with the -ignorecrc option. Files and CRCs may be copied using the -crc option.
+
+Options:
+
+* `-p` : Preserves access and modification times, ownership and the permissions.
+  (assuming the permissions can be propagated across filesystems)
+* `-f` : Overwrites the destination if it already exists.
+* `-ignorecrc` : Skip CRC checks on the file(s) downloaded.
+* `-crc`: write CRC checksums for the files downloaded.
+* `-t <thread count>` : Number of threads to be used, default is 1.
+  Useful when downloading directories containing more than 1 file.
+* `-q <thread pool queue size>` : Thread pool queue size to be used, default is 1024.
+  It takes effect only when thread count greater than 1.
 
 Example:
 
 * `hadoop fs -get /user/hadoop/file localfile`
 * `hadoop fs -get hdfs://nn.example.com/user/hadoop/file localfile`
+* `hadoop fs -get -t 10 hdfs://nn.example.com/user/hadoop/dir1 localdir`
+* `hadoop fs -get -t 10 -q 2048 hdfs://nn.example.com/user/hadoop/dir* localdir`
 
 Exit Code:
 
 Returns 0 on success and -1 on error.
-
-Options:
-
-* `-p` : Preserves access and modification times, ownership and the permissions.
-(assuming the permissions can be propagated across filesystems)
-* `-f` : Overwrites the destination if it already exists.
-* `-ignorecrc` : Skip CRC checks on the file(s) downloaded.
-* `-crc`: write CRC checksums for the files downloaded.
 
 getfacl
 -------
@@ -525,7 +531,7 @@ Returns 0 on success and -1 on error.
 put
 ---
 
-Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [-t <thread count>] [-q <threadPool queue size>] [ - | <localsrc1>  .. ]. <dst>`
+Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [-t <thread count>] [-q <thread pool queue size>] [ - | <localsrc> ...] <dst>`
 
 Copy single src, or multiple srcs from local file system to the destination file system.
 Also reads input from stdin and writes to destination file system if the source is set to "-"
@@ -537,12 +543,13 @@ Options:
 * `-p` : Preserves access and modification times, ownership and the permissions.
 (assuming the permissions can be propagated across filesystems)
 * `-f` : Overwrites the destination if it already exists.
-* `-t <thread count>` : Number of threads to be used, default is 1. Useful
- when uploading a directory containing more than 1 file.
 * `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
  factor of 1. This flag will result in reduced durability. Use with care.
 * `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
-* `-q <threadPool queue size>` : ThreadPool queue size to be used, default is 1024.
+* `-t <thread count>` : Number of threads to be used, default is 1.
+ Useful when uploading directories containing more than 1 file.
+* `-q <thread pool queue size>` : Thread pool queue size to be used, default is 1024.
+ It takes effect only when thread count greater than 1.
 
 
 Examples:
@@ -551,7 +558,8 @@ Examples:
 * `hadoop fs -put -f localfile1 localfile2 /user/hadoop/hadoopdir`
 * `hadoop fs -put -d localfile hdfs://nn.example.com/hadoop/hadoopfile`
 * `hadoop fs -put - hdfs://nn.example.com/hadoop/hadoopfile` Reads the input from stdin.
-* `hadoop fs -put -q 500 localfile3 hdfs://nn.example.com/hadoop/hadoopfile3`
+* `hadoop fs -put -t 5 localdir hdfs://nn.example.com/hadoop/hadoopdir`
+* `hadoop fs -put -t 10 -q 2048 localdir1 localdir2 hdfs://nn.example.com/hadoop/hadoopdir`
 
 Exit Code:
 
