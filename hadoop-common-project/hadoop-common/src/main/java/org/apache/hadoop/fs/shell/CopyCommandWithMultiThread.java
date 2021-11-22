@@ -39,7 +39,8 @@ public abstract class CopyCommandWithMultiThread
   public static final int DEFAULT_QUEUE_SIZE = 1024;
 
   /**
-   * set thread count by option value, if the value <= 1, use 1 instead.
+   * set thread count by option value, if the value less than 1,
+   * use 1 instead.
    *
    * @param optValue option value
    */
@@ -50,7 +51,7 @@ public abstract class CopyCommandWithMultiThread
   }
 
   /**
-   * set thread pool queue size by option value, if the value < 1,
+   * set thread pool queue size by option value, if the value less than 1,
    * use DEFAULT_QUEUE_SIZE instead.
    *
    * @param optValue option value
