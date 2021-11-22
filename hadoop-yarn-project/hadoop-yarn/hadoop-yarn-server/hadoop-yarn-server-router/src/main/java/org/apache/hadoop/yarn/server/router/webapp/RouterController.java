@@ -38,6 +38,11 @@ public class RouterController extends Controller {
     render(AboutPage.class);
   }
 
+  public void server() {
+    setTitle("About the current router server");
+    render(ServerPage.class);
+  }
+
   public void about() {
     setTitle("About the Cluster");
     render(AboutPage.class);

@@ -18,30 +18,20 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
- * Navigation block for the Router Web UI.
+ * Server page for the Router Web UI.
  */
-public class NavBlock extends HtmlBlock {
+public class ServerPage extends RouterView {
 
   @Override
-  public void render(Block html) {
-    html.
-      div("#nav").
-        h3("Cluster").
-        ul().
-          li().a(url("server"), "ServerInfo").__().
-          li().a(url(""), "About").__().
-          li().a(url("federation"), "Federation").__().
-          li().a(url("nodes"), "Nodes").__().
-          li().a(url("apps"), "Applications").__().
-      __().
-      h3("Tools").
-      ul().
-        li().a("/conf", "Configuration").__().
-        li().a("/logs", "Local logs").__().
-        li().a("/stacks", "Server stacks").__().
-        li().a("/jmx?qry=Hadoop:*", "Server metrics").__().__().__();
+  protected void preHead(Page.HTML<__> html) {
+    commonPreHead(html);
+  }
+
+  @Override
+  protected Class<? extends SubView> content() {
+    return ServerBlock.class;
   }
 }

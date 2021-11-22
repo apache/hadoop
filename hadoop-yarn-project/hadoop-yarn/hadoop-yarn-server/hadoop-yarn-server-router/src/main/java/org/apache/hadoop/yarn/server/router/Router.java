@@ -29,6 +29,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -82,6 +83,8 @@ public class Router extends CompositeService {
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private static final String METRICS_NAME = "Router";
+
+  private static long routerStartupTime = Time.monotonicNow();
 
   public Router() {
     super(Router.class.getName());
@@ -169,6 +172,10 @@ public class Router extends CompositeService {
     Builder<Object> builder =
         WebApps.$for("cluster", null, null, "ws").with(conf).at(webAppAddress);
     webApp = builder.start(new RouterWebApp(this));
+  }
+
+  public static long getRouterStartupTime() {
+    return routerStartupTime;
   }
 
   public static void main(String[] argv) {

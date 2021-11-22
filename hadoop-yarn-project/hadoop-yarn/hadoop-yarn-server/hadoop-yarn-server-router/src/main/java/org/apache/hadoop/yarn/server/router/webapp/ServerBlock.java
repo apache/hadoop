@@ -18,30 +18,34 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import com.google.inject.Inject;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.view.InfoBlock;
+
+import java.util.Date;
 
 /**
- * Navigation block for the Router Web UI.
+ * Server block for the Router Web UI.
  */
-public class NavBlock extends HtmlBlock {
+public class ServerBlock extends HtmlBlock {
+
+  @Inject
+  ServerBlock(Router router, ViewContext ctx) {
+    super(ctx);
+  }
 
   @Override
-  public void render(Block html) {
-    html.
-      div("#nav").
-        h3("Cluster").
-        ul().
-          li().a(url("server"), "ServerInfo").__().
-          li().a(url(""), "About").__().
-          li().a(url("federation"), "Federation").__().
-          li().a(url("nodes"), "Nodes").__().
-          li().a(url("apps"), "Applications").__().
-      __().
-      h3("Tools").
-      ul().
-        li().a("/conf", "Configuration").__().
-        li().a("/logs", "Local logs").__().
-        li().a("/stacks", "Server stacks").__().
-        li().a("/jmx?qry=Hadoop:*", "Server metrics").__().__().__();
+  protected void render(Block html) {
+
+    info("Router Details")
+        .__("Router started on",
+            new Date(Router.getRouterStartupTime()))
+        .__("Router Version", YarnVersionInfo.getVersion())
+        .__("Hadoop Version", VersionInfo.getVersion());
+
+    html.__(InfoBlock.class);
   }
 }
