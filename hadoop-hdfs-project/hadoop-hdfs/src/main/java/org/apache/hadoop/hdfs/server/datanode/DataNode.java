@@ -3814,4 +3814,16 @@ public class DataNode extends ReconfigurableBase
     return (stage == PIPELINE_SETUP_STREAMING_RECOVERY
         || stage == PIPELINE_SETUP_APPEND_RECOVERY);
   }
+
+  boolean isSlownodeByNameserviceId(String nsId) {
+    return blockPoolManager.isSlownodeByNameserviceId(nsId);
+  }
+
+  boolean isSlownodeByBlockPoolId(String bpId) {
+    return blockPoolManager.isSlownodeByBlockPoolId(bpId);
+  }
+
+  boolean isSlownode() {
+    return blockPoolManager.isSlownode();
+  }
 }

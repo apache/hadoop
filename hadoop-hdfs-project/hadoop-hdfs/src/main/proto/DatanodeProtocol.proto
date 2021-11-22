@@ -223,6 +223,7 @@ message HeartbeatResponseProto {
   optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
   optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 4;
   optional uint64 fullBlockReportLeaseId = 5 [ default = 0 ];
+  optional bool isSlownode = 6 [ default = false ];
 }
 
 /**
