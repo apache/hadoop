@@ -605,10 +605,9 @@ public class TestAuditLogger {
     conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
     conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
 
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
       cluster.waitClusterUp();
       final FileSystem fs = cluster.getFileSystem();
       final long time = System.currentTimeMillis();
@@ -624,8 +623,6 @@ public class TestAuditLogger {
       assertTrue(auditlog.getOutput().endsWith(
           String.format("callerContext=c1\\nc2,c3\\tc4:s1\\ns2%n")));
       auditlog.clearOutput();
-    } finally {
-      cluster.shutdown();
     }
   }
 
