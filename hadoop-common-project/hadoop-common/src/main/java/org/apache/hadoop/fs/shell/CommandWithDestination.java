@@ -397,11 +397,11 @@ abstract class CommandWithDestination extends FsCommand {
 
   /**
    * If direct write is disabled ,copies the stream contents to a temporary
-   * file "<target>._COPYING_". If the copy is
-   * successful, the temporary file will be renamed to the real path,
-   * else the temporary file will be deleted.
+   * file "target._COPYING_". If the copy is successful, the temporary file
+   * will be renamed to the real path, else the temporary file will be deleted.
    * if direct write is enabled , then creation temporary file is skipped.
-   * @param in the input stream for the copy
+   *
+   * @param in     the input stream for the copy
    * @param target where to store the contents of the stream
    * @throws IOException if copy fails
    */ 
