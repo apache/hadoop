@@ -1100,28 +1100,29 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public boolean truncate(String src, long newLength, String clientName)
-      throws IOException {
+  public boolean truncate(String src, long newLength, String clientName) throws IOException {
     checkNNStartup();
-    stateChangeLog
-        .debug("*DIR* NameNode.truncate: " + src + " to " + newLength);
-    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
-    if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return true; // Return previous result
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.truncate: " + src + " to " +
+          newLength);
     }
-    
+    CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache, null);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return (boolean)cacheEntry.getPayload();
+    }
+
     String clientMachine = getClientMachine();
     boolean ret = false;
     try {
       ret = namesystem.truncate(
           src, newLength, clientName, clientMachine, now());
     } finally {
-      RetryCache.setState(cacheEntry, ret);
+      RetryCache.setState(cacheEntry, true, ret);
       metrics.incrFilesTruncated();
     }
     return ret;
   }
-
+  
   @Override // ClientProtocol
   public boolean delete(String src, boolean recursive) throws IOException {
     checkNNStartup();
