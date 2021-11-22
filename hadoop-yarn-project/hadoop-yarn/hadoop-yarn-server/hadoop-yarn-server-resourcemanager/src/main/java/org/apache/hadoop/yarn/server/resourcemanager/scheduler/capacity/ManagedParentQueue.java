@@ -247,8 +247,8 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
           queueCapacities.getMaximumCapacity(label)
           * getQueueCapacities().getAbsoluteMaximumCapacity(label));
 
-      setConfiguredMinCapacityVector(label, QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100, PERCENTAGE));
-      setConfiguredMaxCapacityVector(label, QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100, PERCENTAGE));
+//      setConfiguredMinCapacityVector(label, QueueCapacityVector.of(queueCapacities.getCapacity(label) * 100, PERCENTAGE));
+//      setConfiguredMaxCapacityVector(label, QueueCapacityVector.of(queueCapacities.getMaximumCapacity(label) * 100, PERCENTAGE));
     }
   }
 
