@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Stack;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.ipc.CallerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -273,31 +273,41 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     AccessControlEnforcer enforcer = getAccessControlEnforcer();
 
     String opType = operationType.get();
-    if (this.authorizeWithContext && opType != null) {
-      INodeAttributeProvider.AuthorizationContext.Builder builder =
-          new INodeAttributeProvider.AuthorizationContext.Builder();
-      builder.fsOwner(fsOwner).
-          supergroup(supergroup).
-          callerUgi(callerUgi).
-          inodeAttrs(inodeAttrs).
-          inodes(inodes).
-          pathByNameArr(components).
-          snapshotId(snapshotId).
-          path(path).
-          ancestorIndex(ancestorIndex).
-          doCheckOwner(doCheckOwner).
-          ancestorAccess(ancestorAccess).
-          parentAccess(parentAccess).
-          access(access).
-          subAccess(subAccess).
-          ignoreEmptyDir(ignoreEmptyDir).
-          operationName(opType).
-          callerContext(CallerContext.getCurrent());
-      enforcer.checkPermissionWithContext(builder.build());
-    } else {
-      enforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
-          inodes, components, snapshotId, path, ancestorIndex, doCheckOwner,
-          ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
+    try {
+      if (this.authorizeWithContext && opType != null) {
+        INodeAttributeProvider.AuthorizationContext.Builder builder =
+            new INodeAttributeProvider.AuthorizationContext.Builder();
+        builder.fsOwner(fsOwner).
+            supergroup(supergroup).
+            callerUgi(callerUgi).
+            inodeAttrs(inodeAttrs).
+            inodes(inodes).
+            pathByNameArr(components).
+            snapshotId(snapshotId).
+            path(path).
+            ancestorIndex(ancestorIndex).
+            doCheckOwner(doCheckOwner).
+            ancestorAccess(ancestorAccess).
+            parentAccess(parentAccess).
+            access(access).
+            subAccess(subAccess).
+            ignoreEmptyDir(ignoreEmptyDir).
+            operationName(opType).
+            callerContext(CallerContext.getCurrent());
+        enforcer.checkPermissionWithContext(builder.build());
+      } else {
+        enforcer.checkPermission(fsOwner, supergroup, callerUgi, inodeAttrs,
+            inodes, components, snapshotId, path, ancestorIndex, doCheckOwner,
+            ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
+      }
+    } catch (AccessControlException ace) {
+      Class<?> exceptionClass = ace.getClass();
+      if (exceptionClass.equals(AccessControlException.class)
+          || exceptionClass.equals(TraverseAccessControlException.class)) {
+        throw ace;
+      }
+      // Only form a new ACE for subclasses which come from external enforcers
+      throw new AccessControlException(ace);
     }
 
   }

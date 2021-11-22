@@ -86,6 +86,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
@@ -266,6 +268,14 @@ public class MiniRouterDFSCluster {
 
     public Configuration getConf() {
       return conf;
+    }
+
+    public RouterRpcServer getRouterRpcServer() {
+      return router.getRpcServer();
+    }
+
+    public RouterRpcClient getRouterRpcClient() {
+      return getRouterRpcServer().getRPCClient();
     }
   }
 

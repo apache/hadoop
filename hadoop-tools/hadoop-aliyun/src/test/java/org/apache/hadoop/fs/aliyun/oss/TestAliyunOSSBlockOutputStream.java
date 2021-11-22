@@ -43,6 +43,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestAliyunOSSBlockOutputStream {
   private FileSystem fs;
+  private static final int PART_SIZE = 1024 * 1024;
   private static String testRootPath =
       AliyunOSSTestUtils.generateUniqueTestPath();
 
@@ -52,7 +53,7 @@ public class TestAliyunOSSBlockOutputStream {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(MULTIPART_UPLOAD_PART_SIZE_KEY, 1024 * 1024);
+    conf.setInt(MULTIPART_UPLOAD_PART_SIZE_KEY, PART_SIZE);
     conf.setInt(IO_CHUNK_BUFFER_SIZE,
         conf.getInt(MULTIPART_UPLOAD_PART_SIZE_KEY, 0));
     conf.setInt(Constants.UPLOAD_ACTIVE_BLOCKS_KEY, 20);
@@ -155,10 +156,8 @@ public class TestAliyunOSSBlockOutputStream {
 
   @Test
   public void testHugeUpload() throws IOException {
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        MULTIPART_UPLOAD_PART_SIZE_DEFAULT - 1);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), PART_SIZE - 1);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), PART_SIZE);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
         MULTIPART_UPLOAD_PART_SIZE_DEFAULT + 1);
     bufferDirShouldEmpty();

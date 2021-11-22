@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.metrics2.sink;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
@@ -51,6 +54,13 @@ public class PrometheusMetricsSink implements MetricsSink {
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
   private static final Pattern DELIMITERS = Pattern.compile("[^a-zA-Z0-9]+");
+
+  private static final Pattern NN_TOPMETRICS_PATTERN =
+      Pattern.compile(
+          "^(nn_top_user_op_counts_window_ms_\\d+)_op_.*?(total_count|count)$");
+  private static final Pattern NN_TOPMETRICS_TAGS_PATTERN =
+      Pattern
+          .compile("^op=(?<op>\\w+)(.user=(?<user>.*)|)\\.(TotalCount|count)$");
 
   public PrometheusMetricsSink() {
   }
@@ -95,25 +105,28 @@ public class PrometheusMetricsSink implements MetricsSink {
   }
 
   public void writeMetrics(Writer writer) throws IOException {
+    List<String> extendMetricsTags = new ArrayList<>();
     for (Map.Entry<String, Map<Collection<MetricsTag>, AbstractMetric>> promMetric :
         promMetrics.entrySet()) {
       AbstractMetric firstMetric = promMetric.getValue().values().iterator().next();
+      String metricKey = getMetricKey(promMetric.getKey(), firstMetric,
+          extendMetricsTags);
 
       StringBuilder builder = new StringBuilder();
       builder.append("# HELP ")
-          .append(promMetric.getKey())
+          .append(metricKey)
           .append(" ")
           .append(firstMetric.description())
           .append("\n")
           .append("# TYPE ")
-          .append(promMetric.getKey())
+          .append(metricKey)
           .append(" ")
           .append(firstMetric.type().toString().toLowerCase())
           .append("\n");
 
       for (Map.Entry<Collection<MetricsTag>, AbstractMetric> metric :
           promMetric.getValue().entrySet()) {
-        builder.append(promMetric.getKey())
+        builder.append(metricKey)
             .append("{");
 
         String sep = "";
@@ -129,6 +142,13 @@ public class PrometheusMetricsSink implements MetricsSink {
             sep = ",";
           }
         }
+        if (!extendMetricsTags.isEmpty()) {
+          //add extend tags
+          for (String tagStr : extendMetricsTags) {
+            builder.append(sep).append(tagStr);
+          }
+          extendMetricsTags.clear();
+        }
         builder.append("} ");
         builder.append(metric.getValue().value());
         builder.append("\n");
@@ -136,5 +156,40 @@ public class PrometheusMetricsSink implements MetricsSink {
 
       writer.write(builder.toString());
     }
+  }
+
+  private String getMetricKey(String promMetricKey, AbstractMetric metric,
+      List<String> extendTags) {
+    Matcher matcher = NN_TOPMETRICS_PATTERN.matcher(promMetricKey);
+    if (matcher.find() && matcher.groupCount() == 2) {
+      extendTags.addAll(parseTopMetricsTags(metric.name()));
+      return String.format("%s_%s",
+          matcher.group(1), matcher.group(2));
+    }
+    return promMetricKey;
+  }
+
+  /**
+   * Parse Custom tags for TopMetrics.
+   *
+   * @param metricName metricName
+   * @return Tags for TopMetrics
+   */
+  private List<String> parseTopMetricsTags(String metricName) {
+    List<String> topMetricsTags = new ArrayList<>();
+    Matcher matcher = NN_TOPMETRICS_TAGS_PATTERN.matcher(metricName);
+    if (matcher.find()) {
+      String op = matcher.group("op");
+      String user = matcher.group("user");
+      // add tag op = "$op"
+      topMetricsTags.add(String
+          .format("op=\"%s\"", op));
+      if (StringUtils.isNoneEmpty(user)) {
+        // add tag user = "$user"
+        topMetricsTags.add(String
+            .format("user=\"%s\"", user));
+      }
+    }
+    return topMetricsTags;
   }
 }

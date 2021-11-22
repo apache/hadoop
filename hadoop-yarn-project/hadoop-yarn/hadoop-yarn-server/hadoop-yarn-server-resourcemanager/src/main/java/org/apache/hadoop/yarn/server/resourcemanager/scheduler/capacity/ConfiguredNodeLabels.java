@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Contains node labels for all queues extracted from configuration properties.
@@ -73,5 +74,20 @@ public class ConfiguredNodeLabels {
   public void setLabelsByQueue(
       String queuePath, Collection<String> nodeLabels) {
     configuredNodeLabelsByQueue.put(queuePath, new HashSet<>(nodeLabels));
+  }
+
+  /**
+   * Get all configured node labels aggregated from each queue.
+   * @return all node labels
+   */
+  public Set<String> getAllConfiguredLabels() {
+    Set<String> nodeLabels = configuredNodeLabelsByQueue.values().stream()
+        .flatMap(Set::stream).collect(Collectors.toSet());
+
+    if (nodeLabels.size() == 0) {
+      nodeLabels = NO_LABEL;
+    }
+
+    return nodeLabels;
   }
 }

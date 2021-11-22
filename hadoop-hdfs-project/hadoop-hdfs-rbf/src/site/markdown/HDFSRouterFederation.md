@@ -500,7 +500,6 @@ Isolation and dedicated assignment of RPC handlers across all configured downstr
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.fairness.enable | `false` | If `true`, dedicated RPC handlers will be assigned to each nameservice based on the fairness assignment policy configured. |
 | dfs.federation.router.fairness.policy.controller.class | `org.apache.hadoop.hdfs.server.federation.fairness.NoRouterRpcFairnessPolicyController` | Default handler allocation model to be used if isolation feature is enabled. Recommend to use `org.apache.hadoop.hdfs.server.federation.fairness.StaticRouterRpcFairnessPolicyController` to fully use the feature. |
 | dfs.federation.router.fairness.handler.count.*EXAMPLENAMESERVICE* | | Dedicated handler assigned to a specific nameservice. If none is specified equal allocation is done across all nameservices. |
 | dfs.federation.router.fairness.handler.count.concurrent | | Dedicated handler assigned to fan out calls such as `renewLease`. |

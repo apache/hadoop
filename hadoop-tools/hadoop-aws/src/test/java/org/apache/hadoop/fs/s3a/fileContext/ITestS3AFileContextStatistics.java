@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
+import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.services.s3.model.CryptoStorageMode;
@@ -32,9 +33,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
-import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 
 /**
@@ -83,12 +85,14 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
    * @param stats Filesystem statistics.
    */
   @Override
-  protected void verifyWrittenBytes(FileSystem.Statistics stats) {
+  protected void verifyWrittenBytes(FileSystem.Statistics stats)
+      throws IOException {
     //No extra bytes are written
     long expectedBlockSize = blockSize;
-    if (conf.get(SERVER_SIDE_ENCRYPTION_ALGORITHM, "")
-        .equals(S3AEncryptionMethods.CSE_KMS.getMethod())) {
-      String keyId = conf.get(SERVER_SIDE_ENCRYPTION_KEY, "");
+    if (S3AEncryptionMethods.CSE_KMS.getMethod()
+        .equals(getEncryptionAlgorithm(getTestBucketName(conf), conf)
+            .getMethod())) {
+      String keyId = getS3EncryptionKey(getTestBucketName(conf), conf);
       // Adding padding length and KMS key generation bytes written.
       expectedBlockSize += CSE_PADDING_LENGTH + keyId.getBytes().length +
           KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;

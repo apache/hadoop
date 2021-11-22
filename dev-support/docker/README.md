@@ -26,9 +26,11 @@ the other. Different platforms have different toolchains. Some packages tend to 
 across platforms and most commonly, a package that's readily available in one platform's toolchain
 isn't available on another. We thus, resort to building and installing the package from source,
 causing duplication of code since this needs to be done for all the Dockerfiles pertaining to all
-the platforms. We need a system to track a dependency - for a package - for a platform. Thus,
-there's a lot of diversity that needs to be handled for managing package dependencies and
-`pkg-resolver` caters to that.
+the platforms. We need a system to track a dependency - for a package - for a platform
+
+- (and optionally) for a release. Thus, there's a lot of diversity that needs to be handled for
+  managing package dependencies and
+  `pkg-resolver` caters to that.
 
 ## Supported platforms
 
@@ -53,6 +55,21 @@ there's a lot of diversity that needs to be handled for managing package depende
       "package_2",
       "package_3"
     ]
+  },
+  "dependency_3": {
+    "platform_1": {
+      "release_1": "package_1_1_1",
+      "release_2": [
+        "package_1_2_1",
+        "package_1_2_2"
+      ]
+    },
+    "platform_2": [
+      "package_2_1",
+      {
+        "release_1": "package_2_1_1"
+      }
+    ]
   }
 }
 ```
@@ -65,6 +82,29 @@ how to interpret the above JSON -
 2. For `dependency_2`, `package_1` and `package_2` needs to be installed for `platform_2`.
 3. For `dependency_2`, `package_1`, `package_3` and `package_3` needs to be installed for
    `platform_1`.
+4. For `dependency_3`, `package_1_1_1` gets installed only if `release_1` has been specified
+   for `platform_1`.
+5. For `dependency_3`, the packages `package_1_2_1` and `package_1_2_2` gets installed only
+   if `release_2` has been specified for `platform_1`.
+6. For `dependency_3`, for `platform_2`, `package_2_1` is always installed, but `package_2_1_1` gets
+   installed only if `release_1` has been specified.
+
+### Tool help
+
+```shell
+$ pkg-resolver/resolve.py -h
+usage: resolve.py [-h] [-r RELEASE] platform
+
+Platform package dependency resolver for building Apache Hadoop
+
+positional arguments:
+  platform              The name of the platform to resolve the dependencies for
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -r RELEASE, --release RELEASE
+                        The release label to filter the packages for the given platform
+```
 
 ## Standalone packages
 

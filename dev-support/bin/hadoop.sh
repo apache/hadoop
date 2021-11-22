@@ -513,7 +513,7 @@ function shadedclient_initialize
   maven_add_install shadedclient
 }
 
-## @description build client facing shaded artifacts and test them
+## @description build client facing shaded and non-shaded artifacts and test them
 ## @audience private
 ## @stability evolving
 ## @param repostatus
@@ -546,12 +546,19 @@ function shadedclient_rebuild
     return 0
   fi
 
-  big_console_header "Checking client artifacts on ${repostatus}"
+  big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
       -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
+
+  big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
+
+  echo_and_redirect "${logfile}" \
+    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
+      "${modules[@]}" \
+      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then

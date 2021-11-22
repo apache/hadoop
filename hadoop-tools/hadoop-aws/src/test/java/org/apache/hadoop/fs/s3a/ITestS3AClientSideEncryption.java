@@ -43,10 +43,14 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -193,6 +197,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
    * Testing how unencrypted and encrypted data behaves when read through
    * CSE enabled and disabled FS respectively.
    */
+  @SuppressWarnings("deprecation")
   @Test
   public void testEncryptionEnabledAndDisabledFS() throws Exception {
     maybeSkipTest();
@@ -203,8 +208,12 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
     Path encryptedFilePath = path(getMethodName() + "cse");
 
     // Initialize a CSE disabled FS.
-    cseDisabledConf.unset(SERVER_SIDE_ENCRYPTION_ALGORITHM);
-    cseDisabledConf.unset(SERVER_SIDE_ENCRYPTION_KEY);
+    removeBaseAndBucketOverrides(getTestBucketName(cseDisabledConf),
+        cseDisabledConf,
+        S3_ENCRYPTION_ALGORITHM,
+        S3_ENCRYPTION_KEY,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
     cseDisabledFS.initialize(getFileSystem().getUri(),
         cseDisabledConf);
 
@@ -288,7 +297,7 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
   /**
    * Skip tests if certain conditions are met.
    */
-  protected abstract void maybeSkipTest();
+  protected abstract void maybeSkipTest() throws IOException;
 
   /**
    * Assert that at path references an encrypted blob.

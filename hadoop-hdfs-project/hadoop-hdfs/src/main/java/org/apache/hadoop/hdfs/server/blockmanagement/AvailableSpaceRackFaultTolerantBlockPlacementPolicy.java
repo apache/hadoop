@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -32,7 +32,9 @@ import java.util.Collection;
 import java.util.Random;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY;
 
 /**
  * Space balanced rack fault tolerant block placement policy.
@@ -45,7 +47,8 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
   private static final Random RAND = new Random();
   private int balancedPreference = (int) (100
       * DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
-
+  private int balancedSpaceTolerance =
+        DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
   @Override
   public void initialize(Configuration conf, FSClusterStats stats,
       NetworkTopology clusterMap, Host2NodesMap host2datanodeMap) {
@@ -53,6 +56,10 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
     float balancedPreferencePercent = conf.getFloat(
         DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT);
+
+    balancedSpaceTolerance = conf.getInt(
+            DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY,
+            DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT);
 
     LOG.info("Available space rack fault tolerant block placement policy "
         + "initialized: "
@@ -70,6 +77,18 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
           + " is less than 0.5 so datanodes with more used percent will"
           + " receive  more block allocations.");
     }
+
+
+    if (balancedSpaceTolerance > 20 || balancedSpaceTolerance < 0) {
+      LOG.warn("The value of "
+          + DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY
+          + " is invalid, Current value is " + balancedSpaceTolerance + ", Default value " +
+            DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT
+          + " will be used instead.");
+      balancedSpaceTolerance =
+            DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT;
+    }
+
     balancedPreference = (int) (100 * balancedPreferencePercent);
   }
 
@@ -80,9 +99,9 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
     Preconditions.checkArgument(clusterMap instanceof DFSNetworkTopology);
     DFSNetworkTopology dfsClusterMap = (DFSNetworkTopology) clusterMap;
     DatanodeDescriptor a = (DatanodeDescriptor) dfsClusterMap
-        .chooseRandomWithStorageType(scope, excludedNode, type);
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     DatanodeDescriptor b = (DatanodeDescriptor) dfsClusterMap
-        .chooseRandomWithStorageType(scope, excludedNode, type);
+        .chooseRandomWithStorageTypeTwoTrial(scope, excludedNode, type);
     return select(a, b);
   }
 
@@ -118,7 +137,7 @@ public class AvailableSpaceRackFaultTolerantBlockPlacementPolicy
   protected int compareDataNode(final DatanodeDescriptor a,
       final DatanodeDescriptor b) {
     if (a.equals(b)
-        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < 5) {
+        || Math.abs(a.getDfsUsedPercent() - b.getDfsUsedPercent()) < balancedSpaceTolerance) {
       return 0;
     }
     return a.getDfsUsedPercent() < b.getDfsUsedPercent() ? -1 : 1;

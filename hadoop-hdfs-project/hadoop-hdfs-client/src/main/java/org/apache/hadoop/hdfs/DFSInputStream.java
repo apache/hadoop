@@ -88,7 +88,7 @@ import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import javax.annotation.Nonnull;
 
@@ -1003,7 +1003,7 @@ public class DFSInputStream extends FSInputStream
       String description = "Could not obtain block: " + blockInfo;
       DFSClient.LOG.warn(description + errMsg
           + ". Throwing a BlockMissingException");
-      throw new BlockMissingException(src, description,
+      throw new BlockMissingException(src, description + errMsg,
           block.getStartOffset());
     }
 

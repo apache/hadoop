@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW
 import org.apache.hadoop.yarn.server.timelineservice.storage.subapplication.SubApplicationTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTableRW;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

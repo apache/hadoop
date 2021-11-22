@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +47,7 @@ import org.apache.hadoop.net.unix.DomainSocketWatcher;
 import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 
 /**

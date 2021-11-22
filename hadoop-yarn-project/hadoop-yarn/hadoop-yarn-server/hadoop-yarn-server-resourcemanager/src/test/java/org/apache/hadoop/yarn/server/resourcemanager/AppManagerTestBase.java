@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -71,7 +72,7 @@ public class AppManagerTestBase {
         ApplicationSubmissionContext submissionContext, String user)
         throws YarnException {
       super.submitApplication(submissionContext, System.currentTimeMillis(),
-          user);
+          UserGroupInformation.createRemoteUser(user));
     }
 
     public String getUserNameForPlacement(final String user,

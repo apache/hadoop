@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 import java.util.*;
@@ -61,7 +62,7 @@ public class MappingRuleValidationContextImpl
    * @return true if the path is valid
    * @throws YarnException if the path is invalid
    */
-  private boolean validateStaticQueuePath(MappingQueuePath path)
+  private boolean validateStaticQueuePath(QueuePath path)
       throws YarnException {
     String normalizedPath = MappingRuleValidationHelper.normalizeQueuePathRoot(
         queueManager, path.getFullPath());
@@ -114,7 +115,7 @@ public class MappingRuleValidationContextImpl
    * @return true of the path is valid
    * @throws YarnException if the path is invalid
    */
-  private boolean validateDynamicQueuePath(MappingQueuePath path)
+  private boolean validateDynamicQueuePath(QueuePath path)
       throws YarnException{
     ArrayList<String> parts = new ArrayList<>();
     Collections.addAll(parts, path.getFullPath().split("\\."));
@@ -216,7 +217,7 @@ public class MappingRuleValidationContextImpl
     if (queuePath == null || queuePath.isEmpty()) {
       throw new YarnException("Queue path is empty.");
     }
-    MappingQueuePath path = new MappingQueuePath(queuePath);
+    QueuePath path = new QueuePath(queuePath);
 
     if (isPathStatic(queuePath)) {
       return validateStaticQueuePath(path);

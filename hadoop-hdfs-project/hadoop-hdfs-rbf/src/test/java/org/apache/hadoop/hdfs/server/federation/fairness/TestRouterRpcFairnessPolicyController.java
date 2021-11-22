@@ -30,6 +30,7 @@ import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnes
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -99,6 +100,26 @@ public class TestRouterRpcFairnessPolicyController {
     Configuration conf = createConf(1);
     conf.setInt(DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX + "concurrent", 1);
     verifyInstantiationError(conf, 1, 3);
+  }
+
+  @Test
+  public void testGetAvailableHandlerOnPerNs() {
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController
+        = getFairnessPolicyController(30);
+    assertEquals("{\"concurrent\":10,\"ns2\":10,\"ns1\":10}",
+        routerRpcFairnessPolicyController.getAvailableHandlerOnPerNs());
+    routerRpcFairnessPolicyController.acquirePermit("ns1");
+    assertEquals("{\"concurrent\":10,\"ns2\":10,\"ns1\":9}",
+        routerRpcFairnessPolicyController.getAvailableHandlerOnPerNs());
+  }
+
+  @Test
+  public void testGetAvailableHandlerOnPerNsForNoFairness() {
+    Configuration conf = new Configuration();
+    RouterRpcFairnessPolicyController routerRpcFairnessPolicyController =
+        FederationUtil.newFairnessPolicyController(conf);
+    assertEquals("N/A",
+        routerRpcFairnessPolicyController.getAvailableHandlerOnPerNs());
   }
 
   @Test

@@ -387,7 +387,7 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT =
-      false;
+      true;
 
   /**
    * The capacity of executor queues for operations other than block
@@ -410,6 +410,12 @@ public final class Constants {
   public static final String CANNED_ACL = "fs.s3a.acl.default";
   public static final String DEFAULT_CANNED_ACL = "";
 
+  /**
+   * Content encoding: gzip, deflate, compress, br, etc.
+   * Value {@value}.
+   */
+  public static final String CONTENT_ENCODING = "fs.s3a.object.content.encoding";
+
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";
@@ -421,11 +427,12 @@ public final class Constants {
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
 
   /**
-   * s3 server-side encryption or s3 client side encryption method, see
+   * s3 server-side encryption, see
    * {@link S3AEncryptionMethods} for valid options.
    *
    * {@value}
    */
+  @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
@@ -449,8 +456,31 @@ public final class Constants {
    * May be set within a JCEKS file.
    * Value: "{@value}".
    */
+  @Deprecated
   public static final String SERVER_SIDE_ENCRYPTION_KEY =
       "fs.s3a.server-side-encryption.key";
+
+  /**
+   * Set S3-server side encryption(SSE) or S3-Client side encryption(CSE)
+   * algorithm. Check {@link S3AEncryptionMethods} for valid options.
+   * <br>
+   * value: {@value}
+   */
+  public static final String S3_ENCRYPTION_ALGORITHM =
+      "fs.s3a.encryption.algorithm";
+
+  /**
+   * Set S3-SSE or S3-CSE encryption Key if required.
+   * <br>
+   * <i>Note:</i>
+   *   <ul>
+   *     <li>In case of S3-CSE this value needs to be set for CSE to work.</li>
+   *     <li>In case of S3-SSE follow {@link #SERVER_SIDE_ENCRYPTION_KEY}</li>
+   *   </ul>
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_KEY =
+      "fs.s3a.encryption.key";
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
@@ -1098,4 +1128,8 @@ public final class Constants {
    */
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
+  /**
+   * Require that all S3 access is made through Access Points.
+   */
+  public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
 }

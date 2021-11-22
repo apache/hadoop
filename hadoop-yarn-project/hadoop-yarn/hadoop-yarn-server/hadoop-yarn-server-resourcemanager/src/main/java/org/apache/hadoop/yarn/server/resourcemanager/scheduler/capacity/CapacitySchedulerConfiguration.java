@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,9 +74,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Set;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
@@ -413,6 +414,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String MAPPING_RULE_FORMAT_DEFAULT =
       MAPPING_RULE_FORMAT_LEGACY;
+
+  private static final QueueCapacityConfigParser queueCapacityConfigParser
+      = new QueueCapacityConfigParser();
+
   private ConfigurationProperties configurationProperties;
 
   /**
@@ -454,11 +459,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return PREFIX + "user." + user + DOT;
   }
 
-  private String getNodeLabelPrefix(String queue, String label) {
+  public static String getNodeLabelPrefix(String queue, String label) {
     if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
       return getQueuePrefix(queue);
     }
     return getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label + DOT;
+  }
+
+  public void setMaximumSystemApplications(int numMaxApps) {
+    setInt(MAXIMUM_SYSTEM_APPLICATIONS, numMaxApps);
   }
 
   public int getMaximumSystemApplications() {
@@ -1672,7 +1681,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getBoolean(LAZY_PREEMPTION_ENABLED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 
-  public boolean shouldAppFailFast(Configuration conf) {
+  public static boolean shouldAppFailFast(Configuration conf) {
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
   }
 
@@ -2048,30 +2057,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
    * Get the weights of all users at this queue level from the configuration.
    * Used in computing user-specific user limit, relative to other users.
    * @param queuePath full queue path
-   * @return map of user weights, if they exists. Otherwise, return empty map.
+   * @return map of user weights, if they exist. Otherwise, return empty map.
    */
-  public Map<String, Float> getAllUserWeightsForQueue(String queuePath) {
-    Map <String, Float> userWeights = new HashMap <>();
-    String qPathPlusPrefix = getQueuePrefix(queuePath) + USER_SETTINGS;
-    Map<String, String> props = getConfigurationProperties()
-        .getPropertiesWithPrefix(qPathPlusPrefix);
-
-    Map<String, String> result = new HashMap<>();
-    for(Map.Entry<String, String> item: props.entrySet()) {
-      Matcher m = USER_WEIGHT_PATTERN.matcher(item.getKey());
-      if(m.find()) {
-        result.put(item.getKey(), substituteVars(item.getValue()));
-      }
-    }
-
-    for (Entry<String, String> e : result.entrySet()) {
-      String userName =
-          e.getKey().replaceFirst("\\." + USER_WEIGHT, "");
-      if (!userName.isEmpty()) {
-        userWeights.put(userName, new Float(e.getValue()));
-      }
-    }
-    return userWeights;
+  public UserWeights getAllUserWeightsForQueue(String queuePath) {
+    return UserWeights.createByConfig(this, getConfigurationProperties(), queuePath);
   }
 
   public boolean getAssignMultipleEnabled() {
@@ -2585,6 +2574,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void setMaximumResourceRequirement(String label, String queue,
       Resource resource) {
     updateMinMaxResourceToConf(label, queue, resource, MAXIMUM_CAPACITY);
+  }
+
+  public Map<String, QueueCapacityVector> parseConfiguredResourceVector(
+      String queuePath, Set<String> labels) {
+    Map<String, QueueCapacityVector> queueResourceVectors = new HashMap<>();
+    for (String label : labels) {
+      queueResourceVectors.put(label, queueCapacityConfigParser.parse(this, queuePath, label));
+    }
+
+    return queueResourceVectors;
   }
 
   private void updateMinMaxResourceToConf(String label, String queue,

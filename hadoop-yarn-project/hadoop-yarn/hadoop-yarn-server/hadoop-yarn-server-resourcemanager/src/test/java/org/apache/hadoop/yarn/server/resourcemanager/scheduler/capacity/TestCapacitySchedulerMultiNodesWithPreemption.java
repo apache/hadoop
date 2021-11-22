@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -52,8 +53,7 @@ import org.junit.Test;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TestCapacitySchedulerMultiNodesWithPreemption
-    extends CapacitySchedulerTestBase {
+public class TestCapacitySchedulerMultiNodesWithPreemption {
 
   private static final Log LOG = LogFactory
       .getLog(TestCapacitySchedulerMultiNodesWithPreemption.class);

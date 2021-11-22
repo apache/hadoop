@@ -71,9 +71,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
@@ -773,7 +773,7 @@ public class Journal implements Closeable {
           .setEditLog(output.toByteString())
           .build();
     } catch (JournaledEditsCache.CacheMissException cme) {
-      metrics.rpcRequestCacheMissAmount.add(cme.getCacheMissAmount());
+      metrics.addRpcRequestCacheMissAmount(cme.getCacheMissAmount());
       throw cme;
     }
   }
