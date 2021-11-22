@@ -908,13 +908,14 @@ public class Client implements AutoCloseable {
         return;
       }
       if (fallbackToSimpleAuth == null) {
+        // this should happen only during testing.
         LOG.trace("Connection {} will skip to set fallbackToSimpleAuth as it is null.", remoteId);
       } else {
-        LOG.trace("Connection {} sets fallbackToSimpleAuth.", remoteId);
+        if (fallbackToSimpleAuth.get()) {
+          // we already set the value to true, we do not need to examine again.
+          return;
+        }
       }
-      LOG.trace("AuthMethod is {}. Fallback allowed by configuration: {}. Security is {}.",
-            authMethod, fallbackAllowed,
-            UserGroupInformation.isSecurityEnabled() ? "enabled" : "disabled");
       if (authMethod != AuthMethod.SIMPLE) {
         if (fallbackToSimpleAuth != null) {
           LOG.trace("Disabling fallbackToSimpleAuth, target does not use SIMPLE authentication.");
