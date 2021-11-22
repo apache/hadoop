@@ -76,6 +76,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 public abstract class AbstractCSQueue implements CSQueue {
   private static final Logger LOG =
@@ -305,7 +306,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       queueCapacities.setMaximumCapacity(maximumCapacity);
       queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
       configuredMaximumCapacityVectors.put(NO_LABEL, QueueCapacityVector.of(
-          maximumCapacity * 100, QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE));
+          maximumCapacity * 100, PERCENTAGE));
     } finally {
       writeLock.unlock();
     }
@@ -329,7 +330,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       queueCapacities.setMaximumCapacity(maximumCapacity);
       queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
       configuredMaximumCapacityVectors.put(nodeLabel, QueueCapacityVector.of(
-          maximumCapacity * 100, QueueCapacityVector.QueueCapacityType.PERCENTAGE));
+          maximumCapacity * 100, PERCENTAGE));
     } finally {
       writeLock.unlock();
     }

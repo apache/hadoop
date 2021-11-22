@@ -18,43 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-<<<<<<< HEAD
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 public class RootQueueCapacityCalculator extends
     AbstractQueueCapacityCalculator {
-=======
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.PERCENTAGE;
-
-public class RootQueueCapacityCalculator extends
-    AbstractQueueCapacityCalculator {
-
-  @Override
-  public void calculateChildQueueResources(
-      QueueHierarchyUpdateContext updateContext, CSQueue parentQueue) {
-    for (String label : parentQueue.getConfiguredNodeLabels()) {
-      for (QueueCapacityVectorEntry capacityVectorEntry : parentQueue.getConfiguredCapacityVector(label)) {
-        parentQueue.getOrCreateAbsoluteMinCapacityVector(label).setValue(
-            capacityVectorEntry.getResourceName(), 1);
-        parentQueue.getOrCreateAbsoluteMaxCapacityVector(label).setValue(
-            capacityVectorEntry.getResourceName(), 1);
-
-        float minimumResource = calculateMinimumResource(updateContext, parentQueue, label, capacityVectorEntry);
-        float maximumResource = calculateMaximumResource(updateContext, parentQueue, label, capacityVectorEntry);
-        long roundedMinResource = (long) Math.floor(minimumResource);
-        long roundedMaxResource = (long) Math.floor(maximumResource);
-        parentQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-            .setResourceValue(capacityVectorEntry.getResourceName(), roundedMinResource);
-        parentQueue.getQueueResourceQuotas().getEffectiveMaxResource(label)
-            .setResourceValue(capacityVectorEntry.getResourceName(), roundedMaxResource);
-      }
-    }
-
-    calculateResourcePrerequisites(updateContext, parentQueue);
-  }
->>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
 
   @Override
   public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver, String label) {

@@ -23,7 +23,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerApp;
@@ -39,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.PERCENTAGE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 /**
  * Auto Creation enabled Parent queue. This queue initially does not have any

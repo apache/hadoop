@@ -18,17 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-<<<<<<< HEAD
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
-=======
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType;
->>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 import java.util.Map;
 import java.util.Set;
@@ -91,13 +87,8 @@ public abstract class AbstractQueueCapacityCalculator {
   public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
     for (String label : resourceCalculationDriver.getParent().getConfiguredNodeLabels()) {
       // We need to set normalized resource ratio only once per parent
-<<<<<<< HEAD
       if (resourceCalculationDriver.getNormalizedResourceRatios().isEmpty()) {
         setNormalizedResourceRatio(resourceCalculationDriver, label);
-=======
-      if (updateContext.getNormalizedMinResourceRatio(parentQueue.getQueuePath(), label).isEmpty()) {
-        setNormalizedResourceRatio(updateContext, parentQueue, label);
->>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
       }
     }
   }
@@ -178,7 +169,6 @@ public abstract class AbstractQueueCapacityCalculator {
    * @param label         node label
    */
   private void setNormalizedResourceRatio(
-<<<<<<< HEAD
       ResourceCalculationDriver resourceCalculationDriver, String label) {
     // ManagedParents assign zero capacity to queues in case of overutilization, downscaling is
     // turned off for their children
@@ -189,14 +179,6 @@ public abstract class AbstractQueueCapacityCalculator {
       return;
     }
 
-=======
-      QueueHierarchyUpdateContext updateContext, CSQueue parentQueue, String label) {
-//    // ManagedParents assign zero capacity to queues in case of overutilization, no need to
-//    // scale down
-//    if (parentQueue instanceof ManagedParentQueue) {
-//      return;
-//    }
->>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
     for (QueueCapacityVectorEntry capacityVectorEntry : parentQueue.getConfiguredCapacityVector(
         label)) {
       String resourceName = capacityVectorEntry.getResourceName();
@@ -236,97 +218,11 @@ public abstract class AbstractQueueCapacityCalculator {
               .getUnits(), childrenConfiguredResource);
 
       if (convertedValue != 0) {
-<<<<<<< HEAD
         Map<String, ResourceVector> normalizedResourceRatios = resourceCalculationDriver
             .getNormalizedResourceRatios();
         normalizedResourceRatios.putIfAbsent(label, ResourceVector.newInstance());
         normalizedResourceRatios.get(label).setValue(resourceName, numeratorForMinRatio /
             convertedValue);
-=======
-        updateContext.getNormalizedMinResourceRatio(parentQueue.getQueuePath(), label).setValue(
-            resourceName, numeratorForMinRatio / convertedValue);
-      }
-    }
-  }
-
-  private void calculateResources(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String label,
-      ResourceVector usedResourcesOfCalculator) {
-    for (String resourceName : getResourceNames(childQueue, label)) {
-      long clusterResource = updateContext.getUpdatedClusterResource(label).getResourceValue(
-          resourceName);
-
-      Pair<Float, Float> resources = validateCalculatedResources(updateContext, childQueue, resourceName, label,
-          usedResourcesOfCalculator);
-      float minimumResource = resources.getLeft();
-      float maximumResource = resources.getRight();
-
-      float absoluteMinCapacity = minimumResource / clusterResource;
-      float absoluteMaxCapacity = maximumResource / clusterResource;
-      childQueue.getOrCreateAbsoluteMinCapacityVector(label).setValue(resourceName, absoluteMinCapacity);
-      childQueue.getOrCreateAbsoluteMaxCapacityVector(label).setValue(resourceName, absoluteMaxCapacity);
-
-      long roundedMinResource = (long) Math.floor(minimumResource);
-      long roundedMaxResource = (long) Math.floor(maximumResource);
-      childQueue.getQueueResourceQuotas().getEffectiveMinResource(label).setResourceValue(
-          resourceName, roundedMinResource);
-      childQueue.getQueueResourceQuotas().getEffectiveMaxResource(label).setResourceValue(
-          resourceName, roundedMaxResource);
-
-      usedResourcesOfCalculator.increment(resourceName, roundedMinResource);
-    }
-  }
-
-  private Pair<Float, Float> validateCalculatedResources(
-      QueueHierarchyUpdateContext updateContext, CSQueue childQueue, String resourceName,
-      String label, ResourceVector usedResourcesOfCalculator) {
-    CSQueue parentQueue = childQueue.getParent();
-
-    float minimumResource = calculateMinimumResource(updateContext, childQueue, label,
-        childQueue.getConfiguredCapacityVector(label).getResource(resourceName));
-    long minimumMemoryResource = childQueue.getQueueResourceQuotas().getEffectiveMinResource(label)
-        .getMemorySize();
-
-    float remainingResourceUnderParent = updateContext.getQueueBranchContext(
-        parentQueue.getQueuePath()).getRemainingResources(label).getValue(resourceName)
-        - usedResourcesOfCalculator.getValue(resourceName);
-    float remainingMemoryUnderParent = updateContext.getQueueBranchContext(
-        parentQueue.getQueuePath()).getRemainingResources(label).getValue(MEMORY_URI)
-        - usedResourcesOfCalculator.getValue(MEMORY_URI);
-
-    long parentMaximumResource = parentQueue.getEffectiveMaxCapacity(label).getResourceValue(
-        resourceName);
-    float maximumResource = calculateMaximumResource(updateContext, childQueue, label,
-        childQueue.getConfiguredMaximumCapacityVector(label).getResource(resourceName));
-
-    // Memory is a primary resource, if it is zero, we consider all other resource zero as well
-    if (remainingMemoryUnderParent == 0 && minimumMemoryResource == 0) {
-      minimumResource = 0;
-    }
-
-    if (maximumResource != 0 && maximumResource > parentMaximumResource) {
-      updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_MAX_RESOURCE_EXCEEDS_PARENT.ofQueue(
-          childQueue.getQueuePath()));
-    }
-    maximumResource = maximumResource == 0 || Float.isNaN(maximumResource) ? parentMaximumResource
-        : Math.min(maximumResource, parentMaximumResource);
-
-    if (maximumResource < minimumResource) {
-      updateContext.addUpdateWarning(QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE.ofQueue(
-          childQueue.getQueuePath()));
-      minimumResource = maximumResource;
-    }
-
-    if (minimumResource > remainingResourceUnderParent) {
-      // Legacy auto queues are assigned a zero resource if not enough resource is left
-      if (parentQueue instanceof ManagedParentQueue) {
-        minimumResource = 0;
-      } else {
-        updateContext.addUpdateWarning(
-            QueueUpdateWarningType.QUEUE_OVERUTILIZED.ofQueue(childQueue.getQueuePath()).withInfo(
-                "Resource name: " + resourceName + " resource value: " + minimumResource));
-        minimumResource = remainingResourceUnderParent;
->>>>>>> 400f4af9c96 (YARN-11000. Fix weight queue calculation and test issues)
       }
     }
   }

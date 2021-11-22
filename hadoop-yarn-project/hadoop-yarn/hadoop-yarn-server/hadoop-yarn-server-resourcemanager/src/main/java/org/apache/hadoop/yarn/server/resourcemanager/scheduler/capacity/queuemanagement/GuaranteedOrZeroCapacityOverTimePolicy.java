@@ -70,7 +70,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityType.PERCENTAGE;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
 /**
  * Capacity Management policy for auto created leaf queues

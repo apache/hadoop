@@ -545,20 +545,20 @@ public class ParentQueue extends AbstractCSQueue {
                 + " and number of child queues is: " + childQueues.size());
       }
 
-//      // First, check if we allow creation or not
-//      boolean weightsAreUsed = false;
-//      try {
-//        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
-//            == QueueCapacityType.WEIGHT;
-//      } catch (IOException e) {
-//        LOG.warn("Caught Exception during auto queue creation", e);
-//      }
-//      if (!weightsAreUsed) {
-//        throw new SchedulerDynamicEditException(
-//            "Trying to create new queue=" + childQueuePath
-//                + " but not all the queues under parent=" + this.getQueuePath()
-//                + " are using weight-based capacity. Failed to created queue");
-//      }
+      // First, check if we allow creation or not
+      boolean weightsAreUsed = false;
+      try {
+        weightsAreUsed = getCapacityConfigurationTypeForQueues(childQueues)
+            == QueueCapacityType.WEIGHT;
+      } catch (IOException e) {
+        LOG.warn("Caught Exception during auto queue creation", e);
+      }
+      if (!weightsAreUsed && csContext.getConfiguration().isLegacyQueueMode()) {
+        throw new SchedulerDynamicEditException(
+            "Trying to create new queue=" + childQueuePath
+                + " but not all the queues under parent=" + this.getQueuePath()
+                + " are using weight-based capacity. Failed to created queue");
+      }
 
       CSQueue newQueue = createNewQueue(childQueuePath, isLeaf);
       this.childQueues.add(newQueue);

@@ -252,6 +252,11 @@ public class ResourceCalculationDriver {
             capacityType)) {
           return;
         }
+
+        if (!overallRemainingResource.containsKey(label)) {
+          continue;
+        }
+
         float usedResourceByChild = setChildResources(label);
         float aggregatedUsedResource = usedResourceByCurrentCalculator.getOrDefault(label,
             0f);
