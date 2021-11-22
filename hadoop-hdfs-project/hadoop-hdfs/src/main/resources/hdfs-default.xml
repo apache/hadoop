@@ -6300,4 +6300,22 @@
       Effective with dfs.nameservices.resolution-enabled on.
     </description>
   </property>
+
+  <property>
+    <name>dfs.client.mark.slownode.as.badnode</name>
+    <value>false</value>
+    <description>
+      Whether clients should mark slownode as badnode to rebuild the pipeline.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.mark.slownode.as.badnode.threshold</name>
+    <value>10</value>
+    <description>
+      The threshold to mark a slownode as a badnode. If we get PipelineAck from
+      a slownode continuously for ${dfs.client.treat.slownode.as.badnode.threshold}
+      times, we should mark it as a badnode.
+    </description>
+  </property>
 </configuration>

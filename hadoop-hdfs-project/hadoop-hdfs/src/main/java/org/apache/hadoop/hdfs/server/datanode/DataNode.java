@@ -636,6 +636,19 @@ public class DataNode extends ReconfigurableBase
         PipelineAck.ECN.SUPPORTED;
   }
 
+  /**
+   * The SLOW bit for the DataNode of the specific BlockPool.
+   * The DataNode should return:
+   * <ul>
+   *   <li>SLOW.NORMAL by default.</li>
+   *   <li>SLOW.SLOW when DN is slow.</li>
+   * </ul>
+   */
+  public PipelineAck.SLOW getSLOWByBlockPoolId(String bpId) {
+    return isSlownodeByBlockPoolId(bpId) ? PipelineAck.SLOW.SLOW :
+        PipelineAck.SLOW.NORMAL;
+  }
+
   public FileIoProvider getFileIoProvider() {
     return fileIoProvider;
   }

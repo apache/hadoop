@@ -42,6 +42,25 @@ public class PipelineAck {
   final static int OOB_START = Status.OOB_RESTART_VALUE; // the first OOB type
   final static int OOB_END = Status.OOB_RESERVED3_VALUE; // the last OOB type
 
+  public enum SLOW {
+    NORMAL(0),
+    SLOW(1);
+
+    private final int value;
+    private static final SLOW[] VALUES = values();
+    static SLOW valueOf(int value) {
+      return VALUES[value];
+    }
+
+    SLOW(int value) {
+      this.value = value;
+    }
+
+    public int getValue() {
+      return value;
+    }
+  }
+
   public enum ECN {
     DISABLED(0),
     SUPPORTED(1),
@@ -66,7 +85,8 @@ public class PipelineAck {
   private enum StatusFormat {
     STATUS(null, 4),
     RESERVED(STATUS.BITS, 1),
-    ECN_BITS(RESERVED.BITS, 2);
+    ECN_BITS(RESERVED.BITS, 2),
+    SLOW_BITS(ECN_BITS.BITS, 1);
 
     private final LongBitFormat BITS;
 
@@ -82,12 +102,20 @@ public class PipelineAck {
       return ECN.valueOf((int) ECN_BITS.BITS.retrieve(header));
     }
 
+    static SLOW getSLOW(int header) {
+      return SLOW.valueOf((int) SLOW_BITS.BITS.retrieve(header));
+    }
+
     public static int setStatus(int old, Status status) {
       return (int) STATUS.BITS.combine(status.getNumber(), old);
     }
 
     public static int setECN(int old, ECN ecn) {
       return (int) ECN_BITS.BITS.combine(ecn.getValue(), old);
+    }
+
+    public static int setSLOW(int old, SLOW slow) {
+      return (int) SLOW_BITS.BITS.combine(slow.getValue(), old);
     }
   }
 
@@ -230,14 +258,23 @@ public class PipelineAck {
     return StatusFormat.getECN(header);
   }
 
+  public static SLOW getSLOWFromHeader(int header) {
+    return StatusFormat.getSLOW(header);
+  }
+
   public static int setStatusForHeader(int old, Status status) {
     return StatusFormat.setStatus(old, status);
   }
 
   public static int combineHeader(ECN ecn, Status status) {
+    return combineHeader(ecn, status, SLOW.NORMAL);
+  }
+
+  public static int combineHeader(ECN ecn, Status status, SLOW slow) {
     int header = 0;
     header = StatusFormat.setStatus(header, status);
     header = StatusFormat.setECN(header, ecn);
+    header = StatusFormat.setSLOW(header, slow);
     return header;
   }
 }
