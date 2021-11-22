@@ -58,21 +58,20 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
       return remainingResource;
     }
 
-    float remainingPerEffectiveResourceRatio = remainingResource / parentQueue.getEffectiveCapacity(
-        label).getResourceValue(resourceName);
+    float remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
+        label, resourceName);
 
     float parentAbsoluteCapacity = parentQueue.getOrCreateAbsoluteMinCapacityVector(label)
         .getValue(resourceName);
-    float queueAbsoluteCapacity = parentAbsoluteCapacity *
-        remainingPerEffectiveResourceRatio * normalizedWeight;
+    float queueAbsoluteCapacity = parentAbsoluteCapacity * remainingResourceRatio
+        * normalizedWeight;
 
     // Weight capacity types are the last to consider, therefore it is safe to assign all remaining
     // effective resources between queues. The strategy is to round values to the closest whole
     // number.
-    float resource = resourceCalculationDriver.getUpdateContext()
-        .getUpdatedClusterResource(label).getResourceValue(resourceName) * queueAbsoluteCapacity;
 
-    return Math.round(resource);
+    return resourceCalculationDriver.getUpdateContext()
+        .getUpdatedClusterResource(label).getResourceValue(resourceName) * queueAbsoluteCapacity;
   }
 
   @Override

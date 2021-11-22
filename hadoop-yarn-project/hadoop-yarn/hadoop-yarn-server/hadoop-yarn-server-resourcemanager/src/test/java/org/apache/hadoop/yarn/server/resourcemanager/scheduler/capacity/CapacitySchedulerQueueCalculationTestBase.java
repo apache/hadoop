@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.GB;
 
 public class CapacitySchedulerQueueCalculationTestBase {
@@ -186,17 +187,13 @@ public class CapacitySchedulerQueueCalculationTestBase {
             String errorMessage = String.format(RESOURCE_ASSERTION_ERROR_MESSAGE,
                 assertion.assertionType, assertionEntry.getKey(),
                 assertion.expectedResource.toString());
-            Assert.assertEquals(errorMessage,
-                assertion.expectedResource,
+            Assert.assertEquals(errorMessage, assertion.expectedResource,
                 assertion.resourceSupplier.get());
           } else {
             String errorMessage = String.format(ASSERTION_ERROR_MESSAGE,
-                assertion.assertionType, assertionEntry.getKey(),
-                assertion.expectedValue);
-            Assert.assertEquals(errorMessage,
-                assertion.expectedValue,
-                assertion.valueSupplier.get(),
-                1e-6);
+                assertion.assertionType, assertionEntry.getKey(), assertion.expectedValue);
+            Assert.assertEquals(errorMessage, assertion.expectedValue,
+                assertion.valueSupplier.get(), EPSILON);
           }
         }
       }

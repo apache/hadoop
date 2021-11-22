@@ -171,6 +171,11 @@ public class ResourceCalculationDriver {
     return normalizedResourceRatio;
   }
 
+  public float getRemainingRatioOfResource(String label, String resourceName) {
+    return batchRemainingResource.get(label).getValue(resourceName)
+        / parent.getEffectiveCapacity(label).getResourceValue(resourceName);
+  }
+
   /**
    * Returns the remaining resources of a parent that is still available for its
    * children. Decremented only after the calculator is finished its work on the corresponding

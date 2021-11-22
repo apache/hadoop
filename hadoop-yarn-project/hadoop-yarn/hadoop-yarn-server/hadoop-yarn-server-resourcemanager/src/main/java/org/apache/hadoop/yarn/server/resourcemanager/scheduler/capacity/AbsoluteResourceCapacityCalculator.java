@@ -26,11 +26,13 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
   public float calculateMinimumResource(
        ResourceCalculationDriver resourceCalculationDriver, String label) {
     String resourceName = resourceCalculationDriver.getCurrentResourceName();
-    ResourceVector ratio = resourceCalculationDriver.getNormalizedResourceRatios().getOrDefault(
-        label, ResourceVector.of(1));
+    float normalizedRatio = resourceCalculationDriver.getNormalizedResourceRatios().getOrDefault(
+        label, ResourceVector.of(1)).getValue(resourceName);
+    float remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
+        label, resourceName);
 
-    return ratio.getValue(resourceName) * resourceCalculationDriver.getCurrentMinimumCapacityEntry(label)
-        .getResourceValue();
+    return normalizedRatio * remainingResourceRatio * resourceCalculationDriver
+        .getCurrentMinimumCapacityEntry(label).getResourceValue();
   }
 
   @Override
