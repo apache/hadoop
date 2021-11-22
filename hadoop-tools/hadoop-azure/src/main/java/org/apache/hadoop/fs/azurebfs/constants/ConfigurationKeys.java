@@ -188,8 +188,12 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
-  /** Server side encryption key */
-  public static final String FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY = "fs.azure.encryption.client-provided-key";
+  /** Server side encryption key encoded in Base6format */
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY =
+      "fs.azure.encryption.encoded.client-provided-key";
+  /** SHA256 hash of encryption key encoded in Base6format */
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA =
+      "fs.azure.encryption.encoded.client-provided-key-sha";
   /** Custom EncryptionContextProvider type */
   public static final String FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE = "fs.azure.encryption.context.provider.type";
 

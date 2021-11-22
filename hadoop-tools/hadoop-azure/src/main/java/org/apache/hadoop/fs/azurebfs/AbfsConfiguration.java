@@ -1039,8 +1039,13 @@ public class AbfsConfiguration{
     return this.enableAbfsListIterator;
   }
 
-  public String getClientProvidedEncryptionKey() {
-    String accSpecEncKey = accountConf(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY);
+  public String getEncodedClientProvidedEncryptionKey() {
+    String accSpecEncKey = accountConf(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY);
+    return rawConfig.get(accSpecEncKey, null);
+  }
+
+  public String getEncodedClientProvidedEncryptionKeySHA() {
+    String accSpecEncKey = accountConf(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA);
     return rawConfig.get(accSpecEncKey, null);
   }
 

@@ -47,8 +47,9 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_SERVER_ENCRYPTED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_SERVER_ENCRYPTED;
@@ -252,15 +253,22 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
     Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE,
         MockEncryptionContextProvider.class.getCanonicalName());
-    configuration.unset(
-        FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + getAccountName());
+    configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + "."
+        + getAccountName());
+    configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
+        + getAccountName());
     return (AzureBlobFileSystem) FileSystem.newInstance(configuration);
   }
 
   private AzureBlobFileSystem getCPKenabledFS() throws IOException {
     Configuration conf = getRawConfiguration();
-    conf.set(FS_AZURE_ENCRYPTION_CLIENT_PROVIDED_KEY + "." + getAccountName(),
-        cpk);
+    String cpkEncoded = EncryptionAdapter.getBase64EncodedString(cpk);
+    String cpkEncodedSHA = EncryptionAdapter.getBase64EncodedString(
+        EncryptionAdapter.getSHA256Hash(cpk));
+    conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + "."
+        + getAccountName(), cpkEncoded);
+    conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
+        + getAccountName(), cpkEncodedSHA);
     conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
     return (AzureBlobFileSystem) FileSystem.newInstance(conf);
   }

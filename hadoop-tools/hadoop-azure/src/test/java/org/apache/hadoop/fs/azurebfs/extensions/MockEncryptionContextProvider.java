@@ -29,6 +29,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCRYPTION_KEY_LEN;
+
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
   private HashMap<String, String> pathToContextMap = new HashMap<>();
   private HashMap<String, Key> contextToKeyMap = new HashMap<>();
@@ -42,7 +44,7 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
       throws IOException {
     String newContext = UUID.randomUUID().toString();
     pathToContextMap.put(path, newContext);
-    String keyString = RandomStringUtils.random(32, true, true);
+    String keyString = RandomStringUtils.random(ENCRYPTION_KEY_LEN, true, true);
     Key key = new Key(keyString.getBytes(StandardCharsets.UTF_8));
     contextToKeyMap.put(newContext, key);
     return new Key(newContext.getBytes(StandardCharsets.UTF_8));

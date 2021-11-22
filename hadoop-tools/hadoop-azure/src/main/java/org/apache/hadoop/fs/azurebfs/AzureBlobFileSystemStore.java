@@ -563,8 +563,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,
             statistics,
-            isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            new Permissions(isNamespaceEnabled, permission, umask),
             isAppendBlob,
             encryptionAdapter,
             tracingContext
@@ -573,8 +572,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       } else {
         op = client.createPath(relativePath, true,
             overwrite,
-            isNamespaceEnabled ? getOctalNotation(permission) : null,
-            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            new Permissions(isNamespaceEnabled, permission, umask),
             isAppendBlob,
             null,
             encryptionAdapter,
@@ -603,16 +601,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * only if there is match for eTag of existing file.
    * @param relativePath
    * @param statistics
-   * @param permission
-   * @param umask
+   * @param permissions contains permission and umask
    * @param isAppendBlob
    * @return
    * @throws AzureBlobFileSystemException
    */
   private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
       final FileSystem.Statistics statistics,
-      final String permission,
-      final String umask,
+      Permissions permissions,
       final boolean isAppendBlob,
       EncryptionAdapter encryptionAdapter,
       TracingContext tracingContext) throws IOException {
@@ -622,7 +618,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
-      op = client.createPath(relativePath, true, false, permission, umask,
+      op = client.createPath(relativePath, true, false, permissions,
           isAppendBlob, null, encryptionAdapter, tracingContext);
 
     } catch (AbfsRestOperationException e) {
@@ -647,7 +643,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
-          op = client.createPath(relativePath, true, true, permission, umask,
+          op = client.createPath(relativePath, true, true, permissions,
               isAppendBlob, eTag, encryptionAdapter, tracingContext);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
@@ -734,11 +730,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       boolean overwrite =
           !isNamespaceEnabled || abfsConfiguration.isEnabledMkdirOverwrite();
+      Permissions permissions = new Permissions(isNamespaceEnabled,
+          permission, umask);
       final AbfsRestOperation op = client.createPath(getRelativePath(path),
-          false, overwrite,
-              isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null, false,
-          null, null, tracingContext);
+          false, overwrite, permissions, false, null, null, tracingContext);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -1632,7 +1627,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       encryptionContextProvider =
           abfsConfiguration.createEncryptionContextProvider();
       if (encryptionContextProvider != null) {
-        if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
+        if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
           throw new IOException(
               "Both global key and encryption context are set, only one allowed");
         }
@@ -1640,8 +1635,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             abfsConfiguration.getRawConfiguration(), accountName,
             fileSystemName);
         encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
-      } else if (abfsConfiguration.getClientProvidedEncryptionKey() != null) {
-        encryptionType = EncryptionType.GLOBAL_KEY;
+      } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
+        if (abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA() != null) {
+          encryptionType = EncryptionType.GLOBAL_KEY;
+        } else {
+          throw new IOException(
+              "Encoded SHA256 hash must be provided for global encryption");
+        }
       }
     }
 
@@ -1655,7 +1655,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           sasTokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
     }
-    client.setEncryptionType(encryptionType);
 
     LOG.trace("AbfsClient init complete");
   }
@@ -1672,11 +1671,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
         .build();
-  }
-
-  private String getOctalNotation(FsPermission fsPermission) {
-    Preconditions.checkNotNull(fsPermission, "fsPermission");
-    return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
   }
 
   public String getRelativePath(final Path path) {
@@ -1863,6 +1857,35 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       sb.append("; version='").append(version).append('\'');
       sb.append('}');
       return sb.toString();
+    }
+  }
+
+  public static class Permissions {
+    private final String permission;
+    private final String umask;
+
+    Permissions(boolean isNamespaceEnabled, FsPermission permission,
+        FsPermission umask) {
+      if (isNamespaceEnabled) {
+        this.permission = getOctalNotation(permission);
+        this.umask = getOctalNotation(umask);
+      } else {
+        this.permission = null;
+        this.umask = null;
+      }
+    }
+
+    private String getOctalNotation(FsPermission fsPermission) {
+      Preconditions.checkNotNull(fsPermission, "fsPermission");
+      return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
+    }
+
+    public String getPermission() {
+      return permission;
+    }
+
+    public String getUmask() {
+      return umask;
     }
   }
 

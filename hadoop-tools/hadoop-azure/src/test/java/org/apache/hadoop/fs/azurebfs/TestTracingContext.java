@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -98,17 +99,13 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         TracingHeaderFormat.ALL_ID_FORMAT, null);
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
     String path = getRelativePath(new Path("/testDir"));
-    String permission = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getDirDefault())
-        : null;
-    String umask = isNamespaceEnabled
-        ? getOctalNotation(FsPermission.getUMask(fs.getConf()))
-        : null;
+    Permissions permissions = new Permissions(isNamespaceEnabled,
+        FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
 
     //request should not fail for invalid clientCorrelationID
     AbfsRestOperation op = fs.getAbfsClient()
-        .createPath(path, false, true, permission, umask, false, null,
-            null, tracingContext);
+        .createPath(path, false, true, permissions, false, null, null,
+            tracingContext);
 
     int statusCode = op.getResult().getStatusCode();
     Assertions.assertThat(statusCode).describedAs("Request should not fail")

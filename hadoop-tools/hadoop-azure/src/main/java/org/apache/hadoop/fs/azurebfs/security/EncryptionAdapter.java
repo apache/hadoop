@@ -76,8 +76,9 @@ public class EncryptionAdapter implements Destroyable {
   public void computeKeys() throws IOException {
     SecretKey key = getEncryptionKey();
     Preconditions.checkNotNull(key, "Encryption key should not be null.");
-    encodedKey = getBase64EncodedString(new String(key.getEncoded(),
-        StandardCharsets.UTF_8));
+//    encodedKey = getBase64EncodedString(new String(key.getEncoded(),
+//        StandardCharsets.UTF_8));
+    encodedKey = getBase64EncodedString(key.getEncoded());
     encodedKeySHA = getBase64EncodedString(getSHA256Hash(new String(key.getEncoded(),
         StandardCharsets.UTF_8)));
   }

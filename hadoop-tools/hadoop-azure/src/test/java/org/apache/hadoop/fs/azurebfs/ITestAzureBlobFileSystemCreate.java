@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -398,9 +399,8 @@ public class ITestAzureBlobFileSystemCreate extends
             serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
         .when(mockClient)
         .createPath(any(String.class), eq(true), eq(false),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), any(), any(TracingContext.class));
+            any(Permissions.class), any(boolean.class), eq(null), any(),
+            any(TracingContext.class));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
@@ -416,9 +416,8 @@ public class ITestAzureBlobFileSystemCreate extends
             serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
         .createPath(any(String.class), eq(true), eq(true),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), any(), any(TracingContext.class));
+            any(Permissions.class), any(boolean.class), eq(null), any(),
+            any(TracingContext.class));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:
