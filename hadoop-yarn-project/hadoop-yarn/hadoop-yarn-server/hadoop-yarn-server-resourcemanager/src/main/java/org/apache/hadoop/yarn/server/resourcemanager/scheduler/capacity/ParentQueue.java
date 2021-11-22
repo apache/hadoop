@@ -298,8 +298,8 @@ public class ParentQueue extends AbstractCSQueue {
    */
   void setChildQueues(Collection<CSQueue> childQueues) throws IOException {
     writeLock.lock();
-    boolean isLegacyQueueMode = csContext.getConfiguration().isLegacyQueueMode();
     try {
+      boolean isLegacyQueueMode = csContext.getConfiguration().isLegacyQueueMode();
       if (isLegacyQueueMode) {
         QueueCapacityType childrenCapacityType =
             getCapacityConfigurationTypeForQueues(childQueues);

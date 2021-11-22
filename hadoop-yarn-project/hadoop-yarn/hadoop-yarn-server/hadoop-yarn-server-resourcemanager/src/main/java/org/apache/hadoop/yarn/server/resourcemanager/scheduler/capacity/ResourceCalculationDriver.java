@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -33,16 +51,15 @@ public class ResourceCalculationDriver {
 
   protected final Map<String, ResourceVector> overallRemainingResource = new HashMap<>();
   protected final Map<String, ResourceVector> batchRemainingResource = new HashMap<>();
+  // Used by ABSOLUTE capacity types
+  protected final Map<String, ResourceVector> normalizedResourceRatio = new HashMap<>();
+  // Used by WEIGHT capacity types
+  protected final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
 
   protected String currentResourceName;
   protected AbstractQueueCapacityCalculator currentCalculator;
   protected CSQueue currentChild;
   protected Map<String, Float> usedResourceByCurrentCalculator = new HashMap<>();
-
-  // Used by ABSOLUTE capacity types
-  protected final Map<String, ResourceVector> normalizedResourceRatio = new HashMap<>();
-  // Used by WEIGHT capacity types
-  protected final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
 
   public ResourceCalculationDriver(
       CSQueue parent, QueueCapacityUpdateContext updateContext,
@@ -56,6 +73,7 @@ public class ResourceCalculationDriver {
 
   /**
    * Returns the parent that is driving the calculation.
+   *
    * @return a common parent queue
    */
   public CSQueue getParent() {
@@ -64,6 +82,7 @@ public class ResourceCalculationDriver {
 
   /**
    * Returns the context that is used throughout the whole update phase.
+   *
    * @return update context
    */
   public QueueCapacityUpdateContext getUpdateContext() {
@@ -72,6 +91,7 @@ public class ResourceCalculationDriver {
 
   /**
    * Returns the name of the resource that is currently processed.
+   *
    * @return resource name
    */
   public String getCurrentResourceName() {
@@ -80,6 +100,7 @@ public class ResourceCalculationDriver {
 
   /**
    * Returns the child that is currently processed.
+   *
    * @return child queue
    */
   public CSQueue getCurrentChild() {
@@ -88,6 +109,7 @@ public class ResourceCalculationDriver {
 
   /**
    * Sets the currently evaluated child to a specific queue.
+   *
    * @param currentChild a child queue
    */
   public void setCurrentChild(CSQueue currentChild) {
@@ -123,9 +145,10 @@ public class ResourceCalculationDriver {
 
   /**
    * Increments the aggregated weight.
-   * @param label node label
+   *
+   * @param label        node label
    * @param resourceName resource unit name
-   * @param value weight value
+   * @param value        weight value
    */
   public void incrementWeight(String label, String resourceName, float value) {
     sumWeightsPerLabel.putIfAbsent(label, new HashMap<>());
@@ -135,7 +158,8 @@ public class ResourceCalculationDriver {
 
   /**
    * Returns the aggregated children weights.
-   * @param label node label
+   *
+   * @param label        node label
    * @param resourceName resource unit name
    * @return aggregated weights of children
    */
@@ -198,29 +222,25 @@ public class ResourceCalculationDriver {
    * Updates the capacity values of the currently evaluated child.
    */
   public void updateChildCapacities() {
-    for (String label : currentChild.getConfiguredNodeLabels()) {
-      QueueCapacityVector capacityVector = currentChild.getConfiguredCapacityVector(label);
-      if (capacityVector.isMixedCapacityVector()) {
-        // Post update capacities based on the calculated effective resource values
-        AbstractQueueCapacityCalculator.setQueueCapacities(updateContext.getUpdatedClusterResource(
-            label), currentChild, label);
-      } else {
-        // Update capacities according to the legacy logic
-        for (ResourceUnitCapacityType capacityType :
-            currentChild.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
-          AbstractQueueCapacityCalculator calculator = calculators.get(capacityType);
-          calculator.updateCapacitiesAfterCalculation(this, label);
+    currentChild.getWriteLock().lock();
+    try {
+      for (String label : currentChild.getConfiguredNodeLabels()) {
+        QueueCapacityVector capacityVector = currentChild.getConfiguredCapacityVector(label);
+        if (capacityVector.isMixedCapacityVector()) {
+          // Post update capacities based on the calculated effective resource values
+          AbstractQueueCapacityCalculator.setQueueCapacities(updateContext.getUpdatedClusterResource(
+              label), currentChild, label);
+        } else {
+          // Update capacities according to the legacy logic
+          for (ResourceUnitCapacityType capacityType :
+              currentChild.getConfiguredCapacityVector(label).getDefinedCapacityTypes()) {
+            AbstractQueueCapacityCalculator calculator = calculators.get(capacityType);
+            calculator.updateCapacitiesAfterCalculation(this, label);
+          }
         }
       }
-    }
-  }
-
-  private void validateRemainingResource() {
-    for (String label : parent.getConfiguredNodeLabels()) {
-      if (!batchRemainingResource.get(label).equals(ResourceVector.newInstance())) {
-        updateContext.addUpdateWarning(QueueUpdateWarning.QueueUpdateWarningType.BRANCH_UNDERUTILIZED.ofQueue(
-            parent.getQueuePath()));
-      }
+    } finally {
+      currentChild.getWriteLock().unlock();
     }
   }
 
@@ -330,5 +350,14 @@ public class ResourceCalculationDriver {
     }
 
     return new ImmutablePair<>(minimumResource, maximumResource);
+  }
+
+  private void validateRemainingResource() {
+    for (String label : parent.getConfiguredNodeLabels()) {
+      if (!batchRemainingResource.get(label).equals(ResourceVector.newInstance())) {
+        updateContext.addUpdateWarning(QueueUpdateWarning.QueueUpdateWarningType.BRANCH_UNDERUTILIZED.ofQueue(
+            parent.getQueuePath()));
+      }
+    }
   }
 }

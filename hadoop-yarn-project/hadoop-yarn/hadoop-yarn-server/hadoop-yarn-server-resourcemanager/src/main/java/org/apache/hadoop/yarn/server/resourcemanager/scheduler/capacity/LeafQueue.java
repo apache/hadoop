@@ -167,7 +167,7 @@ public class LeafQueue extends AbstractCSQueue {
         resourceCalculator);
 
     // One time initialization is enough since it is static ordering policy
-    this.pendingOrderingPolicy = new FifoOrderingPolicyForPendingApps();
+    this.pendingOrderingPolicy = new FifoOrderingPolicyForPendingApps<>();
 
     LOG.debug("LeafQueue: name={}, fullname={}", queueName, getQueuePath());
 

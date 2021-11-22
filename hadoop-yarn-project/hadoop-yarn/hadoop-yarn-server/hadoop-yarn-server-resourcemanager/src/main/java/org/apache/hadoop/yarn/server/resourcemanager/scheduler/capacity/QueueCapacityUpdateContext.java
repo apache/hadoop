@@ -45,6 +45,8 @@ public class QueueCapacityUpdateContext {
 
   /**
    * Returns the overall cluster resource available for the update phase.
+   *
+   * @param label node label
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource(String label) {
@@ -52,7 +54,7 @@ public class QueueCapacityUpdateContext {
   }
 
   /**
-   * Returns the overall cluster resource available for the update phase.
+   * Returns the overall cluster resource available for the update phase of empty label.
    * @return cluster resource
    */
   public Resource getUpdatedClusterResource() {

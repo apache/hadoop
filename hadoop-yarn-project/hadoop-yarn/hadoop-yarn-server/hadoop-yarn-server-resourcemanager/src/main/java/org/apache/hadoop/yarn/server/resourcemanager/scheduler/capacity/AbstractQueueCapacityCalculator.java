@@ -40,6 +40,8 @@ public abstract class AbstractQueueCapacityCalculator {
   /**
    * Sets the metrics and statistics after effective resource values calculation.
    *
+   * @param resourceCalculationDriver driver that contains the current resource unit and child to
+   *                                  process
    * @param label         node label
    */
   public abstract void updateCapacitiesAfterCalculation(

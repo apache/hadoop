@@ -75,6 +75,7 @@ public class CapacitySchedulerQueueCapacityHandler {
    *
    * @param clusterResource resource of the cluster
    * @param queue           queue to update
+   * @return update context that contains information about the update phase
    */
   public QueueCapacityUpdateContext update(Resource clusterResource, CSQueue queue) {
     ResourceLimits resourceLimits = new ResourceLimits(clusterResource);
