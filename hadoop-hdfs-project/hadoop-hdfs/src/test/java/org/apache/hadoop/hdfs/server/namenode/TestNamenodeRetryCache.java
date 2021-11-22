@@ -180,6 +180,26 @@ public class TestNamenodeRetryCache {
   }
   
   /**
+   * Tests for truncate call
+   */
+  @Test
+  public void testTruncate() throws Exception {
+    String src = "/testNamenodeRetryCache/testTruncate/src";
+    resetCall();
+
+    // Create a file
+    DFSTestUtil.createFile(filesystem, new Path(src), 1280, (short)1, 0L);
+
+    // Retried truncates requests should have no side-effect and not throw exception
+    newCall();
+    nnRpc.truncate(src, 128, "holder");
+
+    cluster.getNameNode().getNamesystem().delete(src, false, false);
+
+    nnRpc.truncate(src, 128, "holder");
+  }
+  
+  /**
    * Tests for delete call
    */
   @Test
