@@ -53,7 +53,7 @@ public class ResourceCalculationDriver {
   protected final Map<String, ResourceVector> batchRemainingResource = new HashMap<>();
   // Used by ABSOLUTE capacity types
   protected final Map<String, ResourceVector> normalizedResourceRatio = new HashMap<>();
-  // Used by WEIGHT capacity types
+  // Used by WEIGHT capacity typet js
   protected final Map<String, Map<String, Float>> sumWeightsPerLabel = new HashMap<>();
 
   protected String currentResourceName;
@@ -255,7 +255,7 @@ public class ResourceCalculationDriver {
       for (String label : currentChild.getConfiguredNodeLabels()) {
         if (!currentChild.getConfiguredCapacityVector(label).isResourceOfType(currentResourceName,
             capacityType)) {
-          return;
+          continue;
         }
         float usedResourceByChild = setChildResources(label);
         float aggregatedUsedResource = usedResourceByCurrentCalculator.getOrDefault(label,
@@ -361,7 +361,7 @@ public class ResourceCalculationDriver {
     for (String label : parent.getConfiguredNodeLabels()) {
       if (!batchRemainingResource.get(label).equals(ResourceVector.newInstance())) {
         updateContext.addUpdateWarning(QueueUpdateWarning.QueueUpdateWarningType.BRANCH_UNDERUTILIZED.ofQueue(
-            parent.getQueuePath()));
+            parent.getQueuePath()).withInfo("Label: " + label));
       }
     }
   }

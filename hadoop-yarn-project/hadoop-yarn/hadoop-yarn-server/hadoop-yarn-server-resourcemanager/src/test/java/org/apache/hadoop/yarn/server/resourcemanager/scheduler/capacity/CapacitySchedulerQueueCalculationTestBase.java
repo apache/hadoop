@@ -36,7 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
@@ -58,25 +58,25 @@ public class CapacitySchedulerQueueCalculationTestBase {
 
   protected static class QueueAssertionBuilder {
     public static final String EFFECTIVE_MAX_RES_INFO = "Effective Maximum Resource";
-    public static final Function<QueueResourceQuotas, Resource> EFFECTIVE_MAX_RES =
+    public static final BiFunction<QueueResourceQuotas, String, Resource> EFFECTIVE_MAX_RES =
         QueueResourceQuotas::getEffectiveMaxResource;
 
     public static final String EFFECTIVE_MIN_RES_INFO = "Effective Minimum Resource";
-    public static final Function<QueueResourceQuotas, Resource> EFFECTIVE_MIN_RES =
+    public static final BiFunction<QueueResourceQuotas, String, Resource> EFFECTIVE_MIN_RES =
         QueueResourceQuotas::getEffectiveMinResource;
 
     public static final String CAPACITY_INFO = "Capacity";
-    public static final Function<QueueCapacities, Float> CAPACITY =
+    public static final BiFunction<QueueCapacities, String, Float> CAPACITY =
         QueueCapacities::getCapacity;
 
     public static final String ABS_CAPACITY_INFO = "Absolute Capacity";
-    public static final Function<QueueCapacities, Float> ABS_CAPACITY =
+    public static final BiFunction<QueueCapacities, String, Float> ABS_CAPACITY =
         QueueCapacities::getAbsoluteCapacity;
 
     private static final String ASSERTION_ERROR_MESSAGE =
-        "'%s' of queue '%s' does not match %f";
+        "'%s' of queue '%s' does not match %f for label %s";
     private static final String RESOURCE_ASSERTION_ERROR_MESSAGE =
-        "'%s' of queue '%s' does not match %s";
+        "'%s' of queue '%s' does not match %s for label %s";
     private final CapacityScheduler cs;
 
     QueueAssertionBuilder(CapacityScheduler cs) {
@@ -91,6 +91,7 @@ public class CapacitySchedulerQueueCalculationTestBase {
         private String assertionType;
         private Supplier<Float> valueSupplier;
         private Supplier<Resource> resourceSupplier;
+        private String label = "";
 
         ValueAssertion(float expectedValue) {
           this.expectedValue = expectedValue;
@@ -102,6 +103,10 @@ public class CapacitySchedulerQueueCalculationTestBase {
 
         public QueueAssertion assertEffectiveMaxResource() {
           return withResourceSupplier(EFFECTIVE_MAX_RES, EFFECTIVE_MAX_RES_INFO);
+        }
+        public QueueAssertion assertEffectiveMinResource(String label) {
+          this.label = label;
+          return assertEffectiveMinResource();
         }
 
         public QueueAssertion assertEffectiveMinResource() {
@@ -117,27 +122,27 @@ public class CapacitySchedulerQueueCalculationTestBase {
         }
 
         public QueueAssertion withResourceSupplier(
-            Function<QueueResourceQuotas, Resource> assertion, String messageInfo) {
+            BiFunction<QueueResourceQuotas, String, Resource> assertion, String messageInfo) {
           CSQueue queue = cs.getQueue(queuePath);
           if (queue == null) {
             Assert.fail("Queue " + queuePath + " is not found");
           }
 
           assertionType = messageInfo;
-          resourceSupplier = () -> assertion.apply(queue.getQueueResourceQuotas());
+          resourceSupplier = () -> assertion.apply(queue.getQueueResourceQuotas(), label);
           QueueAssertion.this.assertions.add(this);
 
           return QueueAssertion.this;
         }
 
         public QueueAssertion withCapacitySupplier(
-            Function<QueueCapacities, Float> assertion, String messageInfo) {
+            BiFunction<QueueCapacities, String, Float> assertion, String messageInfo) {
           CSQueue queue = cs.getQueue(queuePath);
           if (queue == null) {
             Assert.fail("Queue " + queuePath + " is not found");
           }
           assertionType = messageInfo;
-          valueSupplier = () -> assertion.apply(queue.getQueueCapacities());
+          valueSupplier = () -> assertion.apply(queue.getQueueCapacities(), label);
           QueueAssertion.this.assertions.add(this);
 
           return QueueAssertion.this;
@@ -186,12 +191,13 @@ public class CapacitySchedulerQueueCalculationTestBase {
           if (assertion.resourceSupplier != null) {
             String errorMessage = String.format(RESOURCE_ASSERTION_ERROR_MESSAGE,
                 assertion.assertionType, assertionEntry.getKey(),
-                assertion.expectedResource.toString());
+                assertion.expectedResource.toString(), assertion.label);
             Assert.assertEquals(errorMessage, assertion.expectedResource,
                 assertion.resourceSupplier.get());
           } else {
             String errorMessage = String.format(ASSERTION_ERROR_MESSAGE,
-                assertion.assertionType, assertionEntry.getKey(), assertion.expectedValue);
+                assertion.assertionType, assertionEntry.getKey(), assertion.expectedValue,
+                assertion.label);
             Assert.assertEquals(errorMessage, assertion.expectedValue,
                 assertion.valueSupplier.get(), EPSILON);
           }
@@ -239,17 +245,23 @@ public class CapacitySchedulerQueueCalculationTestBase {
     mockRM.registerNode("h1:1234", 10 * GB); // label = x
     resourceCalculator = cs.getResourceCalculator();
   }
+  protected QueueCapacityUpdateContext update(
+      QueueAssertionBuilder assertions, Resource clusterResource)
+      throws IOException {
+    return update(assertions, clusterResource, clusterResource);
+  }
 
   protected QueueCapacityUpdateContext update(
-      QueueAssertionBuilder assertions, Resource resource) throws IOException {
+      QueueAssertionBuilder assertions, Resource clusterResource, Resource emptyLabelResource)
+      throws IOException {
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     CapacitySchedulerQueueCapacityHandler queueController =
         new CapacitySchedulerQueueCapacityHandler(mgr);
-    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, resource);
+    mgr.setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, emptyLabelResource);
 
     QueueCapacityUpdateContext updateContext =
-        queueController.update(resource, cs.getQueue("root"));
+        queueController.update(clusterResource, cs.getQueue("root"));
 
     assertions.finishAssertion();
 

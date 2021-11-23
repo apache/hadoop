@@ -839,7 +839,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
             configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
-        configuredCapacity)) {
+        configuredCapacity) || queueCapacityConfigParser.isCapacityVectorFormat(configuredCapacity)) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,

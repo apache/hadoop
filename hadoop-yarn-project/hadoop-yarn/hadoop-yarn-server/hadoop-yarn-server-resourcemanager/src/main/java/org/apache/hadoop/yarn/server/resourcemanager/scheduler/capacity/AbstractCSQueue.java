@@ -536,7 +536,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   private void validateAbsoluteVsPercentageCapacityConfig(
       CapacityConfigType localType) {
     if (!getQueuePath().equals("root")
-        && !this.capacityConfigType.equals(localType)) {
+        && !this.capacityConfigType.equals(localType) &&
+        csContext.getConfiguration().isLegacyQueueMode()) {
       throw new IllegalArgumentException("Queue '" + getQueuePath()
           + "' should use either percentage based capacity"
           + " configuration or absolute resource.");

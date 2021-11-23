@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueUpdateWarning.QueueUpdateWarningType;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
@@ -29,7 +33,9 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Optional;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.GB;
 
 public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCalculationTestBase {
   private static final long MEMORY = 16384;
@@ -53,6 +59,9 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
   public static final Resource A1_WARNING_RESOURCE = Resource.newInstance(2048, 4);
   public static final Resource A2_WARNING_RESOURCE = Resource.newInstance(2048, 8);
   public static final Resource A12_WARNING_RESOURCE = Resource.newInstance(2048, 4);
+  public static final String X_LABEL = "x";
+  public static final String Y_LABEL = "y";
+  public static final String Z_LABEL = "z";
 
   @Override
   public void setUp() throws Exception {
@@ -263,6 +272,101 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
         updateContext.getUpdateWarnings(), QueueUpdateWarningType.QUEUE_EXCEEDS_MAX_RESOURCE, A11);
     Assert.assertTrue(queueA11ExceedsParentMaxResourceWarning.isPresent());
     Assert.assertTrue(queueA11MinExceedsMaxWarning.isPresent());
+  }
+
+  @Test
+  public void testNodeLabels() throws Exception {
+    setLabeledQueueConfigs();
+
+    QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
+        .withQueue(A)
+        .toExpect(createResource(2048, 8))
+        .assertEffectiveMinResource(NO_LABEL)
+        .withQueue(A1)
+        .toExpect(createResource(1024, 5))
+        .assertEffectiveMinResource(NO_LABEL)
+        .withQueue(A2)
+        .toExpect(createResource(1024, 2))
+        .assertEffectiveMinResource(NO_LABEL)
+        .withQueue(B)
+        .toExpect(createResource(3072, 8))
+        .assertEffectiveMinResource(NO_LABEL)
+        .withQueue(A)
+        .toExpect(createResource(30720, 30))
+        .assertEffectiveMinResource(X_LABEL)
+        .withQueue(A1)
+        .toExpect(createResource(20480, 0))
+        .assertEffectiveMinResource(X_LABEL)
+        .withQueue(A2)
+        .toExpect(createResource(10240, 30))
+        .assertEffectiveMinResource(X_LABEL)
+        .withQueue(B)
+        .toExpect(createResource(30720, 30))
+        .assertEffectiveMinResource(X_LABEL)
+        .withQueue(A)
+        .toExpect(createResource(8096, 42))
+        .assertEffectiveMinResource(Y_LABEL)
+        .withQueue(A1)
+        .toExpect(createResource(6186, 21))
+        .assertEffectiveMinResource(Y_LABEL)
+        .withQueue(A2)
+        .toExpect(createResource(1910, 21))
+        .assertEffectiveMinResource(Y_LABEL)
+        .withQueue(B)
+        .toExpect(createResource(12384, 18))
+        .assertEffectiveMinResource(Y_LABEL)
+        .withQueue(A)
+        .toExpect(createResource(7168, 11))
+        .assertEffectiveMinResource(Z_LABEL)
+        .withQueue(A1)
+        .toExpect(createResource(6451, 4))
+        .assertEffectiveMinResource(Z_LABEL)
+        .withQueue(A2)
+        .toExpect(createResource(716, 7))
+        .assertEffectiveMinResource(Z_LABEL)
+        .withQueue(B)
+        .toExpect(createResource(3072, 4))
+        .assertEffectiveMinResource(Z_LABEL)
+        .build();
+
+    update(assertionBuilder, UPDATE_RESOURCE, Resource.newInstance(5 * GB, 16));
+  }
+
+  private void setLabeledQueueConfigs() throws Exception {
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of(X_LABEL, Y_LABEL, Z_LABEL));
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0),
+        TestUtils.toSet(X_LABEL), NodeId.newInstance("h2", 0),
+        TestUtils.toSet(Y_LABEL), NodeId.newInstance("h3", 0),
+        TestUtils.toSet(Y_LABEL), NodeId.newInstance("h4", 0),
+        TestUtils.toSet(Z_LABEL), NodeId.newInstance("h5", 0),
+        RMNodeLabelsManager.EMPTY_STRING_SET));
+
+    mockRM.registerNode("h1:1234", 60 * GB, 60); // label = x
+    mockRM.registerNode("h2:1234", 10 * GB, 25); // label = y
+    mockRM.registerNode("h3:1234", 10 * GB, 35); // label = y
+    mockRM.registerNode("h4:1234", 10 * GB, 15); // label = z
+
+    csConf.setCapacityVector(A, "", createMemoryVcoresVector(absolute(2048), percentage(50)));
+    csConf.setCapacityVector(A1, "", createMemoryVcoresVector(absolute(1024), percentage(70)));
+    csConf.setCapacityVector(A2, "", createMemoryVcoresVector(absolute(1024), percentage(30)));
+    csConf.setCapacityVector(B, "", createMemoryVcoresVector(weight(3), percentage(50)));
+
+    csConf.setCapacityVector(A, X_LABEL, createMemoryVcoresVector(percentage(50), weight(3)));
+    csConf.setCapacityVector(A1, X_LABEL, createMemoryVcoresVector(absolute(20480), percentage(10)));
+    csConf.setCapacityVector(A2, X_LABEL, createMemoryVcoresVector(absolute(10240), absolute(30)));
+    csConf.setCapacityVector(B, X_LABEL, createMemoryVcoresVector(percentage(50), percentage(50)));
+
+    csConf.setCapacityVector(A, Y_LABEL, createMemoryVcoresVector(absolute(8096), weight(1)));
+    csConf.setCapacityVector(A1, Y_LABEL, createMemoryVcoresVector(absolute(6186), weight(3)));
+    csConf.setCapacityVector(A2, Y_LABEL, createMemoryVcoresVector(weight(3), weight(3)));
+    csConf.setCapacityVector(B, Y_LABEL, createMemoryVcoresVector(percentage(100), percentage(30)));
+
+    csConf.setCapacityVector(A, Z_LABEL, createMemoryVcoresVector(percentage(70), absolute(11)));
+    csConf.setCapacityVector(A1, Z_LABEL, createMemoryVcoresVector(percentage(90), percentage(40)));
+    csConf.setCapacityVector(A2, Z_LABEL, createMemoryVcoresVector(percentage(10), weight(4)));
+    csConf.setCapacityVector(B, Z_LABEL, createMemoryVcoresVector(percentage(30), absolute(4)));
+
+    cs.reinitialize(csConf, mockRM.getRMContext());
   }
 
   private void setupQueueHierarchyWithoutRemainingResource() throws IOException {
