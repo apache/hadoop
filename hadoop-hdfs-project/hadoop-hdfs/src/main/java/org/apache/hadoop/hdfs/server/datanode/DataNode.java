@@ -412,7 +412,7 @@ public class DataNode extends ReconfigurableBase
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
 
-  private final long startTime = now();
+  private long startTime = 0;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -2721,6 +2721,7 @@ public class DataNode extends ReconfigurableBase
     }
     ipcServer.setTracer(tracer);
     ipcServer.start();
+    startTime = now();
     startPlugins(getConf());
   }
 
