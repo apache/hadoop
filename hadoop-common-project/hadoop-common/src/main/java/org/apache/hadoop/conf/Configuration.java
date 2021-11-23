@@ -1100,6 +1100,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Provides a public wrapper over substituteVars in order to avoid compatibility issues.
+   * See YARN-11013 for further details.
+   *
+   * @param expr the literal value of a config key
+   * @return null if expr is null, otherwise the value resulting from expanding
+   * expr using the algorithm above.
+   * @throws IllegalArgumentException when more than
+   * {@link Configuration#MAX_SUBST} replacements are required
+   */
+  public String substituteCommonVariables(String expr) {
+    return substituteVars(expr);
+  }
+
+  /**
    * Attempts to repeatedly expand the value {@code expr} by replacing the
    * left-most substring of the form "${var}" in the following precedence order
    * <ol>
@@ -1126,7 +1140,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IllegalArgumentException when more than
    * {@link Configuration#MAX_SUBST} replacements are required
    */
-  public String substituteVars(String expr) {
+  private String substituteVars(String expr) {
     if (expr == null) {
       return null;
     }
