@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.util.StopWatch;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileSystem;
 import org.junit.Test;
 

@@ -37,7 +37,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;

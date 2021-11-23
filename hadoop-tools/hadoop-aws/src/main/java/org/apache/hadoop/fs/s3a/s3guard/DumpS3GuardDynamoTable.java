@@ -59,7 +59,7 @@ import org.apache.hadoop.service.launcher.ServiceLauncher;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 
 /**
