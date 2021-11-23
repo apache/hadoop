@@ -75,6 +75,9 @@ public class TestDataNodeMXBean extends SaslDataTransferTestCase {
       // get attribute "Version"
       String version = (String)mbs.getAttribute(mxbeanName, "Version");
       Assert.assertEquals(datanode.getVersion(),version);
+      // get attribute "DNStartedTimeInMillis"
+      long startTime = (long) mbs.getAttribute(mxbeanName, "DNStartedTimeInMillis");
+      Assert.assertEquals(datanode.getDNStartedTimeInMillis(), startTime);
       // get attribute "SotfwareVersion"
       String softwareVersion =
           (String)mbs.getAttribute(mxbeanName, "SoftwareVersion");
