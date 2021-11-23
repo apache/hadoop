@@ -918,7 +918,8 @@ public class TestSaslRPC extends TestRpcBase {
     return clientConf;
   }
 
-    private SecretManager<?> createServerSecretManager(AuthMethod serverAuth, TestTokenSecretManager sm) {
+  private SecretManager<?> createServerSecretManager(
+      AuthMethod serverAuth, TestTokenSecretManager sm) {
     boolean useSecretManager = (serverAuth != SIMPLE);
     if (enableSecretManager != null) {
       useSecretManager &= enableSecretManager;
@@ -988,8 +989,8 @@ public class TestSaslRPC extends TestRpcBase {
     }
   }
 
-  private String createClientAndQueryAuthMethod(InetSocketAddress serverAddress, Configuration clientConf,
-      UserGroupInformation clientUgi, AtomicBoolean fallbackToSimpleAuth)
+  private String createClientAndQueryAuthMethod(InetSocketAddress serverAddress,
+      Configuration clientConf, UserGroupInformation clientUgi, AtomicBoolean fallbackToSimpleAuth)
       throws IOException, InterruptedException {
     LOG.info("trying ugi:"+ clientUgi +" tokens:"+ clientUgi.getTokens());
     return clientUgi.doAs(new PrivilegedExceptionAction<String>() {

@@ -126,13 +126,13 @@ public class TestRpcBase {
   }
 
   protected static TestRpcService getClient(InetSocketAddress serverAddr, Configuration clientConf)
-    throws ServiceException {
+      throws ServiceException {
     return getClient(serverAddr, clientConf, null);
   }
 
   protected static TestRpcService getClient(InetSocketAddress serverAddr,
       Configuration clientConf, RetryPolicy connectionRetryPolicy) throws ServiceException {
-      return getClient(serverAddr, clientConf, connectionRetryPolicy, null);
+    return getClient(serverAddr, clientConf, connectionRetryPolicy, null);
   }
 
   protected static TestRpcService getClient(InetSocketAddress serverAddr,
