@@ -704,6 +704,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     createStartContainerRequest(appId, cid, cm);
 
     Application app = context.getApplications().get(appId);
+    assertEquals(1, context.getApplications().size());
     assertNotNull(app);
 
     stateStore.storeContainerKilled(cid);
@@ -720,7 +721,6 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     Container c = containers.get(cid);
     assertEquals(ContainerState.DONE, c.getContainerState());
     app = context.getApplications().get(appId);
-    Thread.sleep(1000);
     assertNotNull(app);
     cm.stop();
   }
