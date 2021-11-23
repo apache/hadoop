@@ -153,4 +153,11 @@ public interface DataNodeMXBean {
    * @return true, if security is enabled.
    */
   boolean isSecurityEnabled();
+
+  /**
+   * Get the start time of the DataNode.
+   *
+   * @return Start time of the DataNode.
+   */
+  long getDNStartedTimeInMillis();
 }

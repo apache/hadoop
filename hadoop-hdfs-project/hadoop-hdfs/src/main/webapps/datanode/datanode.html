@@ -71,6 +71,7 @@
 <div class="page-header"><h1>DataNode on <small>{HostName}:{DataPort}</small></h1></div>
 <table class="table table-bordered table-striped">
   <tr><th>Cluster ID:</th><td>{ClusterId}</td></tr>
+  <tr><th>Started:</th><td>{DNStartedTimeInMillis|date_tostring}</td></tr>
   <tr><th>Version:</th><td>{Version}</td></tr>
 </table>
 {/dn}

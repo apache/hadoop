@@ -47,6 +47,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ReconfigurationProtocolService;
@@ -411,6 +412,8 @@ public class DataNode extends ReconfigurableBase
   private long[] oobTimeouts; /** timeout value of each OOB type */
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
+
+  private final long startTime = now();
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -3090,6 +3093,11 @@ public class DataNode extends ReconfigurableBase
   @Override // DataNodeMXBean
   public String getHttpPort(){
     return this.getConf().get("dfs.datanode.info.port");
+  }
+
+  @Override // DataNodeMXBean
+  public long getDNStartedTimeInMillis() {
+    return this.startTime;
   }
 
   public String getRevision() {
