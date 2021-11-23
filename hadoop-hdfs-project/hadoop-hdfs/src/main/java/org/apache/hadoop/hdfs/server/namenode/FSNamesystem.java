@@ -1063,14 +1063,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Preconditions.checkArgument(blockDeletionIncrement > 0,
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY +
               " must be a positive integer.");
-    } catch(IOException e) {
+    } catch(IOException | RuntimeException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
       throw e;
-    } catch (RuntimeException re) {
-      LOG.error(getClass().getSimpleName() + " initialization failed.", re);
-      close();
-      throw re;
     }
   }
 
