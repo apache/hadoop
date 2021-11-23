@@ -20,12 +20,18 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -37,6 +43,42 @@ import java.util.Map;
 import static org.junit.Assert.fail;
 
 public class TestCapacitySchedulerConfigValidator {
+  public static final int NODE_MEMORY = 16;
+  public static final int NODE1_VCORES = 8;
+  public static final int NODE2_VCORES = 10;
+  public static final int NODE3_VCORES = 12;
+  public static final int GB = 1024;
+
+  private static final String PARENT_A = "parentA";
+  private static final String PARENT_B = "parentB";
+  private static final String LEAF_A = "leafA";
+  private static final String LEAF_B = "leafB";
+
+  private static final String PARENT_A_FULL_PATH = CapacitySchedulerConfiguration.ROOT
+      + "." + PARENT_A;
+  private static final String LEAF_A_FULL_PATH = PARENT_A_FULL_PATH
+      + "." + LEAF_A;
+  private static final String PARENT_B_FULL_PATH = CapacitySchedulerConfiguration.ROOT
+      + "." + PARENT_B;
+  private static final String LEAF_B_FULL_PATH = PARENT_B_FULL_PATH
+      + "." + LEAF_B;
+
+  private static final Resource A_MINRES = Resource.newInstance(16 * GB,
+      10);
+  private static final Resource B_MINRES = Resource.newInstance(32 * GB,
+      5);
+  private static final Resource FULL_MAXRES = Resource.newInstance(48 * GB,
+      30);
+  private static final Resource PARTIAL_MAXRES = Resource.newInstance(16 * GB,
+      10);
+  private static final Resource VCORE_EXCEEDED_MAXRES = Resource.newInstance(16 * GB,
+      50);
+
+  protected MockRM mockRM = null;
+  protected MockNM nm1 = null;
+  protected MockNM nm2 = null;
+  protected MockNM nm3 = null;
+  protected CapacityScheduler cs;
 
   /**
    * Test for the case when the scheduler.minimum-allocation-mb == 0.
@@ -68,7 +110,6 @@ public class TestCapacitySchedulerConfigValidator {
             + YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
 
   }
-
 
   @Test
   public void testValidateMemoryAllocation() {
@@ -115,7 +156,6 @@ public class TestCapacitySchedulerConfigValidator {
 
   }
 
-
   @Test
   public void testValidateVCores() {
     Map<String, String> configs = new HashMap();
@@ -144,6 +184,86 @@ public class TestCapacitySchedulerConfigValidator {
     } catch (IOException e) {
       Assert.assertTrue(e.getCause().getMessage()
               .startsWith("Illegal capacity"));
+    }
+  }
+
+  @Test
+  public void testValidateCSConfigDefaultRCAbsoluteModeParentMaxMemoryExceeded()
+      throws Exception {
+    setUpMockRM(false);
+    RMContext rmContext = mockRM.getRMContext();
+    CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
+    CapacitySchedulerConfiguration newConfiguration =
+        new CapacitySchedulerConfiguration(cs.getConfiguration());
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
+    try {
+      CapacitySchedulerConfigValidator
+          .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
+      fail("Parent maximum capacity exceeded");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getCause().getMessage()
+          .startsWith("Max resource configuration"));
+    } finally {
+      mockRM.stop();
+    }
+  }
+
+  @Test
+  public void testValidateCSConfigDefaultRCAbsoluteModeParentMaxVcoreExceeded() throws Exception {
+    setUpMockRM(false);
+    RMContext rmContext = mockRM.getRMContext();
+    CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
+    CapacitySchedulerConfiguration newConfiguration =
+        new CapacitySchedulerConfiguration(cs.getConfiguration());
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    try {
+      CapacitySchedulerConfigValidator
+          .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
+    } catch (IOException e) {
+      fail("In DefaultResourceCalculator vcore limits are not enforced");
+    } finally {
+      mockRM.stop();
+    }
+  }
+
+  @Test
+  public void testValidateCSConfigDominantRCAbsoluteModeParentMaxMemoryExceeded()
+      throws Exception {
+    setUpMockRM(true);
+    RMContext rmContext = mockRM.getRMContext();
+    CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
+    CapacitySchedulerConfiguration newConfiguration =
+        new CapacitySchedulerConfiguration(cs.getConfiguration());
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
+    try {
+      CapacitySchedulerConfigValidator
+          .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
+      fail("Parent maximum capacity exceeded");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getCause().getMessage()
+          .startsWith("Max resource configuration"));
+    } finally {
+      mockRM.stop();
+    }
+  }
+
+  @Test
+  public void testValidateCSConfigDominantRCAbsoluteModeParentMaxVcoreExceeded() throws Exception {
+    setUpMockRM(true);
+    RMContext rmContext = mockRM.getRMContext();
+    CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
+    CapacitySchedulerConfiguration newConfiguration =
+        new CapacitySchedulerConfiguration(cs.getConfiguration());
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    try {
+      CapacitySchedulerConfigValidator
+          .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
+      fail("Parent maximum capacity exceeded");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getCause().getMessage()
+          .startsWith("Max resource configuration"));
+    } finally {
+      mockRM.stop();
     }
   }
 
@@ -340,7 +460,6 @@ public class TestCapacitySchedulerConfigValidator {
     Assert.assertTrue(isValidConfig);
   }
 
-
   public static RMContext prepareRMContext() {
     RMContext rmContext = Mockito.mock(RMContext.class);
     LocalConfigurationProvider configProvider = Mockito
@@ -360,5 +479,68 @@ public class TestCapacitySchedulerConfigValidator {
     Mockito.when(rmContext.getQueuePlacementManager())
             .thenReturn(queuePlacementManager);
     return rmContext;
+  }
+
+  private void setUpMockRM(boolean useDominantRC) throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    CapacitySchedulerConfiguration csConf = setupCSConfiguration(conf, useDominantRC);
+
+    mockRM = new MockRM(csConf);
+
+    cs = (CapacityScheduler) mockRM.getResourceScheduler();
+    mockRM.start();
+    cs.start();
+
+    setupNodes(mockRM);
+  }
+
+  private void setupNodes(MockRM newMockRM) throws Exception {
+    nm1 =
+        new MockNM("h1:1234",
+            Resource.newInstance(NODE_MEMORY * GB, NODE1_VCORES),
+            newMockRM.getResourceTrackerService(),
+            YarnVersionInfo.getVersion());
+
+    nm1.registerNode();
+
+    //Label = GPU
+    nm2 = new MockNM("h2:1234",
+        Resource.newInstance(NODE_MEMORY * GB, NODE2_VCORES),
+        newMockRM.getResourceTrackerService(),
+        YarnVersionInfo.getVersion());
+    nm2.registerNode();
+
+    nm3 = // label = ""
+        new MockNM("h3:1234", NODE_MEMORY * GB, NODE3_VCORES, newMockRM
+            .getResourceTrackerService());
+    nm3.registerNode();
+  }
+
+  private CapacitySchedulerConfiguration setupCSConfiguration(YarnConfiguration configuration,
+                                                              boolean useDominantRC) {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(configuration);
+    if (useDominantRC) {
+      csConf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+          DominantResourceCalculator.class.getName());
+    }
+
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[]{PARENT_A, PARENT_B});
+    csConf.setQueues(PARENT_A_FULL_PATH, new String[]{LEAF_A});
+    csConf.setQueues(PARENT_B_FULL_PATH, new String[]{LEAF_B});
+
+    csConf.setMinimumResourceRequirement("", PARENT_A_FULL_PATH, A_MINRES);
+    csConf.setMinimumResourceRequirement("", PARENT_B_FULL_PATH, B_MINRES);
+    csConf.setMinimumResourceRequirement("", LEAF_A_FULL_PATH, A_MINRES);
+    csConf.setMinimumResourceRequirement("", LEAF_B_FULL_PATH, B_MINRES);
+
+    csConf.setMaximumResourceRequirement("", PARENT_A_FULL_PATH, PARTIAL_MAXRES);
+    csConf.setMaximumResourceRequirement("", PARENT_B_FULL_PATH, FULL_MAXRES);
+    csConf.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, PARTIAL_MAXRES);
+    csConf.setMaximumResourceRequirement("", LEAF_B_FULL_PATH, FULL_MAXRES);
+
+    return csConf;
   }
 }

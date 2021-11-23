@@ -2239,6 +2239,22 @@ public class CapacityScheduler extends
     }
   }
 
+  /**
+   * Add node to nodeTracker. Used when validating CS configuration by instantiating a new
+   * CS instance.
+   * @param nodesToAdd node to be added
+   */
+  public void addNodes(List<FiCaSchedulerNode> nodesToAdd) {
+    writeLock.lock();
+    try {
+      for (FiCaSchedulerNode node : nodesToAdd) {
+        nodeTracker.addNode(node);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
   private void addNode(RMNode nodeManager) {
     writeLock.lock();
     try {
