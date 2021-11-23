@@ -297,7 +297,7 @@ class BlockPoolSlice {
     try {
       sc = new Scanner(duCacheFile, "UTF-8");
     } catch (FileNotFoundException fnfe) {
-      LOG.warn("{} file missing in {}, will proceed with Du " +
+      FsDatasetImpl.LOG.warn("{} file missing in {}, will proceed with Du " +
               "for space computation calculation, ",
               DU_CACHE_FILE, currentDir);
       return -1;
@@ -308,16 +308,17 @@ class BlockPoolSlice {
       if (sc.hasNextLong()) {
         cachedDfsUsed = sc.nextLong();
       } else {
-        LOG.warn("cachedDfsUsed not found in file:{}, will proceed with Du " +
-                        "for space computation calculation, ", duCacheFile);
+        FsDatasetImpl.LOG.warn("cachedDfsUsed not found in file:{}, will " +
+                "proceed with Du for space computation calculation, ",
+                duCacheFile);
         return -1;
       }
       // Get the recorded mtime from the file.
       if (sc.hasNextLong()) {
         mtime = sc.nextLong();
       } else {
-        LOG.warn("mtime not found in file:{}, will proceed with Du " +
-                "for space computation calculation, ", duCacheFile);
+        FsDatasetImpl.LOG.warn("mtime not found in file:{}, will proceed" +
+                " with Du for space computation calculation, ", duCacheFile);
         return -1;
       }
 
@@ -328,9 +329,10 @@ class BlockPoolSlice {
             cachedDfsUsed);
         return cachedDfsUsed;
       }
-      LOG.warn("elapsed time:{} is greater than threshold:{} mtime:{} in " +
-              "file:{}, will proceed with Du for space computation calculation"
-              , elapsedTime, cachedDfsUsedCheckTime, mtime, duCacheFile);
+      FsDatasetImpl.LOG.warn("elapsed time:{} is greater than threshold:{}," +
+                      " mtime:{} in file:{}, will proceed with Du for space" +
+                      " computation calculation",
+              elapsedTime, cachedDfsUsedCheckTime, mtime, duCacheFile);
       return -1;
     } finally {
       sc.close();
