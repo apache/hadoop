@@ -307,6 +307,9 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
 
+  private String clientProvidedEncryptionKey;
+  private String clientProvidedEncryptionKeySHA;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -916,19 +919,15 @@ public class AbfsConfiguration{
       }
       Class<? extends EncryptionContextProvider> encryptionContextClass =
           getAccountSpecificClass(configKey, null, EncryptionContextProvider.class);
-      if (encryptionContextClass == null) {
-        encryptionContextClass = getAccountAgnosticClass(configKey, null,
-            EncryptionContextProvider.class);
-      }
-      Preconditions.checkArgument(encryptionContextClass != null,
-          String.format("The configuration value for %s is invalid.", configKey));
+      Preconditions.checkArgument(encryptionContextClass != null, String.format(
+          "The configuration value for %s is invalid, or config key is not account-specific",
+          configKey));
 
       EncryptionContextProvider encryptionContextProvider =
           ReflectionUtils.newInstance(encryptionContextClass, rawConfig);
       Preconditions.checkArgument(encryptionContextProvider != null,
           String.format("Failed to initialize %s", encryptionContextClass));
 
-      LOG.trace("Initializing {}", encryptionContextClass.getName());
       LOG.trace("{} init complete", encryptionContextClass.getName());
       return encryptionContextProvider;
     } catch (Exception e) {
@@ -1040,13 +1039,21 @@ public class AbfsConfiguration{
   }
 
   public String getEncodedClientProvidedEncryptionKey() {
-    String accSpecEncKey = accountConf(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY);
-    return rawConfig.get(accSpecEncKey, null);
+    if (clientProvidedEncryptionKey == null) {
+      String accSpecEncKey = accountConf(
+          FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY);
+      clientProvidedEncryptionKey = rawConfig.get(accSpecEncKey, null);
+    }
+    return clientProvidedEncryptionKey;
   }
 
   public String getEncodedClientProvidedEncryptionKeySHA() {
-    String accSpecEncKey = accountConf(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA);
-    return rawConfig.get(accSpecEncKey, null);
+    if (clientProvidedEncryptionKeySHA == null) {
+      String accSpecEncKey = accountConf(
+          FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA);
+      clientProvidedEncryptionKeySHA = rawConfig.get(accSpecEncKey, null);
+    }
+    return clientProvidedEncryptionKeySHA;
   }
 
   @VisibleForTesting

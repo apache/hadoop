@@ -1621,7 +1621,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
 
     // Encryption setup
-    EncryptionType encryptionType = EncryptionType.NONE;
     EncryptionContextProvider encryptionContextProvider = null;
     if (isSecure) {
       encryptionContextProvider =
@@ -1634,10 +1633,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         encryptionContextProvider.initialize(
             abfsConfiguration.getRawConfiguration(), accountName,
             fileSystemName);
-        encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
       } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
         if (abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA() != null) {
-          encryptionType = EncryptionType.GLOBAL_KEY;
         } else {
           throw new IOException(
               "Encoded SHA256 hash must be provided for global encryption");

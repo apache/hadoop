@@ -113,12 +113,10 @@ public class AbfsClient implements Closeable {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
-    this.filesystem = baseUrlString.substring(
-        baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
+    this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
-    this.accountName = abfsConfiguration.getAccountName().substring(0,
-        abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
+    this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
 
     if (encryptionContextProvider != null) {

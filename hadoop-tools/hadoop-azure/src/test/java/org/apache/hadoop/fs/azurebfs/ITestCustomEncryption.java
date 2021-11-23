@@ -140,7 +140,6 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
     super();
   }
 
-
   @Test
   public void testCustomEncryptionCombinations() throws Exception {
     AzureBlobFileSystem fs = getFS();
@@ -251,8 +250,8 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
 
   private AzureBlobFileSystem getECProviderEnabledFS() throws Exception {
     Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE,
-        MockEncryptionContextProvider.class.getCanonicalName());
+    configuration.set(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE + "."
+        + getAccountName(), MockEncryptionContextProvider.class.getCanonicalName());
     configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + "."
         + getAccountName());
     configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
@@ -260,7 +259,7 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
     return (AzureBlobFileSystem) FileSystem.newInstance(configuration);
   }
 
-  private AzureBlobFileSystem getCPKenabledFS() throws IOException {
+  private AzureBlobFileSystem getCPKEnabledFS() throws IOException {
     Configuration conf = getRawConfiguration();
     String cpkEncoded = EncryptionAdapter.getBase64EncodedString(cpk);
     String cpkEncodedSHA = EncryptionAdapter.getBase64EncodedString(
@@ -280,7 +279,7 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
     if (requestEncryptionType == ENCRYPTION_CONTEXT) {
       return getECProviderEnabledFS();
     } else if (requestEncryptionType == GLOBAL_KEY) {
-      return getCPKenabledFS();
+      return getCPKEnabledFS();
     } else {
       Configuration conf = getRawConfiguration();
       conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
@@ -295,7 +294,7 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
     } else {
       fs = fileEncryptionType == ENCRYPTION_CONTEXT
           ? getECProviderEnabledFS()
-          : getCPKenabledFS();
+          : getCPKEnabledFS();
     }
     String relativePath = fs.getAbfsStore().getRelativePath(testPath);
     try (FSDataOutputStream out = fs.create(new Path(relativePath))) {
