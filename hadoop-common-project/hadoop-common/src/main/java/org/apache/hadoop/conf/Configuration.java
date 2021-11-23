@@ -1101,7 +1101,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * Provides a public wrapper over substituteVars in order to avoid compatibility issues.
-   * See YARN-11013 for further details.
+   * See HADOOP-18021 for further details.
    *
    * @param expr the literal value of a config key
    * @return null if expr is null, otherwise the value resulting from expanding
@@ -1133,6 +1133,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </pre>
    * If a cycle is detected then the original expr is returned. Loops
    * involving multiple substitutions are not detected.
+   *
+   * In order not to introduce breaking changes (as Oozie for example contains a method with the
+   * same name and same signature) do not make this method public, use substituteCommonVariables
+   * in this case.
    *
    * @param expr the literal value of a config key
    * @return null if expr is null, otherwise the value resulting from expanding
