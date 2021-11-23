@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
+import static org.apache.hadoop.util.Preconditions.*;
 import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
