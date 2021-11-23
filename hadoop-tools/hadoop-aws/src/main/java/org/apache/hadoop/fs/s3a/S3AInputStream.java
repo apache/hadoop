@@ -26,6 +26,8 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
+import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.fs.impl.VectoredReadUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -55,6 +57,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.IntFunction;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.isOrderedDisjoint;
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.sliceTo;
+import static org.apache.hadoop.fs.impl.VectoredReadUtils.sortAndMergeRanges;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
@@ -803,16 +808,69 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
   }
 
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for S3AInputStream.
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   * @throws IOException IOE if any.
+   */
   @Override
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
+    // TODO   Cancelling of vectored read calls.
+    // No upfront cancelling is supported right now but all runnable
+    // tasks will be aborted when threadpool will shutdown during S3AFS.close();
+    // TODO   boundedThreadPool corner cases like rejections etc.
+    // Do we need to think about rejections or we can just use
+    // unbounded thread pool or even create a separate thread pool
+    // for vectored read api such that its bad usage doesn't cause
+    // contention for other api's like list, delete etc.
     checkNotClosed();
     for (FileRange range : ranges) {
       validateRangeRequest(range);
       CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
       range.setData(result);
-      boundedThreadPool.submit(() -> readSingleRange(range, allocate));
     }
+
+    if (isOrderedDisjoint(ranges, 1, minSeekForVectorReads())) {
+      for(FileRange range: ranges) {
+        boundedThreadPool.submit(() -> readSingleRange(range, allocate));
+      }
+    } else {
+      for(CombinedFileRange combinedFileRange: sortAndMergeRanges(ranges, 1, minSeekForVectorReads(),
+              maxReadSizeForVectorReads())) {
+        CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+        combinedFileRange.setData(result);
+        boundedThreadPool.submit(
+                () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
+      }
+    }
+  }
+
+  private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
+                                                  IntFunction<ByteBuffer> allocate) {
+    readSingleRange(combinedFileRange, allocate);
+    try {
+      ByteBuffer combinedBuffer = FutureIOSupport.awaitFuture(combinedFileRange.getData());
+      for(FileRange child : combinedFileRange.getUnderlying()) {
+        updateOriginalRange(child, combinedBuffer, combinedFileRange);
+      }
+    } catch (IOException ex) {
+      LOG.error("Exception occurred while reading combined range ", ex);
+      for(FileRange child : combinedFileRange.getUnderlying()) {
+        child.getData().completeExceptionally(ex);
+      }
+    }
+  }
+  private void updateOriginalRange(FileRange child,
+                                   ByteBuffer combinedBuffer,
+                                   CombinedFileRange combinedFileRange) {
+    LOG.trace("Start Filling original range [{}, {}) from combined range [{}, {}) ",
+            child.getOffset(), child.getLength(), combinedFileRange.getOffset(), combinedFileRange.getLength());
+    ByteBuffer childBuffer = sliceTo(combinedBuffer, combinedFileRange.getOffset(), child);
+    child.getData().complete(childBuffer);
+    LOG.trace("End Filling original range ");
   }
 
   /**
@@ -839,8 +897,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       ByteBuffer buffer = allocate.apply(length);
       final GetObjectRequest request = client.newGetRequest(key)
               .withRange(position, position + range.getLength() - 1);
-      String text = String.format("%s %s at %d",
-              "readAsync", uri, position);
+      String text = String.format("%s %s at %d length %d",
+              "readAsync", uri, position, length);
       S3Object object = Invoker.once(text, uri,
               () -> client.getObject(request));
       S3ObjectInputStream objectContent = object.getObjectContent();

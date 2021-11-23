@@ -82,12 +82,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         CompletableFuture<ByteBuffer> data = res.getData();
         try {
           ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
-          LOG.info("Returned data from offset {} : {} ", res.getOffset(),
-                  Arrays.toString(buffer.array()));
-          //assertDatasetEquals((int) res.getOffset(), "readAsync", buffer, res.getLength());
+          assertDatasetEquals((int) res.getOffset(), "readAsync", buffer, res.getLength());
         } catch (Exception ex) {
           LOG.error("Exception while running vectored read ", ex);
-          //Assert.fail("Exception while running vectored read " + ex);
+          Assert.fail("Exception while running vectored read " + ex);
         }
       }
     }
@@ -104,7 +102,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       for (FileRange res : fileRanges) {
         CompletableFuture<ByteBuffer> data = res.getData();
         try {
-          ByteBuffer buffer = data.get();
+          ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
           assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength());
         } catch (Exception ex) {
           LOG.error("Exception while running vectored read ", ex);
@@ -187,7 +185,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       int o = readOffset + i;
       assertEquals(operation + " with read offset " + readOffset
                       + ": data[" + i + "] != DATASET[" + o + "]",
-              DATASET[o], data.get(i));
+              DATASET[o], data.get());
     }
   }
 }
