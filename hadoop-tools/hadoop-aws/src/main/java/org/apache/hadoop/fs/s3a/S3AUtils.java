@@ -97,8 +97,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
 /**
  * Utility methods for S3A code.
  * Some methods are marked LimitedPrivate since they are being used in an
- * external project. It would be better to call them rather than copying the
- * whole code in that project.
+ * external project.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
