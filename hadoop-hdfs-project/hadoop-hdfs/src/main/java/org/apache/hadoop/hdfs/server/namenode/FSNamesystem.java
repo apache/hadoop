@@ -1063,10 +1063,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Preconditions.checkArgument(blockDeletionIncrement > 0,
           DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY +
               " must be a positive integer.");
-    } catch(IOException | RuntimeException e) {
+    } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
       throw e;
+    } catch (RuntimeException re) {
+      LOG.error(getClass().getSimpleName() + " initialization failed.", re);
+      close();
+      throw re;
     }
   }
 
@@ -8606,7 +8610,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src = iip.getPath();
         INode inode = iip.getLastINode();
         if (inode == null) {
-          throw new FileNotFoundException("Path not found");
+          throw new FileNotFoundException("Path not found: " + iip.getPath());
         }
         if (isPermissionEnabled) {
           dir.checkPathAccess(pc, iip, mode);
