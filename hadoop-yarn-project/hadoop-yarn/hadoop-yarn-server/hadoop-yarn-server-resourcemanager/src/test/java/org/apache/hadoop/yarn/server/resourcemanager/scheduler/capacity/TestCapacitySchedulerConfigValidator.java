@@ -462,6 +462,8 @@ public class TestCapacitySchedulerConfigValidator {
 
   public static RMContext prepareRMContext() {
     RMContext rmContext = Mockito.mock(RMContext.class);
+    CapacityScheduler mockCs = Mockito.mock(CapacityScheduler.class);
+    Mockito.when(rmContext.getScheduler()).thenReturn(mockCs);
     LocalConfigurationProvider configProvider = Mockito
             .mock(LocalConfigurationProvider.class);
     Mockito.when(rmContext.getConfigurationProvider())
