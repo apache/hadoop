@@ -96,6 +96,8 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
 
 /**
  * Utility methods for S3A code.
+ * Some methods are marked LimitedPrivate since they are being used in an
+ * external project.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -884,6 +886,8 @@ public final class S3AUtils {
   /**
    * Get a password from a configuration, including JCEKS files, handling both
    * the absolute key and bucket override.
+   * <br>
+   * <i>Note:</i> LimitedPrivate for ranger repository to get secrets.
    * @param bucket bucket or "" if none known
    * @param conf configuration
    * @param baseKey base key to look up, e.g "fs.s3a.secret.key"
@@ -894,6 +898,7 @@ public final class S3AUtils {
    * @throws IOException on any IO problem
    * @throws IllegalArgumentException bad arguments
    */
+  @InterfaceAudience.LimitedPrivate("Ranger")
   public static String lookupPassword(
       String bucket,
       Configuration conf,
@@ -1152,10 +1157,15 @@ public final class S3AUtils {
    * This method does not propagate security provider path information from
    * the S3A property into the Hadoop common provider: callers must call
    * {@link #patchSecurityCredentialProviders(Configuration)} explicitly.
+   *
+   * <br>
+   * <i>Note:</i> LimitedPrivate for ranger repository to set up
+   * per-bucket configurations.
    * @param source Source Configuration object.
    * @param bucket bucket name. Must not be empty.
    * @return a (potentially) patched clone of the original.
    */
+  @InterfaceAudience.LimitedPrivate("Ranger")
   public static Configuration propagateBucketOptions(Configuration source,
       String bucket) {
 
@@ -1351,6 +1361,8 @@ public final class S3AUtils {
   /**
    * Initializes AWS SDK proxy support in the AWS client configuration
    * if the S3A settings enable it.
+   * <br>
+   * <i>Note:</i> LimitedPrivate to provide proxy support in ranger repository.
    *
    * @param conf Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
@@ -1358,6 +1370,7 @@ public final class S3AUtils {
    * @throws IllegalArgumentException if misconfigured
    * @throws IOException problem getting username/secret from password source.
    */
+  @InterfaceAudience.LimitedPrivate("Ranger")
   public static void initProxySupport(Configuration conf,
       String bucket,
       ClientConfiguration awsConf) throws IllegalArgumentException,
