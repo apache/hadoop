@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 public class TestTracer {
   @Test
   public void testNoopTracer(){
-    Tracer tracer = new Tracer.Builder("testTracer").build();
+    Tracer tracer = new Tracer.Builder().build();
     assertNotNull(tracer.OTelTracer);
   }
 

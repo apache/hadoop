@@ -79,7 +79,7 @@ public class SpanContext implements Closeable  {
       io.opentelemetry.api.trace.SpanContext spanContext = io.opentelemetry.api.trace.SpanContext.createFromRemoteParent(traceId, spanId, traceFlags, traceState );
       return new SpanContext(spanContext);
     } catch (Exception e){
-      LOG.error("Error in processing remote context " + kvMap != null? kvMap.toString() : "", e);
+      LOG.error("Error in processing remote context :", e);
       return null;
     }
 

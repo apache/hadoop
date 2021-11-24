@@ -431,9 +431,8 @@ export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
 ###
 # Opentelemetry Trace Exporters Configuration
-# TODO: javaagent is assumed to be stored in common/lib this should be moved to separate directory
 ###
-# export OPENTELEMETRY_JAVAAGENT_PATH="$(find $HADOOP_HOME/share/hadoop/common/lib/ -name opentelemetry-javaagent*)"
+# export OPENTELEMETRY_JAVAAGENT_PATH="$(find $HADOOP_HOME/share/hadoop/tools/lib/ -name opentelemetry-javaagent*)"
 # export HADOOP_TRACE_OPTS="-javaagent:$OPENTELEMETRY_JAVAAGENT_PATH -Dotel.traces.exporter=jaeger -Dotel.metrics.exporter=none"
 # export HDFS_NAMENODE_OPTS="$HDFS_NAMENODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-namenode"
 # export HDFS_DATANODE_OPTS="$HDFS_DATANODE_OPTS $HADOOP_TRACE_OPTS -Dotel.resource.attributes=service.name=hdfs-datanode"
