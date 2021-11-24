@@ -366,7 +366,7 @@ public class TestRollingUpgrade {
         LOG.error("Something went wrong.", t);
         return false;
       }
-    }, 100, 8000, "RollingUpgradeStatus is already set");
+    }, 100, 8000);
   }
 
   private static void startRollingUpgrade(Path foo, Path bar,
