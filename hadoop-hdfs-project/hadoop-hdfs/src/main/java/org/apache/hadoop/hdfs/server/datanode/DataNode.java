@@ -536,76 +536,76 @@ public class DataNode extends ReconfigurableBase
   public String reconfigurePropertyImpl(String property, String newVal)
       throws ReconfigurationException {
     switch (property) {
-    case DFS_DATANODE_DATA_DIR_KEY: {
-      IOException rootException = null;
-      try {
-        LOG.info("Reconfiguring {} to {}", property, newVal);
-        this.refreshVolumes(newVal);
-        return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
-      } catch (IOException e) {
-        rootException = e;
-      } finally {
-        // Send a full block report to let NN acknowledge the volume changes.
+      case DFS_DATANODE_DATA_DIR_KEY: {
+        IOException rootException = null;
         try {
-          triggerBlockReport(
-              new BlockReportOptions.Factory().setIncremental(false).build());
+          LOG.info("Reconfiguring {} to {}", property, newVal);
+          this.refreshVolumes(newVal);
+          return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
         } catch (IOException e) {
-          LOG.warn("Exception while sending the block report after refreshing"
-              + " volumes {} to {}", property, newVal, e);
-          if (rootException == null) {
-            rootException = e;
-          }
+          rootException = e;
         } finally {
-          if (rootException != null) {
-            throw new ReconfigurationException(property, newVal,
-                getConf().get(property), rootException);
+          // Send a full block report to let NN acknowledge the volume changes.
+          try {
+            triggerBlockReport(
+                new BlockReportOptions.Factory().setIncremental(false).build());
+          } catch (IOException e) {
+            LOG.warn("Exception while sending the block report after refreshing"
+                + " volumes {} to {}", property, newVal, e);
+            if (rootException == null) {
+              rootException = e;
+            }
+          } finally {
+            if (rootException != null) {
+              throw new ReconfigurationException(property, newVal,
+                  getConf().get(property), rootException);
+            }
           }
         }
+        break;
       }
-      break;
-    }
-    case DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY: {
-      ReconfigurationException rootException = null;
-      try {
-        LOG.info("Reconfiguring {} to {}", property, newVal);
-        int movers;
-        if (newVal == null) {
-          // set to default
-          movers = DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
-        } else {
-          movers = Integer.parseInt(newVal);
-          if (movers <= 0) {
+      case DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY: {
+        ReconfigurationException rootException = null;
+        try {
+          LOG.info("Reconfiguring {} to {}", property, newVal);
+          int movers;
+          if (newVal == null) {
+            // set to default
+            movers = DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+          } else {
+            movers = Integer.parseInt(newVal);
+            if (movers <= 0) {
+              rootException = new ReconfigurationException(
+                  property,
+                  newVal,
+                  getConf().get(property),
+                  new IllegalArgumentException(
+                      "balancer max concurrent movers must be larger than 0"));
+            }
+          }
+          boolean success = xserver.updateBalancerMaxConcurrentMovers(movers);
+          if (!success) {
             rootException = new ReconfigurationException(
                 property,
                 newVal,
                 getConf().get(property),
                 new IllegalArgumentException(
-                    "balancer max concurrent movers must be larger than 0"));
+                    "Could not modify concurrent moves thread count"));
+          }
+          return Integer.toString(movers);
+        } catch (NumberFormatException nfe) {
+          rootException = new ReconfigurationException(
+              property, newVal, getConf().get(property), nfe);
+        } finally {
+          if (rootException != null) {
+            LOG.warn(String.format(
+                "Exception in updating balancer max concurrent movers %s to %s",
+                property, newVal), rootException);
+            throw rootException;
           }
         }
-        boolean success = xserver.updateBalancerMaxConcurrentMovers(movers);
-        if (!success) {
-          rootException = new ReconfigurationException(
-              property,
-              newVal,
-              getConf().get(property),
-              new IllegalArgumentException(
-                  "Could not modify concurrent moves thread count"));
-        }
-        return Integer.toString(movers);
-      } catch (NumberFormatException nfe) {
-        rootException = new ReconfigurationException(
-            property, newVal, getConf().get(property), nfe);
-      } finally {
-        if (rootException != null) {
-          LOG.warn(String.format(
-              "Exception in updating balancer max concurrent movers %s to %s",
-              property, newVal), rootException);
-          throw rootException;
-        }
+        break;
       }
-      break;
-    }
     case DFS_BLOCKREPORT_INTERVAL_MSEC_KEY: {
       ReconfigurationException rootException = null;
       try {
