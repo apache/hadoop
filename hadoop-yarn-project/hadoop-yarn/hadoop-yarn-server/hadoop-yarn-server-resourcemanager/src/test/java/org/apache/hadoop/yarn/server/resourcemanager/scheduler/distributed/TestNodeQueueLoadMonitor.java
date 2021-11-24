@@ -18,17 +18,29 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
+import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,7 +48,17 @@ import java.util.Set;
  */
 public class TestNodeQueueLoadMonitor {
 
+  // Extra resource type to test that all resource dimensions are considered
+  private static final String NETWORK_RESOURCE = "network";
   private final static int DEFAULT_MAX_QUEUE_LENGTH = 200;
+
+  // Note: The following variables are private static resources
+  // re-initialized on each test because resource dimensions considered
+  // are initialized in a static method.
+  // Declaring them as static final will "lock-in" resource dimensions and
+  // disallow specification of a new resource dimension ("network") in tests.
+  private static Resource defaultResourceRequested;
+  private static Resource defaultCapacity;
 
   static class FakeNodeId extends NodeId {
     final String host;
@@ -70,6 +92,44 @@ public class TestNodeQueueLoadMonitor {
     }
   }
 
+  private static Resource newResourceInstance(long memory, int vCores) {
+    return newResourceInstance(memory, vCores, 0L);
+  }
+
+  private static Resource newResourceInstance(
+      final long memory, final int vCores, final long network) {
+    return Resource.newInstance(memory, vCores,
+        ImmutableMap.of(NETWORK_RESOURCE, network));
+  }
+
+  private static long getNetworkResourceValue(final Resource resource) {
+    return resource.getResourceValue(NETWORK_RESOURCE);
+  }
+
+  public static void addNewTypesToResources(String... resourceTypes) {
+    // Initialize resource map
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+
+    // Initialize mandatory resources
+    riMap.put(ResourceInformation.MEMORY_URI, ResourceInformation.MEMORY_MB);
+    riMap.put(ResourceInformation.VCORES_URI, ResourceInformation.VCORES);
+
+    for (String newResource : resourceTypes) {
+      riMap.put(newResource, ResourceInformation
+          .newInstance(newResource, "", 0, ResourceTypes.COUNTABLE, 0,
+              Integer.MAX_VALUE));
+    }
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+  }
+
+  @BeforeClass
+  public static void classSetUp() {
+    addNewTypesToResources(NETWORK_RESOURCE);
+    defaultResourceRequested = newResourceInstance(128, 1, 1);
+    defaultCapacity = newResourceInstance(1024, 8, 1000);
+  }
+
   @Test
   public void testWaitTimeSort() {
     NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
@@ -79,7 +139,6 @@ public class TestNodeQueueLoadMonitor {
     selector.updateNode(createRMNode("h3", 3, 10, 10));
     selector.computeTask.run();
     List<NodeId> nodeIds = selector.selectNodes();
-    System.out.println("1-> " + nodeIds);
     Assert.assertEquals("h2:2", nodeIds.get(0).toString());
     Assert.assertEquals("h3:3", nodeIds.get(1).toString());
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
@@ -88,7 +147,6 @@ public class TestNodeQueueLoadMonitor {
     selector.updateNode(createRMNode("h3", 3, 2, 10));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    System.out.println("2-> "+ nodeIds);
     Assert.assertEquals("h3:3", nodeIds.get(0).toString());
     Assert.assertEquals("h2:2", nodeIds.get(1).toString());
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
@@ -97,7 +155,6 @@ public class TestNodeQueueLoadMonitor {
     selector.updateNode(createRMNode("h4", 4, -1, 10));
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
-    System.out.println("3-> "+ nodeIds);
     // No change
     Assert.assertEquals("h3:3", nodeIds.get(0).toString());
     Assert.assertEquals("h2:2", nodeIds.get(1).toString());
@@ -187,6 +244,152 @@ public class TestNodeQueueLoadMonitor {
   }
 
   @Test
+  public void testQueueLengthThenResourcesSort() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH_THEN_RESOURCES);
+
+    // Node and queue sizes were selected such that we can determine the
+    // order of these nodes in the selectNodes call deterministically
+    // h2 -> h1 -> h3 -> h4
+    selector.updateNode(createRMNode(
+        "h1", 1, -1, 0,
+        Resources.multiply(defaultResourceRequested, 3), defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h2", 2, -1, 0,
+        Resources.multiply(defaultResourceRequested, 2), defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h3", 3, -1, 5,
+        Resources.multiply(defaultResourceRequested, 3), defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h4", 4, -1, 10,
+        Resources.multiply(defaultResourceRequested, 2), defaultCapacity));
+    selector.computeTask.run();
+    List<NodeId> nodeIds = selector.selectNodes();
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h3:3", nodeIds.get(2).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+
+    // Now update node3
+    // node3 should now rank after node4 since it has the same queue length
+    // but less resources available
+    selector.updateNode(createRMNode(
+        "h3", 3, -1, 10,
+        Resources.multiply(defaultResourceRequested, 3), defaultCapacity));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    Assert.assertEquals("h3:3", nodeIds.get(3).toString());
+
+    // Now update h3 and fill its queue -- it should no longer be available
+    selector.updateNode(createRMNode("h3", 3, -1,
+        DEFAULT_MAX_QUEUE_LENGTH));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    // h3 is queued up, so we should only have 3 nodes left
+    Assert.assertEquals(3, nodeIds.size());
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+
+    // Now update h2 to Decommissioning state
+    selector.updateNode(createRMNode("h2", 2, -1,
+        5, NodeState.DECOMMISSIONING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    // h2 is decommissioned, and h3 is full, so we should only have 2 nodes
+    Assert.assertEquals(2, nodeIds.size());
+    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+
+    // Now update h2 back to Running state
+    selector.updateNode(createRMNode(
+        "h2", 2, -1, 0,
+        Resources.multiply(defaultResourceRequested, 2), defaultCapacity));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(3, nodeIds.size());
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+
+    // Now update h2 to have a zero queue capacity.
+    // Make sure that here it is still in the pool.
+    selector.updateNode(createRMNode(
+        "h2", 2, -1, 0, 0,
+        Resources.multiply(defaultResourceRequested, 2),
+        defaultCapacity));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(3, nodeIds.size());
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+
+    // Now update h2 to have a positive queue length but a zero queue capacity.
+    // Make sure that here it is no longer in the pool.
+    // Need to first remove the node, because node capacity is not updated.
+    selector.removeNode(createRMNode(
+        "h2", 2, -1, 0, 0,
+        Resources.multiply(defaultResourceRequested, 2),
+        defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h2", 2, -1, 1, 0,
+        Resources.multiply(defaultResourceRequested, 2),
+        defaultCapacity));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(2, nodeIds.size());
+    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+  }
+
+  /**
+   * Tests that when using QUEUE_LENGTH_THEN_RESOURCES decrements the amount
+   * of resources on the internal {@link ClusterNode} representation.
+   */
+  @Test
+  public void testQueueLengthThenResourcesDecrementsAvailable() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH_THEN_RESOURCES);
+    RMNode node = createRMNode("h1", 1, -1, 0);
+    selector.addNode(null, node);
+    selector.updateNode(node);
+    selector.updateSortedNodes();
+
+    ClusterNode clusterNode = selector.getClusterNodes().get(node.getNodeID());
+    Assert.assertEquals(Resources.none(),
+        clusterNode.getAllocatedResource());
+
+    // Has enough resources
+    RMNode selectedNode = selector.selectAnyNode(
+        Collections.emptySet(), defaultResourceRequested);
+    Assert.assertNotNull(selectedNode);
+    Assert.assertEquals(node.getNodeID(), selectedNode.getNodeID());
+
+    clusterNode = selector.getClusterNodes().get(node.getNodeID());
+    Assert.assertEquals(defaultResourceRequested,
+        clusterNode.getAllocatedResource());
+
+    // Does not have enough resources, but can queue
+    selectedNode = selector.selectAnyNode(
+        Collections.emptySet(), defaultCapacity);
+    Assert.assertNotNull(selectedNode);
+    Assert.assertEquals(node.getNodeID(), selectedNode.getNodeID());
+
+    clusterNode = selector.getClusterNodes().get(node.getNodeID());
+    Assert.assertEquals(1, clusterNode.getQueueLength().get());
+
+    // Does not have enough resources and cannot queue
+    selectedNode = selector.selectAnyNode(
+        Collections.emptySet(),
+        Resources.add(defaultResourceRequested, defaultCapacity));
+    Assert.assertNull(selectedNode);
+  }
+
+  @Test
   public void testContainerQueuingLimit() {
     NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
         NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
@@ -254,18 +457,22 @@ public class TestNodeQueueLoadMonitor {
     // basic test for selecting node which has queue length less
     // than queue capacity.
     Set<String> blacklist = new HashSet<>();
-    RMNode node = selector.selectLocalNode("h1", blacklist);
+    RMNode node = selector.selectLocalNode(
+        "h1", blacklist, defaultResourceRequested);
     Assert.assertEquals("h1", node.getHostName());
 
     // if node has been added to blacklist
     blacklist.add("h1");
-    node = selector.selectLocalNode("h1", blacklist);
+    node = selector.selectLocalNode(
+        "h1", blacklist, defaultResourceRequested);
     Assert.assertNull(node);
 
-    node = selector.selectLocalNode("h2", blacklist);
+    node = selector.selectLocalNode(
+        "h2", blacklist, defaultResourceRequested);
     Assert.assertNull(node);
 
-    node = selector.selectLocalNode("h3", blacklist);
+    node = selector.selectLocalNode(
+        "h3", blacklist, defaultResourceRequested);
     Assert.assertEquals("h3", node.getHostName());
   }
 
@@ -293,19 +500,23 @@ public class TestNodeQueueLoadMonitor {
     // basic test for selecting node which has queue length less
     // than queue capacity.
     Set<String> blacklist = new HashSet<>();
-    RMNode node = selector.selectRackLocalNode("rack1", blacklist);
+    RMNode node = selector.selectRackLocalNode(
+        "rack1", blacklist, defaultResourceRequested);
     Assert.assertEquals("h1", node.getHostName());
 
     // if node has been added to blacklist
     blacklist.add("h1");
-    node = selector.selectRackLocalNode("rack1", blacklist);
+    node = selector.selectRackLocalNode(
+        "rack1", blacklist, defaultResourceRequested);
     Assert.assertNull(node);
 
-    node = selector.selectRackLocalNode("rack2", blacklist);
+    node = selector.selectRackLocalNode(
+        "rack2", blacklist, defaultResourceRequested);
     Assert.assertEquals("h3", node.getHostName());
 
     blacklist.add("h3");
-    node = selector.selectRackLocalNode("rack2", blacklist);
+    node = selector.selectRackLocalNode(
+        "rack2", blacklist, defaultResourceRequested);
     Assert.assertNull(node);
   }
 
@@ -337,17 +548,17 @@ public class TestNodeQueueLoadMonitor {
     // basic test for selecting node which has queue length
     // less than queue capacity.
     Set<String> blacklist = new HashSet<>();
-    RMNode node = selector.selectAnyNode(blacklist);
+    RMNode node = selector.selectAnyNode(blacklist, defaultResourceRequested);
     Assert.assertTrue(node.getHostName().equals("h1") ||
         node.getHostName().equals("h3"));
 
     // if node has been added to blacklist
     blacklist.add("h1");
-    node = selector.selectAnyNode(blacklist);
+    node = selector.selectAnyNode(blacklist, defaultResourceRequested);
     Assert.assertEquals("h3", node.getHostName());
 
     blacklist.add("h3");
-    node = selector.selectAnyNode(blacklist);
+    node = selector.selectAnyNode(blacklist, defaultResourceRequested);
     Assert.assertNull(node);
   }
 
@@ -377,12 +588,42 @@ public class TestNodeQueueLoadMonitor {
 
   private RMNode createRMNode(String host, int port, String rack,
       int waitTime, int queueLength, int queueCapacity, NodeState state) {
+    return createRMNode(host, port, rack, waitTime, queueLength, queueCapacity,
+        state, ResourceUtilization.newInstance(0, 0, 0),
+        Resources.none(), defaultCapacity);
+  }
+
+  private RMNode createRMNode(
+      String host, int port, int waitTime, int queueLength,
+      Resource allocatedResource, Resource nodeResource) {
+    return createRMNode(host, port, waitTime, queueLength,
+        DEFAULT_MAX_QUEUE_LENGTH, allocatedResource, nodeResource);
+  }
+
+  private RMNode createRMNode(
+      String host, int port, int waitTime, int queueLength, int queueCapacity,
+      Resource allocatedResource, Resource nodeResource) {
+    return createRMNode(host, port, "default", waitTime, queueLength,
+        queueCapacity, NodeState.RUNNING,
+        ResourceUtilization.newInstance(0, 0, 0),
+        allocatedResource, nodeResource);
+  }
+
+  private RMNode createRMNode(String host, int port, String rack,
+      int waitTime, int queueLength, int queueCapacity, NodeState state,
+      ResourceUtilization utilization, Resource allocatedResource,
+      Resource nodeResource) {
     RMNode node1 = Mockito.mock(RMNode.class);
     NodeId nID1 = new FakeNodeId(host, port);
     Mockito.when(node1.getHostName()).thenReturn(host);
     Mockito.when(node1.getRackName()).thenReturn(rack);
+    Mockito.when(node1.getNode()).thenReturn(new NodeBase("/" + host));
     Mockito.when(node1.getNodeID()).thenReturn(nID1);
     Mockito.when(node1.getState()).thenReturn(state);
+    Mockito.when(node1.getTotalCapability()).thenReturn(nodeResource);
+    Mockito.when(node1.getNodeUtilization()).thenReturn(utilization);
+    Mockito.when(node1.getAllocatedContainerResource()).thenReturn(
+        allocatedResource);
     OpportunisticContainersStatus status1 =
         Mockito.mock(OpportunisticContainersStatus.class);
     Mockito.when(status1.getEstimatedQueueWaitTime())

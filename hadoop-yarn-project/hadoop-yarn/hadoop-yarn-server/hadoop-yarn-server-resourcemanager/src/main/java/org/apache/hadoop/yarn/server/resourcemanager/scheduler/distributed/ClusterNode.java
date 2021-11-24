@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * Represents a node in the cluster from the NodeQueueLoadMonitor's perspective
@@ -33,11 +35,43 @@ public class ClusterNode {
   final NodeId nodeId;
   private int queueCapacity = 0;
   private final HashSet<String> labels;
+  private Resource capability = Resources.none();
+  private Resource allocatedResource = Resources.none();
 
   public ClusterNode(NodeId nodeId) {
     this.nodeId = nodeId;
     this.labels = new HashSet<>();
     updateTimestamp();
+  }
+
+  public ClusterNode setCapability(Resource capability) {
+    if (capability == null) {
+      this.capability = Resources.none();
+    } else {
+      this.capability = capability;
+    }
+    return this;
+  }
+
+  public ClusterNode setAllocatedResource(
+    Resource allocatedResource) {
+    if (allocatedResource == null) {
+      this.allocatedResource = Resources.none();
+    } else {
+      this.allocatedResource = allocatedResource;
+    }
+    return this;
+  }
+
+  /**
+   * The latest allocated resource, as reported by node heartbeats.
+   */
+  public Resource getAllocatedResource() {
+    return this.allocatedResource;
+  }
+
+  public Resource getCapability() {
+    return this.capability;
   }
 
   public ClusterNode setQueueLength(int qLength) {

@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
+import org.apache.commons.math3.util.Precision;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -64,39 +69,164 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
    * of two Nodes are compared.
    */
   public enum LoadComparator implements Comparator<ClusterNode> {
+    /**
+     * This policy only considers queue length.
+     * When allocating, increments queue length without looking at resources
+     * available on the node, and when sorting, also only sorts by queue length.
+     */
     QUEUE_LENGTH,
-    QUEUE_WAIT_TIME;
+    /**
+     * This policy only considers the wait time of containers in the queue.
+     * Neither looks at resources nor at queue length.
+     */
+    QUEUE_WAIT_TIME,
+    /**
+     * This policy considers both queue length and resources.
+     * When allocating, first decrements resources available on a node.
+     * If resources are available, does not place OContainers on the node queue.
+     * When sorting, it first sorts by queue length,
+     * then by available resources.
+     */
+    QUEUE_LENGTH_THEN_RESOURCES;
+
+    private Resource clusterResource = Resources.none();
+    private final DominantResourceCalculator resourceCalculator =
+        new DominantResourceCalculator();
+
+    private Resource computeAvailableResource(final ClusterNode clusterNode) {
+      return Resources.subtractNonNegative(
+          clusterNode.getCapability(),
+          clusterNode.getAllocatedResource());
+    }
 
     @Override
     public int compare(ClusterNode o1, ClusterNode o2) {
-      if (getMetric(o1) == getMetric(o2)) {
-        return (int)(o2.getTimestamp() - o1.getTimestamp());
+      int diff = 0;
+      switch (this) {
+      case QUEUE_LENGTH_THEN_RESOURCES:
+        diff = o1.getQueueLength().get() - o2.getQueueLength().get();
+        if (diff != 0) {
+          break;
+        }
+
+        // NOTE: cluster resource should be
+        // set always before LoadComparator is used
+        final Resource availableResource1 = computeAvailableResource(o1);
+        final Resource availableResource2 = computeAvailableResource(o2);
+        final boolean isClusterResourceLeq0 = resourceCalculator
+            .isAnyMajorResourceZeroOrNegative(clusterResource);
+        if (!isClusterResourceLeq0) {
+          // Takes the least available resource of the two nodes,
+          // normalized to the overall cluster resource
+          final float availableRatio1 =
+              resourceCalculator.minRatio(availableResource1, clusterResource);
+          final float availableRatio2 =
+              resourceCalculator.minRatio(availableResource2, clusterResource);
+
+          // The one with more available resources should be placed first
+          diff = Precision
+              .compareTo(availableRatio2, availableRatio1, Precision.EPSILON);
+        }
+
+        if (diff == 0) {
+          // Compare absolute value if ratios are the same
+          diff = availableResource2.getVirtualCores() - availableResource1.getVirtualCores();
+        }
+
+        if (diff == 0) {
+          diff = Long.compare(availableResource2.getMemorySize(),
+              availableResource1.getMemorySize());
+        }
+        break;
+      case QUEUE_WAIT_TIME:
+      case QUEUE_LENGTH:
+      default:
+        diff = getMetric(o1) - getMetric(o2);
+        break;
       }
-      return getMetric(o1) - getMetric(o2);
+
+      if (diff == 0) {
+        return (int) (o2.getTimestamp() - o1.getTimestamp());
+      }
+      return diff;
+    }
+
+    public void setClusterResource(Resource clusterResource) {
+      this.clusterResource = clusterResource;
+    }
+
+    public ResourceCalculator getResourceCalculator() {
+      return resourceCalculator;
     }
 
     public int getMetric(ClusterNode c) {
-      return (this == QUEUE_LENGTH) ?
-          c.getQueueLength().get() : c.getQueueWaitTime().get();
+      switch (this) {
+      case QUEUE_WAIT_TIME:
+        return c.getQueueWaitTime().get();
+      case QUEUE_LENGTH:
+      case QUEUE_LENGTH_THEN_RESOURCES:
+      default:
+        return c.getQueueLength().get();
+      }
     }
 
     /**
      * Increment the metric by a delta if it is below the threshold.
      * @param c ClusterNode
      * @param incrementSize increment size
+     * @param requested the requested resource
      * @return true if the metric was below threshold and was incremented.
      */
-    public boolean compareAndIncrement(ClusterNode c, int incrementSize) {
-      if(this == QUEUE_LENGTH) {
-        int ret = c.getQueueLength().addAndGet(incrementSize);
-        if (ret <= c.getQueueCapacity()) {
+    public boolean compareAndIncrement(
+        ClusterNode c, int incrementSize, Resource requested) {
+      if (this == QUEUE_LENGTH_THEN_RESOURCES) {
+        // Assignment and getting value is atomic
+        // Can be slightly inaccurate here, don't grab lock for performance
+        final Resource capability = c.getCapability();
+        final Resource currAllocated = c.getAllocatedResource();
+        final Resource currAvailable = Resources.subtractNonNegative(
+            capability, currAllocated);
+        if (resourceCalculator.fitsIn(requested, currAvailable)) {
+          final Resource newAllocated = Resources.add(currAllocated, requested);
+          c.setAllocatedResource(newAllocated);
           return true;
         }
-        c.getQueueLength().addAndGet(-incrementSize);
+
+        if (!resourceCalculator.fitsIn(requested, capability)) {
+          // If does not fit at all, do not allocate
+          return false;
+        }
+      }
+      if (this == QUEUE_LENGTH || this == QUEUE_LENGTH_THEN_RESOURCES) {
+        int beforeIncrement = c.getQueueLength().getAndAdd(incrementSize);
+        if (c.getQueueLength().get() <= c.getQueueCapacity()) {
+          return true;
+        }
+        c.getQueueLength().set(beforeIncrement);
         return false;
       }
       // for queue wait time, we don't have any threshold.
       return true;
+    }
+
+    /**
+     * Whether we should be placing OContainers on a node.
+     * @param cn the clusterNode
+     * @return whether we should be placing OContainers on a node.
+     */
+    public boolean isNodeAvailable(final ClusterNode cn) {
+      int queueCapacity = cn.getQueueCapacity();
+      int queueLength = cn.getQueueLength().get();
+      if (this == LoadComparator.QUEUE_LENGTH_THEN_RESOURCES) {
+        if (queueCapacity <= 0) {
+          return queueLength <= 0;
+        } else {
+          return queueLength < queueCapacity;
+        }
+      }
+      // In the special case where queueCapacity is 0 for the node,
+      // the container can be allocated on the node but will be rejected there
+      return queueCapacity <= 0 || queueLength < queueCapacity;
     }
   }
 
@@ -261,12 +391,15 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
 
     if (rmNode.getState() != NodeState.DECOMMISSIONING &&
         (estimatedQueueWaitTime != -1 ||
-            comparator == LoadComparator.QUEUE_LENGTH)) {
+            comparator == LoadComparator.QUEUE_LENGTH ||
+            comparator == LoadComparator.QUEUE_LENGTH_THEN_RESOURCES)) {
       this.clusterNodes.put(rmNode.getNodeID(),
           new ClusterNode(rmNode.getNodeID())
               .setQueueWaitTime(estimatedQueueWaitTime)
               .setQueueLength(waitQueueLength)
               .setNodeLabels(rmNode.getNodeLabels())
+              .setCapability(rmNode.getTotalCapability())
+              .setAllocatedResource(rmNode.getAllocatedContainerResource())
               .setQueueCapacity(opportQueueCapacity));
       LOG.info(
           "Inserting ClusterNode [{}] with queue wait time [{}] and "
@@ -295,11 +428,14 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
 
     if (rmNode.getState() != NodeState.DECOMMISSIONING &&
         (estimatedQueueWaitTime != -1 ||
-            comparator == LoadComparator.QUEUE_LENGTH)) {
+            comparator == LoadComparator.QUEUE_LENGTH ||
+            comparator == LoadComparator.QUEUE_LENGTH_THEN_RESOURCES)) {
       clusterNode
           .setQueueWaitTime(estimatedQueueWaitTime)
           .setQueueLength(waitQueueLength)
           .setNodeLabels(rmNode.getNodeLabels())
+          .setCapability(rmNode.getTotalCapability())
+          .setAllocatedResource(rmNode.getAllocatedContainerResource())
           .updateTimestamp();
       LOG.debug("Updating ClusterNode [{}] with queue wait time [{}] and"
               + " wait queue length [{}]", rmNode.getNodeID(),
@@ -345,27 +481,31 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     }
   }
 
-  public RMNode selectLocalNode(String hostName, Set<String> blacklist) {
+  public RMNode selectLocalNode(
+      String hostName, Set<String> blacklist, Resource request) {
     if (blacklist.contains(hostName)) {
       return null;
     }
     RMNode node = nodeByHostName.get(hostName);
     if (node != null) {
       ClusterNode clusterNode = clusterNodes.get(node.getNodeID());
-      if (comparator.compareAndIncrement(clusterNode, 1)) {
+      if (clusterNode != null && comparator
+          .compareAndIncrement(clusterNode, 1, request)) {
         return node;
       }
     }
     return null;
   }
 
-  public RMNode selectRackLocalNode(String rackName, Set<String> blacklist) {
+  public RMNode selectRackLocalNode(
+      String rackName, Set<String> blacklist, Resource request) {
     Set<NodeId> nodesOnRack = nodeIdsByRack.get(rackName);
     if (nodesOnRack != null) {
       for (NodeId nodeId : nodesOnRack) {
         if (!blacklist.contains(nodeId.getHost())) {
           ClusterNode node = clusterNodes.get(nodeId);
-          if (node != null && comparator.compareAndIncrement(node, 1)) {
+          if (node != null &&
+              comparator.compareAndIncrement(node, 1, request)) {
             return nodeByHostName.get(nodeId.getHost());
           }
         }
@@ -374,7 +514,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     return null;
   }
 
-  public RMNode selectAnyNode(Set<String> blacklist) {
+  public RMNode selectAnyNode(Set<String> blacklist, Resource request) {
     List<NodeId> nodeIds = getCandidatesForSelectAnyNode();
     int size = nodeIds.size();
     if (size <= 0) {
@@ -388,7 +528,8 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       NodeId nodeId = nodeIds.get(index);
       if (nodeId != null && !blacklist.contains(nodeId.getHost())) {
         ClusterNode node = clusterNodes.get(nodeId);
-        if (node != null && comparator.compareAndIncrement(node, 1)) {
+        if (node != null && comparator.compareAndIncrement(
+            node, 1, request)) {
           return nodeByHostName.get(nodeId.getHost());
         }
       }
@@ -402,7 +543,10 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
 
   protected void removeFromNodeIdsByRack(RMNode removedNode) {
     nodeIdsByRack.computeIfPresent(removedNode.getRackName(),
-        (k, v) -> v).remove(removedNode.getNodeID());
+        (k, v) -> {
+          v.remove(removedNode.getNodeID());
+          return v;
+        });
   }
 
   protected void addIntoNodeIdsByRack(RMNode addedNode) {
@@ -414,21 +558,21 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     ReentrantReadWriteLock.ReadLock readLock = clusterNodesLock.readLock();
     readLock.lock();
     try {
-      ArrayList<ClusterNode> aList = new ArrayList<>(this.clusterNodes.values());
-      List<ClusterNode> retList = new ArrayList<>();
-      Object[] nodes = aList.toArray();
-      // Collections.sort would do something similar by calling Arrays.sort
-      // internally but would finally iterate through the input list (aList)
-      // to reset the value of each element. Since we don't really care about
-      // 'aList', we can use the iteration to create the list of nodeIds which
-      // is what we ultimately care about.
-      Arrays.sort(nodes, (Comparator)comparator);
-      for (int j=0; j < nodes.length; j++) {
-        ClusterNode cNode = (ClusterNode)nodes[j];
-        // Only add node to the result list when either condition is met:
-        // 1. we don't exclude full nodes
-        // 2. we do exclude full nodes, but the current node is not full
-        if (!excludeFullNodes || !cNode.isQueueFull()) {
+      final ClusterNode[] nodes = new ClusterNode[clusterNodes.size()];
+      int nodesIdx = 0;
+      final Resource clusterResource = Resource.newInstance(Resources.none());
+      for (final ClusterNode node : this.clusterNodes.values()) {
+        Resources.addTo(clusterResource, node.getCapability());
+        nodes[nodesIdx] = node;
+        nodesIdx++;
+      }
+
+      comparator.setClusterResource(clusterResource);
+
+      final List<ClusterNode> retList = new ArrayList<>();
+      Arrays.sort(nodes, comparator);
+      for (final ClusterNode cNode : nodes) {
+        if (!excludeFullNodes || comparator.isNodeAvailable(cNode)) {
           retList.add(cNode);
         }
       }
