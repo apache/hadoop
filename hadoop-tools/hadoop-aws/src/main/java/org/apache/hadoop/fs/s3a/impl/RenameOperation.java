@@ -593,7 +593,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     S3ObjectAttributes sourceAttributes =
         callbacks.createObjectAttributes(
             source.getPath(),
-            source.getETag(),
+            source.getEtag(),
             source.getVersionId(),
             source.getLen());
     // queue the copy operation for execution in the thread pool
