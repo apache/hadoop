@@ -26,6 +26,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -34,6 +35,7 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.After;
 import org.junit.Test;
@@ -118,6 +121,23 @@ public class TestFSNamesystem {
       + "isInStartupSafeMode still returned true", !fsn.isInStartupSafeMode());
     assertTrue("After entering safemode due to low resources FSNamesystem."
       + "isInSafeMode still returned false",  fsn.isInSafeMode());
+  }
+
+  @Test
+  public void testCheckAccess() throws IOException {
+    Configuration conf = new Configuration();
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    String src = "/test1";
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    try {
+      fsn.checkAccess(src, FsAction.READ);
+      fail("Failed to get expected FileNotFoundException");
+    } catch (FileNotFoundException e) {
+      GenericTestUtils.assertExceptionContains(
+              "Path not found: " + src, e);
+    }
   }
 
   @Test
