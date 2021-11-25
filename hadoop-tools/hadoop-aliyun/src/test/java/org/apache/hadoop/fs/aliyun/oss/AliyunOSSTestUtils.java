@@ -83,4 +83,14 @@ public final class AliyunOSSTestUtils {
     return testUniqueForkId == null ? "/test" :
         "/" + testUniqueForkId + "/test";
   }
+
+  /**
+   * Turn off FS Caching: use if a filesystem with different options from
+   * the default is required.
+   * @param conf configuration to patch
+   */
+  public static void disableFilesystemCaching(Configuration conf) {
+    conf.setBoolean(TestAliyunOSSFileSystemContract.FS_OSS_IMPL_DISABLE_CACHE,
+        true);
+  }
 }

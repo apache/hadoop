@@ -37,8 +37,7 @@ A plan is a set of statements that describe how much data should move between tw
 A plan is composed of multiple move steps. A move step has source disk, destination
 disk and number of bytes to move. A plan can be executed against an operational data node. Disk balancer should not
 interfere with other processes since it throttles how much data is copied
-every second. Please note that disk balancer is not enabled by default on a cluster.
-To enable diskbalancer `dfs.disk.balancer.enabled` must be set to `true` in hdfs-site.xml.
+every second. Please note that disk balancer is enabled by default on a cluster.
 
 
 Commands
@@ -123,7 +122,7 @@ There is a set of diskbalancer settings that can be controlled via hdfs-site.xml
 
 | Setting | Description |
 |:---- |:---- |
-|`dfs.disk.balancer.enabled`| This parameter controls if diskbalancer is enabled for a cluster. if this is not enabled, any execute command will be rejected by the datanode.The default value is false.|
+|`dfs.disk.balancer.enabled`| This parameter controls if diskbalancer is enabled for a cluster. if this is not enabled, any execute command will be rejected by the datanode.The default value is true.|
 |`dfs.disk.balancer.max.disk.throughputInMBperSec` | This controls the maximum disk bandwidth consumed by diskbalancer while copying data. If a value like 10MB is specified then diskbalancer on the average will only copy 10MB/S. The default value is 10MB/S.|
 |`dfs.disk.balancer.max.disk.errors`| sets the value of maximum number of errors we can ignore for a specific move between two disks before it is abandoned. For example, if a plan has 3 pair of disks to copy between , and the first disk set encounters more than 5 errors, then we abandon the first copy and start the second copy in the plan. The default value of max errors is set to 5.|
 |`dfs.disk.balancer.block.tolerance.percent`| The tolerance percent specifies when we have reached a good enough value for any copy step. For example, if you specify 10% then getting close to 10% of the target value is good enough.|

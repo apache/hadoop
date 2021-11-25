@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.service.utils;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 import org.apache.commons.lang3.StringUtils;

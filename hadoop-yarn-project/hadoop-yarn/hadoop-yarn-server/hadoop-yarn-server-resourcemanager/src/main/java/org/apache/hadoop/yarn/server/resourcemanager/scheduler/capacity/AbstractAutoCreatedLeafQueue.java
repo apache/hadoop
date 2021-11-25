@@ -111,7 +111,7 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
       }
       setCapacity(nodeLabel, capacity);
       setAbsoluteCapacity(nodeLabel,
-          getParent().getQueueCapacities().
+          this.getParent().getQueueCapacities().
               getAbsoluteCapacity(nodeLabel)
               * getQueueCapacities().getCapacity(nodeLabel));
       // note: we currently set maxCapacity to capacity

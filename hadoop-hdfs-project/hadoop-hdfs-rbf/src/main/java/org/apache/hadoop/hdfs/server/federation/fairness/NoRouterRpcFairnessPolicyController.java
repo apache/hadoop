@@ -46,4 +46,9 @@ public class NoRouterRpcFairnessPolicyController implements
   public void shutdown() {
     // Nothing for now.
   }
+
+  @Override
+  public String getAvailableHandlerOnPerNs(){
+    return "N/A";
+  }
 }

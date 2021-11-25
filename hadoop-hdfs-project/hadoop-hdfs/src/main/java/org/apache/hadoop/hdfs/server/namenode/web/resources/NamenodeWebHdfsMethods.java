@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
@@ -132,6 +133,7 @@ public class NamenodeWebHdfsMethods {
   private String scheme;
   private Principal userPrincipal;
   private String remoteAddr;
+  private int remotePort;
 
   private @Context ServletContext context;
   private @Context HttpServletResponse response;
@@ -146,6 +148,7 @@ public class NamenodeWebHdfsMethods {
     // get the remote address, if coming in via a trusted proxy server then
     // the address with be that of the proxied client
     remoteAddr = JspHelper.getRemoteAddr(request);
+    remotePort = JspHelper.getRemotePort(request);
     supportEZ =
         Boolean.valueOf(request.getHeader(WebHdfsFileSystem.EZ_HEADER));
   }
@@ -224,6 +227,10 @@ public class NamenodeWebHdfsMethods {
         return getRemoteAddr();
       }
       @Override
+      public int getRemotePort() {
+        return getRemotePortFromJSPHelper();
+      }
+      @Override
       public InetAddress getHostInetAddress() {
         try {
           return InetAddress.getByName(getHostAddress());
@@ -252,6 +259,10 @@ public class NamenodeWebHdfsMethods {
 
   protected String getRemoteAddr() {
     return remoteAddr;
+  }
+
+  protected int getRemotePortFromJSPHelper() {
+    return remotePort;
   }
 
   protected void queueExternalCall(ExternalCall call)
@@ -1037,6 +1048,10 @@ public class NamenodeWebHdfsMethods {
           final SnapshotNameParam snapshotName,
       @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
           final OldSnapshotNameParam oldSnapshotName,
+      @QueryParam(SnapshotDiffStartPathParam.NAME) @DefaultValue(SnapshotDiffStartPathParam.DEFAULT)
+          final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      @QueryParam(SnapshotDiffIndexParam.NAME) @DefaultValue(SnapshotDiffIndexParam.DEFAULT)
+          final SnapshotDiffIndexParam snapshotDiffIndex,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -1048,7 +1063,9 @@ public class NamenodeWebHdfsMethods {
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
-        fsAction, snapshotName, oldSnapshotName, tokenKind, tokenService,
+        fsAction, snapshotName, oldSnapshotName,
+        snapshotDiffStartPath, snapshotDiffIndex,
+        tokenKind, tokenService,
         noredirect, startAfter);
   }
 
@@ -1088,6 +1105,10 @@ public class NamenodeWebHdfsMethods {
           final SnapshotNameParam snapshotName,
       @QueryParam(OldSnapshotNameParam.NAME) @DefaultValue(OldSnapshotNameParam.DEFAULT)
           final OldSnapshotNameParam oldSnapshotName,
+      @QueryParam(SnapshotDiffStartPathParam.NAME) @DefaultValue(SnapshotDiffStartPathParam.DEFAULT)
+          final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      @QueryParam(SnapshotDiffIndexParam.NAME) @DefaultValue(SnapshotDiffIndexParam.DEFAULT)
+          final SnapshotDiffIndexParam snapshotDiffIndex,
       @QueryParam(TokenKindParam.NAME) @DefaultValue(TokenKindParam.DEFAULT)
           final TokenKindParam tokenKind,
       @QueryParam(TokenServiceParam.NAME) @DefaultValue(TokenServiceParam.DEFAULT)
@@ -1108,6 +1129,7 @@ public class NamenodeWebHdfsMethods {
         return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
+            snapshotDiffStartPath, snapshotDiffIndex,
             tokenKind, tokenService, noredirect, startAfter);
       }
     });
@@ -1137,6 +1159,8 @@ public class NamenodeWebHdfsMethods {
       final FsActionParam fsAction,
       final SnapshotNameParam snapshotName,
       final OldSnapshotNameParam oldSnapshotName,
+      final SnapshotDiffStartPathParam snapshotDiffStartPath,
+      final SnapshotDiffIndexParam snapshotDiffIndex,
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
@@ -1332,6 +1356,14 @@ public class NamenodeWebHdfsMethods {
       SnapshotDiffReport diffReport =
           cp.getSnapshotDiffReport(fullpath, oldSnapshotName.getValue(),
               snapshotName.getValue());
+      final String js = JsonUtil.toJsonString(diffReport);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSNAPSHOTDIFFLISTING: {
+      SnapshotDiffReportListing diffReport = cp.getSnapshotDiffReportListing(
+          fullpath, oldSnapshotName.getValue(), snapshotName.getValue(),
+          DFSUtilClient.string2Bytes(snapshotDiffStartPath.getValue()),
+          snapshotDiffIndex.getValue());
       final String js = JsonUtil.toJsonString(diffReport);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }

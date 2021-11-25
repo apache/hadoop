@@ -46,7 +46,6 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -63,7 +62,6 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -78,7 +76,6 @@ import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
@@ -105,6 +102,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileEncryptionInfoProto;
@@ -1445,19 +1443,45 @@ public class WebHdfsFileSystem extends FileSystem
         new SnapshotNameParam(snapshotNewName)).run();
   }
 
+  private SnapshotDiffReport getSnapshotDiffReport(
+      final String snapshotDir, final String fromSnapshot, final String toSnapshot)
+      throws IOException {
+    return new FsPathResponseRunner<SnapshotDiffReport>(
+        GetOpParam.Op.GETSNAPSHOTDIFF,
+        new Path(snapshotDir),
+        new OldSnapshotNameParam(fromSnapshot),
+        new SnapshotNameParam(toSnapshot)) {
+          @Override
+          SnapshotDiffReport decodeResponse(Map<?, ?> json) {
+            return JsonUtilClient.toSnapshotDiffReport(json);
+          }
+        }.run();
+  }
+
+  private SnapshotDiffReportListing getSnapshotDiffReportListing(
+        String snapshotDir, final String fromSnapshot, final String toSnapshot,
+        byte[] startPath, int index) throws IOException {
+    return new FsPathResponseRunner<SnapshotDiffReportListing>(
+        GetOpParam.Op.GETSNAPSHOTDIFFLISTING,
+        new Path(snapshotDir),
+        new OldSnapshotNameParam(fromSnapshot),
+        new SnapshotNameParam(toSnapshot),
+        new SnapshotDiffStartPathParam(DFSUtilClient.bytes2String(startPath)),
+        new SnapshotDiffIndexParam(index)) {
+          @Override
+          SnapshotDiffReportListing decodeResponse(Map<?, ?> json) {
+            return JsonUtilClient.toSnapshotDiffReportListing(json);
+          }
+        }.run();
+  }
+
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
-    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTDIFF;
-    return new FsPathResponseRunner<SnapshotDiffReport>(op, snapshotDir,
-        new OldSnapshotNameParam(fromSnapshot),
-        new SnapshotNameParam(toSnapshot)) {
-      @Override
-      SnapshotDiffReport decodeResponse(Map<?, ?> json) {
-        return JsonUtilClient.toSnapshotDiffReport(json);
-      }
-    }.run();
+    return DFSUtilClient.getSnapshotDiffReport(
+        snapshotDir.toUri().getPath(), fromSnapshot, toSnapshot,
+        this::getSnapshotDiffReport, this::getSnapshotDiffReportListing);
   }
 
   public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()

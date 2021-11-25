@@ -307,4 +307,27 @@ class BlockPoolManager {
   Map<String, BPOfferService> getBpByNameserviceId() {
     return bpByNameserviceId;
   }
+
+  boolean isSlownodeByNameserviceId(String nsId) {
+    if (bpByNameserviceId.containsKey(nsId)) {
+      return bpByNameserviceId.get(nsId).isSlownode();
+    }
+    return false;
+  }
+
+  boolean isSlownodeByBlockPoolId(String bpId) {
+    if (bpByBlockPoolId.containsKey(bpId)) {
+      return bpByBlockPoolId.get(bpId).isSlownode();
+    }
+    return false;
+  }
+
+  boolean isSlownode() {
+    for (BPOfferService bpOfferService : bpByBlockPoolId.values()) {
+      if (bpOfferService.isSlownode()) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

@@ -5261,7 +5261,7 @@ public class TestLeafQueue {
     ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
 
     Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
-        rootQueue.configuredNodeLabels);
+        rootQueue.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 
   @After
