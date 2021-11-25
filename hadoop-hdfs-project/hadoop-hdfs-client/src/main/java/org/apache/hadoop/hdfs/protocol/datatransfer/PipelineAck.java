@@ -266,6 +266,10 @@ public class PipelineAck {
     return StatusFormat.setStatus(old, status);
   }
 
+  public static int setSLOWForHeader(int old, SLOW slow) {
+    return StatusFormat.setSLOW(old, slow);
+  }
+
   public static int combineHeader(ECN ecn, Status status) {
     return combineHeader(ecn, status, SLOW.NORMAL);
   }
