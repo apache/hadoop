@@ -65,6 +65,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -975,7 +976,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final long blockSize = abfsConfiguration.getAzureBlockSize();
       final AbfsHttpOperation result = op.getResult();
 
-      final String eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+      String eTag = extractEtagHeader(result);
       final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
       final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
       final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
@@ -1733,10 +1734,27 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsPerfInfo(abfsPerfTracker, callerName, calleeName);
   }
 
-  private static class VersionedFileStatus extends FileStatus {
-    private final String version;
+  /**
+   * A File status with version info extracted from the etag value returned
+   * in a LIST or HEAD request.
+   * The etag is included in the java serialization.
+   */
+  private static final class VersionedFileStatus extends FileStatus
+      implements EtagSource {
 
-    VersionedFileStatus(
+    /**
+     * The superclass is declared serializable; this subclass can also
+     * be serialized.
+     */
+    private static final long serialVersionUID = -2009013240419749458L;
+
+    /**
+     * The etag of an object.
+     * Not-final so that serialization via reflection will preserve the value.
+     */
+    private String version;
+
+    private VersionedFileStatus(
             final String owner, final String group, final FsPermission fsPermission, final boolean hasAcl,
             final long length, final boolean isdir, final int blockReplication,
             final long blocksize, final long modificationTime, final Path path,
@@ -1795,6 +1813,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
      */
     public String getVersion() {
       return this.version;
+    }
+
+    @Override
+    public String getEtag() {
+      return getVersion();
     }
 
     @Override
@@ -1901,5 +1924,31 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
     return true;
+  }
+
+  /**
+   * Get the etag header from a response, stripping any quotations.
+   * see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag
+   * @param result response to process.
+   * @return the quote-unwrapped etag.
+   */
+  private static String extractEtagHeader(AbfsHttpOperation result) {
+    String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+    if (etag != null) {
+      // strip out any wrapper "" quotes which come back, for consistency with
+      // list calls
+      if (etag.startsWith("W/\"")) {
+        // Weak etag
+        etag = etag.substring(3);
+      } else if (etag.startsWith("\"")) {
+        // strong etag
+        etag = etag.substring(1);
+      }
+      if (etag.endsWith("\"")) {
+        // trailing quote
+        etag = etag.substring(0, etag.length() - 1);
+      }
+    }
+    return etag;
   }
 }
