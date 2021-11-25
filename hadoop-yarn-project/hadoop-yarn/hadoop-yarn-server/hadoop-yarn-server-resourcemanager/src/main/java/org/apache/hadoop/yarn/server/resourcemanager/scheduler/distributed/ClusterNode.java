@@ -63,9 +63,6 @@ public class ClusterNode {
     return this;
   }
 
-  /**
-   * The latest allocated resource, as reported by node heartbeats.
-   */
   public Resource getAllocatedResource() {
     return this.allocatedResource;
   }
