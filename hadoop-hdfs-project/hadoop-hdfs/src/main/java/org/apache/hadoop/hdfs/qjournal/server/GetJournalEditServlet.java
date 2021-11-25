@@ -79,6 +79,9 @@ public class GetJournalEditServlet extends HttpServlet {
       throws IOException {
     String remotePrincipal = request.getUserPrincipal().getName();
     String remoteShortName = request.getRemoteUser();
+    if (remoteShortName != null && remoteShortName.contains('/')) {
+      remoteShortName = remoteShortName.substr(0, remoteShortName.indexOf('/'));
+    }
     if (remotePrincipal == null) { // This really shouldn't happen...
       LOG.warn("Received null remoteUser while authorizing access to " +
           "GetJournalEditServlet");
