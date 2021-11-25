@@ -1536,9 +1536,19 @@ public abstract class Server {
       SocketChannel channel;
       while ((channel = server.accept()) != null) {
 
-        channel.configureBlocking(false);
-        channel.socket().setTcpNoDelay(tcpNoDelay);
-        channel.socket().setKeepAlive(true);
+        try {
+          channel.configureBlocking(false);
+          channel.socket().setTcpNoDelay(tcpNoDelay);
+          channel.socket().setKeepAlive(true);
+        } catch (IOException e) {
+          LOG.warn("Error in an accepted SocketChannel", e);
+          try {
+            channel.socket().close();
+            channel.close();
+          } catch (IOException ignored) {
+          }
+          continue;
+        }
         
         Reader reader = getReader();
         Connection c = connectionManager.register(channel,
