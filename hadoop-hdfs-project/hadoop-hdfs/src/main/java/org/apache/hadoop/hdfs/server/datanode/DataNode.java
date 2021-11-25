@@ -52,6 +52,7 @@ import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStag
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_CREATE;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.DF;
@@ -213,9 +214,9 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.tracing.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -410,6 +411,8 @@ public class DataNode extends ReconfigurableBase
   private long[] oobTimeouts; /** timeout value of each OOB type */
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
+
+  private long startTime = 0;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -1383,7 +1386,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * This method starts the data node with the specified conf.
    * 
-   * If conf's CONFIG_PROPERTY_SIMULATED property is set
+   * If conf's DFS_DATANODE_FSDATASET_FACTORY_KEY property is set
    * then a simulated storage based data node is created.
    * 
    * @param dataDirectories - only for a non-simulated storage data node
@@ -2718,6 +2721,7 @@ public class DataNode extends ReconfigurableBase
     }
     ipcServer.setTracer(tracer);
     ipcServer.start();
+    startTime = now();
     startPlugins(getConf());
   }
 
@@ -3193,6 +3197,11 @@ public class DataNode extends ReconfigurableBase
   @Override // DataNodeMXBean
   public String getHttpPort(){
     return this.getConf().get("dfs.datanode.info.port");
+  }
+
+  @Override // DataNodeMXBean
+  public long getDNStartedTimeInMillis() {
+    return this.startTime;
   }
 
   public String getRevision() {
@@ -3813,5 +3822,17 @@ public class DataNode extends ReconfigurableBase
   private static boolean isWrite(BlockConstructionStage stage) {
     return (stage == PIPELINE_SETUP_STREAMING_RECOVERY
         || stage == PIPELINE_SETUP_APPEND_RECOVERY);
+  }
+
+  boolean isSlownodeByNameserviceId(String nsId) {
+    return blockPoolManager.isSlownodeByNameserviceId(nsId);
+  }
+
+  boolean isSlownodeByBlockPoolId(String bpId) {
+    return blockPoolManager.isSlownodeByBlockPoolId(bpId);
+  }
+
+  boolean isSlownode() {
+    return blockPoolManager.isSlownode();
   }
 }

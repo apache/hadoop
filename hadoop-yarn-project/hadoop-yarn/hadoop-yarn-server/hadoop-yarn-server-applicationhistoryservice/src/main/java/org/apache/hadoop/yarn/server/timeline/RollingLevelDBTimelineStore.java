@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 
 import java.io.File;
 import java.io.IOException;

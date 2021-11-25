@@ -36,14 +36,23 @@ public class HeartbeatResponse {
   private final RollingUpgradeStatus rollingUpdateStatus;
 
   private final long fullBlockReportLeaseId;
-  
+
+  private final boolean isSlownode;
+
   public HeartbeatResponse(DatanodeCommand[] cmds,
       NNHAStatusHeartbeat haStatus, RollingUpgradeStatus rollingUpdateStatus,
       long fullBlockReportLeaseId) {
+    this(cmds, haStatus, rollingUpdateStatus, fullBlockReportLeaseId, false);
+  }
+
+  public HeartbeatResponse(DatanodeCommand[] cmds,
+      NNHAStatusHeartbeat haStatus, RollingUpgradeStatus rollingUpdateStatus,
+      long fullBlockReportLeaseId, boolean isSlownode) {
     commands = cmds;
     this.haStatus = haStatus;
     this.rollingUpdateStatus = rollingUpdateStatus;
     this.fullBlockReportLeaseId = fullBlockReportLeaseId;
+    this.isSlownode = isSlownode;
   }
   
   public DatanodeCommand[] getCommands() {
@@ -60,5 +69,9 @@ public class HeartbeatResponse {
 
   public long getFullBlockReportLeaseId() {
     return fullBlockReportLeaseId;
+  }
+
+  public boolean getIsSlownode() {
+    return isSlownode;
   }
 }

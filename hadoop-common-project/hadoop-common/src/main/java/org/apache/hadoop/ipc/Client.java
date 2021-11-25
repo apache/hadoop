@@ -19,8 +19,8 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -807,17 +807,18 @@ public class Client implements AutoCloseable {
      */
     private synchronized void setupIOstreams(
         AtomicBoolean fallbackToSimpleAuth) {
-      if (socket != null || shouldCloseConnection.get()) {
-        return;
-      }
-      UserGroupInformation ticket = remoteId.getTicket();
-      if (ticket != null) {
-        final UserGroupInformation realUser = ticket.getRealUser();
-        if (realUser != null) {
-          ticket = realUser;
-        }
-      }
       try {
+        if (socket != null || shouldCloseConnection.get()) {
+          setFallBackToSimpleAuth(fallbackToSimpleAuth);
+          return;
+        }
+        UserGroupInformation ticket = remoteId.getTicket();
+        if (ticket != null) {
+          final UserGroupInformation realUser = ticket.getRealUser();
+          if (realUser != null) {
+            ticket = realUser;
+          }
+        }
         connectingThread.set(Thread.currentThread());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
@@ -863,20 +864,8 @@ public class Client implements AutoCloseable {
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
               LOG.debug("Negotiated QOP is :" + remoteId.saslQop);
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(false);
-              }
-            } else if (UserGroupInformation.isSecurityEnabled()) {
-              if (!fallbackAllowed) {
-                throw new AccessControlException(
-                    "Server asks us to fall back to SIMPLE " +
-                    "auth, but this client is configured to only allow secure " +
-                    "connections.");
-              }
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(true);
-              }
             }
+            setFallBackToSimpleAuth(fallbackToSimpleAuth);
           }
 
           if (doPing) {
@@ -909,7 +898,41 @@ public class Client implements AutoCloseable {
         connectingThread.set(null);
       }
     }
-    
+
+    private void setFallBackToSimpleAuth(AtomicBoolean fallbackToSimpleAuth)
+        throws AccessControlException {
+      if (authMethod == null || authProtocol != AuthProtocol.SASL) {
+        if (authProtocol == AuthProtocol.SASL) {
+          LOG.trace("Auth method is not set, yield from setting auth fallback.");
+        }
+        return;
+      }
+      if (fallbackToSimpleAuth == null) {
+        // this should happen only during testing.
+        LOG.trace("Connection {} will skip to set fallbackToSimpleAuth as it is null.", remoteId);
+      } else {
+        if (fallbackToSimpleAuth.get()) {
+          // we already set the value to true, we do not need to examine again.
+          return;
+        }
+      }
+      if (authMethod != AuthMethod.SIMPLE) {
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Disabling fallbackToSimpleAuth, target does not use SIMPLE authentication.");
+          fallbackToSimpleAuth.set(false);
+        }
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        if (!fallbackAllowed) {
+          throw new AccessControlException("Server asks us to fall back to SIMPLE auth, but this "
+              + "client is configured to only allow secure connections.");
+        }
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Enabling fallbackToSimpleAuth for target, as we are allowed to fall back.");
+          fallbackToSimpleAuth.set(true);
+        }
+      }
+    }
+
     private void closeConnection() {
       if (socket == null) {
         return;
@@ -1907,10 +1930,12 @@ public class Client implements AutoCloseable {
         }
       }
       if (length <= 0) {
-        throw new RpcException("RPC response has invalid length");
+        throw new RpcException(String.format("RPC response has " +
+            "invalid length of %d", length));
       }
       if (maxResponseLength > 0 && length > maxResponseLength) {
-        throw new RpcException("RPC response exceeds maximum data length");
+        throw new RpcException(String.format("RPC response has a " +
+            "length of %d exceeds maximum data length", length));
       }
       ByteBuffer bb = ByteBuffer.allocate(length);
       in.readFully(bb.array());

@@ -222,13 +222,13 @@ public class TestAbsoluteResourceConfiguration {
         new ResourceLimits(cs.getClusterResource()));
 
     Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
-        d1.queueResourceQuotas.getConfiguredMinResource());
+        d1.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
-        d1.queueResourceQuotas.getEffectiveMinResource());
+        d1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
-        d1.queueResourceQuotas.getConfiguredMaxResource());
+        d1.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
-        d1.queueResourceQuotas.getEffectiveMaxResource());
+        d1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     /**
      * After adding child queue d2, d1 + d2 > resource
@@ -243,22 +243,22 @@ public class TestAbsoluteResourceConfiguration {
         new ResourceLimits(cs.getClusterResource()));
 
     Assert.assertEquals(Resource.newInstance(0, 0),
-        d2.queueResourceQuotas.getConfiguredMinResource());
+        d2.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals(Resource.newInstance(0, 0),
-        d2.queueResourceQuotas.getEffectiveMinResource());
+        d2.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
-        d2.queueResourceQuotas.getConfiguredMaxResource());
+        d2.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
-        d2.queueResourceQuotas.getEffectiveMaxResource());
+        d2.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
-        d1.queueResourceQuotas.getConfiguredMinResource());
+        d1.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
-        d1.queueResourceQuotas.getEffectiveMinResource());
+        d1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
-        d1.queueResourceQuotas.getConfiguredMaxResource());
+        d1.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
-        d1.queueResourceQuotas.getEffectiveMaxResource());
+        d1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     rm.close();
   }
@@ -287,35 +287,35 @@ public class TestAbsoluteResourceConfiguration {
     LeafQueue qA = (LeafQueue) cs.getQueue(QUEUEA);
     Assert.assertNotNull(qA);
     Assert.assertEquals("Min resource configured for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qB = (LeafQueue) cs.getQueue(QUEUEB);
     Assert.assertNotNull(qB);
     Assert.assertEquals("Min resource configured for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qC = (LeafQueue) cs.getQueue(QUEUEC);
     Assert.assertNotNull(qC);
     Assert.assertEquals("Min resource configured for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     rm.stop();
   }
@@ -378,37 +378,37 @@ public class TestAbsoluteResourceConfiguration {
 
     LeafQueue qA1 = (LeafQueue) cs.getQueue(QUEUEA1);
     Assert.assertEquals("Effective Min resource for QUEUEA1 is not correct",
-        QUEUE_A1_MINRES, qA1.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A1_MINRES, qA1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA1 is not correct",
-        QUEUE_A_MAXRES, qA1.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qA2 = (LeafQueue) cs.getQueue(QUEUEA2);
     Assert.assertEquals("Effective Min resource for QUEUEA2 is not correct",
-        QUEUE_A2_MINRES, qA2.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A2_MINRES, qA2.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA2 is not correct",
-        QUEUE_A_MAXRES, qA2.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA2.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qB1 = (LeafQueue) cs.getQueue(QUEUEB1);
     Assert.assertNotNull(qB1);
     Assert.assertEquals("Min resource configured for QUEUEB1 is not correct",
-        QUEUE_B1_MINRES, qB1.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_B1_MINRES, qB1.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEB1 is not correct",
-        QUEUE_B_MAXRES, qB1.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_B_MAXRES, qB1.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEB1 is not correct",
-        QUEUE_B1_MINRES, qB1.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B1_MINRES, qB1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB1 is not correct",
-        QUEUE_B_MAXRES, qB1.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qC = (LeafQueue) cs.getQueue(QUEUEC);
     Assert.assertNotNull(qC);
     Assert.assertEquals("Min resource configured for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     // 3. Create a new config and make sure one queue's min resource is more
     // than its max resource configured.
@@ -597,35 +597,35 @@ public class TestAbsoluteResourceConfiguration {
     LeafQueue qA = (LeafQueue) cs.getQueue(QUEUEA);
     Assert.assertNotNull(qA);
     Assert.assertEquals("Min resource configured for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qB = (LeafQueue) cs.getQueue(QUEUEB);
     Assert.assertNotNull(qB);
     Assert.assertEquals("Min resource configured for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     LeafQueue qC = (LeafQueue) cs.getQueue(QUEUEC);
     Assert.assertNotNull(qC);
     Assert.assertEquals("Min resource configured for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     // unregister one NM.
     rm.unRegisterNode(nm1);
@@ -634,19 +634,19 @@ public class TestAbsoluteResourceConfiguration {
     // above half. Hence A's min will be 60Gi and 6 cores and max will be
     // 128GB and 20 cores.
     Assert.assertEquals("Effective Min resource for QUEUEA is not correct",
-        QUEUEA_REDUCED, qA.queueResourceQuotas.getEffectiveMinResource());
+        QUEUEA_REDUCED, qA.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
-        QUEUEMAX_REDUCED, qA.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUEMAX_REDUCED, qA.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     Assert.assertEquals("Effective Min resource for QUEUEB is not correct",
-        QUEUEB_REDUCED, qB.queueResourceQuotas.getEffectiveMinResource());
+        QUEUEB_REDUCED, qB.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
-        QUEUEMAX_REDUCED, qB.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUEMAX_REDUCED, qB.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
-        QUEUEC_REDUCED, qC.queueResourceQuotas.getEffectiveMinResource());
+        QUEUEC_REDUCED, qC.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
-        QUEUEMAX_REDUCED, qC.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUEMAX_REDUCED, qC.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     rm.stop();
   }
@@ -676,13 +676,13 @@ public class TestAbsoluteResourceConfiguration {
     ParentQueue qA = (ParentQueue) cs.getQueue(QUEUEA);
     Assert.assertNotNull(qA);
     Assert.assertEquals("Min resource configured for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEA is not correct",
         0.4, qA.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEA is not correct",
@@ -691,13 +691,13 @@ public class TestAbsoluteResourceConfiguration {
     ParentQueue qB = (ParentQueue) cs.getQueue(QUEUEB);
     Assert.assertNotNull(qB);
     Assert.assertEquals("Min resource configured for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEB is not correct",
         0.2, qB.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEB is not correct",
@@ -706,13 +706,13 @@ public class TestAbsoluteResourceConfiguration {
     LeafQueue qC = (LeafQueue) cs.getQueue(QUEUEC);
     Assert.assertNotNull(qC);
     Assert.assertEquals("Min resource configured for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEC is not correct",
         0.1, qC.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEC is not correct",
@@ -720,9 +720,9 @@ public class TestAbsoluteResourceConfiguration {
 
     LeafQueue qA1 = (LeafQueue) cs.getQueue(QUEUEA1);
     Assert.assertEquals("Effective Min resource for QUEUEA1 is not correct",
-        QUEUE_A1_MINRES, qA1.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A1_MINRES, qA1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA1 is not correct",
-        QUEUE_A_MAXRES, qA1.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEA1 is not correct",
         0.2, qA1.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEA1 is not correct",
@@ -730,9 +730,9 @@ public class TestAbsoluteResourceConfiguration {
 
     LeafQueue qA2 = (LeafQueue) cs.getQueue(QUEUEA2);
     Assert.assertEquals("Effective Min resource for QUEUEA2 is not correct",
-        QUEUE_A2_MINRES, qA2.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A2_MINRES, qA2.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA2 is not correct",
-        QUEUE_A_MAXRES, qA2.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA2.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEA2 is not correct",
         0.2, qA2.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEA2 is not correct",
@@ -740,13 +740,13 @@ public class TestAbsoluteResourceConfiguration {
 
     LeafQueue qB1 = (LeafQueue) cs.getQueue(QUEUEB1);
     Assert.assertEquals("Min resource configured for QUEUEB1 is not correct",
-        QUEUE_B1_MINRES, qB1.queueResourceQuotas.getConfiguredMinResource());
+        QUEUE_B1_MINRES, qB1.usageTracker.getQueueResourceQuotas().getConfiguredMinResource());
     Assert.assertEquals("Max resource configured for QUEUEB1 is not correct",
-        QUEUE_B_MAXRES, qB1.queueResourceQuotas.getConfiguredMaxResource());
+        QUEUE_B_MAXRES, qB1.usageTracker.getQueueResourceQuotas().getConfiguredMaxResource());
     Assert.assertEquals("Effective Min resource for QUEUEB1 is not correct",
-        QUEUE_B1_MINRES, qB1.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B1_MINRES, qB1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB1 is not correct",
-        QUEUE_B_MAXRES, qB1.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEB1 is not correct",
         0.16, qB1.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEB1 is not correct",
@@ -759,54 +759,54 @@ public class TestAbsoluteResourceConfiguration {
     // Since configured capacity was based on initial node capacity, a
     // re configurations is needed to use this added capacity.
     Assert.assertEquals("Effective Min resource for QUEUEA is not correct",
-        QUEUE_A_MINRES, qA.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A_MINRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
-        QUEUE_A_MAXRES, qA.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEA is not correct",
         0.266, qA.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEA is not correct",
         0.533, qA.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEB is not correct",
-        QUEUE_B_MINRES, qB.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B_MINRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
-        QUEUE_B_MAXRES, qB.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEB is not correct",
         0.133, qB.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEB is not correct",
         0.4, qB.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
-        QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_C_MINRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
-        QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_C_MAXRES, qC.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEC is not correct",
         0.066, qC.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEC is not correct",
         0.4, qC.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEB1 is not correct",
-        QUEUE_B1_MINRES, qB1.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_B1_MINRES, qB1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB1 is not correct",
-        QUEUE_B_MAXRES, qB1.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_B_MAXRES, qB1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEB1 is not correct",
         0.106, qB1.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEB1 is not correct",
         0.4, qB1.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEA1 is not correct",
-        QUEUE_A1_MINRES, qA1.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A1_MINRES, qA1.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA1 is not correct",
-        QUEUE_A_MAXRES, qA1.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEA1 is not correct",
         0.133, qA1.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEA1 is not correct",
         0.533, qA1.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEA2 is not correct",
-        QUEUE_A2_MINRES, qA2.queueResourceQuotas.getEffectiveMinResource());
+        QUEUE_A2_MINRES, qA2.usageTracker.getQueueResourceQuotas().getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA2 is not correct",
-        QUEUE_A_MAXRES, qA2.queueResourceQuotas.getEffectiveMaxResource());
+        QUEUE_A_MAXRES, qA2.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
     Assert.assertEquals("Absolute capacity for QUEUEA2 is not correct",
         0.133, qA2.getAbsoluteCapacity(), DELTA);
     Assert.assertEquals("Absolute Max capacity for QUEUEA2 is not correct",

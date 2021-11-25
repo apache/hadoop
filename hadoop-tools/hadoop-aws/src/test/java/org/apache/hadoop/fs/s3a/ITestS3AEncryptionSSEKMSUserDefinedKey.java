@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
@@ -36,9 +38,12 @@ public class ITestS3AEncryptionSSEKMSUserDefinedKey
   protected Configuration createConfiguration() {
     // get the KMS key for this test.
     Configuration c = new Configuration();
-    String kmsKey = c.get(S3_ENCRYPTION_KEY);
+    String kmsKey = S3AUtils.getS3EncryptionKey(getTestBucketName(c), c);
     // skip the test if SSE-KMS or KMS key not set.
-    skipIfEncryptionNotSet(c, getSSEAlgorithm());
+    if (StringUtils.isBlank(kmsKey)) {
+      skip(S3_ENCRYPTION_KEY + " is not set for " +
+          SSE_KMS.getMethod());
+    }
     Configuration conf = super.createConfiguration();
     conf.set(S3_ENCRYPTION_KEY, kmsKey);
     return conf;

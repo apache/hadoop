@@ -26,7 +26,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,8 +47,8 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Statistic.DELEGATION_TOKENS_ISSUED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkState;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DEFAULT_DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DURATION_LOG_AT_INFO;

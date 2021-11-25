@@ -191,6 +191,12 @@
           <scope>test</scope>
           <type>test-jar</type>
         </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <scope>test</scope>
+          <type>test-jar</type>
+        </dependency>
       </dependencies>
     </profile>
   </profiles>

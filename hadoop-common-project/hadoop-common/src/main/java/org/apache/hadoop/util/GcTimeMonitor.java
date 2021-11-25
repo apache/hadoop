@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;

@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * A service that manages a pool of UAM managers in

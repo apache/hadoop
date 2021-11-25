@@ -1209,8 +1209,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
   protected LeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
-    return autoQueueHandler.createQueue(
-        CSQueueUtils.extractQueuePath(queuePath));
+    return autoQueueHandler.createQueue(new QueuePath(queuePath));
   }
 
   private void assertQueueMinResource(CSQueue queue, float expected) {

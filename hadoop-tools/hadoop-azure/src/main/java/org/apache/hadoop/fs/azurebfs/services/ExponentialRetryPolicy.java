@@ -22,7 +22,7 @@ import java.util.Random;
 import java.net.HttpURLConnection;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Retry policy used by AbfsClient.

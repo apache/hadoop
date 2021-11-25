@@ -77,7 +77,7 @@ public class QueueStateManager<T extends SchedulerQueue,
       throw new YarnException("The specified queue:" + queueName
           + " does not exist!");
     }
-    queue.activeQueue();
+    queue.activateQueue();
   }
 
   /**

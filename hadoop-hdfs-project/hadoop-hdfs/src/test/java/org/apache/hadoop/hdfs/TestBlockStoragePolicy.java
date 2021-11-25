@@ -1337,6 +1337,59 @@ public class TestBlockStoragePolicy {
     Assert.assertEquals(StorageType.DISK, targets[1].getStorageType());
   }
 
+  /**
+   * Consider a File with All_SSD storage policy.
+   * 1. Choose 3 DISK DNs for pipeline because SSD DNs no enough at
+   * the beginning.
+   * 2. One of DISK DNs fails And it need choose one new DN for existing.
+   * pipeline {@link DataStreamer addDatanode2ExistingPipeline()}.
+   * Make sure the number of target DNs are 3.
+   * see HDFS-16182.
+   */
+  @Test
+  public void testAddDatanode2ExistingPipelineInSsd() throws Exception {
+    BlockStoragePolicy policy = POLICY_SUITE.getPolicy(ALLSSD);
+
+    final String[] racks = {"/d1/r1", "/d2/r2", "/d3/r3", "/d4/r4", "/d5/r5",
+        "/d6/r6", "/d7/r7"};
+    final String[] hosts = {"host1", "host2", "host3", "host4", "host5",
+        "host6", "host7"};
+    final StorageType[] disks = {StorageType.DISK, StorageType.DISK, StorageType.DISK};
+
+    final DatanodeStorageInfo[] diskStorages
+        = DFSTestUtil.createDatanodeStorageInfos(7, racks, hosts, disks);
+    final DatanodeDescriptor[] dataNodes
+        = DFSTestUtil.toDatanodeDescriptor(diskStorages);
+    for (int i = 0; i < dataNodes.length; i++) {
+      BlockManagerTestUtil.updateStorage(dataNodes[i],
+          new DatanodeStorage("ssd" + i + 1, DatanodeStorage.State.NORMAL,
+              StorageType.SSD));
+    }
+
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    File baseDir = PathUtils.getTestDir(TestReplicationPolicy.class);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        new File(baseDir, "name").getPath());
+    DFSTestUtil.formatNameNode(conf);
+    NameNode namenode = new NameNode(conf);
+
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
+    NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
+    for (DatanodeDescriptor datanode : dataNodes) {
+      cluster.add(datanode);
+    }
+    // chsenDs are DISK StorageType to simulate not enough SDD Storage
+    List<DatanodeStorageInfo> chsenDs = new ArrayList<>();
+    chsenDs.add(diskStorages[0]);
+    chsenDs.add(diskStorages[1]);
+    DatanodeStorageInfo[] targets = replicator.chooseTarget("/foo", 1,
+        null, chsenDs, true,
+        new HashSet<Node>(), 0, policy, null);
+    Assert.assertEquals(3, targets.length);
+  }
+
   @Test
   public void testGetFileStoragePolicyAfterRestartNN() throws Exception {
     //HDFS8219

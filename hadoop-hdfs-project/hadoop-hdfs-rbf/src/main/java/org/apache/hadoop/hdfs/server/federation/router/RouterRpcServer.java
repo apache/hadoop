@@ -181,7 +181,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
@@ -436,7 +436,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       URI journalUri;
       try {
         journalUri = new URI(sConf.get(SCHEDULER_JOURNAL_URI));
-      } catch (URISyntaxException e) {
+      } catch (URISyntaxException | NullPointerException e) {
         throw new IOException("Bad journal uri. Please check configuration for "
             + SCHEDULER_JOURNAL_URI);
       }

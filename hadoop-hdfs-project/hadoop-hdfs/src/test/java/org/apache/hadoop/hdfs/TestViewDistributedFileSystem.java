@@ -32,6 +32,10 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URI;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   @Override
   HdfsConfiguration getTestConfiguration() {
@@ -111,6 +115,75 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
         fileSystem.rename(testDir, renameDir, Options.Rename.TO_TRASH);
         Assert.assertTrue(fileSystem.exists(renameDir));
         Assert.assertFalse(fileSystem.exists(testDir));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testRenameWithOptionsWithMountEntries() throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      URI defaultUri =
+          URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+      conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
+          defaultUri.toString());
+      Path target = new Path(defaultUri.toString(), "/src");
+      ConfigUtil.addLink(conf, defaultUri.getHost(), "/source",
+          target.toUri());
+      FileSystem defaultFs = FileSystem.get(defaultUri, conf);
+      defaultFs.mkdirs(target);
+      try (ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem
+          .get(conf)) {
+        final Path testDir = new Path("/source");
+        Path filePath = new Path(testDir, "file");
+        Path renamedFilePath = new Path(testDir, "fileRename");
+        // Create a file.
+        fileSystem.create(filePath).close();
+        // Check the file exists before rename is called.
+        assertTrue(fileSystem.exists(filePath));
+        fileSystem.rename(filePath, renamedFilePath, Options.Rename.NONE);
+        // Check the file is not present at source location post a rename.
+        assertFalse(fileSystem.exists(filePath));
+        // Check the file is there at target location post rename.
+        assertTrue(fileSystem.exists(renamedFilePath));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testQuota() throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      URI defaultUri =
+          URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+      conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
+          defaultUri.toString());
+      Path target = new Path(defaultUri.toString(), "/src");
+      // /source -> /src
+      ConfigUtil.addLink(conf, defaultUri.getHost(), "/source",
+          target.toUri());
+      FileSystem defaultFs = FileSystem.get(defaultUri, conf);
+      defaultFs.mkdirs(target);
+      try (ViewDistributedFileSystem fileSystem = (ViewDistributedFileSystem) FileSystem
+          .get(conf)) {
+        final Path testDir = new Path("/source");
+        // Set Quota via ViewDFS
+        fileSystem.setQuota(testDir, 10L, 10L);
+        // Check quota through actual DFS
+        assertEquals(10,
+            defaultFs.getQuotaUsage(target).getSpaceQuota());
       }
     } finally {
       if (cluster != null) {

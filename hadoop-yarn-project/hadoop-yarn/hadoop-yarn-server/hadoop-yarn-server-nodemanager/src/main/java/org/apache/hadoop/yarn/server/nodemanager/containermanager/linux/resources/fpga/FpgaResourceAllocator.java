@@ -20,7 +20,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga;
 
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

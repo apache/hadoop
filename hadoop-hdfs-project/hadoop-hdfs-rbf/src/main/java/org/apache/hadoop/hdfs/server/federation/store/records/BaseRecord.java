@@ -21,7 +21,7 @@ import java.util.Map;
 
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Abstract base of a data record in the StateStore. All StateStore records are

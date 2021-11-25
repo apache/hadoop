@@ -64,7 +64,7 @@ import org.apache.hadoop.tracing.Tracer;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.SYNC_FILE_RANGE_WRITE;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 
 /** A class that receives a block and writes to its own disk, meanwhile

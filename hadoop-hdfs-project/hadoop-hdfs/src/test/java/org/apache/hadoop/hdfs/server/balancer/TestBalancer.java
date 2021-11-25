@@ -42,11 +42,16 @@ import java.lang.reflect.Field;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -1664,9 +1669,37 @@ public class TestBalancer {
       // verify locations of striped blocks
       locatedBlocks = client.getBlockLocations(fileName, 0, fileLen);
       StripedFileTestUtil.verifyLocatedStripedBlocks(locatedBlocks, groupSize);
+
+      // Test handling NPE with striped blocks
+      testNullStripedBlocks(conf);
+
     } finally {
       cluster.shutdown();
     }
+  }
+
+  private void testNullStripedBlocks(Configuration conf) throws IOException {
+    NameNodeConnector nnc = NameNodeConnector.newNameNodeConnectors(
+        DFSUtil.getInternalNsRpcUris(conf),
+        Balancer.class.getSimpleName(), Balancer.BALANCER_ID_PATH, conf,
+        BalancerParameters.DEFAULT.getMaxIdleIteration()).get(0);
+    Dispatcher dispatcher = new Dispatcher(nnc, Collections.emptySet(),
+        Collections.<String> emptySet(), 1, 1, 0,
+        1, 1, conf);
+    Dispatcher spyDispatcher = spy(dispatcher);
+    Dispatcher.PendingMove move = spyDispatcher.new PendingMove(
+        mock(Dispatcher.Source.class),
+        mock(Dispatcher.DDatanode.StorageGroup.class));
+    Dispatcher.DBlockStriped block = mock(Dispatcher.DBlockStriped.class);
+
+    doReturn(null).when(block).getInternalBlock(any());
+    doReturn(true)
+        .when(spyDispatcher)
+        .isGoodBlockCandidate(any(), any(), any(), any());
+
+    when(move.markMovedIfGoodBlock(block, DEFAULT)).thenCallRealMethod();
+
+    assertFalse(move.markMovedIfGoodBlock(block, DEFAULT));
   }
 
   /**

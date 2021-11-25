@@ -54,7 +54,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;

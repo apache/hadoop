@@ -89,7 +89,7 @@ import org.apache.hadoop.util.LightWeightGSet;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Multimap;
 

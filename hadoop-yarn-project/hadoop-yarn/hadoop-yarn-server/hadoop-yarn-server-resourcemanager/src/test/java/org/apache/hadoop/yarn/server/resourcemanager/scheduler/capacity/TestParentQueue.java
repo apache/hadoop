@@ -1137,7 +1137,7 @@ public class TestParentQueue {
     assertEquals(b.getMaxApplications(), b.getMaxApplicationsPerUser());
 
     // Set GlobalMaximumApplicationsPerQueue in csConf
-    csConf.setGlobalMaximumApplicationsPerQueue(20000);
+    csConf.setGlobalMaximumApplicationsPerQueue(8000);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 

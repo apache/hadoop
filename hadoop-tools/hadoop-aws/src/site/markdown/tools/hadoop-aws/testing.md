@@ -296,6 +296,15 @@ For the default test dataset, hosted in the `landsat-pds` bucket, this is:
 </property>
 ```
 
+### <a name="csv"></a> Testing Access Point Integration
+S3a supports using Access Point ARNs to access data in S3. If you think your changes affect VPC
+integration, request signing, ARN manipulation, or any code path that deals with the actual
+sending and retrieving of data to/from S3, make sure you run the entire integration test suite with
+this feature enabled.
+
+Check out [our documentation](./index.html#accesspoints) for steps on how to enable this feature. To
+create access points for your S3 bucket you can use the AWS Console or CLI.
+
 ## <a name="reporting"></a> Viewing Integration Test Reports
 
 
@@ -1468,6 +1477,9 @@ as it may take a couple of SDK updates before it is ready.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
   and `fs.s3a.encryption.key` for encryption, for full coverage.
   If you can, scale up the scale tests.
+1. Create an Access Point for your bucket (using the AWS Console or CLI), update S3a configuration
+to use it ([docs for help](./index.html#accesspoints)) and re-run the `ITest*` integration tests from
+your IDE or via maven.
 1. Run the `ILoadTest*` load tests from your IDE or via maven through
       `mvn verify -Dtest=skip -Dit.test=ILoadTest\*`  ; look for regressions in performance
       as much as failures.

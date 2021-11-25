@@ -21,17 +21,25 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.annotation.Metric.Type;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Test prometheus Sink.
@@ -220,6 +228,53 @@ public class TestPrometheusMetricsSink {
   }
 
   /**
+   * testTopMetricsPublish.
+   */
+  @Test
+  public void testTopMetricsPublish() throws IOException {
+    MetricsSystem metrics = DefaultMetricsSystem.instance();
+
+    metrics.init("test");
+
+    //GIVEN
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+
+    metrics.register("prometheus", "prometheus", sink);
+    TestTopMetrics topMetrics = new TestTopMetrics();
+    topMetrics.add("60000");
+    topMetrics.add("1500000");
+    metrics.register(TestTopMetrics.TOPMETRICS_METRICS_SOURCE_NAME,
+        "Top N operations by user", topMetrics);
+
+    metrics.start();
+
+    metrics.publishMetricsNow();
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    OutputStreamWriter writer = new OutputStreamWriter(stream, UTF_8);
+
+    //WHEN
+    sink.writeMetrics(writer);
+    writer.flush();
+
+    //THEN
+    String writtenMetrics = stream.toString(UTF_8.name());
+    System.out.println(writtenMetrics);
+
+    assertThat(writtenMetrics)
+        .contains(
+            "nn_top_user_op_counts_window_ms_60000_total_count{context=\"dfs\"")
+        .contains(
+            "nn_top_user_op_counts_window_ms_60000_count{")
+        .contains(
+            "nn_top_user_op_counts_window_ms_1500000_count{")
+        .contains(
+            "op=\"rename\",user=\"hadoop/TEST_HOSTNAME.com@HOSTNAME.COM\"");
+
+    metrics.stop();
+    metrics.shutdown();
+  }
+
+  /**
    * Example metric pojo.
    */
   @Metrics(about = "Test Metrics", context = "dfs")
@@ -241,5 +296,39 @@ public class TestPrometheusMetricsSink {
 
     @Metric
     private MutableCounterLong numBucketCreateFails;
+  }
+
+  /**
+   * Example metric TopMetrics.
+   */
+  private class TestTopMetrics implements MetricsSource {
+
+    public static final String TOPMETRICS_METRICS_SOURCE_NAME =
+        "NNTopUserOpCounts";
+    private final List<String> windowMsNames = new ArrayList<>();
+
+    public void add(String windowMs) {
+      windowMsNames.add(String.format(".windowMs=%s", windowMs));
+    }
+
+    @Override
+    public void getMetrics(MetricsCollector collector, boolean all) {
+      for (String windowMs : windowMsNames) {
+        MetricsRecordBuilder rb = collector
+            .addRecord(TOPMETRICS_METRICS_SOURCE_NAME + windowMs)
+            .setContext("dfs");
+        rb.addCounter(
+            Interns.info("op=" + StringUtils.deleteWhitespace("rename")
+                + ".TotalCount", "Total operation count"), 2);
+        rb.addCounter(
+            Interns.info("op=" + StringUtils.deleteWhitespace("rename")
+                + ".user=" + "hadoop/TEST_HOSTNAME.com@HOSTNAME.COM"
+                + ".count", "Total operations performed by user"), 3);
+        rb.addCounter(
+            Interns.info("op=" + StringUtils.deleteWhitespace("delete")
+                + ".user=" + "test_user2"
+                + ".count", "Total operations performed by user"), 4);
+      }
+    }
   }
 }

@@ -288,6 +288,8 @@
                         <exclude>com/sun/security/**/*</exclude>
                         <exclude>com/sun/jndi/**/*</exclude>
                         <exclude>com/sun/management/**/*</exclude>
+                        <exclude>com/ibm/security/*</exclude>
+                        <exclude>com/ibm/security/**/*</exclude>
                       </excludes>
                     </relocation>
                     <relocation>

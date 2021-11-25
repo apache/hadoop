@@ -89,7 +89,7 @@ import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.tracing.Tracer;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
@@ -204,6 +205,11 @@ public class TestBalancerWithHANameNodes {
     // Avoid the same FS being reused between tests
     conf.setBoolean("fs.hdfs.impl.disable.cache", true);
     conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
+
+    // Reduce datanode retry so cluster shutdown won't be blocked.
+    if (withObserverFailure) {
+      conf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 2);
+    }
 
     MiniQJMHACluster qjmhaCluster = null;
     try {

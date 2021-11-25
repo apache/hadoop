@@ -1080,6 +1080,17 @@ options are covered in [Testing](./testing.md).
      client has permission to read the bucket.
   </description>
 </property>
+
+<property>
+  <name>fs.s3a.object.content.encoding</name>
+  <value></value>
+  <description>
+    Content encoding: gzip, deflate, compress, br, etc.
+    This will be set in the "Content-Encoding" header of the object,
+    and returned in HTTP HEAD/GET requests.
+  </description>
+</property>
+
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery
@@ -1426,32 +1437,47 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 </property>
 ```
 
-### Customizing S3A secrets held in credential files
+#### per-bucket configuration and deprecated configuration options
+
+Per-bucket declaration of the deprecated encryption options
+will take priority over a global option -even when the
+global option uses the newer configuration keys.
+
+This means that when setting encryption options in XML files,
+the option, `fs.bucket.BUCKET.fs.s3a.server-side-encryption-algorithm`
+will take priority over the global value of `fs.bucket.s3a.encryption.algorithm`.
+The same holds for the encryption key option `fs.s3a.encryption.key`
+and its predecessor `fs.s3a.server-side-encryption.key`.
 
 
-Secrets in JCEKS files or provided by other Hadoop credential providers
-can also be configured on a per bucket basis. The S3A client will
-look for the per-bucket secrets be
+For a site configuration of:
 
+```xml
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption-algorithm</name>
+  <value>SSE-KMS</value>
+</property>
 
-Consider a JCEKS file with six keys:
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption.key</name>
+  <value>arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.algorithm</name>
+  <value>AES256</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.key</name>
+  <value>unset</value>
+</property>
+
 
 ```
-fs.s3a.access.key
-fs.s3a.secret.key
-fs.s3a.encryption.algorithm
-fs.s3a.encryption.key
-fs.s3a.bucket.nightly.access.key
-fs.s3a.bucket.nightly.secret.key
-fs.s3a.bucket.nightly.session.token
-fs.s3a.bucket.nightly.server-side-encryption.key
-fs.s3a.bucket.nightly.server-side-encryption-algorithm
-```
 
-When accessing the bucket `s3a://nightly/`, the per-bucket configuration
-options for that bucket will be used, here the access keys and token,
-and including the encryption algorithm and key.
-
+The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
+`arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
 
@@ -1579,6 +1605,62 @@ for buckets in the central and EU/Ireland endpoints.
 Why explicitly declare a bucket bound to the central endpoint? It ensures
 that if the default endpoint is changed to a new region, data store in
 US-east is still reachable.
+
+## <a name="accesspoints"></a>Configuring S3 AccessPoints usage with S3A
+S3a now supports [S3 Access Point](https://aws.amazon.com/s3/features/access-points/) usage which
+improves VPC integration with S3 and simplifies your data's permission model because different
+policies can be applied now on the Access Point level. For more information about why to use and
+how to create them make sure to read the official documentation.
+
+Accessing data through an access point, is done by using its ARN, as opposed to just the bucket name.
+You can set the Access Point ARN property using the following per bucket configuration property:
+```xml
+<property>
+    <name>fs.s3a.sample-bucket.accesspoint.arn</name>
+    <value> {ACCESSPOINT_ARN_HERE} </value>
+    <description>Configure S3a traffic to use this AccessPoint</description>
+</property>
+```
+
+This configures access to the `sample-bucket` bucket for S3A, to go through the
+new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
+configured ARN when getting data from S3 instead of your bucket.
+
+You can also use an Access Point name as a path URI such as `s3a://finance-team-access/key`, by
+configuring the `.accesspoint.arn` property as a per-bucket override:
+```xml
+<property>
+    <name>fs.s3a.finance-team-access.accesspoint.arn</name>
+    <value> {ACCESSPOINT_ARN_HERE} </value>
+    <description>Configure S3a traffic to use this AccessPoint</description>
+</property>
+```
+
+The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
+Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
+to known sources of data defined through Access Points. In case there is a need to access a bucket
+directly (without Access Points) then you can use per bucket overrides to disable this setting on a
+bucket by bucket basis i.e. `fs.s3a.{YOUR-BUCKET}.accesspoint.required`.
+
+```xml
+<!-- Require access point only access -->
+<property>
+    <name>fs.s3a.accesspoint.required</name>
+    <value>true</value>
+</property>
+<!-- Disable it on a per-bucket basis if needed -->
+<property>
+    <name>fs.s3a.example-bucket.accesspoint.required</name>
+    <value>false</value>
+</property>
+```
+
+Before using Access Points make sure you're not impacted by the following:
+- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
+- The endpoint for S3 requests will automatically change from `s3.amazonaws.com` to use
+`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
+considering endpoints, if you have any custom signers that use the host endpoint property make
+sure to update them if needed;
 
 ## <a name="upload"></a>How S3A writes data to S3
 

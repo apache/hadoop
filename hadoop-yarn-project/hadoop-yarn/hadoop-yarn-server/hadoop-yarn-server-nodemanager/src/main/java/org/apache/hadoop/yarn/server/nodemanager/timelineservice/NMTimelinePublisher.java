@@ -67,7 +67,7 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.TimelineServiceHelper;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
  * Metrics publisher service that publishes data to the timeline service v.2. It

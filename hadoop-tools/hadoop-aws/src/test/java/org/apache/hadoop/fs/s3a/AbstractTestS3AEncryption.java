@@ -32,9 +32,11 @@ import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 
 /**
  * Test whether or not encryption works by turning it on. Some checks
@@ -163,8 +165,9 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    */
   protected void assertEncrypted(Path path) throws IOException {
     //S3 will return full arn of the key, so specify global arn in properties
-    String kmsKeyArn = this.getConfiguration().
-        getTrimmed(S3_ENCRYPTION_KEY);
+    String kmsKeyArn =
+        getS3EncryptionKey(getTestBucketName(getConfiguration()),
+            getConfiguration());
     S3AEncryptionMethods algorithm = getSSEAlgorithm();
     EncryptionTestUtils.assertEncrypted(getFileSystem(),
             path,

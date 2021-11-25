@@ -28,7 +28,7 @@ import static org.apache.hadoop.security.UGIExceptionMessages.*;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.util.StringUtils.getTrimmedStringCollection;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;

@@ -281,7 +281,7 @@ By default, the command sends a HTTP request, but this can be overridden by usin
 Example:
 
     $ bin/hadoop daemonlog -setlevel 127.0.0.1:9870 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG
-    $ bin/hadoop daemonlog -getlevel 127.0.0.1:9871 org.apache.hadoop.hdfs.server.namenode.NameNode DEBUG -protocol https
+    $ bin/hadoop daemonlog -getlevel 127.0.0.1:9871 org.apache.hadoop.hdfs.server.namenode.NameNode -protocol https
 
 Note that the setting is not permanent and will be reset when the daemon is restarted.
 This command works by sending a HTTP/HTTPS request to the daemon's internal Jetty servlet, so it supports the following daemons:
