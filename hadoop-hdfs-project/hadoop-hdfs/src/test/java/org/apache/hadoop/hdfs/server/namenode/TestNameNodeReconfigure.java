@@ -416,18 +416,18 @@ public class TestNameNodeReconfigure {
 
     // By default, excludeSlowNodesEnabled is false.
     assertEquals(false, blockManager.
-        getEnableExculeSlowDataNodesForWrite(BlockType.CONTIGUOUS));
+        getExcludeSlowNodesEnabled(BlockType.CONTIGUOUS));
     assertEquals(false, blockManager.
-        getEnableExculeSlowDataNodesForWrite(BlockType.STRIPED));
+        getExcludeSlowNodesEnabled(BlockType.STRIPED));
 
     nameNode.reconfigureProperty(
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, Boolean.toString(true));
 
     // After reconfigured, excludeSlowNodesEnabled is true.
     assertEquals(true, blockManager.
-        getEnableExculeSlowDataNodesForWrite(BlockType.CONTIGUOUS));
+        getExcludeSlowNodesEnabled(BlockType.CONTIGUOUS));
     assertEquals(true, blockManager.
-        getEnableExculeSlowDataNodesForWrite(BlockType.STRIPED));
+        getExcludeSlowNodesEnabled(BlockType.STRIPED));
   }
 
   @After

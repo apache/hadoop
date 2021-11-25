@@ -270,7 +270,7 @@ public abstract class BlockPlacementPolicy {
    * @param enable true, we will filter out slow nodes
    * when choosing targets for blocks, otherwise false not filter.
    */
-  public abstract void setExculeSlowDataNodesEnabled(boolean enable);
+  public abstract void setExcludeSlowNodesEnabled(boolean enable);
 
-  public abstract boolean getExculeSlowDataNodesEnabled();
+  public abstract boolean getExcludeSlowNodesEnabled();
 }

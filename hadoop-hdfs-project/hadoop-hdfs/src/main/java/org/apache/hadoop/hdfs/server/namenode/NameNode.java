@@ -2407,7 +2407,7 @@ public class NameNode extends ReconfigurableBase implements
         enable = (newVal == null ?
             DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT :
             Boolean.parseBoolean(newVal));
-        bm.setExculeSlowDataNodesForWriteEnabled(enable);
+        bm.setExcludeSlowNodesEnabled(enable);
       } else {
         throw new IllegalArgumentException("Unexpected property " +
             property + " in reconfigureSlowNodesParameters");

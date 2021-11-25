@@ -1361,12 +1361,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   @Override
-  public void setExculeSlowDataNodesEnabled(boolean enable) {
+  public void setExcludeSlowNodesEnabled(boolean enable) {
     this.excludeSlowNodesEnabled = enable;
   }
 
   @Override
-  public boolean getExculeSlowDataNodesEnabled() {
+  public boolean getExcludeSlowNodesEnabled() {
     return excludeSlowNodesEnabled;
   }
 }

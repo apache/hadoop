@@ -5361,13 +5361,13 @@ public class BlockManager implements BlockStatsMXBean {
     return spsManager;
   }
 
-  public void setExculeSlowDataNodesForWriteEnabled(boolean enable) {
-    placementPolicies.getPolicy(CONTIGUOUS).setExculeSlowDataNodesEnabled(enable);
-    placementPolicies.getPolicy(STRIPED).setExculeSlowDataNodesEnabled(enable);
+  public void setExcludeSlowNodesEnabled(boolean enable) {
+    placementPolicies.getPolicy(CONTIGUOUS).setExcludeSlowNodesEnabled(enable);
+    placementPolicies.getPolicy(STRIPED).setExcludeSlowNodesEnabled(enable);
   }
 
   @VisibleForTesting
-  public boolean getEnableExculeSlowDataNodesForWrite(BlockType blockType) {
-    return placementPolicies.getPolicy(blockType).getExculeSlowDataNodesEnabled();
+  public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
   }
 }
