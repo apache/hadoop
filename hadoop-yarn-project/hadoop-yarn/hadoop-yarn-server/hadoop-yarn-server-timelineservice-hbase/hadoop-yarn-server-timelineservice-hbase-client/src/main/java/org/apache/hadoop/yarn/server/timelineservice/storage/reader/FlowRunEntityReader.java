@@ -236,14 +236,14 @@ class FlowRunEntityReader extends TimelineEntityReader {
             "fromid doesn't belong to clusterId=" + context.getClusterId());
       }
       // set start row
-      scan.setStartRow(flowRunRowKey.getRowKey());
+      scan.withStartRow(flowRunRowKey.getRowKey());
 
       // get the bytes for stop row
       flowRunRowKeyPrefix = new FlowRunRowKeyPrefix(context.getClusterId(),
           context.getUserId(), context.getFlowName());
 
       // set stop row
-      scan.setStopRow(
+      scan.withStopRow(
           HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
               flowRunRowKeyPrefix.getRowKeyPrefix()));
     }

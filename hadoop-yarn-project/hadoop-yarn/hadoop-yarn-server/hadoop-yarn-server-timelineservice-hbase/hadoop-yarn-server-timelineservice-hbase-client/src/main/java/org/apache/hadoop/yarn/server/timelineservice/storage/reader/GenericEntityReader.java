@@ -514,7 +514,7 @@ class GenericEntityReader extends TimelineEntityReader {
       }
 
       // set start row
-      scan.setStartRow(entityRowKey.getRowKey());
+      scan.withStartRow(entityRowKey.getRowKey());
 
       // get the bytes for stop row
       entityRowKeyPrefix = new EntityRowKeyPrefix(context.getClusterId(),
@@ -522,7 +522,7 @@ class GenericEntityReader extends TimelineEntityReader {
           context.getAppId(), context.getEntityType(), null, null);
 
       // set stop row
-      scan.setStopRow(
+      scan.withStopRow(
           HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
               entityRowKeyPrefix.getRowKeyPrefix()));
 
