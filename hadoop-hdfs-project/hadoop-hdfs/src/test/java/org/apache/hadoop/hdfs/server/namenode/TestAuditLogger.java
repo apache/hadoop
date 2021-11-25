@@ -256,10 +256,9 @@ public class TestAuditLogger {
     conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
     conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
 
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
       cluster.waitClusterUp();
       final FileSystem fs = cluster.getFileSystem();
       final long time = System.currentTimeMillis();
@@ -414,8 +413,8 @@ public class TestAuditLogger {
       assertFalse(auditlog.getOutput().contains("callerContext="));
       auditlog.clearOutput();
 
-    } finally {
-      cluster.shutdown();
+      // clear client context
+      CallerContext.setCurrent(null);
     }
   }
 
@@ -596,6 +595,36 @@ public class TestAuditLogger {
       auditLog.clearOutput();
     } finally {
       cluster2.shutdown();
+    }
+  }
+
+  @Test
+  public void testCallerContextCharacterEscape() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
+    conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      cluster.waitClusterUp();
+      final FileSystem fs = cluster.getFileSystem();
+      final long time = System.currentTimeMillis();
+      final Path p = new Path("/");
+
+      assertNull(CallerContext.getCurrent());
+
+      CallerContext context = new CallerContext.Builder("c1\nc2").append("c3\tc4")
+          .setSignature("s1\ns2".getBytes(CallerContext.SIGNATURE_ENCODING)).build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=c1\\nc2,c3\\tc4:s1\\ns2%n")));
+      auditlog.clearOutput();
+
+      // clear client context
+      CallerContext.setCurrent(null);
     }
   }
 
