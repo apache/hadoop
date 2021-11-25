@@ -281,20 +281,18 @@ public class TestFSImage {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,"");
     MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).build();
-      cluster.waitActive();
-      FSNamesystem fsn = cluster.getNamesystem();
-      FSImage fsImage= new FSImage(conf);
       try {
+        cluster = new MiniDFSCluster.Builder(conf).build();
+        cluster.waitActive();
+        FSNamesystem fsn = cluster.getNamesystem();
+        FSImage fsImage= new FSImage(conf);
         fsImage.doImportCheckpoint(fsn);
         fail("Expect to throw IOException.");
       } catch (IOException e) {
         GenericTestUtils.assertExceptionContains(
                 "Cannot import image from a checkpoint. "
         + "\"dfs.namenode.checkpoint.edits.dir\" is not set.", e);
-      }
-    } finally {
+      } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
