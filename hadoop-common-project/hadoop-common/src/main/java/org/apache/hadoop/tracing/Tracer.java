@@ -81,13 +81,11 @@ public class Tracer {
   public void close() {
   }
 
-
+  
   public static class Builder {
     static Tracer globalTracer = new Tracer();
-    private String name;
 
-    public Builder(final String name) {
-      this.name = name;
+    public Builder() {
     }
 
     public Builder conf(TraceConfiguration conf) {
