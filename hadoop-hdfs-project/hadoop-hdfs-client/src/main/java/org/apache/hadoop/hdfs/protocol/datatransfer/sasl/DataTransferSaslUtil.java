@@ -221,7 +221,8 @@ public final class DataTransferSaslUtil {
     case SUCCESS:
       return handler.apply(proto);
     default:
-      throw new IOException("Unknown status: " + proto.getStatus() + ", message: " + proto.getMessage());
+      throw new IOException(
+          "Unknown status: " + proto.getStatus() + ", message: " + proto.getMessage());
     }
   }
 
