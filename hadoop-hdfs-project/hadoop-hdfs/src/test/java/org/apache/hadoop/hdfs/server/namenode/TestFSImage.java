@@ -277,9 +277,9 @@ public class TestFSImage {
   }
 
   @Test
-  public void testImportCheckpoint() throws IOException{
+  public void testImportCheckpoint() {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,"");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, "");
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
