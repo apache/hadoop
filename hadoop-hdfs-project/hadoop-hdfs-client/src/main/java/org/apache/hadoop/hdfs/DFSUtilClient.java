@@ -733,13 +733,13 @@ public class DFSUtilClient {
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
     if (cached != null) {
-      LOG.trace("Address {} is {} local", targetAddr, (cached ? "" : "not"));
+      LOG.trace("Address " + targetAddr + (cached ? " is local" : " is not local"));
       return cached;
     }
 
     boolean local = NetUtils.isLocalAddress(addr);
 
-    LOG.trace("Address {} is {} local", targetAddr, (local ? "" : "not"));
+    LOG.trace("Address " + targetAddr + (local ? " is local" : " is not local"));
     localAddrMap.put(addr.getHostAddress(), local);
     return local;
   }
