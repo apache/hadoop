@@ -151,7 +151,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       return diff;
     }
 
-    public void setClusterResource(Resource clusterResource) {
+    private void setClusterResource(Resource clusterResource) {
       this.clusterResource = clusterResource;
     }
 

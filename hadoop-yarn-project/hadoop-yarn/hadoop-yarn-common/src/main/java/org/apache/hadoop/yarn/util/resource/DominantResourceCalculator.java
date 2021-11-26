@@ -436,7 +436,7 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   /**
    * Computes the ratio of resource a over resource b.
-   * However, different from {@link this#ratio(Resource, Resource)},
+   * However, different from ratio(Resource, Resource),
    * this returns the min-share of the resources.
    * For example, ratio(Resource(10, 50), Resource(100, 100)) would return 0.5,
    * whereas minRatio(Resource(10, 50), Resource(100, 100)) would return 0.1.

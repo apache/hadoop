@@ -44,21 +44,21 @@ public class ClusterNode {
     updateTimestamp();
   }
 
-  public ClusterNode setCapability(Resource capability) {
-    if (capability == null) {
+  public ClusterNode setCapability(Resource nodeCapability) {
+    if (nodeCapability == null) {
       this.capability = Resources.none();
     } else {
-      this.capability = capability;
+      this.capability = nodeCapability;
     }
     return this;
   }
 
   public ClusterNode setAllocatedResource(
-    Resource allocatedResource) {
-    if (allocatedResource == null) {
+      Resource allocResource) {
+    if (allocResource == null) {
       this.allocatedResource = Resources.none();
     } else {
-      this.allocatedResource = allocatedResource;
+      this.allocatedResource = allocResource;
     }
     return this;
   }

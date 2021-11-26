@@ -589,8 +589,7 @@ public class TestNodeQueueLoadMonitor {
   private RMNode createRMNode(String host, int port, String rack,
       int waitTime, int queueLength, int queueCapacity, NodeState state) {
     return createRMNode(host, port, rack, waitTime, queueLength, queueCapacity,
-        state, ResourceUtilization.newInstance(0, 0, 0),
-        Resources.none(), defaultCapacity);
+        state, Resources.none(), defaultCapacity);
   }
 
   private RMNode createRMNode(
@@ -604,15 +603,13 @@ public class TestNodeQueueLoadMonitor {
       String host, int port, int waitTime, int queueLength, int queueCapacity,
       Resource allocatedResource, Resource nodeResource) {
     return createRMNode(host, port, "default", waitTime, queueLength,
-        queueCapacity, NodeState.RUNNING,
-        ResourceUtilization.newInstance(0, 0, 0),
-        allocatedResource, nodeResource);
+        queueCapacity, NodeState.RUNNING, allocatedResource, nodeResource);
   }
 
+  @SuppressWarnings("parameternumber")
   private RMNode createRMNode(String host, int port, String rack,
       int waitTime, int queueLength, int queueCapacity, NodeState state,
-      ResourceUtilization utilization, Resource allocatedResource,
-      Resource nodeResource) {
+      Resource allocatedResource, Resource nodeResource) {
     RMNode node1 = Mockito.mock(RMNode.class);
     NodeId nID1 = new FakeNodeId(host, port);
     Mockito.when(node1.getHostName()).thenReturn(host);
@@ -621,7 +618,8 @@ public class TestNodeQueueLoadMonitor {
     Mockito.when(node1.getNodeID()).thenReturn(nID1);
     Mockito.when(node1.getState()).thenReturn(state);
     Mockito.when(node1.getTotalCapability()).thenReturn(nodeResource);
-    Mockito.when(node1.getNodeUtilization()).thenReturn(utilization);
+    Mockito.when(node1.getNodeUtilization()).thenReturn(
+        ResourceUtilization.newInstance(0, 0, 0));
     Mockito.when(node1.getAllocatedContainerResource()).thenReturn(
         allocatedResource);
     OpportunisticContainersStatus status1 =
