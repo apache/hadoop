@@ -114,8 +114,8 @@ public class HttpFSParametersProvider extends ParametersProvider {
             new Class[] {OldSnapshotNameParam.class,
                 SnapshotNameParam.class});
     PARAMS_DEF.put(Operation.GETSNAPSHOTDIFFLISTING,
-        new Class[] { OldSnapshotNameParam.class, SnapshotNameParam.class,
-            SnapshotDiffStartPathParam.class, SnapshotDiffIndexParam.class });
+        new Class[] {OldSnapshotNameParam.class, SnapshotNameParam.class,
+            SnapshotDiffStartPathParam.class, SnapshotDiffIndexParam.class});
     PARAMS_DEF.put(Operation.GETSNAPSHOTDIFF,
         new Class[] {OldSnapshotNameParam.class,
             SnapshotNameParam.class});
