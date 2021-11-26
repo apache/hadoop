@@ -271,20 +271,20 @@ public class TestDFSPermission {
     fs.mkdirs(testValidDir);
     fs.create(testValidFile);
 
-    fs.access(testValidDir,FsAction.READ);
-    fs.access(testValidFile,FsAction.READ);
+    fs.access(testValidDir, FsAction.READ);
+    fs.access(testValidFile, FsAction.READ);
 
     assertTrue(fs.exists(testValidDir));
     assertTrue(fs.exists(testValidFile));
 
     try {
-      fs.access(testInvalidPath,FsAction.READ);
+      fs.access(testInvalidPath, FsAction.READ);
       fail("Failed to get expected FileNotFoundException");
     } catch (FileNotFoundException e) {
       GenericTestUtils.assertExceptionContains(
               "Path not found: " + testInvalidPath, e);
     } finally {
-      fs.delete(testValidDir,true);
+      fs.delete(testValidDir, true);
     }
   }
 
