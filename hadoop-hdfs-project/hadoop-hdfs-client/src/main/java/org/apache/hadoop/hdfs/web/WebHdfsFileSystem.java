@@ -1458,7 +1458,7 @@ public class WebHdfsFileSystem extends FileSystem
         }.run();
   }
 
-  private SnapshotDiffReportListing getSnapshotDiffReportListing(
+  public SnapshotDiffReportListing getSnapshotDiffReportListing(
         String snapshotDir, final String fromSnapshot, final String toSnapshot,
         byte[] startPath, int index) throws IOException {
     return new FsPathResponseRunner<SnapshotDiffReportListing>(
