@@ -159,7 +159,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     // compatible version
     Version compatibleVersion =
         Version.newInstance(defaultVersion.getMajorVersion(),
-            defaultVersion.getMinorVersion() + 2);
+          defaultVersion.getMinorVersion() + 2);
     dbStore.storeVersion(compatibleVersion);
     Assert.assertEquals(compatibleVersion, dbStore.loadVersion());
     restartTimelineStore();
@@ -170,7 +170,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     // incompatible version
     Version incompatibleVersion =
         Version.newInstance(defaultVersion.getMajorVersion() + 1,
-            defaultVersion.getMinorVersion());
+          defaultVersion.getMinorVersion());
     dbStore.storeVersion(incompatibleVersion);
     try {
       restartTimelineStore();
@@ -227,13 +227,13 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     } catch (IllegalArgumentException e) {
       Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration
-              .TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE));
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE));
     }
     try {
       Configuration newConfig = new YarnConfiguration(copyConfig);
       newConfig.setLong(
           YarnConfiguration
-              .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
           0);
       config = newConfig;
       restartTimelineStore();
@@ -241,7 +241,7 @@ public class TestRollingLevelDBTimelineStore extends TimelineStoreTestUtils {
     } catch (IllegalArgumentException e) {
       Assert.assertTrue(e.getMessage().contains(
           YarnConfiguration
-              .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE));
+          .TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE));
     }
     config = copyConfig;
     restartTimelineStore();

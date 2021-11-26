@@ -596,16 +596,16 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     // create a lexicographically-ordered map from start time to entities
     Map<byte[], List<EntityIdentifier>> startTimeMap =
         new TreeMap<byte[], List<EntityIdentifier>>(
-            new Comparator<byte[]>() {
-              @Override
-              public int compare(byte[] o1, byte[] o2) {
-                return WritableComparator.compareBytes(o1, 0, o1.length, o2, 0,
-                    o2.length);
-              }
-            });
+        new Comparator<byte[]>() {
+          @Override
+          public int compare(byte[] o1, byte[] o2) {
+            return WritableComparator.compareBytes(o1, 0, o1.length, o2, 0,
+                o2.length);
+          }
+        });
 
-    // look up start times for the specified entities
-    // skip entities with no start time
+      // look up start times for the specified entities
+      // skip entities with no start time
     for (String entityId : entityIds) {
       byte[] startTime = getStartTime(entityId, entityType);
       if (startTime != null) {
@@ -618,7 +618,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       }
     }
     for (Entry<byte[], List<EntityIdentifier>> entry : startTimeMap
-        .entrySet()) {
+          .entrySet()) {
       // look up the events matching the given parameters (limit,
       // start time, end time, event types) for entities whose start times
       // were found and add the entities to the return list
@@ -851,7 +851,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
                 Object v = entity.getOtherInfo().get(filter.getName());
                 if (v == null) {
                   Set<Object> vs = entity.getPrimaryFilters()
-                      .get(filter.getName());
+                          .get(filter.getName());
                   if (vs == null || !vs.contains(filter.getValue())) {
                     filterPassed = false;
                     break;
@@ -1245,7 +1245,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       }
     }
     LOG.debug("Put {} new leveldb entity entries and {} new leveldb index"
-            + " entries from {} timeline entities", entityCount, indexCount,
+        + " entries from {} timeline entities", entityCount, indexCount,
         entities.getEntities().size());
     return response;
   }
@@ -1670,7 +1670,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
   @Override
   public void put(TimelineDomain domain) throws IOException {
     try (WriteBatch domainWriteBatch = domaindb.createWriteBatch();
-        WriteBatch ownerWriteBatch = ownerdb.createWriteBatch();) {
+         WriteBatch ownerWriteBatch = ownerdb.createWriteBatch();) {
 
       if (domain.getId() == null || domain.getId().length() == 0) {
         throw new IllegalArgumentException("Domain doesn't have an ID");
