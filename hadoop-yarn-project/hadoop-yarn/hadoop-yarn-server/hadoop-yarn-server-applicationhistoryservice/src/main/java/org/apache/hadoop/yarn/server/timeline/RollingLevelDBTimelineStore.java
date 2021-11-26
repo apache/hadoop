@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
@@ -48,6 +49,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -199,6 +201,11 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
   static final String STARTTIME = "starttime-ldb";
   static final String OWNER = "owner-ldb";
 
+  @VisibleForTesting
+  //Extension to FILENAME where backup will be stored in case we need to
+  //call LevelDb recovery
+  static final String BACKUP_EXT = ".backup-";
+
   private static final byte[] DOMAIN_ID_COLUMN = "d".getBytes(UTF_8);
   private static final byte[] EVENTS_COLUMN = "e".getBytes(UTF_8);
   private static final byte[] PRIMARY_FILTERS_COLUMN = "f".getBytes(UTF_8);
@@ -238,6 +245,12 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
   public RollingLevelDBTimelineStore() {
     super(RollingLevelDBTimelineStore.class.getName());
+  }
+
+  private JniDBFactory factory;
+  @VisibleForTesting
+  void setFactory(JniDBFactory fact) {
+    this.factory = fact;
   }
 
   @Override
@@ -284,7 +297,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     options.cacheSize(conf.getLong(
         TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE,
         DEFAULT_TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE));
-    JniDBFactory factory = new JniDBFactory();
+    if(factory == null) {
+      factory = new JniDBFactory();
+    }
     Path dbPath = new Path(
         conf.get(TIMELINE_SERVICE_LEVELDB_PATH), FILENAME);
     Path domainDBPath = new Path(dbPath, DOMAIN);
@@ -327,13 +342,46 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         TIMELINE_SERVICE_LEVELDB_WRITE_BUFFER_SIZE,
         DEFAULT_TIMELINE_SERVICE_LEVELDB_WRITE_BUFFER_SIZE));
     LOG.info("Using leveldb path " + dbPath);
-    domaindb = factory.open(new File(domainDBPath.toString()), options);
+    try{
+      domaindb = factory.open(new File(domainDBPath.toString()), options);
+    } catch (IOException ioe){
+      File domaindbFile = new File(domainDBPath.toString());
+      File domaindbBackupPath = new File(
+          domainDBPath.toString() + BACKUP_EXT + Time.monotonicNow());
+      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
+          "up at "+ domaindbBackupPath, ioe);
+      FileUtils.copyDirectory(domaindbFile, domaindbBackupPath);
+      factory.repair(domaindbFile, options);
+      domaindb = factory.open(domaindbFile, options);
+    }
     entitydb = new RollingLevelDB(ENTITY);
     entitydb.init(conf);
     indexdb = new RollingLevelDB(INDEX);
     indexdb.init(conf);
-    starttimedb = factory.open(new File(starttimeDBPath.toString()), options);
-    ownerdb = factory.open(new File(ownerDBPath.toString()), options);
+    try{
+      starttimedb = factory.open(new File(starttimeDBPath.toString()), options);
+    } catch (IOException ioe){
+      File starttimedbFile = new File(starttimeDBPath.toString());
+      File starttimeBackupPath = new File(
+          starttimeDBPath.toString() + BACKUP_EXT + Time.monotonicNow());
+      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
+          "up at "+ starttimeBackupPath, ioe);
+      FileUtils.copyDirectory(starttimedbFile, starttimeBackupPath);
+      factory.repair(starttimedbFile, options);
+      starttimedb = factory.open(starttimedbFile, options);
+    }
+    try{
+      ownerdb = factory.open(new File(ownerDBPath.toString()), options);
+    } catch (IOException ioe){
+      File ownerdbFile = new File(ownerDBPath.toString());
+      File ownerdbBackupPath = new File(
+          ownerDBPath.toString() + BACKUP_EXT + Time.monotonicNow());
+      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
+          "up at "+ ownerdbBackupPath, ioe);
+      FileUtils.copyDirectory(ownerdbFile, ownerdbBackupPath);
+      factory.repair(ownerdbFile, options);
+      ownerdb = factory.open(ownerdbFile, options);
+    }
     checkVersion();
     startTimeWriteCache = Collections.synchronizedMap(new LRUMap(
         getStartTimeWriteCacheSize(conf)));
@@ -346,7 +394,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
 
     super.serviceInit(conf);
   }
-  
+
   @Override
   protected void serviceStart() throws Exception {
     if (getConfig().getBoolean(TIMELINE_SERVICE_TTL_ENABLE, true)) {
@@ -548,16 +596,16 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     // create a lexicographically-ordered map from start time to entities
     Map<byte[], List<EntityIdentifier>> startTimeMap =
         new TreeMap<byte[], List<EntityIdentifier>>(
-        new Comparator<byte[]>() {
-          @Override
-          public int compare(byte[] o1, byte[] o2) {
-            return WritableComparator.compareBytes(o1, 0, o1.length, o2, 0,
-                o2.length);
-          }
-        });
+            new Comparator<byte[]>() {
+              @Override
+              public int compare(byte[] o1, byte[] o2) {
+                return WritableComparator.compareBytes(o1, 0, o1.length, o2, 0,
+                    o2.length);
+              }
+            });
 
-      // look up start times for the specified entities
-      // skip entities with no start time
+    // look up start times for the specified entities
+    // skip entities with no start time
     for (String entityId : entityIds) {
       byte[] startTime = getStartTime(entityId, entityType);
       if (startTime != null) {
@@ -570,7 +618,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       }
     }
     for (Entry<byte[], List<EntityIdentifier>> entry : startTimeMap
-          .entrySet()) {
+        .entrySet()) {
       // look up the events matching the given parameters (limit,
       // start time, end time, event types) for entities whose start times
       // were found and add the entities to the return list
@@ -803,7 +851,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
                 Object v = entity.getOtherInfo().get(filter.getName());
                 if (v == null) {
                   Set<Object> vs = entity.getPrimaryFilters()
-                          .get(filter.getName());
+                      .get(filter.getName());
                   if (vs == null || !vs.contains(filter.getValue())) {
                     filterPassed = false;
                     break;
@@ -1197,7 +1245,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       }
     }
     LOG.debug("Put {} new leveldb entity entries and {} new leveldb index"
-        + " entries from {} timeline entities", entityCount, indexCount,
+            + " entries from {} timeline entities", entityCount, indexCount,
         entities.getEntities().size());
     return response;
   }
@@ -1622,7 +1670,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
   @Override
   public void put(TimelineDomain domain) throws IOException {
     try (WriteBatch domainWriteBatch = domaindb.createWriteBatch();
-         WriteBatch ownerWriteBatch = ownerdb.createWriteBatch();) {
+        WriteBatch ownerWriteBatch = ownerdb.createWriteBatch();) {
 
       if (domain.getId() == null || domain.getId().length() == 0) {
         throw new IllegalArgumentException("Domain doesn't have an ID");
