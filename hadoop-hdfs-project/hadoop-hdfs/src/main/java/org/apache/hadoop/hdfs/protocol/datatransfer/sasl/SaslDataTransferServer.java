@@ -480,7 +480,6 @@ public class SaslDataTransferServer {
    */
   private static void sendInvalidTokenSaslErrorMessage(DataOutputStream out,
       String message) throws IOException {
-    sendSaslMessage(out, DataTransferEncryptorStatus.ERROR_ACCESS_TOKEN, null,
-        message);
+    sendSaslMessage(out, DataTransferEncryptorStatus.ERROR, null, message, null, true);
   }
 }

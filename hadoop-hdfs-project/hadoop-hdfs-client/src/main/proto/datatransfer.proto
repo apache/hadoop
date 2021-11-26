@@ -38,13 +38,13 @@ message DataTransferEncryptorMessageProto {
     SUCCESS = 0;
     ERROR_UNKNOWN_KEY = 1;
     ERROR = 2;
-    ERROR_ACCESS_TOKEN = 3;
   }
   required DataTransferEncryptorStatus status = 1;
   optional bytes payload = 2;
   optional string message = 3;
   repeated CipherOptionProto cipherOption = 4;
   optional HandshakeSecretProto handshakeSecret = 5;
+  optional bool accessTokenError = 6;
 }
 
 message HandshakeSecretProto {

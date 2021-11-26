@@ -603,7 +603,17 @@ public class SaslDataTransferClient {
           conf, cipherOption, underlyingOut, underlyingIn, false) :
           sasl.createStreamPair(out, in);
     } catch (IOException ioe) {
-      sendGenericSaslErrorMessage(out, ioe.getMessage());
+      try {
+        sendGenericSaslErrorMessage(out, ioe.getMessage());
+      } catch (Exception ioe2) {
+        // If ioe is caused by error response from server, server will close peer connection.
+        // So sendGenericSaslErrorMessage might cause IOException due to "Broken pipe".
+        // We suppress IOException from sendGenericSaslErrorMessage
+        // and always throw `ioe` as top level.
+        // `ioe` can be InvalidEncryptionKeyException or InvalidBlockTokenException
+        // that indicates refresh key or token and are important for caller.
+        ioe.addSuppressed(ioe2);
+      }
       throw ioe;
     }
   }
