@@ -259,6 +259,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <reason>Use hadoop-common provided Preconditions rather than Guava provided</reason>
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
+                      <bannedImport>static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                 </rules>
