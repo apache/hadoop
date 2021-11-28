@@ -29,6 +29,7 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationException;
@@ -298,7 +299,7 @@ public class TestDataNodeReconfiguration {
 
   @Test
   public void testBlockReportIntervalReconfiguration()
-      throws ReconfigurationException {
+      throws ReconfigurationException, IOException {
     int blockReportInterval = 300 * 1000;
     for (int i = 0; i < NUM_DATA_NODE; i++) {
       DataNode dn = cluster.getDataNodes().get(i);
@@ -328,7 +329,12 @@ public class TestDataNodeReconfiguration {
 
       // Verify change.
       BlockPoolManager blockPoolManager = new BlockPoolManager(dn);
-      for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+      blockPoolManager.refreshNamenodes(dn.getConf());
+      assertEquals(String.format("%s has wrong value",
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+          blockReportInterval,
+          dn.getDnConf().getBlockReportInterval());
+      for (BPOfferService bpos : dn.getAllBpOs()) {
         if (bpos != null) {
           for (BPServiceActor actor : bpos.getBPServiceActors()) {
             assertEquals(String.format("%s has wrong value",
@@ -342,9 +348,12 @@ public class TestDataNodeReconfiguration {
       // Revert to default.
       dn.reconfigureProperty(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
           null);
-
+      assertEquals(String.format("%s has wrong value",
+          DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
+          DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT,
+          dn.getDnConf().getBlockReportInterval());
       // Verify default.
-      for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+      for (BPOfferService bpos : dn.getAllBpOs()) {
         if (bpos != null) {
           for (BPServiceActor actor : bpos.getBPServiceActors()) {
             assertEquals(String.format("%s has wrong value",

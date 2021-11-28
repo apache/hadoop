@@ -105,7 +105,7 @@ public class DNConf {
   final long readaheadLength;
   final long heartBeatInterval;
   private final long lifelineIntervalMs;
-  final long blockReportInterval;
+  volatile long blockReportInterval;
   final long blockReportSplitThreshold;
   final boolean peerStatsEnabled;
   final boolean diskStatsEnabled;
@@ -473,6 +473,10 @@ public class DNConf {
 
   public long getProcessCommandsThresholdMs() {
     return processCommandsThresholdMs;
+  }
+
+  void setBlockReportInterval(long intervalMs) {
+    blockReportInterval = intervalMs;
   }
 
   public long getBlockReportInterval() {

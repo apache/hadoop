@@ -625,6 +625,7 @@ public class DataNode extends ReconfigurableBase
                     "block report interval must be larger than or equal to 0"));
           }
         }
+        dnConf.setBlockReportInterval(intervalMs);
         for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
           if (bpos != null) {
             for (BPServiceActor actor : bpos.getBPServiceActors()) {
