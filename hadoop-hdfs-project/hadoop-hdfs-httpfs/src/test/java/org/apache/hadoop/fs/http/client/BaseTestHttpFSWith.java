@@ -1998,56 +1998,61 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         SnapshotDiffReportListing dfsDiffReportListing =
             dfs.getSnapshotDiffReportListing(path, "snap1", "snap2",
                 DFSUtil.bytes2String(emptyBytes), -1);
-        Assert.assertEquals(diffReportListing.getCreateList().size(),
-            dfsDiffReportListing.getCreateList().size());
-        Assert.assertEquals(diffReportListing.getDeleteList().size(),
-            dfsDiffReportListing.getDeleteList().size());
-        Assert.assertEquals(diffReportListing.getModifyList().size(),
-            dfsDiffReportListing.getModifyList().size());
-        Assert.assertEquals(diffReportListing.getIsFromEarlier(),
-            dfsDiffReportListing.getIsFromEarlier());
-        Assert.assertEquals(diffReportListing.getLastIndex(), dfsDiffReportListing.getLastIndex());
-        Assert.assertEquals(DFSUtil.bytes2String(diffReportListing.getLastPath()),
-            DFSUtil.bytes2String(dfsDiffReportListing.getLastPath()));
-        int i = 0;
-        for (SnapshotDiffReportListing.DiffReportListingEntry entry : diffReportListing
-            .getCreateList()) {
-          SnapshotDiffReportListing.DiffReportListingEntry dfsDiffEntry =
-              dfsDiffReportListing.getCreateList().get(i);
-          Assert.assertEquals(entry.getDirId(), dfsDiffEntry.getDirId());
-          Assert.assertEquals(entry.getFileId(), dfsDiffEntry.getFileId());
-          Assert.assertArrayEquals(DFSUtilClient.byteArray2bytes(entry.getSourcePath()),
-              DFSUtilClient.byteArray2bytes(dfsDiffEntry.getSourcePath()));
-          i++;
-        }
-        i = 0;
-        for (SnapshotDiffReportListing.DiffReportListingEntry entry : diffReportListing
-            .getDeleteList()) {
-          SnapshotDiffReportListing.DiffReportListingEntry dfsDiffEntry =
-              dfsDiffReportListing.getDeleteList().get(i);
-          Assert.assertEquals(entry.getDirId(), dfsDiffEntry.getDirId());
-          Assert.assertEquals(entry.getFileId(), dfsDiffEntry.getFileId());
-          Assert.assertArrayEquals(DFSUtilClient.byteArray2bytes(entry.getSourcePath()),
-              DFSUtilClient.byteArray2bytes(dfsDiffEntry.getSourcePath()));
-          i++;
-        }
-        i = 0;
-        for (SnapshotDiffReportListing.DiffReportListingEntry entry : diffReportListing
-            .getModifyList()) {
-          SnapshotDiffReportListing.DiffReportListingEntry dfsDiffEntry =
-              dfsDiffReportListing.getModifyList().get(i);
-          Assert.assertEquals(entry.getDirId(), dfsDiffEntry.getDirId());
-          Assert.assertEquals(entry.getFileId(), dfsDiffEntry.getFileId());
-          Assert.assertArrayEquals(DFSUtilClient.byteArray2bytes(entry.getSourcePath()),
-              DFSUtilClient.byteArray2bytes(dfsDiffEntry.getSourcePath()));
-          i++;
-        }
+        assertHttpFsReportListingWithDfsClient(diffReportListing, dfsDiffReportListing);
       } finally {
         // Cleanup
         fs.deleteSnapshot(path, "snap2");
         fs.deleteSnapshot(path, "snap1");
         fs.delete(path, true);
       }
+    }
+  }
+
+  private void assertHttpFsReportListingWithDfsClient(SnapshotDiffReportListing diffReportListing,
+      SnapshotDiffReportListing dfsDiffReportListing) {
+    Assert.assertEquals(diffReportListing.getCreateList().size(),
+        dfsDiffReportListing.getCreateList().size());
+    Assert.assertEquals(diffReportListing.getDeleteList().size(),
+        dfsDiffReportListing.getDeleteList().size());
+    Assert.assertEquals(diffReportListing.getModifyList().size(),
+        dfsDiffReportListing.getModifyList().size());
+    Assert.assertEquals(diffReportListing.getIsFromEarlier(),
+        dfsDiffReportListing.getIsFromEarlier());
+    Assert.assertEquals(diffReportListing.getLastIndex(), dfsDiffReportListing.getLastIndex());
+    Assert.assertEquals(DFSUtil.bytes2String(diffReportListing.getLastPath()),
+        DFSUtil.bytes2String(dfsDiffReportListing.getLastPath()));
+    int i = 0;
+    for (SnapshotDiffReportListing.DiffReportListingEntry entry : diffReportListing
+        .getCreateList()) {
+      SnapshotDiffReportListing.DiffReportListingEntry dfsDiffEntry =
+          dfsDiffReportListing.getCreateList().get(i);
+      Assert.assertEquals(entry.getDirId(), dfsDiffEntry.getDirId());
+      Assert.assertEquals(entry.getFileId(), dfsDiffEntry.getFileId());
+      Assert.assertArrayEquals(DFSUtilClient.byteArray2bytes(entry.getSourcePath()),
+          DFSUtilClient.byteArray2bytes(dfsDiffEntry.getSourcePath()));
+      i++;
+    }
+    i = 0;
+    for (SnapshotDiffReportListing.DiffReportListingEntry entry : diffReportListing
+        .getDeleteList()) {
+      SnapshotDiffReportListing.DiffReportListingEntry dfsDiffEntry =
+          dfsDiffReportListing.getDeleteList().get(i);
+      Assert.assertEquals(entry.getDirId(), dfsDiffEntry.getDirId());
+      Assert.assertEquals(entry.getFileId(), dfsDiffEntry.getFileId());
+      Assert.assertArrayEquals(DFSUtilClient.byteArray2bytes(entry.getSourcePath()),
+          DFSUtilClient.byteArray2bytes(dfsDiffEntry.getSourcePath()));
+      i++;
+    }
+    i = 0;
+    for (SnapshotDiffReportListing.DiffReportListingEntry entry : diffReportListing
+        .getModifyList()) {
+      SnapshotDiffReportListing.DiffReportListingEntry dfsDiffEntry =
+          dfsDiffReportListing.getModifyList().get(i);
+      Assert.assertEquals(entry.getDirId(), dfsDiffEntry.getDirId());
+      Assert.assertEquals(entry.getFileId(), dfsDiffEntry.getFileId());
+      Assert.assertArrayEquals(DFSUtilClient.byteArray2bytes(entry.getSourcePath()),
+          DFSUtilClient.byteArray2bytes(dfsDiffEntry.getSourcePath()));
+      i++;
     }
   }
 
