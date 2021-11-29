@@ -45,8 +45,12 @@ export default DS.JSONAPISerializer.extend({
   },
 
   normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
-
     payload = payload["containerLogsInfo"]
+
+    if (payload && !Ember.isArray(payload) && !Ember.isEmpty(payload)) {
+      // Payload might not be an array but a single container value
+      payload = [payload]
+    }
 
     var normalizedArrayResponse = {
       data: []
