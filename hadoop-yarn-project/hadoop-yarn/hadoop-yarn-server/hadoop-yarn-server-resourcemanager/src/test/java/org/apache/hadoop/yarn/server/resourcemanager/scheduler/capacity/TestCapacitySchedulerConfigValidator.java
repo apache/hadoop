@@ -19,8 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.LocalConfigurationProvider;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -32,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -40,6 +44,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.api.records.ResourceInformation.GPU_URI;
 import static org.junit.Assert.fail;
 
 public class TestCapacitySchedulerConfigValidator {
@@ -47,6 +52,7 @@ public class TestCapacitySchedulerConfigValidator {
   public static final int NODE1_VCORES = 8;
   public static final int NODE2_VCORES = 10;
   public static final int NODE3_VCORES = 12;
+  public static final Map<String, Long> NODE_GPU = ImmutableMap.of(GPU_URI, 2L);
   public static final int GB = 1024;
 
   private static final String PARENT_A = "parentA";
@@ -63,22 +69,43 @@ public class TestCapacitySchedulerConfigValidator {
   private static final String LEAF_B_FULL_PATH = PARENT_B_FULL_PATH
       + "." + LEAF_B;
 
-  private static final Resource A_MINRES = Resource.newInstance(16 * GB,
-      10);
-  private static final Resource B_MINRES = Resource.newInstance(32 * GB,
-      5);
-  private static final Resource FULL_MAXRES = Resource.newInstance(48 * GB,
-      30);
-  private static final Resource PARTIAL_MAXRES = Resource.newInstance(16 * GB,
-      10);
-  private static final Resource VCORE_EXCEEDED_MAXRES = Resource.newInstance(16 * GB,
-      50);
+  private static Resource A_MINRES;
+  private static Resource B_MINRES;
+  private static Resource FULL_MAXRES;
+  private static Resource PARTIAL_MAXRES;
+  private static Resource VCORE_EXCEEDED_MAXRES;
+  private static Resource GPU_EXCEEDED_MAXRES;
+
 
   protected MockRM mockRM = null;
   protected MockNM nm1 = null;
   protected MockNM nm2 = null;
   protected MockNM nm3 = null;
   protected CapacityScheduler cs;
+
+  public static void setupResources(boolean useGpu) {
+    Map<String, ResourceInformation> riMap = new HashMap<>();
+
+    ResourceInformation memory = ResourceInformation.newInstance(
+        ResourceInformation.MEMORY_MB.getName(),
+        ResourceInformation.MEMORY_MB.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+    ResourceInformation vcores = ResourceInformation.newInstance(
+        ResourceInformation.VCORES.getName(),
+        ResourceInformation.VCORES.getUnits(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
+    riMap.put(ResourceInformation.MEMORY_URI, memory);
+    riMap.put(ResourceInformation.VCORES_URI, vcores);
+    if (useGpu) {
+      riMap.put(ResourceInformation.GPU_URI,
+          ResourceInformation.newInstance(ResourceInformation.GPU_URI, "", 0,
+              ResourceTypes.COUNTABLE, 0, 10L));
+    }
+
+    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
+  }
 
   /**
    * Test for the case when the scheduler.minimum-allocation-mb == 0.
@@ -268,6 +295,26 @@ public class TestCapacitySchedulerConfigValidator {
   }
 
   @Test
+  public void testValidateCSConfigDominantRCAbsoluteModeParentMaxGPUExceeded() throws Exception {
+    setUpMockRM(true);
+    RMContext rmContext = mockRM.getRMContext();
+    CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
+    CapacitySchedulerConfiguration newConfiguration =
+        new CapacitySchedulerConfiguration(cs.getConfiguration());
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES);
+    try {
+      CapacitySchedulerConfigValidator
+          .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
+      fail("Parent maximum capacity exceeded");
+    } catch (IOException e) {
+      Assert.assertTrue(e.getCause().getMessage()
+          .startsWith("Max resource configuration"));
+    } finally {
+      mockRM.stop();
+    }
+  }
+
+  @Test
   public void testValidateCSConfigStopALeafQueue() throws IOException {
     Configuration oldConfig = CapacitySchedulerConfigGeneratorForTest
             .createBasicCSConfiguration();
@@ -275,7 +322,7 @@ public class TestCapacitySchedulerConfigValidator {
     newConfig
             .set("yarn.scheduler.capacity.root.test1.state", "STOPPED");
     RMContext rmContext = prepareRMContext();
-    Boolean isValidConfig = CapacitySchedulerConfigValidator
+    boolean isValidConfig = CapacitySchedulerConfigValidator
             .validateCSConfiguration(oldConfig, newConfig, rmContext);
     Assert.assertTrue(isValidConfig);
   }
@@ -461,6 +508,7 @@ public class TestCapacitySchedulerConfigValidator {
   }
 
   public static RMContext prepareRMContext() {
+    setupResources(false);
     RMContext rmContext = Mockito.mock(RMContext.class);
     CapacityScheduler mockCs = Mockito.mock(CapacityScheduler.class);
     Mockito.when(rmContext.getScheduler()).thenReturn(mockCs);
@@ -487,6 +535,8 @@ public class TestCapacitySchedulerConfigValidator {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
+    setupResources(useDominantRC);
+    setupResourceValues(useDominantRC);
     CapacitySchedulerConfiguration csConf = setupCSConfiguration(conf, useDominantRC);
 
     mockRM = new MockRM(csConf);
@@ -499,25 +549,48 @@ public class TestCapacitySchedulerConfigValidator {
   }
 
   private void setupNodes(MockRM newMockRM) throws Exception {
-    nm1 =
-        new MockNM("h1:1234",
-            Resource.newInstance(NODE_MEMORY * GB, NODE1_VCORES),
-            newMockRM.getResourceTrackerService(),
-            YarnVersionInfo.getVersion());
+      nm1 = new MockNM("h1:1234",
+          Resource.newInstance(NODE_MEMORY * GB, NODE1_VCORES, NODE_GPU),
+          newMockRM.getResourceTrackerService(),
+          YarnVersionInfo.getVersion());
 
-    nm1.registerNode();
+      nm1.registerNode();
 
-    //Label = GPU
-    nm2 = new MockNM("h2:1234",
-        Resource.newInstance(NODE_MEMORY * GB, NODE2_VCORES),
-        newMockRM.getResourceTrackerService(),
-        YarnVersionInfo.getVersion());
-    nm2.registerNode();
+      nm2 = new MockNM("h2:1234",
+          Resource.newInstance(NODE_MEMORY * GB, NODE2_VCORES, NODE_GPU),
+          newMockRM.getResourceTrackerService(),
+          YarnVersionInfo.getVersion());
+      nm2.registerNode();
 
-    nm3 = // label = ""
-        new MockNM("h3:1234", NODE_MEMORY * GB, NODE3_VCORES, newMockRM
-            .getResourceTrackerService());
-    nm3.registerNode();
+      nm3 = new MockNM("h3:1234",
+          Resource.newInstance(NODE_MEMORY * GB, NODE3_VCORES, NODE_GPU),
+          newMockRM.getResourceTrackerService(),
+          YarnVersionInfo.getVersion());
+      nm3.registerNode();
+  }
+
+  private void setupResourceValues(boolean useGpu) {
+    A_MINRES = Resource.newInstance(16 * GB, 10);
+    B_MINRES = Resource.newInstance(32 * GB, 5);
+    FULL_MAXRES = Resource.newInstance(48 * GB, 30);
+    PARTIAL_MAXRES = Resource.newInstance(16 * GB, 10);
+    VCORE_EXCEEDED_MAXRES = Resource.newInstance(16 * GB, 50);
+    GPU_EXCEEDED_MAXRES = Resource.newInstance(16 * GB, 10);
+
+    if (useGpu) {
+      A_MINRES.setResourceInformation(GPU_URI,
+          ResourceInformation.newInstance(GPU_URI, "", 2));
+      B_MINRES.setResourceInformation(GPU_URI,
+          ResourceInformation.newInstance(GPU_URI, "", 2));
+      FULL_MAXRES.setResourceInformation(GPU_URI,
+          ResourceInformation.newInstance(GPU_URI, "", 6));
+      PARTIAL_MAXRES.setResourceInformation(GPU_URI,
+          ResourceInformation.newInstance(GPU_URI, "", 4));
+      VCORE_EXCEEDED_MAXRES.setResourceInformation(GPU_URI,
+          ResourceInformation.newInstance(GPU_URI, "", 6));
+      GPU_EXCEEDED_MAXRES.setResourceInformation(GPU_URI,
+          ResourceInformation.newInstance(GPU_URI, "", 50));
+    }
   }
 
   private CapacitySchedulerConfiguration setupCSConfiguration(YarnConfiguration configuration,
@@ -526,6 +599,7 @@ public class TestCapacitySchedulerConfigValidator {
     if (useDominantRC) {
       csConf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
           DominantResourceCalculator.class.getName());
+      csConf.set(YarnConfiguration.RESOURCE_TYPES, ResourceInformation.GPU_URI);
     }
 
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
