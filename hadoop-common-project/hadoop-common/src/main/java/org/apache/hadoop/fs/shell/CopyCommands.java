@@ -147,33 +147,40 @@ class CopyCommands {
     }
   }
 
-  static class Cp extends CommandWithDestination {
+  static class Cp extends CopyCommandWithMultiThread {
     public static final String NAME = "cp";
     public static final String USAGE =
-        "[-f] [-p | -p[topax]] [-d] <src> ... <dst>";
+        "[-f] [-p | -p[topax]] [-d] [-t <thread count>]"
+            + " [-q <thread pool queue size>] <src> ... <dst>";
     public static final String DESCRIPTION =
-      "Copy files that match the file pattern <src> to a " +
-      "destination.  When copying multiple files, the destination " +
-      "must be a directory. Passing -p preserves status " +
-      "[topax] (timestamps, ownership, permission, ACLs, XAttr). " +
-      "If -p is specified with no <arg>, then preserves " +
-      "timestamps, ownership, permission. If -pa is specified, " +
-      "then preserves permission also because ACL is a super-set of " +
-      "permission. Passing -f overwrites the destination if it " +
-      "already exists. raw namespace extended attributes are preserved " +
-      "if (1) they are supported (HDFS only) and, (2) all of the source and " +
-      "target pathnames are in the /.reserved/raw hierarchy. raw namespace " +
-      "xattr preservation is determined solely by the presence (or absence) " +
-        "of the /.reserved/raw prefix and not by the -p option. Passing -d "+
-        "will skip creation of temporary file(<dst>._COPYING_).\n";
+        "Copy files that match the file pattern <src> to a destination."
+            + " When copying multiple files, the destination must be a "
+            + "directory.\nFlags :\n"
+            + "  -p[topax] : Preserve file attributes [topx] (timestamps, "
+            + "ownership, permission, ACL, XAttr). If -p is specified with "
+            + "no arg, then preserves timestamps, ownership, permission. "
+            + "If -pa is specified, then preserves permission also because "
+            + "ACL is a super-set of permission. Determination of whether raw "
+            + "namespace extended attributes are preserved is independent of "
+            + "the -p flag.\n"
+            + "  -f : Overwrite the destination if it already exists.\n"
+            + "  -d : Skip creation of temporary file(<dst>._COPYING_).\n"
+            + "  -t <thread count> : Number of threads to be used, "
+            + "default is 1.\n"
+            + "  -q <thread pool queue size> : Thread pool queue size to be "
+            + "used, default is 1024.\n";
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       popPreserveOption(args);
       CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f", "d");
+      cf.addOptionWithValue("t");
+      cf.addOptionWithValue("q");
       cf.parse(args);
       setDirectWrite(cf.getOpt("d"));
       setOverwrite(cf.getOpt("f"));
+      setThreadCount(cf.getOptValue("t"));
+      setThreadPoolQueueSize(cf.getOptValue("q"));
       // should have a -r option
       setRecursive(true);
       getRemoteDestination(args);
