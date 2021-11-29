@@ -322,9 +322,8 @@ public class CentralizedOpportunisticContainerAllocator extends
             resourceRequest, convertToRemoteNode(node));
         allocatedContainers.add(container);
         metrics.incrOffSwitchOppContainers();
-        LOG.info(
-            "Allocated [{}] as opportunistic at location [{}] by OFF_SWITCH",
-            container.getId(), node.getNodeID());
+        LOG.info("Allocated [{}] as opportunistic at location [{}]",
+            container.getId(), ResourceRequest.ANY);
       } else {
         // we couldn't allocate any - break the loop.
         break;
