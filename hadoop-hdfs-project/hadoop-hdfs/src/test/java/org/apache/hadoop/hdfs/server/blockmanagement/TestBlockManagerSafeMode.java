@@ -38,10 +38,11 @@ import java.io.InterruptedIOException;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -251,9 +252,9 @@ public class TestBlockManagerSafeMode {
     BlockManagerSafeMode blockManagerSafeMode = new BlockManagerSafeMode(bm,
             fsn, true, conf);
     String content = logs.getOutput();
-    assertTrue(content.contains("Invalid value for " +
+    assertThat(content, containsString("Invalid value for " +
             DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY +
-            ".Should be greater than 0, but is -1"));
+            ". Should be greater than 0, but is -1"));
   }
 
   /**
