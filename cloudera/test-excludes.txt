@@ -1,0 +1,7 @@
+# Further details on how to exclude tests with the maven-surefire plugin: https://maven.apache.org/surefire/maven-surefire-plugin/examples/inclusion-exclusion.html
+# Examples:
+#  - **/TestCircle.java            # Exclude based on the test filename
+#  - %regex[.*(Cat|Dog).*Test.*]   # Exclude based on a regex, note that regex matches are done on the class file names
+#  - my.package.???Excluded*Test   # Exclude based on the fully qualified name
+# Note that the test exclusion is based on files, no built-in way to exclude based on test method level.
+#
