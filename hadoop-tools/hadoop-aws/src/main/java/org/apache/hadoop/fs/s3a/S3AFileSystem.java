@@ -80,6 +80,9 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
+import com.twitter.util.ExecutorServiceFuturePool;
+import com.twitter.util.FuturePool;
+
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -171,6 +174,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.MagicCommitIntegration;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.read.S3EInputStream;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
@@ -293,6 +297,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private TransferManager transfers;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
+
+  // S3 reads are prefetched asynchronously using this future pool.
+  private FuturePool futurePool;
+
+  // If true, the prefetching input stream is used for reads.
+  private boolean prefetchEnabled;
+
+  // Size in bytes of a single prefetch block.
+  private int prefetchBlockSize;
+
+  // Size of prefetch queue (in number of blocks).
+  private int prefetchBlockCount;
+
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
@@ -495,6 +512,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       readAhead = longBytesOption(conf, READAHEAD_RANGE,
           DEFAULT_READAHEAD_RANGE, 0);
 
+      this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, true);
+      this.prefetchBlockSize = intOption(
+          conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, PREFETCH_BLOCK_DEFAULT_SIZE);
+      this.prefetchBlockCount =
+          intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
+
       initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
@@ -606,6 +629,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
+
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -718,9 +742,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
     long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
         DEFAULT_KEEPALIVE_TIME, 0);
+    int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
+
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
         maxThreads,
-        maxThreads + totalTasks,
+        maxThreads + totalTasks + numPrefetchThreads,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
@@ -732,6 +758,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
+    if (this.prefetchEnabled) {
+      this.futurePool = new ExecutorServiceFuturePool(boundedThreadPool);
+    }
   }
 
   /**
@@ -1442,7 +1471,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
-    return open(f, Optional.empty(), Optional.empty());
+    if (this.prefetchEnabled) {
+      return this.createPrefetchingInputStream(f, bufferSize);
+    } else {
+      return open(f, Optional.empty(), Optional.empty());
+    }
+  }
+
+  private FSDataInputStream createPrefetchingInputStream(Path f, int bufferSize)
+      throws IOException {
+
+    final FileStatus fileStatus = getFileStatus(f);
+    if (fileStatus.isDirectory()) {
+      throw new FileNotFoundException("Can't open " + f + " because it is a directory");
+    }
+
+    return new FSDataInputStream(
+        new S3EInputStream(
+            this.futurePool,
+            this.prefetchBlockSize,
+            this.prefetchBlockCount,
+            this.bucket,
+            pathToKey(f),
+            fileStatus.getLen(),
+            this.s3,
+            statistics));
   }
 
   /**
@@ -4109,6 +4162,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
+    if (this.futurePool != null) {
+      this.futurePool = null;
+    }
     // other services are shutdown.
     cleanupWithLogger(LOG,
         metadataStore,

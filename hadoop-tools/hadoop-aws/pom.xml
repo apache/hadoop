@@ -412,6 +412,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/Test*.java</include>
+          </includes>
           <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
           <systemPropertyVariables>
             <test.default.timeout>${test.integration.timeout}</test.default.timeout>
@@ -485,6 +489,12 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-bundle</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>util-core_2.11</artifactId>
+      <version>21.2.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
