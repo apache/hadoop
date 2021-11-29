@@ -1545,7 +1545,8 @@ public abstract class Server {
           try {
             channel.socket().close();
             channel.close();
-          } catch (IOException ignored) {
+          } catch (IOException ex) {
+            LOG.warn("Error in closing SocketChannel", ex);
           }
           continue;
         }
