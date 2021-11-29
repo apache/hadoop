@@ -24,7 +24,9 @@ mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" test -Dparallel-tests -Dt
 
 mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" clover:aggregate clover:clover
 
-if [ -n "$SONAR_LOGIN" ]; then
-    mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" sonar:sonar -Dsonar.clover.reportPath=./target/clover/clover.xml \
-        -Dsonar.host.url="$SONAR_URL" -Dsonar.login="$SONAR_LOGIN" -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.projectName="$SONAR_PROJECT_NAME"
+if [ -z ${SKIP_SONAR+x} ]; then
+    if [ -n "$SONAR_LOGIN" ]; then
+        mvn -s "$MAVEN_SETTINGS" -B -e -Pclover -f "$POM_FILE" sonar:sonar -Dsonar.clover.reportPath=./target/clover/clover.xml \
+            -Dsonar.host.url="$SONAR_URL" -Dsonar.login="$SONAR_LOGIN" -Dsonar.projectKey="$SONAR_PROJECT_KEY" -Dsonar.projectName="$SONAR_PROJECT_NAME"
+    fi
 fi
