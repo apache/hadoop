@@ -63,8 +63,10 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -649,6 +651,9 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
    */
   @Test
   public void testWriteWithUnavailableSubCluster() throws IOException {
+    GenericTestUtils.setLogLevel(RouterRpcServer.LOG, Level.DEBUG);
+    GenericTestUtils.LogCapturer log =
+        GenericTestUtils.LogCapturer.captureLogs(RouterRpcServer.LOG);
     //create a mount point with multiple destinations
     Path path = new Path("/testWriteWithUnavailableSubCluster");
     Map<String, String> destMap = new HashMap<>();
@@ -673,6 +678,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
       out.write("hello".getBytes());
       out.hflush();
       assertTrue(routerFs.exists(filePath));
+      assertTrue(log.getOutput().contains("Number of namespaces without failed: 1"));
     } finally {
       IOUtils.closeStream(out);
       dfsCluster.restartNameNode(0);
