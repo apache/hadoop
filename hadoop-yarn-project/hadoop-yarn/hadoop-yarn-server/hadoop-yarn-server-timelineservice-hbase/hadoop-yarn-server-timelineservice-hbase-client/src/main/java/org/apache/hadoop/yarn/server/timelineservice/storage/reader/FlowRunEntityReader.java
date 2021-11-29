@@ -57,8 +57,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunRowKeyP
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
-import org.apache.hadoop.util.Preconditions;
-
 /**
  * Timeline entity reader for flow run entities that are stored in the flow run
  * table.
@@ -86,18 +84,25 @@ class FlowRunEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(getContext(), "context shouldn't be null");
-    Preconditions.checkNotNull(getDataToRetrieve(),
-        "data to retrieve shouldn't be null");
-    Preconditions.checkNotNull(getContext().getClusterId(),
-        "clusterId shouldn't be null");
-    Preconditions.checkNotNull(getContext().getUserId(),
-        "userId shouldn't be null");
-    Preconditions.checkNotNull(getContext().getFlowName(),
-        "flowName shouldn't be null");
+    if (getContext() == null) {
+      throw new NullPointerException("context shouldn't be null");
+    }
+    if (getDataToRetrieve() == null) {
+      throw new NullPointerException("data to retrieve shouldn't be null");
+    }
+    if (getContext().getClusterId() == null) {
+      throw new NullPointerException("clusterId shouldn't be null");
+    }
+    if (getContext().getUserId() == null) {
+      throw new NullPointerException("userId shouldn't be null");
+    }
+    if (getContext().getFlowName() == null) {
+      throw new NullPointerException("flowName shouldn't be null");
+    }
     if (isSingleEntityRead()) {
-      Preconditions.checkNotNull(getContext().getFlowRunId(),
-          "flowRunId shouldn't be null");
+      if (getContext().getFlowRunId() == null) {
+        throw new NullPointerException("flowRunId shouldn't be null");
+      }
     }
     EnumSet<Field> fieldsToRetrieve = getDataToRetrieve().getFieldsToRetrieve();
     if (!isSingleEntityRead() && fieldsToRetrieve != null) {

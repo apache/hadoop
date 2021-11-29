@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
@@ -115,11 +114,15 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(getContext(), "context shouldn't be null");
-    Preconditions.checkNotNull(getContext().getClusterId(),
-        "clusterId shouldn't be null");
-    Preconditions.checkNotNull(getContext().getAppId(),
-        "appId shouldn't be null");
+    if (getContext() == null) {
+      throw new NullPointerException("context shouldn't be null");
+    }
+    if (getContext().getClusterId() == null) {
+      throw new NullPointerException("clusterId shouldn't be null");
+    }
+    if (getContext().getAppId() == null) {
+      throw new NullPointerException("appId shouldn't be null");
+    }
   }
 
   /**
