@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.SaslPropertiesResolver;
+import org.apache.hadoop.util.Preconditions;
 
 import java.util.concurrent.TimeUnit;
 
@@ -476,6 +477,7 @@ public class DNConf {
   }
 
   void setBlockReportInterval(long intervalMs) {
+    Preconditions.checkArgument(intervalMs > 0);
     blockReportInterval = intervalMs;
   }
 

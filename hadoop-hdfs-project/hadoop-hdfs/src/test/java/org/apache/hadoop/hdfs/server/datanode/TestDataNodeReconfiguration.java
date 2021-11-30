@@ -327,8 +327,6 @@ public class TestDataNodeReconfiguration {
           String.valueOf(blockReportInterval));
 
       // Verify change.
-      BlockPoolManager blockPoolManager = new BlockPoolManager(dn);
-      blockPoolManager.refreshNamenodes(dn.getConf());
       assertEquals(String.format("%s has wrong value",
           DFS_BLOCKREPORT_INTERVAL_MSEC_KEY),
           blockReportInterval,

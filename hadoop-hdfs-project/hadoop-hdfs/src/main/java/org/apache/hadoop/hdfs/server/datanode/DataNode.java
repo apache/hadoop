@@ -616,14 +616,6 @@ public class DataNode extends ReconfigurableBase
           intervalMs = DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
         } else {
           intervalMs = Long.parseLong(newVal);
-          if (intervalMs < 0) {
-            rootException = new ReconfigurationException(
-                property,
-                newVal,
-                getConf().get(property),
-                new IllegalArgumentException(
-                    "block report interval must be larger than or equal to 0"));
-          }
         }
         dnConf.setBlockReportInterval(intervalMs);
         for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
@@ -634,9 +626,9 @@ public class DataNode extends ReconfigurableBase
           }
         }
         return Long.toString(intervalMs);
-      } catch (NumberFormatException nfe) {
+      } catch (IllegalArgumentException e) {
         rootException = new ReconfigurationException(
-            property, newVal, getConf().get(property), nfe);
+            property, newVal, getConf().get(property), e);
       } finally {
         if (rootException != null) {
           LOG.warn(String.format(
