@@ -646,17 +646,22 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   @SuppressWarnings("unchecked")
   public void containerLaunchedOnNode(ContainerId containerId,
       NodeId nodeId) {
-    // Inform the container
-    RMContainer rmContainer = getRMContainer(containerId);
-    if (rmContainer == null) {
-      // Some unknown container sneaked into the system. Kill it.
-      rmContext.getDispatcher().getEventHandler()
-          .handle(new RMNodeCleanContainerEvent(nodeId, containerId));
-      return;
-    }
+    readLock.lock();
+    try {
+      // Inform the container
+      RMContainer rmContainer = getRMContainer(containerId);
+      if (rmContainer == null) {
+        // Some unknown container sneaked into the system. Kill it.
+        rmContext.getDispatcher().getEventHandler()
+            .handle(new RMNodeCleanContainerEvent(nodeId, containerId));
+        return;
+      }
 
-    rmContainer.handle(
-        new RMContainerEvent(containerId, RMContainerEventType.LAUNCHED));
+      rmContainer.handle(
+          new RMContainerEvent(containerId, RMContainerEventType.LAUNCHED));
+    } finally {
+      readLock.unlock();
+    }
   }
   
   public void showRequests() {
