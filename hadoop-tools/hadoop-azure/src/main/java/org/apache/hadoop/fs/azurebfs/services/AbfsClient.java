@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -123,8 +124,9 @@ public class AbfsClient implements Closeable {
       this.encryptionContextProvider = encryptionContextProvider;
       xMsVersion = "2021-04-10"; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
-    } else if ((clientProvidedEncryptionKey =
-        abfsConfiguration.getEncodedClientProvidedEncryptionKey()) != null) {
+    } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
+      clientProvidedEncryptionKey =
+          abfsConfiguration.getEncodedClientProvidedEncryptionKey();
       this.clientProvidedEncryptionKeySHA =
           abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA();
       encryptionType = EncryptionType.GLOBAL_KEY;
@@ -239,7 +241,7 @@ public class AbfsClient implements Closeable {
             encryptionAdapter.createEncryptionContext();
         encryptionAdapter.computeKeys();
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-            new String(encryptionContext.getEncoded(), StandardCharsets.UTF_8)));
+            Base64.getEncoder().encodeToString(encryptionContext.getEncoded())));
         try {
           encryptionContext.destroy();
         } catch (DestroyFailedException e) {

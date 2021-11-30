@@ -22,6 +22,7 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -53,10 +54,12 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   @Override
   public SecretKey getEncryptionKey(String path,
       SecretKey encryptionContext) throws IOException {
-    if (!new String(encryptionContext.getEncoded()).equals(pathToContextMap.get(path))) {
+    String encryptionContextString =
+        new String(encryptionContext.getEncoded(), StandardCharsets.UTF_8);
+    if (!encryptionContextString.equals(pathToContextMap.get(path))) {
       throw new IOException("encryption context does not match path");
     }
-    return contextToKeyMap.get(new String(encryptionContext.getEncoded()));
+    return contextToKeyMap.get(encryptionContextString);
   }
 
   @Override

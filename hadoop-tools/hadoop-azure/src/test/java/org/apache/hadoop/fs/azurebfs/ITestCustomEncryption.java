@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Hashtable;
 
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -211,8 +212,9 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
       if (fileEncryptionType == ENCRYPTION_CONTEXT) {
         encryptionAdapter = new EncryptionAdapter(ecp,
             fs.getAbfsStore().getRelativePath(testPath),
+            Base64.getEncoder().encode(
             ((MockEncryptionContextProvider) ecp).getEncryptionContextForTest(testPath.toString())
-            .getBytes(StandardCharsets.UTF_8));
+            .getBytes(StandardCharsets.UTF_8)));
       }
       String path = testPath.toString();
       switch (operation) {

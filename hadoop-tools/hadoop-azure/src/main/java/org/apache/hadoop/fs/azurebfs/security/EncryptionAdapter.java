@@ -49,7 +49,7 @@ public class EncryptionAdapter implements Destroyable {
     this(provider, path);
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
-    this.encryptionContext = new ABFSSecretKey(encryptionContext);
+    this.encryptionContext = new ABFSSecretKey(Base64.getDecoder().decode(encryptionContext));
   }
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
