@@ -270,7 +270,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           WebServicesTestUtils.getXmlFloat(element, "capacity"),
           WebServicesTestUtils.getXmlFloat(element, "maxCapacity"),
           WebServicesTestUtils.getXmlString(element, "queueName"),
-          WebServicesTestUtils.getXmlString(element, "queuePath"));
+          WebServicesTestUtils.getXmlString(element, "queuePath"),
+          WebServicesTestUtils.getXmlInt(element, "maxParallelApps"));
 
       NodeList children = element.getChildNodes();
       for (int j = 0; j < children.getLength(); j++) {
@@ -374,13 +375,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements in: " + info, 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements in: " + info, 22, info.length());
+    assertEquals("incorrect number of elements in: " + info, 23, info.length());
     verifyClusterSchedulerGeneric(info.getString("type"),
         (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
         (float) info.getDouble("maxCapacity"),
         info.getString("queueName"),
-        info.getString("queuePath"));
+        info.getString("queuePath"),
+        info.getInt("maxParallelApps"));
     JSONObject health = info.getJSONObject("health");
     assertNotNull(health);
     assertEquals("incorrect number of elements in: " + health, 3,
@@ -415,7 +417,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   private void verifyClusterSchedulerGeneric(String type, float usedCapacity,
-      float capacity, float maxCapacity, String queueName, String queuePath)
+      float capacity, float maxCapacity, String queueName, String queuePath, int maxParallelApps)
       throws Exception {
 
     assertTrue("type doesn't match", "capacityScheduler".matches(type));
@@ -424,6 +426,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     assertEquals("maxCapacity doesn't match", 100, maxCapacity, 1e-3f);
     assertTrue("queueName doesn't match", "root".matches(queueName));
     assertTrue("queuePath doesn't match", "root".matches(queuePath));
+    assertEquals("maxParallelApps doesn't match ", Integer.MAX_VALUE, maxParallelApps);
   }
 
   private void verifySubQueue(JSONObject info, String q,

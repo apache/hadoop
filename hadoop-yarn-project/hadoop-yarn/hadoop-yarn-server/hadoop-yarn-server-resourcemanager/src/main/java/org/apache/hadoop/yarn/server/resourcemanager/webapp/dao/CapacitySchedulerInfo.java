@@ -50,6 +50,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float normalizedWeight;
   protected String queueName;
   private String queuePath;
+  protected int maxParallelApps;
   protected CapacitySchedulerQueueInfoList queues;
   protected QueueCapacitiesInfo capacities;
   protected CapacitySchedulerHealthInfo health;
@@ -83,6 +84,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     this.maxCapacity = max * 100;
     this.weight = parent.getQueueCapacities().getWeight();
     this.normalizedWeight = parent.getQueueCapacities().getNormalizedWeight();
+    this.maxParallelApps = parent.getMaxParallelApps();
 
     capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
         parent.getQueueResourceQuotas(), false);
