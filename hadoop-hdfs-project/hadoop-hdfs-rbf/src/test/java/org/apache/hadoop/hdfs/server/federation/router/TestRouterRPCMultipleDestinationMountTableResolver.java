@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -39,6 +40,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -63,10 +65,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -646,14 +646,45 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   }
 
   /**
+   * Test RouterRpcServer#invokeAtAvailableNs on mount point with multiple destinations
+   * and making a one of the destination's subcluster unavailable.
+   */
+  @Test
+  public void testInvokeAtAvailableNs() throws IOException {
+    // Create a mount point with multiple destinations.
+    Path path = new Path("/testInvokeAtAvailableNs");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testInvokeAtAvailableNs");
+    destMap.put("ns1", "/testInvokeAtAvailableNs");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance("/testInvokeAtAvailableNs", destMap);
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    addEntry.setDestOrder(DestinationOrder.RANDOM);
+    addEntry.setFaultTolerant(true);
+    assertTrue(addMountTable(addEntry));
+
+    // Make one subcluster unavailable.
+    MiniDFSCluster dfsCluster = cluster.getCluster();
+    dfsCluster.shutdownNameNode(0);
+    try {
+      // Verify that #invokeAtAvailableNs works by calling #getServerDefaults.
+      RemoteMethod method = new RemoteMethod("getServerDefaults");
+      FsServerDefaults serverDefaults =
+          rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+      assertNotNull(serverDefaults);
+    } finally {
+      dfsCluster.restartNameNode(0);
+    }
+  }
+
+  /**
    * Test write on mount point with multiple destinations
    * and making a one of the destination's subcluster unavailable.
    */
   @Test
   public void testWriteWithUnavailableSubCluster() throws IOException {
-    GenericTestUtils.setLogLevel(RouterRpcServer.LOG, Level.DEBUG);
-    GenericTestUtils.LogCapturer log =
-        GenericTestUtils.LogCapturer.captureLogs(RouterRpcServer.LOG);
     //create a mount point with multiple destinations
     Path path = new Path("/testWriteWithUnavailableSubCluster");
     Map<String, String> destMap = new HashMap<>();
@@ -678,7 +709,6 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
       out.write("hello".getBytes());
       out.hflush();
       assertTrue(routerFs.exists(filePath));
-      assertTrue(log.getOutput().contains("Number of namespaces without failed: 1"));
     } finally {
       IOUtils.closeStream(out);
       dfsCluster.restartNameNode(0);

@@ -195,7 +195,7 @@ import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 public class RouterRpcServer extends AbstractService implements ClientProtocol,
     NamenodeProtocol, RefreshUserMappingsProtocol, GetUserMappingsProtocol {
 
-  static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
 
 
@@ -697,7 +697,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         throw ioe;
       }
       Set<FederationNamespaceInfo> nssWithoutFailed = getNameSpaceInfo(nss, nsId);
-      LOG.debug("Number of namespaces without failed: {}", nssWithoutFailed.size());
       return invokeOnNs(method, clazz, ioe, nssWithoutFailed);
     }
   }
