@@ -23,8 +23,6 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-
 public class BufferPoolTest {
 
   static final int POOL_SIZE = 2;

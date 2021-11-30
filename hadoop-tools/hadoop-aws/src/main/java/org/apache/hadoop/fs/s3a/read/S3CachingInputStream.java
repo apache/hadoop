@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.common.Validate;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.twitter.util.ExceptionalFunction0;
 import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

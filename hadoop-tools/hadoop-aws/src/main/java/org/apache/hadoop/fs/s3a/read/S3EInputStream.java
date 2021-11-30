@@ -19,15 +19,10 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import org.apache.hadoop.fs.s3a.read.S3CachingInputStream;
-import org.apache.hadoop.fs.s3a.read.S3InMemoryInputStream;
-import org.apache.hadoop.fs.s3a.read.S3InputStream;
-
 import com.amazonaws.services.s3.AmazonS3;
 import com.twitter.util.FuturePool;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

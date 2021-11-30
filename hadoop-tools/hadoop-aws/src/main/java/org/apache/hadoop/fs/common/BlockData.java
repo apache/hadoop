@@ -127,7 +127,8 @@ public class BlockData {
   public State setState(int blockNumber, State blockState) {
     throwIfInvalidBlockNumber(blockNumber);
 
-    return this.state[blockNumber] = blockState;
+    this.state[blockNumber] = blockState;
+    return blockState;
   }
 
   // Debug helper.
@@ -135,12 +136,12 @@ public class BlockData {
     StringBuilder sb = new StringBuilder();
     int blockNumber = 0;
     while (blockNumber < this.numBlocks) {
-      State state = this.getState(blockNumber);
+      State tstate = this.getState(blockNumber);
       int endBlockNumber = blockNumber;
-      while ((endBlockNumber < this.numBlocks) && (this.getState(endBlockNumber) == state)) {
+      while ((endBlockNumber < this.numBlocks) && (this.getState(endBlockNumber) == tstate)) {
         endBlockNumber++;
       }
-      sb.append(String.format("[%03d ~ %03d] %s\n", blockNumber, endBlockNumber - 1, state));
+      sb.append(String.format("[%03d ~ %03d] %s\n", blockNumber, endBlockNumber - 1, tstate));
       blockNumber = endBlockNumber;
     }
     return sb.toString();

@@ -25,7 +25,7 @@ import java.io.IOException;
 /**
  * Provides misc functionality related to IO.
  */
-public class Io {
+public final class Io {
   private Io() {}
 
   /**

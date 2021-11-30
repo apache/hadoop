@@ -63,7 +63,7 @@ public class BufferPool implements Closeable {
 
     this.size = size;
     this.bufferSize = bufferSize;
-    this.allocated = new IdentityHashMap();
+    this.allocated = new IdentityHashMap<BufferData, ByteBuffer>();
     this.pool = new BoundedResourcePool<ByteBuffer>(size) {
         @Override
         public ByteBuffer createNew() {
@@ -74,7 +74,7 @@ public class BufferPool implements Closeable {
 
   public List<BufferData> getAll() {
     synchronized (this.allocated) {
-      return Collections.unmodifiableList(new ArrayList(this.allocated.keySet()));
+      return Collections.unmodifiableList(new ArrayList<BufferData>(this.allocated.keySet()));
     }
   }
 

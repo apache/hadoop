@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import com.twitter.util.ExceptionalFunction0;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -33,25 +31,25 @@ public interface BlockCache extends Closeable {
   /**
    * Indicates whether the given block is in this cache.
    */
-  public boolean containsBlock(Integer blockNumber);
+  boolean containsBlock(Integer blockNumber);
 
   /**
    * Gets the blocks in this cache.
    */
-  public Iterable<Integer> blocks();
+  Iterable<Integer> blocks();
 
   /**
    * Gets the number of blocks in this cache.
    */
-  public int size();
+  int size();
 
   /**
    * Gets the block having the given {@code blockNumber}.
    */
-  public void get(Integer blockNumber, ByteBuffer buffer) throws IOException;
+  void get(Integer blockNumber, ByteBuffer buffer) throws IOException;
 
   /**
    * Puts the given block in this cache.
    */
-  public void put(Integer blockNumber, ByteBuffer buffer) throws IOException;
+  void put(Integer blockNumber, ByteBuffer buffer) throws IOException;
 }

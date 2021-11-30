@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import org.apache.hadoop.fs.common.Validate;
-
-import com.twitter.util.Await;
 import com.twitter.util.Future;
 import com.twitter.util.Awaitable.CanAwait;
 import org.slf4j.Logger;
@@ -30,8 +27,6 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.CRC32;
 
 /**
@@ -165,8 +160,7 @@ public class BufferData {
    */
   public synchronized void setDone() {
     if (this.checksum != 0) {
-      long checksum = getChecksum(this.buffer);
-      if (checksum != this.checksum) {
+      if (getChecksum(this.buffer) != this.checksum) {
         throw new IllegalStateException("checksum changed after setReady()");
       }
     }
@@ -218,7 +212,7 @@ public class BufferData {
     return false;
   }
 
-  private static CanAwait CAN_AWAIT = () -> false;
+  private static final CanAwait CAN_AWAIT = () -> false;
 
   public String toString() {
 
@@ -240,14 +234,14 @@ public class BufferData {
     }
   }
 
-  private String getBufferStr(ByteBuffer buffer) {
-    if (buffer == null) {
+  private String getBufferStr(ByteBuffer buf) {
+    if (buf == null) {
       return "--";
     } else {
       return String.format(
           "(id = %d, pos = %d, lim = %d)",
           System.identityHashCode(buffer),
-          buffer.position(), buffer.limit());
+          buf.position(), buf.limit());
     }
   }
 }

@@ -212,7 +212,7 @@ public class BufferDataTest {
     }
   }
 
-  final List<BufferData.State> ALL_STATES = Arrays.asList(
+  static final List<BufferData.State> ALL_STATES = Arrays.asList(
       BufferData.State.UNKNOWN,
       BufferData.State.BLANK,
       BufferData.State.PREFETCHING,

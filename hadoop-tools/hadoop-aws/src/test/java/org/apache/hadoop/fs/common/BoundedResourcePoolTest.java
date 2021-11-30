@@ -31,7 +31,7 @@ import java.util.Set;
 public class BoundedResourcePoolTest {
 
   static class BufferPool extends BoundedResourcePool<ByteBuffer> {
-    public BufferPool(int size) {
+    BufferPool(int size) {
       super(size);
     }
 
@@ -71,7 +71,7 @@ public class BoundedResourcePoolTest {
 
   @Test
   public void testAcquireReleaseSingle() {
-    int NUM_BUFFERS = 5;
+    final int NUM_BUFFERS = 5;
     BufferPool pool = new BufferPool(NUM_BUFFERS);
 
     assertEquals(0, pool.numCreated());
@@ -94,7 +94,7 @@ public class BoundedResourcePoolTest {
 
   @Test
   public void testAcquireReleaseMultiple() {
-    int NUM_BUFFERS = 5;
+    final int NUM_BUFFERS = 5;
     BufferPool pool = new BufferPool(NUM_BUFFERS);
     Set<ByteBuffer> buffers = Collections.newSetFromMap(new IdentityHashMap());
 

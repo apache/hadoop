@@ -19,28 +19,16 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import org.apache.hadoop.fs.common.BlockCache;
 import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.BlockOperations;
-import org.apache.hadoop.fs.common.BufferData;
-import org.apache.hadoop.fs.common.BufferPool;
 import org.apache.hadoop.fs.common.CachingBlockManager;
-import org.apache.hadoop.fs.common.Io;
-import org.apache.hadoop.fs.common.Retryer;
-import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.common.Validate;
 
-import com.twitter.util.Await;
-import com.twitter.util.ExceptionalFunction0;
-import com.twitter.util.Future;
 import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Provides access to S3 file one block at a time.

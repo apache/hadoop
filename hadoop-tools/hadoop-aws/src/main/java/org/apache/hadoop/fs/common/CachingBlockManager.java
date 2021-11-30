@@ -19,16 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import org.apache.hadoop.fs.common.BlockCache;
-import org.apache.hadoop.fs.common.BlockData;
-import org.apache.hadoop.fs.common.BlockOperations;
-import org.apache.hadoop.fs.common.BufferData;
-import org.apache.hadoop.fs.common.BufferPool;
-import org.apache.hadoop.fs.common.Io;
-import org.apache.hadoop.fs.common.Retryer;
-import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
-import org.apache.hadoop.fs.common.Validate;
-
 import com.twitter.util.Await;
 import com.twitter.util.ExceptionalFunction0;
 import com.twitter.util.Future;
@@ -349,7 +339,7 @@ public abstract class CachingBlockManager extends BlockManager {
     private final BufferData data;
     private final CachingBlockManager blockManager;
 
-    public PrefetchTask(BufferData data, CachingBlockManager blockManager) {
+    PrefetchTask(BufferData data, CachingBlockManager blockManager) {
       this.data = data;
       this.blockManager = blockManager;
     }
@@ -367,7 +357,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
   private static final BufferData.State[] EXPECTED_STATE_AT_CACHING =
       new BufferData.State[] {
-        BufferData.State.PREFETCHING, BufferData.State.READY
+          BufferData.State.PREFETCHING, BufferData.State.READY
       };
 
   /**
@@ -510,7 +500,7 @@ public abstract class CachingBlockManager extends BlockManager {
     // Block manager that manages this block.
     private final CachingBlockManager blockManager;
 
-    public CachePutTask(
+    CachePutTask(
         BufferData data,
         Future<Void> blockFuture,
         CachingBlockManager blockManager) {

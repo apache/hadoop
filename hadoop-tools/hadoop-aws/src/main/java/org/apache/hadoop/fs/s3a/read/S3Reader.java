@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import org.apache.hadoop.fs.common.Io;
 import org.apache.hadoop.fs.common.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +28,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 
 /**
  * Provides functionality to read S3 file one block at a time.

@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import org.apache.hadoop.fs.common.Validate;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,9 +52,9 @@ public class BlockOperations {
     REQUEST_CACHING("RC", "requestCaching", true),
     REQUEST_PREFETCH("RP", "requestPrefetch", true);
 
-    String shortName;
-    String name;
-    boolean hasBlock;
+    private String shortName;
+    private String name;
+    private boolean hasBlock;
 
     Kind(String shortName, String name, boolean hasBlock) {
       this.shortName = shortName;

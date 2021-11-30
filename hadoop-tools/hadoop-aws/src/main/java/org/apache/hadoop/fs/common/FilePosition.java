@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3Object;
-
 import java.nio.ByteBuffer;
 
 /**

@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import org.apache.hadoop.fs.common.Validate;
-
-import java.io.Closeable;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
@@ -34,7 +31,7 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
   // The size of this pool. Fixed at creation time.
-  protected int size;
+  protected final int size;
 
   // Items currently available in the pool.
   protected ArrayBlockingQueue<T> items;
@@ -54,7 +51,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
     this.items = new ArrayBlockingQueue<T>(size);
 
     // The created items are identified based on their object reference.
-    this.createdItems = Collections.newSetFromMap(new IdentityHashMap());
+    this.createdItems = Collections.newSetFromMap(new IdentityHashMap<T, Boolean>());
   }
 
   /**

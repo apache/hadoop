@@ -21,11 +21,8 @@ package org.apache.hadoop.fs.common;
 
 import static org.junit.Assert.*;
 
-import com.twitter.util.Await;
-import com.twitter.util.ExceptionalFunction0;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class BlockCacheTest {
@@ -53,7 +50,7 @@ public class BlockCacheTest {
         () -> cache.put(42, null));
   }
 
-  final int BUFFER_SIZE = 16;
+  static final int BUFFER_SIZE = 16;
 
   @Test
   public void testPutAndGet() throws Exception {

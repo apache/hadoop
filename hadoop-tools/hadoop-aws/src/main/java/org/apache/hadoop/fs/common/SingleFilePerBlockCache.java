@@ -19,15 +19,11 @@
 
 package org.apache.hadoop.fs.common;
 
-import org.apache.hadoop.fs.common.Validate;
-
-import com.twitter.util.ExceptionalFunction0;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.IllegalStateException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
@@ -70,7 +66,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     public final int size;
     public final long checksum;
 
-    public Entry(int blockNumber, Path path, int size, long checksum) {
+    Entry(int blockNumber, Path path, int size, long checksum) {
       this.blockNumber = blockNumber;
       this.path = path;
       this.size = size;
@@ -103,8 +99,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    */
   @Override
   public Iterable<Integer> blocks() {
-    List<Integer> blocksList = Collections.unmodifiableList(new ArrayList<Integer>(this.blocks.keySet()));
-    return blocksList;
+    return Collections.unmodifiableList(new ArrayList<Integer>(this.blocks.keySet()));
   }
 
   /**

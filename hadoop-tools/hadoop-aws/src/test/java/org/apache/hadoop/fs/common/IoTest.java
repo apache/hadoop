@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.fs.common;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -44,7 +43,9 @@ public class IoTest {
     ExceptionAsserts.assertThrows(
         IOException.class,
         "foo",
-        () -> { (new TestResource()).close(); });
+        () -> {
+          (new TestResource()).close();
+        });
 
     // Should not throw.
     TestResource resource = new TestResource();
