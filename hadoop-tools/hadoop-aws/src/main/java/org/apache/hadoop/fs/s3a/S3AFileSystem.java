@@ -85,7 +85,7 @@ import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1617,7 +1617,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final S3AFileStatus fileStatus) {
     return createObjectAttributes(
         fileStatus.getPath(),
-        fileStatus.getETag(),
+        fileStatus.getEtag(),
         fileStatus.getVersionId(),
         fileStatus.getLen());
   }
@@ -5242,7 +5242,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
 
-    /*
+    // etags are avaialable in listings, but they
+    // are not consistent across renames.
+    // therefore, only availability is declared
+    case CommonPathCapabilities.ETAGS_AVAILABLE:
+      return true;
+
+      /*
      * Marker policy capabilities are handed off.
      */
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
@@ -5329,7 +5335,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         changeDetectionPolicy, ra, auditSpan);
 
     if (changeDetectionPolicy.getSource() != ChangeDetectionPolicy.Source.None
-        && fileStatus.getETag() != null) {
+        && fileStatus.getEtag() != null) {
       // if there is change detection, and the status includes at least an
       // etag,
       // check that the object metadata lines up with what is expected
