@@ -159,7 +159,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     writeLock.lock();
     try {
       CapacitySchedulerConfiguration schedConf = csContext.getConfiguration();
-      this.setupQueueConfigs(clusterResource, conf);
+      super.setupQueueConfigs(clusterResource, conf);
 
       this.lastClusterResource = clusterResource;
 
