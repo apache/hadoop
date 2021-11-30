@@ -36,7 +36,6 @@ import java.util.Set;
  * ManagedParentQueue for auto created dynamic queues
  */
 public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
-
   private static final Logger LOG = LoggerFactory
       .getLogger(AutoCreatedLeafQueue.class);
 

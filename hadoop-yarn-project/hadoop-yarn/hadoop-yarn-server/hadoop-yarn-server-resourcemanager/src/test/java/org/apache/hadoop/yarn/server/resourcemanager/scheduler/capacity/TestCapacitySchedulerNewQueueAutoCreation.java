@@ -685,7 +685,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         "root.a.*") + "capacity", "6w");
     cs.reinitialize(csConf, mockRM.getRMContext());
 
-    LeafQueue a2 = createQueue("root.a.a-auto.a2");
+    AbstractLeafQueue a2 = createQueue("root.a.a-auto.a2");
     Assert.assertEquals("weight is not set by template", 6f,
         a2.getQueueCapacities().getWeight(), 1e-6);
     Assert.assertEquals("user limit factor should be disabled with dynamic queues",
@@ -719,7 +719,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         "root.a") + CapacitySchedulerConfiguration
         .AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    LeafQueue a3 = createQueue("root.a.a3");
+    AbstractLeafQueue a3 = createQueue("root.a.a3");
     Assert.assertFalse("auto queue deletion should be turned off on a3",
         a3.isEligibleForAutoDeletion());
 
@@ -729,20 +729,19 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     csConf.setQueues("root", new String[]{"a", "b", "c"});
     csConf.setAutoQueueCreationV2Enabled("root.c", true);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    LeafQueue c1 = createQueue("root.c.c1");
+    AbstractLeafQueue c1 = createQueue("root.c.c1");
     Assert.assertEquals("weight is not set for label TEST", 6f,
         c1.getQueueCapacities().getWeight("TEST"), 1e-6);
     cs.reinitialize(csConf, mockRM.getRMContext());
     c1 = (LeafQueue) cs.getQueue("root.c.c1");
     Assert.assertEquals("weight is not set for label TEST", 6f,
         c1.getQueueCapacities().getWeight("TEST"), 1e-6);
-
   }
 
   @Test
   public void testAutoCreatedQueueConfigChange() throws Exception {
     startScheduler();
-    LeafQueue a2 = createQueue("root.a.a-auto.a2");
+    AbstractLeafQueue a2 = createQueue("root.a.a-auto.a2");
     csConf.setNonLabeledQueueWeight("root.a.a-auto.a2", 4f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
@@ -1223,7 +1222,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertNull("root.e.e1-auto should have been removed", eAuto);
   }
 
-  protected LeafQueue createQueue(String queuePath) throws YarnException,
+  protected AbstractLeafQueue createQueue(String queuePath) throws YarnException,
       IOException {
     return autoQueueHandler.createQueue(new QueuePath(queuePath));
   }

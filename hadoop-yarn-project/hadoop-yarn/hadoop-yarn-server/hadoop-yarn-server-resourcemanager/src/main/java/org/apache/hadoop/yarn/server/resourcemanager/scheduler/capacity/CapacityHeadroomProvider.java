@@ -27,11 +27,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class CapacityHeadroomProvider {
   
   UsersManager.User user;
-  LeafQueue queue;
+  AbstractLeafQueue queue;
   FiCaSchedulerApp application;
   LeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo;
   
-  public CapacityHeadroomProvider(UsersManager.User user, LeafQueue queue,
+  public CapacityHeadroomProvider(UsersManager.User user, AbstractLeafQueue queue,
       FiCaSchedulerApp application,
       LeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo) {
 

@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueue
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
@@ -577,7 +577,7 @@ public class FifoIntraQueuePreemptionPlugin
   }
 
   private Resource calculateUsedAMResourcesPerQueue(String partition,
-      LeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
+      AbstractLeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
     Collection<FiCaSchedulerApp> runningApps = leafQueue.getApplications();
     Resource amUsed = Resources.createResource(0, 0);
 

@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-    .LeafQueue;
+    .AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .ManagedParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
@@ -136,7 +136,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       return false;
     }
 
-    public boolean createLeafQueueStateIfNotExists(LeafQueue leafQueue,
+    public boolean createLeafQueueStateIfNotExists(AbstractLeafQueue leafQueue,
         String partition) {
       return addLeafQueueStateIfNotExists(leafQueue.getQueuePath(), partition,
           new LeafQueueStatePerPartition());
@@ -482,9 +482,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       Set<String> newQueues = new HashSet<>();
 
       for (CSQueue newQueue : managedParentQueue.getChildQueues()) {
-        if (newQueue instanceof LeafQueue) {
+        if (newQueue instanceof AbstractLeafQueue) {
           for (String nodeLabel : leafQueueTemplateNodeLabels) {
-            leafQueueState.createLeafQueueStateIfNotExists((LeafQueue) newQueue,
+            leafQueueState.createLeafQueueStateIfNotExists((AbstractLeafQueue) newQueue,
                 nodeLabel);
             newPartitions.add(nodeLabel);
           }
@@ -590,7 +590,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       if (leafQueue != null) {
         if (isActive(leafQueue, nodeLabel) && !hasPendingApps(leafQueue)) {
           QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueue(leafQueue);
-          updateToZeroCapacity(capacities, nodeLabel, (LeafQueue)childQueue);
+          updateToZeroCapacity(capacities, nodeLabel, (AbstractLeafQueue)childQueue);
           deactivatedQueues.put(leafQueue.getQueuePath(), leafQueueTemplateCapacities);
         }
       } else {
@@ -780,7 +780,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   private void updateToZeroCapacity(QueueCapacities capacities,
-      String nodeLabel, LeafQueue leafQueue) {
+      String nodeLabel, AbstractLeafQueue leafQueue) {
     capacities.setCapacity(nodeLabel, 0.0f);
     capacities.setMaximumCapacity(nodeLabel,
         leafQueueTemplateCapacities.getMaximumCapacity(nodeLabel));
@@ -801,7 +801,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @VisibleForTesting
-  LeafQueueStatePerPartition getLeafQueueState(LeafQueue queue,
+  LeafQueueStatePerPartition getLeafQueueState(AbstractLeafQueue queue,
       String partition) throws SchedulerDynamicEditException {
     readLock.lock();
     try {
