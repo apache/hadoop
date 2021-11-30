@@ -652,8 +652,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       RMContainer rmContainer = getRMContainer(containerId);
       if (rmContainer == null) {
         // Some unknown container sneaked into the system. Kill it.
-        rmContext.getDispatcher().getEventHandler()
-            .handle(new RMNodeCleanContainerEvent(nodeId, containerId));
+        rmContext.getDispatcher().getEventHandler().handle(
+            new RMNodeCleanContainerEvent(nodeId, containerId));
         return;
       }
 
