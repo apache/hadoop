@@ -96,7 +96,8 @@ public class BoundedResourcePoolTest {
   public void testAcquireReleaseMultiple() {
     final int NUM_BUFFERS = 5;
     BufferPool pool = new BufferPool(NUM_BUFFERS);
-    Set<ByteBuffer> buffers = Collections.newSetFromMap(new IdentityHashMap());
+    Set<ByteBuffer> buffers =
+        Collections.newSetFromMap(new IdentityHashMap<ByteBuffer, Boolean>());
 
     assertEquals(0, pool.numCreated());
 

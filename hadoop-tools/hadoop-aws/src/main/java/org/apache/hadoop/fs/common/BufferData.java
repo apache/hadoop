@@ -205,7 +205,7 @@ public class BufferData {
       return;
     }
 
-    List<String> statesStr = new ArrayList();
+    List<String> statesStr = new ArrayList<String>();
     for (State s : states) {
       statesStr.add(s.toString());
     }

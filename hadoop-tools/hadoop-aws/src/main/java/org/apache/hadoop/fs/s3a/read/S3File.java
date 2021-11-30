@@ -81,7 +81,7 @@ public class S3File implements Closeable {
     this.bucket = bucket;
     this.key = key;
     this.size = size;
-    this.s3Objects = new IdentityHashMap();
+    this.s3Objects = new IdentityHashMap<InputStream, S3Object>();
   }
 
   public String getPath() {
@@ -140,7 +140,7 @@ public class S3File implements Closeable {
 
   @Override
   public synchronized void close() {
-    List<InputStream> streams = new ArrayList(this.s3Objects.keySet());
+    List<InputStream> streams = new ArrayList<InputStream>(this.s3Objects.keySet());
     for (InputStream stream : streams) {
       this.close(stream);
     }
