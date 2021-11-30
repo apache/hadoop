@@ -111,7 +111,7 @@ public class S3AccessRetryer {
     if (e.getAdditionalDetails() != null) {
       sb.append("\n");
       for (Map.Entry entry : e.getAdditionalDetails().entrySet()) {
-        sb.append(String.format("%s = %s\n", entry.getKey(), entry.getValue()));
+        sb.append(String.format("%s = %s%n", entry.getKey(), entry.getValue()));
       }
     }
     LOG.warn(sb.toString());

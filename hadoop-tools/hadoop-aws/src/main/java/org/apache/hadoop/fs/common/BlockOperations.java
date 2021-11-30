@@ -133,7 +133,7 @@ public class BlockOperations {
     this.ops = new ArrayList<>();
   }
 
-  public void setDebug(boolean state) {
+  public synchronized void setDebug(boolean state) {
     this.debugMode = state;
   }
 
@@ -296,8 +296,9 @@ public class BlockOperations {
     List<Integer> prefetchedNotUsed = new ArrayList<>();
     List<Integer> cachedNotUsed = new ArrayList<>();
 
-    for (Integer blockNumber : blockOps.keySet()) {
-      List<Operation> perBlockOps = blockOps.get(blockNumber);
+    for (Map.Entry<Integer, List<Operation>> entry : blockOps.entrySet()) {
+      Integer blockNumber = entry.getKey();
+      List<Operation> perBlockOps = entry.getValue();
       Map<Kind, Integer> kindCounts = new HashMap<>();
       Map<Kind, Integer> endKindCounts = new HashMap<>();
 
@@ -367,7 +368,7 @@ public class BlockOperations {
 
       String shortName = matcher.group(1);
       String blockNumberStr = matcher.group(3);
-      int blockNumber = (blockNumberStr == null) ? -1 : Integer.valueOf(blockNumberStr);
+      int blockNumber = (blockNumberStr == null) ? -1 : Integer.parseInt(blockNumberStr);
       Kind kind = Kind.fromShortName(shortName);
       Kind endKind = null;
       if (kind == null) {

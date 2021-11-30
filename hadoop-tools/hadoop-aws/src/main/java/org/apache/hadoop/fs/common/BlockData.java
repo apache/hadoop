@@ -141,7 +141,7 @@ public class BlockData {
       while ((endBlockNumber < this.numBlocks) && (this.getState(endBlockNumber) == tstate)) {
         endBlockNumber++;
       }
-      sb.append(String.format("[%03d ~ %03d] %s\n", blockNumber, endBlockNumber - 1, tstate));
+      sb.append(String.format("[%03d ~ %03d] %s%n", blockNumber, endBlockNumber - 1, tstate));
       blockNumber = endBlockNumber;
     }
     return sb.toString();

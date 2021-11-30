@@ -159,7 +159,7 @@ public class S3CachingInputStream extends S3InputStream {
     }
 
     StringBuilder sb = new StringBuilder();
-    sb.append(String.format("fpos = (%s)\n", this.fpos));
+    sb.append(String.format("fpos = (%s)%n", this.fpos));
     sb.append(this.blockManager.toString());
     return sb.toString();
   }

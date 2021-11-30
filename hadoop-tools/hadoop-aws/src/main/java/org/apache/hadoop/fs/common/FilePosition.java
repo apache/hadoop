@@ -220,7 +220,7 @@ public class FilePosition {
       String currentBufferState =
           String.format("%d at pos: %d, lim: %d", val, pos, this.buffer.limit());
       sb.append(String.format(
-          "block: %d, pos: %d (CBuf: %s)\n",
+          "block: %d, pos: %d (CBuf: %s)%n",
           this.blockNumber(), this.absolute(),
           currentBufferState));
       sb.append("\n");
