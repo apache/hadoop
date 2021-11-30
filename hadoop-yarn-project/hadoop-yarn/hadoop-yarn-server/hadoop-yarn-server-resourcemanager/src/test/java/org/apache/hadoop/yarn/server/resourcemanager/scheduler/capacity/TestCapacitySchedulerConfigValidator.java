@@ -69,13 +69,16 @@ public class TestCapacitySchedulerConfigValidator {
   private static final String LEAF_B_FULL_PATH = PARENT_B_FULL_PATH
       + "." + LEAF_B;
 
-  private static Resource A_MINRES;
-  private static Resource B_MINRES;
-  private static Resource FULL_MAXRES;
-  private static Resource PARTIAL_MAXRES;
-  private static Resource VCORE_EXCEEDED_MAXRES;
-  private static Resource GPU_EXCEEDED_MAXRES;
-
+  private final Resource A_MINRES = Resource.newInstance(16 * GB, 10);
+  private final Resource B_MINRES = Resource.newInstance(32 * GB, 5);
+  private final Resource FULL_MAXRES = Resource.newInstance(48 * GB, 30);
+  private final Resource PARTIAL_MAXRES = Resource.newInstance(16 * GB, 10);
+  private final Resource VCORE_EXCEEDED_MAXRES = Resource.newInstance(16 * GB, 50);
+  private Resource A_MINRES_GPU;
+  private Resource B_MINRES_GPU;
+  private Resource FULL_MAXRES_GPU;
+  private Resource PARTIAL_MAXRES_GPU;
+  private Resource GPU_EXCEEDED_MAXRES_GPU;
 
   protected MockRM mockRM = null;
   protected MockNM nm1 = null;
@@ -301,7 +304,7 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES_GPU);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -536,7 +539,6 @@ public class TestCapacitySchedulerConfigValidator {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
     setupResources(useDominantRC);
-    setupResourceValues(useDominantRC);
     CapacitySchedulerConfiguration csConf = setupCSConfiguration(conf, useDominantRC);
 
     mockRM = new MockRM(csConf);
@@ -569,28 +571,17 @@ public class TestCapacitySchedulerConfigValidator {
       nm3.registerNode();
   }
 
-  private void setupResourceValues(boolean useGpu) {
-    A_MINRES = Resource.newInstance(16 * GB, 10);
-    B_MINRES = Resource.newInstance(32 * GB, 5);
-    FULL_MAXRES = Resource.newInstance(48 * GB, 30);
-    PARTIAL_MAXRES = Resource.newInstance(16 * GB, 10);
-    VCORE_EXCEEDED_MAXRES = Resource.newInstance(16 * GB, 50);
-    GPU_EXCEEDED_MAXRES = Resource.newInstance(16 * GB, 10);
-
-    if (useGpu) {
-      A_MINRES.setResourceInformation(GPU_URI,
-          ResourceInformation.newInstance(GPU_URI, "", 2));
-      B_MINRES.setResourceInformation(GPU_URI,
-          ResourceInformation.newInstance(GPU_URI, "", 2));
-      FULL_MAXRES.setResourceInformation(GPU_URI,
-          ResourceInformation.newInstance(GPU_URI, "", 6));
-      PARTIAL_MAXRES.setResourceInformation(GPU_URI,
-          ResourceInformation.newInstance(GPU_URI, "", 4));
-      VCORE_EXCEEDED_MAXRES.setResourceInformation(GPU_URI,
-          ResourceInformation.newInstance(GPU_URI, "", 6));
-      GPU_EXCEEDED_MAXRES.setResourceInformation(GPU_URI,
-          ResourceInformation.newInstance(GPU_URI, "", 50));
-    }
+  private void setupGpuResourceValues() {
+    A_MINRES_GPU = Resource.newInstance(A_MINRES.getMemorySize(), A_MINRES.getVirtualCores(),
+        ImmutableMap.of(GPU_URI, 2L));
+    B_MINRES_GPU =  Resource.newInstance(B_MINRES.getMemorySize(), B_MINRES.getVirtualCores(),
+        ImmutableMap.of(GPU_URI, 2L));
+    FULL_MAXRES_GPU = Resource.newInstance(FULL_MAXRES.getMemorySize(),
+        FULL_MAXRES.getVirtualCores(), ImmutableMap.of(GPU_URI, 6L));
+    PARTIAL_MAXRES_GPU = Resource.newInstance(PARTIAL_MAXRES.getMemorySize(),
+        PARTIAL_MAXRES.getVirtualCores(), ImmutableMap.of(GPU_URI, 4L));
+    GPU_EXCEEDED_MAXRES_GPU = Resource.newInstance(PARTIAL_MAXRES.getMemorySize(),
+        PARTIAL_MAXRES.getVirtualCores(), ImmutableMap.of(GPU_URI, 50L));
   }
 
   private CapacitySchedulerConfiguration setupCSConfiguration(YarnConfiguration configuration,
@@ -607,15 +598,28 @@ public class TestCapacitySchedulerConfigValidator {
     csConf.setQueues(PARENT_A_FULL_PATH, new String[]{LEAF_A});
     csConf.setQueues(PARENT_B_FULL_PATH, new String[]{LEAF_B});
 
-    csConf.setMinimumResourceRequirement("", PARENT_A_FULL_PATH, A_MINRES);
-    csConf.setMinimumResourceRequirement("", PARENT_B_FULL_PATH, B_MINRES);
-    csConf.setMinimumResourceRequirement("", LEAF_A_FULL_PATH, A_MINRES);
-    csConf.setMinimumResourceRequirement("", LEAF_B_FULL_PATH, B_MINRES);
+    if (useDominantRC) {
+      setupGpuResourceValues();
+      csConf.setMinimumResourceRequirement("", PARENT_A_FULL_PATH, A_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("", PARENT_B_FULL_PATH, B_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("", LEAF_A_FULL_PATH, A_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("", LEAF_B_FULL_PATH, B_MINRES_GPU);
 
-    csConf.setMaximumResourceRequirement("", PARENT_A_FULL_PATH, PARTIAL_MAXRES);
-    csConf.setMaximumResourceRequirement("", PARENT_B_FULL_PATH, FULL_MAXRES);
-    csConf.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, PARTIAL_MAXRES);
-    csConf.setMaximumResourceRequirement("", LEAF_B_FULL_PATH, FULL_MAXRES);
+      csConf.setMaximumResourceRequirement("", PARENT_A_FULL_PATH, PARTIAL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("", PARENT_B_FULL_PATH, FULL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, PARTIAL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("", LEAF_B_FULL_PATH, FULL_MAXRES_GPU);
+    } else {
+      csConf.setMinimumResourceRequirement("", PARENT_A_FULL_PATH, A_MINRES);
+      csConf.setMinimumResourceRequirement("", PARENT_B_FULL_PATH, B_MINRES);
+      csConf.setMinimumResourceRequirement("", LEAF_A_FULL_PATH, A_MINRES);
+      csConf.setMinimumResourceRequirement("", LEAF_B_FULL_PATH, B_MINRES);
+
+      csConf.setMaximumResourceRequirement("", PARENT_A_FULL_PATH, PARTIAL_MAXRES);
+      csConf.setMaximumResourceRequirement("", PARENT_B_FULL_PATH, FULL_MAXRES);
+      csConf.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, PARTIAL_MAXRES);
+      csConf.setMaximumResourceRequirement("", LEAF_B_FULL_PATH, FULL_MAXRES);
+    }
 
     return csConf;
   }
