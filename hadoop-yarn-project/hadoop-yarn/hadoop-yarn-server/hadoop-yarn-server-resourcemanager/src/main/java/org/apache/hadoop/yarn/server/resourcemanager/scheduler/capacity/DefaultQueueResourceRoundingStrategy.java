@@ -19,6 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
+
+import java.util.Collection;
+import java.util.SortedSet;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.WEIGHT;
 
@@ -27,9 +31,20 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Q
  * which is always the last type to consider, therefore it is safe to round up.
  */
 public class DefaultQueueResourceRoundingStrategy implements QueueResourceRoundingStrategy {
+  private final ResourceUnitCapacityType lastCapacityType;
+
+  public DefaultQueueResourceRoundingStrategy(
+      SortedSet<ResourceUnitCapacityType> capacityTypePrecedence) {
+    if (capacityTypePrecedence.isEmpty()) {
+      throw new IllegalArgumentException("Capacity type precedence collection is empty");
+    }
+
+    lastCapacityType = capacityTypePrecedence.last();
+  }
+
   @Override
   public float getRoundedResource(float resourceValue, QueueCapacityVectorEntry capacityVectorEntry) {
-    if (capacityVectorEntry.getVectorResourceType().equals(WEIGHT)) {
+    if (capacityVectorEntry.getVectorResourceType().equals(lastCapacityType)) {
       return Math.round(resourceValue);
     } else {
       return (float) Math.floor(resourceValue);

@@ -20,14 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSortedSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.SortedSet;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 
@@ -36,14 +36,14 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
  * bookkeeper of disposable update information that is used by all children under a common parent.
  */
 public class ResourceCalculationDriver {
-  protected static final Set<ResourceUnitCapacityType> CALCULATOR_PRECEDENCE =
-      ImmutableSet.of(
+  protected static final SortedSet<ResourceUnitCapacityType> CALCULATOR_PRECEDENCE =
+      ImmutableSortedSet.of(
           ResourceUnitCapacityType.ABSOLUTE,
           ResourceUnitCapacityType.PERCENTAGE,
           ResourceUnitCapacityType.WEIGHT);
 
   protected final QueueResourceRoundingStrategy roundingStrategy =
-      new DefaultQueueResourceRoundingStrategy();
+      new DefaultQueueResourceRoundingStrategy(CALCULATOR_PRECEDENCE);
   protected final CSQueue parent;
   protected final QueueCapacityUpdateContext updateContext;
   protected final Map<ResourceUnitCapacityType, AbstractQueueCapacityCalculator> calculators;

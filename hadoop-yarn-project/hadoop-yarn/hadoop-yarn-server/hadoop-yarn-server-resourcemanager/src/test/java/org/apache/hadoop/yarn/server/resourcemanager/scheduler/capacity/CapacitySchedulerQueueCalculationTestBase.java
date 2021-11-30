@@ -52,7 +52,7 @@ public class CapacitySchedulerQueueCalculationTestBase {
   protected static final String B1 = "root.b.b1";
   protected static final String C = "root.c";
 
-  protected static final String CAPACITY_VECTOR_TEMPLATE = "[memory=%s, vcores=%s]";
+  private static final String CAPACITY_VECTOR_TEMPLATE = "[memory=%s, vcores=%s]";
 
   protected ResourceCalculator resourceCalculator;
 
@@ -272,7 +272,7 @@ public class CapacitySchedulerQueueCalculationTestBase {
     return new QueueAssertionBuilder(cs);
   }
 
-  protected String createMemoryVcoresVector(Object memory, Object vcores) {
+  protected static String createMemoryVcoresVector(Object memory, Object vcores) {
     return String.format(CAPACITY_VECTOR_TEMPLATE, memory, vcores);
   }
 

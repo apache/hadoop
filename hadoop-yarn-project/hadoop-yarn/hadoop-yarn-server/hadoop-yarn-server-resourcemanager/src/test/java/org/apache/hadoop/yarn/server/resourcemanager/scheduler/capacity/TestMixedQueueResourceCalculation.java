@@ -346,10 +346,10 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     mockRM.registerNode("h3:1234", 10 * GB, 35); // label = y
     mockRM.registerNode("h4:1234", 10 * GB, 15); // label = z
 
-    csConf.setCapacityVector(A, "", createMemoryVcoresVector(absolute(2048), percentage(50)));
-    csConf.setCapacityVector(A1, "", createMemoryVcoresVector(absolute(1024), percentage(70)));
-    csConf.setCapacityVector(A2, "", createMemoryVcoresVector(absolute(1024), percentage(30)));
-    csConf.setCapacityVector(B, "", createMemoryVcoresVector(weight(3), percentage(50)));
+    csConf.setCapacityVector(A, NO_LABEL, createMemoryVcoresVector(absolute(2048), percentage(50)));
+    csConf.setCapacityVector(A1, NO_LABEL, createMemoryVcoresVector(absolute(1024), percentage(70)));
+    csConf.setCapacityVector(A2, NO_LABEL, createMemoryVcoresVector(absolute(1024), percentage(30)));
+    csConf.setCapacityVector(B, NO_LABEL, createMemoryVcoresVector(weight(3), percentage(50)));
 
     csConf.setCapacityVector(A, X_LABEL, createMemoryVcoresVector(percentage(50), weight(3)));
     csConf.setCapacityVector(A1, X_LABEL, createMemoryVcoresVector(absolute(20480), percentage(10)));
@@ -375,14 +375,14 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     setQueues();
 
     csConf.setState(B, QueueState.RUNNING);
-    csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(30), weight(6)));
-    csConf.setCapacityVector(A1, "", createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
-    csConf.setCapacityVector(A11, "", createMemoryVcoresVector(percentage(35), percentage(25)));
-    csConf.setCapacityVector(A12, "", createMemoryVcoresVector(percentage(65), percentage(75)));
-    csConf.setCapacityVector(A2, "", createMemoryVcoresVector(weight(3), percentage(100)));
-    csConf.setCapacityVector(B, "", createMemoryVcoresVector(absolute(8095), percentage(30)));
-    csConf.setCapacityVector(B1, "", createMemoryVcoresVector(weight(5), absolute(3)));
-    csConf.setCapacityVector(C, "", createMemoryVcoresVector(weight(3), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A, NO_LABEL, createMemoryVcoresVector(percentage(30), weight(6)));
+    csConf.setCapacityVector(A1, NO_LABEL, createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A11, NO_LABEL, createMemoryVcoresVector(percentage(35), percentage(25)));
+    csConf.setCapacityVector(A12, NO_LABEL, createMemoryVcoresVector(percentage(65), percentage(75)));
+    csConf.setCapacityVector(A2, NO_LABEL, createMemoryVcoresVector(weight(3), percentage(100)));
+    csConf.setCapacityVector(B, NO_LABEL, createMemoryVcoresVector(absolute(8095), percentage(30)));
+    csConf.setCapacityVector(B1, NO_LABEL, createMemoryVcoresVector(weight(5), absolute(3)));
+    csConf.setCapacityVector(C, NO_LABEL, createMemoryVcoresVector(weight(3), absolute(VCORES * 0.25)));
 
     cs.reinitialize(csConf, mockRM.getRMContext());
   }
@@ -392,19 +392,16 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     cs.reinitialize(csConf, mockRM.getRMContext());
     setQueues();
 
-    Resource.newInstance(0, 0); // C
-    Resource.newInstance(0, 0); // A12
-
     csConf.setState(B, QueueState.RUNNING);
-    csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(100), weight(6)));
-    csConf.setCapacityVector(A1, "", createMemoryVcoresVector(absolute(2048),
+    csConf.setCapacityVector(A, NO_LABEL, createMemoryVcoresVector(percentage(100), weight(6)));
+    csConf.setCapacityVector(A1, NO_LABEL, createMemoryVcoresVector(absolute(2048),
         absolute(VCORES * 0.25)));
-    csConf.setCapacityVector(A11, "", createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
-    csConf.setCapacityVector(A12, "", createMemoryVcoresVector(percentage(100), percentage(100)));
-    csConf.setCapacityVector(A2, "", createMemoryVcoresVector(absolute(2048), percentage(100)));
-    csConf.setCapacityVector(B, "", createMemoryVcoresVector(absolute(8096), percentage(30)));
-    csConf.setCapacityVector(B1, "", createMemoryVcoresVector(absolute(10256), absolute(3)));
-    csConf.setCapacityVector(C, "", createMemoryVcoresVector(weight(3), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A11, NO_LABEL, createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A12, NO_LABEL, createMemoryVcoresVector(percentage(100), percentage(100)));
+    csConf.setCapacityVector(A2, NO_LABEL, createMemoryVcoresVector(absolute(2048), percentage(100)));
+    csConf.setCapacityVector(B, NO_LABEL, createMemoryVcoresVector(absolute(8096), percentage(30)));
+    csConf.setCapacityVector(B1, NO_LABEL, createMemoryVcoresVector(absolute(10256), absolute(3)));
+    csConf.setCapacityVector(C, NO_LABEL, createMemoryVcoresVector(weight(3), absolute(VCORES * 0.25)));
 
     cs.reinitialize(csConf, mockRM.getRMContext());
   }
