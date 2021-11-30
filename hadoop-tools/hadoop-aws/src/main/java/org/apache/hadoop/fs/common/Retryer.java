@@ -47,6 +47,8 @@ public class Retryer {
 
   /**
    * Returns true if retrying should continue, false otherwise.
+   *
+   * @return true if the caller should retry, false otherwise.
    */
   public boolean continueRetry() {
     if (this.delay >= this.maxDelay) {
@@ -65,6 +67,8 @@ public class Retryer {
 
   /**
    * Returns true if status update interval has been reached.
+   *
+   * @return true if status update interval has been reached.
    */
   public boolean updateStatus() {
     return (this.delay > 0) && this.delay % this.statusUpdateInterval == 0;

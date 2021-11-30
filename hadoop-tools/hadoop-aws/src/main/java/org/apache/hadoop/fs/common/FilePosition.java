@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
  * A file is made up of equal sized blocks. The last block may be of a smaller size.
  * The size of a buffer associated with this file is typically the same as block size.
  *
- * This class is typically used with {@link S3InputStream}, however it is separated
+ * This class is typically used with {@code S3InputStream}, however it is separated
  * out in its own file because of its size.
  */
 public class FilePosition {
@@ -78,7 +78,7 @@ public class FilePosition {
   /**
    * Associates a buffer with this file.
    *
-   * @param buffer the buffer associated with this file.
+   * @param data the buffer associated with this file.
    * @param bufferStartOffset Start offset of the buffer relative to the start of a file.
    * @param readStartOffset Offset where reading starts relative to the start of a file.
    */
@@ -113,6 +113,8 @@ public class FilePosition {
 
   /**
    * Gets the current absolute position within this file.
+   *
+   * @return the current absolute position within this file.
    */
   public long absolute() {
     throwIfInvalidBuffer();
@@ -122,6 +124,9 @@ public class FilePosition {
   /**
    * If the given {@code pos} lies within the current buffer, updates the current position to
    * the specified value and returns true; otherwise returns false without changing the position.
+   *
+   * @param pos the absolute position to change the current position to if possible.
+   * @return true if the given current position was updated, false otherwise.
    */
   public boolean setAbsolute(long pos) {
     if (this.isValid() && this.isWithinCurrentBuffer(pos)) {
@@ -135,42 +140,78 @@ public class FilePosition {
 
   /**
    * Gets the current position within this file relative to the start of the associated buffer.
+   *
+   * @return the current position within this file relative to the start of the associated buffer.
    */
   public int relative() {
     throwIfInvalidBuffer();
     return this.buffer.position();
   }
 
+  /**
+   * Determines whether the given absolute position lies within the current buffer.
+   *
+   * @param pos the position to check.
+   * @return true if the given absolute position lies within the current buffer, false otherwise.
+   */
   public boolean isWithinCurrentBuffer(long pos) {
     throwIfInvalidBuffer();
     long bufferEndOffset = this.bufferStartOffset + this.buffer.limit() - 1;
     return (pos >= this.bufferStartOffset) && (pos <= bufferEndOffset);
   }
 
+  /**
+   * Gets the id of the current block.
+   *
+   * @return the id of the current block.
+   */
   public int blockNumber() {
     throwIfInvalidBuffer();
     return this.blockData.getBlockNumber(this.bufferStartOffset);
   }
 
+  /**
+   * Determines whether the current block is the last block in this file.
+   *
+   * @return true if the current block is the last block in this file, false otherwise.
+   */
   public boolean isLastBlock() {
     return this.blockData.isLastBlock(this.blockNumber());
   }
 
+  /**
+   * Determines if the current position is valid.
+   *
+   * @return true if the current position is valid, false otherwise.
+   */
   public boolean isValid() {
     return this.buffer != null;
   }
 
+  /**
+   * Marks the current position as invalid.
+   */
   public void invalidate() {
     this.buffer = null;
     this.bufferStartOffset = -1;
     this.data = null;
   }
 
+  /**
+   * Gets the start of the current block's absolute offset.
+   *
+   * @return the start of the current block's absolute offset.
+   */
   public long bufferStartOffset() {
     throwIfInvalidBuffer();
     return this.bufferStartOffset;
   }
 
+  /**
+   * Determines whether the current buffer has been fully read.
+   *
+   * @return true if the current buffer has been fully read, false otherwise.
+   */
   public boolean bufferFullyRead() {
     throwIfInvalidBuffer();
     return (this.bufferStartOffset == this.readStartOffset)

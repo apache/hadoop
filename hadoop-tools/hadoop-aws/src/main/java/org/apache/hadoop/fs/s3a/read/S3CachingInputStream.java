@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
- * Provides an {@link InputStream} that allows reading from an S3 file.
+ * Provides an {@code InputStream} that allows reading from an S3 file.
  * Prefetched blocks are cached to local disk if a seek away from the
  * current block is issued.
  */

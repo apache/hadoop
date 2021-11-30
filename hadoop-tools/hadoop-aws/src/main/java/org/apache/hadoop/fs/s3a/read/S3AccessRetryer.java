@@ -68,6 +68,7 @@ public class S3AccessRetryer {
    * returning true; otherwise, returns false immediately.
    *
    * @param e the exception encountered by the caller.
+   * @return true if the caller should retry an S3 access attempt, false otherwise.
    */
   public boolean retry(Exception e) {
     if (isRetryable(e) && (this.retryDelay <= this.retryMaxDelay)) {

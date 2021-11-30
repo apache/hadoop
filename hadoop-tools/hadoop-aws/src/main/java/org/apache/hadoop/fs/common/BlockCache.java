@@ -30,26 +30,41 @@ public interface BlockCache extends Closeable {
 
   /**
    * Indicates whether the given block is in this cache.
+   *
+   * @param blockNumber the id of the given block.
+   * @return true if the given block is in this cache, false otherwise.
    */
   boolean containsBlock(Integer blockNumber);
 
   /**
    * Gets the blocks in this cache.
+   *
+   * @return the blocks in this cache.
    */
   Iterable<Integer> blocks();
 
   /**
    * Gets the number of blocks in this cache.
+   *
+   * @return the number of blocks in this cache.
    */
   int size();
 
   /**
    * Gets the block having the given {@code blockNumber}.
+   *
+   * @param blockNumber the id of the desired block.
+   * @param buffer contents of the desired block are copied to this buffer.
+   * @throws IOException if there is an error reading the given block.
    */
   void get(Integer blockNumber, ByteBuffer buffer) throws IOException;
 
   /**
    * Puts the given block in this cache.
+   *
+   * @param blockNumber the id of the given block.
+   * @param buffer contents of the given block to be added to this cache.
+   * @throws IOException if there is an error writing the given block.
    */
   void put(Integer blockNumber, ByteBuffer buffer) throws IOException;
 }

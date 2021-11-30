@@ -518,6 +518,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Number of ByteBuffers available to be acquired.
+   *
+   * @return the number of available buffers.
    */
   public int numAvailable() {
     return this.bufferPool.numAvailable();
@@ -525,6 +527,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Number of caching operations completed.
+   *
+   * @return the number of cached buffers.
    */
   public int numCached() {
     return this.cache.size();
@@ -532,6 +536,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Number of errors encountered when caching.
+   *
+   * @return the number of errors encountered when caching.
    */
   public int numCachingErrors() {
     return this.numCachingErrors.get();
@@ -539,6 +545,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Number of errors encountered when reading.
+   *
+   * @return the number of errors encountered when reading.
    */
   public int numReadErrors() {
     return this.numReadErrors.get();

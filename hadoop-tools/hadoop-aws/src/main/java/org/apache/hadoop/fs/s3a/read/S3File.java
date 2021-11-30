@@ -91,6 +91,9 @@ public class S3File implements Closeable {
   /**
    * Gets the size of this file.
    * Its value is cached once obtained from AWS.
+   *
+   * @return the size of this file.
+   * @throws IOException if there is an error obtaining file size.
    */
   public long size() throws IOException {
     if (size < 0) {
@@ -104,6 +107,8 @@ public class S3File implements Closeable {
    *
    * @param offset Start offset (0 based) of the section to read.
    * @param size Size of the section to read.
+   * @return an {@code InputStream} corresponding to the given section of this file.
+   * @throws IOException if there is an error opening this file section for reading.
    */
   public InputStream openForRead(long offset, int size) throws IOException {
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");

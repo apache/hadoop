@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
- * Provides an {@link InputStream} that allows reading from an S3 file.
+ * Provides an {@code InputStream} that allows reading from an S3 file.
  * The entire file is read into memory before reads can begin.
  *
  * Use of this class is recommended only for small files that can fit

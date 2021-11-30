@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
- * Enhanced {@link InputStream} for reading from S3.
+ * Enhanced {@code InputStream} for reading from S3.
  *
  * This implementation provides improved read throughput by asynchronously prefetching
  * blocks of configurable size from the underlying S3 file.
@@ -48,7 +48,7 @@ public class S3EInputStream extends FSInputStream {
    *
    * @param futurePool Future pool used for async reading activity.
    * @param prefetchBlockSize Size of each prefetched block.
-   * @param prefetchBlockCount Size of the prefetch queue (in number of blocks).
+   * @param numBlocksToPrefetch Size of the prefetch queue (in number of blocks).
    * @param bucket Name of S3 bucket from which key is opened.
    * @param key Name of the S3 key to open.
    * @param contentLength length of the file.

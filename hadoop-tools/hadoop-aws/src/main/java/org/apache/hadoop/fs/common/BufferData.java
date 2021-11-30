@@ -106,6 +106,9 @@ public class BufferData {
 
   /**
    * Computes CRC32 checksum of the given buffer's contents.
+   *
+   * @param buffer the buffer whose content's checksum is to be computed.
+   * @return the computed checksum.
    */
   public static long getChecksum(ByteBuffer buffer) {
     ByteBuffer tempBuffer = buffer.duplicate();
@@ -121,6 +124,8 @@ public class BufferData {
 
   /**
    * Indicates that a prefetch operation is in progress.
+   *
+   * @param actionFuture the {@code Future} of a prefetch action.
    */
   public synchronized void setPrefetch(Future<Void> actionFuture) {
     Validate.checkNotNull(actionFuture, "actionFuture");
@@ -131,6 +136,8 @@ public class BufferData {
 
   /**
    * Indicates that a caching operation is in progress.
+   *
+   * @param actionFuture the {@code Future} of a caching action.
    */
   public synchronized void setCaching(Future<Void> actionFuture) {
     Validate.checkNotNull(actionFuture, "actionFuture");
@@ -143,6 +150,8 @@ public class BufferData {
   /**
    * Marks the completion of reading data into the buffer.
    * The buffer cannot be modified once in this state.
+   *
+   * @param expectedCurrentState the collection of states from which transition to READY is allowed.
    */
   public synchronized void setReady(State... expectedCurrentState) {
     if (this.checksum != 0) {
@@ -171,6 +180,10 @@ public class BufferData {
   /**
    * Updates the current state to the specified value.
    * Asserts that the current state is as expected.
+   *
+   * @param newState the state to transition to.
+   * @param expectedCurrentState the collection of states from which
+   *        transition to {@code newState} is allowed.
    */
   public synchronized void updateState(State newState, State... expectedCurrentState) {
     Validate.checkNotNull(newState, "newState");
@@ -182,6 +195,8 @@ public class BufferData {
 
   /**
    * Helper that asserts the current state is one of the expected values.
+   *
+   * @param states the collection of allowed states.
    */
   public void throwIfStateIncorrect(State... states) {
     Validate.checkNotNull(states, "states");

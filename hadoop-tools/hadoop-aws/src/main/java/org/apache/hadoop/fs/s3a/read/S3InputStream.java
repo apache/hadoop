@@ -117,6 +117,9 @@ public abstract class S3InputStream extends InputStream {
 
   /**
    * Moves the current read position so that the next read will occur at {@code pos}.
+   *
+   * @param pos the absolute position to seek to.
+   * @throws IOException if there an error during this operation.
    */
   public void seek(long pos) throws IOException {
     Validate.checkWithinRange(pos, "pos", 0, this.s3File.size() - 1);
@@ -131,6 +134,8 @@ public abstract class S3InputStream extends InputStream {
    * Ensures that a non-empty valid buffer is available for immediate reading.
    * It returns true when at least one such buffer is available for reading.
    * It returns false on reaching the end of the stream.
+   *
+   * @return true if at least one such buffer is available for reading, false otherwise.
    */
   protected abstract boolean ensureCurrentBuffer();
 

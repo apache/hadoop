@@ -30,6 +30,8 @@ public final class Io {
 
   /**
    * Closes the given resource and ignores any IOException if thrown.
+   *
+   * @param resource the resource to close.
    */
   public static void closeIgnoringIoException(Closeable resource) {
     try {

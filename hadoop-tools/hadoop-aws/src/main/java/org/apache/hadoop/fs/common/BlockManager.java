@@ -54,6 +54,7 @@ public abstract class BlockManager implements Closeable {
    *
    * @param blockNumber the number of the block to be read and returned.
    * @return {@code BufferData} having data from the given block.
+   * @throws IOException if there an error reading the given block.
    */
   public BufferData get(int blockNumber) throws IOException {
     Validate.checkNotNegative(blockNumber, "blockNumber");
@@ -74,11 +75,14 @@ public abstract class BlockManager implements Closeable {
    * @param startOffset the offset at which reading starts.
    * @param size the number bytes to read.
    * @return number of bytes read.
+   * @throws IOException if there an error reading the given block.
    */
   public abstract int read(ByteBuffer buffer, long startOffset, int size) throws IOException;
 
   /**
    * Releases resources allocated to the given block.
+   *
+   * @param data the {@code BufferData} to release.
    */
   public void release(BufferData data) {
     Validate.checkNotNull(data, "data");
@@ -88,6 +92,8 @@ public abstract class BlockManager implements Closeable {
 
   /**
    * Requests optional prefetching of the given block.
+   *
+   * @param blockNumber the id of the block to prefetch.
    */
   public void requestPrefetch(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
@@ -104,6 +110,8 @@ public abstract class BlockManager implements Closeable {
 
   /**
    * Requests that the given block should be copied to the cache. Optional operation.
+   *
+   * @param data the {@code BufferData} instance to optionally cache.
    */
   public void requestCaching(BufferData data) {
     // Do nothing because we do not support caching.

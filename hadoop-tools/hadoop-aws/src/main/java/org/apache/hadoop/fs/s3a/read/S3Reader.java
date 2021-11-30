@@ -60,6 +60,7 @@ public class S3Reader implements Closeable {
    * @param size the number of bytes to be read.
    *
    * @return number of bytes actually read
+   * @throws IOException if there is an error reading from the file.
    */
   public int read(ByteBuffer buffer, long offset, int size) throws IOException {
     Validate.checkNotNull(buffer, "buffer");

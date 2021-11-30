@@ -30,16 +30,22 @@ public abstract class ResourcePool<T> implements Closeable {
 
   /**
    * Acquires a resource blocking if necessary until one becomes available.
+   *
+   * @return the acquired resource instance.
    */
   public abstract T acquire();
 
   /**
    * Acquires a resource blocking if one is immediately available. Otherwise returns null.
+
+   * @return the acquired resource instance (if immediately available) or null.
    */
   public abstract T tryAcquire();
 
   /**
    * Releases a previously acquired resource.
+   *
+   * @param item the resource to release.
    */
   public abstract void release(T item);
 
@@ -49,6 +55,8 @@ public abstract class ResourcePool<T> implements Closeable {
 
   /**
    * Derived classes may implement a way to cleanup each item.
+   *
+   * @param item the resource to close.
    */
   protected void close(T item) {
     // Do nothing in this class. Allow overriding classes to take any cleanup action.
@@ -56,6 +64,8 @@ public abstract class ResourcePool<T> implements Closeable {
 
   /**
    * Derived classes must implement a way to create an instance of a resource.
+   *
+   * @return the created instance.
    */
   protected abstract T createNew();
 }

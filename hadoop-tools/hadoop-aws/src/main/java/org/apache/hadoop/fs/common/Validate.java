@@ -35,6 +35,9 @@ public final class Validate {
 
   /**
    * Validates that the given reference argument is not null.
+   *
+   * @param obj the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNull(Object obj, String argName) {
     checkArgument(obj != null, "'%s' must not be null.", argName);
@@ -42,6 +45,9 @@ public final class Validate {
 
   /**
    * Validates that the given integer argument is not zero or negative.
+   *
+   * @param value the argument value to validate
+   * @param argName the name of the argument being validated.
    */
   public static void checkPositiveInteger(long value, String argName) {
     checkArgument(value > 0, "'%s' must be a positive integer.", argName);
@@ -49,6 +55,9 @@ public final class Validate {
 
   /**
    * Validates that the given integer argument is not negative.
+   *
+   * @param value the argument value to validate
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNegative(long value, String argName) {
     checkArgument(value >= 0, "'%s' must not be negative.", argName);
@@ -56,6 +65,9 @@ public final class Validate {
 
   /*
    * Validates that the expression (that checks a required field is present) is true.
+   *
+   * @param isPresent indicates whether the given argument is present.
+   * @param argName the name of the argument being validated.
    */
   public static void checkRequired(boolean isPresent, String argName) {
     checkArgument(isPresent, "'%s' is required.", argName);
@@ -63,6 +75,9 @@ public final class Validate {
 
   /**
    * Validates that the expression (that checks a field is valid) is true.
+   *
+   * @param isValid indicates whether the given argument is valid.
+   * @param argName the name of the argument being validated.
    */
   public static void checkValid(boolean isValid, String argName) {
     checkArgument(isValid, "'%s' is invalid.", argName);
@@ -70,6 +85,10 @@ public final class Validate {
 
   /**
    * Validates that the expression (that checks a field is valid) is true.
+   *
+   * @param isValid indicates whether the given argument is valid.
+   * @param argName the name of the argument being validated.
+   * @param validValues the list of values that are allowed.
    */
   public static void checkValid(boolean isValid, String argName, String validValues) {
     checkArgument(isValid, "'%s' is invalid. Valid values are: %s.", argName, validValues);
@@ -77,6 +96,9 @@ public final class Validate {
 
   /**
    * Validates that the given string is not null and has non-zero length.
+   *
+   * @param arg the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(String arg, String argName) {
     Validate.checkNotNull(arg, argName);
@@ -88,6 +110,10 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
+   *
+   * @param <T> the type of array's elements.
+   * @param array the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static <T> void checkNotNullAndNotEmpty(T[] array, String argName) {
     Validate.checkNotNull(array, argName);
@@ -96,6 +122,9 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
+   *
+   * @param array the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(byte[] array, String argName) {
     Validate.checkNotNull(array, argName);
@@ -104,6 +133,9 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
+   *
+   * @param array the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(short[] array, String argName) {
     Validate.checkNotNull(array, argName);
@@ -112,6 +144,9 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
+   *
+   * @param array the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(int[] array, String argName) {
     Validate.checkNotNull(array, argName);
@@ -120,6 +155,9 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
+   *
+   * @param array the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static void checkNotNullAndNotEmpty(long[] array, String argName) {
     Validate.checkNotNull(array, argName);
@@ -128,6 +166,10 @@ public final class Validate {
 
   /**
    * Validates that the given buffer is not null and has non-zero capacity.
+   *
+   * @param <T> the type of iterable's elements.
+   * @param iter the argument reference to validate.
+   * @param argName the name of the argument being validated.
    */
   public static <T> void checkNotNullAndNotEmpty(Iterable<T> iter, String argName) {
     Validate.checkNotNull(iter, argName);
@@ -137,6 +179,11 @@ public final class Validate {
 
   /**
    * Validates that the given set is not null and has an exact number of items.
+   *
+   * @param <T> the type of collection's elements.
+   * @param collection the argument reference to validate.
+   * @param numElements the expected number of elements in the collection.
+   * @param argName the name of the argument being validated.
    */
   public static <T> void checkNotNullAndNumberOfElements(
       Collection<T> collection, int numElements, String argName) {
@@ -152,6 +199,11 @@ public final class Validate {
 
   /**
    * Validates that the given two values are equal.
+   *
+   * @param value1 the first value to check.
+   * @param value1Name the name of the first argument.
+   * @param value2 the second value to check.
+   * @param value2Name the name of the second argument.
    */
   public static void checkValuesEqual(
       long value1,
@@ -169,6 +221,11 @@ public final class Validate {
 
   /**
    * Validates that the first value is an integer multiple of the second value.
+   *
+   * @param value1 the first value to check.
+   * @param value1Name the name of the first argument.
+   * @param value2 the second value to check.
+   * @param value2Name the name of the second argument.
    */
   public static void checkIntegerMultiple(
       long value1,
@@ -186,6 +243,11 @@ public final class Validate {
 
   /**
    * Validates that the first value is greater than the second value.
+   *
+   * @param value1 the first value to check.
+   * @param value1Name the name of the first argument.
+   * @param value2 the second value to check.
+   * @param value2Name the name of the second argument.
    */
   public static void checkGreater(
       long value1,
@@ -203,6 +265,11 @@ public final class Validate {
 
   /**
    * Validates that the first value is greater than or equal to the second value.
+   *
+   * @param value1 the first value to check.
+   * @param value1Name the name of the first argument.
+   * @param value2 the second value to check.
+   * @param value2Name the name of the second argument.
    */
   public static void checkGreaterOrEqual(
       long value1,
@@ -220,6 +287,11 @@ public final class Validate {
 
   /**
    * Validates that the first value is less than or equal to the second value.
+   *
+   * @param value1 the first value to check.
+   * @param value1Name the name of the first argument.
+   * @param value2 the second value to check.
+   * @param value2Name the name of the second argument.
    */
   public static void checkLessOrEqual(
       long value1,
@@ -237,6 +309,11 @@ public final class Validate {
 
   /**
    * Validates that the given value is within the given range of values.
+   *
+   * @param value the value to check.
+   * @param valueName the name of the argument.
+   * @param minValueInclusive inclusive lower limit for the value.
+   * @param maxValueInclusive inclusive upper limit for the value.
    */
   public static void checkWithinRange(
       long value,
@@ -254,6 +331,11 @@ public final class Validate {
 
   /**
    * Validates that the given value is within the given range of values.
+   *
+   * @param value the value to check.
+   * @param valueName the name of the argument.
+   * @param minValueInclusive inclusive lower limit for the value.
+   * @param maxValueInclusive inclusive upper limit for the value.
    */
   public static void checkWithinRange(
       double value,
@@ -269,11 +351,23 @@ public final class Validate {
         maxValueInclusive);
   }
 
+  /**
+   * Validates that the given path exists.
+   *
+   * @param path the path to check.
+   * @param argName the name of the argument being validated.
+   */
   public static void checkPathExists(Path path, String argName) {
     checkNotNull(path, argName);
     checkArgument(Files.exists(path), "Path %s (%s) does not exist.", argName, path);
   }
 
+  /**
+   * Validates that the given path exists and is a directory.
+   *
+   * @param path the path to check.
+   * @param argName the name of the argument being validated.
+   */
   public static void checkPathExistsAsDir(Path path, String argName) {
     checkPathExists(path, argName);
     checkArgument(
@@ -283,6 +377,12 @@ public final class Validate {
         path);
   }
 
+  /**
+   * Validates that the given path exists and is a file.
+   *
+   * @param path the path to check.
+   * @param argName the name of the argument being validated.
+   */
   public static void checkPathExistsAsFile(Path path, String argName) {
     checkPathExists(path, argName);
     checkArgument(Files.isRegularFile(path), "Path %s (%s) must point to a file.", argName, path);

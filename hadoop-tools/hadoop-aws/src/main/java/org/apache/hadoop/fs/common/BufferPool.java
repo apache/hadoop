@@ -80,6 +80,9 @@ public class BufferPool implements Closeable {
 
   /**
    * Acquires a {@code ByteBuffer}; blocking if necessary until one becomes available.
+   *
+   * @param blockNumber the id of the block to acquire.
+   * @return the acquired block's {@code BufferData}.
    */
   public synchronized BufferData acquire(int blockNumber) {
     BufferData data;
@@ -107,6 +110,9 @@ public class BufferPool implements Closeable {
 
   /**
    * Acquires a buffer if one is immediately available. Otherwise returns null.
+   *
+   * @param blockNumber the id of the block to try acquire.
+   * @return the acquired block's {@code BufferData} or null.
    */
   public synchronized BufferData tryAcquire(int blockNumber) {
     return this.acquireHelper(blockNumber, false);
@@ -181,6 +187,8 @@ public class BufferPool implements Closeable {
 
   /**
    * Releases a previously acquired resource.
+   *
+   * @param data the {@code BufferData} instance to release.
    */
   public synchronized void release(BufferData data) {
     Validate.checkNotNull(data, "data");
