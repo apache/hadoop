@@ -388,7 +388,7 @@ public class TestAppManager extends AppManagerTestBase{
     MockRM newMockRM = new MockRM(csConf);
     CapacityScheduler cs =
         ((CapacityScheduler) newMockRM.getResourceScheduler());
-    ManagedParentQueue managedParentQueue = new ManagedParentQueue(cs,
+    ManagedParentQueue managedParentQueue = new ManagedParentQueue(cs.getQueueContext(),
         "managedparent", cs.getQueue("root"), null);
     cs.getCapacitySchedulerQueueManager().addQueue("managedparent",
         managedParentQueue);

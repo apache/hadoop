@@ -74,6 +74,7 @@ public class TestChildQueueOrder {
   YarnConfiguration conf;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
+  CapacitySchedulerQueueContext queueContext;
 
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
@@ -100,6 +101,8 @@ public class TestChildQueueOrder {
         thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+
+    queueContext = new CapacitySchedulerQueueContext(csContext, null);
   }
 
   private FiCaSchedulerApp getMockApplication(int appId, String user) {
@@ -221,7 +224,7 @@ public class TestChildQueueOrder {
     setupSortedQueues(csConf);
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues, 
           TestUtils.spyHook);
 

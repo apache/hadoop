@@ -39,14 +39,10 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   private static final Logger LOG = LoggerFactory
       .getLogger(AutoCreatedLeafQueue.class);
 
-  public AutoCreatedLeafQueue(CapacitySchedulerContext cs, String queueName,
+  public AutoCreatedLeafQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       ManagedParentQueue parent) throws IOException {
-    // TODO once YARN-10907 is merged the duplicated collection of
-    //  leafQueueConfigs won't be necessary
-    super(cs, parent.getLeafQueueConfigs(queueName),
-        queueName,
-        parent, null);
-    super.setupQueueConfigs(cs.getClusterResource(), parent.getLeafQueueConfigs(queueName));
+    super(queueContext, queueName, parent, null);
+    super.setupQueueConfigs(queueContext.getClusterResource(), parent.getLeafQueueConfigs(queueName));
 
     LOG.debug("Initialized AutoCreatedLeafQueue: name={}, fullname={}", queueName, getQueuePath());
     updateCapacitiesToZero();
@@ -74,8 +70,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
-  public void reinitializeFromTemplate(AutoCreatedLeafQueueConfig
-      leafQueueTemplate) throws SchedulerDynamicEditException, IOException {
+  public void reinitializeFromTemplate(AutoCreatedLeafQueueConfig leafQueueTemplate) {
 
     writeLock.lock();
     try {
@@ -105,7 +100,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
           .getAbsoluteMaximumCapacity(nodeLabel));
 
       Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
-          csContext.getClusterResource());
+          queueContext.getClusterResource());
       getQueueResourceQuotas().setEffectiveMinResource(nodeLabel,
           Resources.multiply(resourceByLabel,
               queueCapacities.getAbsoluteCapacity(nodeLabel)));
@@ -133,12 +128,12 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     String parentTemplate = String.format("%s.%s", getParent().getQueuePath(),
         CapacitySchedulerConfiguration
             .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
-    Set<String> parentNodeLabels = csContext
-        .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+    Set<String> parentNodeLabels = queueContext
+        .getQueueManager().getConfiguredNodeLabelsForAllQueues()
         .getLabelsByQueue(parentTemplate);
 
     if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
-      csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+      queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues()
           .setLabelsByQueue(getQueuePath(),
               new HashSet<>(parentNodeLabels));
     }

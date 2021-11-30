@@ -143,6 +143,7 @@ public class TestLeafQueue {
   CapacityScheduler cs;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
+  CapacitySchedulerQueueContext queueContext;
   private RMApp rmApp;
   
   CSQueue root;
@@ -229,8 +230,10 @@ public class TestLeafQueue {
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
 
+    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
     root = 
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             queues, queues, 
             TestUtils.spyHook);
@@ -1091,7 +1094,7 @@ public class TestLeafQueue {
     // reinitialize queues
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -1309,7 +1312,7 @@ public class TestLeafQueue {
     // reinitialize queues
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -3217,7 +3220,7 @@ public class TestLeafQueue {
     csConf.setInt(
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 1);
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, ROOT, newQueues, queues,
         TestUtils.spyHook);
     root.reinitialize(newRoot, cs.getClusterResource());
@@ -3654,7 +3657,7 @@ public class TestLeafQueue {
             * 2);
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -3685,7 +3688,7 @@ public class TestLeafQueue {
         CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY, 600);
     CSQueueStore newQueues = new CSQueueStore();
     CSQueue newRoot =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             newQueues, queues,
             TestUtils.spyHook);
@@ -4044,7 +4047,7 @@ public class TestLeafQueue {
         0.1f);
 
     CSQueue root;
-    root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
@@ -4062,7 +4065,7 @@ public class TestLeafQueue {
         0.2f);
     clusterResource = Resources.createResource(100 * 20 * GB, 100 * 32);
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);
     root.reinitialize(newRoot, clusterResource);
@@ -5119,8 +5122,7 @@ public class TestLeafQueue {
       csConf.setNodeLocalityDelay(30);
       csConf.setGlobalMaximumApplicationsPerQueue(20);
 
-      LeafQueue leafQueue = new LeafQueue(csContext, conf,
-          leafQueueName, cs.getRootQueue(),
+      LeafQueue leafQueue = new LeafQueue(queueContext, leafQueueName, cs.getRootQueue(),
           null);
 
       leafQueue.updateClusterResource(Resource.newInstance(0, 0),

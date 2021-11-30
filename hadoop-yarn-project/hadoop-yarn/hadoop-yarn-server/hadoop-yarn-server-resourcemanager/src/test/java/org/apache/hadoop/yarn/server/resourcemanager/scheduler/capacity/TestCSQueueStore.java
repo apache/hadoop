@@ -39,6 +39,7 @@ public class TestCSQueueStore {
 
   private CSQueue root;
   private CapacitySchedulerContext csContext;
+  private CapacitySchedulerQueueContext queueContext;
 
   @Before
   public void setUp() throws IOException {
@@ -63,21 +64,23 @@ public class TestCSQueueStore {
             thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
 
+    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
     CSQueueStore queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager
-            .parseQueue(csContext, csConf, null, "root",
+            .parseQueue(queueContext, csConf, null, "root",
                     queues, queues,
                     TestUtils.spyHook);
   }
 
   public CSQueue createLeafQueue(String name, CSQueue parent)
           throws IOException {
-    return new LeafQueue(csContext, name, parent, null);
+    return new LeafQueue(queueContext, name, parent, null);
   }
 
   public CSQueue createParentQueue(String name, CSQueue parent)
           throws IOException {
-    return new ParentQueue(csContext, name, parent, null);
+    return new ParentQueue(queueContext, name, parent, null);
   }
 
   /**

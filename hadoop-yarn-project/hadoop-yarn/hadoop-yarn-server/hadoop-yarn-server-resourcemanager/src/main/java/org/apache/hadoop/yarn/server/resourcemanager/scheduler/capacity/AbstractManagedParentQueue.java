@@ -44,9 +44,9 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
   protected AutoCreatedLeafQueueConfig leafQueueTemplate;
   protected AutoCreatedQueueManagementPolicy queueManagementPolicy = null;
 
-  public AbstractManagedParentQueue(CapacitySchedulerContext cs,
+  public AbstractManagedParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
-    super(cs, queueName, parent, old);
+    super(queueContext, queueName, parent, old);
   }
 
   @Override
@@ -55,7 +55,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     writeLock.lock();
     try {
       // Set new configs
-      setupQueueConfigs(clusterResource, csContext.getConfiguration());
+      setupQueueConfigs(clusterResource, queueContext.getConfiguration());
 
     } finally {
       writeLock.unlock();
@@ -121,8 +121,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     CSQueue childQueue;
     writeLock.lock();
     try {
-      childQueue = this.csContext.getCapacitySchedulerQueueManager().getQueue(
-          childQueueName);
+      childQueue = queueContext.getQueueManager().getQueue(childQueueName);
       if (childQueue != null) {
         removeChildQueue(childQueue);
       } else {
@@ -176,14 +175,14 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     CapacitySchedulerConfiguration leafQueueConfigs = new
         CapacitySchedulerConfiguration(new Configuration(false), false);
 
-    Map<String, String> rtProps = csContext
+    Map<String, String> rtProps = queueContext
         .getConfiguration().getConfigurationProperties()
         .getPropertiesWithPrefix(YarnConfiguration.RESOURCE_TYPES + ".", true);
     for (Map.Entry<String, String> entry : rtProps.entrySet()) {
       leafQueueConfigs.set(entry.getKey(), entry.getValue());
     }
 
-    Map<String, String> templateConfigs = csContext
+    Map<String, String> templateConfigs = queueContext
         .getConfiguration().getConfigurationProperties()
         .getPropertiesWithPrefix(configPrefix, true);
 

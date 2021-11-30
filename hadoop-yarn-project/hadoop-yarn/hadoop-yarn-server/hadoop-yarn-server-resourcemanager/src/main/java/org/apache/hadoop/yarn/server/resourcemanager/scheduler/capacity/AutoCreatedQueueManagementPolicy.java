@@ -35,6 +35,7 @@ public interface AutoCreatedQueueManagementPolicy {
   /**
    * Reinitialize policy state ( if required )
    * @param schedulerContext Capacity Scheduler context
+   * @param parentQueue parent queue
    */
   void reinitialize(CapacitySchedulerContext schedulerContext,
       ParentQueue parentQueue) throws IOException;

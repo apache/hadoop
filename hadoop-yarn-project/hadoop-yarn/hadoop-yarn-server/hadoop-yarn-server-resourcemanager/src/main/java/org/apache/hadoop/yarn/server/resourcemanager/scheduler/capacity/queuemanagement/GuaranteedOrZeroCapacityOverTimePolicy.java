@@ -70,7 +70,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
     implements AutoCreatedQueueManagementPolicy {
 
   private static final int DEFAULT_QUEUE_PRINT_SIZE_LIMIT = 25;
-  private CapacitySchedulerContext scheduler;
   private ManagedParentQueue managedParentQueue;
 
   private static final Logger LOG =
@@ -263,9 +262,9 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
 
     @Override
     public int compare(FiCaSchedulerApp app1, FiCaSchedulerApp app2) {
-      RMApp rmApp1 = scheduler.getRMContext().getRMApps().get(
+      RMApp rmApp1 = managedParentQueue.getQueueContext().getRMApp(
           app1.getApplicationId());
-      RMApp rmApp2 = scheduler.getRMContext().getRMApps().get(
+      RMApp rmApp2 = managedParentQueue.getQueueContext().getRMApp(
           app2.getApplicationId());
       if (rmApp1 != null && rmApp2 != null) {
         return Long.compare(rmApp1.getSubmitTime(), rmApp2.getSubmitTime());
@@ -285,8 +284,6 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   @Override
   public void init(final CapacitySchedulerContext schedulerContext,
       final ParentQueue parentQueue) throws IOException {
-    this.scheduler = schedulerContext;
-
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -372,7 +369,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       //Populate new entitlements
       return leafQueueEntitlements.mapToQueueManagementChanges((leafQueueName, capacities) -> {
         AutoCreatedLeafQueue leafQueue =
-            (AutoCreatedLeafQueue) scheduler.getCapacitySchedulerQueueManager()
+            (AutoCreatedLeafQueue) managedParentQueue.getQueueContext().getQueueManager()
                 .getQueue(leafQueueName);
         AutoCreatedLeafQueueConfig newTemplate = buildTemplate(capacities);
         return new QueueManagementChange.UpdateQueue(leafQueue, newTemplate);
@@ -651,7 +648,8 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
                   .mergeCapacities(updatedQueueTemplate.getQueueCapacities());
               leafQueue.getQueueResourceQuotas()
                   .setConfiguredMinResource(Resources.multiply(
-                      this.scheduler.getClusterResource(), updatedQueueTemplate
+                      managedParentQueue.getQueueContext().getClusterResource(),
+                      updatedQueueTemplate
                           .getQueueCapacities().getCapacity(nodeLabel)));
               deactivate(leafQueue, nodeLabel);
             }

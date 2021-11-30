@@ -120,6 +120,8 @@ public class TestApplicationLimits {
         thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext, null);
     
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
@@ -129,13 +131,13 @@ public class TestApplicationLimits {
 
     CSQueueStore queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager
-        .parseQueue(csContext, csConf, null, "root",
+        .parseQueue(queueContext, csConf, null, "root",
             queues, queues,
             TestUtils.spyHook);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
 
-    queue = spy(new LeafQueue(csContext, A, root, null));
+    queue = spy(new LeafQueue(queueContext, A, root, null));
     QueueResourceQuotas queueResourceQuotas = ((LeafQueue) queues.get(A))
         .getQueueResourceQuotas();
     doReturn(queueResourceQuotas).when(queue).getQueueResourceQuotas();
@@ -290,7 +292,9 @@ public class TestApplicationLimits {
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
-    
+
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = 
       Resources.createResource(100 * 16 * GB, 100 * 16);
@@ -298,7 +302,7 @@ public class TestApplicationLimits {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             "root", queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
@@ -370,7 +374,7 @@ public class TestApplicationLimits {
     // Re-create queues to get new configs.
     queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager.parseQueue(
-        csContext, csConf, null, "root",
+        queueContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
     clusterResource = Resources.createResource(100 * 16 * GB);
     root.updateClusterResource(clusterResource, new ResourceLimits(
@@ -394,7 +398,7 @@ public class TestApplicationLimits {
     // Re-create queues to get new configs.
     queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager.parseQueue(
-        csContext, csConf, null, "root",
+        queueContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
@@ -604,8 +608,10 @@ public class TestApplicationLimits {
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
     CSQueueStore queues = new CSQueueStore();
-    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
@@ -970,9 +976,11 @@ public class TestApplicationLimits {
     Resource clusterResource = Resources.createResource(100 * GB, 1000);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
     // Set up queue hierarchy.
     CSQueueStore queues = new CSQueueStore();
-    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));

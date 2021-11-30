@@ -1658,6 +1658,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return labelsByQueue;
   }
 
+  public Priority getClusterLevelApplicationMaxPriority() {
+    return Priority.newInstance(getInt(
+        YarnConfiguration.MAX_CLUSTER_LEVEL_APPLICATION_PRIORITY,
+        YarnConfiguration.DEFAULT_CLUSTER_LEVEL_APPLICATION_PRIORITY));
+  }
+
   public Integer getDefaultApplicationPriorityConfPerQueue(String queue) {
     Integer defaultPriority = getInt(getQueuePrefix(queue)
         + DEFAULT_APPLICATION_PRIORITY,

@@ -79,7 +79,8 @@ public class TestParentQueue {
   YarnConfiguration conf;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
-  
+  CapacitySchedulerQueueContext queueContext;
+
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
 
@@ -105,6 +106,8 @@ public class TestParentQueue {
     when(csContext.getResourceCalculator()).
         thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+
+    queueContext = new CapacitySchedulerQueueContext(csContext, null);
   }
   
   private static final String A = "a";
@@ -253,7 +256,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
             TestUtils.spyHook);
 
@@ -375,7 +378,7 @@ public class TestParentQueue {
     CSQueueStore queues = new CSQueueStore();
     boolean exceptionOccurred = false;
     try {
-      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IOException ie) {
@@ -389,7 +392,7 @@ public class TestParentQueue {
     exceptionOccurred = false;
     queues.clear();
     try {
-      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -403,7 +406,7 @@ public class TestParentQueue {
     exceptionOccurred = false;
     queues.clear();
     try {
-      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
@@ -495,7 +498,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
     
@@ -659,7 +662,7 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B + "." + B3, 0);
 
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
@@ -674,7 +677,7 @@ public class TestParentQueue {
     csConf.setCapacity(Q_A, 60);
 
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
@@ -691,7 +694,7 @@ public class TestParentQueue {
     csConf.setCapacity(Q_A, 60);
     csConf.setAllowZeroCapacitySum(Q_B, true);
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
@@ -711,7 +714,7 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B + "." + B3, 20);
     csConf.setAllowZeroCapacitySum(Q_B, true);
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
@@ -731,7 +734,7 @@ public class TestParentQueue {
     csConf.setCapacity(Q_B + "." + B3, 0);
     csConf.setAllowZeroCapacitySum(Q_B, true);
     CSQueueStore queues = new CSQueueStore();
-    CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
   }
@@ -751,7 +754,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     try {
-      CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+      CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
           TestUtils.spyHook);
     } catch (IllegalArgumentException e) {
@@ -767,7 +770,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
@@ -849,7 +852,7 @@ public class TestParentQueue {
     //B3
     CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 
@@ -951,7 +954,7 @@ public class TestParentQueue {
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
-        CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+        CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
     YarnAuthorizationProvider authorizer =
@@ -1014,7 +1017,7 @@ public class TestParentQueue {
     setupSingleLevelQueuesWithAbsoluteResource(csConf);
 
     CSQueueStore queues = new CSQueueStore();
-    CSQueue root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf,
+    CSQueue root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf,
         null, CapacitySchedulerConfiguration.ROOT, queues, queues,
         TestUtils.spyHook);
 
@@ -1085,7 +1088,7 @@ public class TestParentQueue {
     setupSingleLevelQueuesWithAbsoluteResource(csConf);
 
     CSQueueStore queues = new CSQueueStore();
-    CSQueue root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf,
+    CSQueue root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf,
             null, CapacitySchedulerConfiguration.ROOT, queues, queues,
             TestUtils.spyHook);
 

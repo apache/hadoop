@@ -789,8 +789,10 @@ public class TestApplicationLimitsByPartition {
     Resource clusterResource = Resources.createResource(160 * GB);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
     CSQueueStore queues = new CSQueueStore();
-    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));

@@ -31,26 +31,19 @@ public class LeafQueue extends AbstractLeafQueue {
   private static final Logger LOG =
       LoggerFactory.getLogger(LeafQueue.class);
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  public LeafQueue(CapacitySchedulerContext cs,
+  public LeafQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
-    this(cs, cs.getConfiguration(), queueName, parent, old, false);
+    this(queueContext, queueName, parent, old, false);
   }
 
-  public LeafQueue(CapacitySchedulerContext cs,
-      CapacitySchedulerConfiguration configuration,
-      String queueName, CSQueue parent, CSQueue old) throws IOException {
-    this(cs, configuration, queueName, parent, old, false);
-  }
-
-  public LeafQueue(CapacitySchedulerContext cs,
-      CapacitySchedulerConfiguration configuration,
+  public LeafQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old, boolean isDynamic) throws
       IOException {
-    super(cs, configuration, queueName, parent, old, isDynamic);
+    super(queueContext, queueName, parent, old, isDynamic);
 
-    setupQueueConfigs(cs.getClusterResource(), configuration);
+    setupQueueConfigs(queueContext.getClusterResource(), queueContext.getConfiguration());
 
-    LOG.debug("LeafQueue: name={}, fullname={}", queueName, getQueuePath());
+    LOG.debug("Initialized LeafQueue: name={}, fullname={}", queueName,
+        getQueuePath());
   }
 }

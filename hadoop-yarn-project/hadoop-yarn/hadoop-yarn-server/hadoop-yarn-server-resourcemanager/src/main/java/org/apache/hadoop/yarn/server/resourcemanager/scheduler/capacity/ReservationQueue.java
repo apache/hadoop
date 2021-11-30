@@ -31,17 +31,16 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
-
-  private static final Logger LOG = LoggerFactory
-      .getLogger(ReservationQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReservationQueue.class);
 
   private PlanQueue parent;
 
-  public ReservationQueue(CapacitySchedulerContext cs, String queueName,
+  public ReservationQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       PlanQueue parent) throws IOException {
-    super(cs, queueName, parent, null);
-    super.setupQueueConfigs(cs.getClusterResource(),
-        cs.getConfiguration());
+    super(queueContext, queueName, parent, null);
+    super.setupQueueConfigs(queueContext.getClusterResource(),
+        queueContext.getConfiguration());
 
     LOG.debug("Initialized ReservationQueue: name={}, fullname={}",
         queueName, getQueuePath());

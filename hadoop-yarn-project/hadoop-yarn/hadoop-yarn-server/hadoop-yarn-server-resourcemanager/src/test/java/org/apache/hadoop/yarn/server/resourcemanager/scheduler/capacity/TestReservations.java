@@ -90,6 +90,7 @@ public class TestReservations {
   CapacityScheduler cs;
   // CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
+  CapacitySchedulerQueueContext queueContext;
 
   private final ResourceCalculator resourceCalculator =
       new DefaultResourceCalculator();
@@ -143,7 +144,9 @@ public class TestReservations {
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
 
-    root = CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
+    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+
+    root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
 
     ResourceUsage queueResUsage = root.getQueueResourceUsage();
@@ -1181,23 +1184,23 @@ public class TestReservations {
   public void refreshQueuesTurnOffReservationsContLook(LeafQueue a,
       CapacitySchedulerConfiguration csConf) throws Exception {
     // before reinitialization
-    assertEquals(true, a.getReservationContinueLooking());
+    assertEquals(true, a.isReservationsContinueLooking());
     assertEquals(true,
-        ((ParentQueue) a.getParent()).getReservationContinueLooking());
+        ((ParentQueue) a.getParent()).isReservationsContinueLooking());
 
     csConf.setBoolean(
         CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES, false);
     CSQueueStore newQueues = new CSQueueStore();
-    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);
     queues = newQueues;
     root.reinitialize(newRoot, cs.getClusterResource());
 
     // after reinitialization
-    assertEquals(false, a.getReservationContinueLooking());
+    assertEquals(false, a.isReservationsContinueLooking());
     assertEquals(false,
-        ((ParentQueue) a.getParent()).getReservationContinueLooking());
+        ((ParentQueue) a.getParent()).isReservationsContinueLooking());
   }
 
   @Test
