@@ -1264,13 +1264,14 @@ public class ContainerImpl implements Container {
       }
     }
 
-    static boolean isContainerRecoveredAsKilled(ContainerImpl container)
-    {
+    static boolean isContainerRecoveredAsKilled(ContainerImpl container) {
+      if (!container.recoveredAsKilled) {
+        return false;
+      }
       // container was killed but never launched
-      return container.recoveredAsKilled && (
-          container.recoveredStatus == RecoveredContainerStatus.REQUESTED
-              || container.recoveredStatus
-              == RecoveredContainerStatus.QUEUED);
+      RecoveredContainerStatus containerStatus = container.recoveredStatus;
+      return containerStatus == RecoveredContainerStatus.REQUESTED
+          || containerStatus == RecoveredContainerStatus.QUEUED;
     }
   }
 
