@@ -139,7 +139,7 @@ public class TestCodecFactory {
   private static void checkCodec(String msg, 
                                  Class expected, CompressionCodec actual) {
     if (expected == null) {
-      assertNull(msg + " expected null", actual);
+      assertNull(msg, actual);
     } else if (actual == null) {
       fail(msg + " result was null");
     } else {
