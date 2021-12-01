@@ -523,7 +523,7 @@
         "numApplications": 0,
         "maxParallelApps": 2147483647,
         "queueName": "queue1",
-        "isAbsoluteResource": false,
+        "isAbsoluteResource": true,
         "state": "RUNNING",
         "resourcesUsed": {
           "memory": 0,
