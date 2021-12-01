@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.*;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -174,5 +176,34 @@ public class TestAppSchedulingInfo {
     reqs.add(req1);
     info.updateResourceRequests(reqs, false);
     Assert.assertEquals(0, info.getSchedulerKeys().size());
+  }
+
+  @Test
+  public void testApplicationPlacementType() {
+    String DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS =
+        "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement."
+            + "LocalityAppPlacementAllocator";
+    Configuration conf = new Configuration();
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    ApplicationId appIdImpl = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appIdImpl, 1);
+    Queue queue = mock(Queue.class);
+    AppSchedulingInfo info = new AppSchedulingInfo(appAttemptId, "test", queue,
+        mock(ActiveUsersManager.class), 0, new ResourceUsage(), new HashMap<>(),
+        rmContext, false);
+    Assert.assertEquals(info.getApplicationSchedulingEnvs(), new HashMap<>());
+    // This should return null as nothing is set in the conf.
+    Assert.assertNull(info.getDefaultResourceRequestAppPlacementType());
+    conf = new Configuration();
+    conf.set(YarnConfiguration.ENV_APPLICATION_PLACEMENT_TYPE_CLASS_DEFAULT,
+        DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+    info = new AppSchedulingInfo(appAttemptId, "test", queue,
+        mock(ActiveUsersManager.class), 0, new ResourceUsage(), new HashMap<>(),
+        rmContext, false);
+    Assert.assertEquals(info.getDefaultResourceRequestAppPlacementType(),
+        DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS);
   }
 }
