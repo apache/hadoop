@@ -78,25 +78,25 @@ public class FilePosition {
   /**
    * Associates a buffer with this file.
    *
-   * @param data the buffer associated with this file.
-   * @param bufferStartOffset Start offset of the buffer relative to the start of a file.
-   * @param readStartOffset Offset where reading starts relative to the start of a file.
+   * @param bufferData the buffer associated with this file.
+   * @param startOffset Start offset of the buffer relative to the start of a file.
+   * @param readOffset Offset where reading starts relative to the start of a file.
    */
-  public void setData(BufferData data, long bufferStartOffset, long readStartOffset) {
-    Validate.checkNotNull(data, "data");
-    Validate.checkNotNegative(bufferStartOffset, "bufferStartOffset");
-    Validate.checkNotNegative(readStartOffset, "readStartOffset");
+  public void setData(BufferData bufferData, long startOffset, long readOffset) {
+    Validate.checkNotNull(bufferData, "bufferData");
+    Validate.checkNotNegative(startOffset, "startOffset");
+    Validate.checkNotNegative(readOffset, "readOffset");
     Validate.checkWithinRange(
-        readStartOffset,
-        "readStartOffset",
-        bufferStartOffset,
-        bufferStartOffset + data.getBuffer().limit() - 1);
+        readOffset,
+        "readOffset",
+        startOffset,
+        startOffset + bufferData.getBuffer().limit() - 1);
 
-    this.data = data;
-    this.buffer = data.getBuffer().duplicate();
-    this.bufferStartOffset = bufferStartOffset;
-    this.readStartOffset = readStartOffset;
-    this.setAbsolute(readStartOffset);
+    this.data = bufferData;
+    this.buffer = bufferData.getBuffer().duplicate();
+    this.bufferStartOffset = startOffset;
+    this.readStartOffset = readOffset;
+    this.setAbsolute(readOffset);
 
     this.resetReadStats();
   }

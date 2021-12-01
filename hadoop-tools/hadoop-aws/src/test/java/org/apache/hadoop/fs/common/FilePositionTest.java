@@ -91,32 +91,32 @@ public class FilePositionTest {
     // Verify that we cannot set invalid buffer parameters.
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'data' must not be null",
+        "'bufferData' must not be null",
         () -> pos.setData(null, 4, 4));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'bufferStartOffset' must not be negative",
+        "'startOffset' must not be negative",
         () -> pos.setData(data, -4, 4));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'readStartOffset' must not be negative",
+        "'readOffset' must not be negative",
         () -> pos.setData(data, 4, -4));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'readStartOffset' must not be negative",
+        "'readOffset' must not be negative",
         () -> pos.setData(data, 4, -4));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'readStartOffset' (15) must be within the range [4, 13]",
+        "'readOffset' (15) must be within the range [4, 13]",
         () -> pos.setData(data, 4, 15));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'readStartOffset' (3) must be within the range [4, 13]",
+        "'readOffset' (3) must be within the range [4, 13]",
         () -> pos.setData(data, 4, 3));
   }
 

@@ -72,7 +72,7 @@ public class BufferData {
   private volatile State state;
 
   // Future of the action being performed on this block (eg, prefetching or caching).
-  private Future<Void> actionFuture;
+  private Future<Void> action;
 
   // Checksum of the buffer contents once in READY state.
   private long checksum = 0;
@@ -123,7 +123,7 @@ public class BufferData {
   }
 
   public synchronized Future<Void> getActionFuture() {
-    return this.actionFuture;
+    return this.action;
   }
 
   /**
@@ -135,7 +135,7 @@ public class BufferData {
     Validate.checkNotNull(actionFuture, "actionFuture");
 
     this.updateState(State.PREFETCHING, State.BLANK);
-    this.actionFuture = actionFuture;
+    this.action = actionFuture;
   }
 
   /**
@@ -148,7 +148,7 @@ public class BufferData {
 
     this.throwIfStateIncorrect(State.PREFETCHING, State.READY);
     this.state = State.CACHING;
-    this.actionFuture = actionFuture;
+    this.action = actionFuture;
   }
 
   /**
@@ -178,7 +178,7 @@ public class BufferData {
       }
     }
     this.state = State.DONE;
-    this.actionFuture = null;
+    this.action = null;
   }
 
   /**
@@ -242,14 +242,14 @@ public class BufferData {
         this.state,
         this.getBufferStr(this.buffer),
         this.checksum,
-        this.getFutureStr(this.actionFuture));
+        this.getFutureStr(this.action));
   }
 
   private String getFutureStr(Future<Void> f) {
     if (f == null) {
       return "--";
     } else {
-      return this.actionFuture.isReady(CAN_AWAIT) ? "done" : "not done";
+      return this.action.isReady(CAN_AWAIT) ? "done" : "not done";
     }
   }
 

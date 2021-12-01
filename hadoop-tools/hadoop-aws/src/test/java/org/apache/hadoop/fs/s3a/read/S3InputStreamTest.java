@@ -34,9 +34,8 @@ import java.util.concurrent.Executors;
  */
 public class S3InputStreamTest {
 
-  private final int bufferSize = 2;
-  private final int queueSize = 1;
-  private final int fileSize = 10;
+  private static final int FILE_SIZE = 10;
+
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
   private final FuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
   private final AmazonS3 client = TestS3File.createClient("bucket");
@@ -65,11 +64,11 @@ public class S3InputStreamTest {
   @Test
   public void testRead() throws Exception {
     S3InputStream inputStream =
-        new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", fileSize, client);
-    testReadHelper(inputStream, fileSize);
+        new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", FILE_SIZE, client);
+    testReadHelper(inputStream, FILE_SIZE);
 
     inputStream =
-        new Fakes.TestS3CachingInputStream(futurePool, 5, 2, "bucket", "key", fileSize, client);
+        new Fakes.TestS3CachingInputStream(futurePool, 5, 2, "bucket", "key", FILE_SIZE, client);
     testReadHelper(inputStream, 5);
   }
 
@@ -87,7 +86,7 @@ public class S3InputStreamTest {
 
     buffer = new byte[10];
     int curPos = (int) inputStream.getPos();
-    int expectedRemainingBytes = (int) (fileSize - curPos);
+    int expectedRemainingBytes = (int) (FILE_SIZE - curPos);
     int readStartOffset = 2;
     assertEquals(
         expectedRemainingBytes,

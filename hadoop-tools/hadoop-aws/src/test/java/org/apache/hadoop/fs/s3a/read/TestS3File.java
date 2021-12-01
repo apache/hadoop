@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 class TestS3File extends S3File {
-  private int size;
   private byte[] contents;
 
   // If true, throws IOException on open request just once.
@@ -44,17 +43,11 @@ class TestS3File extends S3File {
   TestS3File(int size, boolean throwExceptionOnOpen) {
     super(createClient("bucket"), "bucket", "key", size);
 
-    this.size = size;
     this.throwExceptionOnOpen = throwExceptionOnOpen;
     this.contents = new byte[size];
     for (int b = 0; b < size; b++) {
       this.contents[b] = byteAtOffset(b);
     }
-  }
-
-  @Override
-  public long size() throws IOException {
-    return this.size;
   }
 
   @Override

@@ -45,7 +45,7 @@ public class S3File implements Closeable {
   private final String key;
 
   // Size of S3 file.
-  private long size;
+  private long fileSize;
 
   // Maps a stream returned by openForRead() to the associated S3 object.
   // That allows us to close the object when closing the stream.
@@ -80,7 +80,7 @@ public class S3File implements Closeable {
     this.client = client;
     this.bucket = bucket;
     this.key = key;
-    this.size = size;
+    this.fileSize = size;
     this.s3Objects = new IdentityHashMap<InputStream, S3Object>();
   }
 
@@ -96,10 +96,10 @@ public class S3File implements Closeable {
    * @throws IOException if there is an error obtaining file size.
    */
   public long size() throws IOException {
-    if (size < 0) {
-      size = client.getObjectMetadata(bucket, key).getContentLength();
+    if (this.fileSize < 0) {
+      this.fileSize = client.getObjectMetadata(bucket, key).getContentLength();
     }
-    return size;
+    return this.fileSize;
   }
 
   /**

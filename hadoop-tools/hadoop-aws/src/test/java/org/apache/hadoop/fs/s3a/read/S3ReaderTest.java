@@ -84,8 +84,7 @@ public class S3ReaderTest {
       throws Exception {
     int numBlocks = 0;
     ByteBuffer buffer;
-    TestS3File s3File = new TestS3File(FILE_SIZE, testWithRetry);
-    S3Reader reader = new S3Reader(s3File);
+    S3Reader reader = new S3Reader(new TestS3File(FILE_SIZE, testWithRetry));
     int remainingSize = FILE_SIZE - (int) startOffset;
     for (int bufferSize = 0; bufferSize <= FILE_SIZE + 1; bufferSize++) {
       buffer = ByteBuffer.allocate(bufferSize);
