@@ -39,14 +39,14 @@ public abstract class CachingBlockManager extends BlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(CachingBlockManager.class);
 
   // Asynchronous tasks are performed in this pool.
-  protected FuturePool futurePool;
+  private FuturePool futurePool;
 
   // Pool of shared ByteBuffer instances.
-  protected BufferPool bufferPool;
+  private BufferPool bufferPool;
 
   // Size of the in-memory cache in terms of number of blocks.
   // Total memory consumption is up to bufferPoolSize * blockSize.
-  protected int bufferPoolSize;
+  private int bufferPoolSize;
 
   // Local block cache.
   private BlockCache cache;
@@ -89,8 +89,8 @@ public abstract class CachingBlockManager extends BlockManager {
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
 
-    if (this.blockData.fileSize > 0) {
-      this.bufferPool = new BufferPool(bufferPoolSize, this.blockData.blockSize);
+    if (this.getBlockData().getFileSize() > 0) {
+      this.bufferPool = new BufferPool(bufferPoolSize, this.getBlockData().getBlockSize());
       this.cache = this.createCache();
     }
 
@@ -154,7 +154,7 @@ public abstract class CachingBlockManager extends BlockManager {
         return false;
       }
 
-      int blockNumber = data.blockNumber;
+      int blockNumber = data.getBlockNumber();
       if (data.getState() == BufferData.State.READY) {
         BlockOperations.Operation op = this.ops.getPrefetched(blockNumber);
         this.ops.end(op);
@@ -178,7 +178,7 @@ public abstract class CachingBlockManager extends BlockManager {
 
     Validate.checkNotNull(data, "data");
 
-    BlockOperations.Operation op = this.ops.release(data.blockNumber);
+    BlockOperations.Operation op = this.ops.release(data.getBlockNumber());
     this.bufferPool.release(data);
     this.ops.end(op);
   }
@@ -295,7 +295,7 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         data.throwIfStateIncorrect(expectedState);
-        int blockNumber = data.blockNumber;
+        int blockNumber = data.getBlockNumber();
 
         // Prefer reading from cache over reading from network.
         if (this.cache.containsBlock(blockNumber)) {
@@ -306,20 +306,20 @@ public abstract class CachingBlockManager extends BlockManager {
         }
 
         if (isPrefetch) {
-          op = this.ops.prefetch(data.blockNumber);
+          op = this.ops.prefetch(data.getBlockNumber());
         } else {
-          op = this.ops.getRead(data.blockNumber);
+          op = this.ops.getRead(data.getBlockNumber());
         }
 
-        long offset = this.blockData.getStartOffset(data.blockNumber);
-        int size = this.blockData.getSize(data.blockNumber);
+        long offset = this.getBlockData().getStartOffset(data.getBlockNumber());
+        int size = this.getBlockData().getSize(data.getBlockNumber());
         ByteBuffer buffer = data.getBuffer();
         buffer.clear();
         this.read(buffer, offset, size);
         buffer.flip();
         data.setReady(expectedState);
       } catch (Exception e) {
-        String message = String.format("error during readBlock(%s)", data.blockNumber);
+        String message = String.format("error during readBlock(%s)", data.getBlockNumber());
         LOG.error(message, e);
         this.numReadErrors.incrementAndGet();
         data.setDone();
@@ -389,14 +389,14 @@ public abstract class CachingBlockManager extends BlockManager {
         return;
       }
 
-      if (this.cache.containsBlock(data.blockNumber)) {
+      if (this.cache.containsBlock(data.getBlockNumber())) {
         data.setDone();
         return;
       }
 
       BufferData.State state = data.getState();
 
-      BlockOperations.Operation op = this.ops.requestCaching(data.blockNumber);
+      BlockOperations.Operation op = this.ops.requestCaching(data.getBlockNumber());
       Future<Void> blockFuture;
       if (state == BufferData.State.PREFETCHING) {
         blockFuture = data.getActionFuture();
@@ -447,15 +447,15 @@ public abstract class CachingBlockManager extends BlockManager {
           return;
         }
 
-        if (this.cache.containsBlock(data.blockNumber)) {
+        if (this.cache.containsBlock(data.getBlockNumber())) {
           data.setDone();
           return;
         }
 
-        op = this.ops.addToCache(data.blockNumber);
+        op = this.ops.addToCache(data.getBlockNumber());
         ByteBuffer buffer = data.getBuffer().duplicate();
         buffer.rewind();
-        this.cachePut(data.blockNumber, buffer);
+        this.cachePut(data.getBlockNumber(), buffer);
         data.setDone();
       } catch (Exception e) {
         this.numCachingErrors.incrementAndGet();

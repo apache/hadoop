@@ -51,9 +51,9 @@ public class FilePosition {
   private long readStartOffset;
 
   // Read stats after a seek (mostly for debugging use).
-  protected int numSingleByteReads;
-  protected int numBytesRead;
-  protected int numBufferReads;
+  private int numSingleByteReads;
+  private int numBytesRead;
+  private int numBufferReads;
 
   /**
    * Constructs an instance of {@link FilePosition}.

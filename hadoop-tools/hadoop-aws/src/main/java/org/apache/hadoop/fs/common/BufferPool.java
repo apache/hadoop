@@ -182,7 +182,7 @@ public class BufferPool implements Closeable {
   }
 
   private int distance(BufferData data, int blockNumber) {
-    return Math.abs(data.blockNumber - blockNumber);
+    return Math.abs(data.getBlockNumber() - blockNumber);
   }
 
   /**
@@ -234,7 +234,7 @@ public class BufferPool implements Closeable {
     sb.append(this.pool.toString());
     sb.append("\n");
     List<BufferData> allData = new ArrayList<>(this.getAll());
-    Collections.sort(allData, (d1, d2) -> d1.blockNumber - d2.blockNumber);
+    Collections.sort(allData, (d1, d2) -> d1.getBlockNumber() - d2.getBlockNumber());
     for (BufferData data : allData) {
       sb.append(data.toString());
       sb.append("\n");
@@ -259,7 +259,8 @@ public class BufferPool implements Closeable {
   private BufferData find(int blockNumber) {
     synchronized (this.allocated) {
       for (BufferData data : this.allocated.keySet()) {
-        if ((data.blockNumber == blockNumber) && !data.stateEqualsOneOf(BufferData.State.DONE)) {
+        if ((data.getBlockNumber() == blockNumber)
+            && !data.stateEqualsOneOf(BufferData.State.DONE)) {
           return data;
         }
       }

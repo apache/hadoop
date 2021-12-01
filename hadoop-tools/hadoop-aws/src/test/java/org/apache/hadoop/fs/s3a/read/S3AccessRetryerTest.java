@@ -24,8 +24,6 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Test;
 

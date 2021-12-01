@@ -61,10 +61,10 @@ public class SingleFilePerBlockCache implements BlockCache {
   // Cache entry.
   // Each block is stored as a separate file.
   private static class Entry {
-    public final int blockNumber;
-    public final Path path;
-    public final int size;
-    public final long checksum;
+    private final int blockNumber;
+    private final Path path;
+    private final int size;
+    private final long checksum;
 
     Entry(int blockNumber, Path path, int size, long checksum) {
       this.blockNumber = blockNumber;

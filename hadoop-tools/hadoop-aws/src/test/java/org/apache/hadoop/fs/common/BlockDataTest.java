@@ -106,14 +106,14 @@ public class BlockDataTest {
       return;
     }
 
-    assertEquals(fileSize, bd.fileSize);
-    assertEquals(blockSize, bd.blockSize);
+    assertEquals(fileSize, bd.getFileSize());
+    assertEquals(blockSize, bd.getBlockSize());
 
     int expectedNumBlocks = (int) (fileSize / blockSize);
     if (fileSize % blockSize > 0) {
       expectedNumBlocks++;
     }
-    assertEquals(expectedNumBlocks, bd.numBlocks);
+    assertEquals(expectedNumBlocks, bd.getNumBlocks());
 
     int lastBlockNumber = expectedNumBlocks - 1;
     for (int b = 0; b < lastBlockNumber; b++) {

@@ -32,7 +32,7 @@ import java.nio.ByteBuffer;
 public abstract class BlockManager implements Closeable {
 
   // Information about each block of the underlying file.
-  protected BlockData blockData;
+  private BlockData blockData;
 
   /**
    * Constructs an instance of {@code BlockManager}.
@@ -43,6 +43,15 @@ public abstract class BlockManager implements Closeable {
     Validate.checkNotNull(blockData, "blockData");
 
     this.blockData = blockData;
+  }
+
+  /**
+   * Gets block data information.
+   *
+   * @return instance of {@code BlockData}.
+   */
+  public BlockData getBlockData() {
+    return this.blockData;
   }
 
   /**

@@ -36,7 +36,7 @@ import java.nio.ByteBuffer;
 public class S3CachingBlockManager extends CachingBlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(S3CachingBlockManager.class);
 
-  protected S3Reader reader;
+  private S3Reader reader;
 
   /**
    * Constructs an instance of a {@code S3CachingBlockManager}.
@@ -56,6 +56,10 @@ public class S3CachingBlockManager extends CachingBlockManager {
     Validate.checkNotNull(reader, "reader");
 
     this.reader = reader;
+  }
+
+  protected S3Reader getReader() {
+    return this.reader;
   }
 
   /**

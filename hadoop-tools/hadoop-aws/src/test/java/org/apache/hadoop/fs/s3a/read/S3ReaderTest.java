@@ -23,16 +23,15 @@ import static org.junit.Assert.*;
 
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 
-import com.amazonaws.services.s3.AmazonS3Client;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
 public class S3ReaderTest {
 
-  private final int FILE_SIZE = 9;
-  private final int BUFFER_SIZE = 2;
-  private S3File s3File = new TestS3File(FILE_SIZE, false);
+  private static final int FILE_SIZE = 9;
+  private static final int BUFFER_SIZE = 2;
+  private final S3File s3File = new TestS3File(FILE_SIZE, false);
 
   @Test
   public void testArgChecks() {

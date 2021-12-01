@@ -29,12 +29,16 @@ import java.io.IOException;
 public class IoTest {
 
   private static class TestResource implements Closeable {
-    public boolean isOpen = true;
+    private boolean isOpen = true;
 
     @Override
     public void close() throws IOException {
-      isOpen = false;
+      this.isOpen = false;
       throw new IOException("foo");
+    }
+
+    public boolean isOpen() {
+      return this.isOpen;
     }
   }
 
@@ -49,8 +53,8 @@ public class IoTest {
 
     // Should not throw.
     TestResource resource = new TestResource();
-    assertTrue(resource.isOpen);
+    assertTrue(resource.isOpen());
     Io.closeIgnoringIoException(resource);
-    assertTrue(!resource.isOpen);
+    assertTrue(!resource.isOpen());
   }
 }

@@ -55,10 +55,10 @@ public class S3CachingInputStream extends S3InputStream {
     super(futurePool, bufferSize, bucket, key, fileSize, client);
 
     this.numBlocksToPrefetch = numBlocksToPrefetch;
-    S3Reader reader = new S3Reader(this.s3File);
+    S3Reader reader = new S3Reader(this.getFile());
     int bufferPoolSize = numBlocksToPrefetch + 1;
     this.blockManager =
-        this.createBlockManager(futurePool, reader, this.blockData, bufferPoolSize);
+        this.createBlockManager(futurePool, reader, this.getBlockData(), bufferPoolSize);
     LOG.debug("Created caching input stream for {}/{} (size = {})", bucket, key, fileSize);
   }
 
@@ -67,73 +67,72 @@ public class S3CachingInputStream extends S3InputStream {
    */
   @Override
   public void seek(long pos) throws IOException {
-    Validate.checkWithinRange(pos, "pos", 0, this.s3File.size());
+    Validate.checkWithinRange(pos, "pos", 0, this.getFile().size());
 
-    if (!this.fpos.setAbsolute(pos)) {
+    if (!this.getFilePosition().setAbsolute(pos)) {
       LOG.info("seek({})", getOffsetStr(pos));
-      if (this.fpos.isValid()) {
-        if (!this.fpos.bufferFullyRead()) {
-          this.blockManager.requestCaching(fpos.data());
+      if (this.getFilePosition().isValid()) {
+        if (!this.getFilePosition().bufferFullyRead()) {
+          this.blockManager.requestCaching(this.getFilePosition().data());
         } else {
-          this.blockManager.release(fpos.data());
+          this.blockManager.release(this.getFilePosition().data());
         }
-        this.fpos.invalidate();
+        this.getFilePosition().invalidate();
         this.blockManager.cancelPrefetches();
       }
-      this.seekTargetPos = pos;
+      this.setSeekTargetPos(pos);
     }
   }
 
   @Override
   public void close() throws IOException {
     super.close();
-    this.blockData = null;
     this.blockManager.close();
-    LOG.info("closed: {}", this.name);
+    LOG.info("closed: {}", this.getName());
   }
 
   @Override
   protected boolean ensureCurrentBuffer() {
-    if (this.closed) {
+    if (this.isClosed()) {
       return false;
     }
 
-    if (this.fpos.isValid() && this.fpos.buffer().hasRemaining()) {
+    if (this.getFilePosition().isValid() && this.getFilePosition().buffer().hasRemaining()) {
       return true;
     }
 
     long readPos;
     int prefetchCount;
 
-    if (this.fpos.isValid()) {
+    if (this.getFilePosition().isValid()) {
       // A sequential read results in a prefetch.
-      readPos = this.fpos.absolute();
+      readPos = this.getFilePosition().absolute();
       prefetchCount = this.numBlocksToPrefetch;
     } else {
       // A seek invalidates the current position.
       // We prefetch only 1 block immediately after a seek operation.
-      readPos = this.seekTargetPos;
+      readPos = this.getSeekTargetPos();
       prefetchCount = 1;
     }
 
-    if (!this.blockData.isValidOffset(readPos)) {
+    if (!this.getBlockData().isValidOffset(readPos)) {
       return false;
     }
 
-    if (this.fpos.isValid()) {
-      if (this.fpos.bufferFullyRead()) {
-        this.blockManager.release(this.fpos.data());
+    if (this.getFilePosition().isValid()) {
+      if (this.getFilePosition().bufferFullyRead()) {
+        this.blockManager.release(this.getFilePosition().data());
       } else {
-        this.blockManager.requestCaching(this.fpos.data());
+        this.blockManager.requestCaching(this.getFilePosition().data());
       }
     }
 
-    int toBlockNumber = this.blockData.getBlockNumber(readPos);
-    long startOffset = this.blockData.getStartOffset(toBlockNumber);
+    int toBlockNumber = this.getBlockData().getBlockNumber(readPos);
+    long startOffset = this.getBlockData().getStartOffset(toBlockNumber);
 
     for (int i = 1; i <= prefetchCount; i++) {
       int b = toBlockNumber + i;
-      if (b < this.blockData.numBlocks) {
+      if (b < this.getBlockData().getNumBlocks()) {
         this.blockManager.requestPrefetch(b);
       }
     }
@@ -142,7 +141,7 @@ public class S3CachingInputStream extends S3InputStream {
 
     try {
       data = this.blockManager.get(toBlockNumber);
-      this.fpos.setData(data, startOffset, readPos);
+      this.getFilePosition().setData(data, startOffset, readPos);
       return true;
     } catch (Exception e) {
       LOG.error("prefetchCount = {}", prefetchCount);
@@ -154,12 +153,12 @@ public class S3CachingInputStream extends S3InputStream {
 
   @Override
   public String toString() {
-    if (this.closed) {
+    if (this.isClosed()) {
       return "closed";
     }
 
     StringBuilder sb = new StringBuilder();
-    sb.append(String.format("fpos = (%s)%n", this.fpos));
+    sb.append(String.format("fpos = (%s)%n", this.getFilePosition()));
     sb.append(this.blockManager.toString());
     return sb.toString();
   }

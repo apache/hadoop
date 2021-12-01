@@ -20,7 +20,6 @@
 package org.apache.hadoop.fs.s3a.read;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.MockS3ClientFactory;
 
@@ -38,11 +37,11 @@ class TestS3File extends S3File {
   // That allows test code to validate behavior related to retries.
   private boolean throwExceptionOnOpen;
 
-  public TestS3File(int size) {
+  TestS3File(int size) {
     this(size, false);
   }
 
-  public TestS3File(int size, boolean throwExceptionOnOpen) {
+  TestS3File(int size, boolean throwExceptionOnOpen) {
     super(createClient("bucket"), "bucket", "key", size);
 
     this.size = size;

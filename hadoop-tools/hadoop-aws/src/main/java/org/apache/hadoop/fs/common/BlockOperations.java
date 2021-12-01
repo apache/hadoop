@@ -75,14 +75,26 @@ public class BlockOperations {
   }
 
   public static class Operation {
-    public final Kind kind;
-    public final int blockNumber;
-    public final long timestamp;
+    private final Kind kind;
+    private final int blockNumber;
+    private final long timestamp;
 
     public Operation(Kind kind, int blockNumber) {
       this.kind = kind;
       this.blockNumber = blockNumber;
       this.timestamp = System.nanoTime();
+    }
+
+    public Kind getKind() {
+      return this.kind;
+    }
+
+    public int getBlockNumber() {
+      return this.blockNumber;
+    }
+
+    public long getTimestamp() {
+      return this.timestamp;
     }
 
     public void getSummary(StringBuilder sb) {
@@ -122,7 +134,7 @@ public class BlockOperations {
     }
 
     public double duration() {
-      return (this.timestamp - this.op.timestamp) / 1e9;
+      return (this.getTimestamp() - this.op.getTimestamp()) / 1e9;
     }
   }
 
@@ -234,10 +246,10 @@ public class BlockOperations {
     for (Operation op : this.ops) {
       if (op instanceof End) {
         End endOp = (End) op;
-        DoubleSummaryStatistics stats = durations.get(endOp.kind);
+        DoubleSummaryStatistics stats = durations.get(endOp.getKind());
         if (stats == null) {
           stats = new DoubleSummaryStatistics();
-          durations.put(endOp.kind, stats);
+          durations.put(endOp.getKind(), stats);
         }
         stats.accept(endOp.duration());
       }

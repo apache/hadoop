@@ -138,7 +138,7 @@ public class BufferPoolTest {
     BufferData data = pool.acquire(blockNumber);
     assertNotNull(data);
     assertSame(data, pool.acquire(blockNumber));
-    assertEquals(blockNumber, data.blockNumber);
+    assertEquals(blockNumber, data.getBlockNumber());
     return data;
   }
 

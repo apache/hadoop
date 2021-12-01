@@ -42,13 +42,13 @@ public class BlockData {
   private State[] state;
 
   // The size of an S3 file.
-  public final long fileSize;
+  private final long fileSize;
 
   // The S3 file is divided into blocks of this size.
-  public final int blockSize;
+  private final int blockSize;
 
   // The S3 file has these many blocks.
-  public final int numBlocks;
+  private final int numBlocks;
 
   /**
    * Constructs an instance of {@link BlockData}.
@@ -72,6 +72,18 @@ public class BlockData {
     for (int b = 0; b < this.numBlocks; b++) {
       this.setState(b, State.NOT_READY);
     }
+  }
+
+  public int getBlockSize() {
+    return this.blockSize;
+  }
+
+  public long getFileSize() {
+    return this.fileSize;
+  }
+
+  public int getNumBlocks() {
+    return this.numBlocks;
   }
 
   public boolean isLastBlock(int blockNumber) {

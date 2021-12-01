@@ -31,13 +31,13 @@ import java.util.concurrent.ArrayBlockingQueue;
  */
 public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
   // The size of this pool. Fixed at creation time.
-  protected final int size;
+  private final int size;
 
   // Items currently available in the pool.
-  protected ArrayBlockingQueue<T> items;
+  private ArrayBlockingQueue<T> items;
 
   // Items that have been created so far (regardless of whether they are currently available).
-  protected Set<T> createdItems;
+  private Set<T> createdItems;
 
   /**
    * Constructs a resource pool of the given size.

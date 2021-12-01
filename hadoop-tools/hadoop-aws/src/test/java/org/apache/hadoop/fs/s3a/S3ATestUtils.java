@@ -1431,7 +1431,7 @@ public final class S3ATestUtils {
    */
   public static void setMetadataStore(S3AFileSystem fs, MetadataStore ms) {
     fs.setMetadataStore(ms);
-}
+  }
 
   public static void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
       throws IOException {

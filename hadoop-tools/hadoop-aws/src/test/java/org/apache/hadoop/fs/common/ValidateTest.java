@@ -121,11 +121,11 @@ public class ValidateTest {
   @Test
   public void testCheckNotNullAndNotEmpty() {
     // Should not throw.
-    Validate.checkNotNullAndNotEmpty(TestData.nonEmptyArray, "array");
-    Validate.checkNotNullAndNotEmpty(TestData.nonEmptyByteArray, "array");
-    Validate.checkNotNullAndNotEmpty(TestData.nonEmptyShortArray, "array");
-    Validate.checkNotNullAndNotEmpty(TestData.nonEmptyIntArray, "array");
-    Validate.checkNotNullAndNotEmpty(TestData.nonEmptyLongArray, "array");
+    Validate.checkNotNullAndNotEmpty(TestData.NON_EMPTY_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(TestData.NON_EMPTY_BYTE_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(TestData.NON_EMPTY_SHORT_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(TestData.NON_EMPTY_INT_ARRAY, "array");
+    Validate.checkNotNullAndNotEmpty(TestData.NON_EMPTY_LONG_ARRAY, "array");
 
     // Verify it throws.
     ExceptionAsserts.assertThrows(
@@ -136,69 +136,69 @@ public class ValidateTest {
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.nullArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.NULL_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.emptyArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.EMPTY_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.nullByteArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.NULL_BYTE_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.emptyByteArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.EMPTY_BYTE_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.nullShortArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.NULL_SHORT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.emptyShortArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.EMPTY_SHORT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.nullIntArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.NULL_INT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.emptyIntArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.EMPTY_INT_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.nullLongArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.NULL_LONG_ARRAY, "array"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'array' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.emptyLongArray, "array"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.EMPTY_LONG_ARRAY, "array"));
   }
 
   @Test
   public void testCheckListNotNullAndNotEmpty() {
     // Should not throw.
-    Validate.checkNotNullAndNotEmpty(TestData.validList, "list");
+    Validate.checkNotNullAndNotEmpty(TestData.VALID_LIST, "list");
 
     // Verify it throws.
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'list' must not be null",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.nullList, "list"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.NULL_LIST, "list"));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'list' must have at least one element",
-        () -> Validate.checkNotNullAndNotEmpty(TestData.emptyList, "list"));
+        () -> Validate.checkNotNullAndNotEmpty(TestData.EMPTY_LIST, "list"));
   }
 
   @Test

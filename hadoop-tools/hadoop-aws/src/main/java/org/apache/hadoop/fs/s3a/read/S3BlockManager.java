@@ -35,7 +35,7 @@ import java.nio.ByteBuffer;
 public class S3BlockManager extends BlockManager {
 
   // Reader that reads from S3 file.
-  protected S3Reader reader;
+  private S3Reader reader;
 
   /**
    * Constructs an instance of {@code S3BlockManager}.

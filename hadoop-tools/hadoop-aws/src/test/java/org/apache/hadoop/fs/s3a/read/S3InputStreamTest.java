@@ -21,13 +21,9 @@ package org.apache.hadoop.fs.s3a.read;
 
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.fs.common.ExceptionAsserts;
-
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.twitter.util.ExecutorServiceFuturePool;
 import com.twitter.util.FuturePool;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -55,7 +51,8 @@ public class S3InputStreamTest {
     testRead0SizedFileHelper(inputStream, 5);
   }
 
-  private void testRead0SizedFileHelper(S3InputStream inputStream, int bufferSize) throws Exception {
+  private void testRead0SizedFileHelper(S3InputStream inputStream, int bufferSize)
+      throws Exception {
     assertEquals(0, inputStream.available());
     assertEquals(-1, inputStream.read());
     assertEquals(-1, inputStream.read());
@@ -71,7 +68,8 @@ public class S3InputStreamTest {
         new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", fileSize, client);
     testReadHelper(inputStream, fileSize);
 
-    inputStream = new Fakes.TestS3CachingInputStream(futurePool, 5, 2, "bucket", "key", fileSize, client);
+    inputStream =
+        new Fakes.TestS3CachingInputStream(futurePool, 5, 2, "bucket", "key", fileSize, client);
     testReadHelper(inputStream, 5);
   }
 

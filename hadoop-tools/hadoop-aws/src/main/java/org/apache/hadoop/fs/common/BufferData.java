@@ -63,7 +63,7 @@ public class BufferData {
   }
 
   // Number of the block associated with this buffer.
-  public final int blockNumber;
+  private final int blockNumber;
 
   // The buffer associated with this block.
   private ByteBuffer buffer;
@@ -90,6 +90,10 @@ public class BufferData {
     this.blockNumber = blockNumber;
     this.buffer = buffer;
     this.state = State.BLANK;
+  }
+
+  public int getBlockNumber() {
+    return this.blockNumber;
   }
 
   public ByteBuffer getBuffer() {

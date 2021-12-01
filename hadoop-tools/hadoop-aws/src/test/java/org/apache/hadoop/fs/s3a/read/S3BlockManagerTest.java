@@ -32,10 +32,11 @@ import java.nio.ByteBuffer;
 
 public class S3BlockManagerTest {
 
+  static final int FILE_SIZE = 12;
+  static final int BLOCK_SIZE = 3;
+
   @Test
   public void testArgChecks() {
-    final int FILE_SIZE = 12;
-    final int BLOCK_SIZE = 3;
     BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
     TestS3File s3File = new TestS3File(FILE_SIZE, false);
     S3Reader reader = new S3Reader(s3File);
@@ -67,14 +68,12 @@ public class S3BlockManagerTest {
 
   @Test
   public void testGet() throws IOException {
-    final int FILE_SIZE = 12;
-    final int BLOCK_SIZE = 3;
     BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
     TestS3File s3File = new TestS3File(FILE_SIZE, false);
     S3Reader reader = new S3Reader(s3File);
     S3BlockManager blockManager = new S3BlockManager(reader, blockData);
 
-    for (int b = 0; b < blockData.numBlocks; b++) {
+    for (int b = 0; b < blockData.getNumBlocks(); b++) {
       BufferData data = blockManager.get(b);
       ByteBuffer buffer = data.getBuffer();
       long startOffset = blockData.getStartOffset(b);

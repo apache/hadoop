@@ -39,28 +39,28 @@ public abstract class S3InputStream extends InputStream {
   private static final Logger LOG = LoggerFactory.getLogger(S3InputStream.class);
 
   // Asynchronous reads are performed using this pool.
-  protected FuturePool futurePool;
+  private FuturePool futurePool;
 
   // Size of the internal buffer.
-  protected int bufferSize;
+  private int bufferSize;
 
   // The S3 file read by this instance.
-  protected S3File s3File;
+  private S3File s3File;
 
   // Name of this stream. Used only for logging.
-  protected final String name;
+  private final String name;
 
   // Indicates whether the stream has been closed.
-  protected volatile boolean closed;
+  private volatile boolean closed;
 
   // Current position within the file.
-  protected FilePosition fpos;
+  private FilePosition fpos;
 
   // The target of the most recent seek operation.
-  protected long seekTargetPos;
+  private long seekTargetPos;
 
   // Information about each block of the mapped S3 file.
-  protected BlockData blockData;
+  private BlockData blockData;
 
   public S3InputStream(
       FuturePool futurePool,
@@ -91,8 +91,32 @@ public abstract class S3InputStream extends InputStream {
     LOG.info("reading: {} (size = {})", this.name, fileSize);
   }
 
+  public S3File getFile() {
+    return this.s3File;
+  }
+
+  public FilePosition getFilePosition() {
+    return this.fpos;
+  }
+
   public String getName() {
     return this.name;
+  }
+
+  public boolean isClosed() {
+    return this.closed;
+  }
+
+  protected long getSeekTargetPos() {
+    return this.seekTargetPos;
+  }
+
+  protected void setSeekTargetPos(long pos) {
+    this.seekTargetPos = pos;
+  }
+
+  protected BlockData getBlockData() {
+    return this.blockData;
   }
 
   /**

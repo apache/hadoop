@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.common.Validate;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.twitter.util.FuturePool;
 
 import java.io.IOException;
@@ -108,11 +107,11 @@ public class Fakes {
     }
   }
 
-  private static final Random random = new Random();
+  private static final Random RANDOM = new Random();
 
   private static void randomDelay(int delay) {
     try {
-      Thread.sleep(random.nextInt(delay));
+      Thread.sleep(RANDOM.nextInt(delay));
     } catch (InterruptedException e) {
 
     }
@@ -130,7 +129,7 @@ public class Fakes {
     @Override
     public int read(ByteBuffer buffer, long offset, int size) throws IOException {
       randomDelay(100);
-      return this.reader.read(buffer, offset, size);
+      return this.getReader().read(buffer, offset, size);
     }
 
     @Override

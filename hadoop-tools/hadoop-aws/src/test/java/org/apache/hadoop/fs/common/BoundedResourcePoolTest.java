@@ -71,16 +71,16 @@ public class BoundedResourcePoolTest {
 
   @Test
   public void testAcquireReleaseSingle() {
-    final int NUM_BUFFERS = 5;
-    BufferPool pool = new BufferPool(NUM_BUFFERS);
+    final int numBuffers = 5;
+    BufferPool pool = new BufferPool(numBuffers);
 
     assertEquals(0, pool.numCreated());
-    assertEquals(NUM_BUFFERS, pool.numAvailable());
+    assertEquals(numBuffers, pool.numAvailable());
 
     ByteBuffer buffer1 = pool.acquire();
     assertNotNull(buffer1);
     assertEquals(1, pool.numCreated());
-    assertEquals(NUM_BUFFERS - 1, pool.numAvailable());
+    assertEquals(numBuffers - 1, pool.numAvailable());
 
     // Release and immediately reacquire => should not end up creating new buffer.
     pool.release(buffer1);
@@ -94,16 +94,16 @@ public class BoundedResourcePoolTest {
 
   @Test
   public void testAcquireReleaseMultiple() {
-    final int NUM_BUFFERS = 5;
-    BufferPool pool = new BufferPool(NUM_BUFFERS);
+    final int numBuffers = 5;
+    BufferPool pool = new BufferPool(numBuffers);
     Set<ByteBuffer> buffers =
         Collections.newSetFromMap(new IdentityHashMap<ByteBuffer, Boolean>());
 
     assertEquals(0, pool.numCreated());
 
     // Acquire all one by one.
-    for (int i = 0; i < NUM_BUFFERS; i++) {
-      assertEquals(NUM_BUFFERS - i, pool.numAvailable());
+    for (int i = 0; i < numBuffers; i++) {
+      assertEquals(numBuffers - i, pool.numAvailable());
       ByteBuffer buffer = pool.acquire();
       assertNotNull(buffer);
       assertFalse(buffers.contains(buffer));
@@ -111,7 +111,7 @@ public class BoundedResourcePoolTest {
       assertEquals(i + 1, pool.numCreated());
     }
 
-    assertEquals(NUM_BUFFERS, pool.numCreated());
+    assertEquals(numBuffers, pool.numCreated());
     assertEquals(0, pool.numAvailable());
 
     int releaseCount = 0;
@@ -131,12 +131,12 @@ public class BoundedResourcePoolTest {
     }
 
     // Acquire all one by one again to ensure that they are the same ones we got earlier.
-    for (int i = 0; i < NUM_BUFFERS; i++) {
+    for (int i = 0; i < numBuffers; i++) {
       ByteBuffer buffer = pool.acquire();
       assertTrue(buffers.contains(buffer));
     }
 
-    assertEquals(NUM_BUFFERS, pool.numCreated());
+    assertEquals(numBuffers, pool.numCreated());
     assertEquals(0, pool.numAvailable());
   }
 }

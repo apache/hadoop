@@ -49,35 +49,35 @@ public class S3InMemoryInputStream extends S3InputStream {
       AmazonS3 client) {
     super(futurePool, (int) fileSize, bucket, key, fileSize, client);
     this.buffer = ByteBuffer.allocate((int) fileSize);
-    LOG.debug("Created in-memory input stream for {} (size = {})", this.name, fileSize);
+    LOG.debug("Created in-memory input stream for {} (size = {})", this.getName(), fileSize);
   }
 
   @Override
   protected boolean ensureCurrentBuffer() {
-    if (this.closed) {
+    if (this.isClosed()) {
       return false;
     }
 
-    if (this.blockData.fileSize == 0) {
+    if (this.getBlockData().getFileSize() == 0) {
       return false;
     }
 
-    if (!this.fpos.isValid()) {
+    if (!this.getFilePosition().isValid()) {
       try {
-        S3Reader reader = new S3Reader(this.s3File);
+        S3Reader reader = new S3Reader(this.getFile());
         this.buffer.clear();
         int numBytesRead = reader.read(buffer, 0, this.buffer.capacity());
         if (numBytesRead < 0) {
           return false;
         }
         BufferData data = new BufferData(0, buffer);
-        this.fpos.setData(data, 0, this.seekTargetPos);
+        this.getFilePosition().setData(data, 0, this.getSeekTargetPos());
       } catch (IOException e) {
         LOG.error("ensureCurrentBuffer", e);
         throw new RuntimeException(e);
       }
     }
 
-    return this.fpos.buffer().hasRemaining();
+    return this.getFilePosition().buffer().hasRemaining();
   }
 }

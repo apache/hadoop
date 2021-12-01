@@ -26,10 +26,7 @@ import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 
 import com.twitter.util.ExecutorServiceFuturePool;
-import com.twitter.util.Future;
 import com.twitter.util.FuturePool;
-import com.twitter.util.FuturePools;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,13 +35,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class S3CachingBlockManagerTest {
-  final int FILE_SIZE = 15;
-  final int BLOCK_SIZE = 2;
-  final int POOL_SIZE = 3;
-  final ExecutorService threadPool = Executors.newFixedThreadPool(4);
-  final FuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
+  static final int FILE_SIZE = 15;
+  static final int BLOCK_SIZE = 2;
+  static final int POOL_SIZE = 3;
 
-  final BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
+  private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
+  private final FuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
+
+  private final BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
 
   @Test
   public void testArgChecks() {
@@ -106,7 +104,7 @@ public class S3CachingBlockManagerTest {
    * Extends S3CachingBlockManager so that we can inject asynchronous failures.
    */
   static class TestBlockManager extends S3CachingBlockManager {
-    public TestBlockManager(
+    TestBlockManager(
         FuturePool futurePool,
         S3Reader reader,
         BlockData blockData,
@@ -116,7 +114,7 @@ public class S3CachingBlockManagerTest {
 
     // If true, forces the next read operation to fail.
     // Resets itself to false after one failure.
-    public boolean forceNextReadToFail;
+    private boolean forceNextReadToFail;
 
     @Override
     public int read(ByteBuffer buffer, long offset, int size) throws IOException {
@@ -130,7 +128,7 @@ public class S3CachingBlockManagerTest {
 
     // If true, forces the next cache-put operation to fail.
     // Resets itself to false after one failure.
-    public boolean forceNextCachePutToFail;
+    private boolean forceNextCachePutToFail;
 
     @Override
     protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {
@@ -161,7 +159,7 @@ public class S3CachingBlockManagerTest {
     TestBlockManager blockManager =
         new TestBlockManager(futurePool, reader, blockData, POOL_SIZE);
 
-    for (int b = 0; b < blockData.numBlocks; b++) {
+    for (int b = 0; b < blockData.getNumBlocks(); b++) {
       // We simulate caching failure for all even numbered blocks.
       boolean forceFailure = forceReadFailure && (b % 2 == 0);
 
@@ -241,14 +239,14 @@ public class S3CachingBlockManagerTest {
         new S3CachingBlockManager(futurePool, reader, blockData, POOL_SIZE);
     assertInitialState(blockManager);
 
-    for (int b = 0; b < blockData.numBlocks; b++) {
+    for (int b = 0; b < blockData.getNumBlocks(); b++) {
       blockManager.requestPrefetch(b);
       BufferData data = blockManager.get(b);
       blockManager.requestCaching(data);
     }
 
-    waitForCaching(blockManager, blockData.numBlocks);
-    assertEquals(blockData.numBlocks, blockManager.numCached());
+    waitForCaching(blockManager, blockData.getNumBlocks());
+    assertEquals(blockData.getNumBlocks(), blockManager.numCached());
     assertEquals(0, this.totalErrors(blockManager));
   }
 
@@ -275,7 +273,7 @@ public class S3CachingBlockManagerTest {
     int expectedNumErrors = 0;
     int expectedNumSuccesses = 0;
 
-    for (int b = 0; b < blockData.numBlocks; b++) {
+    for (int b = 0; b < blockData.getNumBlocks(); b++) {
       // We simulate caching failure for all odd numbered blocks.
       boolean forceFailure = forceCachingFailure && (b % 2 == 1);
       if (forceFailure) {
