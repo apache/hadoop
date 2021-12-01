@@ -63,8 +63,10 @@ public class TestCSQueueStore {
     when(csContext.getResourceCalculator()).
             thenReturn(resourceCalculator);
     when(csContext.getRMContext()).thenReturn(rmContext);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(
+        new CapacitySchedulerQueueManager(csConf, null, null));
 
-    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+    queueContext = new CapacitySchedulerQueueContext(csContext);
 
     CSQueueStore queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager

@@ -106,6 +106,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return this.root;
   }
 
+  @VisibleForTesting
+  protected void setRootQueue(CSQueue rootQueue) {
+    this.root = rootQueue;
+  }
+
   @Override
   public Map<String, CSQueue> getQueues() {
     return queues.getFullNameQueues();

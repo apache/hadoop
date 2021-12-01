@@ -79,7 +79,7 @@ public class TestReservationQueue {
     RMContext mockRMContext = TestUtils.getMockRMContext();
     when(csContext.getRMContext()).thenReturn(mockRMContext);
 
-    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+    queueContext = new CapacitySchedulerQueueContext(csContext);
 
     // create a queue
     planQueue = new PlanQueue(queueContext, "root", null, null);

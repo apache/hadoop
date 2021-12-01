@@ -46,7 +46,6 @@ public class CapacitySchedulerQueueContext {
   private final CapacitySchedulerQueueManager queueManager;
   private final RMNodeLabelsManager labelManager;
   private final PreemptionManager preemptionManager;
-  private final AppPriorityACLsManager appPriorityACLManager;
   private final ActivitiesManager activitiesManager;
   private final ResourceCalculator resourceCalculator;
 
@@ -55,17 +54,25 @@ public class CapacitySchedulerQueueContext {
 
   private Resource minimumAllocation;
 
-  public CapacitySchedulerQueueContext(CapacitySchedulerContext csContext,
-      AppPriorityACLsManager appPriorityACLManager) {
+  public CapacitySchedulerQueueContext(CapacitySchedulerContext csContext) {
     this.csContext = csContext;
     this.queueManager = csContext.getCapacitySchedulerQueueManager();
     this.labelManager = csContext.getRMContext().getNodeLabelManager();
     this.preemptionManager = csContext.getPreemptionManager();
-    this.appPriorityACLManager = appPriorityACLManager;
     this.activitiesManager = csContext.getActivitiesManager();
     this.resourceCalculator = csContext.getResourceCalculator();
 
-    this.configuration = csContext.getConfiguration();
+    this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration());
+    this.minimumAllocation = csContext.getMinimumResourceCapability();
+  }
+
+  public void reinitialize() {
+    this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration());
+    this.minimumAllocation = csContext.getMinimumResourceCapability();
+  }
+
+  public void reinitialize(CapacitySchedulerConfiguration newConfiguration) {
+    this.configuration = new CapacitySchedulerConfiguration(newConfiguration);
     this.minimumAllocation = csContext.getMinimumResourceCapability();
   }
 

@@ -136,7 +136,10 @@ public class TestReservations {
     when(csContext.getClusterResource()).thenReturn(
         Resources.createResource(100 * 16 * GB, 100 * 12));
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
+    CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(conf,
+        rmContext.getNodeLabelManager(), null);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
     when(csContext.getRMContext()).thenReturn(rmContext);
     RMContainerTokenSecretManager containerTokenSecretManager = new RMContainerTokenSecretManager(
         conf);
@@ -144,14 +147,11 @@ public class TestReservations {
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
 
-    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+    queueContext = new CapacitySchedulerQueueContext(csContext);
 
     root = CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, TestUtils.spyHook);
-
-    ResourceUsage queueResUsage = root.getQueueResourceUsage();
-    when(csContext.getClusterResourceUsage())
-        .thenReturn(queueResUsage);
+    queueManager.setRootQueue(root);
 
     spyRMContext = spy(rmContext);
     when(spyRMContext.getScheduler()).thenReturn(cs);
@@ -1191,6 +1191,7 @@ public class TestReservations {
     csConf.setBoolean(
         CapacitySchedulerConfiguration.RESERVE_CONT_LOOK_ALL_NODES, false);
     CSQueueStore newQueues = new CSQueueStore();
+    queueContext.reinitialize();
     CSQueue newRoot = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues,
         TestUtils.spyHook);

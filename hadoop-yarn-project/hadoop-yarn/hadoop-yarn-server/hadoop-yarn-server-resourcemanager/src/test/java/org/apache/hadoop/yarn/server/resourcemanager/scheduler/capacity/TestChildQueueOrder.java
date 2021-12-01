@@ -101,8 +101,10 @@ public class TestChildQueueOrder {
         thenReturn(resourceComparator);
     when(csContext.getRMContext()).thenReturn(rmContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(
+        new CapacitySchedulerQueueManager(csConf, rmContext.getNodeLabelManager(), null));
 
-    queueContext = new CapacitySchedulerQueueContext(csContext, null);
+    queueContext = new CapacitySchedulerQueueContext(csContext);
   }
 
   private FiCaSchedulerApp getMockApplication(int appId, String user) {
@@ -222,6 +224,7 @@ public class TestChildQueueOrder {
   public void testSortedQueues() throws Exception {
     // Setup queue configs
     setupSortedQueues(csConf);
+    queueContext.reinitialize();
     CSQueueStore queues = new CSQueueStore();
     CSQueue root =
         CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,

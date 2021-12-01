@@ -326,7 +326,7 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
       this.activitiesManager = new ActivitiesManager(rmContext);
       activitiesManager.init(conf);
-      this.queueContext = new CapacitySchedulerQueueContext(this, appPriorityACLManager);
+      this.queueContext = new CapacitySchedulerQueueContext(this);
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
@@ -852,6 +852,7 @@ public class CapacityScheduler extends
   @Lock(CapacityScheduler.class)
   private void reinitializeQueues(CapacitySchedulerConfiguration newConf)
   throws IOException {
+    queueContext.reinitialize(newConf);
     this.queueManager.reinitializeQueues(newConf);
     updatePlacementRules();
 
