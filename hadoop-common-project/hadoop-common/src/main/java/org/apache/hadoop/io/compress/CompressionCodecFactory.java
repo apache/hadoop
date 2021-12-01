@@ -29,8 +29,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.util.StringUtils.toLowerCase;
-
 /**
  * A factory that will find the correct codec for a given filename.
  */
@@ -69,10 +67,10 @@ public class CompressionCodecFactory {
     codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
 
     String codecName = codec.getClass().getSimpleName();
-    codecsByName.put(toLowerCase(codecName), codec);
+    codecsByName.put(StringUtils.toLowerCase(codecName), codec);
     if (codecName.endsWith("Codec")) {
       codecName = codecName.substring(0, codecName.length() - "Codec".length());
-      codecsByName.put(toLowerCase(codecName), codec);
+      codecsByName.put(StringUtils.toLowerCase(codecName), codec);
     }
   }
 
@@ -201,12 +199,14 @@ public class CompressionCodecFactory {
     if (codecs != null) {
       String filename = file.getName();
       String reversedFilename =
-          toLowerCase(new StringBuilder(filename).reverse().toString());
+          new StringBuilder(filename).reverse().toString();
+      String lowerReversedFilename =
+              StringUtils.toLowerCase(reversedFilename);
       SortedMap<String, CompressionCodec> subMap = 
-        codecs.headMap(reversedFilename);
+        codecs.headMap(lowerReversedFilename);
       if (!subMap.isEmpty()) {
         String potentialSuffix = subMap.lastKey();
-        if (reversedFilename.startsWith(potentialSuffix)) {
+        if (lowerReversedFilename.startsWith(potentialSuffix)) {
           result = codecs.get(potentialSuffix);
         }
       }
@@ -249,7 +249,7 @@ public class CompressionCodecFactory {
       if (codec == null) {
         // trying to get the codec by name in case the name was specified
         // instead a class
-        codec = codecsByName.get(toLowerCase(codecName));
+        codec = codecsByName.get(StringUtils.toLowerCase(codecName));
       }
       return codec;
     }
