@@ -634,11 +634,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
       stopAllServices();
+      if (this.futurePool != null) {
+        this.futurePool = null;
+      }
       throw translateException("initializing ", new Path(name), e);
     } catch (IOException | RuntimeException e) {
       // other exceptions: stop the services.
       cleanupWithLogger(LOG, span);
       stopAllServices();
+      if (this.futurePool != null) {
+        this.futurePool = null;
+      }
       throw e;
     }
   }
@@ -4162,9 +4168,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     HadoopExecutors.shutdown(unboundedThreadPool, LOG,
         THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
     unboundedThreadPool = null;
-    if (this.futurePool != null) {
-      this.futurePool = null;
-    }
     // other services are shutdown.
     cleanupWithLogger(LOG,
         metadataStore,

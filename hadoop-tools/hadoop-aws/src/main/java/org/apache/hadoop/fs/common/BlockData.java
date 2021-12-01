@@ -108,7 +108,7 @@ public class BlockData {
     }
 
     if (this.isLastBlock(blockNumber)) {
-      return (int) (this.fileSize - (this.blockSize * (this.numBlocks - 1)));
+      return (int) (this.fileSize - (((long) this.blockSize) * (this.numBlocks - 1)));
     } else {
       return this.blockSize;
     }

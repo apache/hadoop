@@ -259,7 +259,7 @@ public class BufferData {
     } else {
       return String.format(
           "(id = %d, pos = %d, lim = %d)",
-          System.identityHashCode(buffer),
+          System.identityHashCode(buf),
           buf.position(), buf.limit());
     }
   }
