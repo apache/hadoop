@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
+import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyBuilder;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyParser;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
@@ -242,19 +243,7 @@ public class LeveldbTimelineStore extends AbstractService
       IOUtils.cleanupWithLogger(LOG, localFS);
     }
     LOG.info("Using leveldb path " + dbPath);
-    try {
-      db = factory.open(new File(dbPath.toString()), options);
-    } catch (IOException ioe) {
-      File dbFile = new File(dbPath.toString());
-      File backupPath = new File(
-          dbPath.toString() + BACKUP_EXT + Time.monotonicNow());
-      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
-          "up at "+ backupPath, ioe);
-      FileUtils.copyDirectory(dbFile, backupPath);
-      LOG.warn("Going to try repair");
-      factory.repair(dbFile, options);
-      db = factory.open(dbFile, options);
-    }
+    db = LeveldbUtils.loadOrRepairLevelDb(factory, dbPath, options);
     checkVersion();
     startTimeWriteCache =
         Collections.synchronizedMap(new LRUMap(getStartTimeWriteCacheSize(

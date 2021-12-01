@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.commons.io.FileUtils;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
@@ -38,6 +38,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 
 import org.apache.commons.collections.map.LRUMap;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -64,6 +65,7 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.timeline.RollingLevelDB.RollingWriteBatch;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
+import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyBuilder;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils.KeyParser;
 
@@ -342,46 +344,13 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         TIMELINE_SERVICE_LEVELDB_WRITE_BUFFER_SIZE,
         DEFAULT_TIMELINE_SERVICE_LEVELDB_WRITE_BUFFER_SIZE));
     LOG.info("Using leveldb path " + dbPath);
-    try{
-      domaindb = factory.open(new File(domainDBPath.toString()), options);
-    } catch (IOException ioe){
-      File domaindbFile = new File(domainDBPath.toString());
-      File domaindbBackupPath = new File(
-          domainDBPath.toString() + BACKUP_EXT + Time.monotonicNow());
-      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
-          "up at "+ domaindbBackupPath, ioe);
-      FileUtils.copyDirectory(domaindbFile, domaindbBackupPath);
-      factory.repair(domaindbFile, options);
-      domaindb = factory.open(domaindbFile, options);
-    }
+    domaindb = LeveldbUtils.loadOrRepairLevelDb(factory, domainDBPath, options);
     entitydb = new RollingLevelDB(ENTITY);
     entitydb.init(conf);
     indexdb = new RollingLevelDB(INDEX);
     indexdb.init(conf);
-    try{
-      starttimedb = factory.open(new File(starttimeDBPath.toString()), options);
-    } catch (IOException ioe){
-      File starttimedbFile = new File(starttimeDBPath.toString());
-      File starttimeBackupPath = new File(
-          starttimeDBPath.toString() + BACKUP_EXT + Time.monotonicNow());
-      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
-          "up at "+ starttimeBackupPath, ioe);
-      FileUtils.copyDirectory(starttimedbFile, starttimeBackupPath);
-      factory.repair(starttimedbFile, options);
-      starttimedb = factory.open(starttimedbFile, options);
-    }
-    try{
-      ownerdb = factory.open(new File(ownerDBPath.toString()), options);
-    } catch (IOException ioe){
-      File ownerdbFile = new File(ownerDBPath.toString());
-      File ownerdbBackupPath = new File(
-          ownerDBPath.toString() + BACKUP_EXT + Time.monotonicNow());
-      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
-          "up at "+ ownerdbBackupPath, ioe);
-      FileUtils.copyDirectory(ownerdbFile, ownerdbBackupPath);
-      factory.repair(ownerdbFile, options);
-      ownerdb = factory.open(ownerdbFile, options);
-    }
+    starttimedb = LeveldbUtils.loadOrRepairLevelDb(factory, starttimeDBPath, options);
+    ownerdb = LeveldbUtils.loadOrRepairLevelDb(factory, ownerDBPath, options);
     checkVersion();
     startTimeWriteCache = Collections.synchronizedMap(new LRUMap(
         getStartTimeWriteCacheSize(conf)));
