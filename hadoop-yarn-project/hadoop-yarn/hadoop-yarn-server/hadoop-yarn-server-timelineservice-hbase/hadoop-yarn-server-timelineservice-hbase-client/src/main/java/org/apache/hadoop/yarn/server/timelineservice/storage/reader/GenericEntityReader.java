@@ -63,8 +63,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
-import org.apache.hadoop.util.Preconditions;
-
 /**
  * Timeline entity reader for generic entities that are stored in the entity
  * table.
@@ -406,18 +404,25 @@ class GenericEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(getContext(), "context shouldn't be null");
-    Preconditions.checkNotNull(getDataToRetrieve(),
-        "data to retrieve shouldn't be null");
-    Preconditions.checkNotNull(getContext().getClusterId(),
-        "clusterId shouldn't be null");
-    Preconditions.checkNotNull(getContext().getAppId(),
-        "appId shouldn't be null");
-    Preconditions.checkNotNull(getContext().getEntityType(),
-        "entityType shouldn't be null");
+    if (getContext() == null) {
+      throw new NullPointerException("context shouldn't be null");
+    }
+    if (getDataToRetrieve() == null) {
+      throw new NullPointerException("data to retrieve shouldn't be null");
+    }
+    if (getContext().getClusterId() == null) {
+      throw new NullPointerException("clusterId shouldn't be null");
+    }
+    if (getContext().getAppId() == null) {
+      throw new NullPointerException("appId shouldn't be null");
+    }
+    if (getContext().getEntityType() == null) {
+      throw new NullPointerException("entityType shouldn't be null");
+    }
     if (isSingleEntityRead()) {
-      Preconditions.checkNotNull(getContext().getEntityId(),
-          "entityId shouldn't be null");
+      if (getContext().getEntityId() == null) {
+        throw new NullPointerException("entityId shouldn't be null");
+      }
     }
   }
 

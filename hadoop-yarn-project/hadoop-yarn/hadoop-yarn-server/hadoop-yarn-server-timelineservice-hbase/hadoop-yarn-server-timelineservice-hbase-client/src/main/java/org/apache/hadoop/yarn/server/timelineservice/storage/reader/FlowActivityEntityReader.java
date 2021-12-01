@@ -46,8 +46,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityRo
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowActivityTableRW;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
-import org.apache.hadoop.util.Preconditions;
-
 /**
  * Timeline entity reader for flow activity entities that are stored in the
  * flow activity table.
@@ -82,8 +80,10 @@ class FlowActivityEntityReader extends TimelineEntityReader {
 
   @Override
   protected void validateParams() {
-    Preconditions.checkNotNull(getContext().getClusterId(),
-        "clusterId shouldn't be null");
+    String clusterId = getContext().getClusterId();
+    if (clusterId == null) {
+      throw new NullPointerException("clusterId shouldn't be null");
+    }
   }
 
   @Override
