@@ -46,8 +46,8 @@ public class TestCodecFactory {
     }
     
     @Override
-    public CompressionOutputStream createOutputStream(OutputStream out) 
-    throws IOException {
+    public CompressionOutputStream createOutputStream(OutputStream out)
+            throws IOException {
       return null;
     }
     
@@ -63,21 +63,21 @@ public class TestCodecFactory {
 
     @Override
     public CompressionInputStream createInputStream(InputStream in, 
-                                                    Decompressor decompressor) 
-    throws IOException {
+                                                    Decompressor decompressor)
+            throws IOException {
       return null;
     }
 
     @Override
-    public CompressionInputStream createInputStream(InputStream in) 
-    throws IOException {
+    public CompressionInputStream createInputStream(InputStream in)
+            throws IOException {
       return null;
     }
 
     @Override
     public CompressionOutputStream createOutputStream(OutputStream out, 
-                                                      Compressor compressor) 
-    throws IOException {
+                                                      Compressor compressor)
+            throws IOException {
       return null;
     }
 
@@ -126,7 +126,7 @@ public class TestCodecFactory {
   }
   
   /**
-   * Returns a factory for a given set of codecs
+   * Returns a factory for a given set of codecs.
    * @param classes the codec classes to include
    * @return a new factory
    */
@@ -152,7 +152,7 @@ public class TestCodecFactory {
   @Test
   public void testFinding() {
     CompressionCodecFactory factory =
-      new CompressionCodecFactory(new Configuration());
+            new CompressionCodecFactory(new Configuration());
     CompressionCodec codec = factory.getCodec(new Path("/tmp/foo.bar"));
     assertEquals("default factory foo codec", null, codec);
     codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
