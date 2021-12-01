@@ -41,9 +41,14 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
   public AutoCreatedLeafQueue(CapacitySchedulerContext cs, String queueName,
       ManagedParentQueue parent) throws IOException {
+    // TODO once YARN-10907 is merged the duplicated collection of
+    //  leafQueueConfigs won't be necessary
     super(cs, parent.getLeafQueueConfigs(queueName),
         queueName,
         parent, null);
+    super.setupQueueConfigs(cs.getClusterResource(), parent.getLeafQueueConfigs(queueName));
+
+    LOG.debug("Initialized AutoCreatedLeafQueue: name={}, fullname={}", queueName, getQueuePath());
     updateCapacitiesToZero();
   }
 

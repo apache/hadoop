@@ -733,7 +733,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals("weight is not set for label TEST", 6f,
         c1.getQueueCapacities().getWeight("TEST"), 1e-6);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    c1 = (LeafQueue) cs.getQueue("root.c.c1");
+    c1 = (AbstractLeafQueue) cs.getQueue("root.c.c1");
     Assert.assertEquals("weight is not set for label TEST", 6f,
         c1.getQueueCapacities().getWeight("TEST"), 1e-6);
   }
@@ -748,7 +748,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals("weight is not explicitly set", 4f,
         a2.getQueueCapacities().getWeight(), 1e-6);
 
-    a2 = (LeafQueue) cs.getQueue("root.a.a-auto.a2");
+    a2 = (AbstractLeafQueue) cs.getQueue("root.a.a-auto.a2");
     csConf.setState("root.a.a-auto.a2", QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("root.a.a-auto.a2 has not been stopped",

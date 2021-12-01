@@ -1,23 +1,31 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -43,16 +51,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractUsersManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerHealth;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.AMState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.KillableContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ContainerAllocationProposal;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
@@ -65,8 +69,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.IteratorSelector;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.utils.Lock;
+import org.apache.hadoop.yarn.server.utils.Lock.NoLock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,6 +138,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   private final List<FiCaSchedulerApp> runnableApps = new ArrayList<>();
   private final List<FiCaSchedulerApp> nonRunnableApps = new ArrayList<>();
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public AbstractLeafQueue(CapacitySchedulerContext cs, String queueName,
       CSQueue parent, CSQueue old) {
     this(cs, cs.getConfiguration(), queueName, parent, old, false);
@@ -234,43 +242,56 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       usersManager.updateUserWeights();
 
       LOG.info(
-          "Initializing " + getQueuePath() + "\n" + getExtendedCapacityOrWeightString() + "\n"
+          "Initializing " + getQueuePath() + "\n" +
+              getExtendedCapacityOrWeightString() + "\n"
               + "absoluteCapacity = " + queueCapacities.getAbsoluteCapacity()
-              + " [= parentAbsoluteCapacity * capacity ]" + "\n" + "maxCapacity = "
-              + queueCapacities.getMaximumCapacity() + " [= configuredMaxCapacity ]" + "\n"
-              + "absoluteMaxCapacity = " + queueCapacities.getAbsoluteMaximumCapacity()
+              + " [= parentAbsoluteCapacity * capacity ]" + "\n"
+              + "maxCapacity = " + queueCapacities.getMaximumCapacity()
+              + " [= configuredMaxCapacity ]" + "\n" + "absoluteMaxCapacity = "
+              + queueCapacities.getAbsoluteMaximumCapacity()
               + " [= 1.0 maximumCapacity undefined, "
-              + "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]" + "\n"
-              + "effectiveMinResource=" + getEffectiveCapacity(CommonNodeLabelsManager.NO_LABEL)
-              + "\n" + " , effectiveMaxResource=" + getEffectiveMaxCapacity(
-              CommonNodeLabelsManager.NO_LABEL) + "\n" + "userLimit = "
-              + usersManager.getUserLimit() + " [= configuredUserLimit ]" + "\n"
-              + "userLimitFactor = " + usersManager.getUserLimitFactor()
-              + " [= configuredUserLimitFactor ]" + "\n" + "maxApplications = " + maxApplications
+              + "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]"
+              + "\n" + "effectiveMinResource=" +
+              getEffectiveCapacity(CommonNodeLabelsManager.NO_LABEL) + "\n"
+              + " , effectiveMaxResource=" +
+              getEffectiveMaxCapacity(CommonNodeLabelsManager.NO_LABEL)
+              + "\n" + "userLimit = " + usersManager.getUserLimit()
+              + " [= configuredUserLimit ]" + "\n" + "userLimitFactor = "
+              + usersManager.getUserLimitFactor()
+              + " [= configuredUserLimitFactor ]" + "\n" + "maxApplications = "
+              + maxApplications
               + " [= configuredMaximumSystemApplicationsPerQueue or"
-              + " (int)(configuredMaximumSystemApplications * absoluteCapacity)]" + "\n"
-              + "maxApplicationsPerUser = " + maxApplicationsPerUser
-              + " [= (int)(maxApplications * (userLimit / 100.0f) * " + "userLimitFactor) ]" + "\n"
-              + "maxParallelApps = " + getMaxParallelApps() + "\n" + "usedCapacity = "
-              + +queueCapacities.getUsedCapacity() + " [= usedResourcesMemory / "
-              + "(clusterResourceMemory * absoluteCapacity)]" + "\n" + "absoluteUsedCapacity = "
-              + absoluteUsedCapacity + " [= usedResourcesMemory / clusterResourceMemory]" + "\n"
+              + " (int)(configuredMaximumSystemApplications * absoluteCapacity)]"
+              + "\n" + "maxApplicationsPerUser = " + maxApplicationsPerUser
+              + " [= (int)(maxApplications * (userLimit / 100.0f) * "
+              + "userLimitFactor) ]" + "\n"
+              + "maxParallelApps = " + getMaxParallelApps() + "\n"
+              + "usedCapacity = " +
+              + queueCapacities.getUsedCapacity() + " [= usedResourcesMemory / "
+              + "(clusterResourceMemory * absoluteCapacity)]" + "\n"
+              + "absoluteUsedCapacity = " + absoluteUsedCapacity
+              + " [= usedResourcesMemory / clusterResourceMemory]" + "\n"
               + "maxAMResourcePerQueuePercent = " + maxAMResourcePerQueuePercent
-              + " [= configuredMaximumAMResourcePercent ]" + "\n" + "minimumAllocationFactor = "
-              + minimumAllocationFactor
+              + " [= configuredMaximumAMResourcePercent ]" + "\n"
+              + "minimumAllocationFactor = " + minimumAllocationFactor
               + " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / "
               + "maximumAllocationMemory ]" + "\n" + "maximumAllocation = "
-              + queueAllocationSettings.getMaximumAllocation() + " [= configuredMaxAllocation ]"
-              + "\n" + "numContainers = " + usageTracker.getNumContainers()
+              + queueAllocationSettings.getMaximumAllocation() +
+              " [= configuredMaxAllocation ]" + "\n"
+              + "numContainers = " + usageTracker.getNumContainers()
               + " [= currentNumContainers ]" + "\n" + "state = " + getState()
-              + " [= configuredState ]" + "\n" + "acls = " + aclsString + " [= configuredAcls ]"
-              + "\n" + "nodeLocalityDelay = " + nodeLocalityDelay + "\n"
-              + "rackLocalityAdditionalDelay = " + rackLocalityAdditionalDelay + "\n" + "labels="
-              + labelStrBuilder.toString() + "\n" + "reservationsContinueLooking = "
+              + " [= configuredState ]" + "\n" + "acls = " + aclsString
+              + " [= configuredAcls ]" + "\n"
+              + "nodeLocalityDelay = " + nodeLocalityDelay + "\n"
+              + "rackLocalityAdditionalDelay = "
+              + rackLocalityAdditionalDelay + "\n"
+              + "labels=" + labelStrBuilder.toString() + "\n"
+              + "reservationsContinueLooking = "
               + reservationsContinueLooking + "\n" + "preemptionDisabled = "
               + getPreemptionDisabled() + "\n" + "defaultAppPriorityPerQueue = "
-              + defaultAppPriorityPerQueue + "\npriority = " + priority + "\nmaxLifetime = "
-              + getMaximumApplicationLifetime() + " seconds" + "\ndefaultLifetime = "
+              + defaultAppPriorityPerQueue + "\npriority = " + priority
+              + "\nmaxLifetime = " + getMaximumApplicationLifetime()
+              + " seconds" + "\ndefaultLifetime = "
               + getDefaultApplicationLifetime() + " seconds");
     } finally {
       writeLock.unlock();
@@ -285,14 +306,16 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   /**
    * Used only by tests.
    */
-  @InterfaceAudience.Private public float getMinimumAllocationFactor() {
+  @Private
+  public float getMinimumAllocationFactor() {
     return minimumAllocationFactor;
   }
 
   /**
    * Used only by tests.
    */
-  @InterfaceAudience.Private public float getMaxAMResourcePerQueuePercent() {
+  @Private
+  public float getMaxAMResourcePerQueuePercent() {
     return maxAMResourcePerQueuePercent;
   }
 
@@ -312,11 +335,13 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     return usersManager;
   }
 
-  @Override public AbstractUsersManager getAbstractUsersManager() {
+  @Override
+  public AbstractUsersManager getAbstractUsersManager() {
     return usersManager;
   }
 
-  @Override public List<CSQueue> getChildQueues() {
+  @Override
+  public List<CSQueue> getChildQueues() {
     return null;
   }
 
@@ -324,7 +349,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
    * Set user limit.
    * @param userLimit new user limit
    */
-  @VisibleForTesting void setUserLimit(float userLimit) {
+  @VisibleForTesting
+  void setUserLimit(float userLimit) {
     usersManager.setUserLimit(userLimit);
     usersManager.userLimitNeedsRecompute();
   }
@@ -333,12 +359,14 @@ public class AbstractLeafQueue extends AbstractCSQueue {
    * Set user limit factor.
    * @param userLimitFactor new user limit factor
    */
-  @VisibleForTesting void setUserLimitFactor(float userLimitFactor) {
+  @VisibleForTesting
+  void setUserLimitFactor(float userLimitFactor) {
     usersManager.setUserLimitFactor(userLimitFactor);
     usersManager.userLimitNeedsRecompute();
   }
 
-  @Override public int getNumApplications() {
+  @Override
+  public int getNumApplications() {
     readLock.lock();
     try {
       return getNumPendingApplications() + getNumActiveApplications() + getNumNonRunnableApps();
@@ -365,10 +393,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  @InterfaceAudience.Private public int getNumPendingApplications(String user) {
+  @Private
+  public int getNumPendingApplications(String user) {
     readLock.lock();
     try {
-      UsersManager.User u = getUser(user);
+      User u = getUser(user);
       if (null == u) {
         return 0;
       }
@@ -378,10 +407,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  @InterfaceAudience.Private public int getNumActiveApplications(String user) {
+  @Private
+  public int getNumActiveApplications(String user) {
     readLock.lock();
     try {
-      UsersManager.User u = getUser(user);
+      User u = getUser(user);
       if (null == u) {
         return 0;
       }
@@ -391,23 +421,30 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  @InterfaceAudience.Private public float getUserLimit() {
+  @Private
+  public float getUserLimit() {
     return usersManager.getUserLimit();
   }
 
-  @InterfaceAudience.Private public float getUserLimitFactor() {
+  @Private
+  public float getUserLimitFactor() {
     return usersManager.getUserLimitFactor();
   }
 
-  @Override public QueueInfo getQueueInfo(boolean includeChildQueues, boolean recursive) {
+  @Override
+  public QueueInfo getQueueInfo(
+      boolean includeChildQueues, boolean recursive) {
     QueueInfo queueInfo = getQueueInfo();
     return queueInfo;
   }
 
-  @Override public List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user) {
+  @Override
+  public List<QueueUserACLInfo>
+  getQueueUserAclInfo(UserGroupInformation user) {
     readLock.lock();
     try {
-      QueueUserACLInfo userAclInfo = recordFactory.newRecordInstance(QueueUserACLInfo.class);
+      QueueUserACLInfo userAclInfo = recordFactory.newRecordInstance(
+          QueueUserACLInfo.class);
       List<QueueACL> operations = new ArrayList<>();
       for (QueueACL operation : QueueACL.values()) {
         if (hasAccess(operation, user)) {
@@ -427,13 +464,16 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   public String toString() {
     readLock.lock();
     try {
-      return getQueuePath() + ": " + getCapacityOrWeightString() + ", " + "absoluteCapacity="
-          + queueCapacities.getAbsoluteCapacity() + ", " + "usedResources="
-          + usageTracker.getQueueUsage().getUsed() + ", " + "usedCapacity=" + getUsedCapacity()
-          + ", " + "absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + ", " + "numApps="
-          + getNumApplications() + ", " + "numContainers=" + getNumContainers() + ", "
-          + "effectiveMinResource=" + getEffectiveCapacity(CommonNodeLabelsManager.NO_LABEL)
-          + " , effectiveMaxResource=" + getEffectiveMaxCapacity(CommonNodeLabelsManager.NO_LABEL);
+      return getQueuePath() + ": " + getCapacityOrWeightString()
+          + ", " + "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity()
+          + ", " + "usedResources=" + usageTracker.getQueueUsage().getUsed() + ", "
+          + "usedCapacity=" + getUsedCapacity() + ", " + "absoluteUsedCapacity="
+          + getAbsoluteUsedCapacity() + ", " + "numApps=" + getNumApplications()
+          + ", " + "numContainers=" + getNumContainers() + ", "
+          + "effectiveMinResource=" +
+          getEffectiveCapacity(CommonNodeLabelsManager.NO_LABEL) +
+          " , effectiveMaxResource=" +
+          getEffectiveMaxCapacity(CommonNodeLabelsManager.NO_LABEL);
     } finally {
       readLock.unlock();
     }
@@ -442,25 +482,28 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   protected String getExtendedCapacityOrWeightString() {
     if (queueCapacities.getWeight() != -1) {
       return "weight = " + queueCapacities.getWeight()
-          + " [= (float) configuredCapacity (with w suffix)] " + "\n" + "normalizedWeight = "
-          + queueCapacities.getNormalizedWeight()
-          + " [= (float) configuredCapacity / sum(configuredCapacity of "
-          + "all queues under the parent)]";
+          + " [= (float) configuredCapacity (with w suffix)] " + "\n"
+          + "normalizedWeight = " + queueCapacities.getNormalizedWeight()
+          + " [= (float) configuredCapacity / sum(configuredCapacity of " +
+          "all queues under the parent)]";
     } else {
       return "capacity = " + queueCapacities.getCapacity()
           + " [= (float) configuredCapacity / 100 ]";
     }
   }
 
-  @VisibleForTesting public UsersManager.User getUser(String userName) {
+  @VisibleForTesting
+  public User getUser(String userName) {
     return usersManager.getUser(userName);
   }
 
-  @VisibleForTesting public UsersManager.User getOrCreateUser(String userName) {
+  @VisibleForTesting
+  public User getOrCreateUser(String userName) {
     return usersManager.getUserAndAddIfAbsent(userName);
   }
 
-  @InterfaceAudience.Private public List<AppPriorityACLGroup> getPriorityACLs() {
+  @Private
+  public List<AppPriorityACLGroup> getPriorityACLs() {
     readLock.lock();
     try {
       return new ArrayList<>(priorityAcls);
@@ -469,8 +512,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  protected void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource,
-      CapacitySchedulerConfiguration configuration) throws IOException {
+  protected void reinitialize(
+      CSQueue newlyParsedQueue, Resource clusterResource,
+      CapacitySchedulerConfiguration configuration) throws
+      IOException {
 
     writeLock.lock();
     try {
@@ -497,8 +542,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       if (!Resources.fitsIn(oldMax, newMax)) {
         throw new IOException("Trying to reinitialize " + getQueuePath()
-            + " the maximum allocation size can not be decreased!" + " Current setting: " + oldMax
-            + ", trying to set it to: " + newMax);
+            + " the maximum allocation size can not be decreased!"
+            + " Current setting: " + oldMax + ", trying to set it to: "
+            + newMax);
       }
 
       setupQueueConfigs(clusterResource, configuration);
@@ -508,25 +554,28 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
-      throws IOException {
-    reinitialize(newlyParsedQueue, clusterResource, csContext.getConfiguration());
+  public void reinitialize(
+      CSQueue newlyParsedQueue, Resource clusterResource)
+  throws IOException {
+    reinitialize(newlyParsedQueue, clusterResource,
+        csContext.getConfiguration());
   }
 
   @Override
-  public void submitApplicationAttempt(FiCaSchedulerApp application, String userName) {
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName) {
     submitApplicationAttempt(application, userName, false);
   }
 
   @Override
-  public void submitApplicationAttempt(FiCaSchedulerApp application, String userName,
-      boolean isMoveApp) {
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName, boolean isMoveApp) {
     // Careful! Locking order is important!
     writeLock.lock();
     try {
       // TODO, should use getUser, use this method just to avoid UT failure
       // which is caused by wrong invoking order, will fix UT separately
-      UsersManager.User user = usersManager.getUserAndAddIfAbsent(userName);
+      User user = usersManager.getUserAndAddIfAbsent(userName);
 
       // Add the attempt to our data-structures
       addApplicationAttempt(application, user);
@@ -536,9 +585,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     // We don't want to update metrics for move app
     if (!isMoveApp) {
-      boolean unmanagedAM =
-          application.getAppSchedulingInfo() != null && application.getAppSchedulingInfo()
-              .isUnmanagedAM();
+      boolean unmanagedAM = application.getAppSchedulingInfo() != null &&
+          application.getAppSchedulingInfo().isUnmanagedAM();
       usageTracker.getMetrics().submitAppAttempt(userName, unmanagedAM);
     }
 
@@ -547,7 +595,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   @Override
   public void submitApplication(ApplicationId applicationId, String userName,
-      String queue) throws AccessControlException {
+      String queue)  throws AccessControlException {
     // Careful! Locking order is important!
     validateSubmitApplication(applicationId, userName, queue);
 
@@ -558,22 +606,22 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     try {
       parent.submitApplication(applicationId, userName, queue);
     } catch (AccessControlException ace) {
-      LOG.info(
-          "Failed to submit application to parent-queue: " + parent.getQueuePath(), ace);
+      LOG.info("Failed to submit application to parent-queue: " +
+          parent.getQueuePath(), ace);
       throw ace;
     }
 
   }
 
-  public void validateSubmitApplication(ApplicationId applicationId, String userName, String queue)
-      throws AccessControlException {
+  public void validateSubmitApplication(ApplicationId applicationId,
+      String userName, String queue) throws AccessControlException {
     writeLock.lock();
     try {
       // Check if the queue is accepting jobs
       if (getState() != QueueState.RUNNING) {
-        String msg =
-            "Queue " + getQueuePath() + " is STOPPED. Cannot accept submission of application: "
-                + applicationId;
+        String msg = "Queue " + getQueuePath()
+            + " is STOPPED. Cannot accept submission of application: "
+            + applicationId;
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
@@ -582,20 +630,20 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       //TODO recalculate max applications because they can depend on capacity
       if (getNumApplications() >= getMaxApplications() && !(this instanceof AutoCreatedLeafQueue)) {
         String msg =
-            "Queue " + getQueuePath() + " already has " + getNumApplications() + " applications,"
+            "Queue " + getQueuePath() + " already has " + getNumApplications()
+                + " applications,"
                 + " cannot accept submission of application: " + applicationId;
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
 
       // Check submission limits for the user on this queue
-      UsersManager.User user = usersManager.getUserAndAddIfAbsent(userName);
+      User user = usersManager.getUserAndAddIfAbsent(userName);
       //TODO recalculate max applications because they can depend on capacity
-      if (user.getTotalApplications() >= getMaxApplicationsPerUser()
-          && !(this instanceof AutoCreatedLeafQueue)) {
-        String msg = "Queue " + getQueuePath() + " already has " + user.getTotalApplications()
-            + " applications from user " + userName + " cannot accept submission of application: "
-            + applicationId;
+      if (user.getTotalApplications() >= getMaxApplicationsPerUser() &&  !(this instanceof AutoCreatedLeafQueue)) {
+        String msg = "Queue " + getQueuePath() + " already has " + user
+            .getTotalApplications() + " applications from user " + userName
+            + " cannot accept submission of application: " + applicationId;
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
@@ -606,8 +654,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     try {
       parent.validateSubmitApplication(applicationId, userName, queue);
     } catch (AccessControlException ace) {
-      LOG.info(
-          "Failed to submit application to parent-queue: " + parent.getQueuePath(), ace);
+      LOG.info("Failed to submit application to parent-queue: " +
+          parent.getQueuePath(), ace);
       throw ace;
     }
   }
@@ -622,15 +670,18 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   @VisibleForTesting
   public Resource calculateAndGetAMResourceLimit() {
-    return calculateAndGetAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL);
+    return calculateAndGetAMResourceLimitPerPartition(
+        RMNodeLabelsManager.NO_LABEL);
   }
 
   @VisibleForTesting
   public Resource getUserAMResourceLimit() {
-    return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL, null);
+    return getUserAMResourceLimitPerPartition(RMNodeLabelsManager.NO_LABEL,
+         null);
   }
 
-  public Resource getUserAMResourceLimitPerPartition(String nodePartition, String userName) {
+  public Resource getUserAMResourceLimitPerPartition(
+      String nodePartition, String userName) {
     float userWeight = 1.0f;
     if (userName != null && getUser(userName) != null) {
       userWeight = getUser(userName).getWeight();
@@ -653,38 +704,47 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       Resource minimumAllocation = queueAllocationSettings.getMinimumAllocation();
 
-      Resource userAMLimit =
-          Resources.multiplyAndNormalizeUp(resourceCalculator, queuePartitionResource,
-              queueCapacities.getMaxAMResourcePercentage(nodePartition) * effectiveUserLimit
-                  * usersManager.getUserLimitFactor(), minimumAllocation);
+      Resource userAMLimit = Resources.multiplyAndNormalizeUp(
+          resourceCalculator, queuePartitionResource,
+          queueCapacities.getMaxAMResourcePercentage(nodePartition)
+              * effectiveUserLimit * usersManager.getUserLimitFactor(),
+          minimumAllocation);
 
       if (getUserLimitFactor() == -1) {
-        userAMLimit = Resources.multiplyAndNormalizeUp(resourceCalculator, queuePartitionResource,
-            queueCapacities.getMaxAMResourcePercentage(nodePartition), minimumAllocation);
+        userAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
       }
 
-      userAMLimit = Resources.min(resourceCalculator, lastClusterResource, userAMLimit,
-          Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
+      userAMLimit =
+          Resources.min(resourceCalculator, lastClusterResource,
+              userAMLimit,
+              Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
 
       Resource preWeighteduserAMLimit =
-          Resources.multiplyAndNormalizeUp(resourceCalculator, queuePartitionResource,
-              queueCapacities.getMaxAMResourcePercentage(nodePartition) * preWeightedUserLimit
-                  * usersManager.getUserLimitFactor(), minimumAllocation);
+          Resources.multiplyAndNormalizeUp(
+          resourceCalculator, queuePartitionResource,
+          queueCapacities.getMaxAMResourcePercentage(nodePartition)
+              * preWeightedUserLimit * usersManager.getUserLimitFactor(),
+          minimumAllocation);
 
       if (getUserLimitFactor() == -1) {
-        preWeighteduserAMLimit =
-            Resources.multiplyAndNormalizeUp(resourceCalculator, queuePartitionResource,
-                queueCapacities.getMaxAMResourcePercentage(nodePartition), minimumAllocation);
+        preWeighteduserAMLimit = Resources.multiplyAndNormalizeUp(
+            resourceCalculator, queuePartitionResource,
+            queueCapacities.getMaxAMResourcePercentage(nodePartition),
+            minimumAllocation);
       }
 
       preWeighteduserAMLimit =
-          Resources.min(resourceCalculator, lastClusterResource, preWeighteduserAMLimit,
+          Resources.min(resourceCalculator, lastClusterResource,
+              preWeighteduserAMLimit,
               Resources.clone(getAMResourceLimitPerPartition(nodePartition)));
       usageTracker.getQueueUsage().setUserAMLimit(nodePartition, preWeighteduserAMLimit);
 
       LOG.debug("Effective user AM limit for \"{}\":{}. Effective weighted"
-              + " user AM limit: {}. User weight: {}", userName, preWeighteduserAMLimit, userAMLimit,
-          userWeight);
+          + " user AM limit: {}. User weight: {}", userName,
+          preWeighteduserAMLimit, userAMLimit, userWeight);
       return userAMLimit;
     } finally {
       readLock.unlock();
@@ -733,9 +793,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       usageTracker.getMetrics().setAMResouceLimit(nodePartition, amResouceLimit);
       usageTracker.getQueueUsage().setAMLimit(nodePartition, amResouceLimit);
       LOG.debug("Queue: {}, node label : {}, queue partition resource : {},"
-              + " queue current limit : {}, queue partition usable resource : {},"
-              + " amResourceLimit : {}", getQueuePath(), nodePartition, queuePartitionResource,
-          queueCurrentLimit, queuePartitionUsableResource, amResouceLimit);
+          + " queue current limit : {}, queue partition usable resource : {},"
+          + " amResourceLimit : {}", getQueuePath(), nodePartition,
+          queuePartitionResource, queueCurrentLimit,
+          queuePartitionUsableResource, amResouceLimit);
       return amResouceLimit;
     } finally {
       writeLock.unlock();
@@ -774,11 +835,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
             usageTracker.getQueueUsage().getAMUsed(partitionName));
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "application " + application.getId() + " AMResource " + application.getAMResource(
-                  partitionName) + " maxAMResourcePerQueuePercent " + maxAMResourcePerQueuePercent
-                  + " amLimit " + amLimit + " lastClusterResource " + lastClusterResource
-                  + " amIfStarted " + amIfStarted + " AM node-partition name " + partitionName);
+          LOG.debug("application " + application.getId() + " AMResource "
+              + application.getAMResource(partitionName)
+              + " maxAMResourcePerQueuePercent " + maxAMResourcePerQueuePercent
+              + " amLimit " + amLimit + " lastClusterResource "
+              + lastClusterResource + " amIfStarted " + amIfStarted
+              + " AM node-partition name " + partitionName);
         }
 
         if (!resourceCalculator.fitsIn(amIfStarted, amLimit)) {
@@ -800,7 +862,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         }
 
         // Check user am resource limit
-        UsersManager.User user = usersManager.getUserAndAddIfAbsent(application.getUser());
+        User user = usersManager.getUserAndAddIfAbsent(application.getUser());
         Resource userAMLimit = userAmPartitionLimit.get(partitionName);
 
         // Verify whether we already calculated user-am-limit for this label.
@@ -821,17 +883,17 @@ public class AbstractLeafQueue extends AbstractCSQueue {
                 + " low. skipping enforcement to allow at least one application" + " to start");
           } else {
             application.updateAMContainerDiagnostics(
-                SchedulerApplicationAttempt.AMState.INACTIVATED,
+                AMState.INACTIVATED,
                 CSAMContainerLaunchDiagnosticsConstants.USER_AM_RESOURCE_LIMIT_EXCEED);
             LOG.debug("Not activating application {} for user: {} as"
-                    + " userAmIfStarted: {} exceeds userAmLimit: {}", applicationId, user,
-                userAmIfStarted, userAMLimit);
+                + " userAmIfStarted: {} exceeds userAmLimit: {}",
+                applicationId, user, userAmIfStarted, userAMLimit);
             continue;
           }
         }
         user.activateApplication();
         orderingPolicy.addSchedulableEntity(application);
-        application.updateAMContainerDiagnostics(SchedulerApplicationAttempt.AMState.ACTIVATED,
+        application.updateAMContainerDiagnostics(AMState.ACTIVATED,
             null);
 
         usageTracker.getQueueUsage()
@@ -843,16 +905,15 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         usageTracker.getMetrics()
             .setAMResouceLimitForUser(partitionName, application.getUser(), userAMLimit);
         fsApp.remove();
-        LOG.info(
-            "Application " + applicationId + " from user: " + application.getUser()
-                + " activated in queue: " + getQueuePath());
+        LOG.info("Application " + applicationId + " from user: " + application
+            .getUser() + " activated in queue: " + getQueuePath());
       }
     } finally {
       writeLock.unlock();
     }
   }
 
-  private void addApplicationAttempt(FiCaSchedulerApp application, UsersManager.User user) {
+  private void addApplicationAttempt(FiCaSchedulerApp application, User user) {
     writeLock.lock();
     try {
       applicationAttemptMap.put(application.getApplicationAttemptId(), application);
@@ -863,9 +924,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
             application.getApplicationAttemptId());
       } else {
         nonRunnableApps.add(application);
-        LOG.info(
-            "Application attempt {} is not runnable," + " parallel limit reached",
-            application.getApplicationAttemptId());
+        LOG.info("Application attempt {} is not runnable,"
+            + " parallel limit reached", application.getApplicationAttemptId());
         return;
       }
 
@@ -878,21 +938,23 @@ public class AbstractLeafQueue extends AbstractCSQueue {
           Resources.none())) {
         activateApplications();
       } else {
-        application.updateAMContainerDiagnostics(SchedulerApplicationAttempt.AMState.INACTIVATED,
+        application.updateAMContainerDiagnostics(AMState.INACTIVATED,
             CSAMContainerLaunchDiagnosticsConstants.CLUSTER_RESOURCE_EMPTY);
-        LOG.info(
-            "Skipping activateApplications for " + application.getApplicationAttemptId()
-                + " since cluster resource is " + Resources.none());
+        LOG.info("Skipping activateApplications for "
+            + application.getApplicationAttemptId()
+            + " since cluster resource is " + Resources.none());
       }
 
       LOG.info(
-          "Application added -" + " appId: " + application.getApplicationId() + " user: "
-              + application.getUser() + "," + " leaf-queue: " + getQueuePath()
-              + " #user-pending-applications: " + user.getPendingApplications()
-              + " #user-active-applications: " + user.getActiveApplications()
-              + " #queue-pending-applications: " + getNumPendingApplications()
-              + " #queue-active-applications: " + getNumActiveApplications()
-              + " #queue-nonrunnable-applications: " + getNumNonRunnableApps());
+          "Application added -" + " appId: " + application.getApplicationId()
+              + " user: " + application.getUser() + "," + " leaf-queue: "
+              + getQueuePath() + " #user-pending-applications: " + user
+              .getPendingApplications() + " #user-active-applications: " + user
+              .getActiveApplications() + " #queue-pending-applications: "
+              + getNumPendingApplications() + " #queue-active-applications: "
+              + getNumActiveApplications()
+              + " #queue-nonrunnable-applications: "
+              + getNumNonRunnableApps());
     } finally {
       writeLock.unlock();
     }
@@ -922,14 +984,14 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     try {
       // TODO, should use getUser, use this method just to avoid UT failure
       // which is caused by wrong invoking order, will fix UT separately
-      UsersManager.User user = usersManager.getUserAndAddIfAbsent(userName);
+      User user = usersManager.getUserAndAddIfAbsent(userName);
 
       boolean runnable = runnableApps.remove(application);
       if (!runnable) {
         // removeNonRunnableApp acquires the write lock again, which is fine
         if (!removeNonRunnableApp(application)) {
-          LOG.error(
-              "Given app to remove " + application + " does not exist in queue " + getQueuePath());
+          LOG.error("Given app to remove " + application +
+              " does not exist in queue " + getQueuePath());
         }
       }
 
@@ -955,8 +1017,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       activateApplications();
 
       LOG.info(
-          "Application removed -" + " appId: " + application.getApplicationId() + " user: "
-              + application.getUser() + " queue: " + getQueuePath()
+          "Application removed -" + " appId: " + application.getApplicationId()
+              + " user: " + application.getUser() + " queue: " + getQueuePath()
               + " #user-pending-applications: " + user.getPendingApplications()
               + " #user-active-applications: " + user.getActiveApplications()
               + " #queue-pending-applications: " + getNumPendingApplications()
@@ -975,10 +1037,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     // For leaf queue, only under-utilized queue is allowed to preempt resources from other queues
     if (!usageTracker.getQueueResourceQuotas().getEffectiveMinResource(nodePartition)
         .equals(Resources.none())) {
-      limits.setIsAllowPreemption(
-          Resources.lessThan(resourceCalculator, csContext.getClusterResource(),
-              usageTracker.getQueueUsage().getUsed(nodePartition),
-              usageTracker.getQueueResourceQuotas().getEffectiveMinResource(nodePartition)));
+      limits.setIsAllowPreemption(Resources.lessThan(resourceCalculator,
+          csContext.getClusterResource(), usageTracker.getQueueUsage().getUsed(nodePartition),
+          usageTracker.getQueueResourceQuotas().getEffectiveMinResource(nodePartition)));
       return;
     }
 
@@ -1064,9 +1125,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     FiCaSchedulerNode node = CandidateNodeSetUtils.getSingleNode(candidates);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "assignContainers: partition=" + candidates.getPartition() + " #applications="
-              + orderingPolicy.getNumSchedulableEntities());
+      LOG.debug("assignContainers: partition=" + candidates.getPartition()
+          + " #applications=" + orderingPolicy.getNumSchedulableEntities());
     }
 
     setPreemptionAllowed(currentResourceLimits, candidates.getPartition());
@@ -1082,22 +1142,24 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     // if our queue cannot access this node, just return
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
         && !queueNodeLabelsSettings.isAccessibleToPartition(candidates.getPartition())) {
-      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node, parent.getQueuePath(),
-          getQueuePath(), ActivityState.REJECTED,
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+          parent.getQueuePath(), getQueuePath(), ActivityState.REJECTED,
           ActivityDiagnosticConstant.QUEUE_NOT_ABLE_TO_ACCESS_PARTITION);
       return CSAssignment.NULL_ASSIGNMENT;
     }
 
     // Check if this queue need more resource, simply skip allocation if this
     // queue doesn't need more resources.
-    if (!hasPendingResourceRequest(candidates.getPartition(), clusterResource, schedulingMode)) {
+    if (!hasPendingResourceRequest(candidates.getPartition(), clusterResource,
+        schedulingMode)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Skip this queue=" + getQueuePath()
-            + ", because it doesn't need more resource, schedulingMode=" + schedulingMode.name()
-            + " node-partition=" + candidates.getPartition());
+            + ", because it doesn't need more resource, schedulingMode="
+            + schedulingMode.name() + " node-partition=" + candidates
+            .getPartition());
       }
-      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node, parent.getQueuePath(),
-          getQueuePath(), ActivityState.SKIPPED,
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+          parent.getQueuePath(), getQueuePath(), ActivityState.SKIPPED,
           ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE);
       return CSAssignment.NULL_ASSIGNMENT;
     }
@@ -1165,7 +1227,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         }
       }
       if (!userAssignable) {
-        application.updateAMContainerDiagnostics(SchedulerApplicationAttempt.AMState.ACTIVATED,
+        application.updateAMContainerDiagnostics(AMState.ACTIVATED,
             "User capacity has reached its maximum limit.");
         ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(activitiesManager, node,
             application, application.getPriority(),
@@ -1240,7 +1302,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
             computeUserLimitAndSetHeadroom(app, cluster, p, allocation.getSchedulingMode(), null);
 
         // Deduct resources that we can release
-        UsersManager.User user = getUser(username);
+        User user = getUser(username);
         if (user == null) {
           LOG.debug("User {} has been removed!", username);
           return false;
@@ -1353,21 +1415,23 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  protected Resource getHeadroom(UsersManager.User user, Resource queueCurrentLimit,
+  protected Resource getHeadroom(User user, Resource queueCurrentLimit,
       Resource clusterResource, FiCaSchedulerApp application) {
     return getHeadroom(user, queueCurrentLimit, clusterResource, application,
         RMNodeLabelsManager.NO_LABEL);
   }
 
-  protected Resource getHeadroom(UsersManager.User user, Resource queueCurrentLimit,
-      Resource clusterResource, FiCaSchedulerApp application, String partition) {
+  protected Resource getHeadroom(User user, Resource queueCurrentLimit,
+      Resource clusterResource, FiCaSchedulerApp application,
+      String partition) {
     return getHeadroom(user, queueCurrentLimit, clusterResource,
         getResourceLimitForActiveUsers(application.getUser(), clusterResource, partition,
             SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), partition);
   }
 
-  private Resource getHeadroom(UsersManager.User user, Resource currentPartitionResourceLimit,
-      Resource clusterResource, Resource userLimitResource, String partition) {
+  private Resource getHeadroom(User user,
+      Resource currentPartitionResourceLimit, Resource clusterResource,
+      Resource userLimitResource, String partition) {
     /**
      * Headroom is:
      *    min(
@@ -1420,12 +1484,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   // It doesn't necessarily to hold application's lock here.
-  @Lock({ LeafQueue.class })
+  @Lock({AbstractLeafQueue.class})
   Resource computeUserLimitAndSetHeadroom(FiCaSchedulerApp application,
       Resource clusterResource, String nodePartition, SchedulingMode schedulingMode,
       Resource userLimit) {
     String user = application.getUser();
-    UsersManager.User queueUser = getUser(user);
+    User queueUser = getUser(user);
     if (queueUser == null) {
       LOG.debug("User {} has been removed!", user);
       return Resources.none();
@@ -1461,17 +1525,17 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     return userLimit;
   }
 
-  @Lock(Lock.NoLock.class)
+  @Lock(NoLock.class)
   public int getNodeLocalityDelay() {
     return nodeLocalityDelay;
   }
 
-  @Lock(Lock.NoLock.class)
+  @Lock(NoLock.class)
   public int getRackLocalityAdditionalDelay() {
     return rackLocalityAdditionalDelay;
   }
 
-  @Lock(Lock.NoLock.class)
+  @Lock(NoLock.class)
   public boolean getRackLocalityFullReset() {
     return rackLocalityFullReset;
   }
@@ -1514,13 +1578,14 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         nodePartition, schedulingMode);
   }
 
-  @InterfaceAudience.Private protected boolean canAssignToUser(Resource clusterResource,
-      String userName, Resource limit, FiCaSchedulerApp application, String nodePartition,
-      ResourceLimits currentResourceLimits) {
+  @Private
+  protected boolean canAssignToUser(Resource clusterResource,
+      String userName, Resource limit, FiCaSchedulerApp application,
+      String nodePartition, ResourceLimits currentResourceLimits) {
 
     readLock.lock();
     try {
-      UsersManager.User user = getUser(userName);
+      User user = getUser(userName);
       if (user == null) {
         LOG.debug("User {} has been removed!", userName);
         return false;
@@ -1552,9 +1617,9 @@ public class AbstractLeafQueue extends AbstractCSQueue {
           }
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "User " + userName + " in queue " + getQueuePath() + " will exceed limit - "
-                  + " consumed: " + user.getUsed(nodePartition) + " limit: " + limit);
+          LOG.debug("User " + userName + " in queue " + getQueuePath()
+              + " will exceed limit - " + " consumed: " + user
+              .getUsed(nodePartition) + " limit: " + limit);
         }
         return false;
       }
@@ -1566,11 +1631,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   @Override
   protected void setDynamicQueueProperties(CapacitySchedulerConfiguration configuration) {
-    super.setDynamicQueueProperties(configuration);
     // set to -1, to disable it
     configuration.setUserLimitFactor(getQueuePath(), -1);
     // Set Max AM percentage to a higher value
-    configuration.setMaximumApplicationMasterResourcePerQueuePercent(getQueuePath(), 1f);
+    configuration.setMaximumApplicationMasterResourcePerQueuePercent(
+        getQueuePath(), 1f);
+    super.setDynamicQueueProperties(configuration);
   }
 
   private void updateSchedulerHealthForCompletedContainer(RMContainer rmContainer,
@@ -1699,8 +1765,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       String userName = application.getUser();
 
       // Increment user's resource usage.
-      UsersManager.User user =
-          usersManager.updateUserResourceUsage(userName, resource, nodePartition, true);
+      User user = usersManager.updateUserResourceUsage(userName, resource,
+          nodePartition, true);
 
       Resource partitionHeadroom = Resources.createResource(0, 0);
       if (usageTracker.getMetrics().getUserMetrics(userName) != null) {
@@ -1713,10 +1779,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
           .setAvailableResourcesToUser(nodePartition, userName, partitionHeadroom);
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            getQueuePath() + " user=" + userName + " used=" + usageTracker.getQueueUsage()
-                .getUsed(nodePartition) + " numContainers=" + usageTracker.getNumContainers()
-                + " headroom = " + application.getHeadroom() + " user-resources=" + user.getUsed());
+        LOG.debug(getQueuePath() + " user=" + userName + " used="
+            + usageTracker.getQueueUsage().getUsed(nodePartition) + " numContainers="
+            + usageTracker.getNumContainers() + " headroom = " + application.getHeadroom()
+            + " user-resources=" + user.getUsed());
       }
     } finally {
       writeLock.unlock();
@@ -1744,8 +1810,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       // Update user metrics
       String userName = application.getUser();
-      UsersManager.User user =
-          usersManager.updateUserResourceUsage(userName, resource, nodePartition, false);
+      User user = usersManager.updateUserResourceUsage(userName, resource,
+          nodePartition, false);
 
       Resource partitionHeadroom = Resources.createResource(0, 0);
       if (usageTracker.getMetrics().getUserMetrics(userName) != null) {
@@ -1849,7 +1915,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   public void incAMUsedResource(String nodeLabel, Resource resourceToInc,
       SchedulerApplicationAttempt application) {
-    UsersManager.User user = getUser(application.getUser());
+    User user = getUser(application.getUser());
     if (user == null) {
       return;
     }
@@ -1861,7 +1927,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   public void decAMUsedResource(String nodeLabel, Resource resourceToDec,
       SchedulerApplicationAttempt application) {
-    UsersManager.User user = getUser(application.getUser());
+    User user = getUser(application.getUser());
     if (user == null) {
       return;
     }
@@ -1937,36 +2003,42 @@ public class AbstractLeafQueue extends AbstractCSQueue {
    *                                  excessive preemption.
    * @return Total pending resource considering user limit
    */
-  public Resource getTotalPendingResourcesConsideringUserLimit(Resource clusterResources,
-      String partition, boolean deductReservedFromPending) {
+  public Resource getTotalPendingResourcesConsideringUserLimit(
+      Resource clusterResources, String partition,
+      boolean deductReservedFromPending) {
     readLock.lock();
     try {
-      Map<String, Resource> userNameToHeadroom = new HashMap<>();
+      Map<String, Resource> userNameToHeadroom =
+          new HashMap<>();
       Resource totalPendingConsideringUserLimit = Resource.newInstance(0, 0);
       for (FiCaSchedulerApp app : getApplications()) {
         String userName = app.getUser();
         if (!userNameToHeadroom.containsKey(userName)) {
-          UsersManager.User user = getUsersManager().getUserAndAddIfAbsent(userName);
+          User user = getUsersManager().getUserAndAddIfAbsent(userName);
           Resource headroom = Resources.subtract(
-              getResourceLimitForActiveUsers(app.getUser(), clusterResources, partition,
-                  SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), user.getUsed(partition));
+              getResourceLimitForActiveUsers(app.getUser(), clusterResources,
+                  partition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
+              user.getUsed(partition));
           // Make sure headroom is not negative.
           headroom = Resources.componentwiseMax(headroom, Resources.none());
           userNameToHeadroom.put(userName, headroom);
         }
 
         // Check if we need to deduct reserved from pending
-        Resource pending = app.getAppAttemptResourceUsage().getPending(partition);
+        Resource pending = app.getAppAttemptResourceUsage().getPending(
+            partition);
         if (deductReservedFromPending) {
-          pending =
-              Resources.subtract(pending, app.getAppAttemptResourceUsage().getReserved(partition));
+          pending = Resources.subtract(pending,
+              app.getAppAttemptResourceUsage().getReserved(partition));
         }
         pending = Resources.componentwiseMax(pending, Resources.none());
 
-        Resource minpendingConsideringUserLimit =
-            Resources.componentwiseMin(userNameToHeadroom.get(userName), pending);
-        Resources.addTo(totalPendingConsideringUserLimit, minpendingConsideringUserLimit);
-        Resources.subtractFrom(userNameToHeadroom.get(userName), minpendingConsideringUserLimit);
+        Resource minpendingConsideringUserLimit = Resources.componentwiseMin(
+            userNameToHeadroom.get(userName), pending);
+        Resources.addTo(totalPendingConsideringUserLimit,
+            minpendingConsideringUserLimit);
+        Resources.subtractFrom(userNameToHeadroom.get(userName),
+            minpendingConsideringUserLimit);
       }
       return totalPendingConsideringUserLimit;
     } finally {
@@ -1976,10 +2048,12 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void collectSchedulerApplications(Collection<ApplicationAttemptId> apps) {
+  public void collectSchedulerApplications(
+      Collection<ApplicationAttemptId> apps) {
     readLock.lock();
     try {
-      for (FiCaSchedulerApp pendingApp : pendingOrderingPolicy.getSchedulableEntities()) {
+      for (FiCaSchedulerApp pendingApp : pendingOrderingPolicy
+          .getSchedulableEntities()) {
         apps.add(pendingApp.getApplicationAttemptId());
       }
       for (FiCaSchedulerApp app : orderingPolicy.getSchedulableEntities()) {
@@ -1992,38 +2066,40 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void attachContainer(Resource clusterResource, FiCaSchedulerApp application,
-      RMContainer rmContainer) {
+  public void attachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null && rmContainer != null
         && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-      FiCaSchedulerNode node = csContext.getNode(rmContainer.getContainer().getNodeId());
-      allocateResource(clusterResource, application, rmContainer.getContainer().getResource(),
-          node.getPartition(), rmContainer);
-      LOG.info(
-          "movedContainer" + " container=" + rmContainer.getContainer() + " containerState="
-              + rmContainer.getState() + " resource=" + rmContainer.getContainer().getResource()
-              + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
-              + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
-              + usageTracker.getQueueUsage().getUsed() + " cluster=" + clusterResource);
+      FiCaSchedulerNode node =
+          csContext.getNode(rmContainer.getContainer().getNodeId());
+      allocateResource(clusterResource, application, rmContainer.getContainer()
+          .getResource(), node.getPartition(), rmContainer);
+      LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " containerState="+ rmContainer.getState()
+          + " resource=" + rmContainer.getContainer().getResource()
+          + " queueMoveIn=" + this + " usedCapacity=" + getUsedCapacity()
+          + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+          + usageTracker.getQueueUsage().getUsed() + " cluster=" + clusterResource);
       // Inform the parent queue
       parent.attachContainer(clusterResource, application, rmContainer);
     }
   }
 
   @Override
-  public void detachContainer(Resource clusterResource, FiCaSchedulerApp application,
-      RMContainer rmContainer) {
+  public void detachContainer(Resource clusterResource,
+      FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null && rmContainer != null
-        && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
-      FiCaSchedulerNode node = csContext.getNode(rmContainer.getContainer().getNodeId());
-      releaseResource(clusterResource, application, rmContainer.getContainer().getResource(),
-          node.getPartition(), rmContainer);
-      LOG.info(
-          "movedContainer" + " container=" + rmContainer.getContainer() + " containerState="
-              + rmContainer.getState() + " resource=" + rmContainer.getContainer().getResource()
-              + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()
-              + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
-              + usageTracker.getQueueUsage().getUsed() + " cluster=" + clusterResource);
+          && rmContainer.getExecutionType() == ExecutionType.GUARANTEED) {
+      FiCaSchedulerNode node =
+          csContext.getNode(rmContainer.getContainer().getNodeId());
+      releaseResource(clusterResource, application, rmContainer.getContainer()
+          .getResource(), node.getPartition(), rmContainer);
+      LOG.info("movedContainer" + " container=" + rmContainer.getContainer()
+          + " containerState="+ rmContainer.getState()
+          + " resource=" + rmContainer.getContainer().getResource()
+          + " queueMoveOut=" + this + " usedCapacity=" + getUsedCapacity()
+          + " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() + " used="
+          + usageTracker.getQueueUsage().getUsed() + " cluster=" + clusterResource);
       // Inform the parent queue
       parent.detachContainer(clusterResource, application, rmContainer);
     }
@@ -2033,12 +2109,14 @@ public class AbstractLeafQueue extends AbstractCSQueue {
    * @return all ignored partition exclusivity RMContainers in the LeafQueue,
    *         this will be used by preemption policy.
    */
-  public Map<String, TreeSet<RMContainer>> getIgnoreExclusivityRMContainers() {
+  public Map<String, TreeSet<RMContainer>>
+      getIgnoreExclusivityRMContainers() {
     Map<String, TreeSet<RMContainer>> clonedMap = new HashMap<>();
 
     readLock.lock();
     try {
-      for (Map.Entry<String, TreeSet<RMContainer>> entry : ignorePartitionExclusivityRMContainers.entrySet()) {
+      for (Map.Entry<String, TreeSet<RMContainer>> entry : ignorePartitionExclusivityRMContainers
+          .entrySet()) {
         clonedMap.put(entry.getKey(), new TreeSet<>(entry.getValue()));
       }
 
@@ -2073,19 +2151,23 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     this.maxApplications = maxApplications;
   }
 
-  public void setMaxAMResourcePerQueuePercent(float maxAMResourcePerQueuePercent) {
+  public void setMaxAMResourcePerQueuePercent(
+      float maxAMResourcePerQueuePercent) {
     this.maxAMResourcePerQueuePercent = maxAMResourcePerQueuePercent;
   }
 
-  public OrderingPolicy<FiCaSchedulerApp> getOrderingPolicy() {
+  public OrderingPolicy<FiCaSchedulerApp>
+      getOrderingPolicy() {
     return orderingPolicy;
   }
 
-  void setOrderingPolicy(OrderingPolicy<FiCaSchedulerApp> orderingPolicy) {
+  void setOrderingPolicy(
+      OrderingPolicy<FiCaSchedulerApp> orderingPolicy) {
     writeLock.lock();
     try {
       if (null != this.orderingPolicy) {
-        orderingPolicy.addAllSchedulableEntities(this.orderingPolicy.getSchedulableEntities());
+        orderingPolicy.addAllSchedulableEntities(
+            this.orderingPolicy.getSchedulableEntities());
       }
       this.orderingPolicy = orderingPolicy;
     } finally {
@@ -2120,8 +2202,34 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
   }
 
-  public OrderingPolicy<FiCaSchedulerApp> getPendingAppsOrderingPolicy() {
+  public OrderingPolicy<FiCaSchedulerApp>
+      getPendingAppsOrderingPolicy() {
     return pendingOrderingPolicy;
+  }
+
+  /*
+   * Holds shared values used by all applications in
+   * the queue to calculate headroom on demand
+   */
+  static class QueueResourceLimitsInfo {
+    private Resource queueCurrentLimit;
+    private Resource clusterResource;
+
+    public void setQueueCurrentLimit(Resource currentLimit) {
+      this.queueCurrentLimit = currentLimit;
+    }
+
+    public Resource getQueueCurrentLimit() {
+      return queueCurrentLimit;
+    }
+
+    public void setClusterResource(Resource clusterResource) {
+      this.clusterResource = clusterResource;
+    }
+
+    public Resource getClusterResource() {
+      return clusterResource;
+    }
   }
 
   @Override
@@ -2143,19 +2251,19 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     int maxDefaultPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
     int maxSystemApps = conf.getMaximumSystemApplications();
-    int baseMaxApplications =
-        maxDefaultPerQueueApps > 0 ? Math.min(maxDefaultPerQueueApps, maxSystemApps) :
-            maxSystemApps;
+    int baseMaxApplications = maxDefaultPerQueueApps > 0 ?
+        Math.min(maxDefaultPerQueueApps, maxSystemApps)
+        : maxSystemApps;
 
     String maxLabel = RMNodeLabelsManager.NO_LABEL;
     if (maxAppsForQueue < 0) {
-      if (maxDefaultPerQueueApps > 0
-          && this.capacityConfigType != CapacityConfigType.ABSOLUTE_RESOURCE) {
+      if (maxDefaultPerQueueApps > 0 && this.capacityConfigType
+          != CapacityConfigType.ABSOLUTE_RESOURCE) {
         maxAppsForQueue = baseMaxApplications;
       } else {
         for (String label : queueNodeLabelsSettings.getConfiguredNodeLabels()) {
-          int maxApplicationsByLabel =
-              (int) (baseMaxApplications * queueCapacities.getAbsoluteCapacity(label));
+          int maxApplicationsByLabel = (int) (baseMaxApplications
+              * queueCapacities.getAbsoluteCapacity(label));
           if (maxApplicationsByLabel > maxAppsForQueue) {
             maxAppsForQueue = maxApplicationsByLabel;
             maxLabel = label;
@@ -2168,21 +2276,23 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     updateMaxAppsPerUser();
 
-    LOG.info(
-        "LeafQueue:" + getQueuePath() + "update max app related, maxApplications=" + maxAppsForQueue
-            + ", maxApplicationsPerUser=" + maxApplicationsPerUser + ", Abs Cap:"
-            + queueCapacities.getAbsoluteCapacity(maxLabel) + ", Cap: "
-            + queueCapacities.getCapacity(maxLabel) + ", MaxCap : "
-            + queueCapacities.getMaximumCapacity(maxLabel));
+    LOG.info("LeafQueue:" + getQueuePath() +
+        "update max app related, maxApplications="
+        + maxAppsForQueue + ", maxApplicationsPerUser="
+        + maxApplicationsPerUser + ", Abs Cap:" + queueCapacities
+        .getAbsoluteCapacity(maxLabel) + ", Cap: " + queueCapacities
+        .getCapacity(maxLabel) + ", MaxCap : " + queueCapacities
+        .getMaximumCapacity(maxLabel));
   }
 
   private void updateMaxAppsPerUser() {
     int maxAppsPerUser = maxApplications;
     if (getUsersManager().getUserLimitFactor() != -1) {
-      int maxApplicationsWithUserLimits =
-          (int) (maxApplications * (getUsersManager().getUserLimit() / 100.0f)
-              * getUsersManager().getUserLimitFactor());
-      maxAppsPerUser = Math.min(maxApplications, maxApplicationsWithUserLimits);
+      int maxApplicationsWithUserLimits = (int) (maxApplications
+          * (getUsersManager().getUserLimit() / 100.0f)
+          * getUsersManager().getUserLimitFactor());
+      maxAppsPerUser = Math.min(maxApplications,
+          maxApplicationsWithUserLimits);
     }
 
     setMaxApplicationsPerUser(maxAppsPerUser);
@@ -2196,19 +2306,31 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     return this.getUsersManager().getUsers().keySet();
   }
 
+  static class CachedUserLimit {
+    final Resource userLimit;
+    volatile boolean canAssign = true;
+    volatile Resource reservation = Resources.none();
+
+    CachedUserLimit(Resource userLimit) {
+      this.userLimit = userLimit;
+    }
+  }
+
   private void updateQueuePreemptionMetrics(RMContainer rmc) {
     final long usedMillis = rmc.getFinishTime() - rmc.getCreationTime();
     final long usedSeconds = usedMillis / DateUtils.MILLIS_PER_SECOND;
     CSQueueMetrics metrics = usageTracker.getMetrics();
     Resource containerResource = rmc.getAllocatedResource();
     metrics.preemptContainer();
-    long mbSeconds = (containerResource.getMemorySize() * usedMillis) / DateUtils.MILLIS_PER_SECOND;
-    long vcSeconds =
-        (containerResource.getVirtualCores() * usedMillis) / DateUtils.MILLIS_PER_SECOND;
+    long mbSeconds = (containerResource.getMemorySize() * usedMillis)
+        / DateUtils.MILLIS_PER_SECOND;
+    long vcSeconds = (containerResource.getVirtualCores() * usedMillis)
+        / DateUtils.MILLIS_PER_SECOND;
     metrics.updatePreemptedMemoryMBSeconds(mbSeconds);
     metrics.updatePreemptedVcoreSeconds(vcSeconds);
     metrics.updatePreemptedResources(containerResource);
-    metrics.updatePreemptedSecondsForCustomResources(containerResource, usedSeconds);
+    metrics.updatePreemptedSecondsForCustomResources(containerResource,
+        usedSeconds);
     metrics.updatePreemptedForCustomResources(containerResource);
   }
 
@@ -2253,42 +2375,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   @Override
   public boolean isEligibleForAutoDeletion() {
-    return isDynamicQueue() && getNumApplications() == 0 && csContext.getConfiguration()
-        .isAutoExpiredDeletionEnabled(this.getQueuePath());
-  }
-
-  /*
-   * Holds shared values used by all applications in
-   * the queue to calculate headroom on demand
-   */
-  static class QueueResourceLimitsInfo {
-    private Resource queueCurrentLimit;
-    private Resource clusterResource;
-
-    public void setQueueCurrentLimit(Resource currentLimit) {
-      this.queueCurrentLimit = currentLimit;
-    }
-
-    public Resource getQueueCurrentLimit() {
-      return queueCurrentLimit;
-    }
-
-    public void setClusterResource(Resource clusterResource) {
-      this.clusterResource = clusterResource;
-    }
-
-    public Resource getClusterResource() {
-      return clusterResource;
-    }
-  }
-
-  static class CachedUserLimit {
-    final Resource userLimit;
-    volatile boolean canAssign = true;
-    volatile Resource reservation = Resources.none();
-
-    CachedUserLimit(Resource userLimit) {
-      this.userLimit = userLimit;
-    }
+    return isDynamicQueue() && getNumApplications() == 0
+        && csContext.getConfiguration().
+        isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 }

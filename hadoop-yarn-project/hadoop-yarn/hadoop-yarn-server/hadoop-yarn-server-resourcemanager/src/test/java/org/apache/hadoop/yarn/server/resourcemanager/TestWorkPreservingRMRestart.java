@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
@@ -788,7 +789,7 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         q2UsedResource.getVirtualCores());
 
     // assert parent queue state.
-    AbstractLeafQueue leafQueue = (AbstractLeafQueue) schedulerApp2.getQueue();
+    LeafQueue leafQueue = (LeafQueue) schedulerApp2.getQueue();
     ParentQueue parentQueue = (ParentQueue) leafQueue.getParent();
     checkParentQueue(parentQueue, 6, totalUsedResource, (float) 6 / 16,
       (float) 6 / 16);

@@ -29,11 +29,11 @@ public class CapacityHeadroomProvider {
   UsersManager.User user;
   AbstractLeafQueue queue;
   FiCaSchedulerApp application;
-  LeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo;
+  AbstractLeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo;
   
   public CapacityHeadroomProvider(UsersManager.User user, AbstractLeafQueue queue,
       FiCaSchedulerApp application,
-      LeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo) {
+      AbstractLeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo) {
 
     this.user = user;
     this.queue = queue;
