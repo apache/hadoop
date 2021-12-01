@@ -151,7 +151,7 @@ public class AppSchedulingInfo {
       } else {
         Configuration conf = rmContext.getYarnConfiguration();
         return conf.get(
-            YarnConfiguration.ENV_APPLICATION_PLACEMENT_TYPE_CLASS_DEFAULT);
+            YarnConfiguration.APPLICATION_PLACEMENT_TYPE_CLASS);
       }
     }
     return null;

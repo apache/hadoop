@@ -197,7 +197,7 @@ public class TestAppSchedulingInfo {
     // This should return null as nothing is set in the conf.
     Assert.assertNull(info.getDefaultResourceRequestAppPlacementType());
     conf = new Configuration();
-    conf.set(YarnConfiguration.ENV_APPLICATION_PLACEMENT_TYPE_CLASS_DEFAULT,
+    conf.set(YarnConfiguration.APPLICATION_PLACEMENT_TYPE_CLASS,
         DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS);
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
     info = new AppSchedulingInfo(appAttemptId, "test", queue,

@@ -285,7 +285,7 @@ public class YarnConfiguration extends Configuration {
       false;
 
   /** Configure default application placement allocator. */
-  public static final String ENV_APPLICATION_PLACEMENT_TYPE_CLASS_DEFAULT =
+  public static final String APPLICATION_PLACEMENT_TYPE_CLASS =
       YARN_PREFIX + "scheduler.app-placement-allocator.class";
 
   /** Configured scheduler queue placement rules. */
