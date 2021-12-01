@@ -1458,6 +1458,8 @@ public class WebHdfsFileSystem extends FileSystem
         }.run();
   }
 
+  // This API should be treated as private to WebHdfsFileSystem. Only tests can use it directly.
+  @VisibleForTesting
   public SnapshotDiffReportListing getSnapshotDiffReportListing(
         String snapshotDir, final String fromSnapshot, final String toSnapshot,
         byte[] startPath, int index) throws IOException {
