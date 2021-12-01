@@ -1609,10 +1609,11 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
 
 * Submit a HTTP GET request.
 
-        curl -X GET curl -i -X GET "http://localhost:9870/webhdfs/v1/foo?op=GETSNAPSHOTDIFFLISTING&oldsnapshotname=s4&snapshotname=s5"
-
-        curl -i GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSNAPSHOTDIFFLISTING
+        curl -i -X GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSNAPSHOTDIFFLISTING
                            &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>&snapshotdiffstartpath=<STARTPATH>&snapshotdiffindex=<STARTINDEX>
+
+    If `snapshotdiffstartpath` and `snapshotdiffindex` are not given,
+    `""` (empty string) and `-1` are used respectively implying the first iteration.
 
     The client receives a response with a
     [`SnapshotDiffReportListing` JSON object](#SnapshotDiffReportListing_JSON_Schema).
