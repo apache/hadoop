@@ -4527,33 +4527,10 @@ public class BlockManager implements BlockStatsMXBean {
    * based on its liveness. Dead nodes cannot always be safely decommissioned
    * or in maintenance.
    */
-  boolean isNodeHealthyForDecommissionOrMaintenance(DatanodeDescriptor node) {
-    if (!node.checkBlockReportReceived()) {
-      LOG.info("Node {} hasn't sent its first block report.", node);
-      return false;
-    }
-
-    if (node.isAlive()) {
-      return true;
-    }
-
+  boolean anyLowRedundancyOrPendingReplicationBlocks() {
     updateState();
-    if (pendingReconstructionBlocksCount == 0 &&
-        lowRedundancyBlocksCount == 0) {
-      LOG.info("Node {} is dead and there are no low redundancy" +
-          " blocks or blocks pending reconstruction. Safe to decommission or",
-          " put in maintenance.", node);
-      return true;
-    }
-
-    LOG.warn("Node {} is dead " +
-        "while in {}. Cannot be safely " +
-        "decommissioned or be in maintenance since there is risk of reduced " +
-        "data durability or data loss. Either restart the failed node or " +
-        "force decommissioning or maintenance by removing, calling " +
-        "refreshNodes, then re-adding to the excludes or host config files.",
-        node, node.getAdminState());
-    return false;
+    return pendingReconstructionBlocksCount != 0 ||
+        lowRedundancyBlocksCount != 0;
   }
 
   public int getActiveBlockCount() {

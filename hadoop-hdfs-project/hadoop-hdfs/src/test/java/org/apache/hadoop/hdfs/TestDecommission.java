@@ -26,6 +26,8 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +42,8 @@ import java.util.regex.Pattern;
 import java.util.EnumSet;
 
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -1653,5 +1657,181 @@ public class TestDecommission extends AdminStatesBaseTest {
     }
 
     cleanupFile(fileSys, file);
+  }
+
+  /**
+   * Test DatanodeAdminManager logic related to datanode which dies while DECOMMISSION_INPROGRESS.
+   * If the datanode never comes alive again, it remains DECOMMISSION_INPROGRESS forever.
+   */
+  @Test(timeout = 120000)
+  public void testDeadNodesRemainDecommissionInProgress() throws Exception {
+    final Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> deadNodes =
+        createClusterWithDeadNodesDecommissionInProgress();
+    final DatanodeManager datanodeManager =
+        getCluster().getNamesystem().getBlockManager().getDatanodeManager();
+    final DatanodeAdminManager decomManager = datanodeManager.getDatanodeAdminManager();
+
+    // Do not restart the dead datanodes & validate they remain decommissioning forever
+    final Duration checkDuration = Duration.ofSeconds(10);
+    Instant checkUntil = Instant.now().plus(checkDuration);
+    while (Instant.now().isBefore(checkUntil)) {
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+      assertEquals(0, decomManager.getNumPendingNodes());
+      assertEquals(0, decomManager.getNumTrackedNodes());
+      for (final DatanodeDescriptor deadNode : deadNodes.keySet()) {
+        Assert.assertFalse(deadNode.isAlive());
+        assertEquals(AdminStates.DECOMMISSION_INPROGRESS, deadNode.getAdminState());
+      }
+      Thread.sleep(500);
+    }
+  }
+
+  /**
+   * Test DatanodeAdminManager logic related to datanode which dies while DECOMMISSION_INPROGRESS.
+   * If the datanode comes alive again, it can be DECOMMISSIONED.
+   */
+  @Test(timeout = 120000)
+  public void testRevivedDeadNodeIsDecommissioned() throws Exception {
+    final Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> deadNodes =
+        createClusterWithDeadNodesDecommissionInProgress();
+    final DatanodeManager datanodeManager =
+        getCluster().getNamesystem().getBlockManager().getDatanodeManager();
+    final DatanodeAdminManager decomManager = datanodeManager.getDatanodeAdminManager();
+
+    // Restart the "dead" datanodes & validate they are still DECOMMISSION_INPROGRESS
+    for (final MiniDFSCluster.DataNodeProperties deadNode : deadNodes.values()) {
+      getCluster().restartDataNode(deadNode, true);
+    }
+    GenericTestUtils.waitFor(() -> deadNodes.keySet().stream().allMatch(
+        dn -> dn.isAlive() && dn.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS))
+            && decomManager.getNumTrackedNodes() == 0 && decomManager.getNumPendingNodes() == 3, 500,
+        20000);
+
+    // Validate the revived "dead" datanodes & are eventually decommissioned
+    GenericTestUtils.waitFor(() -> {
+      try {
+        BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+      } catch (Exception e) {
+        LOG.error("Exception running DatanodeAdminManager.Monitor", e);
+      }
+      return deadNodes.keySet().stream()
+          .allMatch(dn -> dn.isAlive() && dn.getAdminState().equals(AdminStates.DECOMMISSIONED))
+          && decomManager.getNumTrackedNodes() == 0 && decomManager.getNumPendingNodes() == 0;
+    }, 500, 20000);
+  }
+
+  /**
+   * Test DatanodeAdminManager logic related to datanode which dies while DECOMMISSION_INPROGRESS.
+   * If the datanode is removed from exclude hosts file while dead,it should transition out of
+   * DECOMMISSION_INPROGRESS to IN_SERVICE. If the datanode comes alive again,
+   * it should still have AdminState=IN_SERVICE.
+   */
+  @Test(timeout = 120000)
+  public void testDeadNodeWithDecommissionInProgressRemovedFromExcludeFile() throws Exception {
+    final Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> deadNodes =
+        createClusterWithDeadNodesDecommissionInProgress();
+    final DatanodeManager datanodeManager =
+        getCluster().getNamesystem().getBlockManager().getDatanodeManager();
+    final DatanodeAdminManager decomManager = datanodeManager.getDatanodeAdminManager();
+
+    // Remove the dead datanodes from the exclude hosts file & validate they become IN_SERVICE
+    for (final DatanodeDescriptor deadNode : deadNodes.keySet()) {
+      putNodeInService(0, deadNode);
+    }
+    GenericTestUtils.waitFor(() -> deadNodes.keySet().stream()
+            .allMatch(dn -> !dn.isAlive() && dn.getAdminState().equals(AdminStates.NORMAL)), 500,
+        20000);
+
+    // Restart the dead datanodes & validate they are still IN_SERVICE
+    for (final MiniDFSCluster.DataNodeProperties deadNode : deadNodes.values()) {
+      getCluster().restartDataNode(deadNode, true);
+    }
+    GenericTestUtils.waitFor(() -> deadNodes.keySet().stream()
+        .allMatch(dn -> dn.isAlive() && dn.getAdminState().equals(AdminStates.NORMAL)), 500, 20000);
+  }
+
+  /**
+   * Create a MiniDFSCluster with 1 live datanode in AdminState=NORMAL and
+   * 3 dead datanodes in AdminState=DECOMMISSION_INPROGRESS
+   *
+   * @return list of 3 dead datanodes in AdminState=DECOMMISSION_INPROGRESS
+   */
+  private Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> createClusterWithDeadNodesDecommissionInProgress()
+      throws Exception {
+    // Allow 3 datanodes to be decommissioned at a time
+    getConf().setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES, 3);
+    // Disable the normal monitor runs
+    getConf()
+        .setInt(MiniDFSCluster.DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY, Integer.MAX_VALUE);
+
+    // Start cluster with 4 datanodes
+    startCluster(1, 4);
+    final FSNamesystem namesystem = getCluster().getNamesystem();
+    final BlockManager blockManager = namesystem.getBlockManager();
+    final DatanodeManager datanodeManager = blockManager.getDatanodeManager();
+    final DatanodeAdminManager decomManager = datanodeManager.getDatanodeAdminManager();
+    assertEquals(4, getCluster().getDataNodes().size());
+    getCluster().waitActive();
+
+    // 1 datanodes will remain "live"
+    final DatanodeDescriptor liveNode =
+        getDatanodeDesriptor(namesystem, getCluster().getDataNodes().get(0).getDatanodeUuid());
+    assertNotNull(liveNode);
+
+    // 3 datanodes will be "dead" while decommissioning
+    final List<DatanodeDescriptor> deadNodes = getCluster().getDataNodes().subList(1, 4).stream()
+        .map(dn -> getDatanodeDesriptor(namesystem, dn.getDatanodeUuid()))
+        .collect(Collectors.toList());
+    assertEquals(3, deadNodes.size());
+
+    // Create file with block replicas on all 4 nodes
+    final Path filePath = new Path("/tmp/test");
+    writeFile(getCluster().getFileSystem(), filePath, 4, 10);
+
+    // Initially there are no low redundancy blocks
+    Assert
+        .assertFalse(BlockManagerTestUtil.anyLowRedundancyOrPendingReplicationBlocks(blockManager));
+
+    // Cause the 3 "dead" nodes to be lost while in state decommissioning
+    // and fill the tracked nodes set with those 3 "dead" nodes
+    final Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> deadNodeProps =
+        new HashMap<>();
+    ArrayList<DatanodeInfo> decommissionedNodes = Lists.newArrayList();
+    for (final DatanodeDescriptor deadNode : deadNodes) {
+      // Start decommissioning the node
+      takeNodeOutofService(0, deadNode.getDatanodeUuid(), 0, decommissionedNodes,
+          AdminStates.DECOMMISSION_INPROGRESS);
+      decommissionedNodes.add(deadNode);
+
+      // Stop the datanode so that it is lost while decommissioning
+      MiniDFSCluster.DataNodeProperties dn = getCluster().stopDataNode(deadNode.getXferAddr());
+      deadNodeProps.put(deadNode, dn);
+      deadNode.setLastUpdate(213); // Set last heartbeat to be in the past
+    }
+    assertEquals(3, deadNodeProps.size());
+    // Wait for the decommissioning nodes to become dead & to be added to "pendingNodes"
+    GenericTestUtils.waitFor(() -> deadNodes.stream().noneMatch(DatanodeDescriptor::isAlive)
+            && decomManager.getNumTrackedNodes() == 0 && decomManager.getNumPendingNodes() == 3, 500,
+        20000);
+
+    // Run DatanodeAdminManager.Monitor & validate the dead nodes are removed
+    if (this instanceof TestDecommissionWithBackoffMonitor) {
+      // For TestDecommissionWithBackoffMonitor an additional tick/execution of the
+      // DatanodeAdminBackoffMonitor is needed because of how node cancellation is implemented
+      // - 1st tick, node is de-queued by "processPendingNodes"
+      // - 2nd tick, node is removed from the DatanodeAdminManager by "processCancelledNodes"
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+    }
+    BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+    assertEquals(0, decomManager.getNumPendingNodes());
+    assertEquals(0, decomManager.getNumTrackedNodes());
+    assertTrue(BlockManagerTestUtil.anyLowRedundancyOrPendingReplicationBlocks(blockManager));
+
+    // Delete the file such that its no longer a factor blocking decommissioning
+    getCluster().getFileSystem().delete(filePath, true);
+    Assert
+        .assertFalse(BlockManagerTestUtil.anyLowRedundancyOrPendingReplicationBlocks(blockManager));
+
+    return deadNodeProps;
   }
 }

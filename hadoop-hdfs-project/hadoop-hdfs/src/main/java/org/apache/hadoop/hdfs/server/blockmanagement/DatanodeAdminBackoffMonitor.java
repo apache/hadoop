@@ -239,6 +239,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       DatanodeDescriptor dn = cancelledNodes.poll();
       outOfServiceNodeBlocks.remove(dn);
       pendingRep.remove(dn);
+      dn.setTrackedForDecommissionOrMaintenance(false);
     }
   }
 
@@ -301,6 +302,42 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
 
     // Finally move the nodes to their final state if they are ready.
     processCompletedNodes(toRemove);
+
+    for (final DatanodeDescriptor dn : outOfServiceNodeBlocks.keySet()) {
+      if (!dn.isAlive()) {
+        if (blockManager.anyLowRedundancyOrPendingReplicationBlocks()) {
+          // Dead datanode should remain in decommissioning because there is risk of data loss
+          LOG.warn("Node {} is dead while in {}. Cannot be safely "
+                  + "decommissioned or be in maintenance since there is risk of reduced "
+                  + "data durability or data loss. Either restart the failed node or "
+                  + "force decommissioning or maintenance by removing, calling "
+                  + "refreshNodes, then re-adding to the excludes or host config files.", dn,
+              dn.getAdminState());
+          // No need to track unhealthy datanodes, when the datanode comes alive again
+          // and re-registers, it will be re-added to the DatanodeAdminManager
+          cancelledNodes.add(dn);
+        } else {
+          // Dead node can potentially be decommissioned because there is no risk of data loss
+          LOG.info("Node {} is dead and there are no low redundancy "
+              + "blocks or blocks pending reconstruction. Safe to decommission or "
+              + "put in maintenance.", dn);
+        }
+      } else if (!dn.checkBlockReportReceived()) {
+        // Cannot untrack a live node with no first block report because it
+        // may not be re-added to the DatanodeAdminManager, requeue the node if necessary
+        LOG.info("Healthy Node {} hasn't sent its first block report.", dn);
+      }
+    }
+
+    // Having more nodes decommissioning than can be tracked will impact decommissioning
+    // performance due to queueing delay
+    int numDecommissioningNodes =
+        outOfServiceNodeBlocks.size() + pendingNodes.size() - cancelledNodes.size();
+    if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+      LOG.warn("There are {} nodes decommissioning but only {} nodes will be tracked at a time. "
+              + "{} nodes are currently queued waiting to be decommissioned.",
+          numDecommissioningNodes, maxConcurrentTrackedNodes, getPendingNodes().size());
+    }
   }
 
   /**
@@ -346,9 +383,8 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     namesystem.writeLock();
     try {
       for (DatanodeDescriptor dn : toRemove) {
-        final boolean isHealthy =
-            blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
-        if (isHealthy) {
+        if (dn.checkBlockReportReceived() &&
+            (dn.isAlive() || !blockManager.anyLowRedundancyOrPendingReplicationBlocks())) {
           if (dn.isDecommissionInProgress()) {
             dnAdmin.setDecommissioned(dn);
             outOfServiceNodeBlocks.remove(dn);

@@ -25,9 +25,11 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerSafeMode.BMSafeModeStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -39,6 +41,11 @@ import org.junit.Assert;
 import org.apache.hadoop.util.Preconditions;
 
 public class BlockManagerTestUtil {
+
+  public static boolean anyLowRedundancyOrPendingReplicationBlocks(final BlockManager blockManager) {
+    return blockManager.anyLowRedundancyOrPendingReplicationBlocks();
+  }
+
   public static void setNodeReplicationLimit(final BlockManager blockManager,
       final int limit) {
     blockManager.maxReplicationStreams = limit;

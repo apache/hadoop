@@ -125,6 +125,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   public void stopTrackingNode(DatanodeDescriptor dn) {
     pendingNodes.remove(dn);
     outOfServiceNodeBlocks.remove(dn);
+    dn.setTrackedForDecommissionOrMaintenance(false);
   }
 
   @Override
@@ -185,6 +186,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         it = new CyclicIteration<>(outOfServiceNodeBlocks,
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
+    final List<DatanodeDescriptor> deadToRemove = new ArrayList<>();
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
         .isRunning()) {
@@ -221,7 +223,32 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           LOG.debug("Processing {} node {}", dn.getAdminState(), dn);
           pruneReliableBlocks(dn, blocks);
         }
-        if (blocks.size() == 0) {
+
+        final boolean anyLowRedundancyBlocks =
+            blockManager.anyLowRedundancyOrPendingReplicationBlocks();
+        if (!dn.isAlive() && !anyLowRedundancyBlocks) {
+          // Dead node can potentially be decommissioned because there is no risk of data loss
+          LOG.info("Node {} is dead and there are no low redundancy "
+              + "blocks or blocks pending reconstruction. Safe to decommission or "
+              + "put in maintenance.", dn);
+        }
+        if (!dn.isAlive() && anyLowRedundancyBlocks) {
+          // Dead datanode should remain in decommissioning because there is risk of data loss
+          LOG.warn("Node {} is dead while in {}. Cannot be safely "
+                  + "decommissioned or be in maintenance since there is risk of reduced "
+                  + "data durability or data loss. Either restart the failed node or "
+                  + "force decommissioning or maintenance by removing, calling "
+                  + "refreshNodes, then re-adding to the excludes or host config files.", dn,
+              dn.getAdminState());
+          // No need to track unhealthy datanodes, when the datanode comes alive again
+          // and re-registers, it will be re-added to the DatanodeAdminManager
+          deadToRemove.add(dn);
+        } else if (!dn.checkBlockReportReceived()) {
+          // Cannot untrack a live node with no first block report because it
+          // may not be re-added to the DatanodeAdminManager
+          LOG.info("Healthy Node {} hasn't sent its first block report, "
+              + "cannot be decommissioned yet.", dn);
+        } else if (blocks.size() == 0) {
           if (!fullScan) {
             // If we didn't just do a full scan, need to re-check with the
             // full block map.
@@ -236,9 +263,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           }
           // If the full scan is clean AND the node liveness is okay,
           // we can finally mark as DECOMMISSIONED or IN_MAINTENANCE.
-          final boolean isHealthy =
-              blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
-          if (blocks.size() == 0 && isHealthy) {
+          if (blocks.size() == 0) {
             if (dn.isDecommissionInProgress()) {
               dnAdmin.setDecommissioned(dn);
               toRemove.add(dn);
@@ -255,10 +280,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
             LOG.debug("Node {} is sufficiently replicated and healthy, "
                 + "marked as {}.", dn, dn.getAdminState());
           } else {
-            LOG.info("Node {} {} healthy."
+            LOG.info("Node {} is healthy."
                     + " It needs to replicate {} more blocks."
-                    + " {} is still in progress.", dn,
-                isHealthy ? "is": "isn't", blocks.size(), dn.getAdminState());
+                    + " {} is still in progress.",
+                dn, blocks.size(), dn.getAdminState());
           }
         } else {
           LOG.info("Node {} still has {} blocks to replicate "
@@ -276,6 +301,17 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         iterkey = dn;
       }
     }
+
+    // Having more nodes decommissioning than can be tracked will impact decommissioning
+    // performance due to queueing delay
+    int numDecommissioningNodes =
+        outOfServiceNodeBlocks.size() + getPendingNodes().size() - toRemove.size();
+    if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+      LOG.warn("There are {} nodes decommissioning but only {} nodes will be tracked at a time. "
+              + "{} nodes are currently queued waiting to be decommissioned.",
+          numDecommissioningNodes, maxConcurrentTrackedNodes, getPendingNodes().size());
+    }
+
     // Remove the datanodes that are DECOMMISSIONED or in service after
     // maintenance expiration.
     for (DatanodeDescriptor dn : toRemove) {
@@ -283,6 +319,14 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           "Removing node %s that is not yet decommissioned or in service!",
           dn);
       outOfServiceNodeBlocks.remove(dn);
+    }
+
+    // Remove dead datanodes which are DECOMMISSION_INPROGRESS
+    for (DatanodeDescriptor dn : deadToRemove) {
+      Preconditions.checkState(dn.isDecommissionInProgress() && !dn.isAlive(),
+          "Removing dead node %s that is not decommission in progress!", dn);
+      outOfServiceNodeBlocks.remove(dn);
+      dn.setTrackedForDecommissionOrMaintenance(false);
     }
   }
 

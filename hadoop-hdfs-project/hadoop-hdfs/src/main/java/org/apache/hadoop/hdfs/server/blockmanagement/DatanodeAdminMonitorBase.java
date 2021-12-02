@@ -134,6 +134,7 @@ public abstract class DatanodeAdminMonitorBase
   @Override
   public void startTrackingNode(DatanodeDescriptor dn) {
     pendingNodes.add(dn);
+    dn.setTrackedForDecommissionOrMaintenance(true);
   }
 
   /**

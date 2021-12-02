@@ -231,6 +231,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // HB processing can use it to tell if it is the first HB since DN restarted
   private boolean heartbeatedSinceRegistration = false;
 
+  // Whether or not the node is tracked within the DatanodeAdminManager for decommissioning
+  // or maintenance. This is necessary to avoid adding duplicate nodes to the DatanodeAdminManager.
+  private boolean isTrackedForDecommissionOrMaintenance  = false;
+
   /**
    * DatanodeDescriptor constructor
    * @param nodeID id of the data node
@@ -1087,5 +1091,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
     }
     return false;
+  }
+
+  public void setTrackedForDecommissionOrMaintenance(final boolean isTracked) {
+    isTrackedForDecommissionOrMaintenance = isTracked;
+  }
+
+  public boolean isTrackedForDecommissionOrMaintenance() {
+    return isTrackedForDecommissionOrMaintenance;
   }
 }

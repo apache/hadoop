@@ -186,6 +186,13 @@ public class DatanodeAdminManager {
         node.getLeavingServiceStatus().setStartTime(monotonicNow());
         monitor.startTrackingNode(node);
       }
+    } else if (!node.isTrackedForDecommissionOrMaintenance() && node.isDecommissionInProgress()
+        && node.isAlive()) {
+      for (DatanodeStorageInfo storage : node.getStorageInfos()) {
+        LOG.info("Resuming decommission of {} {} with {} blocks", node, storage,
+            storage.numBlocks());
+      }
+      monitor.startTrackingNode(node);
     } else {
       LOG.trace("startDecommission: Node {} in {}, nothing to do.",
           node, node.getAdminState());
