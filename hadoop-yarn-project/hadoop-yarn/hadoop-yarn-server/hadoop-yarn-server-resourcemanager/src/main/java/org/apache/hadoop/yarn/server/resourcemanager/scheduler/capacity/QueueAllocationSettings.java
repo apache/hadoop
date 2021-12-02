@@ -36,17 +36,10 @@ public class QueueAllocationSettings {
     this.minimumAllocation = minimumAllocation;
   }
 
-  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration,
-      CapacitySchedulerConfiguration originalSchedulerConfiguration, String queuePath,
+  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration, String queuePath,
       CSQueue parent) {
-    /* YARN-10869: When using AutoCreatedLeafQueues, the passed configuration
-     * object is a cloned one containing only the template configs
-     * (see ManagedParentQueue#getLeafQueueConfigs). To ensure that the actual
-     * cluster maximum allocation is fetched the original config object should
-     * be used.
-     */
     Resource clusterMax = ResourceUtils
-        .fetchMaximumAllocationFromConfig(originalSchedulerConfiguration);
+        .fetchMaximumAllocationFromConfig(configuration);
     Resource queueMax = configuration.getQueueMaximumAllocation(queuePath);
 
     maximumAllocation = Resources.clone(

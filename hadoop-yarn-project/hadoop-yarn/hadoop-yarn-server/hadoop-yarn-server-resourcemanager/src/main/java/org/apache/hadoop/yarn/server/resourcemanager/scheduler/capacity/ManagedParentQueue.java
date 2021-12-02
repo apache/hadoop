@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
@@ -33,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -454,25 +452,13 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     }
   }
 
-  public CapacitySchedulerConfiguration getLeafQueueConfigs(
-      String leafQueueName) {
-    return getLeafQueueConfigs(getLeafQueueTemplate().getLeafQueueConfigs(),
-        leafQueueName);
-  }
-
-  public CapacitySchedulerConfiguration getLeafQueueConfigs(
-      CapacitySchedulerConfiguration templateConfig, String leafQueueName) {
-    CapacitySchedulerConfiguration leafQueueConfigTemplate = new
-        CapacitySchedulerConfiguration(new Configuration(false), false);
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         templateConfig.iterator(); iterator.hasNext();) {
-      Map.Entry<String, String> confKeyValuePair = iterator.next();
-      final String name = confKeyValuePair.getKey().replaceFirst(
-          CapacitySchedulerConfiguration
-              .AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX,
-          leafQueueName);
-      leafQueueConfigTemplate.set(name, confKeyValuePair.getValue());
+  public void setLeafQueueConfigs(String leafQueueName) {
+    CapacitySchedulerConfiguration templateConfig = leafQueueTemplate.getLeafQueueConfigs();
+    for (Map.Entry<String, String> confKeyValuePair : templateConfig) {
+      final String name = confKeyValuePair.getKey()
+          .replaceFirst(CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX,
+              leafQueueName);
+      queueContext.setConfigurationEntry(name, confKeyValuePair.getValue());
     }
-    return leafQueueConfigTemplate;
   }
 }

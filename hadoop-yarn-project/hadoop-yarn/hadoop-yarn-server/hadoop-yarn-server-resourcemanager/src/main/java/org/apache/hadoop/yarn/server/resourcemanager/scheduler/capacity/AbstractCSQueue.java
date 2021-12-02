@@ -173,10 +173,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return new QueuePath(parent.getQueuePath(), queueName);
   }
 
-  protected void setupConfigurableCapacities(
-      CapacitySchedulerConfiguration configuration) {
+  protected void setupConfigurableCapacities() {
     CSQueueUtils.loadCapacitiesByLabelsFromConf(queuePath, queueCapacities,
-        configuration, this.queueNodeLabelsSettings.getConfiguredNodeLabels());
+        queueContext.getConfiguration(), this.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 
   @Override
@@ -329,14 +328,14 @@ public abstract class AbstractCSQueue implements CSQueue {
     return this.queueNodeLabelsSettings.getDefaultLabelExpression();
   }
 
-  protected void setupQueueConfigs(Resource clusterResource,
-      CapacitySchedulerConfiguration configuration) throws
+  protected void setupQueueConfigs(Resource clusterResource) throws
       IOException {
 
     writeLock.lock();
     try {
+      CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
-        setDynamicQueueProperties(configuration);
+        setDynamicQueueProperties();
       }
 
       // Collect and set the Node label configuration
@@ -344,7 +343,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           getQueuePath(), queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
 
       // Initialize the queue capacities
-      setupConfigurableCapacities(configuration);
+      setupConfigurableCapacities();
       updateAbsoluteCapacities();
       updateCapacityConfigType();
 
@@ -354,26 +353,23 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup queue's maximumAllocation respecting the global
       // and the queue settings
-      // TODO remove the getConfiguration() param after the AQC configuration duplication
-      //  removal is resolved
-      this.queueAllocationSettings.setupMaximumAllocation(configuration,
-          queueContext.getConfiguration(), getQueuePath(),
+      this.queueAllocationSettings.setupMaximumAllocation(configuration, getQueuePath(),
           parent);
 
       // Initialize the queue state based on previous state, configured state
       // and its parent state
-      initializeQueueState(configuration);
+      initializeQueueState();
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
       this.acls = configuration.getAcls(getQueuePath());
 
-      this.userWeights = getUserWeightsFromHierarchy(configuration);
+      this.userWeights = getUserWeightsFromHierarchy();
 
       this.reservationsContinueLooking =
           configuration.getReservationContinueLook();
 
-      this.configuredCapacityVectors = queueContext.getConfiguration()
+      this.configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
 
@@ -382,10 +378,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           this, labelManager, null);
 
       // Store preemption settings
-      // TODO remove the getConfiguration() param after the AQC configuration duplication
-      //  removal is resolved
-      this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration,
-          queueContext.getConfiguration());
+      this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration);
       this.priority = configuration.getQueuePriority(
           getQueuePath());
 
@@ -403,14 +396,12 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   /**
    * Set properties specific to dynamic queues.
-   * @param configuration configuration on which the properties are set
    */
-  protected void setDynamicQueueProperties(
-      CapacitySchedulerConfiguration configuration) {
+  protected void setDynamicQueueProperties() {
     // Set properties from parent template
     if (parent instanceof ParentQueue) {
       ((ParentQueue) parent).getAutoCreatedQueueTemplate()
-          .setTemplateEntriesForChild(configuration, getQueuePath());
+          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath());
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
           AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
@@ -428,8 +419,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     }
   }
 
-  private UserWeights getUserWeightsFromHierarchy(
-      CapacitySchedulerConfiguration configuration) {
+  private UserWeights getUserWeightsFromHierarchy() {
     UserWeights unionInheritedWeights = UserWeights.createEmpty();
     CSQueue parentQ = parent;
     if (parentQ != null) {
@@ -439,7 +429,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     // Insert this queue's userWeights, overriding parent's userWeights if
     // there is an overlap.
     unionInheritedWeights.addFrom(
-        configuration.getAllUserWeightsForQueue(getQueuePath()));
+        queueContext.getConfiguration().getAllUserWeightsForQueue(getQueuePath()));
     return unionInheritedWeights;
   }
 
@@ -572,9 +562,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return configuredCapacityVectors.get(label);
   }
 
-  private void initializeQueueState(CapacitySchedulerConfiguration configuration) {
+  private void initializeQueueState() {
     QueueState previousState = getState();
-    QueueState configuredState = configuration
+    QueueState configuredState = queueContext.getConfiguration()
         .getConfiguredState(getQueuePath());
     QueueState parentState = (parent == null) ? null : parent.getState();
 

@@ -104,7 +104,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
       }
 
       // Set new configs
-      setupQueueConfigs(clusterResource, queueContext.getConfiguration());
+      setupQueueConfigs(clusterResource);
 
       updateQuotas(newlyParsedParentQueue.userLimit,
           newlyParsedParentQueue.userLimitFactor,
