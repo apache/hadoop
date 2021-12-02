@@ -696,7 +696,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
             ioe.getClass().getSimpleName());
         throw ioe;
       }
-      Set<FederationNamespaceInfo> nssWithoutFailed = getNameSpaceInfo(nsId);
+      Set<FederationNamespaceInfo> nssWithoutFailed = getNameSpaceInfo(nss, nsId);
       return invokeOnNs(method, clazz, ioe, nssWithoutFailed);
     }
   }
@@ -722,13 +722,15 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   /**
    * Get set of namespace info's removing the already invoked namespaceinfo.
-   * @param nsId already invoked namespace id
+   * @param nss List of namespaces in the federation.
+   * @param nsId Already invoked namespace id.
    * @return List of name spaces in the federation on
    * removing the already invoked namespaceinfo.
    */
-  private Set<FederationNamespaceInfo> getNameSpaceInfo(String nsId) {
+  private static Set<FederationNamespaceInfo> getNameSpaceInfo(
+      final Set<FederationNamespaceInfo> nss, final String nsId) {
     Set<FederationNamespaceInfo> namespaceInfos = new HashSet<>();
-    for (FederationNamespaceInfo ns : namespaceInfos) {
+    for (FederationNamespaceInfo ns : nss) {
       if (!nsId.equals(ns.getNameserviceId())) {
         namespaceInfos.add(ns);
       }

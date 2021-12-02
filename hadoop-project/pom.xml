@@ -196,7 +196,7 @@
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.26</snakeyaml.version>
-    <hbase.one.version>1.4.8</hbase.one.version>
+    <hbase.one.version>1.7.1</hbase.one.version>
     <hbase.two.version>2.0.2</hbase.two.version>
     <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
@@ -2393,7 +2393,7 @@
       </activation>
       <properties>
         <hbase.version>${hbase.one.version}</hbase.version>
-        <hbase-compatible-hadoop.version>2.5.1</hbase-compatible-hadoop.version>
+        <hbase-compatible-hadoop.version>2.8.5</hbase-compatible-hadoop.version>
         <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
         <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-1</hbase-server-artifactid>
       </properties>

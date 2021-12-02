@@ -547,7 +547,7 @@ Conflict management is left to the execution engine itself.
 |--------|---------|---------|
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Write a `_SUCCESS` file on the successful completion of the job. | `true` |
 | `fs.s3a.buffer.dir` | Local filesystem directory for data being written and/or staged. | `${hadoop.tmp.dir}/s3a` |
-| `fs.s3a.committer.magic.enabled` | Enable "magic committer" support in the filesystem. | `false` |
+| `fs.s3a.committer.magic.enabled` | Enable "magic committer" support in the filesystem. | `true` |
 | `fs.s3a.committer.abort.pending.uploads` | list and abort all pending uploads under the destination path when the job is committed or aborted. | `true` |
 | `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files. | 8 |
 | `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
