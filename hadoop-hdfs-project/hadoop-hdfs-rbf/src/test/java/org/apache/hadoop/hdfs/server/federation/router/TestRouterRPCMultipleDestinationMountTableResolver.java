@@ -63,26 +63,30 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationReq
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Tests router rpc with multiple destination mount table resolver.
  */
 public class TestRouterRPCMultipleDestinationMountTableResolver {
-  private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1");
+  private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1", "ns2");
 
   private static StateStoreDFSCluster cluster;
   private static RouterContext routerContext;
   private static MountTableResolver resolver;
   private static DistributedFileSystem nnFs0;
   private static DistributedFileSystem nnFs1;
+  private static DistributedFileSystem nnFs2;
   private static DistributedFileSystem routerFs;
   private static RouterRpcServer rpcServer;
 
@@ -90,7 +94,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   public static void setUp() throws Exception {
 
     // Build and start a federated cluster
-    cluster = new StateStoreDFSCluster(false, 2,
+    cluster = new StateStoreDFSCluster(false, 3,
         MultipleDestinationMountTableResolver.class);
     Configuration routerConf =
         new RouterConfigBuilder().stateStore().admin().quota().rpc().build();
@@ -111,6 +115,8 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         .getNamenode(cluster.getNameservices().get(0), null).getFileSystem();
     nnFs1 = (DistributedFileSystem) cluster
         .getNamenode(cluster.getNameservices().get(1), null).getFileSystem();
+    nnFs2 = (DistributedFileSystem) cluster
+        .getNamenode(cluster.getNameservices().get(2), null).getFileSystem();
     routerFs = (DistributedFileSystem) routerContext.getFileSystem();
     rpcServer =routerContext.getRouter().getRpcServer();
   }
@@ -668,6 +674,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     // Make one subcluster unavailable.
     MiniDFSCluster dfsCluster = cluster.getCluster();
     dfsCluster.shutdownNameNode(0);
+    dfsCluster.shutdownNameNode(1);
     try {
       // Verify that #invokeAtAvailableNs works by calling #getServerDefaults.
       RemoteMethod method = new RemoteMethod("getServerDefaults");
@@ -675,7 +682,8 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
           rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
       assertNotNull(serverDefaults);
     } finally {
-      dfsCluster.restartNameNode(0);
+      dfsCluster.restartNameNode(0, false);
+      dfsCluster.restartNameNode(1);
     }
   }
 
@@ -892,6 +900,9 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     }
     if (nsId.equals("ns1")) {
       return nnFs1;
+    }
+    if (nsId.equals("ns2")) {
+      return nnFs2;
     }
     return null;
   }
