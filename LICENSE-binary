@@ -297,10 +297,10 @@ org.apache.curator:curator-client:5.2.0
 org.apache.curator:curator-framework:5.2.0
 org.apache.curator:curator-recipes:5.2.0
 org.apache.geronimo.specs:geronimo-jcache_1.0_spec:1.0-alpha-1
-org.apache.hbase:hbase-annotations:1.4.8
-org.apache.hbase:hbase-client:1.4.8
-org.apache.hbase:hbase-common:1.4.8
-org.apache.hbase:hbase-protocol:1.4.8
+org.apache.hbase:hbase-annotations:1.7.1
+org.apache.hbase:hbase-client:1.7.1
+org.apache.hbase:hbase-common:1.7.1
+org.apache.hbase:hbase-protocol:1.7.1
 org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.6
