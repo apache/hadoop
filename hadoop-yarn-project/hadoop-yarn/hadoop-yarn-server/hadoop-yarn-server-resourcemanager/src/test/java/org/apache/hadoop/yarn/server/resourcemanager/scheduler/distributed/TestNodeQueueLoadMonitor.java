@@ -390,6 +390,62 @@ public class TestNodeQueueLoadMonitor {
   }
 
   @Test
+  public void testQueueLengthThenResourcesCapabilityChange() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH_THEN_RESOURCES);
+
+    // Node sizes were selected such that we can determine the
+    // order of these nodes in the selectNodes call deterministically
+    // h1 -> h2 -> h3 -> h4
+    selector.updateNode(createRMNode(
+        "h1", 1, -1, 0,
+        Resources.multiply(defaultResourceRequested, 1), defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h2", 2, -1, 0,
+        Resources.multiply(defaultResourceRequested, 2), defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h3", 3, -1, 0,
+        Resources.multiply(defaultResourceRequested, 3), defaultCapacity));
+    selector.updateNode(createRMNode(
+        "h4", 4, -1, 0,
+        Resources.multiply(defaultResourceRequested, 4), defaultCapacity));
+    selector.computeTask.run();
+    List<NodeId> nodeIds = selector.selectNodes();
+    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
+    Assert.assertEquals("h2:2", nodeIds.get(1).toString());
+    Assert.assertEquals("h3:3", nodeIds.get(2).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(3).toString());
+
+    // Now update node1 to have only defaultResourceRequested available
+    // by changing its capability to 2x defaultResourceReqeusted
+    // node1 should now rank last
+    selector.updateNode(createRMNode(
+        "h1", 1, -1, 0,
+        Resources.multiply(defaultResourceRequested, 1),
+        Resources.multiply(defaultResourceRequested, 2)));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(3).toString());
+
+    // Now update node2 to have no resources available
+    // by changing its capability to 1x defaultResourceReqeusted
+    // node2 should now rank last
+    selector.updateNode(createRMNode(
+        "h2", 2, -1, 0,
+        Resources.multiply(defaultResourceRequested, 1),
+        Resources.multiply(defaultResourceRequested, 1)));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+    Assert.assertEquals("h2:2", nodeIds.get(3).toString());
+  }
+
+  @Test
   public void testContainerQueuingLimit() {
     NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
         NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
