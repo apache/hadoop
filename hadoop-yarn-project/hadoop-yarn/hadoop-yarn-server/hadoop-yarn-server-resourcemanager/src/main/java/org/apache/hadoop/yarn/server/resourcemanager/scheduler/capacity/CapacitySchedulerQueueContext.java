@@ -67,12 +67,10 @@ public class CapacitySchedulerQueueContext {
   }
 
   public void reinitialize() {
-    this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration());
-    this.minimumAllocation = csContext.getMinimumResourceCapability();
-  }
-
-  public void reinitialize(CapacitySchedulerConfiguration newConfiguration) {
-    this.configuration = new CapacitySchedulerConfiguration(newConfiguration);
+    // When csConfProvider.loadConfiguration is called the useLocalConfigurationProvider is
+    // correctly set to load the config entries from the capacity-scheduler.xml, here we
+    // just need to copy the csConfiguration
+    this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration(), false);
     this.minimumAllocation = csContext.getMinimumResourceCapability();
   }
 

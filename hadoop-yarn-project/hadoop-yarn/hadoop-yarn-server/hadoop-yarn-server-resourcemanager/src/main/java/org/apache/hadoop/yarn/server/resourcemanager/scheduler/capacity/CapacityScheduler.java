@@ -852,7 +852,7 @@ public class CapacityScheduler extends
   @Lock(CapacityScheduler.class)
   private void reinitializeQueues(CapacitySchedulerConfiguration newConf)
   throws IOException {
-    queueContext.reinitialize(newConf);
+    queueContext.reinitialize();
     this.queueManager.reinitializeQueues(newConf);
     updatePlacementRules();
 

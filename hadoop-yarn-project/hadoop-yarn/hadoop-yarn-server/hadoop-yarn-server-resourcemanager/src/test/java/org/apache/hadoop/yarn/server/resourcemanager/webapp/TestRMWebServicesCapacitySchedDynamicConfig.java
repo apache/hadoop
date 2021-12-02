@@ -249,7 +249,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
     public static Configuration createPercentageConfig() {
       Map<String, String> conf = new HashMap<>();
       conf.put("yarn.scheduler.capacity.root.queues", "default, test1, test2");
-      conf.put("yarn.scheduler.capacity.root.default.capacity", "0");
       conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
       conf.put("yarn.scheduler.capacity.root.test2.capacity", "50");
       conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
@@ -262,7 +261,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
       Map<String, String> conf = new HashMap<>();
       conf.put("yarn.scheduler.capacity.root.queues", "default, test1, " +
           "managedtest2");
-      conf.put("yarn.scheduler.capacity.root.default.capacity", "0");
       conf.put("yarn.scheduler.capacity.root.test1.capacity", "50");
       conf.put("yarn.scheduler.capacity.root.managedtest2.capacity", "50");
       conf.put("yarn.scheduler.capacity.root.test1.maximum-capacity", "100");
