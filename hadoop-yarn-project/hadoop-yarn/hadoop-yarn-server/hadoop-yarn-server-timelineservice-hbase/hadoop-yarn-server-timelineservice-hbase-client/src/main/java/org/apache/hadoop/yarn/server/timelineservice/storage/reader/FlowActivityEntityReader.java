@@ -133,16 +133,16 @@ class FlowActivityEntityReader extends TimelineEntityReader {
         throw new BadRequestException(
             "fromid doesn't belong to clusterId=" + clusterId);
       }
-      scan.setStartRow(key.getRowKey());
-      scan.setStopRow(
+      scan.withStartRow(key.getRowKey());
+      scan.withStopRow(
           new FlowActivityRowKeyPrefix(clusterId,
               (getFilters().getCreatedTimeBegin() <= 0 ? 0
                   : (getFilters().getCreatedTimeBegin() - 1)))
                       .getRowKeyPrefix());
     } else {
-      scan.setStartRow(new FlowActivityRowKeyPrefix(clusterId, getFilters()
+      scan.withStartRow(new FlowActivityRowKeyPrefix(clusterId, getFilters()
           .getCreatedTimeEnd()).getRowKeyPrefix());
-      scan.setStopRow(new FlowActivityRowKeyPrefix(clusterId, (getFilters()
+      scan.withStopRow(new FlowActivityRowKeyPrefix(clusterId, (getFilters()
           .getCreatedTimeBegin() <= 0 ? 0
           : (getFilters().getCreatedTimeBegin() - 1))).getRowKeyPrefix());
     }

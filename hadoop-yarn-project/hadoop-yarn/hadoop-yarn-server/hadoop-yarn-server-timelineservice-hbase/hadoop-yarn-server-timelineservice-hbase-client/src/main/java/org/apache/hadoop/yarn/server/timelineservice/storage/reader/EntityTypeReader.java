@@ -158,9 +158,11 @@ public final class EntityTypeReader extends AbstractTimelineStorageReader {
   private ResultScanner getResult(Configuration hbaseConf, Connection conn,
       FilterList filterList, byte[] startPrefix, byte[] endPrefix)
       throws IOException {
-    Scan scan = new Scan(startPrefix, endPrefix);
-    scan.setFilter(filterList);
-    scan.setSmall(true);
+    Scan scan = new Scan()
+        .withStartRow(startPrefix)
+        .withStopRow(endPrefix)
+        .setFilter(filterList)
+        .setSmall(true);
     return ENTITY_TABLE.getResultScanner(hbaseConf, conn, scan);
   }
 

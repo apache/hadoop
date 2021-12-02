@@ -412,7 +412,7 @@ class ApplicationEntityReader extends GenericEntityReader {
       }
 
       // set start row
-      scan.setStartRow(applicationRowKey.getRowKey());
+      scan.withStartRow(applicationRowKey.getRowKey());
 
       // get the bytes for stop row
       applicationRowKeyPrefix = new ApplicationRowKeyPrefix(
@@ -420,7 +420,7 @@ class ApplicationEntityReader extends GenericEntityReader {
           context.getFlowRunId());
 
       // set stop row
-      scan.setStopRow(
+      scan.withStopRow(
           HBaseTimelineStorageUtils.calculateTheClosestNextRowKeyForPrefix(
               applicationRowKeyPrefix.getRowKeyPrefix()));
     }
