@@ -91,13 +91,11 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
       }
     }
 
-    while (true) {
-      try {
-        this.items.put(item);
-        return;
-      } catch (InterruptedException e) {
-        throw new IllegalStateException("release() should never block");
-      }
+    try {
+      this.items.put(item);
+      return;
+    } catch (InterruptedException e) {
+      throw new IllegalStateException("release() should never block");
     }
   }
 
@@ -170,6 +168,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
         // Block for an instance to be available.
         return this.items.take();
       } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         return null;
       }
     } else {
