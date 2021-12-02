@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Hashtable;
+import java.util.Random;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.assertj.core.api.Assertions;
@@ -54,6 +55,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_SERVER_ENCRYPTED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_SERVER_ENCRYPTED;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCRYPTION_KEY_LEN;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
 import static org.apache.hadoop.fs.azurebfs.utils.EncryptionType.ENCRYPTION_CONTEXT;
@@ -64,10 +66,9 @@ import static org.apache.hadoop.fs.permission.AclEntryType.USER;
 import static org.apache.hadoop.fs.permission.FsAction.ALL;
 
 @RunWith(Parameterized.class)
-public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
-  private final String cpk = "12345678901234567890123456789012";
-  private final String cpkSHAEncoded = EncryptionAdapter.getBase64EncodedString(
-      EncryptionAdapter.getSHA256Hash(cpk));
+public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
+  private final byte[] cpk = new byte[ENCRYPTION_KEY_LEN];
+  private final String cpkSHAEncoded;
 
   // Encryption type used by filesystem while creating file
   @Parameterized.Parameter
@@ -137,8 +138,11 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
     });
   }
 
-  public ITestCustomEncryption() throws Exception {
+  public ITestAbfsCustomEncryption() throws Exception {
     super();
+    new Random().nextBytes(cpk);
+    cpkSHAEncoded = EncryptionAdapter.getBase64EncodedString(
+        EncryptionAdapter.getSHA256Hash(cpk));
   }
 
   @Test
@@ -157,7 +161,8 @@ public class ITestCustomEncryption extends AbstractAbfsIntegrationTest {
       if (requestEncryptionType == ENCRYPTION_CONTEXT) {
         String encryptionContext = ecp.getEncryptionContextForTest(relativePath);
         String expectedKeySHA = EncryptionAdapter.getBase64EncodedString(
-            EncryptionAdapter.getSHA256Hash(ecp.getEncryptionKeyForTest(encryptionContext)));
+            EncryptionAdapter.getSHA256Hash(
+                ecp.getEncryptionKeyForTest(encryptionContext)));
         Assertions.assertThat(httpOp.getResponseHeader(X_MS_ENCRYPTION_KEY_SHA256))
             .isEqualTo(expectedKeySHA);
       } else {  // GLOBAL_KEY

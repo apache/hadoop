@@ -77,8 +77,7 @@ public class EncryptionAdapter implements Destroyable {
     SecretKey key = getEncryptionKey();
     Preconditions.checkNotNull(key, "Encryption key should not be null.");
     encodedKey = getBase64EncodedString(key.getEncoded());
-    encodedKeySHA = getBase64EncodedString(getSHA256Hash(new String(key.getEncoded(),
-        StandardCharsets.UTF_8)));
+    encodedKeySHA = getBase64EncodedString(getSHA256Hash(key.getEncoded()));
   }
 
   public String getEncodedKey() throws IOException {
@@ -127,17 +126,13 @@ public class EncryptionAdapter implements Destroyable {
     }
   }
 
-  public static byte[] getSHA256Hash(String key) throws IOException {
+  public static byte[] getSHA256Hash(byte[] key) throws IOException {
     try {
       final MessageDigest digester = MessageDigest.getInstance("SHA-256");
-      return digester.digest(key.getBytes(StandardCharsets.UTF_8));
+      return digester.digest(key);
     } catch (NoSuchAlgorithmException e) {
       throw new IOException(e);
     }
-  }
-
-  public static String getBase64EncodedString(String key) {
-    return getBase64EncodedString(key.getBytes(StandardCharsets.UTF_8));
   }
 
   public static String getBase64EncodedString(byte[] bytes) {

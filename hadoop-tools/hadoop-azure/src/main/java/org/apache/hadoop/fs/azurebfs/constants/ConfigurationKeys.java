@@ -191,7 +191,7 @@ public final class ConfigurationKeys {
   /** Server side encryption key encoded in Base6format */
   public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY =
       "fs.azure.encryption.encoded.client-provided-key";
-  /** SHA256 hash of encryption key encoded in Base6format */
+  /** SHA256 hash of encryption key encoded in Base64format */
   public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA =
       "fs.azure.encryption.encoded.client-provided-key-sha";
   /** Custom EncryptionContextProvider type */

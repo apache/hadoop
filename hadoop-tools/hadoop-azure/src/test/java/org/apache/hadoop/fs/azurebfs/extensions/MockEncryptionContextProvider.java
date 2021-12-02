@@ -22,11 +22,10 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.UUID;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -45,8 +44,9 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
       throws IOException {
     String newContext = UUID.randomUUID().toString();
     pathToContextMap.put(path, newContext);
-    String keyString = RandomStringUtils.random(ENCRYPTION_KEY_LEN, true, true);
-    Key key = new Key(keyString.getBytes(StandardCharsets.UTF_8));
+    byte[] newKey = new byte[ENCRYPTION_KEY_LEN];
+    new Random().nextBytes(newKey);
+    Key key = new Key(newKey);
     contextToKeyMap.put(newContext, key);
     return new Key(newContext.getBytes(StandardCharsets.UTF_8));
   }
@@ -100,8 +100,8 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
   }
 
   @VisibleForTesting
-  public String getEncryptionKeyForTest(String encryptionContext) {
-    return new String(contextToKeyMap.get(encryptionContext).getEncoded());
+  public byte[] getEncryptionKeyForTest(String encryptionContext) {
+    return contextToKeyMap.get(encryptionContext).getEncoded();
   }
 
   @VisibleForTesting
