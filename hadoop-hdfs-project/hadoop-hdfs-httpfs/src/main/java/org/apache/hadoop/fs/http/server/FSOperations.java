@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
@@ -1873,6 +1874,65 @@ public final class FSOperations {
       }
       if (sdr != null) {
         return JsonUtil.toJsonString(sdr);
+      } else {
+        return "";
+      }
+    }
+  }
+
+  /**
+   *  Executor that performs a getSnapshotDiffListing operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetSnapshotDiffListing implements
+      FileSystemAccess.FileSystemExecutor<String> {
+
+    private final Path path;
+    private final String oldSnapshotName;
+    private final String snapshotName;
+    private final String snapshotDiffStartPath;
+    private final int snapshotDiffIndex;
+
+    /**
+     * Creates a getSnapshotDiffListing executor.
+     *
+     * @param path directory path of the snapshots to be examined.
+     * @param oldSnapshotName Older snapshot name.
+     * @param snapshotName Newer snapshot name.
+     * @param snapshotDiffStartPath snapshot diff start path.
+     * @param snapshotDiffIndex snapshot diff index.
+     */
+    public FSGetSnapshotDiffListing(String path, String oldSnapshotName,
+        String snapshotName, String snapshotDiffStartPath, int snapshotDiffIndex) {
+      this.path = new Path(path);
+      this.oldSnapshotName = oldSnapshotName;
+      this.snapshotName = snapshotName;
+      this.snapshotDiffStartPath = snapshotDiffStartPath;
+      this.snapshotDiffIndex = snapshotDiffIndex;
+    }
+
+    /**
+     * Executes the filesystem operation.
+     *
+     * @param fs filesystem instance to use.
+     * @return A serialized JSON string of snapshot diffs.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      SnapshotDiffReportListing snapshotDiffReportListing = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        snapshotDiffReportListing =
+            dfs.getSnapshotDiffReportListing(path, oldSnapshotName, snapshotName,
+                snapshotDiffStartPath, snapshotDiffIndex);
+      } else {
+        throw new UnsupportedOperationException("getSnapshotDiffListing is not "
+            + "supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      if (snapshotDiffReportListing != null) {
+        return JsonUtil.toJsonString(snapshotDiffReportListing);
       } else {
         return "";
       }
