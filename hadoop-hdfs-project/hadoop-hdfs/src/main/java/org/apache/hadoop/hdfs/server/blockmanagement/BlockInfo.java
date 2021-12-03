@@ -136,7 +136,7 @@ public abstract class BlockInfo extends Block
     BlockInfo info = (BlockInfo)triplets[index*3+1];
     assert info == null ||
         info.getClass().getName().startsWith(BlockInfo.class.getName()) :
-        "BlockInfo is expected at " + index*3;
+        "BlockInfo is expected at " + (index*3+1);
     return info;
   }
 
@@ -146,7 +146,7 @@ public abstract class BlockInfo extends Block
     BlockInfo info = (BlockInfo)triplets[index*3+2];
     assert info == null || info.getClass().getName().startsWith(
         BlockInfo.class.getName()) :
-        "BlockInfo is expected at " + index*3;
+        "BlockInfo is expected at " + (index*3+2);
     return info;
   }
 
