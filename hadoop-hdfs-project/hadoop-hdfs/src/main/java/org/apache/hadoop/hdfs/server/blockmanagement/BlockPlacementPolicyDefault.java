@@ -103,7 +103,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected double considerLoadFactor;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
-  private boolean excludeSlowNodesEnabled;
+  private volatile boolean excludeSlowNodesEnabled;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
   private FSClusterStats stats;
@@ -1358,6 +1358,16 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @VisibleForTesting
   void setPreferLocalNode(boolean prefer) {
     this.preferLocalNode = prefer;
+  }
+
+  @Override
+  public void setExcludeSlowNodesEnabled(boolean enable) {
+    this.excludeSlowNodesEnabled = enable;
+  }
+
+  @Override
+  public boolean getExcludeSlowNodesEnabled() {
+    return excludeSlowNodesEnabled;
   }
 }
 
