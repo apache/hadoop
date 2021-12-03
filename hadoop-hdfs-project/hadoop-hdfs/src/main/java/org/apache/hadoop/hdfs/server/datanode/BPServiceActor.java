@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
@@ -1139,7 +1140,7 @@ class BPServiceActor implements Runnable {
 
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
-    private final long blockReportIntervalMs;
+    private volatile long blockReportIntervalMs;
     private final long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
@@ -1294,6 +1295,15 @@ class BPServiceActor implements Runnable {
     @VisibleForTesting
     void setNextBlockReportTime(long nextBlockReportTime) {
       this.nextBlockReportTime.getAndSet(nextBlockReportTime);
+    }
+
+    long getBlockReportIntervalMs() {
+      return this.blockReportIntervalMs;
+    }
+
+    void setBlockReportIntervalMs(long intervalMs) {
+      Preconditions.checkArgument(intervalMs > 0);
+      this.blockReportIntervalMs = intervalMs;
     }
 
     /**
