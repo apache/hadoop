@@ -39,8 +39,7 @@ add_subdirectory(hdfs-chgrp)
 
 add_subdirectory(hdfs-chown)
 
-add_executable(hdfs_chmod hdfs_chmod.cc)
-target_link_libraries(hdfs_chmod tools_common hdfspp_static)
+add_subdirectory(hdfs-chmod)
 
 add_executable(hdfs_find hdfs_find.cc)
 target_link_libraries(hdfs_find tools_common hdfspp_static)
