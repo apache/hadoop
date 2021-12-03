@@ -31,6 +31,8 @@ import java.io.IOException;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readReverseOrderedLong;
@@ -38,6 +40,8 @@ import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.readRev
 public class LeveldbUtils {
 
   private static final String BACKUP_EXT = ".backup-";
+  private static final Logger LOG = LoggerFactory
+      .getLogger(LeveldbUtils.class);
 
   /** A string builder utility for building timeline server leveldb keys. */
   public static class KeyBuilder {
@@ -203,6 +207,8 @@ public class LeveldbUtils {
       File dbFile = new File(dbPath.toString());
       File dbBackupPath = new File(
           dbPath.toString() + BACKUP_EXT + Time.monotonicNow());
+      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
+          "up at "+ dbBackupPath, ioe);
       FileUtils.copyDirectory(dbFile, dbBackupPath);
       factory.repair(dbFile, options);
       db = factory.open(dbFile, options);
