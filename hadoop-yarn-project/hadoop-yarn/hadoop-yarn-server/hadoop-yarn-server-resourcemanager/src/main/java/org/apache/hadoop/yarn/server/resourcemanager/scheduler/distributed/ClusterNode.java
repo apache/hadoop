@@ -60,8 +60,7 @@ public class ClusterNode {
         this.capability = nodeCapability;
       }
       return this;
-    }
-    finally {
+    } finally {
       writeLock.unlock();
     }
   }
@@ -76,8 +75,7 @@ public class ClusterNode {
         this.allocatedResource = allocResource;
       }
       return this;
-    }
-    finally {
+    } finally {
       writeLock.unlock();
     }
   }
@@ -86,8 +84,7 @@ public class ClusterNode {
     readLock.lock();
     try {
       return this.allocatedResource;
-    }
-    finally {
+    } finally {
       readLock.unlock();
     }
   }
@@ -105,8 +102,7 @@ public class ClusterNode {
     readLock.lock();
     try {
       return this.capability;
-    }
-      finally {
+    } finally {
       readLock.unlock();
     }
   }

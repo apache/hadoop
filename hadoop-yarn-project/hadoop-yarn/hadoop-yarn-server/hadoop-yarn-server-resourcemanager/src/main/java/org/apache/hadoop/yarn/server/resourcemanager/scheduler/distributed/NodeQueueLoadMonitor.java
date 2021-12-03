@@ -93,44 +93,67 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     private final DominantResourceCalculator resourceCalculator =
         new DominantResourceCalculator();
 
+    private boolean shouldPerformMinRatioComputation() {
+      if (clusterResource == null) {
+        return false;
+      }
+
+      return !resourceCalculator.isAnyMajorResourceZeroOrNegative(
+          clusterResource);
+    }
+
+    /**
+     * Compares queue length of nodes first (shortest first),
+     * then compares available resources normalized
+     * over cluster resources (most available resources first).
+     * @param o1 the first ClusterNode
+     * @param o2 the second ClusterNode
+     * @return the difference the two ClusterNodes for sorting
+     */
+    private int compareQueueLengthThenResources(
+        final ClusterNode o1, final ClusterNode o2) {
+      int diff = o1.getQueueLength() - o2.getQueueLength();
+      if (diff != 0) {
+        return diff;
+      }
+
+      final Resource availableResource1 = o1.getAvailableResource();
+      final Resource availableResource2 = o2.getAvailableResource();
+
+      // Cluster resource should be valid before performing min-ratio logic
+      // Use raw available resource comparison otherwise
+      if (shouldPerformMinRatioComputation()) {
+        // Takes the least available resource of the two nodes,
+        // normalized to the overall cluster resource
+        final float availableRatio1 =
+            resourceCalculator.minRatio(availableResource1, clusterResource);
+        final float availableRatio2 =
+            resourceCalculator.minRatio(availableResource2, clusterResource);
+
+        // The one with more available resources should be placed first
+        diff = Precision.compareTo(
+            availableRatio2, availableRatio1, Precision.EPSILON);
+      }
+
+      if (diff == 0) {
+        // Compare absolute value if ratios are the same
+        diff = availableResource2.getVirtualCores() - availableResource1.getVirtualCores();
+      }
+
+      if (diff == 0) {
+        diff = Long.compare(availableResource2.getMemorySize(),
+            availableResource1.getMemorySize());
+      }
+
+      return diff;
+    }
+
     @Override
     public int compare(ClusterNode o1, ClusterNode o2) {
-      int diff = 0;
+      int diff;
       switch (this) {
       case QUEUE_LENGTH_THEN_RESOURCES:
-        diff = o1.getQueueLength() - o2.getQueueLength();
-        if (diff != 0) {
-          break;
-        }
-
-        // NOTE: cluster resource should be
-        // set always before LoadComparator is used
-        final Resource availableResource1 = o1.getAvailableResource();
-        final Resource availableResource2 = o2.getAvailableResource();
-        final boolean isClusterResourceLeq0 = resourceCalculator
-            .isAnyMajorResourceZeroOrNegative(clusterResource);
-        if (!isClusterResourceLeq0) {
-          // Takes the least available resource of the two nodes,
-          // normalized to the overall cluster resource
-          final float availableRatio1 =
-              resourceCalculator.minRatio(availableResource1, clusterResource);
-          final float availableRatio2 =
-              resourceCalculator.minRatio(availableResource2, clusterResource);
-
-          // The one with more available resources should be placed first
-          diff = Precision
-              .compareTo(availableRatio2, availableRatio1, Precision.EPSILON);
-        }
-
-        if (diff == 0) {
-          // Compare absolute value if ratios are the same
-          diff = availableResource2.getVirtualCores() - availableResource1.getVirtualCores();
-        }
-
-        if (diff == 0) {
-          diff = Long.compare(availableResource2.getMemorySize(),
-              availableResource1.getMemorySize());
-        }
+        diff = compareQueueLengthThenResources(o1, o2);
         break;
       case QUEUE_WAIT_TIME:
       case QUEUE_LENGTH:
@@ -458,6 +481,14 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     }
   }
 
+  /**
+   * Selects the node as specified by hostName for resource allocation,
+   * unless the node has been blacklisted.
+   * @param hostName the hostname of the node for local resource allocation
+   * @param blacklist the blacklisted nodes
+   * @param request the requested resource
+   * @return the selected node, null if the node is full or is blacklisted
+   */
   public RMNode selectLocalNode(
       String hostName, Set<String> blacklist, Resource request) {
     if (blacklist.contains(hostName)) {
@@ -474,6 +505,14 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     return null;
   }
 
+  /**
+   * Selects a node from the rack as specified by rackName
+   * for resource allocation, excluding blacklisted nodes
+   * @param rackName the rack name for rack-local resource allocation
+   * @param blacklist the blacklisted nodes
+   * @param request the requested resource
+   * @return the selected node, null if no suitable nodes
+   */
   public RMNode selectRackLocalNode(
       String rackName, Set<String> blacklist, Resource request) {
     Set<NodeId> nodesOnRack = nodeIdsByRack.get(rackName);
@@ -491,6 +530,13 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     return null;
   }
 
+  /**
+   * Selects a node from all ClusterNodes for resource allocation,
+   * excluding blacklisted nodes.
+   * @param blacklist the blacklisted nodes
+   * @param request the requested resource
+   * @return the selected node, null if no suitable nodes
+   */
   public RMNode selectAnyNode(Set<String> blacklist, Resource request) {
     List<NodeId> nodeIds = getCandidatesForSelectAnyNode();
     int size = nodeIds.size();
