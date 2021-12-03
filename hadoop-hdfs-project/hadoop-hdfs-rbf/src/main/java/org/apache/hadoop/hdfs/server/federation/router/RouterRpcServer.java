@@ -43,8 +43,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -718,9 +716,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     if (nss.isEmpty()) {
       throw ioe;
     }
-    for (Iterator<FederationNamespaceInfo> it = nss.iterator(); it
-        .hasNext(); ) {
-      String nsId = it.next().getNameserviceId();
+    for (FederationNamespaceInfo fnInfo : nss) {
+      String nsId = fnInfo.getNameserviceId();
       LOG.debug("Invoking {} on namespace {}", method, nsId);
       try {
         return rpcClient.invokeSingle(nsId, method, clazz);
