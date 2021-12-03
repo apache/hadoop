@@ -444,6 +444,17 @@ public class TestConfiguration {
     assertTrue(mock.getInt("my.int", -1) == 42);
   }
 
+  /**
+   * Checks if variable substitution is accessible via a public API.
+   */
+  @Test
+  public void testCommonVariableSubstitution() {
+    conf.set("intvar", String.valueOf(42));
+    String intVar = conf.substituteCommonVariables("${intvar}");
+
+    assertEquals("42", intVar);
+  }
+
   @Test
   public void testEnvDefault() throws IOException {
     Configuration mock = Mockito.spy(conf);
