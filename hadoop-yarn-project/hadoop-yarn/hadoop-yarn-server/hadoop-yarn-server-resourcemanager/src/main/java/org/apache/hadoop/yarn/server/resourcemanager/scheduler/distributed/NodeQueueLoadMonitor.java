@@ -93,26 +93,20 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     private final DominantResourceCalculator resourceCalculator =
         new DominantResourceCalculator();
 
-    private Resource computeAvailableResource(final ClusterNode clusterNode) {
-      return Resources.subtractNonNegative(
-          clusterNode.getCapability(),
-          clusterNode.getAllocatedResource());
-    }
-
     @Override
     public int compare(ClusterNode o1, ClusterNode o2) {
       int diff = 0;
       switch (this) {
       case QUEUE_LENGTH_THEN_RESOURCES:
-        diff = o1.getQueueLength().get() - o2.getQueueLength().get();
+        diff = o1.getQueueLength() - o2.getQueueLength();
         if (diff != 0) {
           break;
         }
 
         // NOTE: cluster resource should be
         // set always before LoadComparator is used
-        final Resource availableResource1 = computeAvailableResource(o1);
-        final Resource availableResource2 = computeAvailableResource(o2);
+        final Resource availableResource1 = o1.getAvailableResource();
+        final Resource availableResource2 = o2.getAvailableResource();
         final boolean isClusterResourceLeq0 = resourceCalculator
             .isAnyMajorResourceZeroOrNegative(clusterResource);
         if (!isClusterResourceLeq0) {
@@ -162,11 +156,11 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
     public int getMetric(ClusterNode c) {
       switch (this) {
       case QUEUE_WAIT_TIME:
-        return c.getQueueWaitTime().get();
+        return c.getQueueWaitTime();
       case QUEUE_LENGTH:
       case QUEUE_LENGTH_THEN_RESOURCES:
       default:
-        return c.getQueueLength().get();
+        return c.getQueueLength();
       }
     }
 
@@ -179,34 +173,17 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
      */
     public boolean compareAndIncrement(
         ClusterNode c, int incrementSize, Resource requested) {
-      if (this == QUEUE_LENGTH_THEN_RESOURCES) {
-        // Assignment and getting value is atomic
-        // Can be slightly inaccurate here, don't grab lock for performance
-        final Resource capability = c.getCapability();
-        final Resource currAllocated = c.getAllocatedResource();
-        final Resource currAvailable = Resources.subtractNonNegative(
-            capability, currAllocated);
-        if (resourceCalculator.fitsIn(requested, currAvailable)) {
-          final Resource newAllocated = Resources.add(currAllocated, requested);
-          c.setAllocatedResource(newAllocated);
-          return true;
-        }
-
-        if (!resourceCalculator.fitsIn(requested, capability)) {
-          // If does not fit at all, do not allocate
-          return false;
-        }
+      switch (this) {
+      case QUEUE_LENGTH_THEN_RESOURCES:
+        return c.compareAndIncrementAllocation(
+            incrementSize, resourceCalculator, requested);
+      case QUEUE_WAIT_TIME:
+        // for queue wait time, we don't have any threshold.
+        return true;
+      case QUEUE_LENGTH:
+      default:
+        return c.compareAndIncrementAllocation(incrementSize);
       }
-      if (this == QUEUE_LENGTH || this == QUEUE_LENGTH_THEN_RESOURCES) {
-        int beforeIncrement = c.getQueueLength().getAndAdd(incrementSize);
-        if (c.getQueueLength().get() <= c.getQueueCapacity()) {
-          return true;
-        }
-        c.getQueueLength().set(beforeIncrement);
-        return false;
-      }
-      // for queue wait time, we don't have any threshold.
-      return true;
     }
 
     /**
@@ -216,7 +193,7 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
      */
     public boolean isNodeAvailable(final ClusterNode cn) {
       int queueCapacity = cn.getQueueCapacity();
-      int queueLength = cn.getQueueLength().get();
+      int queueLength = cn.getQueueLength();
       if (this == LoadComparator.QUEUE_LENGTH_THEN_RESOURCES) {
         if (queueCapacity <= 0) {
           return queueLength <= 0;

@@ -380,7 +380,7 @@ public class TestNodeQueueLoadMonitor {
     Assert.assertEquals(node.getNodeID(), selectedNode.getNodeID());
 
     clusterNode = selector.getClusterNodes().get(node.getNodeID());
-    Assert.assertEquals(1, clusterNode.getQueueLength().get());
+    Assert.assertEquals(1, clusterNode.getQueueLength());
 
     // Does not have enough resources and cannot queue
     selectedNode = selector.selectAnyNode(
