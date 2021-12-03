@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
