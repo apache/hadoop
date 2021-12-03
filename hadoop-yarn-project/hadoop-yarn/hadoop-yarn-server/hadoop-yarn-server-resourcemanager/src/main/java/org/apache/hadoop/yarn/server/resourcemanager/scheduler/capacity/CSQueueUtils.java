@@ -36,7 +36,7 @@ public class CSQueueUtils {
   /*
    * Used only by tests
    */
-  public static void checkMaxCapacity(String queuePath,
+  public static void checkMaxCapacity(QueuePath queuePath,
       float capacity, float maximumCapacity) {
     if (maximumCapacity < 0.0f || maximumCapacity > 1.0f) {
       throw new IllegalArgumentException(
@@ -48,7 +48,7 @@ public class CSQueueUtils {
   /*
    * Used only by tests
    */
-  public static void checkAbsoluteCapacity(String queuePath,
+  public static void checkAbsoluteCapacity(QueuePath queuePath,
       float absCapacity, float absMaxCapacity) {
     if (absMaxCapacity < (absCapacity - EPSILON)) {
       throw new IllegalArgumentException("Illegal call to setMaxCapacity. "
@@ -67,7 +67,7 @@ public class CSQueueUtils {
   }
 
   public static void loadCapacitiesByLabelsFromConf(
-      String queuePath, QueueCapacities queueCapacities,
+      QueuePath queuePath, QueueCapacities queueCapacities,
       CapacitySchedulerConfiguration csConf, Set<String> nodeLabels) {
     queueCapacities.clearConfigurableFields();
 

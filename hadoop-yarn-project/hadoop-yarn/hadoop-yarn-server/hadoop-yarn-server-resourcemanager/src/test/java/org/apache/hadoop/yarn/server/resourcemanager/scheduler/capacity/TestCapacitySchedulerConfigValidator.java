@@ -225,7 +225,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            new QueuePath(LEAF_A_FULL_PATH), FULL_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -245,7 +246,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            new QueuePath(LEAF_A_FULL_PATH), VCORE_EXCEEDED_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -264,7 +266,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            new QueuePath(LEAF_A_FULL_PATH), FULL_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -284,7 +287,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            new QueuePath(LEAF_A_FULL_PATH), VCORE_EXCEEDED_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -304,7 +308,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES_GPU);
+    newConfiguration.setMaximumResourceRequirement("",
+            new QueuePath(LEAF_A_FULL_PATH), GPU_EXCEEDED_MAXRES_GPU);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -600,25 +605,41 @@ public class TestCapacitySchedulerConfigValidator {
 
     if (useDominantRC) {
       setupGpuResourceValues();
-      csConf.setMinimumResourceRequirement("", PARENT_A_FULL_PATH, A_MINRES_GPU);
-      csConf.setMinimumResourceRequirement("", PARENT_B_FULL_PATH, B_MINRES_GPU);
-      csConf.setMinimumResourceRequirement("", LEAF_A_FULL_PATH, A_MINRES_GPU);
-      csConf.setMinimumResourceRequirement("", LEAF_B_FULL_PATH, B_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(PARENT_A_FULL_PATH), A_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(PARENT_B_FULL_PATH), B_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(LEAF_A_FULL_PATH), A_MINRES_GPU);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(LEAF_B_FULL_PATH), B_MINRES_GPU);
 
-      csConf.setMaximumResourceRequirement("", PARENT_A_FULL_PATH, PARTIAL_MAXRES_GPU);
-      csConf.setMaximumResourceRequirement("", PARENT_B_FULL_PATH, FULL_MAXRES_GPU);
-      csConf.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, PARTIAL_MAXRES_GPU);
-      csConf.setMaximumResourceRequirement("", LEAF_B_FULL_PATH, FULL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(PARENT_A_FULL_PATH), PARTIAL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(PARENT_B_FULL_PATH), FULL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(LEAF_A_FULL_PATH), PARTIAL_MAXRES_GPU);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(LEAF_B_FULL_PATH), FULL_MAXRES_GPU);
     } else {
-      csConf.setMinimumResourceRequirement("", PARENT_A_FULL_PATH, A_MINRES);
-      csConf.setMinimumResourceRequirement("", PARENT_B_FULL_PATH, B_MINRES);
-      csConf.setMinimumResourceRequirement("", LEAF_A_FULL_PATH, A_MINRES);
-      csConf.setMinimumResourceRequirement("", LEAF_B_FULL_PATH, B_MINRES);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(PARENT_A_FULL_PATH), A_MINRES);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(PARENT_B_FULL_PATH), B_MINRES);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(LEAF_A_FULL_PATH), A_MINRES);
+      csConf.setMinimumResourceRequirement("",
+              new QueuePath(LEAF_B_FULL_PATH), B_MINRES);
 
-      csConf.setMaximumResourceRequirement("", PARENT_A_FULL_PATH, PARTIAL_MAXRES);
-      csConf.setMaximumResourceRequirement("", PARENT_B_FULL_PATH, FULL_MAXRES);
-      csConf.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, PARTIAL_MAXRES);
-      csConf.setMaximumResourceRequirement("", LEAF_B_FULL_PATH, FULL_MAXRES);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(PARENT_A_FULL_PATH), PARTIAL_MAXRES);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(PARENT_B_FULL_PATH), FULL_MAXRES);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(LEAF_A_FULL_PATH), PARTIAL_MAXRES);
+      csConf.setMaximumResourceRequirement("",
+              new QueuePath(LEAF_B_FULL_PATH), FULL_MAXRES);
     }
 
     return csConf;
