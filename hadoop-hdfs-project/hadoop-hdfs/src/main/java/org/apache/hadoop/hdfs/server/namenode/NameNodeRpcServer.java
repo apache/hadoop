@@ -450,7 +450,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
 
     GlobalStateIdContext stateIdContext = null;
     if (enableStateContext) {
-      stateIdContext = new GlobalStateIdContext((namesystem));
+      stateIdContext = new GlobalStateIdContext(namesystem);
     }
 
     clientRpcServer = new RPC.Builder(conf)

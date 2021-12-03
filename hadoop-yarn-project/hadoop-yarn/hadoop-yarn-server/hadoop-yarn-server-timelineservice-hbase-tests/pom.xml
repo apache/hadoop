@@ -96,6 +96,10 @@
           <groupId>tomcat</groupId>
           <artifactId>jasper-runtime</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -106,6 +110,12 @@
       <artifactId>hadoop-auth</artifactId>
       <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -116,6 +126,10 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -311,6 +325,12 @@
       <artifactId>hadoop-hdfs</artifactId>
       <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this direct
@@ -320,6 +340,19 @@
       <artifactId>hadoop-hdfs</artifactId>
       <version>${hbase-compatible-hadoop.version}</version>
       <type>test-jar</type>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs-client</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs-client</artifactId>
+      <version>${hbase-compatible-hadoop.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -469,14 +502,6 @@
               <artifactId>hadoop-common</artifactId>
             </exclusion>
           </exclusions>
-        </dependency>
-        <!-- 'mvn dependency:analyze' fails to detect use of this direct
-             dependency -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs-client</artifactId>
-          <version>${hbase-compatible-hadoop.version}</version>
-          <scope>test</scope>
         </dependency>
         <!-- 'mvn dependency:analyze' fails to detect use of this direct
              dependency -->
