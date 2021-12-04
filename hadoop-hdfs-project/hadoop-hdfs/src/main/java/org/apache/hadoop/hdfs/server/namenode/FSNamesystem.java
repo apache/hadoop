@@ -8610,7 +8610,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src = iip.getPath();
         INode inode = iip.getLastINode();
         if (inode == null) {
-          throw new FileNotFoundException("Path not found: " + src);
+          throw new FileNotFoundException("Path not found");
         }
         if (isPermissionEnabled) {
           dir.checkPathAccess(pc, iip, mode);
