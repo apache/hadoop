@@ -57,6 +57,15 @@ public class BufferPool implements Closeable {
   // Allows associating metadata to each buffer in the pool.
   private Map<BufferData, ByteBuffer> allocated;
 
+  /**
+   * Initializes a new instance of the {@code BufferPool} class.
+   *
+   * @param size number of buffer in this pool.
+   * @param bufferSize size in bytes of each buffer.
+   *
+   * @throws IllegalArgumentException if size is zero or negative.
+   * @throws IllegalArgumentException if bufferSize is zero or negative.
+   */
   public BufferPool(int size, int bufferSize) {
     Validate.checkPositiveInteger(size, "size");
     Validate.checkPositiveInteger(bufferSize, "bufferSize");
@@ -72,6 +81,11 @@ public class BufferPool implements Closeable {
       };
   }
 
+  /**
+   * Gets a list of all blocks in this pool.
+   *
+   * @return a list of all blocks in this pool.
+   */
   public List<BufferData> getAll() {
     synchronized (this.allocated) {
       return Collections.unmodifiableList(new ArrayList<BufferData>(this.allocated.keySet()));
@@ -189,6 +203,9 @@ public class BufferPool implements Closeable {
    * Releases a previously acquired resource.
    *
    * @param data the {@code BufferData} instance to release.
+   *
+   * @throws IllegalArgumentException if data is null.
+   * @throws IllegalArgumentException if data cannot be released due to its state.
    */
   public synchronized void release(BufferData data) {
     Validate.checkNotNull(data, "data");

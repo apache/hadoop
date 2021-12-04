@@ -32,8 +32,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Block level operations performed on S3 file.
- * This class is meant to be used by {@code S3BlockManager}.
+ * Block level operations performed on a file.
+ * This class is meant to be used by {@code BlockManager}.
  * It is separated out in its own file due to its size.
  */
 public class BlockOperations {

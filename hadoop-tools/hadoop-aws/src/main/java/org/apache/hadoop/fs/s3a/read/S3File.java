@@ -71,6 +71,10 @@ public class S3File implements Closeable {
    * @param size the size of this file. it should be passed in if pre-known
    *        to avoid an additional network call. If size is not known,
    *        pass a negative number so that size can be obtained if needed.
+   *
+   * @throws IllegalArgumentException if client is null.
+   * @throws IllegalArgumentException if bucket is either null or empty.
+   * @throws IllegalArgumentException if key is either null or empty.
    */
   public S3File(AmazonS3 client, String bucket, String key, long size) {
     Validate.checkNotNull(client, "client");
@@ -109,8 +113,13 @@ public class S3File implements Closeable {
    * @param size Size of the section to read.
    * @return an {@code InputStream} corresponding to the given section of this file.
    * @throws IOException if there is an error opening this file section for reading.
+   *
+   * @throws IllegalArgumentException if offset is negative.
+   * @throws IllegalArgumentException if offset is greater than or equal to file size.
+   * @throws IllegalArgumentException if size is greater than the remaining bytes.
    */
   public InputStream openForRead(long offset, int size) throws IOException {
+    Validate.checkNotNegative(offset, "offset");
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 

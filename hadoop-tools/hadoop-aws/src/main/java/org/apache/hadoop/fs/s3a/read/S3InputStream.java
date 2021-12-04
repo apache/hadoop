@@ -62,6 +62,23 @@ public abstract class S3InputStream extends InputStream {
   // Information about each block of the mapped S3 file.
   private BlockData blockData;
 
+  /**
+   * Initializes a new instance of the {@code S3InputStream} class.
+   *
+   * @param futurePool Future pool to use for async operations.
+   * @param bufferSize size of prefetch buffer.
+   * @param bucket S3 bucket name.
+   * @param key S3 path.
+   * @param fileSize size of the given file.
+   * @param client S3 client to use.
+   *
+   * @throws IllegalArgumentException if futurePool is null.
+   * @throws IllegalArgumentException if bufferSize is negative.
+   * @throws IllegalArgumentException if bufferSize is zero or negative.
+   * @throws IllegalArgumentException if bucket is either null or empty.
+   * @throws IllegalArgumentException if key is either null or empty.
+   * @throws IllegalArgumentException if client is null.
+   */
   public S3InputStream(
       FuturePool futurePool,
       int bufferSize,
@@ -144,6 +161,8 @@ public abstract class S3InputStream extends InputStream {
    *
    * @param pos the absolute position to seek to.
    * @throws IOException if there an error during this operation.
+   *
+   * @throws IllegalArgumentException if pos is outside of the range [0, file size].
    */
   public void seek(long pos) throws IOException {
     Validate.checkWithinRange(pos, "pos", 0, this.s3File.size() - 1);

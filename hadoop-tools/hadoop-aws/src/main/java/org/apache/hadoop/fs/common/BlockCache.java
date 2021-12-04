@@ -34,7 +34,7 @@ public interface BlockCache extends Closeable {
    * @param blockNumber the id of the given block.
    * @return true if the given block is in this cache, false otherwise.
    */
-  boolean containsBlock(Integer blockNumber);
+  boolean containsBlock(int blockNumber);
 
   /**
    * Gets the blocks in this cache.
@@ -57,7 +57,7 @@ public interface BlockCache extends Closeable {
    * @param buffer contents of the desired block are copied to this buffer.
    * @throws IOException if there is an error reading the given block.
    */
-  void get(Integer blockNumber, ByteBuffer buffer) throws IOException;
+  void get(int blockNumber, ByteBuffer buffer) throws IOException;
 
   /**
    * Puts the given block in this cache.
@@ -66,5 +66,5 @@ public interface BlockCache extends Closeable {
    * @param buffer contents of the given block to be added to this cache.
    * @throws IOException if there is an error writing the given block.
    */
-  void put(Integer blockNumber, ByteBuffer buffer) throws IOException;
+  void put(int blockNumber, ByteBuffer buffer) throws IOException;
 }

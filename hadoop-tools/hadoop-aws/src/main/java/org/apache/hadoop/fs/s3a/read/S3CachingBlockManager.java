@@ -45,6 +45,8 @@ public class S3CachingBlockManager extends CachingBlockManager {
    * @param reader reader that reads from S3 file.
    * @param blockData information about each block of the S3 file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
+   *
+   * @throws IllegalArgumentException if reader is null.
    */
   public S3CachingBlockManager(
       FuturePool futurePool,

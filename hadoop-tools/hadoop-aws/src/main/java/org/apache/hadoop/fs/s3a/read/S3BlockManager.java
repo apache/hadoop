@@ -42,6 +42,8 @@ public class S3BlockManager extends BlockManager {
    *
    * @param reader a reader that reads from S3 file.
    * @param blockData information about each block of the S3 file.
+   *
+   * @throws IllegalArgumentException if reader is null.
    */
   public S3BlockManager(S3Reader reader, BlockData blockData) {
     super(blockData);

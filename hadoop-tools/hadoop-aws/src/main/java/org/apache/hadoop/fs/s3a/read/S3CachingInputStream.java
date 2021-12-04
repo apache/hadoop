@@ -64,6 +64,8 @@ public class S3CachingInputStream extends S3InputStream {
 
   /**
    * Moves the current read position so that the next read will occur at {@code pos}.
+   *
+   * @throws IllegalArgumentException if pos is outside of the range [0, file size].
    */
   @Override
   public void seek(long pos) throws IOException {

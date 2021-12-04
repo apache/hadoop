@@ -88,9 +88,7 @@ public class SingleFilePerBlockCache implements BlockCache {
    * Indicates whether the given block is in this cache.
    */
   @Override
-  public boolean containsBlock(Integer blockNumber) {
-    Validate.checkNotNull(blockNumber, "blockNumber");
-
+  public boolean containsBlock(int blockNumber) {
     return this.blocks.containsKey(blockNumber);
   }
 
@@ -112,9 +110,11 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   /**
    * Gets the block having the given {@code blockNumber}.
+   *
+   * @throws IllegalArgumentException if buffer is null.
    */
   @Override
-  public void get(Integer blockNumber, ByteBuffer buffer) throws IOException {
+  public void get(int blockNumber, ByteBuffer buffer) throws IOException {
     if (this.closed) {
       return;
     }
@@ -141,8 +141,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     return numBytesRead;
   }
 
-  private Entry getEntry(Integer blockNumber) {
-    Validate.checkNotNull(blockNumber, "blockNumber");
+  private Entry getEntry(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
 
     Entry entry = this.blocks.get(blockNumber);
@@ -155,14 +154,16 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   /**
    * Puts the given block in this cache.
+   *
+   * @throws IllegalArgumentException if buffer is null.
+   * @throws IllegalArgumentException if buffer.limit() is zero or negative.
    */
   @Override
-  public void put(Integer blockNumber, ByteBuffer buffer) throws IOException {
+  public void put(int blockNumber, ByteBuffer buffer) throws IOException {
     if (this.closed) {
       return;
     }
 
-    Validate.checkNotNull(blockNumber, "blockNumber");
     Validate.checkNotNull(buffer, "buffer");
 
     if (this.blocks.containsKey(blockNumber)) {

@@ -30,9 +30,6 @@ import java.nio.ByteBuffer;
  *
  * A file is made up of equal sized blocks. The last block may be of a smaller size.
  * The size of a buffer associated with this file is typically the same as block size.
- *
- * This class is typically used with {@code S3InputStream}, however it is separated
- * out in its own file because of its size.
  */
 public class FilePosition {
   // Holds block based information about a file.
@@ -60,6 +57,9 @@ public class FilePosition {
    *
    * @param fileSize size of the associated file.
    * @param blockSize size of each block within the file.
+   *
+   * @throws IllegalArgumentException if fileSize is negative.
+   * @throws IllegalArgumentException if blockSize is zero or negative.
    */
   public FilePosition(long fileSize, int blockSize) {
     Validate.checkNotNegative(fileSize, "fileSize");
@@ -81,6 +81,11 @@ public class FilePosition {
    * @param bufferData the buffer associated with this file.
    * @param startOffset Start offset of the buffer relative to the start of a file.
    * @param readOffset Offset where reading starts relative to the start of a file.
+   *
+   * @throws IllegalArgumentException if bufferData is null.
+   * @throws IllegalArgumentException if startOffset is negative.
+   * @throws IllegalArgumentException if readOffset is negative.
+   * @throws IllegalArgumentException if readOffset is outside the range [startOffset, buffer end].
    */
   public void setData(BufferData bufferData, long startOffset, long readOffset) {
     Validate.checkNotNull(bufferData, "bufferData");

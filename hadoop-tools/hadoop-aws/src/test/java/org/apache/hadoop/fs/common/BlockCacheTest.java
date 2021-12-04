@@ -36,16 +36,6 @@ public class BlockCacheTest {
     // Verify it throws correctly.
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
-        "'blockNumber' must not be null",
-        () -> cache.containsBlock(null));
-
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'blockNumber' must not be null",
-        () -> cache.put(null, buffer));
-
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
         "'buffer' must not be null",
         () -> cache.put(42, null));
   }

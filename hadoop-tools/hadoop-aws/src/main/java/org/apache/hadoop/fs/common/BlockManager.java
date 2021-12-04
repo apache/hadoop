@@ -38,6 +38,8 @@ public abstract class BlockManager implements Closeable {
    * Constructs an instance of {@code BlockManager}.
    *
    * @param blockData information about each block of the underlying file.
+   *
+   * @throws IllegalArgumentException if blockData is null.
    */
   public BlockManager(BlockData blockData) {
     Validate.checkNotNull(blockData, "blockData");
@@ -63,7 +65,9 @@ public abstract class BlockManager implements Closeable {
    *
    * @param blockNumber the number of the block to be read and returned.
    * @return {@code BufferData} having data from the given block.
+   *
    * @throws IOException if there an error reading the given block.
+   * @throws IllegalArgumentException if blockNumber is negative.
    */
   public BufferData get(int blockNumber) throws IOException {
     Validate.checkNotNegative(blockNumber, "blockNumber");
@@ -92,6 +96,8 @@ public abstract class BlockManager implements Closeable {
    * Releases resources allocated to the given block.
    *
    * @param data the {@code BufferData} to release.
+   *
+   * @throws IllegalArgumentException if data is null.
    */
   public void release(BufferData data) {
     Validate.checkNotNull(data, "data");
@@ -103,6 +109,8 @@ public abstract class BlockManager implements Closeable {
    * Requests optional prefetching of the given block.
    *
    * @param blockNumber the id of the block to prefetch.
+   *
+   * @throws IllegalArgumentException if blockNumber is negative.
    */
   public void requestPrefetch(int blockNumber) {
     Validate.checkNotNegative(blockNumber, "blockNumber");

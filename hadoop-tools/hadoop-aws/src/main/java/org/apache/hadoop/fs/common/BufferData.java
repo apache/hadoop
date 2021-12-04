@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.zip.CRC32;
 
 /**
- * Holds the state of a ByteBuffer that is in use by {@code S3CachingBlockManager}.
+ * Holds the state of a ByteBuffer that is in use by {@code CachingBlockManager}.
  *
  * This class is not meant to be of general use. It exists into its own file due to its size.
  * We use the term block and buffer interchangeably in this file because one buffer
@@ -82,6 +82,9 @@ public class BufferData {
    *
    * @param blockNumber Number of the block associated with this buffer.
    * @param buffer The buffer associated with this block.
+   *
+   * @throws IllegalArgumentException if blockNumber is negative.
+   * @throws IllegalArgumentException if buffer is null.
    */
   public BufferData(int blockNumber, ByteBuffer buffer) {
     Validate.checkNotNegative(blockNumber, "blockNumber");
@@ -92,18 +95,38 @@ public class BufferData {
     this.state = State.BLANK;
   }
 
+  /**
+   * Gets the id of this block.
+   *
+   * @return the id of this block.
+   */
   public int getBlockNumber() {
     return this.blockNumber;
   }
 
+  /**
+   * Gets the buffer associated with this block.
+   *
+   * @return the buffer associated with this block.
+   */
   public ByteBuffer getBuffer() {
     return this.buffer;
   }
 
+  /**
+   * Gets the state of this block.
+   *
+   * @return the state of this block.
+   */
   public State getState() {
     return this.state;
   }
 
+  /**
+   * Gets the checksum of data in this block.
+   *
+   * @return the checksum of data in this block.
+   */
   public long getChecksum() {
     return this.checksum;
   }
@@ -130,6 +153,8 @@ public class BufferData {
    * Indicates that a prefetch operation is in progress.
    *
    * @param actionFuture the {@code Future} of a prefetch action.
+   *
+   * @throws IllegalArgumentException if actionFuture is null.
    */
   public synchronized void setPrefetch(Future<Void> actionFuture) {
     Validate.checkNotNull(actionFuture, "actionFuture");
@@ -142,6 +167,8 @@ public class BufferData {
    * Indicates that a caching operation is in progress.
    *
    * @param actionFuture the {@code Future} of a caching action.
+   *
+   * @throws IllegalArgumentException if actionFuture is null.
    */
   public synchronized void setCaching(Future<Void> actionFuture) {
     Validate.checkNotNull(actionFuture, "actionFuture");
@@ -188,6 +215,9 @@ public class BufferData {
    * @param newState the state to transition to.
    * @param expectedCurrentState the collection of states from which
    *        transition to {@code newState} is allowed.
+   *
+   * @throws IllegalArgumentException if newState is null.
+   * @throws IllegalArgumentException if expectedCurrentState is null.
    */
   public synchronized void updateState(State newState, State... expectedCurrentState) {
     Validate.checkNotNull(newState, "newState");
@@ -201,6 +231,8 @@ public class BufferData {
    * Helper that asserts the current state is one of the expected values.
    *
    * @param states the collection of allowed states.
+   *
+   * @throws IllegalArgumentException if states is null.
    */
   public void throwIfStateIncorrect(State... states) {
     Validate.checkNotNull(states, "states");

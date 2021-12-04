@@ -45,6 +45,8 @@ public class S3Reader implements Closeable {
    * Constructs an instance of {@link S3Reader}.
    *
    * @param s3File The S3 file to read.
+   *
+   * @throws IllegalArgumentException if s3File is null.
    */
   public S3Reader(S3File s3File) {
     Validate.checkNotNull(s3File, "s3File");
@@ -61,6 +63,10 @@ public class S3Reader implements Closeable {
    *
    * @return number of bytes actually read
    * @throws IOException if there is an error reading from the file.
+   *
+   * @throws IllegalArgumentException if buffer is null.
+   * @throws IllegalArgumentException if offset is outside of the range [0, file size].
+   * @throws IllegalArgumentException if size is zero or negative.
    */
   public int read(ByteBuffer buffer, long offset, int size) throws IOException {
     Validate.checkNotNull(buffer, "buffer");

@@ -73,6 +73,9 @@ public abstract class CachingBlockManager extends BlockManager {
    * @param futurePool asynchronous tasks are performed in this pool.
    * @param blockData information about each block of the underlying file.
    * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
+   *
+   * @throws IllegalArgumentException if futurePool is null.
+   * @throws IllegalArgumentException if bufferPoolSize is zero or negative.
    */
   public CachingBlockManager(
       FuturePool futurePool,
@@ -100,6 +103,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Gets the block having the given {@code blockNumber}.
+   *
+   * @throws IllegalArgumentException if blockNumber is negative.
    */
   @Override
   public BufferData get(int blockNumber) throws IOException {
@@ -169,6 +174,8 @@ public abstract class CachingBlockManager extends BlockManager {
 
   /**
    * Releases resources allocated to the given block.
+   *
+   * @throws IllegalArgumentException if data is null.
    */
   @Override
   public void release(BufferData data) {
@@ -208,6 +215,8 @@ public abstract class CachingBlockManager extends BlockManager {
   /**
    * Requests optional prefetching of the given block.
    * The block is prefetched only if we can acquire a free buffer.
+   *
+   * @throws IllegalArgumentException if blockNumber is negative.
    */
   @Override
   public void requestPrefetch(int blockNumber) {
@@ -364,6 +373,8 @@ public abstract class CachingBlockManager extends BlockManager {
    * Requests that the given block should be copied to the local cache.
    * The block must not be accessed by the caller after calling this method
    * because it will released asynchronously relative to the caller.
+   *
+   * @throws IllegalArgumentException if data is null.
    */
   @Override
   public void requestCaching(BufferData data) {

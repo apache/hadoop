@@ -43,6 +43,8 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
    * Constructs a resource pool of the given size.
    *
    * @param size the size of this pool. Cannot be changed post creation.
+   *
+   * @throws IllegalArgumentException if size is zero or negative.
    */
   public BoundedResourcePool(int size) {
     Validate.checkPositiveInteger(size, "size");
@@ -72,6 +74,8 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
 
   /**
    * Releases a previously acquired resource.
+   *
+   * @throws IllegalArgumentException if item is null.
    */
   @Override
   public void release(T item) {

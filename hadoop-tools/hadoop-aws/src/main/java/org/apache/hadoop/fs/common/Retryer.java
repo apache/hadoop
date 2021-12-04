@@ -26,7 +26,7 @@ public class Retryer {
   // Maximum amount of delay (in ms) before retry fails.
   private int maxDelay;
 
-  // Per retry delay (in mx).
+  // Per retry delay (in ms).
   private int perRetryDelay;
 
   // The time interval (in ms) at which status update would be made.
@@ -35,6 +35,17 @@ public class Retryer {
   // Current delay.
   private int delay;
 
+  /**
+   * Initializes a new instance of the {@code Retryer} class.
+   *
+   * @param perRetryDelay per retry delay (in ms).
+   * @param maxDelay maximum amount of delay (in ms) before retry fails.
+   * @param statusUpdateInterval time interval (in ms) at which status update would be made.
+   *
+   * @throws IllegalArgumentException if perRetryDelay is zero or negative.
+   * @throws IllegalArgumentException if maxDelay is less than or equal to perRetryDelay.
+   * @throws IllegalArgumentException if statusUpdateInterval is zero or negative.
+   */
   public Retryer(int perRetryDelay, int maxDelay, int statusUpdateInterval) {
     Validate.checkPositiveInteger(perRetryDelay, "perRetryDelay");
     Validate.checkGreater(maxDelay, "maxDelay", perRetryDelay, "perRetryDelay");

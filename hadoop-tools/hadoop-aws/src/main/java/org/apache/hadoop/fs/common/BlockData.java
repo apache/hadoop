@@ -20,7 +20,7 @@
 package org.apache.hadoop.fs.common;
 
 /**
- * Holds information about blocks of data in an S3 file.
+ * Holds information about blocks of data in a file.
  */
 public class BlockData {
   // State of each block of data.
@@ -38,23 +38,27 @@ public class BlockData {
     CACHED
   }
 
-  // State of all blocks in an S3 file.
+  // State of all blocks in a file.
   private State[] state;
 
-  // The size of an S3 file.
+  // The size of a file.
   private final long fileSize;
 
-  // The S3 file is divided into blocks of this size.
+  // The file is divided into blocks of this size.
   private final int blockSize;
 
-  // The S3 file has these many blocks.
+  // The file has these many blocks.
   private final int numBlocks;
 
   /**
    * Constructs an instance of {@link BlockData}.
    *
-   * @param fileSize the size of an S3 file.
-   * @param blockSize the S3 file is divided into blocks of this size.
+   * @param fileSize the size of a file.
+   * @param blockSize the file is divided into blocks of this size.
+   *
+   * @throws IllegalArgumentException if fileSize is negative.
+   * @throws IllegalArgumentException if blockSize is negative.
+   * @throws IllegalArgumentException if blockSize is zero or negative.
    */
   public BlockData(long fileSize, int blockSize) {
     Validate.checkNotNegative(fileSize, "fileSize");
@@ -74,18 +78,41 @@ public class BlockData {
     }
   }
 
+  /**
+   * Gets the size of each block.
+   *
+   * @return the size of each block.
+   */
   public int getBlockSize() {
     return this.blockSize;
   }
 
+  /**
+   * Gets the size of the associated file.
+   *
+   * @return the size of the associated file.
+   */
   public long getFileSize() {
     return this.fileSize;
   }
 
+  /**
+   * Gets the number of blocks in the associated file.
+   *
+   * @return the number of blocks in the associated file.
+   */
   public int getNumBlocks() {
     return this.numBlocks;
   }
 
+  /**
+   * Indicates whether the given block is the last block in the associated file.
+   *
+   * @param blockNumber the id of the desired block.
+   * @return true if the given block is the last block in the associated file, false otherwise.
+   *
+   * @throws IllegalArgumentException if blockNumber is invalid.
+   */
   public boolean isLastBlock(int blockNumber) {
     if (this.fileSize == 0) {
       return false;
@@ -96,12 +123,26 @@ public class BlockData {
     return blockNumber == (this.numBlocks - 1);
   }
 
+  /**
+   * Gets the id of the block that contains the given absolute offset.
+   *
+   * @param offset the absolute offset to check.
+   * @return the id of the block that contains the given absolute offset.
+   *
+   * @throws IllegalArgumentException if offset is invalid.
+   */
   public int getBlockNumber(long offset) {
     throwIfInvalidOffset(offset);
 
     return (int) (offset / this.blockSize);
   }
 
+  /**
+   * Gets the size of the given block.
+   *
+   * @param blockNumber the id of the desired block.
+   * @return the size of the given block.
+   */
   public int getSize(int blockNumber) {
     if (this.fileSize == 0) {
       return 0;
@@ -114,33 +155,71 @@ public class BlockData {
     }
   }
 
+  /**
+   * Indicates whether the given absolute offset is valid.
+   *
+   * @param offset absolute offset in the file..
+   * @return true if the given absolute offset is valid, false otherwise.
+   */
   public boolean isValidOffset(long offset) {
     return (offset >= 0) && (offset < this.fileSize);
   }
 
+  /**
+   * Gets the start offset of the given block.
+
+   * @param blockNumber the id of the given block.
+   * @return the start offset of the given block.
+   *
+   * @throws IllegalArgumentException if blockNumber is invalid.
+   */
   public long getStartOffset(int blockNumber) {
     throwIfInvalidBlockNumber(blockNumber);
 
     return blockNumber * (long) this.blockSize;
   }
 
+  /**
+   * Gets the relative offset corresponding to the given block and the absolute offset.
+   *
+   * @param blockNumber the id of the given block.
+   * @param offset absolute offset in the file.
+   * @return the relative offset corresponding to the given block and the absolute offset.
+   *
+   * @throws IllegalArgumentException if either blockNumber or offset is invalid.
+   */
   public int getRelativeOffset(int blockNumber, long offset) {
     throwIfInvalidOffset(offset);
 
     return (int) (offset - this.getStartOffset(blockNumber));
   }
 
+  /**
+   * Gets the state of the given block.
+   *
+   * @param blockNumber the id of the given block.
+   * @return the state of the given block.
+   *
+   * @throws IllegalArgumentException if blockNumber is invalid.
+   */
   public State getState(int blockNumber) {
     throwIfInvalidBlockNumber(blockNumber);
 
     return this.state[blockNumber];
   }
 
-  public State setState(int blockNumber, State blockState) {
+  /**
+   * Sets the state of the given block to the given value.
+   *
+   * @param blockNumber the id of the given block.
+   * @param blockState the target state.
+   *
+   * @throws IllegalArgumentException if blockNumber is invalid.
+   */
+  public void setState(int blockNumber, State blockState) {
     throwIfInvalidBlockNumber(blockNumber);
 
     this.state[blockNumber] = blockState;
-    return blockState;
   }
 
   // Debug helper.

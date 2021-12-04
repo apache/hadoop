@@ -53,6 +53,9 @@ public class S3AccessRetryer {
    *
    * @param baseDelay the delay before attempting the first retry.
    * @param maxDelay the amount of delay after which no additional retries will be attempted.
+   *
+   * @throws IllegalArgumentException if baseDelay is zero or negative.
+   * @throws IllegalArgumentException if maxDelay is less than or equal to baseDelay.
    */
   public S3AccessRetryer(int baseDelay, int maxDelay) {
     Validate.checkPositiveInteger(baseDelay, "baseDelay");
