@@ -32,7 +32,6 @@ import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,6 +44,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
@@ -262,7 +262,7 @@ public class TestDFSPermission {
   }
 
   @Test
-  public void testFSNamesystemCheckAccess(){
+  public void testFSNamesystemCheckAccess() throws Exception{
     Path testInvalidPath = new Path("/test2");
     fs = FileSystem.get(conf);
 
@@ -300,7 +300,7 @@ public class TestDFSPermission {
     fs.setPermission(new Path("/"),
         FsPermission.createImmutable((short)0777));
   }
-
+  
   @Test(timeout=30000)
   public void testTrashPermission() throws Exception {
     //  /BSS                  user1:group2 777
