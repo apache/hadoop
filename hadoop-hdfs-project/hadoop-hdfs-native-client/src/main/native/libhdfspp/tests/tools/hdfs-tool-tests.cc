@@ -80,9 +80,10 @@ INSTANTIATE_TEST_SUITE_P(
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsChmod, HdfsToolBasicTest,
-    testing::Values(CallHelp<hdfs::tools::test::ChmodMock>,
-                    PassOwnerAndAPath<hdfs::tools::test::ChmodMock>,
-                    PassRecursiveOwnerAndAPath<hdfs::tools::test::ChmodMock>));
+    testing::Values(
+        CallHelp<hdfs::tools::test::ChmodMock>,
+        PassPermissionsAndAPath<hdfs::tools::test::ChmodMock>,
+        PassRecursivePermissionsAndAPath<hdfs::tools::test::ChmodMock>));
 
 INSTANTIATE_TEST_SUITE_P(
     HdfsChgrp, HdfsToolBasicTest,
