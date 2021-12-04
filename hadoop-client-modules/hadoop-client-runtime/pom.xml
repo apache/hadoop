@@ -242,6 +242,12 @@
                         <exclude>google/protobuf/**/*.proto</exclude>
                       </excludes>
                     </filter>
+                    <filter>
+                      <artifact>com.fasterxml.jackson.*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/11/module-info.class</exclude>
+                      </excludes>
+                    </filter>
                   </filters>
                   <relocations>
                     <relocation>
