@@ -50,6 +50,7 @@ void ChownMock::SetExpectations(
     const auto arg1 = args[0];
     const auto arg2 = args[1];
     const Ownership ownership(arg1);
+
     EXPECT_CALL(*this, HandlePath(ownership, false, arg2))
         .Times(1)
         .WillOnce(testing::Return(true));
@@ -59,6 +60,7 @@ void ChownMock::SetExpectations(
     const auto arg1 = args[1];
     const auto arg2 = args[2];
     const Ownership ownership(arg1);
+
     EXPECT_CALL(*this, HandlePath(ownership, true, arg2))
         .Times(1)
         .WillOnce(testing::Return(true));

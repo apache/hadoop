@@ -61,7 +61,7 @@ bool Chmod::ValidateConstraints() const {
     return opt_val_.count("help");
   }
 
-  // Rest of the cases must contain more than 1 argument on the command line
+  // Rest of the cases must contain more than 2 arguments on the command line
   return argc_ > 2;
 }
 
@@ -123,7 +123,7 @@ bool Chmod::HandlePath(const std::string &permissions, const bool recursive,
   // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(file);
 
-  auto fs = hdfs::doConnect(uri, true);
+  const auto fs = hdfs::doConnect(uri, true);
   if (!fs) {
     std::cerr << "Could not connect the file system. " << std::endl;
     return false;
@@ -133,8 +133,8 @@ bool Chmod::HandlePath(const std::string &permissions, const bool recursive,
    * Wrap async FileSystem::SetPermission with promise to make it a blocking
    * call.
    */
-  auto promise = std::make_shared<std::promise<hdfs::Status>>();
-  std::future future(promise->get_future());
+  const auto promise = std::make_shared<std::promise<hdfs::Status>>();
+  auto future(promise->get_future());
   auto handler = [promise](const hdfs::Status &s) { promise->set_value(s); };
 
   /*

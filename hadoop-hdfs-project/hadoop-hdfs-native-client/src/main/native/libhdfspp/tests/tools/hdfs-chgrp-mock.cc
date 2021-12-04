@@ -49,6 +49,7 @@ void ChgrpMock::SetExpectations(
   if (*test_case_func == &PassOwnerAndAPath<ChgrpMock>) {
     const auto arg1 = args[0];
     const auto arg2 = args[1];
+
     EXPECT_CALL(*this, HandlePath(arg1, false, arg2))
         .Times(1)
         .WillOnce(testing::Return(true));

@@ -23,7 +23,6 @@
 
 #include <boost/program_options.hpp>
 
-#include "hdfs-ownership.h"
 #include "hdfs-tool.h"
 
 namespace hdfs::tools {
@@ -72,12 +71,12 @@ protected:
   [[nodiscard]] bool HandleHelp() const override;
 
   /**
-   * Handle the file to the file argument that's passed to this tool.
+   * Handle the path to the file argument that's passed to this tool.
    *
-   * @param ownership The owner's user and group names.
+   * @param group The name of the group to which to change to.
    * @param recursive Whether this operation needs to be performed recursively
    * on all the files in the given path's sub-directory.
-   * @param file The path to the file whose ownership needs to be changed.
+   * @param file The path to the file whose group needs to be changed.
    *
    * @return A boolean indicating the result of this operation.
    */

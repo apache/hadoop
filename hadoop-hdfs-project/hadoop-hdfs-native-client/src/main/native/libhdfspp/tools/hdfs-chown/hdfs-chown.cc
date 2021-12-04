@@ -63,7 +63,7 @@ bool Chown::ValidateConstraints() const {
     return opt_val_.count("help");
   }
 
-  // Rest of the cases must contain more than 1 argument on the command line
+  // Rest of the cases must contain more than 2 arguments on the command line
   return argc_ > 2;
 }
 
@@ -145,7 +145,7 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
     fs->SetOwner(uri.get_path(), ownership.GetUser(),
                  ownership.GetGroup().value_or(""), handler);
   } else {
-    /**
+    /*
      * Allocating shared state, which includes: username and groupname to be
      * set, handler to be called, request counter, and a boolean to keep track
      * if find is done
@@ -154,7 +154,7 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
                                               ownership.GetGroup().value_or(""),
                                               handler, 0, false);
 
-    /**
+    /*
      * Keep requesting more from Find until we process the entire listing. Call
      * handler when Find is done and request counter is 0. Find guarantees that
      * the handler will only be called once at a time so we do not need locking
@@ -164,7 +164,7 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
                          state](const hdfs::Status &status_find,
                                 const std::vector<hdfs::StatInfo> &stat_infos,
                                 const bool has_more_results) -> bool {
-      /**
+      /*
        * For each result returned by Find we call async SetOwner with the
        * handler below. SetOwner DOES NOT guarantee that the handler will only
        * be called once at a time, so we DO need locking in handler_set_owner.
@@ -193,7 +193,7 @@ bool Chown::HandlePath(const Ownership &ownership, const bool recursive,
         }
       }
 
-      /**
+      /*
        * Lock this section because handler_set_owner might be accessing the same
        * shared variables simultaneously.
        */

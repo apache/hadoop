@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "hdfs-chgrp.h"
+#include "hdfs-ownership.h"
 #include "tools_common.h"
 
 namespace hdfs::tools {
@@ -35,10 +36,11 @@ bool Chgrp::Initialize() {
   auto add_options = opt_desc_.add_options();
   add_options("help,h", "Change the group association of each FILE to GROUP.");
   add_options("file", po::value<std::string>(),
-              "The path to the file whose ownership needs to be modified");
+              "The path to the file whose group needs to be modified");
   add_options("recursive,R", "Operate on files and directories recursively");
-  add_options("group", po::value<std::string>(),
-              "The group to which the file's ownership needs to be changed to");
+  add_options(
+      "group", po::value<std::string>(),
+      "The group to which the file's group association needs to be changed to");
 
   // An exception is thrown if these arguments are missing or if the arguments'
   // count doesn't tally.
@@ -60,7 +62,7 @@ bool Chgrp::ValidateConstraints() const {
     return opt_val_.count("help");
   }
 
-  // Rest of the cases must contain more than 1 argument on the command line
+  // Rest of the cases must contain more than 2 arguments on the command line
   return argc_ > 2;
 }
 
@@ -116,7 +118,7 @@ bool Chgrp::HandleHelp() const {
   return true;
 }
 
-bool Chgrp::HandlePath(const std::string &group, bool recursive,
+bool Chgrp::HandlePath(const std::string &group, const bool recursive,
                        const std::string &file) const {
   // Building a URI object from the given file
   auto uri = hdfs::parse_path_or_exit(file);
@@ -135,7 +137,7 @@ bool Chgrp::HandlePath(const std::string &group, bool recursive,
   if (!recursive) {
     fs->SetOwner(uri.get_path(), "", group, handler);
   } else {
-    /**
+    /*
      * Allocating shared state, which includes: username and groupname to be
      * set, handler to be called, request counter, and a boolean to keep track
      * if find is done
@@ -143,7 +145,7 @@ bool Chgrp::HandlePath(const std::string &group, bool recursive,
     const auto state =
         std::make_shared<OwnerState>("", group, handler, 0, false);
 
-    /**
+    /*
      * Keep requesting more from Find until we process the entire listing. Call
      * handler when Find is done and request counter is 0. Find guarantees that
      * the handler will only be called once at a time so we do not need locking
@@ -153,7 +155,7 @@ bool Chgrp::HandlePath(const std::string &group, bool recursive,
                          state](const hdfs::Status &status_find,
                                 const std::vector<hdfs::StatInfo> &stat_infos,
                                 const bool has_more_results) -> bool {
-      /**
+      /*
        * For each result returned by Find we call async SetOwner with the
        * handler below. SetOwner DOES NOT guarantee that the handler will only
        * be called once at a time, so we DO need locking in handler_set_owner.
@@ -182,7 +184,7 @@ bool Chgrp::HandlePath(const std::string &group, bool recursive,
         }
       }
 
-      /**
+      /*
        * Lock this section because handler_set_owner might be accessing the same
        * shared variables simultaneously.
        */

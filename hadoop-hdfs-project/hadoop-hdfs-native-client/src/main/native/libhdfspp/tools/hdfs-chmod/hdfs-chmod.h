@@ -63,8 +63,8 @@ struct PermissionState {
 };
 
 /**
- * {@class Chmod} is an {@class HdfsTool} that changes the owner and/or group of
- * each file to owner and/or group.
+ * {@class Chmod} is an {@class HdfsTool} that changes the permissions to a
+ * file or folder.
  */
 class Chmod : public HdfsTool {
 public:
@@ -109,7 +109,8 @@ protected:
   /**
    * Handle the file to the file argument that's passed to this tool.
    *
-   * @param ownership The owner's user and group names.
+   * @param permissions An octal representation of the new permissions to be
+   * assigned.
    * @param recursive Whether this operation needs to be performed recursively
    * on all the files in the given path's sub-directory.
    * @param file The path to the file whose ownership needs to be changed.
