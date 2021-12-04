@@ -37,6 +37,9 @@ struct PermissionState {
       : permissions(permissions), handler(std::move(handler)),
         request_counter(request_counter), find_is_done(find_is_done) {}
 
+  const uint16_t permissions;
+  const std::function<void(const hdfs::Status &)> handler;
+
   /**
    * The request counter is incremented once every time SetOwner async call is
    * made
@@ -57,9 +60,6 @@ struct PermissionState {
    * Shared variables will need protection with a lock
    */
   std::mutex lock;
-
-  const uint16_t permissions;
-  const std::function<void(const hdfs::Status &)> handler;
 };
 
 /**

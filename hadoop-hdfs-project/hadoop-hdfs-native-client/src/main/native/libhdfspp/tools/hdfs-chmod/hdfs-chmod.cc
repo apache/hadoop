@@ -34,16 +34,16 @@ Chmod::Chmod(const int argc, char **argv) : HdfsTool(argc, argv) {}
 
 bool Chmod::Initialize() {
   auto add_options = opt_desc_.add_options();
-  add_options("help,h", "Change the group association of each FILE to GROUP.");
+  add_options("help,h", "Change the permissions of each FILE to MODE.");
   add_options("file", po::value<std::string>(),
-              "The path to the file whose ownership needs to be modified");
+              "The path to the file whose permissions needs to be modified");
   add_options("recursive,R", "Operate on files and directories recursively");
-  add_options("group", po::value<std::string>(),
-              "The group to which the file's ownership needs to be changed to");
+  add_options("permissions", po::value<std::string>(),
+              "Octal representation of the permission bits");
 
   // An exception is thrown if these arguments are missing or if the arguments'
   // count doesn't tally.
-  pos_opt_desc_.add("group", 1);
+  pos_opt_desc_.add("permissions", 1);
   pos_opt_desc_.add("file", 1);
 
   po::store(po::command_line_parser(argc_, argv_)
@@ -67,12 +67,13 @@ bool Chmod::ValidateConstraints() const {
 
 std::string Chmod ::GetDescription() const {
   std::stringstream desc;
-  desc << "Usage: hdfs_chgrp [OPTION] GROUP FILE" << std::endl
+  desc << "Usage: hdfs_chmod [OPTION] <MODE[,MODE]... | OCTALMODE> FILE"
        << std::endl
-       << "Change the group association of each FILE to GROUP." << std::endl
-       << "The user must be the owner of files. Additional information is in "
-          "the Permissions Guide:"
        << std::endl
+       << "Change the permissions of each FILE to MODE." << std::endl
+       << "The user must be the owner of the file, or else a super-user."
+       << std::endl
+       << "Additional information is in the Permissions Guide:" << std::endl
        << "https://hadoop.apache.org/docs/r2.7.1/hadoop-project-dist/"
           "hadoop-hdfs/HdfsPermissionsGuide.html"
        << std::endl
@@ -81,9 +82,9 @@ std::string Chmod ::GetDescription() const {
        << "  -h  display this help and exit" << std::endl
        << std::endl
        << "Examples:" << std::endl
-       << "hdfs_chgrp -R new_group hdfs://localhost.localdomain:8020/dir/file"
+       << "hdfs_chmod -R 755 hdfs://localhost.localdomain:8020/dir/file"
        << std::endl
-       << "hdfs_chgrp new_group /dir/file" << std::endl;
+       << "hdfs_chmod 777 /dir/file" << std::endl;
   return desc.str();
 }
 
@@ -102,11 +103,11 @@ bool Chmod::Do() {
     return HandleHelp();
   }
 
-  if (opt_val_.count("file") > 0 && opt_val_.count("group") > 0) {
+  if (opt_val_.count("file") > 0 && opt_val_.count("permissions") > 0) {
     const auto file = opt_val_["file"].as<std::string>();
     const auto recursive = opt_val_.count("recursive") > 0;
-    const auto group = opt_val_["group"].as<std::string>();
-    return HandlePath(group, recursive, file);
+    const auto permissions = opt_val_["permissions"].as<std::string>();
+    return HandlePath(permissions, recursive, file);
   }
 
   return true;
@@ -117,7 +118,7 @@ bool Chmod::HandleHelp() const {
   return true;
 }
 
-bool Chmod::HandlePath(const std::string &permissions, bool recursive,
+bool Chmod::HandlePath(const std::string &permissions, const bool recursive,
                        const std::string &file) const {
   // Building a URI object from the given uri_path
   auto uri = hdfs::parse_path_or_exit(file);
