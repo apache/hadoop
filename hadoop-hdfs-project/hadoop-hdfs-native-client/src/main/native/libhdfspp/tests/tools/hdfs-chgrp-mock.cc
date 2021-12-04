@@ -57,7 +57,7 @@ void ChgrpMock::SetExpectations(
   if (*test_case_func == &PassRecursiveOwnerAndAPath<ChgrpMock>) {
     const auto arg1 = args[1];
     const auto arg2 = args[2];
-    const Ownership ownership(arg1);
+
     EXPECT_CALL(*this, HandlePath(arg1, true, arg2))
         .Times(1)
         .WillOnce(testing::Return(true));
