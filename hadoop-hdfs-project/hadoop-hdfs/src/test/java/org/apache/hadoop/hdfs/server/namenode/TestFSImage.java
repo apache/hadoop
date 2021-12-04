@@ -80,13 +80,13 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
 
 public class TestFSImage {
 
@@ -277,25 +277,17 @@ public class TestFSImage {
   }
 
   @Test
-  public void testImportCheckpoint() {
+  public void testImportCheckpoint() throws Exception{
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, "");
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).build();
+    try(MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()){
       cluster.waitActive();
       FSNamesystem fsn = cluster.getNamesystem();
       FSImage fsImage= new FSImage(conf);
-      fsImage.doImportCheckpoint(fsn);
-      fail("Expect to throw IOException.");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
+      LambdaTestUtils.intercept(IOException.class,
               "Cannot import image from a checkpoint. "
-                      + "\"dfs.namenode.checkpoint.edits.dir\" is not set.", e);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+                      + "\"dfs.namenode.checkpoint.edits.dir\" is not set.",
+              () -> fsImage.doImportCheckpoint(fsn));
     }
   }
 
