@@ -30,9 +30,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -262,30 +262,13 @@ public class TestDFSPermission {
   }
 
   @Test
-  public void testFSNamesystemCheckAccess() throws Exception {
-    Path testValidDir = new Path("/test1");
-    Path testValidFile = new Path("/test1/file1");
+  public void testFSNamesystemCheckAccess(){
     Path testInvalidPath = new Path("/test2");
     fs = FileSystem.get(conf);
 
-    fs.mkdirs(testValidDir);
-    fs.create(testValidFile);
-
-    fs.access(testValidDir, FsAction.READ);
-    fs.access(testValidFile, FsAction.READ);
-
-    assertTrue(fs.exists(testValidDir));
-    assertTrue(fs.exists(testValidFile));
-
-    try {
-      fs.access(testInvalidPath, FsAction.READ);
-      fail("Failed to get expected FileNotFoundException");
-    } catch (FileNotFoundException e) {
-      GenericTestUtils.assertExceptionContains(
-              "Path not found: " + testInvalidPath, e);
-    } finally {
-      fs.delete(testValidDir, true);
-    }
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+            "Path not found: " + testInvalidPath,
+            () -> fs.access(testInvalidPath, FsAction.READ));
   }
 
   /* Check if the permission of a file/directory is the same as the
