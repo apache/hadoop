@@ -284,10 +284,11 @@ public class TestFSImage {
       cluster.waitActive();
       FSNamesystem fsn = cluster.getNamesystem();
       FSImage fsImage= new FSImage(conf);
-      LambdaTestUtils.intercept(IOException.class,
-              "Cannot import image from a checkpoint. "
-                      + "\"dfs.namenode.checkpoint.edits.dir\" is not set.",
-              () -> fsImage.doImportCheckpoint(fsn));
+      LambdaTestUtils.intercept(
+          IOException.class,
+          "Cannot import image from a checkpoint. "
+                  + "\"dfs.namenode.checkpoint.edits.dir\" is not set.",
+          () -> fsImage.doImportCheckpoint(fsn));
     }
   }
 
