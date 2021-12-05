@@ -266,8 +266,8 @@ public class TestDFSPermission {
     Path testInvalidPath = new Path("/test2");
     fs = FileSystem.get(conf);
 
-    LambdaTestUtils.intercept(FileNotFoundException.class,
-            "Path not found: " + testInvalidPath,
+    LambdaTestUtils.intercept(
+            FileNotFoundException.class, "Path not found: " + testInvalidPath,
             () -> fs.access(testInvalidPath, FsAction.READ));
   }
 
