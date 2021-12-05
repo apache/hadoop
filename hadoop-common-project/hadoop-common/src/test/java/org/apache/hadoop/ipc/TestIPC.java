@@ -648,6 +648,7 @@ public class TestIPC {
       } catch (EOFException e) {
         LOG.info("Got expected exception", e);
       } catch (Throwable t) {
+        LOG.warn("Got unexpected error", t);
         fail("Expected an EOFException to have been thrown");
       }
 
