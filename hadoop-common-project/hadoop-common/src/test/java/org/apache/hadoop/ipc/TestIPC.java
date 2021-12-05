@@ -628,14 +628,9 @@ public class TestIPC {
     Server server = new TestServer(1, false,
             LongWritable.class, LongWritable.class) {
       @Override
-      protected Listener createListener(int port) throws IOException {
-        return new Listener(port) {
-          @Override
-          protected void configureSocketChannel(SocketChannel channel) throws IOException {
-            maybeThrowIOE();
-            super.configureSocketChannel(channel);
-          }
-        };
+      protected void configureSocketChannel(SocketChannel channel) throws IOException {
+        maybeThrowIOE();
+        super.configureSocketChannel(channel);
       }
     };
     InetSocketAddress addr = NetUtils.getConnectAddress(server);

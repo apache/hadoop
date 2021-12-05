@@ -1324,8 +1324,16 @@ public abstract class Server {
     }
   }
 
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  protected void configureSocketChannel(SocketChannel channel) throws IOException {
+    channel.configureBlocking(false);
+    channel.socket().setTcpNoDelay(tcpNoDelay);
+    channel.socket().setKeepAlive(true);
+  }
+
   /** Listens on the socket. Creates jobs for the handler threads*/
-  protected class Listener extends Thread {
+  private class Listener extends Thread {
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
@@ -1529,12 +1537,6 @@ public abstract class Server {
 
     InetSocketAddress getAddress() {
       return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
-    }
-
-    protected void configureSocketChannel(SocketChannel channel) throws IOException {
-      channel.configureBlocking(false);
-      channel.socket().setTcpNoDelay(tcpNoDelay);
-      channel.socket().setKeepAlive(true);
     }
 
     void doAccept(SelectionKey key) throws InterruptedException, IOException,  OutOfMemoryError {
@@ -3264,7 +3266,7 @@ public abstract class Server {
     this.negotiateResponse = buildNegotiateResponse(enabledAuthMethods);
     
     // Start the listener here and let it bind to the port
-    listener = createListener(port);
+    listener = new Listener(port);
     // set the server port to the default listener port.
     this.port = listener.getAddress().getPort();
     connectionManager = new ConnectionManager();
@@ -3295,10 +3297,6 @@ public abstract class Server {
         HealthCheckFailedException.class);
   }
 
-  protected Listener createListener(int port) throws IOException {
-    return new Listener(port);
-  }
-
   public synchronized void addAuxiliaryListener(int auxiliaryPort)
       throws IOException {
     if (auxiliaryListenerMap == null) {
@@ -3308,7 +3306,7 @@ public abstract class Server {
       throw new IOException(
           "There is already a listener binding to: " + auxiliaryPort);
     }
-    Listener newListener = createListener(auxiliaryPort);
+    Listener newListener = new Listener(auxiliaryPort);
     newListener.setIsAuxiliary();
 
     // in the case of port = 0, the listener would be on a != 0 port.
