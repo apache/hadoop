@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -395,7 +396,19 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId appAttemptId =
         amrmTokenIdentifier.getApplicationAttemptId();
+    RMAppAttemptMetrics rmMetrics = getAppAttemptMetrics(appAttemptId);
+    // we do this here to prevent the internal lock in allocate()
+    rmMetrics.setAllocateLatenciesTimestamps(request.getAskList());
+    AllocateResponse response = allocate(request, amrmTokenIdentifier);
+    rmMetrics.updateAllocateLatencies(response.getAllocatedContainers());
+    return response;
+  }
 
+  protected AllocateResponse allocate(AllocateRequest request,
+      AMRMTokenIdentifier amrmTokenIdentifier)
+      throws YarnException, IOException {
+    ApplicationAttemptId appAttemptId =
+        amrmTokenIdentifier.getApplicationAttemptId();
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
     /* check if its in cache */
@@ -470,6 +483,23 @@ public class ApplicationMasterService extends AbstractService implements
       lock.setAllocateResponse(response);
       return response;
     }
+  }
+
+  protected RMAppAttemptMetrics getAppAttemptMetrics(
+      ApplicationAttemptId appAttemptId) {
+    if (appAttemptId == null) {
+      return null;
+    }
+    RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
+    if (app == null) {
+      return null;
+    }
+    RMAppAttempt attempt = app.getAppAttempts().get(appAttemptId);
+    if (attempt == null) {
+      return null;
+    }
+
+    return attempt.getRMAppAttemptMetrics();
   }
 
   public void registerAppAttempt(ApplicationAttemptId attemptId) {
