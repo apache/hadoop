@@ -1274,7 +1274,7 @@ public class TestBlockStoragePolicy {
     DFSTestUtil.formatNameNode(conf);
     NameNode namenode = new NameNode(conf);
 
-    try{
+    try {
       final BlockManager bm = namenode.getNamesystem().getBlockManager();
       BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
       NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
@@ -1291,11 +1291,11 @@ public class TestBlockStoragePolicy {
               dataNodes[0], Collections.<DatanodeStorageInfo>emptyList(), false,
               new HashSet<Node>(), 0, policy2, null);
       System.out.println(Arrays.asList(targets));
-      Assert.assertEquals(3, targets.length);  
+      Assert.assertEquals(3, targets.length);
     } finally {
       if (namenode != null) {
         namenode.stop();
-      } 
+      }
     }
   }
 
@@ -1327,7 +1327,7 @@ public class TestBlockStoragePolicy {
     DFSTestUtil.formatNameNode(conf);
     NameNode namenode = new NameNode(conf);
 
-    try{
+    try {
       final BlockManager bm = namenode.getNamesystem().getBlockManager();
       BlockPlacementPolicy replicator = bm.getBlockPlacementPolicy();
       NetworkTopology cluster = bm.getDatanodeManager().getNetworkTopology();
