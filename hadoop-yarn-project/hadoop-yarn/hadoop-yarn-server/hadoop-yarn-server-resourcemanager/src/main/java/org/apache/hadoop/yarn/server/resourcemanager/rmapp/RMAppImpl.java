@@ -1018,14 +1018,14 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
     updatedNodes.put(node, RMAppNodeUpdateType.convertToNodeUpdateType(type));
-    LOG.debug("Received node update event:{} for node:{} with state:",
+    LOG.debug("Received node update event:{} for node:{} with state:{}.",
         type, node, nodeState);
   }
 
   private static class RMAppTransition implements
       SingleArcTransition<RMAppImpl, RMAppEvent> {
     public void transition(RMAppImpl app, RMAppEvent event) {
-    };
+    }
   }
 
   private static final class RMAppNodeUpdateTransition extends RMAppTransition {
@@ -1033,7 +1033,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       RMAppNodeUpdateEvent nodeUpdateEvent = (RMAppNodeUpdateEvent) event;
       app.processNodeUpdate(nodeUpdateEvent.getUpdateType(),
           nodeUpdateEvent.getNode());
-    };
+    }
   }
 
   private static final class RMAppStateUpdateTransition
@@ -1047,7 +1047,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.rmContext.getSystemMetricsPublisher().appStateUpdated(
           app, stateToATS, app.systemClock.getTime());
-    };
+    }
   }
 
   private static final class AttemptLaunchedTransition
@@ -1189,7 +1189,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.createAndStartNewAttempt(false);
-    };
+    }
   }
 
   private static final class FinalStateSavedTransition implements
@@ -1374,7 +1374,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
-    };
+    }
   }
 
   private static class AttemptFinishedAtFinalSavingTransition extends
@@ -1393,7 +1393,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.rememberTargetTransitions(event,
         new AppFinishedFinalStateSavedTransition(app.eventCausingFinalSaving),
         RMAppState.FINISHED);
-    };
+    }
   }
 
   private static class AppFinishedFinalStateSavedTransition extends
@@ -1407,7 +1407,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       new AttemptUnregisteredTransition().transition(app, attemptUnregistered);
       FINISHED_TRANSITION.transition(app, event);
-    };
+    }
   }
 
   /**
@@ -1440,7 +1440,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
       RMAppImpl.auditLogKillEvent(event);
-    };
+    }
   }
 
   private static class KillAttemptTransition extends RMAppTransition {
@@ -1465,7 +1465,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.diagnostics.append(event.getDiagnosticMsg());
       super.transition(app, event);
-    };
+    }
   }
 
   /**
