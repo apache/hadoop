@@ -835,22 +835,24 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     if (isOrderedDisjoint(ranges, 1, minSeekForVectorReads())) {
       for(FileRange range: ranges) {
-        boundedThreadPool.submit(() -> readSingleRange(range, allocate));
+        ByteBuffer buffer = allocate.apply(range.getLength());
+        boundedThreadPool.submit(() -> readSingleRange(range, buffer));
       }
     } else {
       for(CombinedFileRange combinedFileRange: sortAndMergeRanges(ranges, 1, minSeekForVectorReads(),
               maxReadSizeForVectorReads())) {
         CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+        ByteBuffer buffer = allocate.apply(combinedFileRange.getLength());
         combinedFileRange.setData(result);
         boundedThreadPool.submit(
-                () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
+                () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
       }
     }
   }
 
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
-                                                  IntFunction<ByteBuffer> allocate) {
-    readSingleRange(combinedFileRange, allocate);
+                                                  ByteBuffer buffer) {
+    readSingleRange(combinedFileRange, buffer);
     try {
       ByteBuffer combinedBuffer = FutureIOSupport.awaitFuture(combinedFileRange.getData());
       for(FileRange child : combinedFileRange.getUnderlying()) {
@@ -886,30 +888,22 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * Add retry in client.getObject().
+   * Add retry in client.getObject(). not present in older reads why here??
+   * Okay retry is being done in the top layer during read.
+   * But if we do here in the top layer, one issue I am thinking is
+   * what if there is some error which happened during filling the buffer
+   * If we retry that old offsets of heap buffers can be overwritten ?
    * @param range
-   * @param allocate
+   * @param buffer
    */
-  private void readSingleRange(FileRange range, IntFunction<ByteBuffer> allocate) {
+  private void readSingleRange(FileRange range, ByteBuffer buffer) {
     try {
       long position = range.getOffset();
       int length = range.getLength();
-      ByteBuffer buffer = allocate.apply(length);
-      final GetObjectRequest request = client.newGetRequest(key)
-              .withRange(position, position + range.getLength() - 1);
-      String text = String.format("%s %s at %d length %d",
-              "readAsync", uri, position, length);
-      S3Object object = Invoker.once(text, uri,
-              () -> client.getObject(request));
-      S3ObjectInputStream objectContent = object.getObjectContent();
-      if (buffer.isDirect()) {
-        byte[] tmp = new byte[length];
-        objectContent.read(tmp, 0, length);
-        buffer.put(tmp);
-        buffer.flip();
-      } else {
-        objectContent.read(buffer.array(), buffer.arrayOffset(), range.getLength());
-      }
+      final String operationName = "readVectored";
+      S3Object objectRange = getS3Object(operationName, position, length);
+      S3ObjectInputStream objectContent = objectRange.getObjectContent();
+      populateBuffer(length, buffer, objectContent);
       range.getData().complete(buffer);
     } catch (IOException ex) {
       LOG.error("Exception while reading a range {} ", range, ex);
@@ -917,6 +911,59 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
   }
 
+  /**
+   * Populates the buffer with data from objectContent
+   * till length. Handles both direct and heap byte buffers.
+   * @param length
+   * @param buffer
+   * @param objectContent
+   * @throws IOException
+   */
+  private void populateBuffer(int length,
+                              ByteBuffer buffer,
+                              S3ObjectInputStream objectContent) throws IOException {
+    if (buffer.isDirect()) {
+      byte[] tmp = new byte[length];
+      objectContent.read(tmp, 0, length);
+      buffer.put(tmp);
+      buffer.flip();
+    } else {
+      objectContent.read(buffer.array(), buffer.arrayOffset(), length);
+    }
+  }
+
+  /**
+   * Read data from S3 using a http request.
+   *
+   * @param operationName
+   * @param position
+   * @param length
+   * @return
+   * @throws IOException
+   */
+  private S3Object getS3Object(String operationName, long position,
+                               int length) throws IOException {
+    final GetObjectRequest request = client.newGetRequest(key)
+            .withRange(position, position + length - 1);
+    String text = String.format("%s %s at %d length %d",
+            operationName, uri, position, length);
+    changeTracker.maybeApplyConstraint(request);
+    DurationTracker tracker = streamStatistics.initiateGetRequest();
+    S3Object objectRange;
+    try {
+      objectRange = Invoker.once(text, uri,
+              () -> client.getObject(request));
+    } catch (IOException ex) {
+      tracker.failed();
+      throw ex;
+    } finally {
+      tracker.close();
+
+    }
+    changeTracker.processResponse(objectRange, operationName,
+            position);
+    return objectRange;
+  }
 
   /**
    * Access the input stream statistics.
