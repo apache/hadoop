@@ -227,8 +227,7 @@ public class ClusterNode {
     }
   }
 
-  public boolean compareAndIncrementAllocation(
-      final int incrementQLen) {
+  public boolean compareAndIncrementAllocation(final int incrementQLen) {
     writeLock.lock();
     try {
       final int added = queueLength + incrementQLen;
