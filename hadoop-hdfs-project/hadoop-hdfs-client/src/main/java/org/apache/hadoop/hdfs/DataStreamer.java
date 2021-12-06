@@ -687,11 +687,6 @@ class DataStreamer extends Daemon {
             continue;
           }
           // get packet to be sent.
-          try {
-            backOffIfNecessary();
-          } catch (InterruptedException e) {
-            LOG.debug("Thread interrupted", e);
-          }
           one = dataQueue.getFirst(); // regular data packet
           SpanContext[] parents = one.getTraceParents();
           if (parents != null && parents.length > 0) {
@@ -702,6 +697,14 @@ class DataStreamer extends Daemon {
                 newScope("dataStreamer", parents[0], false);
             //scope.getSpan().setParents(parents);
           }
+        }
+
+        // The DataStreamer has to release the dataQueue before sleeping,
+        // otherwise it will cause the ResponseProcessor to accept the ACK delay.
+        try {
+          backOffIfNecessary();
+        } catch (InterruptedException e) {
+          LOG.debug("Thread interrupted", e);
         }
 
         // get new block from namenode.
