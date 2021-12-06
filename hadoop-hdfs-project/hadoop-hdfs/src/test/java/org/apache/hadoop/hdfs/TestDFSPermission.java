@@ -267,8 +267,9 @@ public class TestDFSPermission {
     fs = FileSystem.get(conf);
 
     LambdaTestUtils.intercept(
-            FileNotFoundException.class, "Path not found: " + testInvalidPath,
-            () -> fs.access(testInvalidPath, FsAction.READ));
+        FileNotFoundException.class,
+        "Path not found: " + testInvalidPath,
+        () -> fs.access(testInvalidPath, FsAction.READ));
   }
 
   /* Check if the permission of a file/directory is the same as the
