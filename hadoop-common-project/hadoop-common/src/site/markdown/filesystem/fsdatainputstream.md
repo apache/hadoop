@@ -443,7 +443,7 @@ The semantics of this are exactly equivalent to
 That is, the buffer is filled entirely with the contents of the input source
 from position `position`
 
-### `default void readAsync(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
+### `default void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
 
 Read fully data for a list of ranges asynchronously. The default implementation
 iterates through the ranges, tries to coalesce the ranges based on values of

@@ -36,9 +36,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   private static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   private static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
-  private IntFunction<ByteBuffer> allocate;
+  private final IntFunction<ByteBuffer> allocate;
 
-  private String bufferType;
+  private final String bufferType;
 
   @Parameterized.Parameters
   public static List<String> params() {
@@ -59,6 +59,20 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     createFile(fs, path, true, DATASET);
   }
 
+  /**
+   * TODO: Improve coverage here by adding :
+   * 1. Some disjoint along with combinable ranges.
+   * 2. Non overlapping ranges.
+   * 3. Overlapping + Non overlapping ranges.
+   * 4. Limit buffer allocation.
+   * 5. Trying to exhaust thread pool -> maybe scale tests.
+   * 6. testNormalReadAfterVectoredRead
+   * 7. testVectoredReadAfterNormalRead
+   * 8. testMultipleVectoredReads
+   * 9. test allocate capacity limit errors.
+   *
+   * @throws Exception
+   */
   @Test
   public void testVectoredReadMultipleRanges() throws Exception {
     describe("Running with buffer type : " + bufferType);
@@ -149,6 +163,21 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(new FileRangeImpl(-1, 50));
     testExceptionalVectoredRead(fs, fileRanges, "Exception is expected");
+  }
+
+  @Test
+  public void testNormalReadAfterVectoredRead() throws Exception {
+
+  }
+
+  @Test
+  public void testVectoredReadAfterNormalRead() throws Exception {
+
+  }
+
+  @Test
+  public void testMultipleVectoredReads() throws Exception {
+
   }
 
   protected void testExceptionalVectoredRead(FileSystem fs,
