@@ -23,6 +23,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
 
+
   <dependencyManagement>
     <dependencies>
       <dependency>
