@@ -620,7 +620,7 @@ public class TestIPC {
   }
 
   /**
-   * Test for HADOOP-18024
+   * Test for HADOOP-18024.
    */
   @Test(timeout=60000)
   public void testIOEOnListenerAccept() throws Exception {
