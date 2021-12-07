@@ -42,7 +42,8 @@ public final class CapacitySchedulerConfigValidator {
 
   public static boolean validateCSConfiguration(
           final Configuration oldConf, final Configuration newConf,
-         final RMContext rmContext) throws IOException {
+          final RMContext rmContext) throws IOException {
+    CapacityScheduler liveScheduler = (CapacityScheduler) rmContext.getScheduler();
     CapacityScheduler newCs = new CapacityScheduler();
     try {
       //TODO: extract all the validation steps and replace reinitialize with
@@ -50,6 +51,7 @@ public final class CapacitySchedulerConfigValidator {
       newCs.setConf(oldConf);
       newCs.setRMContext(rmContext);
       newCs.init(oldConf);
+      newCs.addNodes(liveScheduler.getAllNodes());
       newCs.reinitialize(newConf, rmContext, true);
       return true;
     } finally {
