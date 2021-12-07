@@ -23,8 +23,8 @@
 
 #include <boost/program_options.hpp>
 
-#include "hdfs-ownership.h"
 #include "hdfs-tool.h"
+#include "internal/hdfs-ownership.h"
 
 namespace hdfs::tools {
 /**

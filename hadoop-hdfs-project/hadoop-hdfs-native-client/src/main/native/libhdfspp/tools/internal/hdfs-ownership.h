@@ -27,6 +27,9 @@
 #include "hdfspp/status.h"
 
 namespace hdfs::tools {
+/**
+ * {@class Ownership} contains the user and group ownership information.
+ */
 struct Ownership {
   explicit Ownership(const std::string &user_and_group);
 
@@ -43,6 +46,10 @@ private:
   std::optional<std::string> group_;
 };
 
+/**
+ * {@class OwnerState} holds information needed for recursive traversal of some
+ * of the HDFS APIs.
+ */
 struct OwnerState {
   OwnerState(std::string username, std::string group,
              std::function<void(const hdfs::Status &)> handler,

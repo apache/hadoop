@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "hdfs-chgrp.h"
-#include "hdfs-ownership.h"
+#include "internal/hdfs-ownership.h"
 #include "tools_common.h"
 
 namespace hdfs::tools {
