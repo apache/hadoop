@@ -4421,8 +4421,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           haContext.getState().getServiceState(),
           getFSImage().getCorrectLastAppliedOrWrittenTxId());
 
+      Set<String> slownodes = DatanodeManager.getSlowNodesUuidSet();
+      boolean isSlownode = slownodes.contains(nodeReg.getDatanodeUuid());
+
       return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo,
-          blockReportLeaseId);
+          blockReportLeaseId, isSlownode);
     } finally {
       readUnlock("handleHeartbeat");
     }
@@ -8609,7 +8612,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         src = iip.getPath();
         INode inode = iip.getLastINode();
         if (inode == null) {
-          throw new FileNotFoundException("Path not found");
+          throw new FileNotFoundException("Path not found: " + src);
         }
         if (isPermissionEnabled) {
           dir.checkPathAccess(pc, iip, mode);
@@ -8799,18 +8802,18 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             callerContext != null &&
             callerContext.isContextValid()) {
           sb.append("\t").append("callerContext=");
-          if (callerContext.getContext().length() > callerContextMaxLen) {
-            sb.append(callerContext.getContext().substring(0,
-                callerContextMaxLen));
+          String context = escapeJava(callerContext.getContext());
+          if (context.length() > callerContextMaxLen) {
+            sb.append(context, 0, callerContextMaxLen);
           } else {
-            sb.append(callerContext.getContext());
+            sb.append(context);
           }
           if (callerContext.getSignature() != null &&
               callerContext.getSignature().length > 0 &&
               callerContext.getSignature().length <= callerSignatureMaxLen) {
             sb.append(":")
-                .append(new String(callerContext.getSignature(),
-                CallerContext.SIGNATURE_ENCODING));
+                .append(escapeJava(new String(callerContext.getSignature(),
+                CallerContext.SIGNATURE_ENCODING)));
           }
         }
         logAuditMessage(sb.toString());

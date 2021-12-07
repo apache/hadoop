@@ -5360,4 +5360,14 @@ public class BlockManager implements BlockStatsMXBean {
   public StoragePolicySatisfyManager getSPSManager() {
     return spsManager;
   }
+
+  public void setExcludeSlowNodesEnabled(boolean enable) {
+    placementPolicies.getPolicy(CONTIGUOUS).setExcludeSlowNodesEnabled(enable);
+    placementPolicies.getPolicy(STRIPED).setExcludeSlowNodesEnabled(enable);
+  }
+
+  @VisibleForTesting
+  public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
+  }
 }

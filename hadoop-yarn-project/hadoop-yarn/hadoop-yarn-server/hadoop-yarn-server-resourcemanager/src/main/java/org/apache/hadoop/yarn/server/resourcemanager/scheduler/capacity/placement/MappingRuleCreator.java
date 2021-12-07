@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.nio.file.Files;
