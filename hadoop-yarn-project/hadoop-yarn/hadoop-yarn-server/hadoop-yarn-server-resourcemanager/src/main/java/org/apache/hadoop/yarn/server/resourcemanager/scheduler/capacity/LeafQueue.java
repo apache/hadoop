@@ -1707,12 +1707,12 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   protected void setDynamicQueueProperties(
       CapacitySchedulerConfiguration configuration) {
-    super.setDynamicQueueProperties(configuration);
     // set to -1, to disable it
     configuration.setUserLimitFactor(getQueuePath(), -1);
     // Set Max AM percentage to a higher value
     configuration.setMaximumApplicationMasterResourcePerQueuePercent(
         getQueuePath(), 1f);
+    super.setDynamicQueueProperties(configuration);
   }
 
   private void updateSchedulerHealthForCompletedContainer(
