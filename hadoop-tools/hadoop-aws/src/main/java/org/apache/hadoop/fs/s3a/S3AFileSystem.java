@@ -1500,7 +1500,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             readContext,
             createObjectAttributes(fileStatus),
             createInputStreamCallbacks(auditSpan),
-            boundedThreadPool));
+            unboundedThreadPool));
   }
 
   /**

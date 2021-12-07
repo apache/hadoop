@@ -92,16 +92,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
       combinedFuture.get();
 
-      for (FileRange res : fileRanges) {
-        CompletableFuture<ByteBuffer> data = res.getData();
-        try {
-          ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
-          assertDatasetEquals((int) res.getOffset(), "readAsync", buffer, res.getLength());
-        } catch (Exception ex) {
-          LOG.error("Exception while running vectored read ", ex);
-          Assert.fail("Exception while running vectored read " + ex);
-        }
-      }
+      validateVectoredReadResult(fileRanges);
     }
   }
 
@@ -113,16 +104,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     fileRanges.add(new FileRangeImpl(90, 50));
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, allocate);
-      for (FileRange res : fileRanges) {
-        CompletableFuture<ByteBuffer> data = res.getData();
-        try {
-          ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
-          assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength());
-        } catch (Exception ex) {
-          LOG.error("Exception while running vectored read ", ex);
-          Assert.fail("Exception while running vectored read " + ex);
-        }
-      }
+      validateVectoredReadResult(fileRanges);
     }
   }
 
@@ -167,17 +149,70 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   @Test
   public void testNormalReadAfterVectoredRead() throws Exception {
-
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = createSomeOverlappingRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, allocate);
+      // read starting 200 bytes
+      byte[] res = new byte[200];
+      in.read(res, 0, 200);
+      ByteBuffer buffer = ByteBuffer.wrap(res);
+      assertDatasetEquals(0, "normal_read", buffer, 200);
+      Assertions.assertThat(in.getPos())
+              .describedAs("Vectored read shouldn't change file pointer.")
+              .isEqualTo(200);
+      validateVectoredReadResult(fileRanges);
+    }
   }
 
   @Test
   public void testVectoredReadAfterNormalRead() throws Exception {
-
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = createSomeOverlappingRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      // read starting 200 bytes
+      byte[] res = new byte[200];
+      in.read(res, 0, 200);
+      ByteBuffer buffer = ByteBuffer.wrap(res);
+      assertDatasetEquals(0, "normal_read", buffer, 200);
+      Assertions.assertThat(in.getPos())
+              .describedAs("Vectored read shouldn't change file pointer.")
+              .isEqualTo(200);
+      in.readVectored(fileRanges, allocate);
+      validateVectoredReadResult(fileRanges);
+    }
   }
 
   @Test
   public void testMultipleVectoredReads() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges1 = createSomeOverlappingRanges();
+    List<FileRange> fileRanges2 = createSomeOverlappingRanges();
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges1, allocate);
+      in.readVectored(fileRanges2, allocate);
+      validateVectoredReadResult(fileRanges2);
+      validateVectoredReadResult(fileRanges1);
+    }
+  }
 
+  protected List<FileRange> createSomeOverlappingRanges() {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(new FileRangeImpl(0, 100));
+    fileRanges.add(new FileRangeImpl(90, 50));
+    return fileRanges;
+  }
+  protected void validateVectoredReadResult(List<FileRange> fileRanges) {
+    for (FileRange res : fileRanges) {
+      CompletableFuture<ByteBuffer> data = res.getData();
+      try {
+        ByteBuffer buffer = FutureIOSupport.awaitFuture(data);
+        assertDatasetEquals((int) res.getOffset(), "vecRead", buffer, res.getLength());
+      } catch (Exception ex) {
+        LOG.error("Exception while running vectored read ", ex);
+        Assert.fail("Exception while running vectored read " + ex);
+      }
+    }
   }
 
   protected void testExceptionalVectoredRead(FileSystem fs,

@@ -179,6 +179,32 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 16, 700));
   }
 
+  @Test
+  public void testSortAndMergeMoreCases() throws Exception {
+    List<FileRange> input = Arrays.asList(
+            new FileRangeImpl(3000, 110),
+            new FileRangeImpl(3000, 100),
+            new FileRangeImpl(2100, 100),
+            new FileRangeImpl(1000, 100)
+    );
+    assertFalse(VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
+    List<CombinedFileRange> outputList = VectoredReadUtils.sortAndMergeRanges(
+            input, 1, 1001, 2500);
+    assertEquals(1, outputList.size());
+    CombinedFileRange output = outputList.get(0);
+    assertEquals(4, output.getUnderlying().size());
+    assertEquals("range[1000,3110)", output.toString());
+    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
+
+    outputList = VectoredReadUtils.sortAndMergeRanges(
+            input, 100, 1001, 2500);
+    assertEquals(1, outputList.size());
+    output = outputList.get(0);
+    assertEquals(4, output.getUnderlying().size());
+    assertEquals("range[1000,3200)", output.toString());
+    assertTrue(VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
+
+  }
   interface Stream extends PositionedReadable, ByteBufferPositionedReadable {
     // nothing
   }
