@@ -1404,7 +1404,7 @@ public class TestBlockStoragePolicy {
     } finally {
       if (namenode != null) {
         namenode.stop();
-      } 
+      }
     }
   }
 
