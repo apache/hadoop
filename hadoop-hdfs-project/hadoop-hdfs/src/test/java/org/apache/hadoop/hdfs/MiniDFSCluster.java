@@ -2267,7 +2267,9 @@ public class MiniDFSCluster implements AutoCloseable {
     info.nameNode = nn;
     info.setStartOpt(startOpt);
     if (waitActive) {
-      waitNameNodeUp(nnIndex);
+      if (numDataNodes > 0) {
+        waitNameNodeUp(nnIndex);
+      }
       LOG.info("Restarted the namenode");
       waitActive(nnIndex);
     }
