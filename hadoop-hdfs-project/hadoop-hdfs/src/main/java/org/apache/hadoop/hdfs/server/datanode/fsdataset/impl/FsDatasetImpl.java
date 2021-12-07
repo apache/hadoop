@@ -3669,9 +3669,5 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
   }
-
-  public FsVolumeList getVolumes() {
-    return volumes;
-  }
 }
 

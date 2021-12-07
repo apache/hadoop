@@ -147,7 +147,8 @@ public class DataNodeDiskMetrics {
             // Sort the slow disks by latency.
             if (maxSlowDisksToBeExcluded > 0) {
               ArrayList<DiskLatency> diskLatencies = new ArrayList<>();
-              for (Map.Entry<String, Map<DiskOp, Double>> diskStats : diskOutliersStats.entrySet()) {
+              for (Map.Entry<String, Map<DiskOp, Double>> diskStats :
+                  diskOutliersStats.entrySet()) {
                 diskLatencies.add(new DiskLatency(diskStats.getKey(), diskStats.getValue()));
               }
               sortSlowDisks(diskLatencies);
