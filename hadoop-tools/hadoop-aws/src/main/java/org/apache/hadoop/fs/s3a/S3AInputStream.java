@@ -54,6 +54,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.IntFunction;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -112,7 +113,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private S3ObjectInputStream wrappedStream;
   private final S3AReadOpContext context;
   private final InputStreamCallbacks client;
-  private final ExecutorService boundedThreadPool;
+  private final ThreadPoolExecutor unboundedThreadPool;
   private final String bucket;
   private final String key;
   private final String pathStr;
@@ -160,7 +161,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public S3AInputStream(S3AReadOpContext ctx,
                         S3ObjectAttributes s3Attributes,
                         InputStreamCallbacks client,
-                        ExecutorService threadPool) {
+                        ThreadPoolExecutor unboundedThreadPool) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
@@ -182,7 +183,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
-    this.boundedThreadPool = threadPool;
+    this.unboundedThreadPool = unboundedThreadPool;
   }
 
   /**
@@ -809,11 +810,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     // TODO   Cancelling of vectored read calls.
     // No upfront cancelling is supported right now but all runnable
     // tasks will be aborted when threadpool will shutdown during S3AFS.close();
-    // TODO   boundedThreadPool corner cases like rejections etc.
-    // Do we need to think about rejections or we can just use
-    // unbounded thread pool or even create a separate thread pool
+    // TODO   unbounded corner cases like starvation etc.
+    // think of creating a separate thread pool
     // for vectored read api such that its bad usage doesn't cause
-    // contention for other api's like list, delete etc.
+    // starvation for other api's like list, delete etc.
+    // TODO: what if combined range becomes so big that memory can't be allocated.
     checkNotClosed();
     for (FileRange range : ranges) {
       validateRangeRequest(range);
@@ -824,7 +825,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (isOrderedDisjoint(ranges, 1, minSeekForVectorReads())) {
       for(FileRange range: ranges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
-        boundedThreadPool.submit(() -> readSingleRange(range, buffer));
+        unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
       }
     } else {
       for(CombinedFileRange combinedFileRange: sortAndMergeRanges(ranges, 1, minSeekForVectorReads(),
@@ -832,12 +833,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
         ByteBuffer buffer = allocate.apply(combinedFileRange.getLength());
         combinedFileRange.setData(result);
-        boundedThreadPool.submit(
+        unboundedThreadPool.submit(
                 () -> readCombinedRangeAndUpdateChildren(combinedFileRange, buffer));
       }
     }
   }
 
+  /**
+   * Read data in the combinedFileRange and update data in buffers
+   * of all underlying ranges.
+   * @param combinedFileRange combined range.
+   * @param buffer combined buffer.
+   */
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
                                                   ByteBuffer buffer) {
     readSingleRange(combinedFileRange, buffer);
@@ -853,6 +860,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
     }
   }
+
+  /**
+   * Update data in child range from combined range.
+   * @param child child range.
+   * @param combinedBuffer combined buffer.
+   * @param combinedFileRange
+   */
   private void updateOriginalRange(FileRange child,
                                    ByteBuffer combinedBuffer,
                                    CombinedFileRange combinedFileRange) {
@@ -876,13 +890,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
-   * Add retry in client.getObject(). not present in older reads why here??
+   * TODO: Add retry in client.getObject(). not present in older reads why here??
    * Okay retry is being done in the top layer during read.
    * But if we do here in the top layer, one issue I am thinking is
    * what if there is some error which happened during filling the buffer
    * If we retry that old offsets of heap buffers can be overwritten ?
-   * @param range
-   * @param buffer
+   * I think retry should be only added in {@link S3AInputStream#getS3Object}
+   * Read data from S3 for this range and populate the bufffer.
+   * @param range range of data to read.
+   * @param buffer buffer to fill.
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
     try {
@@ -902,10 +918,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   /**
    * Populates the buffer with data from objectContent
    * till length. Handles both direct and heap byte buffers.
-   * @param length
-   * @param buffer
-   * @param objectContent
-   * @throws IOException
+   * @param length length of data to populate.
+   * @param buffer buffer to fill.
+   * @param objectContent result retrieved from S3 store.
+   * @throws IOException any IOE.
    */
   private void populateBuffer(int length,
                               ByteBuffer buffer,
@@ -922,7 +938,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Read data from S3 using a http request.
-   *
+   * This also handles if file has been changed while http call
+   * is getting executed. If file has been changed RemoteFileChangedException
+   * is thrown.
+   * TODO: add retries here.
    * @param operationName
    * @param position
    * @param length
