@@ -795,6 +795,100 @@ public class TestLocalityMulticastAMRMProxyPolicy
     checkTotalContainerAllocation(response, 100);
   }
 
+  @Test
+  public void testPickSubClusterIdForMaxLoadSC() throws YarnException {
+    int pendingThreshold = 1000;
+
+    LocalityMulticastAMRMProxyPolicy policy =
+        (LocalityMulticastAMRMProxyPolicy) getPolicy();
+    initializePolicy();
+
+    // This cluster is the most overloaded - 4 times the threshold.
+    SubClusterId sc0 = SubClusterId.newInstance("0");
+    Resource r0 =
+        Resource.newInstance(Integer.MAX_VALUE - 4 * pendingThreshold, 0);
+    // This cluster is the most overloaded - 4 times the threshold.
+    SubClusterId sc1 = SubClusterId.newInstance("1");
+    Resource r1 =
+        Resource.newInstance(Integer.MAX_VALUE - 4 * pendingThreshold, 0);
+    // This cluster is 2 times the threshold, but not the most loaded.
+    SubClusterId sc2 = SubClusterId.newInstance("2");
+    Resource r2 =
+        Resource.newInstance(Integer.MAX_VALUE - 2 * pendingThreshold, 0);
+    // This cluster is at the threshold, but not the most loaded.
+    SubClusterId sc3 = SubClusterId.newInstance("3");
+    Resource r3 = Resource.newInstance(Integer.MAX_VALUE - pendingThreshold, 0);
+    // This cluster has zero pending.
+    SubClusterId sc4 = SubClusterId.newInstance("4");
+    Resource r4 = Resource.newInstance(Integer.MAX_VALUE - 0, 0);
+
+    Set<SubClusterId> scList = new HashSet<>();
+    scList.add(sc0);
+    scList.add(sc1);
+    scList.add(sc2);
+    scList.add(sc3);
+    scList.add(sc4);
+
+    policy.notifyOfResponse(sc0, getAllocateResponseWithTargetHeadroom(r0));
+    policy.notifyOfResponse(sc1, getAllocateResponseWithTargetHeadroom(r1));
+    policy.notifyOfResponse(sc2, getAllocateResponseWithTargetHeadroom(r2));
+    policy.notifyOfResponse(sc3, getAllocateResponseWithTargetHeadroom(r3));
+    policy.notifyOfResponse(sc4, getAllocateResponseWithTargetHeadroom(r4));
+
+    // sc2, sc3 and sc4 should just return the original subcluster.
+    Assert.assertTrue(policy
+        .routeNodeRequestIfNeeded(sc2, pendingThreshold, scList).equals(sc2));
+    Assert.assertTrue(policy
+        .routeNodeRequestIfNeeded(sc3, pendingThreshold, scList).equals(sc3));
+    Assert.assertTrue(policy
+        .routeNodeRequestIfNeeded(sc4, pendingThreshold, scList).equals(sc4));
+
+    // sc0 and sc1 must select from sc0/sc1/sc2/sc3/sc4 according to weights
+    // 1/4, 1/4, 1/2, 1, 2. Let's run tons of random of samples, and verify that
+    // the proportion approximately holds.
+    Map<SubClusterId, Integer> counts = new HashMap<SubClusterId, Integer>();
+    counts.put(sc0, 0);
+    counts.put(sc1, 0);
+    counts.put(sc2, 0);
+    counts.put(sc3, 0);
+    counts.put(sc4, 0);
+    int n = 100000;
+    for (int i = 0; i < n; i++) {
+      SubClusterId selectedId =
+          policy.routeNodeRequestIfNeeded(sc0, pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+
+      selectedId =
+          policy.routeNodeRequestIfNeeded(sc1, pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+
+      // Also try a new SCId that's not active and enabled. Should be rerouted
+      // to sc0-4 with the same distribution as above
+      selectedId = policy.routeNodeRequestIfNeeded(
+          SubClusterId.newInstance("10"), pendingThreshold, scList);
+      counts.put(selectedId, counts.get(selectedId) + 1);
+    }
+
+    // The probability should be 1/16, 1/16, 1/8, 1/4, 1/2
+    Assert.assertTrue(
+        approximateEquals((double) counts.get(sc0) / n / 3, 0.0625));
+    Assert.assertTrue(
+        approximateEquals((double) counts.get(sc1) / n / 3, 0.0625));
+    Assert
+        .assertTrue(approximateEquals((double) counts.get(sc2) / n / 3, 0.125));
+    Assert
+        .assertTrue(approximateEquals((double) counts.get(sc3) / n / 3, 0.25));
+    Assert.assertTrue(approximateEquals((double) counts.get(sc4) / n / 3, 0.5));
+
+    // Everything should be routed to these five active and enabled SCs
+    Assert.assertEquals(5, counts.size());
+  }
+
+  protected boolean approximateEquals(double a, double b) {
+    LOG.info("Comparing " + a + " and " + b);
+    return Math.abs(a - b) < 0.01;
+  }
+
   /**
    * A testable version of LocalityMulticastAMRMProxyPolicy that
    * deterministically falls back to home sub-cluster for unresolved requests.
@@ -818,5 +912,11 @@ public class TestLocalityMulticastAMRMProxyPolicy
       // Alwasy use home sub-cluster so that unit test is deterministic
       return getHomeSubCluster();
     }
+  }
+
+  private AllocateResponse getAllocateResponseWithTargetHeadroom(Resource r) {
+    return AllocateResponse.newInstance(0, null, null,
+        Collections.<NodeReport> emptyList(), r, null, 10, null,
+        Collections.<NMToken> emptyList());
   }
 }

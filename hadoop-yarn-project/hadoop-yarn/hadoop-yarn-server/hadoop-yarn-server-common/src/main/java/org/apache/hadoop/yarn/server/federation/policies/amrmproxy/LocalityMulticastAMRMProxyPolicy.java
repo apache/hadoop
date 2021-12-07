@@ -31,6 +31,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -52,6 +53,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_ENABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOAD_BASED_SC_SELECTOR_THRESHOLD;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD;
 
 /**
  * An implementation of the {@link FederationAMRMProxyPolicy} interface that
@@ -232,6 +238,19 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
       // Handle "node" requests
       try {
         targetId = resolver.getSubClusterForNode(rr.getResourceName());
+
+        // If needed, re-reroute node requests base on SC load
+        // Read from config every time so that it is SCDable
+        Configuration conf = this.federationFacade.getConf();
+        if (conf.getBoolean(LOAD_BASED_SC_SELECTOR_ENABLED,
+            DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED)) {
+          int maxPendingThreshold =
+              conf.getInt(LOAD_BASED_SC_SELECTOR_THRESHOLD,
+                  DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD);
+
+          targetId = routeNodeRequestIfNeeded(targetId, maxPendingThreshold,
+              bookkeeper.getActiveAndEnabledSC());
+        }
       } catch (YarnException e) {
         // this might happen as we can't differentiate node from rack names
         // we log altogether later
@@ -482,6 +501,73 @@ public class LocalityMulticastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
     }
     return headroomWeighting;
   }
+
+  /**
+   * When certain subcluster is too loaded, reroute Node requests going there.
+   */
+  protected SubClusterId routeNodeRequestIfNeeded(SubClusterId targetId,
+      int maxThreshold, Set<SubClusterId> activeAndEnabledSCs) {
+    // If targetId is not in the active and enabled SC list, reroute the traffic
+    if (activeAndEnabledSCs.contains(targetId)) {
+      int targetPendingCount = getSubClusterLoad(targetId);
+      if (targetPendingCount == -1 || targetPendingCount < maxThreshold) {
+        return targetId;
+      }
+    }
+    SubClusterId scId = pickSubClusterIdForMaxLoadSC(targetId, maxThreshold,
+        activeAndEnabledSCs);
+    return scId;
+  }
+
+  private SubClusterId pickSubClusterIdForMaxLoadSC(SubClusterId targetId,
+      int maxThreshold, Set<SubClusterId> activeAndEnabledSCs) {
+    ArrayList<Float> weights = new ArrayList<>();
+    ArrayList<SubClusterId> scIds = new ArrayList<>();
+    int targetLoad = getSubClusterLoad(targetId);
+    if (targetLoad == -1) {
+      // Probably a SC that's not active and enabled. Forcing a reroute
+      targetLoad = Integer.MAX_VALUE;
+    }
+
+    for (SubClusterId sc : activeAndEnabledSCs) {
+      int scLoad = getSubClusterLoad(sc);
+      if (scLoad > targetLoad) {
+        // Never mind if it is not the most loaded SC
+        return targetId;
+      }
+
+      /*
+       * Prepare the weights for a random draw among all known SCs.
+       *
+       * For SC with pending bigger than maxThreshold / 2, use maxThreshold /
+       * pending as weight. We multiplied by maxThreshold so that the weights
+       * won't be too small in value.
+       *
+       * For SC with pending less than maxThreshold / 2, we cap the weight at 2
+       * = (maxThreshold / (maxThreshold / 2)) so that SC with small pending
+       * will not get a huge weight and thus get swamped.
+       */
+      if (scLoad <= maxThreshold / 2) {
+        weights.add(2f);
+      } else {
+        weights.add((float) maxThreshold / scLoad);
+      }
+      scIds.add(sc);
+    }
+    if (weights.size() == 0) {
+      return targetId;
+    }
+    return scIds.get(FederationPolicyUtils.getWeightedRandom(weights));
+  }
+
+  private int getSubClusterLoad(SubClusterId subClusterId) {
+    Resource r = this.headroom.get(subClusterId);
+    if (r == null) {
+      return -1;
+    }
+    return Integer.MAX_VALUE - r.getMemory();
+  }
+
 
   /**
    * This helper class is used to book-keep the requests made to each

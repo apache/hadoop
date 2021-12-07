@@ -3917,6 +3917,15 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT =
       60000; // one minute
 
+  // Pending container limit
+  public static final String LOAD_BASED_SC_SELECTOR_THRESHOLD =
+      "yarn.nodemanager.least-load-policy-selector.pending-container.threshold";
+  public static final int DEFAULT_LOAD_BASED_SC_SELECTOR_THRESHOLD = 10000;
+
+  public static final boolean DEFAULT_LOAD_BASED_SC_SELECTOR_ENABLED = false;
+  public static final String LOAD_BASED_SC_SELECTOR_ENABLED =
+      "yarn.nodemanager.least-load-policy-selector.enabled";
+
   public static final String DEFAULT_FEDERATION_POLICY_KEY = "*";
   public static final String FEDERATION_POLICY_MANAGER = FEDERATION_PREFIX
       + "policy-manager";
