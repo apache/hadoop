@@ -168,7 +168,8 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       return diff;
     }
 
-    private void setClusterResource(Resource clusterResource) {
+    @VisibleForTesting
+    void setClusterResource(Resource clusterResource) {
       this.clusterResource = clusterResource;
     }
 

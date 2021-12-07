@@ -618,6 +618,203 @@ public class TestNodeQueueLoadMonitor {
     Assert.assertNull(node);
   }
 
+  @Test
+  public void testQueueLengthThenResourcesComparator() {
+    NodeQueueLoadMonitor.LoadComparator comparator =
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH_THEN_RESOURCES;
+
+    NodeId n1 = new FakeNodeId("n1", 5000);
+    NodeId n2 = new FakeNodeId("n2", 5000);
+
+    // Case 1: larger available cores should be ranked first
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(6, 6))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+    }
+
+    // Case 2: Shorter queue should be ranked first before comparing resources
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(5);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(3, 3))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+    }
+
+    // Case 3: No capability vs with capability,
+    // with capability should come first
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(Resources.none())
+              .setCapability(newResourceInstance(1, 1, 1000))
+              .setQueueLength(5);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(Resources.none())
+              .setCapability(Resources.none())
+              .setQueueLength(5);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+    }
+
+    // Case 4: Compare same values
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertEquals(0, comparator.compare(cn1, cn2));
+    }
+
+    // Case 5: If ratio is the same, compare raw values
+    // by VCores first, then memory
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(6, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 6))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      // Both are 60% allocated, but CN1 has 5 avail VCores, CN2 only has 4
+      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+    }
+
+    // Case 6: by VCores absolute value
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 6))
+              .setCapability(newResourceInstance(10, 12, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertTrue(comparator.compare(cn2, cn1) < 0);
+    }
+
+    // Case 7: by memory absolute value
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 5))
+              .setCapability(newResourceInstance(10, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(6, 5))
+              .setCapability(newResourceInstance(12, 10, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertTrue(comparator.compare(cn2, cn1) < 0);
+    }
+
+    // Case 8: Memory should be more constraining in the overall cluster,
+    // so rank the node with less allocated memory first
+    {
+      ClusterNode.Properties cn1Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(5, 11))
+              .setCapability(newResourceInstance(10, 100, 1000))
+              .setQueueLength(10);
+      ClusterNode cn1 = new ClusterNode(n1);
+      cn1.setProperties(cn1Props);
+
+      ClusterNode.Properties cn2Props =
+          ClusterNode.Properties.newInstance()
+              .setAllocatedResource(newResourceInstance(6, 10))
+              .setCapability(newResourceInstance(10, 100, 1000))
+              .setQueueLength(10);
+      ClusterNode cn2 = new ClusterNode(n2);
+      cn2.setProperties(cn2Props);
+
+      comparator.setClusterResource(
+          Resources.add(cn1.getCapability(), cn2.getCapability()));
+      Assert.assertTrue(comparator.compare(cn1, cn2) < 0);
+    }
+  }
+
   private RMNode createRMNode(String host, int port,
       int waitTime, int queueLength) {
     return createRMNode(host, port, waitTime, queueLength,
