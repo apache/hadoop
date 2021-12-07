@@ -393,14 +393,19 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
         (estimatedQueueWaitTime != -1 ||
             comparator == LoadComparator.QUEUE_LENGTH ||
             comparator == LoadComparator.QUEUE_LENGTH_THEN_RESOURCES)) {
-      this.clusterNodes.put(rmNode.getNodeID(),
-          new ClusterNode(rmNode.getNodeID())
+      final ClusterNode.Properties properties =
+          ClusterNode.Properties.newInstance()
               .setQueueWaitTime(estimatedQueueWaitTime)
               .setQueueLength(waitQueueLength)
               .setNodeLabels(rmNode.getNodeLabels())
               .setCapability(rmNode.getTotalCapability())
               .setAllocatedResource(rmNode.getAllocatedContainerResource())
-              .setQueueCapacity(opportQueueCapacity));
+              .setQueueCapacity(opportQueueCapacity)
+              .updateTimestamp();
+
+      this.clusterNodes.put(rmNode.getNodeID(),
+          new ClusterNode(rmNode.getNodeID()).setProperties(properties));
+
       LOG.info(
           "Inserting ClusterNode [{}] with queue wait time [{}] and "
               + "wait queue length [{}]",
@@ -430,13 +435,17 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
         (estimatedQueueWaitTime != -1 ||
             comparator == LoadComparator.QUEUE_LENGTH ||
             comparator == LoadComparator.QUEUE_LENGTH_THEN_RESOURCES)) {
-      clusterNode
-          .setQueueWaitTime(estimatedQueueWaitTime)
-          .setQueueLength(waitQueueLength)
-          .setNodeLabels(rmNode.getNodeLabels())
-          .setCapability(rmNode.getTotalCapability())
-          .setAllocatedResource(rmNode.getAllocatedContainerResource())
-          .updateTimestamp();
+      final ClusterNode.Properties properties =
+          ClusterNode.Properties.newInstance()
+              .setQueueWaitTime(estimatedQueueWaitTime)
+              .setQueueLength(waitQueueLength)
+              .setNodeLabels(rmNode.getNodeLabels())
+              .setCapability(rmNode.getTotalCapability())
+              .setAllocatedResource(rmNode.getAllocatedContainerResource())
+              .updateTimestamp();
+
+      clusterNode.setProperties(properties);
+
       LOG.debug("Updating ClusterNode [{}] with queue wait time [{}] and"
               + " wait queue length [{}]", rmNode.getNodeID(),
           estimatedQueueWaitTime, waitQueueLength);

@@ -31,6 +31,65 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * Represents a node in the cluster from the NodeQueueLoadMonitor's perspective
  */
 public class ClusterNode {
+  /**
+   * Properties class used to initialize/change fields in ClusterNode.
+   */
+  public static final class Properties {
+    private int queueLength = 0;
+    private int queueWaitTime = -1;
+    private long timestamp;
+    private int queueCapacity = 0;
+    private boolean queueCapacityIsSet = false;
+    private final HashSet<String> labels;
+    private Resource capability = null;
+    private Resource allocatedResource = null;
+
+    public static Properties newInstance() {
+      return new Properties();
+    }
+
+    Properties setQueueLength(int qLength) {
+      this.queueLength = qLength;
+      return this;
+    }
+
+    Properties setQueueWaitTime(int wTime) {
+      this.queueWaitTime = wTime;
+      return this;
+    }
+
+    Properties updateTimestamp() {
+      this.timestamp = System.currentTimeMillis();
+      return this;
+    }
+
+    Properties setQueueCapacity(int capacity) {
+      this.queueCapacity = capacity;
+      this.queueCapacityIsSet = true;
+      return this;
+    }
+
+    Properties setNodeLabels(Collection<String> labelsToAdd) {
+      labels.clear();
+      labels.addAll(labelsToAdd);
+      return this;
+    }
+
+    Properties setCapability(Resource nodeCapability) {
+      this.capability = nodeCapability;
+      return this;
+    }
+
+    Properties setAllocatedResource(Resource allocResource) {
+      this.allocatedResource = allocResource;
+      return this;
+    }
+
+    private Properties() {
+      labels = new HashSet<>();
+    }
+  }
+
   private int queueLength = 0;
   private int queueWaitTime = -1;
   private long timestamp;
@@ -46,34 +105,35 @@ public class ClusterNode {
     this.nodeId = nodeId;
     this.labels = new HashSet<>();
     final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    writeLock = lock.writeLock();
-    readLock = lock.readLock();
-    updateTimestamp();
+    this.writeLock = lock.writeLock();
+    this.readLock = lock.readLock();
+    this.timestamp = System.currentTimeMillis();
   }
 
-  public ClusterNode setCapability(Resource nodeCapability) {
+  public ClusterNode setProperties(final Properties properties) {
     writeLock.lock();
     try {
-      if (nodeCapability == null) {
+      if (properties.capability == null) {
         this.capability = Resources.none();
       } else {
-        this.capability = nodeCapability;
+        this.capability = properties.capability;
       }
-      return this;
-    } finally {
-      writeLock.unlock();
-    }
-  }
 
-  public ClusterNode setAllocatedResource(
-      Resource allocResource) {
-    writeLock.lock();
-    try {
-      if (allocResource == null) {
+      if (properties.allocatedResource == null) {
         this.allocatedResource = Resources.none();
       } else {
-        this.allocatedResource = allocResource;
+        this.allocatedResource = properties.allocatedResource;
       }
+
+      this.queueLength = properties.queueLength;
+      this.queueWaitTime = properties.queueWaitTime;
+      this.timestamp = properties.timestamp;
+      if (properties.queueCapacityIsSet) {
+        // queue capacity is only set on node add, not on node updates
+        this.queueCapacity = properties.queueCapacity;
+      }
+      this.labels.clear();
+      this.labels.addAll(properties.labels);
       return this;
     } finally {
       writeLock.unlock();
@@ -104,57 +164,6 @@ public class ClusterNode {
       return this.capability;
     } finally {
       readLock.unlock();
-    }
-  }
-
-  public ClusterNode setQueueLength(int qLength) {
-    writeLock.lock();
-    try {
-      this.queueLength = qLength;
-      return this;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public ClusterNode setQueueWaitTime(int wTime) {
-    writeLock.lock();
-    try {
-      this.queueWaitTime = wTime;
-      return this;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public ClusterNode updateTimestamp() {
-    writeLock.lock();
-    try {
-      this.timestamp = System.currentTimeMillis();
-      return this;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public ClusterNode setQueueCapacity(int capacity) {
-    writeLock.lock();
-    try {
-      this.queueCapacity = capacity;
-      return this;
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  public ClusterNode setNodeLabels(Collection<String> labelsToAdd) {
-    writeLock.lock();
-    try {
-      labels.clear();
-      labels.addAll(labelsToAdd);
-      return this;
-    } finally {
-      writeLock.unlock();
     }
   }
 
