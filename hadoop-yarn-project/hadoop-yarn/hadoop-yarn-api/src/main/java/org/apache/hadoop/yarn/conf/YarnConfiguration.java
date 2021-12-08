@@ -451,6 +451,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR =
       "QUEUE_LENGTH";
 
+  /** Class for ClusterMonitor */
+  @Unstable
+  public static final String OPP_CONTAINER_CLUSTER_MONITOR =
+      RM_PREFIX + "opp-container-cluster-monitor";
+  public static final String DEFAULT_OPP_CONTAINER_CLUSTER_MONITOR =
+      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.NodeQueueLoadMonitor";
+
   /** Value of standard deviation used for calculation of queue limit
    * thresholds. */
   @Unstable

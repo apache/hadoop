@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
 import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
@@ -59,7 +60,7 @@ public class CentralizedOpportunisticContainerAllocator extends
   private static final Logger LOG =
       LoggerFactory.getLogger(CentralizedOpportunisticContainerAllocator.class);
 
-  private NodeQueueLoadMonitor nodeQueueLoadMonitor;
+  private ClusterMonitor clusterMonitor;
   private OpportunisticSchedulerMetrics metrics =
       OpportunisticSchedulerMetrics.getMetrics();
 
@@ -81,14 +82,14 @@ public class CentralizedOpportunisticContainerAllocator extends
   public CentralizedOpportunisticContainerAllocator(
       BaseContainerTokenSecretManager tokenSecretManager,
       int maxAllocationsPerAMHeartbeat,
-      NodeQueueLoadMonitor nodeQueueLoadMonitor) {
+      ClusterMonitor clusterMonitor) {
     super(tokenSecretManager, maxAllocationsPerAMHeartbeat);
-    this.nodeQueueLoadMonitor = nodeQueueLoadMonitor;
+    this.clusterMonitor = clusterMonitor;
   }
 
   @VisibleForTesting
-  void setNodeQueueLoadMonitor(NodeQueueLoadMonitor nodeQueueLoadMonitor) {
-    this.nodeQueueLoadMonitor = nodeQueueLoadMonitor;
+  void setNodeQueueLoadMonitor(ClusterMonitor clusterMonitor) {
+    this.clusterMonitor = clusterMonitor;
   }
 
   @Override
@@ -252,7 +253,7 @@ public class CentralizedOpportunisticContainerAllocator extends
       throws YarnException {
     List<Container> allocatedContainers = new ArrayList<>();
     while (toAllocate > 0) {
-      RMNode node = nodeQueueLoadMonitor.selectLocalNode(nodeLocation,
+      RMNode node = clusterMonitor.selectLocalNode(nodeLocation,
           blacklist);
       if (node != null) {
         toAllocate--;
@@ -281,7 +282,7 @@ public class CentralizedOpportunisticContainerAllocator extends
       throws YarnException {
     List<Container> allocatedContainers = new ArrayList<>();
     while (toAllocate > 0) {
-      RMNode node = nodeQueueLoadMonitor.selectRackLocalNode(rackLocation,
+      RMNode node = clusterMonitor.selectRackLocalNode(rackLocation,
           blacklist);
       if (node != null) {
         toAllocate--;
@@ -310,7 +311,7 @@ public class CentralizedOpportunisticContainerAllocator extends
       throws YarnException {
     List<Container> allocatedContainers = new ArrayList<>();
     while (toAllocate > 0) {
-      RMNode node = nodeQueueLoadMonitor.selectAnyNode(blacklist);
+      RMNode node = clusterMonitor.selectAnyNode(blacklist);
       if (node != null) {
         toAllocate--;
         Container container = createContainer(rmIdentifier, appParams,

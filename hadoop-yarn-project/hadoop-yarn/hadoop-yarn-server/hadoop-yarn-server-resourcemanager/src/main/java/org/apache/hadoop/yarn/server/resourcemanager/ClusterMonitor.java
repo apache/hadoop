@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.QueueLimitCalculator;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Implementations of this class are notified of changes to the cluster's state,
@@ -37,4 +40,18 @@ public interface ClusterMonitor {
   void updateNode(RMNode rmNode);
 
   void updateNodeResource(RMNode rmNode, ResourceOption resourceOption);
+
+  RMNode selectLocalNode(String hostName, Set<String> blacklist);
+
+  RMNode selectRackLocalNode(String rackName, Set<String> blacklist);
+
+  RMNode selectAnyNode(Set<String> blacklist);
+
+  void initThresholdCalculator(float sigma, int limitMin,
+      int limitMax);
+
+  void stop();
+  List<NodeId> selectLeastLoadedNodes(int k);
+
+  QueueLimitCalculator getThresholdCalculator();
 }

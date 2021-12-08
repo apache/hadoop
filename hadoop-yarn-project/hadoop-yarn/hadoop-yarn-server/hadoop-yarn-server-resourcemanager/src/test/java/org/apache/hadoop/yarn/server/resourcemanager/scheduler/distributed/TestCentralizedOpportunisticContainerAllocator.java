@@ -603,8 +603,8 @@ public class TestCentralizedOpportunisticContainerAllocator {
 
   private NodeQueueLoadMonitor createNodeQueueLoadMonitor(int numNodes,
       int queueLength, int queueCapacity) {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
     for (int i = 1; i <= numNodes; ++i) {
       RMNode node = createRMNode("h" + i, 1234, queueLength, queueCapacity);
       selector.addNode(null, node);
@@ -617,8 +617,8 @@ public class TestCentralizedOpportunisticContainerAllocator {
   private NodeQueueLoadMonitor createNodeQueueLoadMonitor(List<String> hosts,
       List<String> racks, List<Integer> queueLengths,
       List<Integer> queueCapacities) {
-    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
-        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+    NodeQueueLoadMonitor selector =
+        new NodeQueueLoadMonitor(LoadComparator.QUEUE_LENGTH);
     for (int i = 0; i < hosts.size(); ++i) {
       RMNode node = createRMNode(hosts.get(i), 1234, racks.get(i),
           queueLengths.get(i), queueCapacities.get(i));
