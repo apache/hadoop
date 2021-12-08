@@ -99,7 +99,7 @@ public class AbfsListStatusRemoteIterator
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      LOG.error("Thread got interrupted: {}", e);
+      LOG.error("Thread got interrupted:", e);
       throw new IOException(e);
     }
   }
@@ -128,11 +128,11 @@ public class AbfsListStatusRemoteIterator
         listResultQueue.put(new AbfsListResult(ioe));
       } catch (InterruptedException interruptedException) {
         Thread.currentThread().interrupt();
-        LOG.error("Thread got interrupted: {}", interruptedException);
+        LOG.error("Thread got interrupted:", interruptedException);
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      LOG.error("Thread got interrupted: {}", e);
+      LOG.error("Thread got interrupted:", e);
     } finally {
       synchronized (this) {
         isAsyncInProgress = false;
