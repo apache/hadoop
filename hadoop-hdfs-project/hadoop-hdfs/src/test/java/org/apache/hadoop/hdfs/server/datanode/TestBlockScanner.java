@@ -284,7 +284,7 @@ public class TestBlockScanner {
     disableBlockScanner(conf);
     TestContext ctx = new TestContext(conf, 1);
     try {
-      Assert.assertFalse(ctx.datanode.getBlockScanner().isEnabled());
+      assertFalse(ctx.datanode.getBlockScanner().isEnabled());
     } finally {
       ctx.close();
     }
