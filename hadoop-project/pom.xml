@@ -70,8 +70,11 @@
 
     <!-- jackson versions -->
     <jackson.version>1.9.13</jackson.version>
-    <jackson2.version>2.10.5</jackson2.version>
-    <jackson2.databind.version>2.10.5.1</jackson2.databind.version>
+    <jackson2.version>2.13.0</jackson2.version>
+    <jackson2.databind.version>2.13.0</jackson2.databind.version>
+
+    <!-- javax ws rs api version -->
+    <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -759,6 +762,11 @@
         <groupId>javax.ws.rs</groupId>
         <artifactId>jsr311-api</artifactId>
         <version>1.1.1</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.ws.rs</groupId>
+        <artifactId>javax.ws.rs-api</artifactId>
+        <version>${javax.ws.rs-api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
