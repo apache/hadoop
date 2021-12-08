@@ -161,6 +161,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+
+    LOG.debug("Initialized {}: name={}, fullname={}", this.getClass().getSimpleName(),
+        queueName, getQueuePath());
   }
 
   private static QueuePath createQueuePath(CSQueue parent, String queueName) {

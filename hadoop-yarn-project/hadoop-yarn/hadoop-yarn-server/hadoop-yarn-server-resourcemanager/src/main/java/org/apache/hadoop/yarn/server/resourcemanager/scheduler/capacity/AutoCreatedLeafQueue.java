@@ -44,7 +44,6 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     super(queueContext, queueName, parent, null);
     super.setupQueueConfigs(queueContext.getClusterResource(), parent.getLeafQueueConfigs(queueName));
 
-    LOG.debug("Initialized AutoCreatedLeafQueue: name={}, fullname={}", queueName, getQueuePath());
     updateCapacitiesToZero();
   }
 

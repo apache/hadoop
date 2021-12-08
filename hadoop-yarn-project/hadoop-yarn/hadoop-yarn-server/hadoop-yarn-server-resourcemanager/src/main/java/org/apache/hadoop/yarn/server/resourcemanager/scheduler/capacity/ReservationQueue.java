@@ -42,8 +42,6 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
     super.setupQueueConfigs(queueContext.getClusterResource(),
         queueContext.getConfiguration());
 
-    LOG.debug("Initialized ReservationQueue: name={}, fullname={}",
-        queueName, getQueuePath());
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),

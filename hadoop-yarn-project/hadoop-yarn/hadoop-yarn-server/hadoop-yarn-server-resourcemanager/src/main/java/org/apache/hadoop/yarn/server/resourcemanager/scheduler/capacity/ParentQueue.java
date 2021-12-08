@@ -135,8 +135,6 @@ public class ParentQueue extends AbstractCSQueue {
             .getAllowZeroCapacitySum(getQueuePath());
 
     setupQueueConfigs(queueContext.getClusterResource(), queueContext.getConfiguration());
-
-    LOG.debug("Initialized ParentQueue: name={}, fullname={}", queueName, getQueuePath());
   }
 
   // returns what is configured queue ordering policy

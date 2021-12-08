@@ -65,11 +65,6 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
     leafQueueTemplate = initializeLeafQueueConfigs().build();
 
-    LOG.info(
-        "Created Managed Parent Queue: [{}] with capacity: [{}]"
-            + " with max capacity: [{}]",
-        queueName, super.getCapacity(), super.getMaximumCapacity());
-
     initializeQueueManagementPolicy();
   }
 
@@ -136,7 +131,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
         queueContext.getConfiguration().getAutoCreatedQueueManagementPolicyClass(
             getQueuePath());
 
-    queueManagementPolicy.init(null, this);
+    queueManagementPolicy.init(this);
   }
 
   private void reinitializeQueueManagementPolicy() throws IOException {
@@ -147,10 +142,9 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     if (!(managementPolicy.getClass().equals(
         this.queueManagementPolicy.getClass()))) {
       queueManagementPolicy = managementPolicy;
-      // TODO handle deprecation
-      queueManagementPolicy.init(null, this);
+      queueManagementPolicy.init(this);
     } else{
-      queueManagementPolicy.reinitialize(null, this);
+      queueManagementPolicy.reinitialize(this);
     }
   }
 

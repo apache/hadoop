@@ -282,8 +282,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       new PendingApplicationComparator();
 
   @Override
-  public void init(final CapacitySchedulerContext schedulerContext,
-      final ParentQueue parentQueue) throws IOException {
+  public void init(final ParentQueue parentQueue) throws IOException {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -691,8 +690,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
   }
 
   @Override
-  public void reinitialize(CapacitySchedulerContext schedulerContext,
-      final ParentQueue parentQueue) throws IOException {
+  public void reinitialize(final ParentQueue parentQueue) throws IOException {
     if (!(parentQueue instanceof ManagedParentQueue)) {
       throw new IllegalStateException(
           "Expected instance of type " + ManagedParentQueue.class + " found  "

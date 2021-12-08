@@ -62,7 +62,7 @@ public class CSQueuePreemptionSettings {
     // on, then q does not have preemption disabled (default=false, below)
     // unless the preemption_disabled property is explicitly set.
     if (parentQ == null) {
-      return originalSchedulerConfiguration.getPreemptionDisabled(q.getQueuePath(), false);
+      return configuration.getPreemptionDisabled(q.getQueuePath(), false);
     }
 
     // If this is not the root queue, inherit the default value for the
