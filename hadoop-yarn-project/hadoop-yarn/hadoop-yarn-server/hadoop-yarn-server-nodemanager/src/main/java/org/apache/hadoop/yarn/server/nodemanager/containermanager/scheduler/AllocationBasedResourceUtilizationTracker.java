@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
@@ -33,6 +34,9 @@ public class AllocationBasedResourceUtilizationTracker implements
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AllocationBasedResourceUtilizationTracker.class);
+
+  private static final long LEFT_SHIFT_MB_IN_BYTES = 20;
+  private static final int RIGHT_SHIFT_BYTES_IN_MB = 20;
 
   private ResourceUtilization containersAllocation;
   private ContainerScheduler scheduler;
@@ -80,10 +84,24 @@ public class AllocationBasedResourceUtilizationTracker implements
    */
   @Override
   public boolean hasResourcesAvailable(Container container) {
-    long pMemBytes = container.getResource().getMemorySize() * 1024 * 1024L;
-    return hasResourcesAvailable(pMemBytes,
-        (long) (getContainersMonitor().getVmemRatio()* pMemBytes),
-        container.getResource().getVirtualCores());
+    return hasResourcesAvailable(container.getResource());
+  }
+
+  private static long convertMBToBytes(final long memMB) {
+    return memMB << LEFT_SHIFT_MB_IN_BYTES;
+  }
+
+  private static long convertBytesToMB(final long bytes) {
+    return bytes >> RIGHT_SHIFT_BYTES_IN_MB;
+  }
+
+  @Override
+  public boolean hasResourcesAvailable(Resource resource) {
+    long pMemBytes = convertMBToBytes(resource.getMemorySize());
+    final long vmemBytes = (long)
+        (getContainersMonitor().getVmemRatio() * pMemBytes);
+    return hasResourcesAvailable(
+        pMemBytes, vmemBytes, resource.getVirtualCores());
   }
 
   private boolean hasResourcesAvailable(long pMemBytes, long vMemBytes,
@@ -92,13 +110,14 @@ public class AllocationBasedResourceUtilizationTracker implements
     if (LOG.isDebugEnabled()) {
       LOG.debug("pMemCheck [current={} + asked={} > allowed={}]",
           this.containersAllocation.getPhysicalMemory(),
-          (pMemBytes >> 20),
-          (getContainersMonitor().getPmemAllocatedForContainers() >> 20));
+          convertBytesToMB(pMemBytes),
+          convertBytesToMB(
+              getContainersMonitor().getPmemAllocatedForContainers()));
     }
     if (this.containersAllocation.getPhysicalMemory() +
-        (int) (pMemBytes >> 20) >
-        (int) (getContainersMonitor()
-            .getPmemAllocatedForContainers() >> 20)) {
+        (int) convertBytesToMB(pMemBytes) >
+        (int) convertBytesToMB(getContainersMonitor()
+            .getPmemAllocatedForContainers())) {
       return false;
     }
 
@@ -106,15 +125,17 @@ public class AllocationBasedResourceUtilizationTracker implements
       LOG.debug("before vMemCheck" +
               "[isEnabled={}, current={} + asked={} > allowed={}]",
           getContainersMonitor().isVmemCheckEnabled(),
-          this.containersAllocation.getVirtualMemory(), (vMemBytes >> 20),
-          (getContainersMonitor().getVmemAllocatedForContainers() >> 20));
+          this.containersAllocation.getVirtualMemory(),
+          convertBytesToMB(vMemBytes),
+          convertBytesToMB(
+              getContainersMonitor().getVmemAllocatedForContainers()));
     }
     // Check virtual memory.
     if (getContainersMonitor().isVmemCheckEnabled() &&
         this.containersAllocation.getVirtualMemory() +
-            (int) (vMemBytes >> 20) >
-            (int) (getContainersMonitor()
-                .getVmemAllocatedForContainers() >> 20)) {
+            (int) convertBytesToMB(vMemBytes) >
+            (int) convertBytesToMB(getContainersMonitor()
+                .getVmemAllocatedForContainers())) {
       return false;
     }
 
