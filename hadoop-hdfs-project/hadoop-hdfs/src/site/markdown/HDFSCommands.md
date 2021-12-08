@@ -306,11 +306,11 @@ Usage:
 
 Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the rebalancing process. See [Balancer](./HdfsUserGuide.html#Balancer) for more details.
 
-Note that the `blockpool` policy is more strict than the `datanode` policy.
+Note that the `blockpool` policy is stricter than the `datanode` policy.
 
 Besides the above command options, a pinning feature is introduced starting from 2.7.0 to prevent certain replicas from getting moved by balancer/mover. This pinning feature is disabled by default, and can be enabled by configuration property "dfs.datanode.block-pinning.enabled". When enabled, this feature only affects blocks that are written to favored nodes specified in the create() call. This feature is useful when we want to maintain the data locality, for applications such as HBase regionserver.
 
-If you want to run Balancer as a long running service, please start Balancer using `-asService` parameter with daemon-mode. You can do this by using the following command: `hdfs --daemon start balancer -asService`, or just use sbin/start-balancer.sh script with parameter `-asService`.
+If you want to run Balancer as a long-running service, please start Balancer using `-asService` parameter with daemon-mode. You can do this by using the following command: `hdfs --daemon start balancer -asService`, or just use sbin/start-balancer.sh script with parameter `-asService`.
 
 ### `cacheadmin`
 
@@ -463,7 +463,7 @@ Usage:
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | `-add` *source* *nameservices* *destination* | Add a mount table entry or update if it exists. |
-| `-update` *source* *nameservices* *destination* | Update a mount table entry attribures. |
+| `-update` *source* *nameservices* *destination* | Update a mount table entry attributes. |
 | `-rm` *source* | Remove mount point of specified path. |
 | `-ls` `[-d]` *path* | List mount points under specified path. Specify -d parameter to get detailed listing.|
 | `-getDestination` *path* | Get the subcluster where a file is or should be created. |
@@ -496,7 +496,7 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-|-plan| Creates a disbalancer plan|
+|-plan| Creates a diskbalancer plan|
 |-execute| Executes a given plan on a datanode|
 |-query| Gets the current diskbalancer status from a datanode|
 |-cancel| Cancels a running plan|
@@ -567,7 +567,7 @@ See [HDFS HA with NFS](./HDFSHighAvailabilityWithNFS.html#Administrative_command
 
 Usage: `hdfs journalnode`
 
-This comamnd starts a journalnode for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
+This command starts a journalnode for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
 
 ### `mover`
 
@@ -622,13 +622,13 @@ Runs the namenode. More info about the upgrade and rollback is at [Upgrade Rollb
 
 Usage: `hdfs nfs3`
 
-This comamnd starts the NFS3 gateway for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
+This command starts the NFS3 gateway for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
 
 ### `portmap`
 
 Usage: `hdfs portmap`
 
-This comamnd starts the RPC portmap for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
+This command starts the RPC portmap for use with the [HDFS NFS3 Service](./HdfsNfsGateway.html#Start_and_stop_NFS_gateway_service).
 
 ### `secondarynamenode`
 
@@ -666,7 +666,7 @@ Usage: `hdfs zkfc [-formatZK [-force] [-nonInteractive]]`
 | `-formatZK` | Format the Zookeeper instance. -force: formats the znode if the znode exists. -nonInteractive: formats the znode aborts if the znode exists, unless -force option is specified. |
 | `-h` | Display help |
 
-This comamnd starts a Zookeeper Failover Controller process for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
+This command starts a Zookeeper Failover Controller process for use with [HDFS HA with QJM](./HDFSHighAvailabilityWithQJM.html#Administrative_commands).
 
 Debug Commands
 --------------

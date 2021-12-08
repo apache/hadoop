@@ -132,6 +132,7 @@ public class RouterRpcClient {
       Pattern.compile("\\tat (.*)\\.(.*)\\((.*):(\\d*)\\)");
 
   private static final String CLIENT_IP_STR = "clientIp";
+  private static final String CLIENT_PORT_STR = "clientPort";
 
   /** Fairness manager to control handlers assigned per NS. */
   private RouterRpcFairnessPolicyController routerRpcFairnessPolicyController;
@@ -465,7 +466,7 @@ public class RouterRpcClient {
           + router.getRouterId());
     }
 
-    appendClientIpToCallerContextIfAbsent();
+    appendClientIpPortToCallerContextIfAbsent();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -489,7 +490,7 @@ public class RouterRpcClient {
           namenodeResolver.updateActiveNamenode(nsId, address);
         }
         if (this.rpcMonitor != null) {
-          this.rpcMonitor.proxyOpComplete(true);
+          this.rpcMonitor.proxyOpComplete(true, nsId);
         }
         if (this.router.getRouterClientMetrics() != null) {
           this.router.getRouterClientMetrics().incInvokedMethod(method);
@@ -500,17 +501,17 @@ public class RouterRpcClient {
         if (ioe instanceof StandbyException) {
           // Fail over indicated by retry policy and/or NN
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureStandby();
+            this.rpcMonitor.proxyOpFailureStandby(nsId);
           }
           failover = true;
         } else if (isUnavailableException(ioe)) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureCommunicate();
+            this.rpcMonitor.proxyOpFailureCommunicate(nsId);
           }
           failover = true;
         } else if (ioe instanceof RemoteException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpComplete(true);
+            this.rpcMonitor.proxyOpComplete(true, nsId);
           }
           RemoteException re = (RemoteException) ioe;
           ioe = re.unwrapRemoteException();
@@ -519,7 +520,7 @@ public class RouterRpcClient {
           throw ioe;
         } else if (ioe instanceof ConnectionNullException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureCommunicate();
+            this.rpcMonitor.proxyOpFailureCommunicate(nsId);
           }
           LOG.error("Get connection for {} {} error: {}", nsId, rpcAddress,
               ioe.getMessage());
@@ -529,7 +530,7 @@ public class RouterRpcClient {
           throw se;
         } else if (ioe instanceof NoNamenodesAvailableException) {
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpNoNamenodes();
+            this.rpcMonitor.proxyOpNoNamenodes(nsId);
           }
           LOG.error("Cannot get available namenode for {} {} error: {}",
               nsId, rpcAddress, ioe.getMessage());
@@ -539,8 +540,8 @@ public class RouterRpcClient {
           // Other communication error, this is a failure
           // Communication retries are handled by the retry policy
           if (this.rpcMonitor != null) {
-            this.rpcMonitor.proxyOpFailureCommunicate();
-            this.rpcMonitor.proxyOpComplete(false);
+            this.rpcMonitor.proxyOpFailureCommunicate(nsId);
+            this.rpcMonitor.proxyOpComplete(false, nsId);
           }
           throw ioe;
         }
@@ -551,7 +552,7 @@ public class RouterRpcClient {
       }
     }
     if (this.rpcMonitor != null) {
-      this.rpcMonitor.proxyOpComplete(false);
+      this.rpcMonitor.proxyOpComplete(false, null);
     }
 
     // All namenodes were unavailable or in standby
@@ -586,25 +587,20 @@ public class RouterRpcClient {
 
   /**
    * For tracking which is the actual client address.
-   * It adds trace info "clientIp:ip" to caller context if it's absent.
+   * It adds trace info "clientIp:ip" and "clientPort:port"
+   * to caller context if they are absent.
    */
-  private void appendClientIpToCallerContextIfAbsent() {
-    String clientIpInfo = CLIENT_IP_STR + ":" + Server.getRemoteAddress();
-    final CallerContext ctx = CallerContext.getCurrent();
-    if (isClientIpInfoAbsent(clientIpInfo, ctx)) {
-      String origContext = ctx == null ? null : ctx.getContext();
-      byte[] origSignature = ctx == null ? null : ctx.getSignature();
-      CallerContext.setCurrent(
-          new CallerContext.Builder(origContext, contextFieldSeparator)
-              .append(clientIpInfo)
-              .setSignature(origSignature)
-              .build());
-    }
-  }
-
-  private boolean isClientIpInfoAbsent(String clientIpInfo, CallerContext ctx){
-    return ctx == null || ctx.getContext() == null
-        || !ctx.getContext().contains(clientIpInfo);
+  private void appendClientIpPortToCallerContextIfAbsent() {
+    CallerContext ctx = CallerContext.getCurrent();
+    String origContext = ctx == null ? null : ctx.getContext();
+    byte[] origSignature = ctx == null ? null : ctx.getSignature();
+    CallerContext.setCurrent(
+        new CallerContext.Builder(origContext, contextFieldSeparator)
+            .appendIfAbsent(CLIENT_IP_STR, Server.getRemoteAddress())
+            .appendIfAbsent(CLIENT_PORT_STR,
+                Integer.toString(Server.getRemotePort()))
+            .setSignature(origSignature)
+            .build());
   }
 
   /**

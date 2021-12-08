@@ -187,6 +187,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_GC_TIME_MONITOR_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -328,7 +332,9 @@ public class NameNode extends ReconfigurableBase implements
           DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
           DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
           DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY,
-          DFS_IMAGE_PARALLEL_LOAD_KEY));
+          DFS_IMAGE_PARALLEL_LOAD_KEY,
+          DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY,
+          DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2197,6 +2203,9 @@ public class NameNode extends ReconfigurableBase implements
       return newVal;
     } else if (property.equals(DFS_IMAGE_PARALLEL_LOAD_KEY)) {
       return reconfigureParallelLoad(newVal);
+    } else if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY)
+          || (property.equals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY))) {
+      return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2229,7 +2238,7 @@ public class NameNode extends ReconfigurableBase implements
         newSetting = bm.getBlocksReplWorkMultiplier();
       } else {
         throw new IllegalArgumentException("Unexpected property " +
-            property + "in reconfReplicationParameters");
+            property + " in reconfReplicationParameters");
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newSetting);
       return String.valueOf(newSetting);
@@ -2381,6 +2390,36 @@ public class NameNode extends ReconfigurableBase implements
     }
     FSImageFormatProtobuf.refreshParallelSaveAndLoad(enableParallelLoad);
     return Boolean.toString(enableParallelLoad);
+  }
+
+  String reconfigureSlowNodesParameters(final DatanodeManager datanodeManager,
+      final String property, final String newVal) throws ReconfigurationException {
+    BlockManager bm = namesystem.getBlockManager();
+    namesystem.writeLock();
+    boolean enable;
+    try {
+      if (property.equals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY)) {
+        enable = (newVal == null ? DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        datanodeManager.setAvoidSlowDataNodesForReadEnabled(enable);
+      } else if (property.equals(
+            DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY)) {
+        enable = (newVal == null ?
+            DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT :
+            Boolean.parseBoolean(newVal));
+        bm.setExcludeSlowNodesEnabled(enable);
+      } else {
+        throw new IllegalArgumentException("Unexpected property " +
+            property + " in reconfigureSlowNodesParameters");
+      }
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return Boolean.toString(enable);
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(
+          property), e);
+    } finally {
+      namesystem.writeUnlock();
+    }
   }
 
   @Override  // ReconfigurableBase

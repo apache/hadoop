@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveAncestors;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
 

@@ -22,7 +22,7 @@ By default HDFS supports BlockPlacementPolicyDefault. Where one block on local a
 
 ## BlockPlacementPolicyRackFaultTolerant
 
-BlockPlacementPolicyRackFaultTolerant can be used to split the placement of blocks across multiple rack.By default with replication of 3 BlockPlacementPolicyDefault will  put one replica on the local machine if the writer is on a datanode, otherwise on a random datanode in the same rack as that of the writer, another replica on a node in a different (remote) rack, and the last on a different node in the same remote rack. So totally 2 racks will be used, in sceneraio like 2 racks going down at the same time will cause data inavailability where using BlockPlacementPolicyRackFaultTolerant will helop in placing 3 blocks on 3 different racks.
+BlockPlacementPolicyRackFaultTolerant can be used to split the placement of blocks across multiple rack. By default, with replication of 3 BlockPlacementPolicyDefault will  put one replica on the local machine if the writer is on a datanode, otherwise on a random datanode in the same rack as that of the writer, another replica on a node in a different (remote) rack, and the last on a different node in the same remote rack. So totally 2 racks will be used, in scenario like 2 racks going down at the same time will cause data unavailability where using BlockPlacementPolicyRackFaultTolerant will help in placing 3 blocks on 3 different racks.
 
 For more details check [HDFS-7891](https://issues.apache.org/jira/browse/HDFS-7891)
 
@@ -42,7 +42,7 @@ For more details check [HDFS-7891](https://issues.apache.org/jira/browse/HDFS-78
 
 ## BlockPlacementPolicyWithNodeGroup
 
-With new 3 layer hierarchical topology, a node group level got introduced, which maps well onto a infrastructure that is based on a virtulized environment. In Virtualized environment multiple vm's will be hosted on same physical machine. Vm's on the same physical host are affected by the same hardware failure. So mapping the physical host a node groups this block placement gurantees that it will never place more than one replica on the same node group (physical host), in case of node group failure, only one replica will be lost at the maximum.
+With new 3 layer hierarchical topology, a node group level got introduced, which maps well onto an infrastructure that is based on a virtualized environment. In Virtualized environment multiple vm's will be hosted on same physical machine. Vm's on the same physical host are affected by the same hardware failure. So mapping the physical host a node groups this block placement guarantees that it will never place more than one replica on the same node group (physical host), in case of node group failure, only one replica will be lost at the maximum.
 
   **Configurations :**
 

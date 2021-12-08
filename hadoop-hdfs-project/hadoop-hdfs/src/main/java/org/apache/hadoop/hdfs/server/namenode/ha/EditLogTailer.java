@@ -413,6 +413,8 @@ public class EditLogTailer {
     return new MultipleNameNodeProxy<Void>() {
       @Override
       protected Void doWork() throws IOException {
+        LOG.info("Triggering log rolling to the remote NameNode, " +
+            "active NameNode = {}", currentNN.getIpcAddress());
         cachedActiveProxy.rollEditLog();
         return null;
       }
@@ -424,7 +426,6 @@ public class EditLogTailer {
    */
   @VisibleForTesting
   void triggerActiveLogRoll() {
-    LOG.info("Triggering log roll on remote NameNode");
     Future<Void> future = null;
     try {
       future = rollEditsRpcExecutor.submit(getNameNodeProxy());
