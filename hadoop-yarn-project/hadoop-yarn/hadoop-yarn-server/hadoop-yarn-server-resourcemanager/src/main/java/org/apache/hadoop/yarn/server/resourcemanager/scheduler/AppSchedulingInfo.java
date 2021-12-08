@@ -139,6 +139,8 @@ public class AppSchedulingInfo {
 
   /**
    * Set default App Placement Allocator.
+   *
+   * @return app placement class.
    */
   public String getDefaultResourceRequestAppPlacementType() {
     if (this.rmContext != null
@@ -156,7 +158,6 @@ public class AppSchedulingInfo {
     }
     return null;
   }
-
 
   public ApplicationId getApplicationId() {
     return applicationId;
