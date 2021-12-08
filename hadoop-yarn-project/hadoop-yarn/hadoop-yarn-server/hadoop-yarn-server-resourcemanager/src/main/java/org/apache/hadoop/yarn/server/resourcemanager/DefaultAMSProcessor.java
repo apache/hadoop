@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -333,6 +334,15 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     response.setCompletedContainersStatuses(appAttempt
         .pullJustFinishedContainers());
     response.setAvailableResources(allocation.getResourceLimit());
+
+    int totalVirtualCores = this.rmContext.getScheduler().getRootQueueMetrics()
+        .getAllocatedVirtualCores() + this.rmContext.getScheduler()
+        .getRootQueueMetrics().getAvailableVirtualCores();
+    int pendingContainers = this.rmContext.getScheduler().getRootQueueMetrics()
+        .getPendingContainers();
+
+    response.setEnhancedHeadroom(
+        EnhancedHeadroom.newInstance(pendingContainers, totalVirtualCores));
 
     addToContainerUpdates(response, allocation,
         ((AbstractYarnScheduler)getScheduler())
