@@ -24,9 +24,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -35,8 +32,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQu
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.List;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo.getSortedQueueAclInfoList;
 
 @XmlRootElement(name = "capacityScheduler")
 @XmlType(name = "capacityScheduler")
@@ -94,21 +92,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    for (Map.Entry<AccessType, AccessControlList> e : conf
-        .getAcls(queueName).entrySet()) {
-      QueueAclInfo queueAcl = new QueueAclInfo(e.getKey().toString(),
-          e.getValue().getAclString());
-      queueAcls.add(queueAcl);
-    }
-
-    String aclApplicationMaxPriority = "acl_" +
-        StringUtils.toLowerCase(AccessType.APPLICATION_MAX_PRIORITY.toString());
-    String priorityAcls = conf.get(parent.getQueuePath()
-        + aclApplicationMaxPriority, conf.ALL_ACL);
-
-    QueueAclInfo queueAcl = new QueueAclInfo(
-        AccessType.APPLICATION_MAX_PRIORITY.toString(), priorityAcls);
-    queueAcls.add(queueAcl);
+    queueAcls.addAll(getSortedQueueAclInfoList(queueName, conf));
 
     queuePriority = parent.getPriority().getPriority();
     if (parent instanceof ParentQueue) {
