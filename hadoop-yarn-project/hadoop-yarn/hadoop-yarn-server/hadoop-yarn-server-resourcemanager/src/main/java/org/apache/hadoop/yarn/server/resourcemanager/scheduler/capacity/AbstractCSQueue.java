@@ -174,7 +174,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   protected void setupConfigurableCapacities(
       CapacitySchedulerConfiguration configuration) {
-    CSQueueUtils.loadCapacitiesByLabelsFromConf(getQueuePathObject(), queueCapacities,
+    CSQueueUtils.loadCapacitiesByLabelsFromConf(queuePath, queueCapacities,
         configuration, this.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 

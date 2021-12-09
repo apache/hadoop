@@ -57,15 +57,11 @@ public class TestQueuePath {
   @Test
   public void testNullPath() {
     QueuePath queuePathWithNullPath = new QueuePath(null);
-    String parentOfQueueWithNullPath = queuePathWithNullPath.getParent();
-    String leafOfQueueWithNullPath = queuePathWithNullPath.getLeafName();
-    String fullPathOfQueueWithNullPath = queuePathWithNullPath.getFullPath();
-    boolean isTheQueueWithNullPathRoot = queuePathWithNullPath.isRoot();
 
-    Assert.assertEquals(parentOfQueueWithNullPath, null);
-    Assert.assertEquals(leafOfQueueWithNullPath, "");
-    Assert.assertEquals(fullPathOfQueueWithNullPath, "");
-    Assert.assertFalse(isTheQueueWithNullPathRoot);
+    Assert.assertNull(queuePathWithNullPath.getParent());
+    Assert.assertEquals("", queuePathWithNullPath.getLeafName());
+    Assert.assertEquals("", queuePathWithNullPath.getFullPath());
+    Assert.assertFalse(queuePathWithNullPath.isRoot());
   }
 
   @Test

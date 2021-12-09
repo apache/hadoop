@@ -137,7 +137,7 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
-   * Convenience getter to check if the queue is a root path.
+   * Convenience getter to check if the queue is the root queue.
    * @return True if the path is root
    */
   public boolean isRoot() {

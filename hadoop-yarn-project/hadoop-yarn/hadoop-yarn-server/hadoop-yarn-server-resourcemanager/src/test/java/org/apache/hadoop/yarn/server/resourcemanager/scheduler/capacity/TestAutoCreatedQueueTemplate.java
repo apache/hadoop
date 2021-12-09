@@ -25,11 +25,12 @@ import org.junit.Test;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE;
 
 public class TestAutoCreatedQueueTemplate {
-  private static final String TEST_QUEUE_ABC = "root.a.b.c";
-  private static final String TEST_QUEUE_AB = "root.a.b";
-  private static final String TEST_QUEUE_A = "root.a";
-  private static final String TEST_QUEUE_B = "root.b";
+  private static final QueuePath TEST_QUEUE_ABC = new QueuePath("root.a.b.c");
+  private static final QueuePath TEST_QUEUE_AB = new QueuePath("root.a.b");
+  private static final QueuePath TEST_QUEUE_A = new QueuePath("root.a");
+  private static final QueuePath TEST_QUEUE_B = new QueuePath("root.b");
   private static final String ROOT = "root";
+
   private CapacitySchedulerConfiguration conf;
 
   @Before
@@ -43,13 +44,13 @@ public class TestAutoCreatedQueueTemplate {
 
   @Test
   public void testNonWildCardTemplate() {
-    conf.set(getTemplateKey(TEST_QUEUE_AB, "capacity"), "6w");
+    conf.set(getTemplateKey(TEST_QUEUE_AB.getFullPath(), "capacity"), "6w");
     AutoCreatedQueueTemplate template =
-        new AutoCreatedQueueTemplate(conf, new QueuePath(TEST_QUEUE_AB));
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_ABC);
+        new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_ABC.getFullPath());
 
     Assert.assertEquals("weight is not set", 6f,
-        conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_ABC)), 10e-6);
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_ABC.getFullPath()), 10e-6);
 
   }
 
@@ -57,11 +58,11 @@ public class TestAutoCreatedQueueTemplate {
   public void testOneLevelWildcardTemplate() {
     conf.set(getTemplateKey("root.a.*", "capacity"), "6w");
     AutoCreatedQueueTemplate template =
-        new AutoCreatedQueueTemplate(conf, new QueuePath(TEST_QUEUE_AB));
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_ABC);
+        new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_ABC.getFullPath());
 
     Assert.assertEquals("weight is not set", 6f,
-        conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_ABC)), 10e-6);
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_ABC.getFullPath()), 10e-6);
 
   }
 
@@ -70,10 +71,10 @@ public class TestAutoCreatedQueueTemplate {
     conf.set(getTemplateKey("*", "capacity"), "6w");
     AutoCreatedQueueTemplate template =
         new AutoCreatedQueueTemplate(conf, new QueuePath(ROOT));
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A.getFullPath());
 
     Assert.assertEquals("weight is set", -1f,
-        conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_A)), 10e-6);
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_A.getFullPath()), 10e-6);
   }
 
   @Test
@@ -84,7 +85,7 @@ public class TestAutoCreatedQueueTemplate {
     template.setTemplateEntriesForChild(conf, ROOT);
 
     Assert.assertEquals("weight is set", -1f,
-        conf.getNonLabeledQueueWeight(new QueuePath(ROOT)), 10e-6);
+        conf.getNonLabeledQueueWeight(ROOT), 10e-6);
   }
 
   @Test
@@ -94,22 +95,22 @@ public class TestAutoCreatedQueueTemplate {
     conf.set(getTemplateKey("root.*.*", "capacity"), "2w");
 
     AutoCreatedQueueTemplate template =
-        new AutoCreatedQueueTemplate(conf, new QueuePath(TEST_QUEUE_AB));
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_ABC);
+        new AutoCreatedQueueTemplate(conf, TEST_QUEUE_AB);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_ABC.getFullPath());
 
     Assert.assertEquals(
         "explicit template does not have the highest precedence", 6f,
-        conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_ABC)), 10e-6);
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_ABC.getFullPath()), 10e-6);
 
     CapacitySchedulerConfiguration newConf =
         new CapacitySchedulerConfiguration();
     newConf.set(getTemplateKey("root.a.*", "capacity"), "4w");
     template =
-        new AutoCreatedQueueTemplate(newConf, new QueuePath(TEST_QUEUE_AB));
-    template.setTemplateEntriesForChild(newConf, TEST_QUEUE_ABC);
+        new AutoCreatedQueueTemplate(newConf, TEST_QUEUE_AB);
+    template.setTemplateEntriesForChild(newConf, TEST_QUEUE_ABC.getFullPath());
 
     Assert.assertEquals("precedence is invalid", 4f,
-        newConf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_ABC)), 10e-6);
+        newConf.getNonLabeledQueueWeight(TEST_QUEUE_ABC.getFullPath()), 10e-6);
   }
 
   @Test
@@ -118,9 +119,9 @@ public class TestAutoCreatedQueueTemplate {
 
     AutoCreatedQueueTemplate template =
         new AutoCreatedQueueTemplate(conf, new QueuePath(ROOT));
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A.getFullPath());
     Assert.assertEquals("root property is not set", 2f,
-        conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_A)), 10e-6);
+        conf.getNonLabeledQueueWeight(TEST_QUEUE_A.getFullPath()), 10e-6);
   }
 
   @Test
@@ -134,20 +135,20 @@ public class TestAutoCreatedQueueTemplate {
 
     AutoCreatedQueueTemplate template =
         new AutoCreatedQueueTemplate(conf, new QueuePath(ROOT));
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A);
-    template.setTemplateEntriesForChild(conf, TEST_QUEUE_B, true);
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_A.getFullPath());
+    template.setTemplateEntriesForChild(conf, TEST_QUEUE_B.getFullPath(), true);
 
     Assert.assertNull("default-node-label-expression is set for parent",
-        conf.getDefaultNodeLabelExpression(TEST_QUEUE_A));
+        conf.getDefaultNodeLabelExpression(TEST_QUEUE_A.getFullPath()));
     Assert.assertEquals("default-node-label-expression is not set for leaf",
-        "test", conf.getDefaultNodeLabelExpression(TEST_QUEUE_B));
+        "test", conf.getDefaultNodeLabelExpression(TEST_QUEUE_B.getFullPath()));
     Assert.assertFalse("auto queue removal is not disabled for parent",
-        conf.isAutoExpiredDeletionEnabled(TEST_QUEUE_A));
+        conf.isAutoExpiredDeletionEnabled(TEST_QUEUE_A.getFullPath()));
     Assert.assertEquals("weight should not be overridden when set by " +
             "queue type specific template",
-        10f, conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_B)), 10e-6);
+        10f, conf.getNonLabeledQueueWeight(TEST_QUEUE_B.getFullPath()), 10e-6);
     Assert.assertEquals("weight should be set by common template",
-        2f, conf.getNonLabeledQueueWeight(new QueuePath(TEST_QUEUE_A)), 10e-6);
+        2f, conf.getNonLabeledQueueWeight(TEST_QUEUE_A.getFullPath()), 10e-6);
 
   }
 

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.commons.collections.IteratorUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import java.util.HashMap;

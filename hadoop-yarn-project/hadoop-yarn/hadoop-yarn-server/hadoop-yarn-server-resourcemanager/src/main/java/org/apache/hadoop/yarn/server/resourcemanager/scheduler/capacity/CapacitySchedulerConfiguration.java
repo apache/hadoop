@@ -527,10 +527,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  public float getNonLabeledQueueWeight(QueuePath queue) {
-    String configuredValue = get(getQueuePrefix(queue.getFullPath()) + CAPACITY);
+  public float getNonLabeledQueueWeight(String queue) {
+    String configuredValue = get(getQueuePrefix(queue) + CAPACITY);
     float weight = extractFloatValueFromWeightConfig(configuredValue);
-    throwExceptionForUnexpectedWeight(weight, queue.getFullPath(), "");
+    throwExceptionForUnexpectedWeight(weight, queue, "");
     return weight;
   }
 

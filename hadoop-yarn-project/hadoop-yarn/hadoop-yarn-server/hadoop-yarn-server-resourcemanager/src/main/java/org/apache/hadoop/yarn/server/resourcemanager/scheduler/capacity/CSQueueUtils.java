@@ -81,7 +81,7 @@ public class CSQueueUtils {
             label,
             csConf.getMaximumAMResourcePercentPerPartition(queuePath, label));
         queueCapacities.setWeight(label,
-            csConf.getNonLabeledQueueWeight(queuePath));
+            csConf.getNonLabeledQueueWeight(queuePath.getFullPath()));
       } else{
         queueCapacities.setCapacity(label,
             csConf.getLabeledQueueCapacity(queuePath, label) / 100);
