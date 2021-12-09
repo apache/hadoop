@@ -19,12 +19,17 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import org.apache.hadoop.fs.common.Validate;
-import org.apache.hadoop.fs.common.Io;
-
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import org.apache.hadoop.fs.common.Io;
+import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -38,58 +43,82 @@ import java.util.Map;
  * Ecapsulates low level interactions with S3 object on AWS.
  */
 public class S3File implements Closeable {
-  // Client used for accessing S3 objects.
-  private final AmazonS3 client;
 
-  private final String bucket;
-  private final String key;
+  // Read-specific operation context.
+  private final S3AReadOpContext context;
 
-  // Size of S3 file.
-  private long fileSize;
+  // S3 object attributes.
+  private final S3ObjectAttributes s3Attributes;
+
+  // Callbacks used for interacting with the underlying S3 client.
+  private final S3AInputStream.InputStreamCallbacks client;
+
+  // Used for reporting input stream access statistics.
+  private final S3AInputStreamStatistics streamStatistics;
+
+  // Enforces change tracking related policies.
+  private final ChangeTracker changeTracker;
 
   // Maps a stream returned by openForRead() to the associated S3 object.
   // That allows us to close the object when closing the stream.
   private Map<InputStream, S3Object> s3Objects;
 
-  /**
-   * Creates an instance of {@link S3File}.
-   *
-   * @param client AWS S3 client instance.
-   * @param bucket the bucket to read from.
-   * @param key the key to read from.
-   */
-  public S3File(AmazonS3 client, String bucket, String key) {
-    this(client, bucket, key, -1);
-  }
+  public S3File(
+      S3AReadOpContext context,
+      S3ObjectAttributes s3Attributes,
+      S3AInputStream.InputStreamCallbacks client,
+      S3AInputStreamStatistics streamStatistics,
+      ChangeTracker changeTracker) {
 
-  /**
-   * Creates an instance of {@link S3File}.
-   *
-   * @param client AWS S3 client instance.
-   * @param bucket the bucket to read from.
-   * @param key the key to read from.
-   * @param size the size of this file. it should be passed in if pre-known
-   *        to avoid an additional network call. If size is not known,
-   *        pass a negative number so that size can be obtained if needed.
-   *
-   * @throws IllegalArgumentException if client is null.
-   * @throws IllegalArgumentException if bucket is either null or empty.
-   * @throws IllegalArgumentException if key is either null or empty.
-   */
-  public S3File(AmazonS3 client, String bucket, String key, long size) {
+    Validate.checkNotNull(context, "context");
+    Validate.checkNotNull(s3Attributes, "s3Attributes");
     Validate.checkNotNull(client, "client");
-    Validate.checkNotNullAndNotEmpty(bucket, "bucket");
-    Validate.checkNotNullAndNotEmpty(key, "key");
+    Validate.checkNotNull(streamStatistics, "streamStatistics");
+    Validate.checkNotNull(changeTracker, "changeTracker");
 
+    this.context = context;
+    this.s3Attributes = s3Attributes;
     this.client = client;
-    this.bucket = bucket;
-    this.key = key;
-    this.fileSize = size;
+    this.streamStatistics = streamStatistics;
+    this.changeTracker = changeTracker;
     this.s3Objects = new IdentityHashMap<InputStream, S3Object>();
   }
 
+  /**
+   * Gets an instance of {@code Invoker} for interacting with S3 API.
+   *
+   * @return an instance of {@code Invoker} for interacting with S3 API.
+   */
+  public Invoker getReadInvoker() {
+    return this.context.getReadInvoker();
+  }
+
+  /**
+   * Gets an instance of {@code S3AInputStreamStatistics} used for reporting access metrics.
+   *
+   * @return an instance of {@code S3AInputStreamStatistics} used for reporting access metrics.
+   */
+  public S3AInputStreamStatistics getStatistics() {
+    return this.streamStatistics;
+  }
+
+  /**
+   * Gets the path of this file.
+   *
+   * @return the path of this file.
+   */
   public String getPath() {
-    return String.format("s3://%s/%s", this.bucket, this.key);
+    return getPath(this.s3Attributes);
+  }
+
+  /**
+   * Gets the path corresponding to the given s3Attributes.
+   *
+   * @param s3Attributes attributes of an S3 object.
+   * @return the path corresponding to the given s3Attributes.
+   */
+  public static String getPath(S3ObjectAttributes s3Attributes) {
+    return String.format("s3a://%s/%s", s3Attributes.getBucket(), s3Attributes.getKey());
   }
 
   /**
@@ -100,10 +129,7 @@ public class S3File implements Closeable {
    * @throws IOException if there is an error obtaining file size.
    */
   public long size() throws IOException {
-    if (this.fileSize < 0) {
-      this.fileSize = client.getObjectMetadata(bucket, key).getContentLength();
-    }
-    return this.fileSize;
+    return this.s3Attributes.getLen();
   }
 
   /**
@@ -123,13 +149,31 @@ public class S3File implements Closeable {
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
-    GetObjectRequest request =
-        new GetObjectRequest(bucket, key).withRange(offset, offset + size - 1);
-    S3Object obj = client.getObject(request);
-    InputStream stream = obj.getObjectContent();
-    synchronized (this.s3Objects) {
-      this.s3Objects.put(stream, obj);
+    final GetObjectRequest request = client.newGetRequest(this.s3Attributes.getKey())
+        .withRange(offset, offset + size - 1);
+    this.changeTracker.maybeApplyConstraint(request);
+
+    String uri = this.getPath();
+    String operation = String.format(
+        "%s %s at %d", S3AInputStream.OPERATION_OPEN, uri, offset);
+    DurationTracker tracker = streamStatistics.initiateGetRequest();
+    S3Object object = null;
+
+    try {
+      object = Invoker.once(operation, uri, () -> client.getObject(request));
+    } catch(IOException e) {
+      tracker.failed();
+      throw e;
+    } finally {
+      tracker.close();
     }
+
+    changeTracker.processResponse(object, operation, offset);
+    InputStream stream = object.getObjectContent();
+    synchronized (this.s3Objects) {
+      this.s3Objects.put(stream, object);
+    }
+
     return stream;
   }
 

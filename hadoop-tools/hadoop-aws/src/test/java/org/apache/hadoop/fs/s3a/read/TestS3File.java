@@ -19,15 +19,15 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import org.apache.hadoop.fs.common.Validate;
-import org.apache.hadoop.fs.s3a.MockS3ClientFactory;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 class TestS3File extends S3File {
   private byte[] contents;
@@ -36,12 +36,21 @@ class TestS3File extends S3File {
   // That allows test code to validate behavior related to retries.
   private boolean throwExceptionOnOpen;
 
+  private static final String BUCKET = "bucket";
+  private static final String KEY = "key";
+
   TestS3File(int size) {
     this(size, false);
   }
 
   TestS3File(int size, boolean throwExceptionOnOpen) {
-    super(createClient("bucket"), "bucket", "key", size);
+    super(
+        Fakes.createReadContext(null, KEY, size, 1, 1),
+        Fakes.createObjectAttributes(BUCKET, KEY, size),
+        Fakes.createInputStreamCallbacks(BUCKET, KEY),
+        new EmptyS3AStatisticsContext().EMPTY_INPUT_STREAM_STATISTICS,
+        Fakes.createChangeTracker(BUCKET, KEY, size)
+    );
 
     this.throwExceptionOnOpen = throwExceptionOnOpen;
     this.contents = new byte[size];
@@ -72,12 +81,21 @@ class TestS3File extends S3File {
     return (byte) (offset % 128);
   }
 
-  public static AmazonS3 createClient(String bucketName) {
-    String uriString = String.format("s3a://%s/", bucketName);
-    try {
-      return new MockS3ClientFactory().createS3Client(new URI(uriString), null);
-    } catch (URISyntaxException e) {
-      return null;
-    }
+  public static S3AInputStream.InputStreamCallbacks createClient(String bucketName) {
+    return new S3AInputStream.InputStreamCallbacks() {
+      @Override
+      public S3Object getObject(GetObjectRequest request) {
+        return null;
+      }
+
+      @Override
+      public GetObjectRequest newGetRequest(String key) {
+        return new GetObjectRequest(bucketName, key);
+      }
+
+      @Override
+      public void close() {
+      }
+    };
   }
 }

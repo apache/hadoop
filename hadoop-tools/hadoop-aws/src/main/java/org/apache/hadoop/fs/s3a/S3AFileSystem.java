@@ -1477,31 +1477,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
-    if (this.prefetchEnabled) {
-      return this.createPrefetchingInputStream(f, bufferSize);
-    } else {
-      return open(f, Optional.empty(), Optional.empty());
-    }
-  }
-
-  private FSDataInputStream createPrefetchingInputStream(Path f, int bufferSize)
-      throws IOException {
-
-    final FileStatus fileStatus = getFileStatus(f);
-    if (fileStatus.isDirectory()) {
-      throw new FileNotFoundException("Can't open " + f + " because it is a directory");
-    }
-
-    return new FSDataInputStream(
-        new S3EInputStream(
-            this.futurePool,
-            this.prefetchBlockSize,
-            this.prefetchBlockCount,
-            this.bucket,
-            pathToKey(f),
-            fileStatus.getLen(),
-            this.s3,
-            statistics));
+    return open(f, Optional.empty(), Optional.empty());
   }
 
   /**
@@ -1554,11 +1530,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     LOG.debug("Opening '{}'", readContext);
 
-    return new FSDataInputStream(
-        new S3AInputStream(
-            readContext,
-            createObjectAttributes(fileStatus),
-            createInputStreamCallbacks(auditSpan)));
+    S3ObjectAttributes attrs = createObjectAttributes(fileStatus);
+    S3AInputStream.InputStreamCallbacks client = createInputStreamCallbacks(auditSpan);
+
+    if (this.prefetchEnabled) {
+      return new FSDataInputStream(new S3EInputStream(readContext, attrs, client));
+    } else {
+      return new FSDataInputStream(new S3AInputStream(readContext, attrs, client));
+    }
   }
 
   /**
@@ -1641,7 +1620,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         seekPolicy,
         changePolicy,
         readAheadRange,
-        auditSpan);
+        auditSpan,
+        futurePool,
+        prefetchBlockSize,
+        prefetchBlockCount);
   }
 
   /**

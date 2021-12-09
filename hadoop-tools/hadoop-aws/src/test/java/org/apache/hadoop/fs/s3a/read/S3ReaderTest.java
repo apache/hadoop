@@ -22,7 +22,6 @@ package org.apache.hadoop.fs.s3a.read;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.fs.common.ExceptionAsserts;
-
 import org.junit.Test;
 
 import java.nio.ByteBuffer;

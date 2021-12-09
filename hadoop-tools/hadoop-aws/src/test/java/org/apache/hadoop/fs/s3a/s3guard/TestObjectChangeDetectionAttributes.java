@@ -234,6 +234,7 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
     s3Object.setObjectMetadata(metadata);
     s3Object.setObjectContent(new ByteArrayInputStream(content));
     when(s3.getObject(argThat(correctGetObjectRequest(file, eTag, versionId))))
+    // when(s3.getObject(any()))
         .thenReturn(s3Object);
     FSDataInputStream inputStream = fs.open(path);
     byte[] readContent = IOUtils.toByteArray(inputStream);
@@ -250,20 +251,41 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
     assertEquals(versionId, fileStatus.getVersionId());
   }
 
+  static String toString(GetObjectRequest req) {
+    return String.format(
+        "req = (%s/%s: et = %s, !et = %s, v = %s)",
+        req.getBucketName(),
+        req.getKey(),
+        String.join("|", req.getMatchingETagConstraints()),
+        String.join("|", req.getNonmatchingETagConstraints()),
+        req.getVersionId()
+    );
+  }
+
   private Matcher<GetObjectRequest> correctGetObjectRequest(final String key,
       final String eTag, final String versionId) {
     return new BaseMatcher<GetObjectRequest>() {
       @Override
       public boolean matches(Object item) {
         if (item instanceof GetObjectRequest) {
+          if (item instanceof GetObjectRequest) {
+            // throw new RuntimeException("instanceof GetObjectRequest");
+          }
           GetObjectRequest getObjectRequest = (GetObjectRequest) item;
           if (getObjectRequest.getKey().equals(key)) {
+            if (getObjectRequest.getKey().equals(key)) {
+              // throw new RuntimeException("key matches");
+            }
             if (changeDetectionSource.equals(
                 CHANGE_DETECT_SOURCE_ETAG)) {
+              if (changeDetectionSource.equals(CHANGE_DETECT_SOURCE_ETAG)) {
+                // throw new RuntimeException("src = etags: " + TestObjectChangeDetectionAttributes.toString(getObjectRequest));
+              }
               return getObjectRequest.getMatchingETagConstraints()
                   .contains(eTag);
             } else if (changeDetectionSource.equals(
                 CHANGE_DETECT_SOURCE_VERSION_ID)) {
+              // throw new RuntimeException("src = version-id");
               return getObjectRequest.getVersionId().equals(versionId);
             }
           }

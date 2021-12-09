@@ -19,13 +19,14 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
+import com.twitter.util.FuturePool;
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BlockManager;
 import org.apache.hadoop.fs.common.BufferData;
 import org.apache.hadoop.fs.common.Validate;
-
-import com.amazonaws.services.s3.AmazonS3;
-import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,21 +46,20 @@ public class S3CachingInputStream extends S3InputStream {
   private BlockManager blockManager;
 
   public S3CachingInputStream(
-      FuturePool futurePool,
-      int bufferSize,
-      int numBlocksToPrefetch,
-      String bucket,
-      String key,
-      long fileSize,
-      AmazonS3 client) {
-    super(futurePool, bufferSize, bucket, key, fileSize, client);
+      S3AReadOpContext context,
+      S3ObjectAttributes s3Attributes,
+      S3AInputStream.InputStreamCallbacks client) {
+    super(context, s3Attributes, client);
 
-    this.numBlocksToPrefetch = numBlocksToPrefetch;
-    S3Reader reader = new S3Reader(this.getFile());
-    int bufferPoolSize = numBlocksToPrefetch + 1;
-    this.blockManager =
-        this.createBlockManager(futurePool, reader, this.getBlockData(), bufferPoolSize);
-    LOG.debug("Created caching input stream for {}/{} (size = {})", bucket, key, fileSize);
+    this.numBlocksToPrefetch = this.getContext().getPrefetchBlockCount();
+    int bufferPoolSize = this.numBlocksToPrefetch + 1;
+    this.blockManager = this.createBlockManager(
+        this.getContext().getFuturePool(),
+        this.getReader(),
+        this.getBlockData(),
+        bufferPoolSize);
+    int fileSize = (int) s3Attributes.getLen();
+    LOG.debug("Created caching input stream for {} (size = {})", this.getName(), fileSize);
   }
 
   /**

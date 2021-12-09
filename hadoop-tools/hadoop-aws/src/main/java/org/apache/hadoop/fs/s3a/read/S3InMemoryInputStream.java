@@ -20,9 +20,10 @@
 package org.apache.hadoop.fs.s3a.read;
 
 import org.apache.hadoop.fs.common.BufferData;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.twitter.util.FuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,13 +43,12 @@ public class S3InMemoryInputStream extends S3InputStream {
   private ByteBuffer buffer;
 
   public S3InMemoryInputStream(
-      FuturePool futurePool,
-      String bucket,
-      String key,
-      long fileSize,
-      AmazonS3 client) {
-    super(futurePool, (int) fileSize, bucket, key, fileSize, client);
-    this.buffer = ByteBuffer.allocate((int) fileSize);
+      S3AReadOpContext context,
+      S3ObjectAttributes s3Attributes,
+      S3AInputStream.InputStreamCallbacks client) {
+    super(context, s3Attributes, client);
+    int fileSize = (int) s3Attributes.getLen();
+    this.buffer = ByteBuffer.allocate(fileSize);
     LOG.debug("Created in-memory input stream for {} (size = {})", this.getName(), fileSize);
   }
 
@@ -64,10 +64,9 @@ public class S3InMemoryInputStream extends S3InputStream {
 
     if (!this.getFilePosition().isValid()) {
       try {
-        S3Reader reader = new S3Reader(this.getFile());
         this.buffer.clear();
-        int numBytesRead = reader.read(buffer, 0, this.buffer.capacity());
-        if (numBytesRead < 0) {
+        int numBytesRead = this.getReader().read(buffer, 0, this.buffer.capacity());
+        if (numBytesRead <= 0) {
           return false;
         }
         BufferData data = new BufferData(0, buffer);

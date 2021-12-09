@@ -19,10 +19,11 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.twitter.util.FuturePool;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,44 +41,30 @@ public class S3EInputStream extends FSInputStream {
   // Underlying input stream used for reading S3 file.
   private S3InputStream inputStream;
 
-  // S3 access stats.
-  private FileSystem.Statistics stats;
-
   /**
-   * Constructs an instance of {@link S3EInputStream}.
+   * Initializes a new instance of the {@code S3EInputStream} class.
    *
-   * @param futurePool Future pool used for async reading activity.
-   * @param prefetchBlockSize Size of each prefetched block.
-   * @param numBlocksToPrefetch Size of the prefetch queue (in number of blocks).
-   * @param bucket Name of S3 bucket from which key is opened.
-   * @param key Name of the S3 key to open.
-   * @param contentLength length of the file.
-   * @param client S3 access client.
-   * @param stats {@link FileSystem} stats related to read operation.
+   * @param context .
+   * @param s3Attributes .
+   * @param client .
    */
   public S3EInputStream(
-      FuturePool futurePool,
-      int prefetchBlockSize,
-      int numBlocksToPrefetch,
-      String bucket,
-      String key,
-      long contentLength,
-      AmazonS3 client,
-      FileSystem.Statistics stats) {
+      S3AReadOpContext context,
+      S3ObjectAttributes s3Attributes,
+      S3AInputStream.InputStreamCallbacks client) {
 
-    this.stats = stats;
-    if (contentLength <= prefetchBlockSize) {
-      this.inputStream = new S3InMemoryInputStream(futurePool, bucket, key, contentLength, client);
+    Validate.checkNotNull(context, "context");
+    Validate.checkNotNull(s3Attributes, "s3Attributes");
+    Validate.checkNotNullAndNotEmpty(s3Attributes.getBucket(), "s3Attributes.getBucket()");
+    Validate.checkNotNullAndNotEmpty(s3Attributes.getKey(), "s3Attributes.getKey()");
+    Validate.checkNotNegative(s3Attributes.getLen(), "s3Attributes.getLen()");
+    Validate.checkNotNull(client, "client");
+
+    long fileSize = s3Attributes.getLen();
+    if (fileSize <= context.getPrefetchBlockSize()) {
+      this.inputStream = new S3InMemoryInputStream(context, s3Attributes, client);
     } else {
-      this.inputStream =
-          new S3CachingInputStream(
-              futurePool,
-              prefetchBlockSize,
-              numBlocksToPrefetch,
-              bucket,
-              key,
-              contentLength,
-              client);
+      this.inputStream = new S3CachingInputStream(context, s3Attributes, client);
     }
   }
 
@@ -93,24 +80,12 @@ public class S3EInputStream extends FSInputStream {
 
   @Override
   public synchronized int read() throws IOException {
-    int byteRead = this.inputStream.read();
-    if (byteRead >= 0) {
-      if (stats != null) {
-        stats.incrementBytesRead(1);
-      }
-    }
-    return byteRead;
+    return this.inputStream.read();
   }
 
   @Override
   public synchronized int read(byte[] buf, int off, int len) throws IOException {
-    int bytesRead = this.inputStream.read(buf, off, len);
-    if (bytesRead > 0) {
-      if (stats != null) {
-        stats.incrementBytesRead(bytesRead);
-      }
-    }
-    return bytesRead;
+    return this.inputStream.read(buf, off, len);
   }
 
   @Override

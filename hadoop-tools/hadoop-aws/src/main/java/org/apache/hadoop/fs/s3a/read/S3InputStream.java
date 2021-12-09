@@ -19,12 +19,19 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
+import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.FilePosition;
 import org.apache.hadoop.fs.common.Validate;
-
-import com.amazonaws.services.s3.AmazonS3;
-import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,17 +42,17 @@ import java.nio.ByteBuffer;
 /**
  * Provides an {@link InputStream} that allows reading from an S3 file.
  */
-public abstract class S3InputStream extends InputStream {
+public abstract class S3InputStream
+    extends InputStream
+    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
+
   private static final Logger LOG = LoggerFactory.getLogger(S3InputStream.class);
-
-  // Asynchronous reads are performed using this pool.
-  private FuturePool futurePool;
-
-  // Size of the internal buffer.
-  private int bufferSize;
 
   // The S3 file read by this instance.
   private S3File s3File;
+
+  // Reading of S3 file takes place through this reader.
+  private S3Reader reader;
 
   // Name of this stream. Used only for logging.
   private final String name;
@@ -62,54 +69,70 @@ public abstract class S3InputStream extends InputStream {
   // Information about each block of the mapped S3 file.
   private BlockData blockData;
 
-  /**
-   * Initializes a new instance of the {@code S3InputStream} class.
-   *
-   * @param futurePool Future pool to use for async operations.
-   * @param bufferSize size of prefetch buffer.
-   * @param bucket S3 bucket name.
-   * @param key S3 path.
-   * @param fileSize size of the given file.
-   * @param client S3 client to use.
-   *
-   * @throws IllegalArgumentException if futurePool is null.
-   * @throws IllegalArgumentException if bufferSize is negative.
-   * @throws IllegalArgumentException if bufferSize is zero or negative.
-   * @throws IllegalArgumentException if bucket is either null or empty.
-   * @throws IllegalArgumentException if key is either null or empty.
-   * @throws IllegalArgumentException if client is null.
-   */
-  public S3InputStream(
-      FuturePool futurePool,
-      int bufferSize,
-      String bucket,
-      String key,
-      long fileSize,
-      AmazonS3 client) {
+  // Read-specific operation context.
+  private S3AReadOpContext context;
 
-    Validate.checkNotNull(futurePool, "futurePool");
-    if (fileSize == 0) {
-      Validate.checkNotNegative(bufferSize, "bufferSize");
-    } else {
-      Validate.checkPositiveInteger(bufferSize, "bufferSize");
-    }
-    Validate.checkNotNullAndNotEmpty(bucket, "bucket");
-    Validate.checkNotNullAndNotEmpty(key, "key");
+  // S3 object attributes.
+  private S3ObjectAttributes s3Attributes;
+
+  // Callbacks used for interacting with the underlying S3 client.
+  private S3AInputStream.InputStreamCallbacks client;
+
+  // Used for reporting input stream access statistics.
+  private final S3AInputStreamStatistics streamStatistics;
+
+  private S3AInputPolicy inputPolicy;
+  private final ChangeTracker changeTracker;
+  private final IOStatistics ioStatistics;
+
+  public S3InputStream(
+      S3AReadOpContext context,
+      S3ObjectAttributes s3Attributes,
+      S3AInputStream.InputStreamCallbacks client) {
+
+    Validate.checkNotNull(context, "context");
+    Validate.checkNotNull(s3Attributes, "s3Attributes");
     Validate.checkNotNull(client, "client");
 
-    this.futurePool = futurePool;
-    this.bufferSize = bufferSize;
-    this.blockData = new BlockData(fileSize, this.bufferSize);
+    this.context = context;
+    this.s3Attributes = s3Attributes;
+    this.client = client;
+    this.streamStatistics = context.getS3AStatisticsContext().newInputStreamStatistics();
+    this.ioStatistics = streamStatistics.getIOStatistics();
+    this.name = S3File.getPath(s3Attributes);
+    this.changeTracker = new ChangeTracker(
+        this.name,
+        context.getChangeDetectionPolicy(),
+        this.streamStatistics.getChangeTrackerStatistics(),
+        s3Attributes);
+
+    setInputPolicy(context.getInputPolicy());
+    setReadahead(context.getReadahead());
+
+    long fileSize = s3Attributes.getLen();
+    int bufferSize = context.getPrefetchBlockSize();
+
+    this.blockData = new BlockData(fileSize, bufferSize);
     this.fpos = new FilePosition(fileSize, bufferSize);
-    this.s3File = this.getS3File(client, bucket, key, fileSize);
-    this.name = this.s3File.getPath();
+    this.s3File = this.getS3File();
+    this.reader = new S3Reader(this.s3File);
+
     this.seekTargetPos = 0;
+
 
     LOG.info("reading: {} (size = {})", this.name, fileSize);
   }
 
-  public S3File getFile() {
+  protected S3File getFile() {
     return this.s3File;
+  }
+
+  protected S3Reader getReader() {
+    return this.reader;
+  }
+
+  protected S3ObjectAttributes getS3ObjectAttributes() {
+    return this.s3Attributes;
   }
 
   public FilePosition getFilePosition() {
@@ -134,6 +157,36 @@ public abstract class S3InputStream extends InputStream {
 
   protected BlockData getBlockData() {
     return this.blockData;
+  }
+
+  protected S3AReadOpContext getContext() {
+    return this.context;
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return this.ioStatistics;
+  }
+
+  @Override
+  public synchronized void setReadahead(Long readahead) {
+    // We support read head by prefetching therefore we ignore the supplied value.
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    return capability.equalsIgnoreCase(StreamCapabilities.IOSTATISTICS)
+        || capability.equalsIgnoreCase(StreamCapabilities.READAHEAD);
+  }
+
+  /**
+   * Set/update the input policy of the stream.
+   * This updates the stream statistics.
+   * @param inputPolicy new input policy.
+   */
+  private void setInputPolicy(S3AInputPolicy inputPolicy) {
+    this.inputPolicy = inputPolicy;
+    streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
 
   /**
@@ -188,7 +241,7 @@ public abstract class S3InputStream extends InputStream {
       return -1;
     }
 
-    this.fpos.incrementBytesRead(1);
+    this.incrementBytesRead(1);
 
     return this.fpos.buffer().get() & 0xff;
   }
@@ -215,7 +268,7 @@ public abstract class S3InputStream extends InputStream {
       ByteBuffer buffer = this.fpos.buffer();
       int bytesToRead = Math.min(numBytesRemaining, buffer.remaining());
       buffer.get(b, off, bytesToRead);
-      this.fpos.incrementBytesRead(bytesToRead);
+      this.incrementBytesRead(bytesToRead);
       off += bytesToRead;
       numBytesRemaining -= bytesToRead;
       numBytesRead += bytesToRead;
@@ -224,9 +277,25 @@ public abstract class S3InputStream extends InputStream {
     return numBytesRead;
   }
 
+  private void incrementBytesRead(int bytesRead) {
+    if (bytesRead > 0) {
+      this.streamStatistics.bytesRead(bytesRead);
+      if (this.getContext().getStats() != null) {
+        this.getContext().getStats().incrementBytesRead(bytesRead);
+      }
+      this.fpos.incrementBytesRead(bytesRead);
+    }
+  }
+
   // @VisibleForTesting
-  protected S3File getS3File(AmazonS3 client, String bucket, String key, long fileSize) {
-    return new S3File(client, bucket, key, fileSize);
+  protected S3File getS3File() {
+    return new S3File(
+        this.context,
+        this.s3Attributes,
+        this.client,
+        this.streamStatistics,
+        this.changeTracker
+    );
   }
 
   protected String getOffsetStr(long offset) {

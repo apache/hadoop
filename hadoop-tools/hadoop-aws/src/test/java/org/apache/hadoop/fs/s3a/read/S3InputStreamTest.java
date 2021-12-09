@@ -21,9 +21,12 @@ package org.apache.hadoop.fs.s3a.read;
 
 import static org.junit.Assert.*;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.twitter.util.ExecutorServiceFuturePool;
 import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.common.ExceptionAsserts;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -38,15 +41,39 @@ public class S3InputStreamTest {
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
   private final FuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
-  private final AmazonS3 client = TestS3File.createClient("bucket");
+  private final S3AInputStream.InputStreamCallbacks client = TestS3File.createClient("bucket");
+
+  @Test
+  public void testArgChecks() {
+    S3AReadOpContext readContext = Fakes.createReadContext(futurePool, "key", 10, 10, 1);
+    S3ObjectAttributes attrs = Fakes.createObjectAttributes("bucket", "key", 10);
+
+    // Should not throw.
+    new S3CachingInputStream(readContext, attrs, client);
+
+    ExceptionAsserts.assertThrows(
+        IllegalArgumentException.class,
+        "'context' must not be null",
+        () -> new S3CachingInputStream(null, attrs, client));
+
+    ExceptionAsserts.assertThrows(
+        IllegalArgumentException.class,
+        "'s3Attributes' must not be null",
+        () -> new S3CachingInputStream(readContext, null, client));
+
+    ExceptionAsserts.assertThrows(
+        IllegalArgumentException.class,
+        "'client' must not be null",
+        () -> new S3CachingInputStream(readContext, attrs, null));
+  }
 
   @Test
   public void testRead0SizedFile() throws Exception {
     S3InputStream inputStream =
-        new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", 0, client);
+        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 0);
     testRead0SizedFileHelper(inputStream, 9);
 
-    inputStream = new Fakes.TestS3CachingInputStream(futurePool, 5, 2, "bucket", "key", 0, client);
+    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 0, 5, 2);
     testRead0SizedFileHelper(inputStream, 5);
   }
 
@@ -64,11 +91,11 @@ public class S3InputStreamTest {
   @Test
   public void testRead() throws Exception {
     S3InputStream inputStream =
-        new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", FILE_SIZE, client);
+        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", FILE_SIZE);
     testReadHelper(inputStream, FILE_SIZE);
 
     inputStream =
-        new Fakes.TestS3CachingInputStream(futurePool, 5, 2, "bucket", "key", FILE_SIZE, client);
+        Fakes.createS3CachingInputStream(futurePool, "bucket", "key", FILE_SIZE, 5, 2);
     testReadHelper(inputStream, 5);
   }
 
@@ -107,10 +134,10 @@ public class S3InputStreamTest {
   @Test
   public void testSeek() throws Exception {
     S3InputStream inputStream;
-    inputStream = new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", 9, client);
+    inputStream = Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
     testSeekHelper(inputStream, 9, 9);
 
-    inputStream = new Fakes.TestS3CachingInputStream(futurePool, 5, 1, "bucket", "key", 9, client);
+    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
     testSeekHelper(inputStream, 5, 9);
   }
 
@@ -137,10 +164,10 @@ public class S3InputStreamTest {
   @Test
   public void testRandomSeek() throws Exception {
     S3InputStream inputStream;
-    inputStream = new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", 9, client);
+    inputStream = Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
     testRandomSeekHelper(inputStream, 9, 9);
 
-    inputStream = new Fakes.TestS3CachingInputStream(futurePool, 5, 1, "bucket", "key", 9, client);
+    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
     testRandomSeekHelper(inputStream, 5, 9);
   }
 
@@ -173,11 +200,11 @@ public class S3InputStreamTest {
   @Test
   public void testClose() throws Exception {
     S3InputStream inputStream =
-        new Fakes.TestS3InMemoryInputStream(futurePool, "bucket", "key", 9, client);
+        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
     testCloseHelper(inputStream, 9);
 
     inputStream =
-        new Fakes.TestS3CachingInputStream(futurePool, 5, 3, "bucket", "key", 9, client);
+        Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 3);
     testCloseHelper(inputStream, 5);
   }
 

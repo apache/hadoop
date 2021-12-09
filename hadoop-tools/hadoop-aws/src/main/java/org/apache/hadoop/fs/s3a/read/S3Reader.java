@@ -20,6 +20,7 @@
 package org.apache.hadoop.fs.s3a.read;
 
 import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.s3a.Invoker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +28,7 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 
 /**
@@ -97,28 +99,32 @@ public class S3Reader implements Closeable {
 
   private int readOneBlockWithRetries(ByteBuffer buffer, long offset, int size)
       throws IOException {
-    S3AccessRetryer retryer = new S3AccessRetryer();
-    while (true) {
-      if (this.closed) {
-        return -1;
-      }
 
-      try {
-        buffer.clear();
-        readOneBlock(buffer, offset, size);
-        int numBytesRead = buffer.position();
-        buffer.limit(numBytesRead);
-        return numBytesRead;
-      } catch (Exception e) {
-        if (!retryer.retry(e)) {
-          if (e instanceof EOFException) {
+    this.s3File.getStatistics().readOperationStarted(offset, size);
+    Invoker invoker = this.s3File.getReadInvoker();
+
+    invoker.retry(
+        "read", this.s3File.getPath(), true,
+        () -> {
+          try {
+            this.readOneBlock(buffer, offset, size);
+          } catch (EOFException e) {
+            // the base implementation swallows EOFs.
             return -1;
-          } else {
+          } catch (SocketTimeoutException e) {
+            this.s3File.getStatistics().readException();
+            throw e;
+          } catch (IOException e) {
+            this.s3File.getStatistics().readException();
             throw e;
           }
-        }
-      }
-    }
+          return 0;
+        });
+
+    int numBytesRead = buffer.position();
+    buffer.limit(numBytesRead);
+    this.s3File.getStatistics().readOperationCompleted(size, numBytesRead);
+    return numBytesRead;
   }
 
   private static final int READ_BUFFER_SIZE = 64 * 1024;

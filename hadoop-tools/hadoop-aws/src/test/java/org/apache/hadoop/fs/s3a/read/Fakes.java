@@ -19,21 +19,42 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
-import org.apache.hadoop.fs.common.BlockData;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.common.BlockCache;
+import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.SingleFilePerBlockCache;
 import org.apache.hadoop.fs.common.Validate;
+import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.statistics.impl.CountingChangeTracker;
+import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.twitter.util.FuturePool;
-
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Provides 'fake' implementations of S3InputStream variants.
@@ -46,21 +67,204 @@ import java.util.concurrent.ConcurrentHashMap;
  * implementations without accessing external resources. It also helps
  * avoid test flakiness introduced by external factors.
  */
-public class Fakes {
+public final class Fakes {
+
+  private Fakes() {}
+
+  public static final String E_TAG = "eTag";
+  public static final String OWNER = "owner";
+  public static final String VERSION_ID = "v1";
+  public static final long MODIFICATION_TIME = 0L;
+  public static final ChangeDetectionPolicy CHANGE_POLICY =
+      ChangeDetectionPolicy.createPolicy(
+          ChangeDetectionPolicy.Mode.None,
+          ChangeDetectionPolicy.Source.None,
+          false);
+
+  public static S3AFileStatus createFileStatus(String key, long fileSize) {
+    org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(key);
+    long blockSize = fileSize;
+    return new S3AFileStatus(
+        fileSize, MODIFICATION_TIME, path, blockSize, OWNER, E_TAG, VERSION_ID);
+  }
+
+  public static S3ObjectAttributes createObjectAttributes(
+      String bucket,
+      String key,
+      long fileSize) {
+
+    org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(key);
+    String encryptionKey = "";
+
+    return new S3ObjectAttributes(
+        bucket,
+        path,
+        key,
+        S3AEncryptionMethods.NONE,
+        encryptionKey,
+        E_TAG,
+        VERSION_ID,
+        fileSize);
+  }
+
+  public static S3AReadOpContext createReadContext(
+      FuturePool futurePool,
+      String key,
+      int fileSize,
+      int prefetchBlockSize,
+      int prefetchBlockCount) {
+
+    S3AFileStatus fileStatus = createFileStatus(key, fileSize);
+    org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(key);
+    FileSystem.Statistics statistics = new FileSystem.Statistics("s3a");
+    S3AStatisticsContext statisticsContext = new EmptyS3AStatisticsContext();
+    RetryPolicy retryPolicy =
+        RetryPolicies.retryUpToMaximumCountWithFixedSleep(3, 10, TimeUnit.MILLISECONDS);
+
+    return new S3AReadOpContext(
+        path,
+        false, // hasMetadataStore()
+        new Invoker(retryPolicy, Invoker.LOG_EVENT),
+        null,                   // s3guardInvoker
+        statistics,
+        statisticsContext,
+        fileStatus,
+        S3AInputPolicy.Random,  // seekPolicy
+        CHANGE_POLICY,
+        1L,                     // readAheadRange
+        NoopSpan.INSTANCE,      // auditSpan
+        futurePool,
+        prefetchBlockSize,
+        prefetchBlockCount);
+  }
+
+  public static URI createUri(String bucket, String key) {
+    return URI.create(String.format("s3a://%s/%s", bucket, key));
+  }
+
+  public static ChangeTracker createChangeTracker(
+      String bucket,
+      String key,
+      long fileSize) {
+
+    return new ChangeTracker(
+        createUri(bucket, key).toString(),
+        CHANGE_POLICY,
+        new CountingChangeTracker(),
+        createObjectAttributes(bucket, key, fileSize));
+  }
+
+  public static S3ObjectInputStream createS3ObjectInputStream(byte[] buffer) {
+    return new S3ObjectInputStream(new ByteArrayInputStream(buffer), null);
+  }
+
+  public static S3AInputStream.InputStreamCallbacks createInputStreamCallbacks(
+      String bucket,
+      String key) {
+
+    S3Object object = new S3Object() {
+        @Override
+        public S3ObjectInputStream getObjectContent() {
+          return createS3ObjectInputStream(new byte[8]);
+        }
+
+        @Override
+        public ObjectMetadata getObjectMetadata() {
+          ObjectMetadata metadata = new ObjectMetadata();
+          metadata.setHeader("ETag", E_TAG);
+          return metadata;
+        }
+      };
+
+    return new S3AInputStream.InputStreamCallbacks() {
+      @Override
+      public S3Object getObject(GetObjectRequest request) {
+        return object;
+      }
+
+      @Override
+      public GetObjectRequest newGetRequest(String key) {
+        return new GetObjectRequest(bucket, key);
+      }
+
+      @Override
+      public void close() {
+      }
+    };
+  }
+
+
+  public static S3InputStream createInputStream(
+      Class<? extends S3InputStream> clazz,
+      FuturePool futurePool,
+      String bucket,
+      String key,
+      int fileSize,
+      int prefetchBlockSize,
+      int prefetchBlockCount) {
+
+    org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(key);
+
+    S3AFileStatus fileStatus = createFileStatus(key, fileSize);
+    S3ObjectAttributes s3ObjectAttributes = createObjectAttributes(bucket, key, fileSize);
+    S3AReadOpContext s3AReadOpContext = createReadContext(
+        futurePool,
+        key,
+        fileSize,
+        prefetchBlockSize,
+        prefetchBlockCount);
+
+    S3AInputStream.InputStreamCallbacks callbacks = createInputStreamCallbacks(bucket, key);
+
+    if (clazz == TestS3InMemoryInputStream.class) {
+      return new TestS3InMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks);
+    } else if (clazz == TestS3CachingInputStream.class) {
+      return new TestS3CachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks);
+    }
+
+    throw new RuntimeException("Unsupported class: " + clazz);
+  }
+
+  public static TestS3InMemoryInputStream createS3InMemoryInputStream(
+      FuturePool futurePool,
+      String bucket,
+      String key,
+      int fileSize) {
+
+    return (TestS3InMemoryInputStream) createInputStream(
+        TestS3InMemoryInputStream.class, futurePool, bucket, key, fileSize, 1, 1);
+  }
+
+  public static TestS3CachingInputStream createS3CachingInputStream(
+      FuturePool futurePool,
+      String bucket,
+      String key,
+      int fileSize,
+      int prefetchBlockSize,
+      int prefetchBlockCount) {
+
+    return (TestS3CachingInputStream) createInputStream(
+        TestS3CachingInputStream.class,
+        futurePool,
+        bucket,
+        key,
+        fileSize,
+        prefetchBlockSize,
+        prefetchBlockCount);
+  }
+
   public static class TestS3InMemoryInputStream extends S3InMemoryInputStream {
     public TestS3InMemoryInputStream(
-        FuturePool futurePool,
-        String bucket,
-        String key,
-        long fileSize,
-        AmazonS3 client) {
-      super(futurePool, bucket, key, fileSize, client);
+        S3AReadOpContext context,
+        S3ObjectAttributes s3Attributes,
+        S3AInputStream.InputStreamCallbacks client) {
+      super(context, s3Attributes, client);
     }
 
     @Override
-    protected S3File getS3File(AmazonS3 client, String bucket, String key, long fileSize) {
+    protected S3File getS3File() {
       randomDelay(200);
-      return new TestS3File((int) fileSize, false);
+      return new TestS3File((int) this.getS3ObjectAttributes().getLen(), false);
     }
   }
 
@@ -142,19 +346,16 @@ public class Fakes {
 
   public static class TestS3CachingInputStream extends S3CachingInputStream {
     public TestS3CachingInputStream(
-        FuturePool futurePool,
-        int bufferSize,
-        int numBlocksToPrefetch,
-        String bucket,
-        String key,
-        long fileSize,
-        AmazonS3 client) {
-      super(futurePool, bufferSize, numBlocksToPrefetch, bucket, key, fileSize, client);
+        S3AReadOpContext context,
+        S3ObjectAttributes s3Attributes,
+        S3AInputStream.InputStreamCallbacks client) {
+      super(context, s3Attributes, client);
     }
 
     @Override
-    protected S3File getS3File(AmazonS3 client, String bucket, String key, long fileSize) {
-      return new TestS3File((int) fileSize, false);
+    protected S3File getS3File() {
+      randomDelay(200);
+      return new TestS3File((int) this.getS3ObjectAttributes().getLen(), false);
     }
 
     @Override
