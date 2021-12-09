@@ -34,6 +34,8 @@
     <release-year>2021</release-year>
 
     <failIfNoTests>false</failIfNoTests>
+    <!--Whether to proceed to next module if any test failures exist-->
+    <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     <jetty.version>6.1.26</jetty.version>
     <test.exclude>_</test.exclude>
@@ -1614,6 +1616,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>${maven-surefire-plugin.argLine}</argLine>
