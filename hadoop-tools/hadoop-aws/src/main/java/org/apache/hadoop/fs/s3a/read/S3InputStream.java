@@ -118,9 +118,6 @@ public abstract class S3InputStream
     this.reader = new S3Reader(this.s3File);
 
     this.seekTargetPos = 0;
-
-
-    LOG.info("reading: {} (size = {})", this.name, fileSize);
   }
 
   protected S3File getFile() {
@@ -168,9 +165,16 @@ public abstract class S3InputStream
     return this.ioStatistics;
   }
 
+  public S3AInputStreamStatistics getS3AStreamStatistics() {
+    return this.streamStatistics;
+  }
+
   @Override
   public synchronized void setReadahead(Long readahead) {
     // We support read head by prefetching therefore we ignore the supplied value.
+    if (readahead != null) {
+      Validate.checkNotNegative(readahead, "readahead");
+    }
   }
 
   @Override
@@ -193,7 +197,7 @@ public abstract class S3InputStream
    * Returns the number of bytes that can read from this stream without blocking.
    */
   @Override
-  public int available() {
+  public int available() throws IOException {
     if (!ensureCurrentBuffer()) {
       return 0;
     }
@@ -233,10 +237,10 @@ public abstract class S3InputStream
    *
    * @return true if at least one such buffer is available for reading, false otherwise.
    */
-  protected abstract boolean ensureCurrentBuffer();
+  protected abstract boolean ensureCurrentBuffer() throws IOException;
 
   @Override
-  public int read() {
+  public int read() throws IOException {
     if (!ensureCurrentBuffer()) {
       return -1;
     }
@@ -247,12 +251,12 @@ public abstract class S3InputStream
   }
 
   @Override
-  public int read(byte[] b) {
+  public int read(byte[] b) throws IOException {
     return this.read(b, 0, b.length);
   }
 
   @Override
-  public int read(byte[] b, int off, int len) {
+  public int read(byte[] b, int off, int len) throws IOException {
     if (!ensureCurrentBuffer()) {
       return -1;
     }
@@ -318,6 +322,12 @@ public abstract class S3InputStream
     this.blockData = null;
     this.s3File = null;
     this.fpos.invalidate();
+    try {
+      this.client.close();
+    } finally {
+      this.streamStatistics.close();
+    }
+    this.client = null;
   }
 
   @Override

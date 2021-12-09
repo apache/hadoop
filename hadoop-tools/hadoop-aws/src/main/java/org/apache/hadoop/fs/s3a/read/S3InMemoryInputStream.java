@@ -53,7 +53,7 @@ public class S3InMemoryInputStream extends S3InputStream {
   }
 
   @Override
-  protected boolean ensureCurrentBuffer() {
+  protected boolean ensureCurrentBuffer() throws IOException {
     if (this.isClosed()) {
       return false;
     }
@@ -63,18 +63,13 @@ public class S3InMemoryInputStream extends S3InputStream {
     }
 
     if (!this.getFilePosition().isValid()) {
-      try {
-        this.buffer.clear();
-        int numBytesRead = this.getReader().read(buffer, 0, this.buffer.capacity());
-        if (numBytesRead <= 0) {
-          return false;
-        }
-        BufferData data = new BufferData(0, buffer);
-        this.getFilePosition().setData(data, 0, this.getSeekTargetPos());
-      } catch (IOException e) {
-        LOG.error("ensureCurrentBuffer", e);
-        throw new RuntimeException(e);
+      this.buffer.clear();
+      int numBytesRead = this.getReader().read(buffer, 0, this.buffer.capacity());
+      if (numBytesRead <= 0) {
+        return false;
       }
+      BufferData data = new BufferData(0, buffer);
+      this.getFilePosition().setData(data, 0, this.getSeekTargetPos());
     }
 
     return this.getFilePosition().buffer().hasRemaining();

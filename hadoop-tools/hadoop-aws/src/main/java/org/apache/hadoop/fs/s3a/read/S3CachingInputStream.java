@@ -94,7 +94,7 @@ public class S3CachingInputStream extends S3InputStream {
   }
 
   @Override
-  protected boolean ensureCurrentBuffer() {
+  protected boolean ensureCurrentBuffer() throws IOException {
     if (this.isClosed()) {
       return false;
     }
@@ -139,18 +139,9 @@ public class S3CachingInputStream extends S3InputStream {
       }
     }
 
-    BufferData data = null;
-
-    try {
-      data = this.blockManager.get(toBlockNumber);
-      this.getFilePosition().setData(data, startOffset, readPos);
-      return true;
-    } catch (Exception e) {
-      LOG.error("prefetchCount = {}", prefetchCount);
-      LOG.error("data = {}", data);
-      LOG.error("Error fetching buffer", e);
-      throw new RuntimeException(e);
-    }
+    BufferData data = this.blockManager.get(toBlockNumber);
+    this.getFilePosition().setData(data, startOffset, readPos);
+    return true;
   }
 
   @Override

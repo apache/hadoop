@@ -72,29 +72,20 @@ public class S3Reader implements Closeable {
    */
   public int read(ByteBuffer buffer, long offset, int size) throws IOException {
     Validate.checkNotNull(buffer, "buffer");
-    Validate.checkWithinRange(offset, "offset", 0, this.getFileSize());
+    Validate.checkWithinRange(offset, "offset", 0, this.s3File.size());
     Validate.checkPositiveInteger(size, "size");
 
     if (this.closed) {
       return -1;
     }
 
-    int reqSize = (int) Math.min(size, this.getFileSize() - offset);
+    int reqSize = (int) Math.min(size, this.s3File.size() - offset);
     return readOneBlockWithRetries(buffer, offset, reqSize);
   }
 
   @Override
   public void close() {
     this.closed = true;
-  }
-
-  private long getFileSize() {
-    try {
-      return this.s3File.size();
-    } catch (IOException e) {
-      LOG.error("Error getting file size", e);
-      throw new RuntimeException(e);
-    }
   }
 
   private int readOneBlockWithRetries(ByteBuffer buffer, long offset, int size)

@@ -19,11 +19,17 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +41,9 @@ import java.io.IOException;
  * This implementation provides improved read throughput by asynchronously prefetching
  * blocks of configurable size from the underlying S3 file.
  */
-public class S3EInputStream extends FSInputStream {
+public class S3EInputStream
+    extends FSInputStream
+    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(S3EInputStream.class);
 
   // Underlying input stream used for reading S3 file.
@@ -100,6 +108,27 @@ public class S3EInputStream extends FSInputStream {
   @Override
   public synchronized void seek(long pos) throws IOException {
     this.inputStream.seek(pos);
+  }
+
+  @Override
+  public synchronized void setReadahead(Long readahead) {
+    this.inputStream.setReadahead(readahead);
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    return this.inputStream.hasCapability(capability);
+  }
+
+  /**
+   * Access the input stream statistics.
+   * This is for internal testing and may be removed without warning.
+   * @return the statistics for this input stream
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public S3AInputStreamStatistics getS3AStreamStatistics() {
+    return this.inputStream.getS3AStreamStatistics();
   }
 
   // Unsupported functions.

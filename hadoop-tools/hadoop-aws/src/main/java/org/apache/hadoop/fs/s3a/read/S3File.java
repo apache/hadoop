@@ -126,9 +126,8 @@ public class S3File implements Closeable {
    * Its value is cached once obtained from AWS.
    *
    * @return the size of this file.
-   * @throws IOException if there is an error obtaining file size.
    */
-  public long size() throws IOException {
+  public long size() {
     return this.s3Attributes.getLen();
   }
 
