@@ -819,23 +819,23 @@ public class ResourceUtils {
     return res;
   }
 
-  public static Resource multiply(Resource lhs, float rhs) {
+  public static Resource multiply(Resource resource, float multiplier) {
     Resource newResource = Resource.newInstance(0, 0);
 
-    for (ResourceInformation resourceInformation : lhs.getResources()) {
+    for (ResourceInformation resourceInformation : resource.getResources()) {
       newResource.setResourceValue(resourceInformation.getName(),
-          (long) Math.floor(resourceInformation.getValue() * rhs));
+          (long) Math.floor(resourceInformation.getValue() * multiplier));
     }
 
     return newResource;
   }
 
-  public static Resource multiplyRound(Resource lhs, float rhs) {
+  public static Resource multiplyRound(Resource resource, float multiplier) {
     Resource newResource = Resource.newInstance(0, 0);
 
-    for (ResourceInformation resourceInformation : lhs.getResources()) {
+    for (ResourceInformation resourceInformation : resource.getResources()) {
       newResource.setResourceValue(resourceInformation.getName(),
-          Math.round(resourceInformation.getValue() * rhs));
+          Math.round(resourceInformation.getValue() * multiplier));
     }
 
     return newResource;

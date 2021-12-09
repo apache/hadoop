@@ -40,28 +40,123 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.T
 public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCalculationTestBase {
   private static final long MEMORY = 16384;
   private static final long VCORES = 16;
+  private static final String C_VECTOR_WITH_WARNING = createCapacityVector(weight(3), absolute(VCORES * 0.25));
+  private static final String A11_VECTOR_WITH_WARNING = createCapacityVector(weight(1), absolute(VCORES * 0.25));
+  private static final String A1_VECTOR_WITH_WARNING = createCapacityVector(absolute(2048),
+      absolute(VCORES * 0.25));
+  private static final String C_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(weight(3), absolute(VCORES * 0.25));
+  private static final String A1_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(weight(1), absolute(VCORES * 0.25));
+
+  private static final Resource A12_EXPECTED_MAX_RESOURCE_MAX_WARNINGS = createResource(MEMORY * 0.5, VCORES);
+  private static final Resource A11_EXPECTED_MAX_RESOURCE_MAX_WARNINGS = createResource(MEMORY * 0.5, 0.1 * VCORES);
+  private static final Resource A11_EXPECTED_MIN_RESOURCE_MAX_WARNINGS = createResource(0.5 * 0.5 * MEMORY, 0.1 * VCORES);
+  private static final Resource A12_EXPECTED_MIN_RESOURCE_MAX_WARNINGS = createResource(0.5 * 0.5 * MEMORY, 0);
+  private static final String A11_MAX_VECTOR_MAX_WARNINGS = createCapacityVector(absolute(MEMORY),
+      percentage(10));
+  private static final String A1_MAX_VECTOR_MAX_WARNINGS = createCapacityVector(absolute(MEMORY * 0.5),
+      percentage(100));
 
   private static final Resource UPDATE_RESOURCE = Resource.newInstance(16384, 16);
   private static final Resource ZERO_RESOURCE = Resource.newInstance(0, 0);
 
-  public static final Resource A_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(2486, 9);
-  public static final Resource A1_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(621, 4);
-  public static final Resource A11_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(217, 1);
-  public static final Resource A12_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(403, 3);
-  public static final Resource A2_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(1865, 5);
-  public static final Resource B_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(8095, 3);
-  public static final Resource B1_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(8095, 3);
-  public static final Resource C_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(5803, 4);
+  private static final Resource A_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(2486, 9);
+  private static final Resource A1_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(621, 4);
+  private static final Resource A11_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(217, 1);
+  private static final Resource A12_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(403, 3);
+  private static final Resource A2_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(1865, 5);
+  private static final Resource B_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(8095, 3);
+  private static final Resource B1_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(8095, 3);
+  private static final Resource C_COMPLEX_NO_REMAINING_RESOURCE = Resource.newInstance(5803, 4);
 
-  public static final Resource B_WARNING_RESOURCE = Resource.newInstance(8096, 4);
-  public static final Resource B1_WARNING_RESOURCE = Resource.newInstance(8096, 3);
-  public static final Resource A_WARNING_RESOURCE = Resource.newInstance(8288, 12);
-  public static final Resource A1_WARNING_RESOURCE = Resource.newInstance(2048, 4);
-  public static final Resource A2_WARNING_RESOURCE = Resource.newInstance(2048, 8);
-  public static final Resource A12_WARNING_RESOURCE = Resource.newInstance(2048, 4);
-  public static final String X_LABEL = "x";
-  public static final String Y_LABEL = "y";
-  public static final String Z_LABEL = "z";
+  private static final Resource B_WARNING_RESOURCE = Resource.newInstance(8096, 4);
+  private static final Resource B1_WARNING_RESOURCE = Resource.newInstance(8096, 3);
+  private static final Resource A_WARNING_RESOURCE = Resource.newInstance(8288, 12);
+  private static final Resource A1_WARNING_RESOURCE = Resource.newInstance(2048, 4);
+  private static final Resource A2_WARNING_RESOURCE = Resource.newInstance(2048, 8);
+  private static final Resource A12_WARNING_RESOURCE = Resource.newInstance(2048, 4);
+
+  private static final String A_VECTOR_ZERO_RESOURCE = createCapacityVector(percentage(100), weight(6));
+  private static final String B_VECTOR_ZERO_RESOURCE = createCapacityVector(absolute(MEMORY),
+      absolute(VCORES * 0.5));
+
+  private static final String A_MAX_VECTOR_DIFFERENT_MIN_MAX = createCapacityVector(absolute(MEMORY),
+      percentage(80));
+  private static final Resource B_EXPECTED_MAX_RESOURCE_DIFFERENT_MIN_MAX = Resource.newInstance(MEMORY, (int) (VCORES * 0.5));
+  private static final Resource A_EXPECTED_MAX_RESOURCE_DIFFERENT_MIN_MAX = Resource.newInstance(MEMORY, (int) (VCORES * 0.8));
+  private static final String B_MAX_VECTOR_DIFFERENT_MIN_MAX = createCapacityVector(absolute(MEMORY),
+      absolute(VCORES * 0.5));
+  private static final String A_MIN_VECTOR_DIFFERENT_MIN_MAX = createCapacityVector(percentage(50),
+      absolute(VCORES * 0.5));
+  private static final String B_MIN_VECTOR_DIFFERENT_MIN_MAX = createCapacityVector(weight(6), percentage(100));
+  private static final String B_INVALID_MAX_VECTOR = createCapacityVector(absolute(MEMORY), weight(10));
+
+  private static final String X_LABEL = "x";
+  private static final String Y_LABEL = "y";
+  private static final String Z_LABEL = "z";
+
+  private static final String H1_NODE = "h1";
+  private static final String H2_NODE = "h2";
+  private static final String H3_NODE = "h3";
+  private static final String H4_NODE = "h4";
+  private static final String H5_NODE = "h5";
+  private static final int H1_MEMORY = 60 * GB;
+  private static final int H1_VCORES = 60;
+  private static final int H2_MEMORY = 10 * GB;
+  private static final int H2_VCORES = 25;
+  private static final int H3_VCORES = 35;
+  private static final int H3_MEMORY = 10 * GB;
+  private static final int H4_MEMORY = 10 * GB;
+  private static final int H4_VCORES = 15;
+
+  private static final String A11_MIN_VECTOR_MAX_WARNINGS = createCapacityVector(percentage(50), percentage(100));
+  private static final String A12_MIN_VECTOR_MAX_WARNINGS = createCapacityVector(percentage(50), percentage(0));
+
+  private static final Resource A_EXPECTED_MIN_RESOURCE_NO_LABEL = createResource(2048, 8);
+  private static final Resource A1_EXPECTED_MIN_RESOURCE_NO_LABEL = createResource(1024, 5);
+  private static final Resource A2_EXPECTED_MIN_RESOURCE_NO_LABEL = createResource(1024, 2);
+  private static final Resource B_EXPECTED_MIN_RESOURCE_NO_LABEL = createResource(3072, 8);
+  private static final Resource A_EXPECTED_MIN_RESOURCE_X_LABEL = createResource(30720, 30);
+  private static final Resource A1_EXPECTED_MIN_RESOURCE_X_LABEL = createResource(20480, 0);
+  private static final Resource A2_EXPECTED_MIN_RESOURCE_X_LABEL = createResource(10240, 30);
+  private static final Resource B_EXPECTED_MIN_RESOURCE_X_LABEL = createResource(30720, 30);
+  private static final Resource A_EXPECTED_MIN_RESOURCE_Y_LABEL = createResource(8096, 42);
+  private static final Resource A1_EXPECTED_MIN_RESOURCE_Y_LABEL = createResource(6186, 21);
+  private static final Resource A2_EXPECTED_MIN_RESOURCE_Y_LABEL = createResource(1910, 21);
+  private static final Resource B_EXPECTED_MIN_RESOURCE_Y_LABEL = createResource(12384, 18);
+  private static final Resource A_EXPECTED_MIN_RESOURCE_Z_LABEL = createResource(7168, 11);
+  private static final Resource A1_EXPECTED_MIN_RESOURCE_Z_LABEL = createResource(6451, 4);
+  private static final Resource A2_EXPECTED_MIN_RESOURCE_Z_LABEL = createResource(716, 7);
+  private static final Resource B_EXPECTED_MIN_RESOURCE_Z_LABEL = createResource(3072, 4);
+  private static final Resource EMPTY_LABEL_RESOURCE = Resource.newInstance(5 * GB, 16);
+
+  private static final String A_VECTOR_NO_LABEL = createCapacityVector(absolute(2048), percentage(50));
+  private static final String A1_VECTOR_NO_LABEL = createCapacityVector(absolute(1024), percentage(70));
+  private static final String A2_VECTOR_NO_LABEL = createCapacityVector(absolute(1024), percentage(30));
+  private static final String B_VECTOR_NO_LABEL = createCapacityVector(weight(3), percentage(50));
+  private static final String A_VECTOR_X_LABEL = createCapacityVector(percentage(50), weight(3));
+  private static final String A1_VECTOR_X_LABEL = createCapacityVector(absolute(20480), percentage(10));
+  private static final String A2_VECTOR_X_LABEL = createCapacityVector(absolute(10240), absolute(30));
+  private static final String B_VECTOR_X_LABEL = createCapacityVector(percentage(50), percentage(50));
+  private static final String A_VECTOR_Y_LABEL = createCapacityVector(absolute(8096), weight(1));
+  private static final String A1_VECTOR_Y_LABEL = createCapacityVector(absolute(6186), weight(3));
+  private static final String A2_VECTOR_Y_LABEL = createCapacityVector(weight(3), weight(3));
+  private static final String B_VECTOR_Y_LABEL = createCapacityVector(percentage(100), percentage(30));
+  private static final String A_VECTOR_Z_LABEL = createCapacityVector(percentage(70), absolute(11));
+  private static final String A1_VECTOR_Z_LABEL = createCapacityVector(percentage(90), percentage(40));
+  private static final String A2_VECTOR_Z_LABEL = createCapacityVector(percentage(10), weight(4));
+  private static final String B_VECTOR_Z_LABEL = createCapacityVector(percentage(30), absolute(4));
+
+  private static final String A_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(percentage(30), weight(6));
+  private static final String A11_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(percentage(35), percentage(25));
+  private static final String A12_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(percentage(65), percentage(75));
+  private static final String A2_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(weight(3), percentage(100));
+  private static final String B_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(absolute(8095), percentage(30));
+  private static final String B1_VECTOR_NO_REMAINING_RESOURCE = createCapacityVector(weight(5), absolute(3));
+  private static final String A_VECTOR_WITH_WARNINGS = createCapacityVector(percentage(100), weight(6));
+  private static final String A12_VECTOR_WITH_WARNING = createCapacityVector(percentage(100), percentage(100));
+  private static final String A2_VECTOR_WITH_WARNING = createCapacityVector(absolute(2048), percentage(100));
+  private static final String B_VECTOR_WITH_WARNING = createCapacityVector(absolute(8096), percentage(30));
+  private static final String B1_VECTOR_WITH_WARNING = createCapacityVector(absolute(10256), absolute(3));
 
   @Override
   public void setUp() throws Exception {
@@ -69,6 +164,20 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     csConf.setLegacyQueueModeEnabled(false);
   }
 
+  /**
+   * Tests a complex scenario in which no warning or remaining resource is generated during the
+   * update phase (except for rounding leftovers, eg. 1 memory or 1 vcores).
+   *
+   *          -root-
+   *        /    \  \
+   *       A      B  C
+   *      / \     |
+   *     A1  A2   B1
+   *   /  \
+   *  A11 A12
+   *
+   * @throws IOException if update is failed
+   */
   @Test
   public void testComplexHierarchyWithoutRemainingResource() throws IOException {
     setupQueueHierarchyWithoutRemainingResource();
@@ -103,6 +212,20 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     update(assertionBuilder, UPDATE_RESOURCE);
   }
 
+  /**
+   * Tests a complex scenario in which several validation warnings are generated during the update
+   * phase.
+   *
+   *          -root-
+   *        /    \  \
+   *       A      B  C
+   *      / \     |
+   *     A1  A2   B1
+   *   /  \
+   *  A11 A12
+   *
+   * @throws IOException if update is failed
+   */
   @Test
   public void testComplexHierarchyWithWarnings() throws IOException {
     setupQueueHierarchyWithWarnings();
@@ -151,9 +274,8 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
   @Test
   public void testZeroResourceIfNoMemory() throws IOException {
-    csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(100), weight(6)));
-    csConf.setCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY),
-        absolute(VCORES * 0.5)));
+    csConf.setCapacityVector(A, NO_LABEL, A_VECTOR_ZERO_RESOURCE);
+    csConf.setCapacityVector(B, NO_LABEL, B_VECTOR_ZERO_RESOURCE);
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A)
@@ -173,28 +295,25 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
   @Test
   public void testDifferentMinimumAndMaximumCapacityTypes() throws IOException {
-    csConf.setCapacityVector(A, "", createMemoryVcoresVector(percentage(50),
-        absolute(VCORES * 0.5)));
-    csConf.setMaximumCapacityVector(A, "", createMemoryVcoresVector(absolute(MEMORY),
-        percentage(80)));
-    csConf.setCapacityVector(B, "", createMemoryVcoresVector(weight(6), percentage(100)));
-    csConf.setMaximumCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY),
-        absolute(VCORES * 0.5)));
+    csConf.setCapacityVector(A, NO_LABEL, A_MIN_VECTOR_DIFFERENT_MIN_MAX);
+    csConf.setMaximumCapacityVector(A, NO_LABEL, A_MAX_VECTOR_DIFFERENT_MIN_MAX);
+    csConf.setCapacityVector(B, NO_LABEL, B_MIN_VECTOR_DIFFERENT_MIN_MAX);
+    csConf.setMaximumCapacityVector(B, NO_LABEL, B_MAX_VECTOR_DIFFERENT_MIN_MAX);
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A)
         .assertEffectiveMinResource(ResourceUtils.multiply(UPDATE_RESOURCE, 0.5f))
-        .assertEffectiveMaxResource(Resource.newInstance(MEMORY, (int) (VCORES * 0.8)))
+        .assertEffectiveMaxResource(A_EXPECTED_MAX_RESOURCE_DIFFERENT_MIN_MAX)
         .withQueue(B)
         .assertEffectiveMinResource(ResourceUtils.multiply(UPDATE_RESOURCE, 0.5f))
-        .assertEffectiveMaxResource(Resource.newInstance(MEMORY, (int) (VCORES * 0.5)))
+        .assertEffectiveMaxResource(B_EXPECTED_MAX_RESOURCE_DIFFERENT_MIN_MAX)
         .build();
 
     QueueCapacityUpdateContext updateContext = update(assertionBuilder, UPDATE_RESOURCE);
     Assert.assertEquals(0, updateContext.getUpdateWarnings().size());
 
     // WEIGHT capacity type for maximum capacity is not supported
-    csConf.setMaximumCapacityVector(B, "", createMemoryVcoresVector(absolute(MEMORY), weight(10)));
+    csConf.setMaximumCapacityVector(B, NO_LABEL, B_INVALID_MAX_VECTOR);
     try {
       cs.reinitialize(csConf, mockRM.getRMContext());
       update(assertionBuilder, UPDATE_RESOURCE);
@@ -206,20 +325,18 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
   @Test
   public void testMaximumResourceWarnings() throws IOException {
-    csConf.setMaximumCapacityVector(A1, "", createMemoryVcoresVector(absolute(MEMORY * 0.5),
-        percentage(100)));
-    csConf.setCapacityVector(A11, "", createMemoryVcoresVector(percentage(50), percentage(100)));
-    csConf.setCapacityVector(A12, "", createMemoryVcoresVector(percentage(50), percentage(0)));
-    csConf.setMaximumCapacityVector(A11, "", createMemoryVcoresVector(absolute(MEMORY),
-        percentage(10)));
+    csConf.setMaximumCapacityVector(A1, NO_LABEL, A1_MAX_VECTOR_MAX_WARNINGS);
+    csConf.setCapacityVector(A11, NO_LABEL, A11_MIN_VECTOR_MAX_WARNINGS);
+    csConf.setCapacityVector(A12, NO_LABEL, A12_MIN_VECTOR_MAX_WARNINGS);
+    csConf.setMaximumCapacityVector(A11, NO_LABEL, A11_MAX_VECTOR_MAX_WARNINGS);
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A11)
-        .assertEffectiveMinResource(createResource(0.5 * 0.5 * MEMORY, 0.1 * VCORES))
-        .assertEffectiveMaxResource(createResource(MEMORY * 0.5, 0.1 * VCORES))
+        .assertEffectiveMinResource(A11_EXPECTED_MIN_RESOURCE_MAX_WARNINGS)
+        .assertEffectiveMaxResource(A11_EXPECTED_MAX_RESOURCE_MAX_WARNINGS)
         .withQueue(A12)
-        .assertEffectiveMinResource(createResource(0.5 * 0.5 * MEMORY, 0))
-        .assertEffectiveMaxResource(createResource(MEMORY * 0.5, VCORES))
+        .assertEffectiveMinResource(A12_EXPECTED_MIN_RESOURCE_MAX_WARNINGS)
+        .assertEffectiveMaxResource(A12_EXPECTED_MAX_RESOURCE_MAX_WARNINGS)
         .build();
 
     QueueCapacityUpdateContext updateContext = update(assertionBuilder, UPDATE_RESOURCE);
@@ -238,75 +355,75 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
 
     QueueAssertionBuilder assertionBuilder = createAssertionBuilder()
         .withQueue(A)
-        .assertEffectiveMinResource(createResource(2048, 8), NO_LABEL)
+        .assertEffectiveMinResource(A_EXPECTED_MIN_RESOURCE_NO_LABEL, NO_LABEL)
         .withQueue(A1)
-        .assertEffectiveMinResource(createResource(1024, 5), NO_LABEL)
+        .assertEffectiveMinResource(A1_EXPECTED_MIN_RESOURCE_NO_LABEL, NO_LABEL)
         .withQueue(A2)
-        .assertEffectiveMinResource(createResource(1024, 2), NO_LABEL)
+        .assertEffectiveMinResource(A2_EXPECTED_MIN_RESOURCE_NO_LABEL, NO_LABEL)
         .withQueue(B)
-        .assertEffectiveMinResource(createResource(3072, 8), NO_LABEL)
+        .assertEffectiveMinResource(B_EXPECTED_MIN_RESOURCE_NO_LABEL, NO_LABEL)
         .withQueue(A)
-        .assertEffectiveMinResource(createResource(30720, 30), X_LABEL)
+        .assertEffectiveMinResource(A_EXPECTED_MIN_RESOURCE_X_LABEL, X_LABEL)
         .withQueue(A1)
-        .assertEffectiveMinResource(createResource(20480, 0), X_LABEL)
+        .assertEffectiveMinResource(A1_EXPECTED_MIN_RESOURCE_X_LABEL, X_LABEL)
         .withQueue(A2)
-        .assertEffectiveMinResource(createResource(10240, 30), X_LABEL)
+        .assertEffectiveMinResource(A2_EXPECTED_MIN_RESOURCE_X_LABEL, X_LABEL)
         .withQueue(B)
-        .assertEffectiveMinResource(createResource(30720, 30), X_LABEL)
+        .assertEffectiveMinResource(B_EXPECTED_MIN_RESOURCE_X_LABEL, X_LABEL)
         .withQueue(A)
-        .assertEffectiveMinResource(createResource(8096, 42), Y_LABEL)
+        .assertEffectiveMinResource(A_EXPECTED_MIN_RESOURCE_Y_LABEL, Y_LABEL)
         .withQueue(A1)
-        .assertEffectiveMinResource(createResource(6186, 21), Y_LABEL)
+        .assertEffectiveMinResource(A1_EXPECTED_MIN_RESOURCE_Y_LABEL, Y_LABEL)
         .withQueue(A2)
-        .assertEffectiveMinResource(createResource(1910, 21), Y_LABEL)
+        .assertEffectiveMinResource(A2_EXPECTED_MIN_RESOURCE_Y_LABEL, Y_LABEL)
         .withQueue(B)
-        .assertEffectiveMinResource(createResource(12384, 18), Y_LABEL)
+        .assertEffectiveMinResource(B_EXPECTED_MIN_RESOURCE_Y_LABEL, Y_LABEL)
         .withQueue(A)
-        .assertEffectiveMinResource(createResource(7168, 11), Z_LABEL)
+        .assertEffectiveMinResource(A_EXPECTED_MIN_RESOURCE_Z_LABEL, Z_LABEL)
         .withQueue(A1)
-        .assertEffectiveMinResource(createResource(6451, 4), Z_LABEL)
+        .assertEffectiveMinResource(A1_EXPECTED_MIN_RESOURCE_Z_LABEL, Z_LABEL)
         .withQueue(A2)
-        .assertEffectiveMinResource(createResource(716, 7), Z_LABEL)
+        .assertEffectiveMinResource(A2_EXPECTED_MIN_RESOURCE_Z_LABEL, Z_LABEL)
         .withQueue(B)
-        .assertEffectiveMinResource(createResource(3072, 4), Z_LABEL)
+        .assertEffectiveMinResource(B_EXPECTED_MIN_RESOURCE_Z_LABEL, Z_LABEL)
         .build();
 
-    update(assertionBuilder, UPDATE_RESOURCE, Resource.newInstance(5 * GB, 16));
+    update(assertionBuilder, UPDATE_RESOURCE, EMPTY_LABEL_RESOURCE);
   }
 
   private void setLabeledQueueConfigs() throws Exception {
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of(X_LABEL, Y_LABEL, Z_LABEL));
-    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance("h1", 0),
-        TestUtils.toSet(X_LABEL), NodeId.newInstance("h2", 0),
-        TestUtils.toSet(Y_LABEL), NodeId.newInstance("h3", 0),
-        TestUtils.toSet(Y_LABEL), NodeId.newInstance("h4", 0),
-        TestUtils.toSet(Z_LABEL), NodeId.newInstance("h5", 0),
+    mgr.addLabelsToNode(ImmutableMap.of(NodeId.newInstance(H1_NODE, 0),
+        TestUtils.toSet(X_LABEL), NodeId.newInstance(H2_NODE, 0),
+        TestUtils.toSet(Y_LABEL), NodeId.newInstance(H3_NODE, 0),
+        TestUtils.toSet(Y_LABEL), NodeId.newInstance(H4_NODE, 0),
+        TestUtils.toSet(Z_LABEL), NodeId.newInstance(H5_NODE, 0),
         RMNodeLabelsManager.EMPTY_STRING_SET));
 
-    mockRM.registerNode("h1:1234", 60 * GB, 60); // label = x
-    mockRM.registerNode("h2:1234", 10 * GB, 25); // label = y
-    mockRM.registerNode("h3:1234", 10 * GB, 35); // label = y
-    mockRM.registerNode("h4:1234", 10 * GB, 15); // label = z
+    mockRM.registerNode("h1:1234", H1_MEMORY, H1_VCORES); // label = x
+    mockRM.registerNode("h2:1234", H2_MEMORY, H2_VCORES); // label = y
+    mockRM.registerNode("h3:1234", H3_MEMORY, H3_VCORES); // label = y
+    mockRM.registerNode("h4:1234", H4_MEMORY, H4_VCORES); // label = z
 
-    csConf.setCapacityVector(A, NO_LABEL, createMemoryVcoresVector(absolute(2048), percentage(50)));
-    csConf.setCapacityVector(A1, NO_LABEL, createMemoryVcoresVector(absolute(1024), percentage(70)));
-    csConf.setCapacityVector(A2, NO_LABEL, createMemoryVcoresVector(absolute(1024), percentage(30)));
-    csConf.setCapacityVector(B, NO_LABEL, createMemoryVcoresVector(weight(3), percentage(50)));
+    csConf.setCapacityVector(A, NO_LABEL, A_VECTOR_NO_LABEL);
+    csConf.setCapacityVector(A1, NO_LABEL, A1_VECTOR_NO_LABEL);
+    csConf.setCapacityVector(A2, NO_LABEL, A2_VECTOR_NO_LABEL);
+    csConf.setCapacityVector(B, NO_LABEL, B_VECTOR_NO_LABEL);
 
-    csConf.setCapacityVector(A, X_LABEL, createMemoryVcoresVector(percentage(50), weight(3)));
-    csConf.setCapacityVector(A1, X_LABEL, createMemoryVcoresVector(absolute(20480), percentage(10)));
-    csConf.setCapacityVector(A2, X_LABEL, createMemoryVcoresVector(absolute(10240), absolute(30)));
-    csConf.setCapacityVector(B, X_LABEL, createMemoryVcoresVector(percentage(50), percentage(50)));
+    csConf.setCapacityVector(A, X_LABEL, A_VECTOR_X_LABEL);
+    csConf.setCapacityVector(A1, X_LABEL, A1_VECTOR_X_LABEL);
+    csConf.setCapacityVector(A2, X_LABEL, A2_VECTOR_X_LABEL);
+    csConf.setCapacityVector(B, X_LABEL, B_VECTOR_X_LABEL);
 
-    csConf.setCapacityVector(A, Y_LABEL, createMemoryVcoresVector(absolute(8096), weight(1)));
-    csConf.setCapacityVector(A1, Y_LABEL, createMemoryVcoresVector(absolute(6186), weight(3)));
-    csConf.setCapacityVector(A2, Y_LABEL, createMemoryVcoresVector(weight(3), weight(3)));
-    csConf.setCapacityVector(B, Y_LABEL, createMemoryVcoresVector(percentage(100), percentage(30)));
+    csConf.setCapacityVector(A, Y_LABEL, A_VECTOR_Y_LABEL);
+    csConf.setCapacityVector(A1, Y_LABEL, A1_VECTOR_Y_LABEL);
+    csConf.setCapacityVector(A2, Y_LABEL, A2_VECTOR_Y_LABEL);
+    csConf.setCapacityVector(B, Y_LABEL, B_VECTOR_Y_LABEL);
 
-    csConf.setCapacityVector(A, Z_LABEL, createMemoryVcoresVector(percentage(70), absolute(11)));
-    csConf.setCapacityVector(A1, Z_LABEL, createMemoryVcoresVector(percentage(90), percentage(40)));
-    csConf.setCapacityVector(A2, Z_LABEL, createMemoryVcoresVector(percentage(10), weight(4)));
-    csConf.setCapacityVector(B, Z_LABEL, createMemoryVcoresVector(percentage(30), absolute(4)));
+    csConf.setCapacityVector(A, Z_LABEL, A_VECTOR_Z_LABEL);
+    csConf.setCapacityVector(A1, Z_LABEL, A1_VECTOR_Z_LABEL);
+    csConf.setCapacityVector(A2, Z_LABEL, A2_VECTOR_Z_LABEL);
+    csConf.setCapacityVector(B, Z_LABEL, B_VECTOR_Z_LABEL);
 
     cs.reinitialize(csConf, mockRM.getRMContext());
   }
@@ -317,14 +434,14 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     setQueues();
 
     csConf.setState(B, QueueState.RUNNING);
-    csConf.setCapacityVector(A, NO_LABEL, createMemoryVcoresVector(percentage(30), weight(6)));
-    csConf.setCapacityVector(A1, NO_LABEL, createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
-    csConf.setCapacityVector(A11, NO_LABEL, createMemoryVcoresVector(percentage(35), percentage(25)));
-    csConf.setCapacityVector(A12, NO_LABEL, createMemoryVcoresVector(percentage(65), percentage(75)));
-    csConf.setCapacityVector(A2, NO_LABEL, createMemoryVcoresVector(weight(3), percentage(100)));
-    csConf.setCapacityVector(B, NO_LABEL, createMemoryVcoresVector(absolute(8095), percentage(30)));
-    csConf.setCapacityVector(B1, NO_LABEL, createMemoryVcoresVector(weight(5), absolute(3)));
-    csConf.setCapacityVector(C, NO_LABEL, createMemoryVcoresVector(weight(3), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A, NO_LABEL, A_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(A1, NO_LABEL, A1_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(A11, NO_LABEL, A11_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(A12, NO_LABEL, A12_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(A2, NO_LABEL, A2_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(B, NO_LABEL, B_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(B1, NO_LABEL, B1_VECTOR_NO_REMAINING_RESOURCE);
+    csConf.setCapacityVector(C, NO_LABEL, C_VECTOR_NO_REMAINING_RESOURCE);
 
     cs.reinitialize(csConf, mockRM.getRMContext());
   }
@@ -335,15 +452,14 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
     setQueues();
 
     csConf.setState(B, QueueState.RUNNING);
-    csConf.setCapacityVector(A, NO_LABEL, createMemoryVcoresVector(percentage(100), weight(6)));
-    csConf.setCapacityVector(A1, NO_LABEL, createMemoryVcoresVector(absolute(2048),
-        absolute(VCORES * 0.25)));
-    csConf.setCapacityVector(A11, NO_LABEL, createMemoryVcoresVector(weight(1), absolute(VCORES * 0.25)));
-    csConf.setCapacityVector(A12, NO_LABEL, createMemoryVcoresVector(percentage(100), percentage(100)));
-    csConf.setCapacityVector(A2, NO_LABEL, createMemoryVcoresVector(absolute(2048), percentage(100)));
-    csConf.setCapacityVector(B, NO_LABEL, createMemoryVcoresVector(absolute(8096), percentage(30)));
-    csConf.setCapacityVector(B1, NO_LABEL, createMemoryVcoresVector(absolute(10256), absolute(3)));
-    csConf.setCapacityVector(C, NO_LABEL, createMemoryVcoresVector(weight(3), absolute(VCORES * 0.25)));
+    csConf.setCapacityVector(A, NO_LABEL, A_VECTOR_WITH_WARNINGS);
+    csConf.setCapacityVector(A1, NO_LABEL, A1_VECTOR_WITH_WARNING);
+    csConf.setCapacityVector(A11, NO_LABEL, A11_VECTOR_WITH_WARNING);
+    csConf.setCapacityVector(A12, NO_LABEL, A12_VECTOR_WITH_WARNING);
+    csConf.setCapacityVector(A2, NO_LABEL, A2_VECTOR_WITH_WARNING);
+    csConf.setCapacityVector(B, NO_LABEL, B_VECTOR_WITH_WARNING);
+    csConf.setCapacityVector(B1, NO_LABEL, B1_VECTOR_WITH_WARNING);
+    csConf.setCapacityVector(C, NO_LABEL, C_VECTOR_WITH_WARNING);
 
     cs.reinitialize(csConf, mockRM.getRMContext());
   }

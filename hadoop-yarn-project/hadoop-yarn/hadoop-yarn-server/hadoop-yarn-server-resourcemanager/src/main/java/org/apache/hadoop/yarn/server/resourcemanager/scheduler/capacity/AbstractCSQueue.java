@@ -115,7 +115,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       CapacityConfigType.NONE;
 
   protected Map<String, QueueCapacityVector> configuredCapacityVectors;
-  protected Map<String, QueueCapacityVector> configuredMaximumCapacityVectors;
+  protected Map<String, QueueCapacityVector> configuredMaxCapacityVectors;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -385,7 +385,7 @@ public abstract class AbstractCSQueue implements CSQueue {
       this.configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
-      this.configuredMaximumCapacityVectors = configuration
+      this.configuredMaxCapacityVectors = configuration
           .parseConfiguredMaximumCapacityVector(queuePath.getFullPath(), this.queueNodeLabelsSettings.getConfiguredNodeLabels(), QueueCapacityVector.newInstance());
       // Update metrics
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
@@ -581,8 +581,8 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Override
-  public QueueCapacityVector getConfiguredMaximumCapacityVector(String label) {
-    return configuredMaximumCapacityVectors.get(label);
+  public QueueCapacityVector getConfiguredMaxCapacityVector(String label) {
+    return configuredMaxCapacityVectors.get(label);
   }
 
   @Override
@@ -592,7 +592,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public void setConfiguredMaxCapacityVector(String label, QueueCapacityVector maxCapacityVector) {
-    configuredMaximumCapacityVectors.put(label, maxCapacityVector);
+    configuredMaxCapacityVectors.put(label, maxCapacityVector);
   }
 
   private void initializeQueueState(CapacitySchedulerConfiguration configuration) {

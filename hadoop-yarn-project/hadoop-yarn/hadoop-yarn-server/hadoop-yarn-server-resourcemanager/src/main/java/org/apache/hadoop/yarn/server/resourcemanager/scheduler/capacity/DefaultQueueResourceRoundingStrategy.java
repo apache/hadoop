@@ -21,7 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.SortedSet;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.WEIGHT;
@@ -34,12 +37,9 @@ public class DefaultQueueResourceRoundingStrategy implements QueueResourceRoundi
   private final ResourceUnitCapacityType lastCapacityType;
 
   public DefaultQueueResourceRoundingStrategy(
-      SortedSet<ResourceUnitCapacityType> capacityTypePrecedence) {
-    if (capacityTypePrecedence.isEmpty()) {
-      throw new IllegalArgumentException("Capacity type precedence collection is empty");
-    }
-
-    lastCapacityType = capacityTypePrecedence.last();
+      Set<ResourceUnitCapacityType> capacityTypePrecedence) {
+    lastCapacityType = capacityTypePrecedence.stream().reduce((c1, c2) -> c2).orElseThrow(()
+        -> new IllegalArgumentException("Capacity type precedence collection is empty"));
   }
 
   @Override

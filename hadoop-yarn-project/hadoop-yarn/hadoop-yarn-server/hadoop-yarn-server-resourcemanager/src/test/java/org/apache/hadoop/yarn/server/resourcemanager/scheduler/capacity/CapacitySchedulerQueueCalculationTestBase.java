@@ -108,7 +108,7 @@ public class CapacitySchedulerQueueCalculationTestBase {
     return new QueueAssertionBuilder(cs);
   }
 
-  protected static String createMemoryVcoresVector(Object memory, Object vcores) {
+  protected static String createCapacityVector(Object memory, Object vcores) {
     return String.format(CAPACITY_VECTOR_TEMPLATE, memory, vcores);
   }
 

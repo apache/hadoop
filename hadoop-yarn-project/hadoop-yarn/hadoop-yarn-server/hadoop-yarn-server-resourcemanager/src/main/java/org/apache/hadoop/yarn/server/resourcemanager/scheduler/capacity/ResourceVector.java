@@ -80,21 +80,21 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   }
 
   /**
-   * Subtract values for each resource defined in the given resource vector.
+   * Decrements values for each resource defined in the given resource vector.
    * @param otherResourceVector rhs resource vector of the subtraction
    */
-  public void subtract(ResourceVector otherResourceVector) {
+  public void decrement(ResourceVector otherResourceVector) {
     for (Map.Entry<String, Float> resource : otherResourceVector) {
       setValue(resource.getKey(), getValue(resource.getKey()) - resource.getValue());
     }
   }
 
   /**
-   * Subtracts the given resource by the specified value.
+   * Decrements the given resource by the specified value.
    * @param resourceName name of the resource
    * @param value value to be subtracted from the resource's current value
    */
-  public void subtract(String resourceName, float value) {
+  public void decrement(String resourceName, float value) {
     setValue(resourceName, getValue(resourceName) - value);
   }
 

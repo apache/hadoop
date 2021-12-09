@@ -20,14 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSortedSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.QueueCapacityVectorEntry;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.SortedSet;
+import java.util.Set;
 
 import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
 
@@ -36,8 +36,8 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
  * bookkeeper of disposable update information that is used by all children under a common parent.
  */
 public class ResourceCalculationDriver {
-  protected static final SortedSet<ResourceUnitCapacityType> CALCULATOR_PRECEDENCE =
-      ImmutableSortedSet.of(
+  protected static final Set<ResourceUnitCapacityType> CALCULATOR_PRECEDENCE =
+      ImmutableSet.of(
           ResourceUnitCapacityType.ABSOLUTE,
           ResourceUnitCapacityType.PERCENTAGE,
           ResourceUnitCapacityType.WEIGHT);
@@ -140,7 +140,7 @@ public class ResourceCalculationDriver {
    * @return capacity vector entry
    */
   public QueueCapacityVectorEntry getCurrentMaximumCapacityEntry(String label) {
-    return currentChild.getConfiguredMaximumCapacityVector(label).getResource(currentResourceName);
+    return currentChild.getConfiguredMaxCapacityVector(label).getResource(currentResourceName);
   }
 
   /**
@@ -214,7 +214,7 @@ public class ResourceCalculationDriver {
         }
         // Flush aggregated used resource by labels at the end of a calculator phase
         for (Map.Entry<String, Float> entry : usedResourceByCurrentCalculator.entrySet()) {
-          batchRemainingResource.get(entry.getKey()).subtract(resourceName, entry.getValue());
+          batchRemainingResource.get(entry.getKey()).decrement(resourceName, entry.getValue());
         }
         usedResourceByCurrentCalculator = new HashMap<>();
       }
@@ -262,7 +262,7 @@ public class ResourceCalculationDriver {
             0f);
         float resourceUsedByLabel = aggregatedUsedResource + usedResourceByChild;
 
-        overallRemainingResource.get(label).subtract(currentResourceName, usedResourceByChild);
+        overallRemainingResource.get(label).decrement(currentResourceName, usedResourceByChild);
         usedResourceByCurrentCalculator.put(label, resourceUsedByLabel);
       }
     } finally {
@@ -276,7 +276,7 @@ public class ResourceCalculationDriver {
     long clusterResource = updateContext.getUpdatedClusterResource(label).getResourceValue(
         currentResourceName);
     QueueCapacityVectorEntry maximumCapacityVectorEntry = currentChild
-        .getConfiguredMaximumCapacityVector(label).getResource(currentResourceName);
+        .getConfiguredMaxCapacityVector(label).getResource(currentResourceName);
     AbstractQueueCapacityCalculator maximumCapacityCalculator = calculators.get(
         maximumCapacityVectorEntry.getVectorResourceType());
 

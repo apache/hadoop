@@ -2812,7 +2812,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public void setLegacyQueueModeEnabled(boolean value) {
-    setBoolean(LEGACY_QUEUE_MODE_ENABLED, false);
+    setBoolean(LEGACY_QUEUE_MODE_ENABLED, value);
   }
 
   public boolean getMultiNodePlacementEnabled() {
