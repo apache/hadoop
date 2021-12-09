@@ -26,6 +26,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import javax.management.openmbean.CompositeDataSupport;
+import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -122,6 +126,17 @@ public class TestReplicationPolicyExcludeSlowNodes
         assertTrue(!slowPeers.contains(targets[i].getDatanodeDescriptor()
             .getDatanodeUuid()));
       }
+
+      // Fetch metrics.
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanNameFs =
+          new ObjectName("Hadoop:service=NameNode,name=BlockPlacementStats");
+      CompositeDataSupport metrics =
+          (CompositeDataSupport) mbs.getAttribute(mxbeanNameFs,
+              "NumberOfEachNotChosenReason");
+
+      // Assert NodeSlow.
+      assertTrue((long) metrics.get("nodeSlow") > 0);
     } finally {
       namenode.getNamesystem().writeUnlock();
     }

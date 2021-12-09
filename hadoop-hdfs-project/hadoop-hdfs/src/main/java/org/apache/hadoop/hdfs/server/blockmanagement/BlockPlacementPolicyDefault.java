@@ -24,8 +24,11 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSI
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +43,8 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import javax.management.ObjectName;
 
 /**
  * The class is responsible for choosing the desired number of targets
@@ -56,7 +61,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
  * rack as the second replica.
  */
 @InterfaceAudience.Private
-public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
+public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
+    implements BlockPlacementMXBean {
 
   private static final String enableDebugLogging =
       "For more information, please enable DEBUG log level on "
@@ -78,7 +84,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private static final BlockPlacementStatus ONE_RACK_PLACEMENT =
       new BlockPlacementStatusDefault(1, 1, 1);
 
-  private enum NodeNotChosenReason {
+  private static final ConcurrentHashMap<NodeNotChosenReason, LongAdder> notChosenReasonMap =
+      new ConcurrentHashMap<>();
+
+  public enum NodeNotChosenReason {
     NOT_IN_SERVICE("the node is not in service"),
     NODE_STALE("the node is stale"),
     NODE_TOO_BUSY("the node is too busy"),
@@ -109,7 +118,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private FSClusterStats stats;
   protected long heartbeatInterval;   // interval for DataNode heartbeats
   private long staleInterval;   // interval used to identify stale DataNodes
-  
+  private ObjectName mxBeanName;
+
+  public ObjectName getMxBeanName() {
+    return mxBeanName;
+  }
+
   /**
    * A miss of that many heartbeats is tolerated for replica deletion policy.
    */
@@ -155,6 +169,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.excludeSlowNodesEnabled = conf.getBoolean(
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT);
+    if (mxBeanName == null) {
+      mxBeanName = MBeans.register("NameNode", "BlockPlacementStats", this);
+    }
   }
 
   @Override
@@ -988,6 +1005,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       base = 0;
     }
     reasonMap.put(reason, base + 1);
+    // To calculate the metrics of NodeNotChosenReason.
+    incrNotChosenReasonNum(reason);
+  }
+
+  private static void incrNotChosenReasonNum(NodeNotChosenReason reason) {
+    notChosenReasonMap.computeIfAbsent(reason, k -> new LongAdder())
+        .increment();
   }
 
   /**
@@ -1368,6 +1392,49 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @Override
   public boolean getExcludeSlowNodesEnabled() {
     return excludeSlowNodesEnabled;
+  }
+
+  @Override
+  public NodeNotChosenReasonMetrics getNumberOfEachNotChosenReason() {
+    return new NodeNotChosenReasonMetrics();
+  }
+
+  public class NodeNotChosenReasonMetrics {
+
+    public long getNotInService() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.NOT_IN_SERVICE, new LongAdder()).longValue();
+    }
+
+    public long getNodeStale() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.NODE_STALE, new LongAdder()).longValue();
+    }
+
+    public long getNodeTooBusy() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.NODE_TOO_BUSY, new LongAdder()).longValue();
+    }
+
+    public long getTooManyNodesOnRack() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.TOO_MANY_NODES_ON_RACK, new LongAdder()).longValue();
+    }
+
+    public long getNotEnoughStorageSpace() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.NOT_ENOUGH_STORAGE_SPACE, new LongAdder()).longValue();
+    }
+
+    public long getNoRequiredStorageType() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.NO_REQUIRED_STORAGE_TYPE, new LongAdder()).longValue();
+    }
+
+    public long getNodeSlow() {
+      return notChosenReasonMap
+          .getOrDefault(NodeNotChosenReason.NODE_SLOW, new LongAdder()).longValue();
+    }
   }
 }
 
