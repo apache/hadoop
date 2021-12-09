@@ -128,7 +128,7 @@ public class ParentQueue extends AbstractCSQueue {
     this.scheduler = cs;
     this.rootQueue = (parent == null);
 
-    float rawCapacity = csConf.getNonLabeledQueueCapacity(getQueuePathObject());
+    float rawCapacity = csConf.getNonLabeledQueueCapacity(this.queuePath);
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
@@ -161,7 +161,7 @@ public class ParentQueue extends AbstractCSQueue {
     writeLock.lock();
     try {
       autoCreatedQueueTemplate = new AutoCreatedQueueTemplate(
-          csConf, getQueuePathObject());
+          csConf, this.queuePath);
       super.setupQueueConfigs(clusterResource, csConf);
       StringBuilder aclsString = new StringBuilder();
       for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {

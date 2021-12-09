@@ -90,7 +90,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public String getQueuePath();
 
   /**
-   * Gets the object of the queue.
+   * Gets the queue path object.
    * @return the object of the queue
    */
   QueuePath getQueuePathObject();

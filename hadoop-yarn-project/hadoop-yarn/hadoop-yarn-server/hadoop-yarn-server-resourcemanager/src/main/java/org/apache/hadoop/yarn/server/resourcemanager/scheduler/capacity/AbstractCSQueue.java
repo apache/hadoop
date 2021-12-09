@@ -282,11 +282,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       // Sanity check
-      CSQueueUtils.checkMaxCapacity(getQueuePathObject(),
+      CSQueueUtils.checkMaxCapacity(this.queuePath,
           queueCapacities.getCapacity(), maximumCapacity);
       float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
           maximumCapacity, parent);
-      CSQueueUtils.checkAbsoluteCapacity(getQueuePathObject(),
+      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
           queueCapacities.getAbsoluteCapacity(), absMaxCapacity);
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
@@ -304,11 +304,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       // Sanity check
-      CSQueueUtils.checkMaxCapacity(getQueuePathObject(),
+      CSQueueUtils.checkMaxCapacity(this.queuePath,
           queueCapacities.getCapacity(nodeLabel), maximumCapacity);
       float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
           maximumCapacity, parent);
-      CSQueueUtils.checkAbsoluteCapacity(getQueuePathObject(),
+      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
           queueCapacities.getAbsoluteCapacity(nodeLabel), absMaxCapacity);
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
