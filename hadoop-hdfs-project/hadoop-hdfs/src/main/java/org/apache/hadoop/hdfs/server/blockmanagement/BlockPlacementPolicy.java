@@ -261,4 +261,16 @@ public abstract class BlockPlacementPolicy {
       }
     }
   }
+
+  /**
+   * Updates the value used for excludeSlowNodesEnabled, which is set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY}
+   * initially.
+   *
+   * @param enable true, we will filter out slow nodes
+   * when choosing targets for blocks, otherwise false not filter.
+   */
+  public abstract void setExcludeSlowNodesEnabled(boolean enable);
+
+  public abstract boolean getExcludeSlowNodesEnabled();
 }

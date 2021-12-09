@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING;
@@ -300,7 +302,8 @@ public class DataNode extends ReconfigurableBase
       Collections.unmodifiableList(
           Arrays.asList(
               DFS_DATANODE_DATA_DIR_KEY,
-              DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY));
+              DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
+              DFS_BLOCKREPORT_INTERVAL_MSEC_KEY));
 
   public static final Log METRICS_LOG = LogFactory.getLog("DataNodeMetricsLog");
 
@@ -536,78 +539,111 @@ public class DataNode extends ReconfigurableBase
   public String reconfigurePropertyImpl(String property, String newVal)
       throws ReconfigurationException {
     switch (property) {
-      case DFS_DATANODE_DATA_DIR_KEY: {
-        IOException rootException = null;
+    case DFS_DATANODE_DATA_DIR_KEY: {
+      IOException rootException = null;
+      try {
+        LOG.info("Reconfiguring {} to {}", property, newVal);
+        this.refreshVolumes(newVal);
+        return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
+      } catch (IOException e) {
+        rootException = e;
+      } finally {
+        // Send a full block report to let NN acknowledge the volume changes.
         try {
-          LOG.info("Reconfiguring {} to {}", property, newVal);
-          this.refreshVolumes(newVal);
-          return getConf().get(DFS_DATANODE_DATA_DIR_KEY);
+          triggerBlockReport(
+              new BlockReportOptions.Factory().setIncremental(false).build());
         } catch (IOException e) {
-          rootException = e;
+          LOG.warn("Exception while sending the block report after refreshing"
+              + " volumes {} to {}", property, newVal, e);
+          if (rootException == null) {
+            rootException = e;
+          }
         } finally {
-          // Send a full block report to let NN acknowledge the volume changes.
-          try {
-            triggerBlockReport(
-                new BlockReportOptions.Factory().setIncremental(false).build());
-          } catch (IOException e) {
-            LOG.warn("Exception while sending the block report after refreshing"
-                + " volumes {} to {}", property, newVal, e);
-            if (rootException == null) {
-              rootException = e;
-            }
-          } finally {
-            if (rootException != null) {
-              throw new ReconfigurationException(property, newVal,
-                  getConf().get(property), rootException);
-            }
+          if (rootException != null) {
+            throw new ReconfigurationException(property, newVal,
+                getConf().get(property), rootException);
           }
         }
-        break;
       }
-      case DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY: {
-        ReconfigurationException rootException = null;
-        try {
-          LOG.info("Reconfiguring {} to {}", property, newVal);
-          int movers;
-          if (newVal == null) {
-            // set to default
-            movers = DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
-          } else {
-            movers = Integer.parseInt(newVal);
-            if (movers <= 0) {
-              rootException = new ReconfigurationException(
-                  property,
-                  newVal,
-                  getConf().get(property),
-                  new IllegalArgumentException(
-                      "balancer max concurrent movers must be larger than 0"));
-            }
-          }
-          boolean success = xserver.updateBalancerMaxConcurrentMovers(movers);
-          if (!success) {
+      break;
+    }
+    case DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY: {
+      ReconfigurationException rootException = null;
+      try {
+        LOG.info("Reconfiguring {} to {}", property, newVal);
+        int movers;
+        if (newVal == null) {
+          // set to default
+          movers = DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+        } else {
+          movers = Integer.parseInt(newVal);
+          if (movers <= 0) {
             rootException = new ReconfigurationException(
                 property,
                 newVal,
                 getConf().get(property),
                 new IllegalArgumentException(
-                    "Could not modify concurrent moves thread count"));
-          }
-          return Integer.toString(movers);
-        } catch (NumberFormatException nfe) {
-          rootException = new ReconfigurationException(
-              property, newVal, getConf().get(property), nfe);
-        } finally {
-          if (rootException != null) {
-            LOG.warn(String.format(
-                "Exception in updating balancer max concurrent movers %s to %s",
-                property, newVal), rootException);
-            throw rootException;
+                    "balancer max concurrent movers must be larger than 0"));
           }
         }
-        break;
+        boolean success = xserver.updateBalancerMaxConcurrentMovers(movers);
+        if (!success) {
+          rootException = new ReconfigurationException(
+              property,
+              newVal,
+              getConf().get(property),
+              new IllegalArgumentException(
+                  "Could not modify concurrent moves thread count"));
+        }
+        return Integer.toString(movers);
+      } catch (NumberFormatException nfe) {
+        rootException = new ReconfigurationException(
+            property, newVal, getConf().get(property), nfe);
+      } finally {
+        if (rootException != null) {
+          LOG.warn(String.format(
+              "Exception in updating balancer max concurrent movers %s to %s",
+              property, newVal), rootException);
+          throw rootException;
+        }
       }
-      default:
-        break;
+      break;
+    }
+    case DFS_BLOCKREPORT_INTERVAL_MSEC_KEY: {
+      ReconfigurationException rootException = null;
+      try {
+        LOG.info("Reconfiguring {} to {}", property, newVal);
+        long intervalMs;
+        if (newVal == null) {
+          // Set to default.
+          intervalMs = DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
+        } else {
+          intervalMs = Long.parseLong(newVal);
+        }
+        dnConf.setBlockReportInterval(intervalMs);
+        for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+          if (bpos != null) {
+            for (BPServiceActor actor : bpos.getBPServiceActors()) {
+              actor.getScheduler().setBlockReportIntervalMs(intervalMs);
+            }
+          }
+        }
+        return Long.toString(intervalMs);
+      } catch (IllegalArgumentException e) {
+        rootException = new ReconfigurationException(
+            property, newVal, getConf().get(property), e);
+      } finally {
+        if (rootException != null) {
+          LOG.warn(String.format(
+              "Exception in updating block report interval %s to %s",
+              property, newVal), rootException);
+          throw rootException;
+        }
+      }
+      break;
+    }
+    default:
+      break;
     }
     throw new ReconfigurationException(
         property, newVal, getConf().get(property));
