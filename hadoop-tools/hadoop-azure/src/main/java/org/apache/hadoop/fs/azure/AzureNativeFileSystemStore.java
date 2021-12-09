@@ -41,6 +41,7 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -240,6 +241,16 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * only if listing depth is AZURE_UNBOUNDED_DEPTH.
    */
   public static final String KEY_ENABLE_FLAT_LISTING = "fs.azure.flatlist.enable";
+
+  /**
+   * Optional config to enable a lock free pread which will bypass buffer in
+   * BlockBlobInputStream.
+   * This is not a config which can be set at cluster level. It can be used as
+   * an option on FutureDataInputStreamBuilder.
+   * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
+   */
+  public static final String FS_AZURE_BLOCK_BLOB_BUFFERED_PREAD_DISABLE =
+      "fs.azure.block.blob.buffered.pread.disable";
 
   /**
    * The set of directories where we should apply atomic folder rename
@@ -1591,8 +1602,8 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
    * Opens a new input stream for the given blob (page or block blob)
    * to read its data.
    */
-  private InputStream openInputStream(CloudBlobWrapper blob)
-      throws StorageException, IOException {
+  private InputStream openInputStream(CloudBlobWrapper blob,
+      Optional<Configuration> options) throws StorageException, IOException {
     if (blob instanceof CloudBlockBlobWrapper) {
       LOG.debug("Using stream seek algorithm {}", inputStreamVersion);
       switch(inputStreamVersion) {
@@ -1600,9 +1611,13 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         return blob.openInputStream(getDownloadOptions(),
             getInstrumentedContext(isConcurrentOOBAppendAllowed()));
       case 2:
+        boolean bufferedPreadDisabled = options.map(c -> c
+            .getBoolean(FS_AZURE_BLOCK_BLOB_BUFFERED_PREAD_DISABLE, false))
+            .orElse(false);
         return new BlockBlobInputStream((CloudBlockBlobWrapper) blob,
             getDownloadOptions(),
-            getInstrumentedContext(isConcurrentOOBAppendAllowed()));
+            getInstrumentedContext(isConcurrentOOBAppendAllowed()),
+            bufferedPreadDisabled);
       default:
         throw new IOException("Unknown seek algorithm: " + inputStreamVersion);
       }
@@ -2290,6 +2305,12 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
   @Override
   public InputStream retrieve(String key, long startByteOffset)
       throws AzureException, IOException {
+    return retrieve(key, startByteOffset, Optional.empty());
+  }
+
+  @Override
+  public InputStream retrieve(String key, long startByteOffset,
+      Optional<Configuration> options) throws AzureException, IOException {
       try {
         // Check if a session exists, if not create a session with the
         // Azure storage server.
@@ -2301,7 +2322,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         }
         checkContainer(ContainerAccessType.PureRead);
 
-        InputStream inputStream = openInputStream(getBlobReference(key));
+        InputStream inputStream = openInputStream(getBlobReference(key), options);
         if (startByteOffset > 0) {
           // Skip bytes and ignore return value. This is okay
           // because if you try to skip too far you will be positioned
@@ -2852,7 +2873,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         OutputStream opStream = null;
         try {
           if (srcBlob.getProperties().getBlobType() == BlobType.PAGE_BLOB){
-            ipStream = openInputStream(srcBlob);
+            ipStream = openInputStream(srcBlob, Optional.empty());
             opStream = openOutputStream(dstBlob);
             byte[] buffer = new byte[PageBlobFormatHelpers.PAGE_SIZE];
             int len;

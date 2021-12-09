@@ -20,11 +20,13 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.test.Whitebox;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -82,6 +84,33 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
       ConfigUtil.addLinkFallback(conf, defaultUri.getHost(), defaultUri);
       try (FileSystem fileSys = FileSystem.get(conf)) {
         fileSys.getDelegationToken("");
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testRenameWithOptions() throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      URI defaultUri =
+          URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+      conf.set("fs.viewfs.mounttable." + defaultUri.getHost() + ".linkFallback",
+          defaultUri.toString());
+      conf.setLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 30000);
+      try (ViewDistributedFileSystem fileSystem =
+          (ViewDistributedFileSystem) FileSystem.get(conf)) {
+        final Path testDir = new Path("/test");
+        final Path renameDir = new Path("/testRename");
+        fileSystem.mkdirs(testDir);
+        fileSystem.rename(testDir, renameDir, Options.Rename.TO_TRASH);
+        Assert.assertTrue(fileSystem.exists(renameDir));
+        Assert.assertFalse(fileSystem.exists(testDir));
       }
     } finally {
       if (cluster != null) {

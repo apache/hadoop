@@ -43,7 +43,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeFalse("This test does not support namespace enabled account",
-            this.getFileSystem().getIsNamespaceEnabled());
+        getIsNamespaceEnabled(getFileSystem()));
     String storageConnectionString = getBlobConnectionString();
     CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
     CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
@@ -71,6 +71,12 @@ public class ITestAzureBlobFileSystemBackCompat extends
     if (isIPAddress()) {
       connectionString = "DefaultEndpointsProtocol=http;BlobEndpoint=http://"
               + this.getHostName() + ":8880/" + this.getAccountName().split("\\.") [0]
+              + ";AccountName=" + this.getAccountName().split("\\.")[0]
+              + ";AccountKey=" + this.getAccountKey();
+    }
+    else if (this.getConfiguration().isHttpsAlwaysUsed()) {
+      connectionString = "DefaultEndpointsProtocol=https;BlobEndpoint=https://"
+              + this.getAccountName().replaceFirst("\\.dfs\\.", ".blob.")
               + ";AccountName=" + this.getAccountName().split("\\.")[0]
               + ";AccountKey=" + this.getAccountKey();
     }

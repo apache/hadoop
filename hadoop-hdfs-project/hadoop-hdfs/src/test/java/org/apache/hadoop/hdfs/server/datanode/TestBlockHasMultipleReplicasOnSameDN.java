@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,13 +116,12 @@ public class TestBlockHasMultipleReplicasOnSameDN {
     StorageBlockReport reports[] =
         new StorageBlockReport[cluster.getStoragesPerDatanode()];
 
-    ArrayList<ReplicaInfo> blocks = new ArrayList<>();
+    ArrayList<Replica> blocks = new ArrayList<>();
 
     for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
       Block localBlock = locatedBlock.getBlock().getLocalBlock();
       blocks.add(new FinalizedReplica(localBlock, null, null));
     }
-    Collections.sort(blocks);
 
     try (FsDatasetSpi.FsVolumeReferences volumes =
       dn.getFSDataset().getFsVolumeReferences()) {
@@ -137,7 +134,7 @@ public class TestBlockHasMultipleReplicasOnSameDN {
 
     // Should not assert!
     cluster.getNameNodeRpc().blockReport(dnReg, bpid, reports,
-        new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+        new BlockReportContext(1, 0, System.nanoTime(), 0L));
 
     // Get the block locations once again.
     locatedBlocks = client.getLocatedBlocks(filename, 0, BLOCK_SIZE * NUM_BLOCKS);

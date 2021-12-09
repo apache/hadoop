@@ -90,7 +90,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public List<ReplicaInfo> getSortedFinalizedBlocks(String bpid) {
+  public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
     return null;
   }
 

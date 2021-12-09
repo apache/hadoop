@@ -877,7 +877,7 @@ public class TestDecommission extends AdminStatesBaseTest {
    * 2. close file with decommissioning
    * @throws Exception
    */
-  @Test(timeout=180000)
+  @Test(timeout=360000)
   public void testDecommissionWithCloseFileAndListOpenFiles()
       throws Exception {
     LOG.info("Starting test testDecommissionWithCloseFileAndListOpenFiles");

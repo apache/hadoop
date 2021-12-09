@@ -28,6 +28,7 @@ import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlockBlobWrapper;
 
@@ -36,10 +37,11 @@ import org.apache.hadoop.fs.azure.StorageInterface.CloudBlockBlobWrapper;
  * random access and seek. Random access performance is improved by several
  * orders of magnitude.
  */
-final class BlockBlobInputStream extends InputStream implements Seekable {
+final class BlockBlobInputStream extends FSInputStream {
   private final CloudBlockBlobWrapper blob;
   private final BlobRequestOptions options;
   private final OperationContext opContext;
+  private final boolean bufferedPreadDisabled;
   private InputStream blobInputStream = null;
   private int minimumReadSizeInBytes = 0;
   private long streamPositionAfterLastRead = -1;
@@ -64,10 +66,12 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
    */
   BlockBlobInputStream(CloudBlockBlobWrapper blob,
       BlobRequestOptions options,
-      OperationContext opContext) throws IOException {
+      OperationContext opContext, boolean bufferedPreadDisabled)
+      throws IOException {
     this.blob = blob;
     this.options = options;
     this.opContext = opContext;
+    this.bufferedPreadDisabled = bufferedPreadDisabled;
 
     this.minimumReadSizeInBytes = blob.getStreamMinimumReadSizeInBytes();
 
@@ -261,6 +265,39 @@ final class BlockBlobInputStream extends InputStream implements Seekable {
       // This may happen if the blob was modified after the length was obtained.
       throw new EOFException("End of stream reached unexpectedly.");
     }
+  }
+
+  @Override
+  public int read(long position, byte[] buffer, int offset, int length)
+      throws IOException {
+    synchronized (this) {
+      checkState();
+    }
+    if (!bufferedPreadDisabled) {
+      // This will do a seek + read in which the streamBuffer will get used.
+      return super.read(position, buffer, offset, length);
+    }
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return 0;
+    }
+    if (position >= streamLength) {
+      throw new EOFException("position is beyond stream capacity");
+    }
+    MemoryOutputStream os = new MemoryOutputStream(buffer, offset, length);
+    long bytesToRead = Math.min(minimumReadSizeInBytes,
+        Math.min(os.capacity(), streamLength - position));
+    try {
+      blob.downloadRange(position, bytesToRead, os, options, opContext);
+    } catch (StorageException e) {
+      throw new IOException(e);
+    }
+    int bytesRead = os.size();
+    if (bytesRead == 0) {
+      // This may happen if the blob was modified after the length was obtained.
+      throw new EOFException("End of stream reached unexpectedly.");
+    }
+    return bytesRead;
   }
 
   /**

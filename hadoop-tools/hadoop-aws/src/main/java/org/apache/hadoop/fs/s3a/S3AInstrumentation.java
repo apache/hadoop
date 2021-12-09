@@ -988,6 +988,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         closed.incrementAndGet();
         bytesDiscardedInClose.addAndGet(remainingInCurrentRequest);
         totalBytesRead.addAndGet(remainingInCurrentRequest);
+        filesystemStatistics.incrementBytesRead(remainingInCurrentRequest);
       }
     }
 
@@ -1144,7 +1145,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         // increment the filesystem statistics for this thread.
         if (filesystemStatistics != null) {
           long t = getTotalBytesRead();
-          filesystemStatistics.incrementBytesRead(t);
           filesystemStatistics.incrementBytesReadByDistance(DISTANCE, t);
         }
       }

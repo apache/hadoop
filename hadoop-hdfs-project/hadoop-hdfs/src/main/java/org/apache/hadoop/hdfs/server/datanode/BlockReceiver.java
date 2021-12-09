@@ -58,8 +58,8 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.Tracer;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.SYNC_FILE_RANGE_WRITE;

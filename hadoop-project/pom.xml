@@ -20,10 +20,10 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>3.3.2-SNAPSHOT</version>
+    <version>3.3.3-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-project</artifactId>
-  <version>3.3.2-SNAPSHOT</version>
+  <version>3.3.3-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <ignoreTestFailure>true</ignoreTestFailure>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.40.v20210413</jetty.version>
+    <jetty.version>9.4.43.v20210629</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -48,9 +48,9 @@
     <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <jdiff.version>1.0.9</jdiff.version>
     <!-- Version number for xerces used by JDiff -->
-    <xerces.jdiff.version>2.11.0</xerces.jdiff.version>
+    <xerces.jdiff.version>2.12.1</xerces.jdiff.version>
 
-    <kafka.version>2.4.0</kafka.version>
+    <kafka.version>2.8.1</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -117,10 +117,10 @@
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.11</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
-    <commons-compress.version>1.19</commons-compress.version>
+    <commons-compress.version>1.21</commons-compress.version>
     <commons-csv.version>1.0</commons-csv.version>
     <commons-io.version>2.8.0</commons-io.version>
-    <commons-lang3.version>3.7</commons-lang3.version>
+    <commons-lang3.version>3.12.0</commons-lang3.version>
     <commons-logging.version>1.1.3</commons-logging.version>
     <commons-logging-api.version>1.1</commons-logging-api.version>
     <commons-math3.version>3.1.1</commons-math3.version>
@@ -137,11 +137,9 @@
     <jna.version>5.2.0</jna.version>
     <grizzly.version>2.2.21</grizzly.version>
     <gson.version>2.2.4</gson.version>
-    <htrace3.version>3.1.0-incubating</htrace3.version>
-    <htrace4.version>4.1.0-incubating</htrace4.version>
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
-    <netty4.version>4.1.61.Final</netty4.version>
+    <netty4.version>4.1.68.Final</netty4.version>
     <snappy-java.version>1.1.8.2</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
 
@@ -200,7 +198,7 @@
     <snakeyaml.version>1.26</snakeyaml.version>
     <hbase.one.version>1.4.8</hbase.one.version>
     <hbase.two.version>2.0.2</hbase.two.version>
-    <junit.version>4.13.1</junit.version>
+    <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <junit.vintage.version>5.5.1</junit.vintage.version>
     <junit.platform.version>1.5.1</junit.platform.version>
@@ -210,8 +208,9 @@
     <solr.version>7.7.0</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <woodstox.version>5.3.0</woodstox.version>
-    <json-smart.version>2.4.2</json-smart.version>
+    <json-smart.version>2.4.7</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
+    <apache-ant.version>1.10.11</apache-ant.version>
   </properties>
 
   <dependencyManagement>
@@ -1205,7 +1204,7 @@
       <dependency>
         <groupId>org.apache.ant</groupId>
         <artifactId>ant</artifactId>
-        <version>1.10.9</version>
+        <version>${apache-ant.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.re2j</groupId>
@@ -1226,16 +1225,6 @@
         <groupId>com.jcraft</groupId>
         <artifactId>jsch</artifactId>
         <version>0.1.55</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.htrace</groupId>
-        <artifactId>htrace-core</artifactId>
-        <version>${htrace3.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.htrace</groupId>
-        <artifactId>htrace-core4</artifactId>
-        <version>${htrace4.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
@@ -1445,7 +1434,7 @@
       <dependency>
         <groupId>com.aliyun.oss</groupId>
         <artifactId>aliyun-sdk-oss</artifactId>
-        <version>3.4.1</version>
+        <version>3.13.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
@@ -2217,6 +2206,8 @@
       </activation>
       <properties>
         <build.platform>Mac_OS_X-${sun.arch.data.model}</build.platform>
+        <!-- To make protoc work on Apple Silicon via fallback -->
+        <os.detected.classifier>osx-x86_64</os.detected.classifier>
       </properties>
     </profile>
     <profile>

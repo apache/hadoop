@@ -44,6 +44,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -436,7 +437,8 @@ public class TestFrameworkUploader {
       // Create a target file
       File targetFile = new File(parent, "a.txt");
       try(FileOutputStream os = new FileOutputStream(targetFile)) {
-        IOUtils.writeLines(Lists.newArrayList("a", "b"), null, os);
+        IOUtils.writeLines(Lists.newArrayList("a", "b"), null, os,
+            Charset.defaultCharset());
       }
       Assert.assertFalse(uploader.checkSymlink(targetFile));
 

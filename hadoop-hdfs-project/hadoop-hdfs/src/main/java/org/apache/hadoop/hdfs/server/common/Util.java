@@ -285,7 +285,7 @@ public final class Util {
         fos.getChannel().force(true);
         fos.close();
         double writeSec = Math.max(((float)
-            (flushStartTime - Time.monotonicNow())) / 1000.0, 0.001);
+            (Time.monotonicNow() - flushStartTime)) / 1000.0, 0.001);
         xferCombined += writeSec;
         xferStats.append(String
             .format(" Synchronous (fsync) write to disk of " +

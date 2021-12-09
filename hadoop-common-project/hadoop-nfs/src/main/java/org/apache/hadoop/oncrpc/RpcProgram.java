@@ -24,7 +24,6 @@ import java.net.SocketAddress;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.oncrpc.RpcAcceptedReply.AcceptState;
-import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.portmap.PortmapMapping;
 import org.apache.hadoop.portmap.PortmapRequest;
@@ -214,7 +213,7 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   private void sendAcceptedReply(RpcCall call, SocketAddress remoteAddress,
       AcceptState acceptState, ChannelHandlerContext ctx) {
     RpcAcceptedReply reply = RpcAcceptedReply.getInstance(call.getXid(),
-        acceptState, Verifier.VERIFIER_NONE);
+        acceptState, VerifierNone.INSTANCE);
 
     XDR out = new XDR();
     reply.write(out);

@@ -789,7 +789,7 @@
 
 <property>
   <name>dfs.blockreport.initialDelay</name>
-  <value>0s</value>
+  <value>0</value>
   <description>
     Delay for first block report in seconds. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.If
@@ -834,7 +834,7 @@
 
 <property>
   <name>dfs.datanode.directoryscan.interval</name>
-  <value>21600s</value>
+  <value>21600</value>
   <description>Interval in seconds for Datanode to scan data directories and
   reconcile the difference between blocks in memory and on the disk.
   Support multiple time unit suffix(case insensitive), as described
@@ -873,7 +873,7 @@
 
 <property>
   <name>dfs.heartbeat.interval</name>
-  <value>3s</value>
+  <value>3</value>
   <description>
     Determines datanode heartbeat interval in seconds.
     Can use the following suffix (case insensitive):
@@ -1086,7 +1086,7 @@
 
 <property>
   <name>dfs.namenode.decommission.interval</name>
-  <value>30s</value>
+  <value>30</value>
   <description>Namenode periodicity in seconds to check if
     decommission or maintenance is complete. Support multiple time unit
     suffix(case insensitive), as described in dfs.heartbeat.interval.
@@ -1154,7 +1154,7 @@
 
 <property>
   <name>dfs.namenode.redundancy.interval.seconds</name>
-  <value>3s</value>
+  <value>3</value>
   <description>The periodicity in seconds with which the namenode computes 
   low redundancy work for datanodes. Support multiple time unit suffix(case insensitive),
   as described in dfs.heartbeat.interval.
@@ -1270,7 +1270,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.period</name>
-  <value>3600s</value>
+  <value>3600</value>
   <description>
     The number of seconds between two periodic checkpoints.
     Support multiple time unit suffix(case insensitive), as described
@@ -1290,7 +1290,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.check.period</name>
-  <value>60s</value>
+  <value>60</value>
   <description>The SecondaryNameNode and CheckpointNode will poll the NameNode
   every 'dfs.namenode.checkpoint.check.period' seconds to query the number
   of uncheckpointed transactions. Support multiple time unit suffix(case insensitive),
@@ -1747,7 +1747,7 @@
 
 <property>
   <name>dfs.client.datanode-restart.timeout</name>
-  <value>30s</value>
+  <value>30</value>
   <description>
     Expert only. The time to wait, in seconds, from reception of an
     datanode shutdown notification for quick restart, until declaring
@@ -1817,7 +1817,7 @@
 
 <property>
   <name>dfs.ha.log-roll.period</name>
-  <value>120s</value>
+  <value>120</value>
   <description>
     How often, in seconds, the StandbyNode should ask the active to
     roll edit logs. Since the StandbyNode only reads from finalized
@@ -1832,7 +1832,7 @@
 
 <property>
   <name>dfs.ha.tail-edits.period</name>
-  <value>60s</value>
+  <value>60</value>
   <description>
     How often, the StandbyNode and ObserverNode should check if there are new
     edit log entries ready to be consumed. This is the minimum period between
@@ -2085,6 +2085,16 @@
     for more than a specified time interval. Stale datanodes will be
     moved to the end of the node list returned for reading. See
     dfs.namenode.avoid.write.stale.datanode for a similar setting for writes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.avoid.read.slow.datanode</name>
+  <value>false</value>
+  <description>
+    Indicate whether or not to avoid reading from &quot;slow&quot; datanodes.
+    Slow datanodes will be moved to the end of the node list returned
+    for reading.
   </description>
 </property>
 
@@ -3739,7 +3749,7 @@
 
 <property>
   <name>dfs.datanode.bp-ready.timeout</name>
-  <value>20s</value>
+  <value>20</value>
   <description>
     The maximum wait time for datanode to be ready before failing the
     received request. Setting this to 0 fails requests right away if the
@@ -3897,7 +3907,7 @@
   <value>10000,6,60000,10</value>
   <description>
     Specify a policy of multiple linear random retry for WebHDFS client,
-    e.g. given pairs of number of retries and sleep time (n0, t0), (n1, t1),
+    e.g. given pairs of sleep time and number of retries (t0, n0), (t1, n1),
     ..., the first n0 retries sleep t0 milliseconds on average,
     the following n1 retries sleep t1 milliseconds on average, and so on.
   </description>
@@ -4155,6 +4165,16 @@
 </property>
 
 <property>
+  <name>dfs.checksum.ec.socket-timeout</name>
+  <value>3000</value>
+  <description>
+    Default timeout value in milliseconds for computing the checksum of striped blocks.
+    Recommended to set the same value between client and DNs in a cluster because mismatching
+    may cause exhausting handler threads.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.block.write.locateFollowingBlock.retries</name>
   <value>5</value>
   <description>
@@ -4336,7 +4356,10 @@
   <name>dfs.client.retry.policy.spec</name>
   <value>10000,6,60000,10</value>
   <description>
-    Set to pairs of timeouts and retries for DFSClient.
+    Specify a policy of multiple linear random retry for the DFS client,
+    e.g. given pairs of sleep time and number of retries (t0, n0), (t1, n1),
+    ..., the first n0 retries sleep t0 milliseconds on average,
+    the following n1 retries sleep t1 milliseconds on average, and so on.
   </description>
 </property>
 
@@ -4929,6 +4952,18 @@
   </description>
 </property>
 
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance</name>
+    <value>5</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 20, inclusive. if the value is set beyond the scope,
+      this value will be set as 5 by default, Increases tolerance of
+      placing blocks on Datanodes with similar disk space used.
+    </description>
+  </property>
+
 <property>
   <name>
     dfs.namenode.available-space-block-placement-policy.balance-local-node
@@ -4941,6 +4976,30 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-preference-fraction</name>
+  <value>0.6</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 1, noninclusive.  Increases chance of
+    placing blocks on Datanodes with less disk space used. More the value near 1
+    more are the chances of choosing the datanode with less percentage of data.
+    Similarly as the value moves near 0, the chances of choosing datanode with
+    high load increases as the value reaches near 0.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerance</name>
+  <value>5</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 20, inclusive. if the value is set beyond the scope,
+    this value will be set as 5 by default, Increases tolerance of
+    placing blocks on Datanodes with similar disk space used.
+  </description>
+</property>
 <property>
   <name>dfs.namenode.backup.dnrpc-address</name>
   <value></value>
@@ -5095,32 +5154,6 @@
     in seconds.  If this value is greater than the property
     dfs.namenode.stale.datanode.interval, then the calculated value above
     is used.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.timeout.ms</name>
-  <value>4</value>
-  <description>
-    Timeout value in ms for the StorageInfo compaction run.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.interval.ms</name>
-  <value>600000</value>
-  <description>
-    The thread for checking the StorageInfo for defragmentation will
-    run periodically.  The time between runs is determined by this
-    property.
-  </description>
-</property>
-
-<property>
-  <name>dfs.namenode.storageinfo.defragment.ratio</name>
-  <value>0.75</value>
-  <description>
-    The defragmentation threshold for the StorageInfo.
   </description>
 </property>
 

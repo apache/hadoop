@@ -33,6 +33,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
  */
 public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
+  private S3AContract contract;
 
   public ITestS3AFSMainOperations() {
     super(createTestPath(
@@ -41,9 +42,16 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   @Override
   protected FileSystem createFileSystem() throws Exception {
-    S3AContract contract = new S3AContract(new Configuration());
+    contract = new S3AContract(new Configuration());
     contract.init();
     return contract.getTestFileSystem();
+  }
+
+  @Override
+  public void tearDown() throws Exception {
+    if (contract.getTestFileSystem() != null) {
+      super.tearDown();
+    }
   }
 
   @Override

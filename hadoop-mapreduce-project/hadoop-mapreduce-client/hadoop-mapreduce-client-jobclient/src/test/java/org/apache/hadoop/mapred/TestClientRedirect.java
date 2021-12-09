@@ -280,6 +280,14 @@ public class TestClientRedirect {
     }
 
     @Override
+    protected void serviceStop() throws Exception {
+      if (server != null) {
+        server.stop();
+      }
+      super.serviceStop();
+    }
+
+    @Override
     protected void serviceInit(Configuration conf) throws Exception {
       clientServiceBindAddress = RMADDRESS;
       /*

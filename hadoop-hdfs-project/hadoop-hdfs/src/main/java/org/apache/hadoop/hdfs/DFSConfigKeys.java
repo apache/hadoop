@@ -291,18 +291,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;
   public static final String  DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY = "dfs.namenode.replication.max-streams-hard-limit";
   public static final int     DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT = 4;
-  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_INTERVAL_MS_KEY
-      = "dfs.namenode.storageinfo.defragment.interval.ms";
-  public static final int
-      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_INTERVAL_MS_DEFAULT = 10 * 60 * 1000;
-  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_TIMEOUT_MS_KEY
-      = "dfs.namenode.storageinfo.defragment.timeout.ms";
-  public static final int
-      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_TIMEOUT_MS_DEFAULT = 4;
-  public static final String DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_RATIO_KEY
-      = "dfs.namenode.storageinfo.defragment.ratio";
-  public static final double
-      DFS_NAMENODE_STORAGEINFO_DEFRAGMENT_RATIO_DEFAULT = 0.75;
   public static final String DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_KEY
       = "dfs.namenode.blockreport.queue.size";
   public static final int    DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_DEFAULT
@@ -517,6 +505,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;
+  public static final String DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY =
+      "dfs.namenode.avoid.read.slow.datanode";
+  public static final boolean
+      DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_DEFAULT = false;
   // Whether to enable datanode's stale state detection and usage for writes
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY = "dfs.namenode.avoid.write.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT = false;
@@ -1132,6 +1124,26 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.available-space-block-placement-policy.balanced-space-preference-fraction";
   public static final float   DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
       0.6f;
+  public static final String
+          DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY =
+          "dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance";
+  public static final int
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT =
+      5;
+  public static final String
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY =
+      "dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy"
+          + ".balanced-space-preference-fraction";
+  public static final float
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
+      0.6f;
+  public static final String
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_KEY =
+      "dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy"
+          + ".balanced-space-tolerance";
+  public static final int
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_TOLERANCE_DEFAULT =
+      5;
   public static final String
       DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY =
       "dfs.namenode.available-space-block-placement-policy.balance-local-node";

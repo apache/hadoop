@@ -18,7 +18,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.2-SNAPSHOT</version>
+    <version>3.3.3-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-aliyun</artifactId>
@@ -105,6 +105,12 @@
       <groupId>com.aliyun.oss</groupId>
       <artifactId>aliyun-sdk-oss</artifactId>
       <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>

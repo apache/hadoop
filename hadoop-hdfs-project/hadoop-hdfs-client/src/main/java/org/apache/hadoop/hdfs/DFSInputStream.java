@@ -1003,7 +1003,7 @@ public class DFSInputStream extends FSInputStream
       String description = "Could not obtain block: " + blockInfo;
       DFSClient.LOG.warn(description + errMsg
           + ". Throwing a BlockMissingException");
-      throw new BlockMissingException(src, description,
+      throw new BlockMissingException(src, description + errMsg,
           block.getStartOffset());
     }
 

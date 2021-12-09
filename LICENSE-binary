@@ -212,7 +212,7 @@ com.aliyun:aliyun-java-sdk-core:3.4.0
 com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
-com.aliyun.oss:aliyun-sdk-oss:3.4.1
+com.aliyun.oss:aliyun-sdk-oss:3.13.0
 com.amazonaws:aws-java-sdk-bundle:1.11.901
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
@@ -252,7 +252,6 @@ commons-codec:commons-codec:1.11
 commons-collections:commons-collections:3.2.2
 commons-daemon:commons-daemon:1.0.13
 commons-io:commons-io:2.8.0
-commons-lang:commons-lang:2.6
 commons-logging:commons-logging:1.1.3
 commons-net:commons-net:3.6
 de.ruedigermoeller:fst:2.50
@@ -276,15 +275,15 @@ io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
 log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
-net.minidev:accessors-smart:2.4.2
-net.minidev:json-smart:2.4.2
+net.minidev:accessors-smart:2.4.7
+net.minidev:json-smart:2.4.7
 org.apache.avro:avro:1.7.7
 org.apache.commons:commons-collections4:4.2
-org.apache.commons:commons-compress:1.19
+org.apache.commons:commons-compress:1.21
 org.apache.commons:commons-configuration2:2.1.1
 org.apache.commons:commons-csv:1.0
 org.apache.commons:commons-digester:1.8.1
-org.apache.commons:commons-lang3:3.7
+org.apache.commons:commons-lang3:3.12.0
 org.apache.commons:commons-math3:3.1.1
 org.apache.commons:commons-text:1.4
 org.apache.commons:commons-validator:1.6
@@ -300,7 +299,7 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
-org.apache.kafka:kafka-clients:2.4.0
+org.apache.kafka:kafka-clients:2.8.1
 org.apache.kerby:kerb-admin:1.0.1
 org.apache.kerby:kerb-client:1.0.1
 org.apache.kerby:kerb-common:1.0.1
@@ -365,7 +364,7 @@ hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-nativet
 hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/compat/{fstatat|openat|unlinkat}.h
 
-com.github.luben:zstd-jni:1.4.3-1
+com.github.luben:zstd-jni:1.4.9-1
 dnsjava:dnsjava:2.1.7
 org.codehaus.woodstox:stax2-api:4.2.1
 
@@ -464,7 +463,7 @@ javax.xml.bind:jaxb-api:2.2.11
 Eclipse Public License 1.0
 --------------------------
 
-junit:junit:4.13.1
+junit:junit:4.13.2
 
 Eclipse Distribution License 1.0
 --------------------------

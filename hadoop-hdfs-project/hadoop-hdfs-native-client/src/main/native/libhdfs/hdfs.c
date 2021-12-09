@@ -956,9 +956,14 @@ struct hdfsStreamBuilder {
 struct hdfsStreamBuilder *hdfsStreamBuilderAlloc(hdfsFS fs,
                                             const char *path, int flags)
 {
-    int path_len = strlen(path);
+    size_t path_len = strlen(path);
     struct hdfsStreamBuilder *bld;
 
+    // Check for overflow in path_len
+    if (path_len > SIZE_MAX - sizeof(struct hdfsStreamBuilder)) {
+        errno = EOVERFLOW;
+        return NULL;
+    }
     // sizeof(hdfsStreamBuilder->path) includes one byte for the string
     // terminator
     bld = malloc(sizeof(struct hdfsStreamBuilder) + path_len);

@@ -29,14 +29,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -59,6 +62,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -89,6 +93,8 @@ import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.buildEncryptionSecrets;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
@@ -186,6 +192,8 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     S3AFileSystem fs1 = new S3AFileSystem();
@@ -229,10 +237,44 @@ public final class S3ATestUtils {
     // make this whole class not run by default
     Assume.assumeTrue("No test filesystem in " + TEST_FS_S3A_NAME,
         liveTest);
+    // Skip if S3Guard and S3-CSE are enabled.
+    skipIfS3GuardAndS3CSEEnabled(conf);
     // patch in S3Guard options
     maybeEnableS3Guard(conf);
     FileContext fc = FileContext.getFileContext(testURI, conf);
     return fc;
+  }
+
+  /**
+   * Skip if S3Guard and S3CSE are enabled together.
+   *
+   * @param conf Test Configuration.
+   */
+  private static void skipIfS3GuardAndS3CSEEnabled(Configuration conf)
+      throws IOException {
+    String encryptionMethod = getEncryptionAlgorithm(getTestBucketName(conf),
+        conf).getMethod();
+    String metaStore = conf.getTrimmed(S3_METADATA_STORE_IMPL, "");
+    if (encryptionMethod.equals(S3AEncryptionMethods.CSE_KMS.getMethod()) &&
+        !metaStore.equals(S3GUARD_METASTORE_NULL)) {
+      skip("Skipped if CSE is enabled with S3Guard.");
+    }
+  }
+
+  /**
+   * Either skip if PathIOE occurred due to S3CSE and S3Guard
+   * incompatibility or throw the PathIOE.
+   *
+   * @param ioe PathIOE being parsed.
+   * @throws PathIOException Throws PathIOE if it doesn't relate to S3CSE
+   *                         and S3Guard incompatibility.
+   */
+  public static void maybeSkipIfS3GuardAndS3CSEIOE(PathIOException ioe)
+      throws PathIOException {
+    if (ioe.toString().contains(InternalConstants.CSE_S3GUARD_INCOMPATIBLE)) {
+      skip("Skipping since CSE is enabled with S3Guard.");
+    }
+    throw ioe;
   }
 
   /**
@@ -1201,7 +1243,13 @@ public final class S3ATestUtils {
   public static void assertOptionEquals(Configuration conf,
       String key,
       String expected) {
-    assertEquals("Value of " + key, expected, conf.get(key));
+    String actual = conf.get(key);
+    String origin = actual == null
+        ? "(none)"
+        : "[" + StringUtils.join(conf.getPropertySources(key), ", ") + "]";
+    Assertions.assertThat(actual)
+        .describedAs("Value of %s with origin %s", key, origin)
+        .isEqualTo(expected);
   }
 
   /**
@@ -1493,6 +1541,26 @@ public final class S3ATestUtils {
         path,
         needEmptyDirectoryFlag,
         probes);
+  }
+
+  /**
+   * Skip a test if encryption algorithm or encryption key is not set.
+   *
+   * @param configuration configuration to probe.
+   */
+  public static void skipIfEncryptionNotSet(Configuration configuration,
+      S3AEncryptionMethods s3AEncryptionMethod) throws IOException {
+    // if S3 encryption algorithm is not set to desired method or AWS encryption
+    // key is not set, then skip.
+    String bucket = getTestBucketName(configuration);
+    final EncryptionSecrets secrets = buildEncryptionSecrets(bucket, configuration);
+    if (!s3AEncryptionMethod.getMethod().equals(secrets.getEncryptionMethod().getMethod())
+        || StringUtils.isBlank(secrets.getEncryptionKey())) {
+      skip(S3_ENCRYPTION_KEY + " is not set for " + s3AEncryptionMethod
+          .getMethod() + " or " + S3_ENCRYPTION_ALGORITHM + " is not set to "
+          + s3AEncryptionMethod.getMethod()
+          + " in " + secrets);
+    }
   }
 
 }

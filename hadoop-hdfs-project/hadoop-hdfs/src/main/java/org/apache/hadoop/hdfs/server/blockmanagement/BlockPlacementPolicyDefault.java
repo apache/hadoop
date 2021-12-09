@@ -103,7 +103,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected double considerLoadFactor;
   private boolean preferLocalNode;
   private boolean dataNodePeerStatsEnabled;
-  private boolean excludeSlowNodesEnabled;
+  private volatile boolean excludeSlowNodesEnabled;
   protected NetworkTopology clusterMap;
   protected Host2NodesMap host2datanodeMap;
   private FSClusterStats stats;
@@ -435,7 +435,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * @param storageTypes storage type to be considered for target
    * @return local node of writer (not chosen node)
    */
-  private Node chooseTarget(int numOfReplicas,
+  private Node chooseTarget(final int numOfReplicas,
                             Node writer,
                             final Set<Node> excludedNodes,
                             final long blocksize,
@@ -469,7 +469,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     LOG.trace("storageTypes={}", storageTypes);
 
     try {
-      if ((numOfReplicas = requiredStorageTypes.size()) == 0) {
+      if (requiredStorageTypes.size() == 0) {
         throw new NotEnoughReplicasException(
             "All required storage types are unavailable: "
             + " unavailableStorages=" + unavailableStorages
@@ -498,10 +498,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         for (DatanodeStorageInfo resultStorage : results) {
           addToExcludedNodes(resultStorage.getDatanodeDescriptor(), oldExcludedNodes);
         }
-        // Set numOfReplicas, since it can get out of sync with the result list
+        // Set newNumOfReplicas, since it can get out of sync with the result list
         // if the NotEnoughReplicasException was thrown in chooseRandom().
-        numOfReplicas = totalReplicasExpected - results.size();
-        return chooseTarget(numOfReplicas, writer, oldExcludedNodes, blocksize,
+        int newNumOfReplicas = totalReplicasExpected - results.size();
+        return chooseTarget(newNumOfReplicas, writer, oldExcludedNodes, blocksize,
             maxNodesPerRack, results, false, storagePolicy, unavailableStorages,
             newBlock, null);
       }
@@ -520,8 +520,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           addToExcludedNodes(resultStorage.getDatanodeDescriptor(),
               oldExcludedNodes);
         }
-        numOfReplicas = totalReplicasExpected - results.size();
-        return chooseTarget(numOfReplicas, writer, oldExcludedNodes, blocksize,
+        int newNumOfReplicas = totalReplicasExpected - results.size();
+        return chooseTarget(newNumOfReplicas, writer, oldExcludedNodes, blocksize,
             maxNodesPerRack, results, false, storagePolicy, unavailableStorages,
             newBlock, null);
       }
@@ -1104,8 +1104,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
     // check if the target is a slow node
     if (dataNodePeerStatsEnabled && excludeSlowNodesEnabled) {
-      Set<Node> nodes = DatanodeManager.getSlowNodes();
-      if (nodes.contains(node)) {
+      Set<String> slowNodesUuidSet = DatanodeManager.getSlowNodesUuidSet();
+      if (slowNodesUuidSet.contains(node.getDatanodeUuid())) {
         logNodeIsNotChosen(node, NodeNotChosenReason.NODE_SLOW);
         return false;
       }
@@ -1358,6 +1358,16 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @VisibleForTesting
   void setPreferLocalNode(boolean prefer) {
     this.preferLocalNode = prefer;
+  }
+
+  @Override
+  public void setExcludeSlowNodesEnabled(boolean enable) {
+    this.excludeSlowNodesEnabled = enable;
+  }
+
+  @Override
+  public boolean getExcludeSlowNodesEnabled() {
+    return excludeSlowNodesEnabled;
   }
 }
 

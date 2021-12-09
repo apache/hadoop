@@ -712,10 +712,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
       // percentage will also be re-calculated.
-      return defaultValue;
+      return queue.equals("root") ? 100.0f : defaultValue;
     }
 
-    float capacity = getFloat(capacityPropertyName, defaultValue);
+    float capacity = queue.equals("root") ? 100.0f
+        : getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal capacity of " + capacity
@@ -950,6 +951,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       return ResourceUtils.createResourceFromString(rawQueueMaxAllocation,
               ResourceUtils.getResourcesTypeInfo());
     }
+  }
+
+  public void setQueueMaximumAllocation(String queue, String maximumAllocation) {
+    String queuePrefix = getQueuePrefix(queue);
+    set(queuePrefix + MAXIMUM_ALLOCATION, maximumAllocation);
   }
 
   public long getQueueMaximumAllocationMb(String queue) {
@@ -2058,6 +2064,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setDefaultNodeLabelExpression(leafQueueConfPrefix, expression);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueConfigMaximumAllocation(String
+         queuePath, String expression) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setQueueMaximumAllocation(leafQueueConfPrefix, expression);
   }
 
   public static String getUnits(String resourceValue) {

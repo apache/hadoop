@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.tools.contract;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DISTCP_JOB_ID;
 
 import java.io.IOException;
@@ -76,6 +78,22 @@ public abstract class AbstractContractDistCpTest
   public static final int DEFAULT_DISTCP_SIZE_KB = 1024;
 
   protected static final int MB = 1024 * 1024;
+
+  /**
+   * Default depth for a directory tree: {@value}.
+   */
+  protected static final int DEFAULT_DEPTH = 3;
+
+  /**
+   * Default width for a directory tree: {@value}.
+   * Total dir size is
+   * <pre>
+   *   DEFAULT_WITH^DEFAULT_DEPTH
+   * </pre>
+   * So the duration of a test run grows rapidly with this value.
+   * This has very significant consequences for object storage runs.
+   */
+  protected static final int DEFAULT_WIDTH = 2;
 
   @Rule
   public TestName testName = new TestName();
@@ -154,13 +172,20 @@ public abstract class AbstractContractDistCpTest
     localDir =
         localFS.makeQualified(new Path(new Path(
         GenericTestUtils.getTestDir().toURI()), testSubDir + "/local"));
+    localFS.delete(localDir, true);
     mkdirs(localFS, localDir);
-    remoteDir = path(testSubDir + "/remote");
-    mkdirs(remoteFS, remoteDir);
+    Path testSubPath = path(testSubDir);
+    remoteDir = new Path(testSubPath, "remote");
     // test teardown does this, but IDE-based test debugging can skip
     // that teardown; this guarantees the initial state is clean
     remoteFS.delete(remoteDir, true);
-    localFS.delete(localDir, true);
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    // if remote FS supports IOStatistics log it.
+    logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, getRemoteFS());
+    super.teardown();
   }
 
   /**
@@ -325,6 +350,7 @@ public abstract class AbstractContractDistCpTest
             .withDeleteMissing(true)
             .withSyncFolder(true)
             .withCRC(true)
+            .withDirectWrite(shouldUseDirectWrite())
             .withOverwrite(false)));
   }
 
@@ -378,6 +404,7 @@ public abstract class AbstractContractDistCpTest
             inputDirUnderOutputDir)
             .withTrackMissing(trackDir)
             .withSyncFolder(true)
+            .withDirectWrite(shouldUseDirectWrite())
             .withOverwrite(false)));
 
     lsR("tracked udpate", remoteFS, destDir);
@@ -476,7 +503,7 @@ public abstract class AbstractContractDistCpTest
     remoteFS.create(new Path(remoteDir, "file1")).close();
     DistCpTestUtils
         .assertRunDistCp(DistCpConstants.SUCCESS, remoteDir.toString(),
-            localDir.toString(), null, conf);
+            localDir.toString(), getDefaultCLIOptionsOrNull(), conf);
     assertNotNull("DistCp job id isn't set",
         conf.get(CONF_LABEL_DISTCP_JOB_ID));
   }
@@ -532,13 +559,15 @@ public abstract class AbstractContractDistCpTest
    */
   private void largeFiles(FileSystem srcFS, Path srcDir, FileSystem dstFS,
       Path dstDir) throws Exception {
+    int fileSizeKb = conf.getInt(SCALE_TEST_DISTCP_FILE_SIZE_KB,
+        getDefaultDistCPSizeKb());
+    if (fileSizeKb < 1) {
+      skip("File size in " + SCALE_TEST_DISTCP_FILE_SIZE_KB + " is zero");
+    }
     initPathFields(srcDir, dstDir);
     Path largeFile1 = new Path(inputDir, "file1");
     Path largeFile2 = new Path(inputDir, "file2");
     Path largeFile3 = new Path(inputDir, "file3");
-    mkdirs(srcFS, inputDir);
-    int fileSizeKb = conf.getInt(SCALE_TEST_DISTCP_FILE_SIZE_KB,
-        DEFAULT_DISTCP_SIZE_KB);
     int fileSizeMb = fileSizeKb / 1024;
     getLogger().info("{} with file size {}", testName.getMethodName(), fileSizeMb);
     byte[] data1 = dataset((fileSizeMb + 1) * MB, 33, 43);
@@ -549,22 +578,37 @@ public abstract class AbstractContractDistCpTest
     createFile(srcFS, largeFile3, true, data3);
     Path target = new Path(dstDir, "outputDir");
     runDistCp(inputDir, target);
-    ContractTestUtils.assertIsDirectory(dstFS, target);
     verifyFileContents(dstFS, new Path(target, "inputDir/file1"), data1);
     verifyFileContents(dstFS, new Path(target, "inputDir/file2"), data2);
     verifyFileContents(dstFS, new Path(target, "inputDir/file3"), data3);
   }
 
   /**
+   * Override point. What is the default distcp size
+   * for large files if not overridden by
+   * {@link #SCALE_TEST_DISTCP_FILE_SIZE_KB}.
+   * If 0 then, unless overridden in the configuration,
+   * the large file tests will not run.
+   * @return file size.
+   */
+  protected int getDefaultDistCPSizeKb() {
+    return DEFAULT_DISTCP_SIZE_KB;
+  }
+
+  /**
    * Executes DistCp and asserts that the job finished successfully.
-   *
+   * The choice of direct/indirect is based on the value of
+   *  {@link #shouldUseDirectWrite()}.
    * @param src source path
    * @param dst destination path
    * @throws Exception if there is a failure
    */
   private void runDistCp(Path src, Path dst) throws Exception {
-    runDistCp(buildWithStandardOptions(
-        new DistCpOptions.Builder(Collections.singletonList(src), dst)));
+    if (shouldUseDirectWrite()) {
+      runDistCpDirectWrite(src, dst);
+    } else {
+      runDistCpWithRename(src, dst);
+    }
   }
 
   /**
@@ -607,6 +651,9 @@ public abstract class AbstractContractDistCpTest
   @Test
   public void testDirectWrite() throws Exception {
     describe("copy file from local to remote using direct write option");
+    if (shouldUseDirectWrite()) {
+      skip("not needed as all other tests use the -direct option.");
+    }
     directWrite(localFS, localDir, remoteFS, remoteDir, true);
   }
 
@@ -623,8 +670,6 @@ public abstract class AbstractContractDistCpTest
     Path source = new Path(remoteDir, "src");
     Path dest = new Path(localDir, "dest");
     dest = localFS.makeQualified(dest);
-    mkdirs(remoteFS, source);
-    verifyPathExists(remoteFS, "", source);
 
     GenericTestUtils
         .createFiles(remoteFS, source, getDepth(), getWidth(), getWidth());
@@ -632,8 +677,9 @@ public abstract class AbstractContractDistCpTest
     GenericTestUtils.LogCapturer log =
         GenericTestUtils.LogCapturer.captureLogs(SimpleCopyListing.LOG);
 
+    String options = "-useiterator -update -delete" + getDefaultCLIOptions();
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest.toString(), "-useiterator -update -delete", conf);
+        dest.toString(), options, conf);
 
     // Check the target listing was also done using iterator.
     Assertions.assertThat(log.getOutput()).contains(
@@ -644,11 +690,11 @@ public abstract class AbstractContractDistCpTest
   }
 
   public int getDepth() {
-    return 3;
+    return DEFAULT_DEPTH;
   }
 
   public int getWidth() {
-    return 10;
+    return DEFAULT_WIDTH;
   }
 
   private int getTotalFiles() {
@@ -657,6 +703,41 @@ public abstract class AbstractContractDistCpTest
       totalFiles += Math.pow(getWidth(), i);
     }
     return totalFiles;
+  }
+
+  /**
+   * Override point: should direct write always be used?
+   * false by default; enable for stores where rename is slow.
+   * @return true if direct write should be used in all tests.
+   */
+  protected boolean shouldUseDirectWrite() {
+    return false;
+  }
+
+  /**
+   * Return the default options for distcp, including,
+   * if {@link #shouldUseDirectWrite()} is true,
+   * the -direct option.
+   * Append or prepend this to string CLIs.
+   * @return default options.
+   */
+  protected String getDefaultCLIOptions() {
+    return shouldUseDirectWrite()
+        ? " -direct "
+        : "";
+  }
+
+  /**
+   * Return the default options for distcp, including,
+   * if {@link #shouldUseDirectWrite()} is true,
+   * the -direct option, null if there are no
+   * defaults.
+   * @return default options.
+   */
+  protected String getDefaultCLIOptionsOrNull() {
+    return shouldUseDirectWrite()
+        ? " -direct "
+        : null;
   }
 
   /**
@@ -683,7 +764,7 @@ public abstract class AbstractContractDistCpTest
     if (directWrite) {
       runDistCpDirectWrite(inputDir, target);
     } else {
-      runDistCp(inputDir, target);
+      runDistCpWithRename(inputDir, target);
     }
     ContractTestUtils.assertIsDirectory(dstFS, target);
     lsR("Destination tree after distcp", dstFS, target);
@@ -709,6 +790,21 @@ public abstract class AbstractContractDistCpTest
                     Collections.singletonList(srcDir), destDir)
                     .withDirectWrite(true)));
   }
+  /**
+   * Run distcp srcDir destDir.
+   * @param srcDir local source directory
+   * @param destDir remote destination directory
+   * @return the completed job
+   * @throws Exception any failure.
+   */
+  private Job runDistCpWithRename(Path srcDir, final Path destDir)
+          throws Exception {
+    describe("\nDistcp from " + srcDir + " to " + destDir);
+    return runDistCp(buildWithStandardOptions(
+            new DistCpOptions.Builder(
+                    Collections.singletonList(srcDir), destDir)
+                    .withDirectWrite(false)));
+  }
 
   @Test
   public void testDistCpWithFile() throws Exception {
@@ -718,7 +814,6 @@ public abstract class AbstractContractDistCpTest
     Path dest = new Path(localDir, "file");
     dest = localFS.makeQualified(dest);
 
-    mkdirs(remoteFS, remoteDir);
     mkdirs(localFS, localDir);
 
     int len = 4;
@@ -729,7 +824,7 @@ public abstract class AbstractContractDistCpTest
     verifyPathExists(localFS, "", localDir);
 
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest.toString(), null, conf);
+        dest.toString(), getDefaultCLIOptionsOrNull(), conf);
 
     Assertions
         .assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
@@ -739,14 +834,11 @@ public abstract class AbstractContractDistCpTest
 
   @Test
   public void testDistCpWithUpdateExistFile() throws Exception {
-    describe("Now update an exist file.");
+    describe("Now update an existing file.");
 
     Path source = new Path(remoteDir, "file");
     Path dest = new Path(localDir, "file");
     dest = localFS.makeQualified(dest);
-
-    mkdirs(remoteFS, remoteDir);
-    mkdirs(localFS, localDir);
 
     int len = 4;
     int base = 0x40;
@@ -758,7 +850,7 @@ public abstract class AbstractContractDistCpTest
     verifyPathExists(remoteFS, "", source);
     verifyPathExists(localFS, "", dest);
     DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, source.toString(),
-        dest.toString(), "-delete -update", conf);
+        dest.toString(), "-delete -update" + getDefaultCLIOptions(), conf);
 
     Assertions.assertThat(RemoteIterators.toList(localFS.listFiles(dest, true)))
         .hasSize(1);

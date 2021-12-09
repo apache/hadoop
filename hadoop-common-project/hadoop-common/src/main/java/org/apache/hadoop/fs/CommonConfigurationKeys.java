@@ -378,7 +378,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean RPC_METRICS_QUANTILE_ENABLE_DEFAULT = false;
   public static final String  RPC_METRICS_PERCENTILES_INTERVALS_KEY =
       "rpc.metrics.percentiles.intervals";
-  
+
+  public static final String RPC_METRICS_TIME_UNIT = "rpc.metrics.timeunit";
+
   /** Allowed hosts for nfs exports */
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_SEPARATOR = ";";
   public static final String NFS_EXPORTS_ALLOWED_HOSTS_KEY = "nfs.exports.allowed.hosts";
@@ -459,4 +461,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IOStatistics logging level. */
   public static final String IOSTATISTICS_LOGGING_LEVEL_DEFAULT
       = IOSTATISTICS_LOGGING_LEVEL_DEBUG;
+
+  /**
+   * default hadoop temp dir on local system: {@value}.
+   */
+  public static final String HADOOP_TMP_DIR = "hadoop.tmp.dir";
 }

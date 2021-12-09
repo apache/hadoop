@@ -461,8 +461,8 @@ public class TestLeaseRecovery {
 
       // Add a block to the file
       ExtendedBlock block = client.getNamenode().addBlock(
-          file, client.clientName, null, new DatanodeInfo[0], stat.getFileId(),
-          new String[0], null).getBlock();
+          file, client.clientName, null, DatanodeInfo.EMPTY_ARRAY,
+          stat.getFileId(), new String[0], null).getBlock();
 
       // update the pipeline to get a new genstamp.
       ExtendedBlock updatedBlock = client.getNamenode()
@@ -578,7 +578,7 @@ public class TestLeaseRecovery {
     // Add a block to the file
     LocatedBlock blk = client.getNamenode()
         .addBlock(file, client.clientName, null,
-            new DatanodeInfo[0], stat.getFileId(), new String[0], null);
+            DatanodeInfo.EMPTY_ARRAY, stat.getFileId(), new String[0], null);
     ExtendedBlock finalBlock = blk.getBlock();
     if (bytesToWrite != null) {
       // Here we create a output stream and then abort it so the block gets

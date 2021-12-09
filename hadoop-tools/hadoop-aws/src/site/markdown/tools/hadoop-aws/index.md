@@ -438,6 +438,12 @@ you'll need to remove the `profile` prefix from the AWS configuration section he
     aws_session_token = ...
     aws_security_token = ...
     ```
+Note:
+
+1. The `region` setting is only used if `fs.s3a.endpoint.region` is set to the empty string.
+1. For the credentials to be available to applications running in a Hadoop cluster, the
+   configuration files MUST be in the `~/.aws/` directory on the local filesystem in
+   all hosts in the cluster.
 
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 
@@ -641,7 +647,7 @@ files in local or Hadoop filesystems, and including them in requests.
 
 The S3A configuration options with sensitive data
 (`fs.s3a.secret.key`, `fs.s3a.access.key`,  `fs.s3a.session.token`
-and `fs.s3a.server-side-encryption.key`) can
+and `fs.s3a.encryption.key`) can
 have their data saved to a binary file stored, with the values being read in
 when the S3A filesystem URL is used for data access. The reference to this
 credential provider then declared in the Hadoop configuration.
@@ -657,8 +663,8 @@ stores.
 fs.s3a.access.key
 fs.s3a.secret.key
 fs.s3a.session.token
-fs.s3a.server-side-encryption.key
-fs.s3a.server-side-encryption-algorithm
+fs.s3a.encryption.key
+fs.s3a.encryption.algorithm
 ```
 
 The first three are for authentication; the final two for
@@ -802,8 +808,10 @@ options are covered in [Testing](./testing.md).
 <property>
   <name>fs.s3a.endpoint.region</name>
   <description>AWS S3 region for a bucket, which bypasses the parsing of
- fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
- while using privateLink URL and explicitly set the bucket region.
+    fs.s3a.endpoint to know the region. Would be helpful in avoiding errors
+    while using privateLink URL and explicitly set the bucket region.
+    If set to a blank string (or 1+ space), falls back to the
+    (potentially brittle) SDK region resolution process.
   </description>
 </property>
 
@@ -936,7 +944,9 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.acl.default</name>
   <description>Set a canned ACL for newly created and copied objects. Value may be Private,
     PublicRead, PublicReadWrite, AuthenticatedRead, LogDeliveryWrite, BucketOwnerRead,
-    or BucketOwnerFullControl.</description>
+    or BucketOwnerFullControl.
+    If set, caller IAM role must have "s3:PutObjectAcl" permission on the bucket.
+    </description>
 </property>
 
 <property>
@@ -959,20 +969,23 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.server-side-encryption-algorithm</name>
-  <description>Specify a server-side encryption algorithm for s3a: file system.
-    Unset by default. It supports the following values: 'AES256' (for SSE-S3), 'SSE-KMS'
-     and 'SSE-C'
+  <name>fs.s3a.encryption.algorithm</name>
+  <description>Specify a server-side encryption or client-side
+     encryption algorithm for s3a: file system. Unset by default. It supports the
+     following values: 'AES256' (for SSE-S3), 'SSE-KMS', 'SSE-C', and 'CSE-KMS'
   </description>
 </property>
 
 <property>
-    <name>fs.s3a.server-side-encryption.key</name>
-    <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
-    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
-    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
-    you'll be using your default's S3 KMS key, otherwise you should set this property to
-    the specific KMS key id.</description>
+    <name>fs.s3a.encryption.key</name>
+    <description>Specific encryption key to use if fs.s3a.encryption.algorithm
+        has been set to 'SSE-KMS', 'SSE-C' or 'CSE-KMS'. In the case of SSE-C
+    , the value of this property should be the Base64 encoded key. If you are
+     using SSE-KMS and leave this property empty, you'll be using your default's
+     S3 KMS key, otherwise you should set this property to the specific KMS key
+     id. In case of 'CSE-KMS' this value needs to be the AWS-KMS Key ID
+     generated from AWS console.
+    </description>
 </property>
 
 <property>
@@ -1413,31 +1426,47 @@ Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
 </property>
 ```
 
-### Customizing S3A secrets held in credential files
+#### per-bucket configuration and deprecated configuration options
+
+Per-bucket declaration of the deprecated encryption options
+will take priority over a global option -even when the
+global option uses the newer configuration keys.
+
+This means that when setting encryption options in XML files,
+the option, `fs.bucket.BUCKET.fs.s3a.server-side-encryption-algorithm`
+will take priority over the global value of `fs.bucket.s3a.encryption.algorithm`.
+The same holds for the encryption key option `fs.s3a.encryption.key`
+and its predecessor `fs.s3a.server-side-encryption.key`.
 
 
-Secrets in JCEKS files or provided by other Hadoop credential providers
-can also be configured on a per bucket basis. The S3A client will
-look for the per-bucket secrets be
+For a site configuration of:
 
+```xml
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption-algorithm</name>
+  <value>SSE-KMS</value>
+</property>
 
-Consider a JCEKS file with six keys:
+<property>
+  <name>fs.s3a.bucket.nightly.server-side-encryption.key</name>
+  <value>arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.algorithm</name>
+  <value>AES256</value>
+</property>
+
+<property>
+  <name>fs.s3a.encryption.key</name>
+  <value>unset</value>
+</property>
+
 
 ```
-fs.s3a.access.key
-fs.s3a.secret.key
-fs.s3a.server-side-encryption-algorithm
-fs.s3a.bucket.nightly.access.key
-fs.s3a.bucket.nightly.secret.key
-fs.s3a.bucket.nightly.session.token
-fs.s3a.bucket.nightly.server-side-encryption.key
-fs.s3a.bucket.nightly.server-side-encryption-algorithm
-```
 
-When accessing the bucket `s3a://nightly/`, the per-bucket configuration
-options for that bucket will be used, here the access keys and token,
-and including the encryption algorithm and key.
-
+The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
+`arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
 
 ###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
 

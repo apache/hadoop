@@ -38,8 +38,8 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.tracing.TraceScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -450,7 +450,11 @@ public class ProtobufRpcEngine2 implements RpcEngine {
      * @param bindAddress the address to bind on to listen for connection
      * @param port the port to listen for connections on
      * @param numHandlers the number of method handler threads to run
+     * @param numReaders number of read threads
+     * @param queueSizePerHandler the size of the queue contained
+     *                            in each Handler
      * @param verbose whether each call should be logged
+     * @param secretManager the server-side secret manager for each token type
      * @param portRangeConfig A config parameter that can be used to restrict
      * the range of ports used when port is 0 (an ephemeral port)
      * @param alignmentContext provides server state info on client responses

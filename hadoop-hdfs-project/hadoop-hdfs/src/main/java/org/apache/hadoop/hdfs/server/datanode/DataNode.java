@@ -50,6 +50,7 @@ import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStag
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_CREATE;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage.PIPELINE_SETUP_STREAMING_RECOVERY;
 import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.protocol.proto.ReconfigurationProtocolProtos.ReconfigurationProtocolService;
@@ -85,6 +86,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -202,13 +204,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.tracing.SpanReceiverInfo;
-import org.apache.hadoop.tracing.TraceAdminPB.TraceAdminService;
-import org.apache.hadoop.tracing.TraceAdminProtocol;
-import org.apache.hadoop.tracing.TraceAdminProtocolPB;
-import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.tracing.TraceUtils;
-import org.apache.hadoop.tracing.TracerConfigurationManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -219,7 +215,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 import org.eclipse.jetty.util.ajax.JSON;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
@@ -268,7 +264,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class DataNode extends ReconfigurableBase
     implements InterDatanodeProtocol, ClientDatanodeProtocol,
-        TraceAdminProtocol, DataNodeMXBean, ReconfigurationProtocol {
+        DataNodeMXBean, ReconfigurationProtocol {
   public static final Logger LOG = LoggerFactory.getLogger(DataNode.class);
   
   static{
@@ -315,6 +311,8 @@ public class DataNode extends ReconfigurableBase
   private static final String DATANODE_HTRACE_PREFIX = "datanode.htrace.";
   private final FileIoProvider fileIoProvider;
 
+  private static final String NETWORK_ERRORS = "networkErrors";
+
   /**
    * Use {@link NetUtils#createSocketAddr(String)} instead.
    */
@@ -351,8 +349,7 @@ public class DataNode extends ReconfigurableBase
   private DataNodePeerMetrics peerMetrics;
   private DataNodeDiskMetrics diskMetrics;
   private InetSocketAddress streamingAddr;
-  
-  // See the note below in incrDatanodeNetworkErrors re: concurrency.
+
   private LoadingCache<String, Map<String, Long>> datanodeNetworkCounts;
 
   private String hostName;
@@ -395,7 +392,6 @@ public class DataNode extends ReconfigurableBase
   private BlockRecoveryWorker blockRecoveryWorker;
   private ErasureCodingWorker ecWorker;
   private final Tracer tracer;
-  private final TracerConfigurationManager tracerConfigurationManager;
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
   private static final double CONGESTION_RATIO = 1.5;
@@ -412,13 +408,15 @@ public class DataNode extends ReconfigurableBase
 
   private static Tracer createTracer(Configuration conf) {
     return new Tracer.Builder("DataNode").
-        conf(TraceUtils.wrapHadoopConf(DATANODE_HTRACE_PREFIX , conf)).
+        conf(TraceUtils.wrapHadoopConf(DATANODE_HTRACE_PREFIX, conf)).
         build();
   }
 
   private long[] oobTimeouts; /** timeout value of each OOB type */
 
   private ScheduledThreadPoolExecutor metricsLoggerTimer;
+
+  private long startTime = 0;
 
   /**
    * Creates a dummy DataNode for testing purpose.
@@ -428,8 +426,6 @@ public class DataNode extends ReconfigurableBase
   DataNode(final Configuration conf) throws DiskErrorException {
     super(conf);
     this.tracer = createTracer(conf);
-    this.tracerConfigurationManager =
-        new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
     this.fileIoProvider = new FileIoProvider(conf, this);
     this.fileDescriptorPassingDisabledReason = null;
     this.maxNumberOfBlocksToLog = 0;
@@ -457,8 +453,6 @@ public class DataNode extends ReconfigurableBase
            final SecureResources resources) throws IOException {
     super(conf);
     this.tracer = createTracer(conf);
-    this.tracerConfigurationManager =
-        new TracerConfigurationManager(DATANODE_HTRACE_PREFIX, conf);
     this.fileIoProvider = new FileIoProvider(conf, this);
     this.blockScanner = new BlockScanner(this);
     this.lastDiskErrorCheck = 0;
@@ -523,9 +517,9 @@ public class DataNode extends ReconfigurableBase
             .maximumSize(dncCacheMaxSize)
             .build(new CacheLoader<String, Map<String, Long>>() {
               @Override
-              public Map<String, Long> load(String key) throws Exception {
-                final Map<String, Long> ret = new HashMap<String, Long>();
-                ret.put("networkErrors", 0L);
+              public Map<String, Long> load(String key) {
+                final Map<String, Long> ret = new ConcurrentHashMap<>();
+                ret.put(NETWORK_ERRORS, 0L);
                 return ret;
               }
             });
@@ -1044,16 +1038,6 @@ public class DataNode extends ReconfigurableBase
     DFSUtil.addPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
-    TraceAdminProtocolServerSideTranslatorPB traceAdminXlator =
-        new TraceAdminProtocolServerSideTranslatorPB(this);
-    BlockingService traceAdminService = TraceAdminService
-        .newReflectiveBlockingService(traceAdminXlator);
-    DFSUtil.addPBProtocol(
-        getConf(),
-        TraceAdminProtocolPB.class,
-        traceAdminService,
-        ipcServer);
-
     LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());
 
     // set service-level authorization security policy
@@ -1365,7 +1349,7 @@ public class DataNode extends ReconfigurableBase
   /**
    * This method starts the data node with the specified conf.
    * 
-   * If conf's CONFIG_PROPERTY_SIMULATED property is set
+   * If conf's DFS_DATANODE_FSDATASET_FACTORY_KEY property is set
    * then a simulated storage based data node is created.
    * 
    * @param dataDirectories - only for a non-simulated storage data node
@@ -2257,19 +2241,11 @@ public class DataNode extends ReconfigurableBase
   void incrDatanodeNetworkErrors(String host) {
     metrics.incrDatanodeNetworkErrors();
 
-    /*
-     * Synchronizing on the whole cache is a big hammer, but since it's only
-     * accumulating errors, it should be ok. If this is ever expanded to include
-     * non-error stats, then finer-grained concurrency should be applied.
-     */
-    synchronized (datanodeNetworkCounts) {
-      try {
-        final Map<String, Long> curCount = datanodeNetworkCounts.get(host);
-        curCount.put("networkErrors", curCount.get("networkErrors") + 1L);
-        datanodeNetworkCounts.put(host, curCount);
-      } catch (ExecutionException e) {
-        LOG.warn("failed to increment network error counts for host: {}", host);
-      }
+    try {
+      datanodeNetworkCounts.get(host).compute(NETWORK_ERRORS,
+          (key, errors) -> errors == null ? 1L : errors + 1L);
+    } catch (ExecutionException e) {
+      LOG.warn("Failed to increment network error counts for host: {}", host);
     }
   }
 
@@ -2705,6 +2681,7 @@ public class DataNode extends ReconfigurableBase
     }
     ipcServer.setTracer(tracer);
     ipcServer.start();
+    startTime = now();
     startPlugins(getConf());
   }
 
@@ -3136,6 +3113,11 @@ public class DataNode extends ReconfigurableBase
     return this.getConf().get("dfs.datanode.info.port");
   }
 
+  @Override // DataNodeMXBean
+  public long getDNStartedTimeInMillis() {
+    return this.startTime;
+  }
+
   public String getRevision() {
     return VersionInfo.getRevision();
   }
@@ -3512,24 +3494,6 @@ public class DataNode extends ReconfigurableBase
   @VisibleForTesting
   public long getLastDiskErrorCheck() {
     return lastDiskErrorCheck;
-  }
-
-  @Override
-  public SpanReceiverInfo[] listSpanReceivers() throws IOException {
-    checkSuperuserPrivilege();
-    return tracerConfigurationManager.listSpanReceivers();
-  }
-
-  @Override
-  public long addSpanReceiver(SpanReceiverInfo info) throws IOException {
-    checkSuperuserPrivilege();
-    return tracerConfigurationManager.addSpanReceiver(info);
-  }
-
-  @Override
-  public void removeSpanReceiver(long id) throws IOException {
-    checkSuperuserPrivilege();
-    tracerConfigurationManager.removeSpanReceiver(id);
   }
 
   public BlockRecoveryWorker getBlockRecoveryWorker(){

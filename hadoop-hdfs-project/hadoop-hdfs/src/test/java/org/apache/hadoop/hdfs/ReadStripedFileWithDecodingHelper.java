@@ -76,8 +76,6 @@ abstract public class ReadStripedFileWithDecodingHelper {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
         0);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-        false);
     MiniDFSCluster myCluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATANODES)
         .build();

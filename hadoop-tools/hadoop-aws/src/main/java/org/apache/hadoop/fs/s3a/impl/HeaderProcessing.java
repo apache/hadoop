@@ -301,8 +301,15 @@ public class HeaderProcessing extends AbstractStoreOperation {
         md.getContentEncoding());
     maybeSetHeader(headers, XA_CONTENT_LANGUAGE,
         md.getContentLanguage());
-    maybeSetHeader(headers, XA_CONTENT_LENGTH,
-        md.getContentLength());
+    // If CSE is enabled, use the unencrypted content length.
+    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+        && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
+      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+          md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
+    } else {
+      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+          md.getContentLength());
+    }
     maybeSetHeader(headers, XA_CONTENT_MD5,
         md.getContentMD5());
     maybeSetHeader(headers, XA_CONTENT_RANGE,

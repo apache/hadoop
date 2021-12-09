@@ -187,8 +187,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -509,7 +509,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException {
     synchronized (filesBeingWritten) {
       putFileBeingWritten(inodeId, out);
-      getLeaseRenewer().put(this);
+      LeaseRenewer renewer = getLeaseRenewer();
+      boolean result = renewer.put(this);
+      if (!result) {
+        // Existing LeaseRenewer cannot add another Daemon, so remove existing
+        // and add new one.
+        LeaseRenewer.remove(renewer);
+        renewer = getLeaseRenewer();
+        renewer.put(this);
+      }
     }
   }
 

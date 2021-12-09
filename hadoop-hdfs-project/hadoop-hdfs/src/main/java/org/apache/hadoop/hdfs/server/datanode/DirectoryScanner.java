@@ -140,7 +140,8 @@ public class DirectoryScanner implements Runnable {
           + ", missing metadata files: " + missingMetaFile
           + ", missing block files: " + missingBlockFile
           + ", missing blocks in memory: " + missingMemoryBlocks
-          + ", mismatched blocks: " + mismatchBlocks;
+          + ", mismatched blocks: " + mismatchBlocks
+          + ", duplicated blocks: " + duplicateBlocks;
     }
   }
 
@@ -355,7 +356,7 @@ public class DirectoryScanner implements Runnable {
   }
 
   /**
-   * Main program loop for DirectoryScanner. Runs {@link reconcile()} and
+   * Main program loop for DirectoryScanner. Runs {@link #reconcile()} and
    * handles any exceptions.
    */
   @Override
@@ -479,8 +480,8 @@ public class DirectoryScanner implements Runnable {
       Collection<ScanInfo> diffRecord = new ArrayList<>();
 
       statsRecord.totalBlocks = blockpoolReport.size();
-      final List<ReplicaInfo> bl;
-      bl = dataset.getSortedFinalizedBlocks(bpid);
+      final List<ReplicaInfo> bl = dataset.getFinalizedBlocks(bpid);
+      Collections.sort(bl); // Sort based on blockId
 
       int d = 0; // index for blockpoolReport
       int m = 0; // index for memReprot

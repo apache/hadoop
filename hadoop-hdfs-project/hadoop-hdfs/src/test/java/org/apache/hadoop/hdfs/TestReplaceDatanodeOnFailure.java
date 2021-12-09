@@ -65,7 +65,7 @@ public class TestReplaceDatanodeOnFailure {
 
     final DatanodeInfo[] infos = new DatanodeInfo[5];
     final DatanodeInfo[][] datanodes = new DatanodeInfo[infos.length + 1][];
-    datanodes[0] = new DatanodeInfo[0];
+    datanodes[0] = DatanodeInfo.EMPTY_ARRAY;
     for(int i = 0; i < infos.length; ) {
       infos[i] = DFSTestUtil.getLocalDatanodeInfo(9867 + i);
       i++;

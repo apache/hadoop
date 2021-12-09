@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 
 import java.io.IOException;
-
+import java.nio.charset.Charset;
 
 /**
  * executes a given plan.
@@ -69,7 +69,7 @@ public class ExecuteCommand extends Command {
 
     String planData = null;
     try (FSDataInputStream plan = open(planFile)) {
-      planData = IOUtils.toString(plan);
+      planData = IOUtils.toString(plan, Charset.defaultCharset());
     }
 
     boolean skipDateCheck = false;

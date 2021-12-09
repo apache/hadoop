@@ -179,6 +179,11 @@ public interface S3ATestConstants {
   String TEST_S3GUARD_DYNAMO_TABLE_PREFIX_DEFAULT = "s3guard.test.";
 
   /**
+   * ACL for S3 Logging; used in some tests: {@value}.
+   */
+  String LOG_DELIVERY_WRITE = "LogDeliveryWrite";
+
+  /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */
   int S3A_TEST_TIMEOUT = 10 * 60 * 1000;
@@ -229,4 +234,17 @@ public interface S3ATestConstants {
    * every test case.
    */
   String DIRECTORY_MARKER_AUDIT = "fs.s3a.directory.marker.audit";
+
+  /**
+   * Constant bytes being written when Client side encryption KMS is enabled
+   * for a test. This bytes written takes into account "EncryptionContext",
+   * which contains the algo used for eg:
+   * "aws:x-amz-cek-alg":"AES/GCM/NoPadding" , and "KeySpec", which specifies
+   * the length of data key. for eg: AES_256 to generate a 256-bit symmetric
+   * key.
+   *
+   * For test using bytesWritten as an assertion this constant value can be
+   * used.
+   */
+  int KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN = 94;
 }

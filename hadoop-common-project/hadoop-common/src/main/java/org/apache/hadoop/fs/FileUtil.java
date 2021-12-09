@@ -398,12 +398,6 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
-
-    if (srcFS.makeQualified(src).equals(dstFS.makeQualified(dst))) {
-      throw new PathOperationException("Source (" + src + ") and destination " +
-          "(" + dst + ") are equal in the copy command.");
-    }
-
     if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
@@ -524,6 +518,9 @@ public class FileUtil {
     if (null != sdst) {
       if (sdst.isDirectory()) {
         if (null == srcName) {
+          if (overwrite) {
+            return dst;
+          }
           throw new PathIsDirectoryException(dst.toString());
         }
         return checkDest(null, dstFS, new Path(dst, srcName), overwrite);
@@ -1868,5 +1865,21 @@ public class FileUtil {
   public static FileContext write(final FileContext fileContext,
       final Path path, final CharSequence charseq) throws IOException {
     return write(fileContext, path, charseq, StandardCharsets.UTF_8);
+  }
+
+  @InterfaceAudience.LimitedPrivate({"ViewDistributedFileSystem"})
+  @InterfaceStability.Unstable
+  /**
+   * Used in ViewDistributedFileSystem rename API to get access to the protected
+   * API of FileSystem interface. Even though Rename with options API
+   * deprecated, we are still using as part of trash. If any filesystem provided
+   * implementation to this protected FileSystem API, we can't invoke it with
+   * out casting to the specific filesystem. This util method is proposed to get
+   * the access to FileSystem#rename with options.
+   */
+  @SuppressWarnings("deprecation")
+  public static void rename(FileSystem srcFs, Path src, Path dst,
+      final Options.Rename... options) throws IOException {
+    srcFs.rename(src, dst, options);
   }
 }

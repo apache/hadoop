@@ -52,6 +52,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -80,6 +81,8 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -184,6 +187,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -212,6 +216,8 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_S3GUARD_INCOMPATIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
@@ -356,13 +362,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private AuditManagerS3A auditManager =
       AuditIntegration.stubAuditManager();
 
+  /**
+   * Is this S3A FS instance using S3 client side encryption?
+   */
+  private boolean isCSEEnabled;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
     Configuration.DeprecationDelta[] deltas = {
         new Configuration.DeprecationDelta(
             FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS,
-            FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS)
+            FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS),
+        new Configuration.DeprecationDelta(
+            SERVER_SIDE_ENCRYPTION_ALGORITHM,
+            S3_ENCRYPTION_ALGORITHM),
+        new Configuration.DeprecationDelta(
+            SERVER_SIDE_ENCRYPTION_KEY,
+            S3_ENCRYPTION_KEY)
     };
 
     if (deltas.length > 0) {
@@ -391,6 +408,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
+
+      // HADOOP-17894. remove references to s3a stores in JCEKS credentials.
+      conf = ProviderUtils.excludeIncompatibleCredentialProviders(
+          conf, S3AFileSystem.class);
+
       // fix up the classloader of the configuration to be whatever
       // classloader loaded this filesystem.
       // See: HADOOP-17372
@@ -411,14 +433,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // look for encryption data
       // DT Bindings may override this
-      setEncryptionSecrets(new EncryptionSecrets(
-          getEncryptionAlgorithm(bucket, conf),
-          getServerSideEncryptionKey(bucket, getConf())));
+      setEncryptionSecrets(
+          buildEncryptionSecrets(bucket, conf));
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
       initializeStatisticsBinding();
-
+      // If CSE-KMS method is set then CSE is enabled.
+      isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
+          .equals(getS3EncryptionAlgorithm().getMethod());
+      LOG.debug("Client Side Encryption enabled: {}", isCSEEnabled);
+      setCSEGauge();
       // Username is the current user at the time the FS was instantiated.
       owner = UserGroupInformation.getCurrentUser();
       username = owner.getShortUserName();
@@ -479,7 +504,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       initTransferManager();
 
-      initCannedAcls(conf);
 
       // This initiates a probe against S3 for the bucket existing.
       doBucketProbing();
@@ -508,6 +532,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
+      // If CSE is enabled, do multipart uploads serially.
+      if (isCSEEnabled) {
+        blockOutputActiveBlocks = 1;
+      }
       LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
               " queue limit={}",
           blockOutputBuffer, partSize, blockOutputActiveBlocks);
@@ -523,6 +551,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (hasMetadataStore()) {
         LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
             getMetadataStore(), allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+        if (isCSEEnabled) {
+          throw new PathIOException(uri.toString(), CSE_S3GUARD_INCOMPATIBLE);
+        }
       }
 
       // LOG if S3Guard is disabled on the warn level set in config
@@ -552,7 +583,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       stopAllServices();
       throw e;
     }
+  }
 
+  /**
+   * Set the client side encryption gauge to 0 or 1, indicating if CSE is
+   * enabled through the gauge or not.
+   */
+  private void setCSEGauge() {
+    IOStatisticsStore ioStatisticsStore =
+        (IOStatisticsStore) getIOStatistics();
+    if (isCSEEnabled) {
+      ioStatisticsStore
+          .setGauge(CLIENT_SIDE_ENCRYPTION_ENABLED.getSymbol(), 1L);
+    } else {
+      ioStatisticsStore
+          .setGauge(CLIENT_SIDE_ENCRYPTION_ENABLED.getSymbol(), 0L);
+    }
   }
 
   /**
@@ -681,7 +727,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
             () -> s3.doesBucketExist(bucket)))) {
-      throw new UnknownStoreException("Bucket " + bucket + " does not exist");
+      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
+          + "not exist");
     }
   }
 
@@ -699,7 +746,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
             () -> s3.doesBucketExistV2(bucket)))) {
-      throw new UnknownStoreException("Bucket " + bucket + " does not exist");
+      throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
+          + "not exist");
     }
   }
 
@@ -710,6 +758,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public S3AInstrumentation getInstrumentation() {
     return instrumentation;
+  }
+
+  /**
+   * Get FS Statistic for this S3AFS instance.
+   *
+   * @return FS statistic instance.
+   */
+  @VisibleForTesting
+  public FileSystem.Statistics getFsStatistics() {
+    return statistics;
   }
 
   /**
@@ -873,6 +931,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.warn("Configuration property {} shouldn't be overridden by client",
           UPLOAD_PART_COUNT_LIMIT);
     }
+
+    // ACLs; this is passed to the
+    // request factory.
+    initCannedAcls(getConf());
 
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
@@ -1139,7 +1201,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the encryption algorithm of this endpoint.
    * @return the encryption algorithm.
    */
-  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
+  public S3AEncryptionMethods getS3EncryptionAlgorithm() {
     return encryptionSecrets.getEncryptionMethod();
   }
 
@@ -1439,10 +1501,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * using FS state as well as the status.
    * @param fileStatus file status.
    * @param seekPolicy input policy for this operation
+   * @param changePolicy change policy for this operation.
    * @param readAheadRange readahead value.
+   * @param auditSpan audit span.
    * @return a context for read and select operations.
    */
-  private S3AReadOpContext createReadContext(
+  @VisibleForTesting
+  protected S3AReadOpContext createReadContext(
       final FileStatus fileStatus,
       final S3AInputPolicy seekPolicy,
       final ChangeDetectionPolicy changePolicy,
@@ -1477,7 +1542,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return new S3ObjectAttributes(bucket,
         f,
         pathToKey(f),
-        getServerSideEncryptionAlgorithm(),
+        getS3EncryptionAlgorithm(),
         encryptionSecrets.getEncryptionKey(),
         eTag,
         versionId,
@@ -1493,7 +1558,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final S3AFileStatus fileStatus) {
     return createObjectAttributes(
         fileStatus.getPath(),
-        fileStatus.getETag(),
+        fileStatus.getEtag(),
         fileStatus.getVersionId(),
         fileStatus.getLen());
   }
@@ -1602,7 +1667,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withDowngradeSyncableExceptions(
             getConf().getBoolean(
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
-                DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT));
+                DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
+        .withCSEEnabled(isCSEEnabled);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -3654,7 +3720,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // look for the simple file
         ObjectMetadata meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-        return new S3AFileStatus(meta.getContentLength(),
+        long contentLength = meta.getContentLength();
+        // check if CSE is enabled, then strip padded length.
+        if (isCSEEnabled
+            && meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+            && contentLength >= CSE_PADDING_LENGTH) {
+          contentLength -= CSE_PADDING_LENGTH;
+        }
+        return new S3AFileStatus(contentLength,
             dateToLong(meta.getLastModified()),
             path,
             getDefaultBlockSize(path),
@@ -3779,73 +3852,82 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   @AuditEntryPoint
   public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
-      Path dst) throws IOException {
+                                Path dst) throws IOException {
     checkNotClosed();
     LOG.debug("Copying local file from {} to {}", src, dst);
-    trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst, () -> {
-      //  innerCopyFromLocalFile(delSrc, overwrite, src, dst);
-      super.copyFromLocalFile(delSrc, overwrite, src, dst);
-      return null;
-    });
+    trackDurationAndSpan(INVOCATION_COPY_FROM_LOCAL_FILE, dst,
+        () -> new CopyFromLocalOperation(
+            createStoreContext(),
+            src,
+            dst,
+            delSrc,
+            overwrite,
+            createCopyFromLocalCallbacks()).execute());
   }
 
-  /**
-   * The src file is on the local disk.  Add it to FS at
-   * the given dst name.
-   *
-   * This version doesn't need to create a temporary file to calculate the md5.
-   * Sadly this doesn't seem to be used by the shell cp :(
-   *
-   * <i>HADOOP-15932:</i> this method has been unwired from
-   * {@link #copyFromLocalFile(boolean, boolean, Path, Path)} until
-   * it is extended to list and copy whole directories.
-   * delSrc indicates if the source should be removed
-   * @param delSrc whether to delete the src
-   * @param overwrite whether to overwrite an existing file
-   * @param src Source path: must be on local filesystem
-   * @param dst path
-   * @throws IOException IO problem
-   * @throws FileAlreadyExistsException the destination file exists and
-   * overwrite==false, or if the destination is a directory.
-   * @throws FileNotFoundException if the source file does not exit
-   * @throws AmazonClientException failure in the AWS SDK
-   * @throws IllegalArgumentException if the source path is not on the local FS
-   */
-  @Retries.RetryTranslated
-  private void innerCopyFromLocalFile(boolean delSrc, boolean overwrite,
-      Path src, Path dst)
-      throws IOException, FileAlreadyExistsException, AmazonClientException {
-    LOG.debug("Copying local file from {} to {}", src, dst);
-
-    // Since we have a local file, we don't need to stream into a temporary file
+  protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
+  createCopyFromLocalCallbacks() throws IOException {
     LocalFileSystem local = getLocal(getConf());
-    File srcfile = local.pathToFile(src);
-    if (!srcfile.exists()) {
-      throw new FileNotFoundException("No file: " + src);
-    }
-    if (!srcfile.isFile()) {
-      throw new FileNotFoundException("Not a file: " + src);
+    return new CopyFromLocalCallbacksImpl(local);
+  }
+
+  protected class CopyFromLocalCallbacksImpl implements
+      CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
+    private final LocalFileSystem local;
+
+    private CopyFromLocalCallbacksImpl(LocalFileSystem local) {
+      this.local = local;
     }
 
-    try {
-      FileStatus status = innerGetFileStatus(dst, false, StatusProbeEnum.ALL);
-      if (!status.isFile()) {
-        throw new FileAlreadyExistsException(dst + " exists and is not a file");
-      }
-      if (!overwrite) {
-        throw new FileAlreadyExistsException(dst + " already exists");
-      }
-    } catch (FileNotFoundException e) {
-      // no destination, all is well
+    @Override
+    public RemoteIterator<LocatedFileStatus> listLocalStatusIterator(
+        final Path path) throws IOException {
+      return local.listLocatedStatus(path);
     }
-    final String key = pathToKey(dst);
-    final ObjectMetadata om = newObjectMetadata(srcfile.length());
-    Progressable progress = null;
-    PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, srcfile);
-    invoker.retry("copyFromLocalFile(" + src + ")", dst.toString(), true,
-        () -> executePut(putObjectRequest, progress));
-    if (delSrc) {
-      local.delete(src, false);
+
+    @Override
+    public File pathToLocalFile(Path path) {
+      return local.pathToFile(path);
+    }
+
+    @Override
+    public boolean deleteLocal(Path path, boolean recursive) throws IOException {
+      return local.delete(path, recursive);
+    }
+
+    @Override
+    public void copyLocalFileFromTo(File file, Path from, Path to) throws IOException {
+      trackDurationAndSpan(
+          OBJECT_PUT_REQUESTS,
+          to,
+          () -> {
+            final String key = pathToKey(to);
+            final ObjectMetadata om = newObjectMetadata(file.length());
+            Progressable progress = null;
+            PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
+            S3AFileSystem.this.invoker.retry(
+                "putObject(" + "" + ")", to.toString(),
+                true,
+                () -> executePut(putObjectRequest, progress));
+
+            return null;
+          });
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return S3AFileSystem.this.getFileStatus(f);
+    }
+
+    @Override
+    public boolean createEmptyDir(Path path, StoreContext storeContext)
+        throws IOException {
+      return trackDuration(getDurationTrackerFactory(),
+          INVOCATION_MKDIRS.getSymbol(),
+          new MkdirOperation(
+              storeContext,
+              path,
+              createMkdirOperationCallbacks()));
     }
   }
 
@@ -4256,7 +4338,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         key, length, eTag, versionId);
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
-    final boolean isDir = objectRepresentsDirectory(key, length);
+    final boolean isDir = objectRepresentsDirectory(key);
     // kick off an async delete
     CompletableFuture<?> deletion;
     if (!keepDirectoryMarkers(p)) {
@@ -4436,9 +4518,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       sb.append(", blockSize=").append(getDefaultBlockSize());
     }
     sb.append(", multiPartThreshold=").append(multiPartThreshold);
-    if (getServerSideEncryptionAlgorithm() != null) {
-      sb.append(", serverSideEncryptionAlgorithm='")
-          .append(getServerSideEncryptionAlgorithm())
+    if (getS3EncryptionAlgorithm() != null) {
+      sb.append(", s3EncryptionAlgorithm='")
+          .append(getS3EncryptionAlgorithm())
           .append('\'');
     }
     if (blockFactory != null) {
@@ -4464,6 +4546,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           .append(getInstrumentation().toString())
           .append("}");
     }
+    sb.append(", ClientSideEncryption=").append(isCSEEnabled);
     sb.append('}');
     return sb.toString();
   }
@@ -5074,8 +5157,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return isMagicCommitEnabled();
 
     case SelectConstants.S3_SELECT_CAPABILITY:
-      // select is only supported if enabled
-      return SelectBinding.isSelectEnabled(getConf());
+      // select is only supported if enabled and client side encryption is
+      // disabled.
+      return !isCSEEnabled && SelectBinding.isSelectEnabled(getConf());
 
     case CommonPathCapabilities.FS_CHECKSUMS:
       // capability depends on FS configuration
@@ -5083,8 +5167,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
     case CommonPathCapabilities.ABORTABLE_STREAM:
-    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
       return true;
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+      // client side encryption doesn't support multipart uploader.
+      return !isCSEEnabled;
 
     // this client is safe to use with buckets
     // containing directory markers anywhere in
@@ -5092,7 +5178,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
 
-    /*
+    // etags are avaialable in listings, but they
+    // are not consistent across renames.
+    // therefore, only availability is declared
+    case CommonPathCapabilities.ETAGS_AVAILABLE:
+      return true;
+
+      /*
      * Marker policy capabilities are handed off.
      */
     case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
@@ -5179,7 +5271,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         changeDetectionPolicy, ra, auditSpan);
 
     if (changeDetectionPolicy.getSource() != ChangeDetectionPolicy.Source.None
-        && fileStatus.getETag() != null) {
+        && fileStatus.getEtag() != null) {
       // if there is change detection, and the status includes at least an
       // etag,
       // check that the object metadata lines up with what is expected
@@ -5220,7 +5312,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private void requireSelectSupport(final Path source) throws
       UnsupportedOperationException {
-    if (!SelectBinding.isSelectEnabled(getConf())) {
+    if (!isCSEEnabled && !SelectBinding.isSelectEnabled(getConf())) {
 
       throw new UnsupportedOperationException(
           SelectConstants.SELECT_UNSUPPORTED);
@@ -5343,6 +5435,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public S3AMultipartUploaderBuilder createMultipartUploader(
       final Path basePath)
       throws IOException {
+    if(isCSEEnabled) {
+      throw new UnsupportedOperationException("Multi-part uploader not "
+          + "supported for Client side encryption.");
+    }
     final Path path = makeQualified(basePath);
     try (AuditSpan span = entryPoint(MULTIPART_UPLOAD_INSTANTIATED, path)) {
       StoreContext ctx = createStoreContext();
@@ -5381,6 +5477,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setContextAccessors(new ContextAccessorsImpl())
         .setTimeProvider(getTtlTimeProvider())
         .setAuditor(getAuditor())
+        .setEnableCSE(isCSEEnabled)
         .build();
   }
 
@@ -5449,5 +5546,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public RequestFactory getRequestFactory() {
       return S3AFileSystem.this.getRequestFactory();
     }
+  }
+
+  /**
+   * a method to know if Client side encryption is enabled or not.
+   * @return a boolean stating if CSE is enabled.
+   */
+  public boolean isCSEEnabled() {
+    return isCSEEnabled;
   }
 }

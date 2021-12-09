@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +74,37 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .build();
     createFactoryObjects(factory);
   }
+
+  /**
+   * Verify ACLs are passed from the factory to the requests.
+   */
+  @Test
+  public void testRequestFactoryWithCannedACL() throws Throwable {
+    CannedAccessControlList acl = CannedAccessControlList.BucketOwnerFullControl;
+    RequestFactory factory = RequestFactoryImpl.builder()
+        .withBucket("bucket")
+        .withCannedACL(acl)
+        .build();
+    String path = "path";
+    String path2 = "path2";
+    ObjectMetadata md = factory.newObjectMetadata(128);
+    Assertions.assertThat(
+            factory.newPutObjectRequest(path, md,
+                    new ByteArrayInputStream(new byte[0]))
+                .getCannedAcl())
+        .describedAs("ACL of PUT")
+        .isEqualTo(acl);
+    Assertions.assertThat(factory.newCopyObjectRequest(path, path2, md)
+            .getCannedAccessControlList())
+        .describedAs("ACL of COPY")
+        .isEqualTo(acl);
+    Assertions.assertThat(factory.newMultipartUploadRequest(path)
+            .getCannedACL())
+        .describedAs("ACL of MPU")
+        .isEqualTo(acl);
+  }
+
+
 
   /**
    * Now add a processor and verify that it was invoked for

@@ -209,7 +209,7 @@ final class FSDirAppendOp {
       BlockInfo lastBlock = file.getLastBlock();
       if (lastBlock != null) {
         ExtendedBlock blk = new ExtendedBlock(fsn.getBlockPoolId(), lastBlock);
-        ret = new LocatedBlock(blk, new DatanodeInfo[0]);
+        ret = new LocatedBlock(blk, DatanodeInfo.EMPTY_ARRAY);
       }
     }
 

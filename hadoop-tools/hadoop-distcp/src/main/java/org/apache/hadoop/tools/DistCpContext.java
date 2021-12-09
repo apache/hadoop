@@ -204,7 +204,7 @@ public class DistCpContext {
     return options.toString() +
         ", sourcePaths=" + sourcePaths +
         ", targetPathExists=" + targetPathExists +
-        ", preserveRawXattrs" + preserveRawXattrs;
+        ", preserveRawXattrs=" + preserveRawXattrs;
   }
 
 }

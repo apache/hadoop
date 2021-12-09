@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -62,6 +63,14 @@ public class ITestS3AInconsistency extends AbstractS3ATestBase {
 
   /** By using a power of 2 for the initial time, the total is a shift left. */
   private static final int TOTAL_RETRY_DELAY = INITIAL_RETRY << RETRIES;
+
+  /**
+   * S3 Client side encryption when enabled should skip this test.
+   */
+  @Before
+  public void setUp() {
+    skipIfClientSideEncryption();
+  }
 
   @Override
   protected Configuration createConfiguration() {

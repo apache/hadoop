@@ -23,7 +23,9 @@ import static org.junit.Assert.assertEquals;
 import java.util.*;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
@@ -345,5 +347,45 @@ public class TestFairOrderingPolicy {
 
     assertEquals("Comparator Output", 0,
         policy.getComparator().compare(r1, r2));
+  }
+
+  @Test
+  public void testRemoveEntitiesWithSizeBasedWeightAsCompletedJobs() {
+    FairOrderingPolicy<MockSchedulableEntity> policy =
+        new FairOrderingPolicy<MockSchedulableEntity>();
+    policy.setSizeBasedWeight(true);
+
+    // Add 10 different schedulable entities
+    List<MockSchedulableEntity> entities = new ArrayList<>(10);
+    for (int i = 1; i <= 10; i++) {
+      MockSchedulableEntity r = new MockSchedulableEntity();
+      r.setApplicationPriority(Priority.newInstance(i));
+      r.setUsed(Resources.createResource(4 * i));
+      r.setPending(Resources.createResource(4 * i));
+      AbstractComparatorOrderingPolicy.updateSchedulingResourceUsage(
+          r.getSchedulingResourceUsage());
+      policy.addSchedulableEntity(r);
+      entities.add(r);
+    }
+
+    // Mark the first 5 entities as completed by setting
+    // the resources to 0
+    for (int i = 0; i < 5; i++) {
+      MockSchedulableEntity r = entities.get(i);
+      r.getSchedulingResourceUsage().setCachedUsed(
+          CommonNodeLabelsManager.ANY, Resources.createResource(0));
+      r.getSchedulingResourceUsage().setCachedPending(
+          CommonNodeLabelsManager.ANY, Resources.createResource(0));
+      policy.entityRequiresReordering(r);
+    }
+
+    policy.reorderScheduleEntities();
+
+    // Remove the first 5 elements
+    for (int i = 0; i < 5; i++) {
+      policy.removeSchedulableEntity(entities.get(i));
+    }
+
+    Assert.assertEquals(5, policy.getNumSchedulableEntities());
   }
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.io.IOUtils;
 
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -258,5 +259,13 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   protected AuditSpan span(AuditSpanSource source) throws IOException {
 
     return source.createSpan(getMethodName(), null, null);
+  }
+
+  /**
+   *  Method to assume that S3 client side encryption is disabled on a test.
+   */
+  public void skipIfClientSideEncryption() {
+    Assume.assumeTrue("Skipping test if CSE is enabled",
+        !getFileSystem().isCSEEnabled());
   }
 }

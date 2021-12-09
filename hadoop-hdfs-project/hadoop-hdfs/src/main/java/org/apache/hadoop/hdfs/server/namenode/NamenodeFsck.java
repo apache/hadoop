@@ -87,7 +87,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Tracer;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
@@ -573,10 +573,11 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     final FSNamesystem fsn = namenode.getNamesystem();
     final String operationName = "fsckGetBlockLocations";
     FSPermissionChecker.setOperationType(operationName);
+    FSPermissionChecker pc = fsn.getPermissionChecker();
     fsn.readLock();
     try {
       blocks = FSDirStatAndListingOp.getBlockLocations(
-          fsn.getFSDirectory(), fsn.getPermissionChecker(),
+          fsn.getFSDirectory(), pc,
           path, 0, fileLen, false)
           .blocks;
     } catch (FileNotFoundException fnfe) {

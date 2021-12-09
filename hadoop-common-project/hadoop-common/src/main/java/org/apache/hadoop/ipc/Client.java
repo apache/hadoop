@@ -54,8 +54,8 @@ import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
-import org.apache.htrace.core.Span;
-import org.apache.htrace.core.Tracer;
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -655,6 +655,16 @@ public class Client implements AutoCloseable {
       short timeoutFailures = 0;
       while (true) {
         try {
+          if (server.isUnresolved()) {
+            // Jump into the catch block. updateAddress() will re-resolve
+            // the address if this is just a temporary DNS failure. If not,
+            // it will timeout after max ipc client retries
+            throw NetUtils.wrapException(server.getHostName(),
+                server.getPort(),
+                NetUtils.getHostname(),
+                0,
+                new UnknownHostException());
+          }
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.setKeepAlive(true);
@@ -797,17 +807,18 @@ public class Client implements AutoCloseable {
      */
     private synchronized void setupIOstreams(
         AtomicBoolean fallbackToSimpleAuth) {
-      if (socket != null || shouldCloseConnection.get()) {
-        return;
-      }
-      UserGroupInformation ticket = remoteId.getTicket();
-      if (ticket != null) {
-        final UserGroupInformation realUser = ticket.getRealUser();
-        if (realUser != null) {
-          ticket = realUser;
-        }
-      }
       try {
+        if (socket != null || shouldCloseConnection.get()) {
+          setFallBackToSimpleAuth(fallbackToSimpleAuth);
+          return;
+        }
+        UserGroupInformation ticket = remoteId.getTicket();
+        if (ticket != null) {
+          final UserGroupInformation realUser = ticket.getRealUser();
+          if (realUser != null) {
+            ticket = realUser;
+          }
+        }
         connectingThread.set(Thread.currentThread());
         if (LOG.isDebugEnabled()) {
           LOG.debug("Connecting to "+server);
@@ -853,20 +864,8 @@ public class Client implements AutoCloseable {
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
               LOG.debug("Negotiated QOP is :" + remoteId.saslQop);
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(false);
-              }
-            } else if (UserGroupInformation.isSecurityEnabled()) {
-              if (!fallbackAllowed) {
-                throw new AccessControlException(
-                    "Server asks us to fall back to SIMPLE " +
-                    "auth, but this client is configured to only allow secure " +
-                    "connections.");
-              }
-              if (fallbackToSimpleAuth != null) {
-                fallbackToSimpleAuth.set(true);
-              }
             }
+            setFallBackToSimpleAuth(fallbackToSimpleAuth);
           }
 
           if (doPing) {
@@ -899,7 +898,41 @@ public class Client implements AutoCloseable {
         connectingThread.set(null);
       }
     }
-    
+
+    private void setFallBackToSimpleAuth(AtomicBoolean fallbackToSimpleAuth)
+        throws AccessControlException {
+      if (authMethod == null || authProtocol != AuthProtocol.SASL) {
+        if (authProtocol == AuthProtocol.SASL) {
+          LOG.trace("Auth method is not set, yield from setting auth fallback.");
+        }
+        return;
+      }
+      if (fallbackToSimpleAuth == null) {
+        // this should happen only during testing.
+        LOG.trace("Connection {} will skip to set fallbackToSimpleAuth as it is null.", remoteId);
+      } else {
+        if (fallbackToSimpleAuth.get()) {
+          // we already set the value to true, we do not need to examine again.
+          return;
+        }
+      }
+      if (authMethod != AuthMethod.SIMPLE) {
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Disabling fallbackToSimpleAuth, target does not use SIMPLE authentication.");
+          fallbackToSimpleAuth.set(false);
+        }
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        if (!fallbackAllowed) {
+          throw new AccessControlException("Server asks us to fall back to SIMPLE auth, but this "
+              + "client is configured to only allow secure connections.");
+        }
+        if (fallbackToSimpleAuth != null) {
+          LOG.trace("Enabling fallbackToSimpleAuth for target, as we are allowed to fall back.");
+          fallbackToSimpleAuth.set(true);
+        }
+      }
+    }
+
     private void closeConnection() {
       if (socket == null) {
         return;
@@ -1051,7 +1084,10 @@ public class Client implements AutoCloseable {
         if (timeout>0) {
           try {
             wait(timeout);
-          } catch (InterruptedException e) {}
+          } catch (InterruptedException e) {
+            LOG.trace("Interrupted while waiting to retrieve RPC response.");
+            Thread.currentThread().interrupt();
+          }
         }
       }
       
@@ -1383,6 +1419,9 @@ public class Client implements AutoCloseable {
         try {
           emptyCondition.wait();
         } catch (InterruptedException e) {
+          LOG.trace(
+              "Interrupted while waiting on all connections to be closed.");
+          Thread.currentThread().interrupt();
         }
       }
     }
@@ -1598,15 +1637,6 @@ public class Client implements AutoCloseable {
   private Connection getConnection(ConnectionId remoteId,
       Call call, int serviceClass, AtomicBoolean fallbackToSimpleAuth)
       throws IOException {
-    final InetSocketAddress address = remoteId.getAddress();
-    if (address.isUnresolved()) {
-      throw NetUtils.wrapException(address.getHostName(),
-          address.getPort(),
-          null,
-          0,
-          new UnknownHostException());
-    }
-
     final Consumer<Connection> removeMethod = c -> {
       final boolean removed = connections.remove(remoteId, c);
       if (removed && connections.isEmpty()) {

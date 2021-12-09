@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -99,6 +100,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.Rpc
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslAuth;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -118,10 +120,11 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.htrace.core.SpanId;
-import org.apache.htrace.core.TraceScope;
-import org.apache.htrace.core.Tracer;
-
+import org.apache.hadoop.tracing.Span;
+import org.apache.hadoop.tracing.SpanContext;
+import org.apache.hadoop.tracing.TraceScope;
+import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.tracing.TraceUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
@@ -182,8 +185,11 @@ public abstract class Server {
    * e.g., terse exception group for concise logging messages
    */
   static class ExceptionsHandler {
-    private volatile Set<String> terseExceptions = new HashSet<>();
-    private volatile Set<String> suppressedExceptions = new HashSet<>();
+
+    private final Set<String> terseExceptions =
+        ConcurrentHashMap.newKeySet();
+    private final Set<String> suppressedExceptions =
+        ConcurrentHashMap.newKeySet();
 
     /**
      * Add exception classes for which server won't log stack traces.
@@ -191,8 +197,10 @@ public abstract class Server {
      * @param exceptionClass exception classes 
      */
     void addTerseLoggingExceptions(Class<?>... exceptionClass) {
-      // Thread-safe replacement of terseExceptions.
-      terseExceptions = addExceptions(terseExceptions, exceptionClass);
+      terseExceptions.addAll(Arrays
+          .stream(exceptionClass)
+          .map(Class::toString)
+          .collect(Collectors.toSet()));
     }
 
     /**
@@ -201,9 +209,10 @@ public abstract class Server {
      * @param exceptionClass exception classes
      */
     void addSuppressedLoggingExceptions(Class<?>... exceptionClass) {
-      // Thread-safe replacement of suppressedExceptions.
-      suppressedExceptions = addExceptions(
-          suppressedExceptions, exceptionClass);
+      suppressedExceptions.addAll(Arrays
+          .stream(exceptionClass)
+          .map(Class::toString)
+          .collect(Collectors.toSet()));
     }
 
     boolean isTerseLog(Class<?> t) {
@@ -214,23 +223,6 @@ public abstract class Server {
       return suppressedExceptions.contains(t.toString());
     }
 
-    /**
-     * Return a new set containing all the exceptions in exceptionsSet
-     * and exceptionClass.
-     * @return
-     */
-    private static Set<String> addExceptions(
-        final Set<String> exceptionsSet, Class<?>[] exceptionClass) {
-      // Make a copy of the exceptionSet for performing modification
-      final HashSet<String> newSet = new HashSet<>(exceptionsSet);
-
-      // Add all class names into the HashSet
-      for (Class<?> name : exceptionClass) {
-        newSet.add(name.toString());
-      }
-
-      return Collections.unmodifiableSet(newSet);
-    }
   }
 
   
@@ -486,6 +478,8 @@ public abstract class Server {
   volatile private boolean running = true;         // true while server runs
   private CallQueueManager<Call> callQueue;
 
+  private long purgeIntervalNanos;
+
   // maintains the set of client connections and handles idle timeouts
   private ConnectionManager connectionManager;
   private Listener listener = null;
@@ -515,6 +509,20 @@ public abstract class Server {
     this.logSlowRPC = logSlowRPCFlag;
   }
 
+  private void setPurgeIntervalNanos(int purgeInterval) {
+    int tmpPurgeInterval = CommonConfigurationKeysPublic.
+        IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT;
+    if (purgeInterval > 0) {
+      tmpPurgeInterval = purgeInterval;
+    }
+    this.purgeIntervalNanos = TimeUnit.NANOSECONDS.convert(
+            tmpPurgeInterval, TimeUnit.MINUTES);
+  }
+
+  @VisibleForTesting
+  public long getPurgeIntervalNanos() {
+    return this.purgeIntervalNanos;
+  }
 
   /**
    * Logs a Slow RPC Request.
@@ -542,13 +550,13 @@ public abstract class Server {
         (rpcMetrics.getProcessingStdDev() * deviation);
 
     long processingTime =
-            details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+            details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     if ((rpcMetrics.getProcessingSampleCount() > minSampleSize) &&
         (processingTime > threeSigma)) {
       LOG.warn(
           "Slow RPC : {} took {} {} to process from client {},"
               + " the processing detail is {}",
-          methodName, processingTime, RpcMetrics.TIMEUNIT, call,
+          methodName, processingTime, rpcMetrics.getMetricsTimeUnit(), call,
           details.toString());
       rpcMetrics.incrSlowRpc();
     }
@@ -568,7 +576,7 @@ public abstract class Server {
     deltaNanos -= details.get(Timing.RESPONSE);
     details.set(Timing.HANDLER, deltaNanos);
 
-    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
+    long queueTime = details.get(Timing.QUEUE, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcQueueTime(queueTime);
 
     if (call.isResponseDeferred() || connDropped) {
@@ -577,9 +585,9 @@ public abstract class Server {
     }
 
     long processingTime =
-        details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
+        details.get(Timing.PROCESSING, rpcMetrics.getMetricsTimeUnit());
     long waitTime =
-        details.get(Timing.LOCKWAIT, RpcMetrics.TIMEUNIT);
+        details.get(Timing.LOCKWAIT, rpcMetrics.getMetricsTimeUnit());
     rpcMetrics.addRpcLockWaitTime(waitTime);
     rpcMetrics.addRpcProcessingTime(processingTime);
     // don't include lock wait for detailed metrics.
@@ -783,7 +791,7 @@ public abstract class Server {
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
     final byte[] clientId;
-    private final TraceScope traceScope; // the HTrace scope on the server side
+    private final Span span; // the trace span on the server side
     private final CallerContext callerContext; // the call context
     private boolean deferredResponse = false;
     private int priorityLevel;
@@ -798,7 +806,7 @@ public abstract class Server {
 
     Call(Call call) {
       this(call.callId, call.retryCount, call.rpcKind, call.clientId,
-          call.traceScope, call.callerContext);
+          call.span, call.callerContext);
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId) {
@@ -812,14 +820,14 @@ public abstract class Server {
     }
 
     Call(int id, int retryCount, RPC.RpcKind kind, byte[] clientId,
-        TraceScope traceScope, CallerContext callerContext) {
+        Span span, CallerContext callerContext) {
       this.callId = id;
       this.retryCount = retryCount;
       this.timestampNanos = Time.monotonicNowNanos();
       this.responseTimestampNanos = timestampNanos;
       this.rpcKind = kind;
       this.clientId = clientId;
-      this.traceScope = traceScope;
+      this.span = span;
       this.callerContext = callerContext;
       this.clientStateId = Long.MIN_VALUE;
       this.isCallCoordinated = false;
@@ -988,8 +996,8 @@ public abstract class Server {
 
     RpcCall(Connection connection, int id, int retryCount,
         Writable param, RPC.RpcKind kind, byte[] clientId,
-        TraceScope traceScope, CallerContext context) {
-      super(id, retryCount, kind, clientId, traceScope, context);
+        Span span, CallerContext context) {
+      super(id, retryCount, kind, clientId, span, context);
       this.connection = connection;
       this.rpcRequest = param;
     }
@@ -1487,9 +1495,6 @@ public abstract class Server {
     }
   }
 
-  private final static long PURGE_INTERVAL_NANOS = TimeUnit.NANOSECONDS.convert(
-      15, TimeUnit.MINUTES);
-
   // Sends responses of RPC back to clients.
   private class Responder extends Thread {
     private final Selector writeSelector;
@@ -1525,7 +1530,7 @@ public abstract class Server {
         try {
           waitPending();     // If a channel is being registered, wait.
           writeSelector.select(
-              TimeUnit.NANOSECONDS.toMillis(PURGE_INTERVAL_NANOS));
+              TimeUnit.NANOSECONDS.toMillis(purgeIntervalNanos));
           Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();
           while (iter.hasNext()) {
             SelectionKey key = iter.next();
@@ -1548,7 +1553,7 @@ public abstract class Server {
             }
           }
           long nowNanos = Time.monotonicNowNanos();
-          if (nowNanos < lastPurgeTimeNanos + PURGE_INTERVAL_NANOS) {
+          if (nowNanos < lastPurgeTimeNanos + purgeIntervalNanos) {
             continue;
           }
           lastPurgeTimeNanos = nowNanos;
@@ -1626,7 +1631,7 @@ public abstract class Server {
         Iterator<RpcCall> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (now > call.responseTimestampNanos + PURGE_INTERVAL_NANOS) {
+          if (now > call.responseTimestampNanos + purgeIntervalNanos) {
             closeConnection(call.connection);
             break;
           }
@@ -2672,19 +2677,24 @@ public abstract class Server {
         throw new FatalRpcServerException(
             RpcErrorCodeProto.FATAL_DESERIALIZING_REQUEST, err);
       }
-        
-      TraceScope traceScope = null;
+
+      Span span = null;
       if (header.hasTraceInfo()) {
-        if (tracer != null) {
-          // If the incoming RPC included tracing info, always continue the
-          // trace
-          SpanId parentSpanId = new SpanId(
-              header.getTraceInfo().getTraceId(),
-              header.getTraceInfo().getParentId());
-          traceScope = tracer.newScope(
-              RpcClientUtil.toTraceName(rpcRequest.toString()),
-              parentSpanId);
-          traceScope.detach();
+        RPCTraceInfoProto traceInfoProto = header.getTraceInfo();
+        if (traceInfoProto.hasSpanContext()) {
+          if (tracer == null) {
+            setTracer(Tracer.curThreadTracer());
+          }
+          if (tracer != null) {
+            // If the incoming RPC included tracing info, always continue the
+            // trace
+            SpanContext spanCtx = TraceUtils.byteStringToSpanContext(
+                traceInfoProto.getSpanContext());
+            if (spanCtx != null) {
+              span = tracer.newSpan(
+                  RpcClientUtil.toTraceName(rpcRequest.toString()), spanCtx);
+            }
+          }
         }
       }
 
@@ -2700,7 +2710,7 @@ public abstract class Server {
       RpcCall call = new RpcCall(this, header.getCallId(),
           header.getRetryCount(), rpcRequest,
           ProtoUtil.convert(header.getRpcKind()),
-          header.getClientId().toByteArray(), traceScope, callerContext);
+          header.getClientId().toByteArray(), span, callerContext);
 
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
@@ -2954,10 +2964,9 @@ public abstract class Server {
             LOG.debug(Thread.currentThread().getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
           CurCall.set(call);
-          if (call.traceScope != null) {
-            call.traceScope.reattach();
-            traceScope = call.traceScope;
-            traceScope.getSpan().addTimelineAnnotation("called");
+          if (call.span != null) {
+            traceScope = tracer.activateSpan(call.span);
+            call.span.addTimelineAnnotation("called");
           }
           // always update the current call context
           CallerContext.setCurrent(call.callerContext);
@@ -2972,14 +2981,14 @@ public abstract class Server {
           if (running) {                          // unexpected -- log it
             LOG.info(Thread.currentThread().getName() + " unexpectedly interrupted", e);
             if (traceScope != null) {
-              traceScope.getSpan().addTimelineAnnotation("unexpectedly interrupted: " +
+              traceScope.addTimelineAnnotation("unexpectedly interrupted: " +
                   StringUtils.stringifyException(e));
             }
           }
         } catch (Exception e) {
           LOG.info(Thread.currentThread().getName() + " caught an exception", e);
           if (traceScope != null) {
-            traceScope.getSpan().addTimelineAnnotation("Exception: " +
+            traceScope.addTimelineAnnotation("Exception: " +
                 StringUtils.stringifyException(e));
           }
         } finally {
@@ -3128,6 +3137,10 @@ public abstract class Server {
     this.setLogSlowRPC(conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC,
         CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_DEFAULT));
+
+    this.setPurgeIntervalNanos(conf.getInt(
+        CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_PURGE_INTERVAL_MINUTES_DEFAULT));
 
     // Create the responder here
     responder = new Responder();

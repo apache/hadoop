@@ -178,7 +178,8 @@ public abstract class FCStatisticsBaseTest {
    * 
    * @param stats
    */
-  protected abstract void verifyWrittenBytes(Statistics stats);
+  protected abstract void verifyWrittenBytes(Statistics stats)
+      throws IOException;
   
   /**
    * Returns the filesystem uri. Should be set

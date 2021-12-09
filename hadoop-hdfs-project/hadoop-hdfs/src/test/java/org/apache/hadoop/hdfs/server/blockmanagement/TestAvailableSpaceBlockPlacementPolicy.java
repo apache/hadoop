@@ -35,9 +35,10 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 public class TestAvailableSpaceBlockPlacementPolicy {
   private final static int numRacks = 4;
@@ -127,7 +128,7 @@ public class TestAvailableSpaceBlockPlacementPolicy {
    */
   @Test
   public void testPolicyReplacement() {
-    Assert.assertTrue((placementPolicy instanceof AvailableSpaceBlockPlacementPolicy));
+    assertTrue((placementPolicy instanceof AvailableSpaceBlockPlacementPolicy));
   }
 
   /*
@@ -147,7 +148,7 @@ public class TestAvailableSpaceBlockPlacementPolicy {
               .chooseTarget(file, replica, null, new ArrayList<DatanodeStorageInfo>(), false, null,
                 blockSize, TestBlockStoragePolicy.DEFAULT_STORAGE_POLICY, null);
 
-      Assert.assertTrue(targets.length == replica);
+      assertTrue(targets.length == replica);
       for (int j = 0; j < replica; j++) {
         total++;
         if (targets[j].getDatanodeDescriptor().getRemainingPercent() > 60) {
@@ -155,25 +156,67 @@ public class TestAvailableSpaceBlockPlacementPolicy {
         }
       }
     }
-    Assert.assertTrue(total == replica * chooseTimes);
+    assertTrue(total == replica * chooseTimes);
     double possibility = 1.0 * moreRemainingNode / total;
-    Assert.assertTrue(possibility > 0.52);
-    Assert.assertTrue(possibility < 0.55);
+    assertTrue(possibility > 0.52);
+    assertTrue(possibility < 0.55);
   }
 
   @Test
   public void testChooseDataNode() {
-    try {
-      Collection<Node> allNodes = new ArrayList<>(dataNodes.length);
-      Collections.addAll(allNodes, dataNodes);
-      if (placementPolicy instanceof AvailableSpaceBlockPlacementPolicy){
-        // exclude all datanodes when chooseDataNode, no NPE should be thrown
-        ((AvailableSpaceBlockPlacementPolicy)placementPolicy)
-                .chooseDataNode("~", allNodes);
-      }
-    }catch (NullPointerException npe){
-      Assert.fail("NPE should not be thrown");
+    Collection<Node> allNodes = new ArrayList<>(dataNodes.length);
+    Collections.addAll(allNodes, dataNodes);
+    if (placementPolicy instanceof AvailableSpaceBlockPlacementPolicy) {
+      // exclude all datanodes when chooseDataNode, no NPE should be thrown
+      ((AvailableSpaceBlockPlacementPolicy) placementPolicy)
+          .chooseDataNode("~", allNodes);
     }
+  }
+
+  @Test
+  public void testChooseSimilarDataNode() {
+    DatanodeDescriptor[] tolerateDataNodes;
+    DatanodeStorageInfo[] tolerateStorages;
+    int capacity  = 3;
+    Collection<Node> allTolerateNodes = new ArrayList<>(capacity);
+    String[] ownerRackOfTolerateNodes = new String[capacity];
+    for (int i = 0; i < capacity; i++) {
+      ownerRackOfTolerateNodes[i] = "rack"+i;
+    }
+    tolerateStorages = DFSTestUtil.createDatanodeStorageInfos(ownerRackOfTolerateNodes);
+    tolerateDataNodes = DFSTestUtil.toDatanodeDescriptor(tolerateStorages);
+
+    Collections.addAll(allTolerateNodes, tolerateDataNodes);
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+    AvailableSpaceBlockPlacementPolicy toleratePlacementPolicy =
+            (AvailableSpaceBlockPlacementPolicy)bm.getBlockPlacementPolicy();
+
+    updateHeartbeatWithUsage(tolerateDataNodes[0],
+            20 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+                    * blockSize, 0L, 0L, 0L, 0, 0);
+
+    updateHeartbeatWithUsage(tolerateDataNodes[1],
+            11 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+                    * blockSize, 0L, 0L, 0L, 0, 0);
+
+    updateHeartbeatWithUsage(tolerateDataNodes[2],
+            10 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            1 * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE * blockSize,
+            HdfsServerConstants.MIN_BLOCKS_FOR_WRITE
+                    * blockSize, 0L, 0L, 0L, 0, 0);
+
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[1], false) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[1],
+            tolerateDataNodes[0], false) == 0);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[0],
+            tolerateDataNodes[2], false) == -1);
+    assertTrue(toleratePlacementPolicy.compareDataNode(tolerateDataNodes[2],
+            tolerateDataNodes[0], false) == 1);
   }
 
   @AfterClass

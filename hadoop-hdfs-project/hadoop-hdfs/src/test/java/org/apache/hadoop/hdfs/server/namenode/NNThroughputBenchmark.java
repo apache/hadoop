@@ -959,7 +959,7 @@ public class NNThroughputBenchmark implements Tool {
           new StorageBlockReport(storage, BlockListAsLongs.EMPTY)
       };
       dataNodeProto.blockReport(dnRegistration, bpid, reports,
-              new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+              new BlockReportContext(1, 0, System.nanoTime(), 0L));
     }
 
     /**
@@ -1173,10 +1173,28 @@ public class NNThroughputBenchmark implements Tool {
 
     private ExtendedBlock addBlocks(String fileName, String clientName)
     throws IOException {
+      DatanodeInfo[] excludeNodes = null;
+      DatanodeInfo[] dnInfos = clientProto.getDatanodeReport(
+          HdfsConstants.DatanodeReportType.LIVE);
+      if (dnInfos != null && dnInfos.length > 0) {
+        List<DatanodeInfo> tmpNodes = new ArrayList<>();
+        String localHost = DNS.getDefaultHost("default", "default");
+        for (DatanodeInfo dnInfo : dnInfos) {
+          if (!localHost.equals(dnInfo.getHostName()) ||
+              (dnInfo.getXferPort() > datanodes.length)) {
+            tmpNodes.add(dnInfo);
+          }
+        }
+
+        if (tmpNodes.size() > 0) {
+          excludeNodes = tmpNodes.toArray(new DatanodeInfo[tmpNodes.size()]);
+        }
+      }
+
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
         LocatedBlock loc = addBlock(fileName, clientName,
-            prevBlock, null, HdfsConstants.GRANDFATHER_INODE_ID, null);
+            prevBlock, excludeNodes, HdfsConstants.GRANDFATHER_INODE_ID, null);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = dnInfo.getXferPort() - 1;
@@ -1241,7 +1259,7 @@ public class NNThroughputBenchmark implements Tool {
       StorageBlockReport[] report = { new StorageBlockReport(
           dn.storage, dn.getBlockReportList()) };
       dataNodeProto.blockReport(dn.dnRegistration, bpid, report,
-          new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+          new BlockReportContext(1, 0, System.nanoTime(), 0L));
       long end = Time.now();
       return end-start;
     }

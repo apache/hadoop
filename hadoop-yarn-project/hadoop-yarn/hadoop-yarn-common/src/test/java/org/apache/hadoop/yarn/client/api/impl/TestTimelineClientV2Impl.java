@@ -248,24 +248,36 @@ public class TestTimelineClientV2Impl {
       Thread.sleep(TIME_TO_SLEEP);
     }
     printReceivedEntities();
-    Assert.assertEquals("TimelineEntities not published as desired", 3,
-        client.getNumOfTimelineEntitiesPublished());
+
+    boolean asyncPushesMerged = client.getNumOfTimelineEntitiesPublished() == 3;
+    int lastPublishIndex = asyncPushesMerged ? 2 : 3;
+
     TimelineEntities firstPublishedEntities = client.getPublishedEntities(0);
     Assert.assertEquals("sync entities should not be merged with async", 1,
         firstPublishedEntities.getEntities().size());
 
-    // test before pushing the sync entities asyncs are merged and pushed
-    TimelineEntities secondPublishedEntities = client.getPublishedEntities(1);
-    Assert.assertEquals(
-        "async entities should be merged before publishing sync", 2,
-        secondPublishedEntities.getEntities().size());
-    Assert.assertEquals("Order of Async Events Needs to be FIFO", "2",
-        secondPublishedEntities.getEntities().get(0).getId());
-    Assert.assertEquals("Order of Async Events Needs to be FIFO", "3",
-        secondPublishedEntities.getEntities().get(1).getId());
+    // async push does not guarantee a merge but is FIFO
+    if (asyncPushesMerged) {
+      TimelineEntities secondPublishedEntities = client.getPublishedEntities(1);
+      Assert.assertEquals(
+          "async entities should be merged before publishing sync", 2,
+          secondPublishedEntities.getEntities().size());
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "2",
+          secondPublishedEntities.getEntities().get(0).getId());
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "3",
+          secondPublishedEntities.getEntities().get(1).getId());
+    } else {
+      TimelineEntities secondAsyncPublish = client.getPublishedEntities(1);
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "2",
+          secondAsyncPublish.getEntities().get(0).getId());
+      TimelineEntities thirdAsyncPublish = client.getPublishedEntities(2);
+      Assert.assertEquals("Order of Async Events Needs to be FIFO", "3",
+          thirdAsyncPublish.getEntities().get(0).getId());
+    }
 
     // test the last entity published is sync put
-    TimelineEntities thirdPublishedEntities = client.getPublishedEntities(2);
+    TimelineEntities thirdPublishedEntities =
+        client.getPublishedEntities(lastPublishIndex);
     Assert.assertEquals("sync entities had to be published at the last", 1,
         thirdPublishedEntities.getEntities().size());
     Assert.assertEquals("Expected last sync Event is not proper", "4",
