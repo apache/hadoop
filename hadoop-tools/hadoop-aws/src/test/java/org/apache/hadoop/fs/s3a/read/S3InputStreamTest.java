@@ -23,12 +23,15 @@ import static org.junit.Assert.*;
 
 import com.twitter.util.ExecutorServiceFuturePool;
 import com.twitter.util.FuturePool;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.common.ExceptionAsserts;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.junit.Test;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -159,6 +162,17 @@ public class S3InputStreamTest {
         assertEquals(j, inputStream.read());
       }
     }
+
+    // Test invalid seeks.
+    ExceptionAsserts.assertThrows(
+        EOFException.class,
+        FSExceptionMessages.NEGATIVE_SEEK,
+        () -> inputStream.seek(-1));
+
+    ExceptionAsserts.assertThrows(
+        EOFException.class,
+        FSExceptionMessages.CANNOT_SEEK_PAST_EOF,
+        () -> inputStream.seek(fileSize + 1));
   }
 
   @Test
@@ -215,11 +229,21 @@ public class S3InputStreamTest {
 
     inputStream.close();
 
-    assertEquals(0, inputStream.available());
-    assertEquals(-1, inputStream.read());
+    ExceptionAsserts.assertThrows(
+        IOException.class,
+        FSExceptionMessages.STREAM_IS_CLOSED,
+        () -> inputStream.available());
+
+    ExceptionAsserts.assertThrows(
+        IOException.class,
+        FSExceptionMessages.STREAM_IS_CLOSED,
+        () -> inputStream.read());
 
     byte[] buffer = new byte[10];
-    assertEquals(-1, inputStream.read(buffer));
+    ExceptionAsserts.assertThrows(
+        IOException.class,
+        FSExceptionMessages.STREAM_IS_CLOSED,
+        () -> inputStream.read(buffer));
 
     // Verify a second close() does not throw.
     inputStream.close();

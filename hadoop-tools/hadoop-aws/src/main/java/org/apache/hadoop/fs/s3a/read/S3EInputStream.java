@@ -22,6 +22,7 @@ package org.apache.hadoop.fs.s3a.read;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.common.Validate;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,21 +80,25 @@ public class S3EInputStream
 
   @Override
   public synchronized int available() throws IOException {
+    this.throwIfClosed();
     return this.inputStream.available();
   }
 
   @Override
   public synchronized long getPos() throws IOException {
+    this.throwIfClosed();
     return this.inputStream.getPos();
   }
 
   @Override
   public synchronized int read() throws IOException {
+    this.throwIfClosed();
     return this.inputStream.read();
   }
 
   @Override
   public synchronized int read(byte[] buf, int off, int len) throws IOException {
+    this.throwIfClosed();
     return this.inputStream.read(buf, off, len);
   }
 
@@ -101,23 +107,30 @@ public class S3EInputStream
     if (this.inputStream != null) {
       this.inputStream.close();
       this.inputStream = null;
+      super.close();
     }
-    super.close();
   }
 
   @Override
   public synchronized void seek(long pos) throws IOException {
+    this.throwIfClosed();
     this.inputStream.seek(pos);
   }
 
   @Override
   public synchronized void setReadahead(Long readahead) {
-    this.inputStream.setReadahead(readahead);
+    if (!this.isClosed()) {
+      this.inputStream.setReadahead(readahead);
+    }
   }
 
   @Override
   public boolean hasCapability(String capability) {
-    return this.inputStream.hasCapability(capability);
+    if (!this.isClosed()) {
+      return this.inputStream.hasCapability(capability);
+    }
+
+    return false;
   }
 
   /**
@@ -128,13 +141,35 @@ public class S3EInputStream
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public S3AInputStreamStatistics getS3AStreamStatistics() {
+    if (this.isClosed()) {
+      return null;
+    }
     return this.inputStream.getS3AStreamStatistics();
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    if (this.isClosed()) {
+      return null;
+    }
+    return this.inputStream.getIOStatistics();
+  }
+
+  protected boolean isClosed() {
+    return this.inputStream == null;
+  }
+
+  protected void throwIfClosed() throws IOException {
+    if (this.isClosed()) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
   }
 
   // Unsupported functions.
 
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
+    this.throwIfClosed();
     return false;
   }
 

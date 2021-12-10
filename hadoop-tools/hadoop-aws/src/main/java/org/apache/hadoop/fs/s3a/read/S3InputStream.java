@@ -20,6 +20,7 @@
 package org.apache.hadoop.fs.s3a.read;
 
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.FilePosition;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -198,6 +200,8 @@ public abstract class S3InputStream
    */
   @Override
   public int available() throws IOException {
+    this.throwIfClosed();
+
     if (!ensureCurrentBuffer()) {
       return 0;
     }
@@ -206,6 +210,8 @@ public abstract class S3InputStream
   }
 
   public long getPos() throws IOException {
+    this.throwIfClosed();
+
     if (this.fpos.isValid()) {
       return this.fpos.absolute();
     } else {
@@ -222,7 +228,8 @@ public abstract class S3InputStream
    * @throws IllegalArgumentException if pos is outside of the range [0, file size].
    */
   public void seek(long pos) throws IOException {
-    Validate.checkWithinRange(pos, "pos", 0, this.s3File.size() - 1);
+    this.throwIfClosed();
+    this.throwIfInvalidSeek(pos);
 
     if (!this.fpos.setAbsolute(pos)) {
       this.fpos.invalidate();
@@ -241,6 +248,8 @@ public abstract class S3InputStream
 
   @Override
   public int read() throws IOException {
+    this.throwIfClosed();
+
     if (!ensureCurrentBuffer()) {
       return -1;
     }
@@ -257,6 +266,12 @@ public abstract class S3InputStream
 
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
+    this.throwIfClosed();
+
+    if (len == 0) {
+      return 0;
+    }
+
     if (!ensureCurrentBuffer()) {
       return -1;
     }
@@ -333,6 +348,25 @@ public abstract class S3InputStream
   @Override
   public boolean markSupported() {
     return false;
+  }
+
+  protected void throwIfClosed() throws IOException {
+    if (this.closed) {
+      throw new IOException(this.name + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+  }
+
+  protected void throwIfInvalidSeek(long pos) throws EOFException {
+    long fileSize = this.s3File.size();
+    if (pos < 0) {
+      throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK + " " + pos);
+    } else {
+      if (fileSize == 0 && pos == 0) {
+        // Do nothing. Valid combination.
+      } else if (pos >= fileSize) {
+        throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF + " " + pos);
+      }
+    }
   }
 
   // Unsupported functions.

@@ -69,7 +69,8 @@ public class S3CachingInputStream extends S3InputStream {
    */
   @Override
   public void seek(long pos) throws IOException {
-    Validate.checkWithinRange(pos, "pos", 0, this.getFile().size());
+    this.throwIfClosed();
+    this.throwIfInvalidSeek(pos);
 
     if (!this.getFilePosition().setAbsolute(pos)) {
       LOG.info("seek({})", getOffsetStr(pos));
