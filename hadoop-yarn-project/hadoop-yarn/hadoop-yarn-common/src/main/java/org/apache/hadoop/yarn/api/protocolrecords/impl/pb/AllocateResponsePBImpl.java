@@ -429,7 +429,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
 
   @Override
-  public EnhancedHeadroom getEnhancedHeadroom() {
+  public synchronized EnhancedHeadroom getEnhancedHeadroom() {
     AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (enhancedHeadroom != null) {
       return enhancedHeadroom;
@@ -442,7 +442,8 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   }
 
   @Override
-  public void setEnhancedHeadroom(EnhancedHeadroom enhancedHeadroom) {
+  public synchronized void setEnhancedHeadroom(
+      EnhancedHeadroom enhancedHeadroom) {
     maybeInitBuilder();
     if (enhancedHeadroom == null) {
       builder.clearEnhancedHeadroom();
