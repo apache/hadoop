@@ -398,9 +398,13 @@ public class ApplicationMasterService extends AbstractService implements
         amrmTokenIdentifier.getApplicationAttemptId();
     RMAppAttemptMetrics rmMetrics = getAppAttemptMetrics(appAttemptId);
     // we do this here to prevent the internal lock in allocate()
-    rmMetrics.setAllocateLatenciesTimestamps(request.getAskList());
+    if (rmMetrics != null) {
+      rmMetrics.setAllocateLatenciesTimestamps(request.getAskList());
+    }
     AllocateResponse response = allocate(request, amrmTokenIdentifier);
-    rmMetrics.updateAllocateLatencies(response.getAllocatedContainers());
+    if (rmMetrics != null) {
+      rmMetrics.updateAllocateLatencies(response.getAllocatedContainers());
+    }
     return response;
   }
 
