@@ -131,10 +131,10 @@ public class TestParentQueue {
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{A, B});
 
-    conf.setMinimumResourceRequirement("", Q_A,
+    conf.setMinimumResourceRequirement("", new QueuePath(Q_A),
         QUEUE_A_RESOURCE);
 
-    conf.setMinimumResourceRequirement("", Q_B,
+    conf.setMinimumResourceRequirement("", new QueuePath(Q_B),
         QUEUE_B_RESOURCE);
 
     LOG.info("Setup top-level queues a and b with absolute resource");
