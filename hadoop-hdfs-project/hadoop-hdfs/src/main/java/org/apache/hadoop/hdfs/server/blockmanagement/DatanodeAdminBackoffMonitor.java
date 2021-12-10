@@ -211,6 +211,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           for (DatanodeDescriptor dn : toRequeue) {
             getPendingNodes().add(dn);
             outOfServiceNodeBlocks.remove(dn);
+            pendingRep.remove(dn);
           }
         }
 

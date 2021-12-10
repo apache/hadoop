@@ -1667,112 +1667,109 @@ public class TestDecommission extends AdminStatesBaseTest {
    */
   @Test(timeout = 120000)
   public void testRequeueUnhealthyDecommissioningNodes() throws Exception {
-    // Allow 3 datanodes to be decommissioned at a time
-    getConf().setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES, 3);
-    // Disable the normal monitor runs
-    getConf()
-        .setInt(MiniDFSCluster.DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY, Integer.MAX_VALUE);
-
-    // Start cluster with 6 datanodes
-    startCluster(1, 6);
+    // Create a MiniDFSCluster with 3 live datanode in AdminState=NORMAL and
+    // 2 dead datanodes in AdminState=DECOMMISSION_INPROGRESS and a file
+    // with replication factor of 5.
+    final int numLiveNodes = 3;
+    final int numDeadNodes = 2;
+    final int numNodes = numLiveNodes + numDeadNodes;
+    final List<DatanodeDescriptor> liveNodes = new ArrayList<>();
+    final Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> deadNodeProps =
+        new HashMap<>();
+    final ArrayList<DatanodeInfo> decommissionedNodes = new ArrayList<>();
+    final Path filePath = new Path("/tmp/test");
+    createClusterWithDeadNodesDecommissionInProgress(numLiveNodes, liveNodes, numDeadNodes,
+        deadNodeProps, decommissionedNodes, filePath);
     final FSNamesystem namesystem = getCluster().getNamesystem();
     final BlockManager blockManager = namesystem.getBlockManager();
     final DatanodeManager datanodeManager = blockManager.getDatanodeManager();
     final DatanodeAdminManager decomManager = datanodeManager.getDatanodeAdminManager();
-    assertEquals(6, getCluster().getDataNodes().size());
 
-    // 3 datanodes will be "live" datanodes that are expected to be decommissioned eventually
-    final List<DatanodeDescriptor> liveNodes = getCluster().getDataNodes().subList(3, 6).stream()
-        .map(dn -> getDatanodeDesriptor(namesystem, dn.getDatanodeUuid()))
-        .collect(Collectors.toList());
-    assertEquals(3, liveNodes.size());
-
-    // 3 datanodes will be "dead" datanodes that are expected to never be decommissioned
-    final List<DatanodeDescriptor> deadNodes = getCluster().getDataNodes().subList(0, 3).stream()
-        .map(dn -> getDatanodeDesriptor(namesystem, dn.getDatanodeUuid()))
-        .collect(Collectors.toList());
-    assertEquals(3, deadNodes.size());
-
-    // Need to create some data or "isNodeHealthyForDecommissionOrMaintenance"
-    // may unexpectedly return true for a dead node
-    writeFile(getCluster().getFileSystem(), new Path("/tmp/test1"), 1, 100);
-
-    // Cause the 3 "dead" nodes to be lost while in state decommissioning
-    // and fill the tracked nodes set with those 3 "dead" nodes
-    ArrayList<DatanodeInfo> decommissionedNodes = Lists.newArrayList();
-    int expectedNumTracked = 0;
-    for (final DatanodeDescriptor deadNode : deadNodes) {
-      assertEquals(0, decomManager.getNumPendingNodes());
-      assertEquals(expectedNumTracked, decomManager.getNumTrackedNodes());
-
-      // Start decommissioning the node
-      takeNodeOutofService(0, deadNode.getDatanodeUuid(), 0, decommissionedNodes,
-          AdminStates.DECOMMISSION_INPROGRESS);
-      decommissionedNodes.add(deadNode);
-
-      // Stop the datanode so that it is lost while decommissioning
-      getCluster().stopDataNode(deadNode.getXferAddr());
-      deadNode.setLastUpdate(213); // Set last heartbeat to be in the past
-
-      // Wait for the decommissioning datanode to become unhealthy
-      // & to be added to "pendingNodes"
-      final int finalExpectedNumTracked = expectedNumTracked;
-      GenericTestUtils.waitFor(() ->
-          !BlockManagerTestUtil.isNodeHealthyForDecommissionOrMaintenance(blockManager, deadNode)
-              && decomManager.getNumTrackedNodes() == finalExpectedNumTracked
-              && decomManager.getNumPendingNodes() == 1, 500, 30000);
-
-      // Run DatanodeAdminManager.Monitor & validate the node becomes tracked
-      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      expectedNumTracked++;
-      assertEquals(0, decomManager.getNumPendingNodes());
-      assertEquals(expectedNumTracked, decomManager.getNumTrackedNodes());
-    }
-
-    // Validate the 3 "dead" nodes are not removed from the tracked nodes set
+    // Validate the 2 "dead" nodes are not removed from the tracked nodes set
     // after several seconds of operation
     final Duration checkDuration = Duration.ofSeconds(5);
     Instant checkUntil = Instant.now().plus(checkDuration);
     while (Instant.now().isBefore(checkUntil)) {
       BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
       assertEquals(0, decomManager.getNumPendingNodes());
-      assertEquals(3, decomManager.getNumTrackedNodes());
+      assertEquals(numDeadNodes, decomManager.getNumTrackedNodes());
+      assertTrue(deadNodeProps.keySet().stream()
+          .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
       Thread.sleep(500);
     }
 
-    // Validate that the "live" nodes are considered healthy
-    GenericTestUtils.waitFor(() -> {
-      try {
-        return liveNodes.stream().allMatch(
-            dn -> BlockManagerTestUtil.isNodeHealthyForDecommissionOrMaintenance(blockManager, dn));
-      } catch (Exception e) {
-        LOG.warn("Exception running isNodeHealthyForDecommissionOrMaintenance", e);
-        return false;
-      }
-    }, 500, 30000);
+    // Delete the file such that its no longer a factor blocking decommissioning of live nodes
+    // which have block replicas for that file
+    getCluster().getFileSystem().delete(filePath, true);
 
     // Start decommissioning 2 "live" datanodes
-    for (final DatanodeDescriptor liveNode : liveNodes.subList(0, 2)) {
+    int numLiveDecommNodes = 2;
+    final List<DatanodeDescriptor> liveDecommNodes = liveNodes.subList(0, numLiveDecommNodes);
+    for (final DatanodeDescriptor liveNode : liveDecommNodes) {
       takeNodeOutofService(0, liveNode.getDatanodeUuid(), 0, decommissionedNodes,
           AdminStates.DECOMMISSION_INPROGRESS);
       decommissionedNodes.add(liveNode);
     }
 
+    // Write a new file such that there are under-replicated blocks preventing decommissioning
+    // of dead nodes
+    writeFile(getCluster().getFileSystem(), filePath, numNodes, 10);
+
     // Validate that the live datanodes are put into the pending decommissioning queue
-    GenericTestUtils.waitFor(
-        () -> decomManager.getNumTrackedNodes() == 3 && decomManager.getNumPendingNodes() == 2, 500,
-        30000);
+    GenericTestUtils.waitFor(() -> decomManager.getNumTrackedNodes() == numDeadNodes
+            && decomManager.getNumPendingNodes() == numLiveDecommNodes
+            && liveDecommNodes.stream().allMatch(
+                node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)),
+        500, 30000);
+    for (final DatanodeDescriptor node : decomManager.getPendingNodes()) {
+      assertTrue(liveDecommNodes.contains(node));
+    }
 
-    // Validate that 2 of the "dead" nodes are re-queued.
-    // Need to comment out this check because DatanodeAdminBackoffMonitor
-    // manages datanodes with different logic than DatanodeAdminDefaultMonitor.
-    /*
-    BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-    assertEquals(4, decomManager.getNumPendingNodes());
-    assertEquals(1, decomManager.getNumTrackedNodes());
-    */
+    // Run DatanodeAdminManager.Monitor, then validate the dead nodes are re-queued & the
+    // live nodes are decommissioned
+    if (this instanceof TestDecommissionWithBackoffMonitor) {
+      // For TestDecommissionWithBackoffMonitor a single tick/execution of the
+      // DatanodeAdminBackoffMonitor will re-queue the dead nodes, then call
+      // "processPendingNodes" to de-queue the live nodes & decommission them
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+      assertEquals(2, decomManager.getNumPendingNodes());
+      assertEquals(0, decomManager.getNumTrackedNodes());
+    } else {
+      // For TestDecommission a single tick/execution of the DatanodeAdminDefaultMonitor
+      // will re-queue the dead nodes. A seconds tick is needed to de-queue the live nodes
+      // & decommission them
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+      assertEquals(4, decomManager.getNumPendingNodes());
+      assertEquals(0, decomManager.getNumTrackedNodes());
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+      assertEquals(2, decomManager.getNumPendingNodes());
+      assertEquals(0, decomManager.getNumTrackedNodes());
+    }
+    assertTrue(liveDecommNodes.stream()
+        .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSIONED)));
+    assertTrue(deadNodeProps.keySet().stream()
+        .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
+    for (final DatanodeDescriptor node : decomManager.getPendingNodes()) {
+      assertTrue(deadNodeProps.keySet().contains(node));
+    }
 
-    // Validate that 2 of the "live" nodes are decommissioned eventually
+    // Validate the 2 "dead" nodes are not removed from the tracked nodes set
+    // after several seconds of operation
+    checkUntil = Instant.now().plus(checkDuration);
+    while (Instant.now().isBefore(checkUntil)) {
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+      assertEquals(0, decomManager.getNumPendingNodes());
+      assertEquals(numDeadNodes, decomManager.getNumTrackedNodes());
+      assertTrue(deadNodeProps.keySet().stream()
+          .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
+      Thread.sleep(500);
+    }
+
+    // Delete the file such that there are no more under-replicated blocks
+    // allowing the dead nodes to be decommissioned
+    getCluster().getFileSystem().delete(filePath, true);
+
+    // Validate the dead nodes are eventually decommissioned
     GenericTestUtils.waitFor(() -> {
       try {
         BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
@@ -1780,17 +1777,85 @@ public class TestDecommission extends AdminStatesBaseTest {
         LOG.warn("Exception running DatanodeAdminMonitor", e);
         return false;
       }
-      return decomManager.getNumTrackedNodes() == 3 && decomManager.getNumPendingNodes() == 0;
+      return decomManager.getNumTrackedNodes() == 0 && decomManager.getNumPendingNodes() == 0
+          && deadNodeProps.keySet().stream().allMatch(
+              node -> node.getAdminState().equals(AdminStates.DECOMMISSIONED));
     }, 500, 30000);
+  }
 
-    // Validate the 3 "dead" nodes are not removed from the tracked nodes set
-    // after several seconds of operation
-    checkUntil = Instant.now().plus(checkDuration);
-    while (Instant.now().isBefore(checkUntil)) {
-      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      assertEquals(0, decomManager.getNumPendingNodes());
-      assertEquals(3, decomManager.getNumTrackedNodes());
-      Thread.sleep(500);
+  /**
+   * Create a MiniDFSCluster with "numLiveNodes" live datanodes in AdminState=NORMAL and
+   * "numDeadNodes" dead datanodes in AdminState=DECOMMISSION_INPROGRESS. Create a file
+   * replicated to all datanodes.
+   *
+   * @param numLiveNodes  - number of live nodes in cluster
+   * @param liveNodes     - list which will be loaded with references to 3 live datanodes
+   * @param numDeadNodes  - number of live nodes in cluster
+   * @param deadNodeProps - map which will be loaded with references to 2 dead datanodes
+   * @param decommissionedNodes - list which will be loaded with references to decommissioning nodes
+   * @param filePath      - path used to create HDFS file
+   */
+  private void createClusterWithDeadNodesDecommissionInProgress(final int numLiveNodes,
+      final List<DatanodeDescriptor> liveNodes, final int numDeadNodes,
+      final Map<DatanodeDescriptor, MiniDFSCluster.DataNodeProperties> deadNodeProps,
+      final ArrayList<DatanodeInfo> decommissionedNodes, final Path filePath) throws Exception {
+    assertTrue("Must have numLiveNode > 0", numLiveNodes > 0);
+    assertTrue("Must have numDeadNode > 0", numDeadNodes > 0);
+    int numNodes = numLiveNodes + numDeadNodes;
+
+    // Allow "numDeadNodes" datanodes to be decommissioned at a time
+    getConf()
+        .setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES, numDeadNodes);
+    // Disable the normal monitor runs
+    getConf()
+        .setInt(MiniDFSCluster.DFS_NAMENODE_DECOMMISSION_INTERVAL_TESTING_KEY, Integer.MAX_VALUE);
+
+    // Start cluster with "numNodes" datanodes
+    startCluster(1, numNodes);
+    final FSNamesystem namesystem = getCluster().getNamesystem();
+    final BlockManager blockManager = namesystem.getBlockManager();
+    final DatanodeManager datanodeManager = blockManager.getDatanodeManager();
+    final DatanodeAdminManager decomManager = datanodeManager.getDatanodeAdminManager();
+    assertEquals(numNodes, getCluster().getDataNodes().size());
+    getCluster().waitActive();
+
+    // "numLiveNodes" datanodes will remain "live"
+    for (final DataNode node : getCluster().getDataNodes().subList(0, numLiveNodes)) {
+      liveNodes.add(getDatanodeDesriptor(namesystem, node.getDatanodeUuid()));
     }
+    assertEquals(numLiveNodes, liveNodes.size());
+
+    // "numDeadNodes" datanodes will be "dead" while decommissioning
+    final List<DatanodeDescriptor> deadNodes =
+        getCluster().getDataNodes().subList(numLiveNodes, numNodes).stream()
+            .map(dn -> getDatanodeDesriptor(namesystem, dn.getDatanodeUuid()))
+            .collect(Collectors.toList());
+    assertEquals(numDeadNodes, deadNodes.size());
+
+    // Create file with block replicas on all nodes
+    writeFile(getCluster().getFileSystem(), filePath, numNodes, 10);
+
+    // Cause the "dead" nodes to be lost while in state decommissioning
+    // and fill the tracked nodes set with those "dead" nodes
+    for (final DatanodeDescriptor deadNode : deadNodes) {
+      // Start decommissioning the node, it will not be able to complete due to the
+      // under-replicated file
+      takeNodeOutofService(0, deadNode.getDatanodeUuid(), 0, decommissionedNodes,
+          AdminStates.DECOMMISSION_INPROGRESS);
+      decommissionedNodes.add(deadNode);
+
+      // Stop the datanode so that it is lost while decommissioning
+      MiniDFSCluster.DataNodeProperties dn = getCluster().stopDataNode(deadNode.getXferAddr());
+      deadNodeProps.put(deadNode, dn);
+      deadNode.setLastUpdate(213); // Set last heartbeat to be in the past
+    }
+    assertEquals(numDeadNodes, deadNodeProps.size());
+
+    // Wait for the decommissioning nodes to become dead & to be added to "pendingNodes"
+    GenericTestUtils.waitFor(() -> decomManager.getNumTrackedNodes() == 0
+        && decomManager.getNumPendingNodes() == numDeadNodes
+        && deadNodes.stream().allMatch(node ->
+            !BlockManagerTestUtil.isNodeHealthyForDecommissionOrMaintenance(blockManager, node)
+                && !node.isAlive()), 500, 20000);
   }
 }
