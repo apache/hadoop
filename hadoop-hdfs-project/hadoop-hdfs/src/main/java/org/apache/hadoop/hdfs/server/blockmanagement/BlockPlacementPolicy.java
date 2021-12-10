@@ -273,4 +273,9 @@ public abstract class BlockPlacementPolicy {
   public abstract void setExcludeSlowNodesEnabled(boolean enable);
 
   public abstract boolean getExcludeSlowNodesEnabled();
+
+  /**
+   * Clean up resources, such as MxBeans.
+   */
+  public abstract void clear();
 }

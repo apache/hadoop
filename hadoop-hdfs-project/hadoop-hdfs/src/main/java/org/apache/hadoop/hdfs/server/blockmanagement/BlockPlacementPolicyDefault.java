@@ -118,7 +118,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
   private FSClusterStats stats;
   protected long heartbeatInterval;   // interval for DataNode heartbeats
   private long staleInterval;   // interval used to identify stale DataNodes
-  private ObjectName mxBeanName;
+  private static ObjectName mxBeanName;
 
   public ObjectName getMxBeanName() {
     return mxBeanName;
@@ -1397,6 +1397,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
   @Override
   public NodeNotChosenReasonMetrics getNumberOfEachNotChosenReason() {
     return new NodeNotChosenReasonMetrics();
+  }
+
+  @Override
+  public void clear() {
+    MBeans.unregister(mxBeanName);
+    mxBeanName = null;
   }
 
   public static class NodeNotChosenReasonMetrics {
