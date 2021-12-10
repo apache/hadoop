@@ -21,6 +21,9 @@
 
 #include "hdfs-allow-snapshot-mock.h"
 #include "hdfs-cat-mock.h"
+#include "hdfs-chgrp-mock.h"
+#include "hdfs-chmod-mock.h"
+#include "hdfs-chown-mock.h"
 #include "hdfs-create-snapshot-mock.h"
 #include "hdfs-delete-snapshot-mock.h"
 #include "hdfs-df-mock.h"
@@ -69,6 +72,25 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Values(CallHelp<hdfs::tools::test::DeleteSnapshotMock>,
                     Pass2Paths<hdfs::tools::test::DeleteSnapshotMock>));
 
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChown, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::ChownMock>,
+                    PassOwnerAndAPath<hdfs::tools::test::ChownMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::ChownMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChmod, HdfsToolBasicTest,
+    testing::Values(
+        CallHelp<hdfs::tools::test::ChmodMock>,
+        PassPermissionsAndAPath<hdfs::tools::test::ChmodMock>,
+        PassRecursivePermissionsAndAPath<hdfs::tools::test::ChmodMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChgrp, HdfsToolBasicTest,
+    testing::Values(CallHelp<hdfs::tools::test::ChgrpMock>,
+                    PassOwnerAndAPath<hdfs::tools::test::ChgrpMock>,
+                    PassRecursiveOwnerAndAPath<hdfs::tools::test::ChgrpMock>));
+
 // Negative tests
 INSTANTIATE_TEST_SUITE_P(
     HdfsAllowSnapshot, HdfsToolNegativeTestThrows,
@@ -99,3 +121,27 @@ INSTANTIATE_TEST_SUITE_P(
 INSTANTIATE_TEST_SUITE_P(
     HdfsDeleteSnapshot, HdfsToolNegativeTestNoThrow,
     testing::Values(PassAPath<hdfs::tools::test::DeleteSnapshotMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChown, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::ChownMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChown, HdfsToolNegativeTestThrows,
+    testing::Values(PassNOptAndAPath<hdfs::tools::test::ChownMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChmod, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::ChmodMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChmod, HdfsToolNegativeTestThrows,
+    testing::Values(PassNOptAndAPath<hdfs::tools::test::ChmodMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChgrp, HdfsToolNegativeTestNoThrow,
+    testing::Values(PassAPath<hdfs::tools::test::ChgrpMock>));
+
+INSTANTIATE_TEST_SUITE_P(
+    HdfsChgrp, HdfsToolNegativeTestThrows,
+    testing::Values(PassNOptAndAPath<hdfs::tools::test::ChgrpMock>));

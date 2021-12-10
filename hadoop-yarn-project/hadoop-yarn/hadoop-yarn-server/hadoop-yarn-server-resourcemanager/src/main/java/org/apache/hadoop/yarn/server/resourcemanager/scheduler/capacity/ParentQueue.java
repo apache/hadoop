@@ -128,7 +128,7 @@ public class ParentQueue extends AbstractCSQueue {
     this.scheduler = cs;
     this.rootQueue = (parent == null);
 
-    float rawCapacity = csConf.getNonLabeledQueueCapacity(getQueuePath());
+    float rawCapacity = csConf.getNonLabeledQueueCapacity(this.queuePath);
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
@@ -161,7 +161,7 @@ public class ParentQueue extends AbstractCSQueue {
     writeLock.lock();
     try {
       autoCreatedQueueTemplate = new AutoCreatedQueueTemplate(
-          csConf, getQueuePath());
+          csConf, this.queuePath);
       super.setupQueueConfigs(clusterResource, csConf);
       StringBuilder aclsString = new StringBuilder();
       for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {
@@ -182,7 +182,7 @@ public class ParentQueue extends AbstractCSQueue {
               ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
 
-      LOG.info(queueName + ", " + getCapacityOrWeightString()
+      LOG.info(getQueueName() + ", " + getCapacityOrWeightString()
           + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
           + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
           + ", absoluteMaxCapacity=" + this.queueCapacities
@@ -333,7 +333,7 @@ public class ParentQueue extends AbstractCSQueue {
             throw new IOException(
                 "Parent Queues" + " capacity: " + parentMinResource
                     + " is less than" + " to its children:" + minRes
-                    + " for queue:" + queueName);
+                    + " for queue:" + getQueueName());
           }
         }
       }
@@ -355,7 +355,7 @@ public class ParentQueue extends AbstractCSQueue {
               // It is wrong when percent sum != {0, 1}
               throw new IOException(
                   "Illegal" + " capacity sum of " + childrenPctSum
-                      + " for children of queue " + queueName + " for label="
+                      + " for children of queue " + getQueueName() + " for label="
                       + nodeLabel + ". It should be either 0 or 1.0");
             } else{
               // We also allow children's percent sum = 0 under the following
@@ -368,7 +368,7 @@ public class ParentQueue extends AbstractCSQueue {
                     > PRECISION) && (!allowZeroCapacitySum)) {
                   throw new IOException(
                       "Illegal" + " capacity sum of " + childrenPctSum
-                          + " for children of queue " + queueName
+                          + " for children of queue " + getQueueName()
                           + " for label=" + nodeLabel
                           + ". It is set to 0, but parent percent != 0, and "
                           + "doesn't allow children capacity to set to 0");
@@ -383,8 +383,8 @@ public class ParentQueue extends AbstractCSQueue {
                 && !allowZeroCapacitySum) {
               throw new IOException(
                   "Illegal" + " capacity sum of " + childrenPctSum
-                      + " for children of queue " + queueName + " for label="
-                      + nodeLabel + ". queue=" + queueName
+                      + " for children of queue " + getQueueName() + " for label="
+                      + nodeLabel + ". queue=" + getQueueName()
                       + " has zero capacity, but child"
                       + "queues have positive capacities");
             }
@@ -470,7 +470,7 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   public String toString() {
-    return queueName + ": " +
+    return getQueueName() + ": " +
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
@@ -768,9 +768,9 @@ public class ParentQueue extends AbstractCSQueue {
       String userName, String queue) throws AccessControlException {
     writeLock.lock();
     try {
-      if (queue.equals(queueName)) {
+      if (queue.equals(getQueueName())) {
         throw new AccessControlException(
-            "Cannot submit application " + "to non-leaf queue: " + queueName);
+            "Cannot submit application " + "to non-leaf queue: " + getQueueName());
       }
 
       if (getState() != QueueState.RUNNING) {

@@ -60,14 +60,14 @@ public class TestCapacitySchedulerConfigValidator {
   private static final String LEAF_A = "leafA";
   private static final String LEAF_B = "leafB";
 
-  private static final String PARENT_A_FULL_PATH = CapacitySchedulerConfiguration.ROOT
-      + "." + PARENT_A;
-  private static final String LEAF_A_FULL_PATH = PARENT_A_FULL_PATH
-      + "." + LEAF_A;
-  private static final String PARENT_B_FULL_PATH = CapacitySchedulerConfiguration.ROOT
-      + "." + PARENT_B;
-  private static final String LEAF_B_FULL_PATH = PARENT_B_FULL_PATH
-      + "." + LEAF_B;
+  private static final QueuePath PARENT_A_FULL_PATH =
+          new QueuePath(CapacitySchedulerConfiguration.ROOT + "." + PARENT_A);
+  private static final QueuePath LEAF_A_FULL_PATH =
+          new QueuePath(PARENT_A_FULL_PATH + "." + LEAF_A);
+  private static final QueuePath PARENT_B_FULL_PATH =
+          new QueuePath(CapacitySchedulerConfiguration.ROOT + "." + PARENT_B);
+  private static final QueuePath LEAF_B_FULL_PATH =
+          new QueuePath(PARENT_B_FULL_PATH + "." + LEAF_B);
 
   private final Resource A_MINRES = Resource.newInstance(16 * GB, 10);
   private final Resource B_MINRES = Resource.newInstance(32 * GB, 5);
@@ -225,7 +225,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            LEAF_A_FULL_PATH, FULL_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -245,7 +246,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -264,7 +266,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, FULL_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            LEAF_A_FULL_PATH, FULL_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -284,7 +287,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
+    newConfiguration.setMaximumResourceRequirement("",
+            LEAF_A_FULL_PATH, VCORE_EXCEEDED_MAXRES);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -304,7 +308,8 @@ public class TestCapacitySchedulerConfigValidator {
     CapacitySchedulerConfiguration oldConfiguration = cs.getConfiguration();
     CapacitySchedulerConfiguration newConfiguration =
         new CapacitySchedulerConfiguration(cs.getConfiguration());
-    newConfiguration.setMaximumResourceRequirement("", LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES_GPU);
+    newConfiguration.setMaximumResourceRequirement("",
+            LEAF_A_FULL_PATH, GPU_EXCEEDED_MAXRES_GPU);
     try {
       CapacitySchedulerConfigValidator
           .validateCSConfiguration(oldConfiguration, newConfiguration, rmContext);
@@ -595,8 +600,8 @@ public class TestCapacitySchedulerConfigValidator {
 
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{PARENT_A, PARENT_B});
-    csConf.setQueues(PARENT_A_FULL_PATH, new String[]{LEAF_A});
-    csConf.setQueues(PARENT_B_FULL_PATH, new String[]{LEAF_B});
+    csConf.setQueues(PARENT_A_FULL_PATH.getFullPath(), new String[]{LEAF_A});
+    csConf.setQueues(PARENT_B_FULL_PATH.getFullPath(), new String[]{LEAF_B});
 
     if (useDominantRC) {
       setupGpuResourceValues();

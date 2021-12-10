@@ -649,8 +649,8 @@ class BlockManagerSafeMode {
           DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_DEFAULT);
       if (recheckInterval < 1) {
         LOG.warn("Invalid value for " +
-            DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_DEFAULT +
-            ".Should be greater than 0, but is {}", recheckInterval);
+            DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_KEY +
+            ". Should be greater than 0, but is {}", recheckInterval);
         recheckInterval = DFSConfigKeys.DFS_NAMENODE_SAFEMODE_RECHECK_INTERVAL_DEFAULT;
       }
       LOG.info("Using {} as SafeModeMonitor Interval", recheckInterval);

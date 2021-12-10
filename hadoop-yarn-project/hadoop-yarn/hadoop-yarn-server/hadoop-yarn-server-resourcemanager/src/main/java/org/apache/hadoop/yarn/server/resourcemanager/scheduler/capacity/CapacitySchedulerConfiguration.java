@@ -542,15 +542,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(getNodeLabelPrefix(queue, label) + CAPACITY, weight + WEIGHT_SUFFIX);
   }
 
-  public float getLabeledQueueWeight(String queue, String label) {
-    String configuredValue = get(getNodeLabelPrefix(queue, label) + CAPACITY);
+  public float getLabeledQueueWeight(QueuePath queue, String label) {
+    String configuredValue = get(getNodeLabelPrefix(queue.getFullPath(), label) + CAPACITY);
     float weight = extractFloatValueFromWeightConfig(configuredValue);
-    throwExceptionForUnexpectedWeight(weight, queue, label);
+    throwExceptionForUnexpectedWeight(weight, queue.getFullPath(), label);
     return weight;
   }
 
-  public float getNonLabeledQueueCapacity(String queue) {
-    String configuredCapacity = get(getQueuePrefix(queue) + CAPACITY);
+  public float getNonLabeledQueueCapacity(QueuePath queue) {
+    String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + CAPACITY);
     boolean absoluteResourceConfigured = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (absoluteResourceConfigured || configuredWeightAsCapacity(
@@ -559,10 +559,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource will be parsed and
       // updated. Once nodes are added/removed in cluster, capacity in
       // percentage will also be re-calculated.
-      return queue.equals("root") ? 100.0f : 0f;
+      return queue.isRoot() ? 100.0f : 0f;
     }
 
-    float capacity = queue.equals("root")
+    float capacity = queue.isRoot()
         ? 100.0f
         : (configuredCapacity == null)
             ? 0f
@@ -573,7 +573,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           "Illegal " + "capacity of " + capacity + " for queue " + queue);
     }
     LOG.debug("CSConf - getCapacity: queuePrefix={}, capacity={}",
-        getQueuePrefix(queue), capacity);
+        getQueuePrefix(queue.getFullPath()), capacity);
 
     return capacity;
   }
@@ -601,8 +601,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   }
 
-  public float getNonLabeledQueueMaximumCapacity(String queue) {
-    String configuredCapacity = get(getQueuePrefix(queue) + MAXIMUM_CAPACITY);
+  public float getNonLabeledQueueMaximumCapacity(QueuePath queue) {
+    String configuredCapacity = get(getQueuePrefix(queue.getFullPath()) + MAXIMUM_CAPACITY);
     boolean matcher = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (matcher) {
@@ -816,9 +816,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  private float internalGetLabeledQueueCapacity(String queue, String label,
+  private float internalGetLabeledQueueCapacity(QueuePath queue, String label,
       String suffix, float defaultValue) {
-    String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
+    String capacityPropertyName = getNodeLabelPrefix(queue.getFullPath(), label) + suffix;
     String configuredCapacity = get(capacityPropertyName);
     boolean absoluteResourceConfigured =
         (configuredCapacity != null) && RESOURCE_PATTERN.matcher(
@@ -829,10 +829,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       // root.From AbstractCSQueue, absolute resource, and weight will be parsed
       // and updated separately. Once nodes are added/removed in cluster,
       // capacity is percentage will also be re-calculated.
-      return queue.equals("root") ? 100.0f : defaultValue;
+      return queue.isRoot() ? 100.0f : defaultValue;
     }
 
-    float capacity = queue.equals("root") ? 100.0f
+    float capacity = queue.isRoot() ? 100.0f
         : getFloat(capacityPropertyName, defaultValue);
     if (capacity < MINIMUM_CAPACITY_VALUE
         || capacity > MAXIMUM_CAPACITY_VALUE) {
@@ -843,17 +843,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug(
-          "CSConf - getCapacityOfLabel: prefix=" + getNodeLabelPrefix(queue,
+          "CSConf - getCapacityOfLabel: prefix=" + getNodeLabelPrefix(queue.getFullPath(),
               label) + ", capacity=" + capacity);
     }
     return capacity;
   }
 
-  public float getLabeledQueueCapacity(String queue, String label) {
+  public float getLabeledQueueCapacity(QueuePath queue, String label) {
     return internalGetLabeledQueueCapacity(queue, label, CAPACITY, 0f);
   }
 
-  public float getLabeledQueueMaximumCapacity(String queue, String label) {
+  public float getLabeledQueueMaximumCapacity(QueuePath queue, String label) {
     return internalGetLabeledQueueCapacity(queue, label, MAXIMUM_CAPACITY, 100f);
   }
 
@@ -870,13 +870,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(getQueuePrefix(queue) + DEFAULT_NODE_LABEL_EXPRESSION, exp);
   }
 
-  public float getMaximumAMResourcePercentPerPartition(String queue,
+  public float getMaximumAMResourcePercentPerPartition(QueuePath queue,
       String label) {
     // If per-partition max-am-resource-percent is not configured,
     // use default value as max-am-resource-percent for this queue.
-    return getFloat(getNodeLabelPrefix(queue, label)
+    return getFloat(getNodeLabelPrefix(queue.getFullPath(), label)
         + MAXIMUM_AM_RESOURCE_SUFFIX,
-        getMaximumApplicationMasterResourcePerQueuePercent(queue));
+        getMaximumApplicationMasterResourcePerQueuePercent(queue.getFullPath()));
   }
 
   public void setMaximumAMResourcePercentPerPartition(String queue,
@@ -2190,6 +2190,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @Private
+  public QueuePath getAutoCreatedQueueObjectTemplateConfPrefix(String queuePath) {
+    return new QueuePath(queuePath, AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX);
+  }
+
+  @Private
   public static final String FAIL_AUTO_CREATION_ON_EXCEEDING_CAPACITY =
       "auto-create-child-queue.fail-on-exceeding-parent-capacity";
 
@@ -2565,13 +2570,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @VisibleForTesting
-  public void setMinimumResourceRequirement(String label, String queue,
+  public void setMinimumResourceRequirement(String label, QueuePath queue,
       Resource resource) {
     updateMinMaxResourceToConf(label, queue, resource, CAPACITY);
   }
 
   @VisibleForTesting
-  public void setMaximumResourceRequirement(String label, String queue,
+  public void setMaximumResourceRequirement(String label, QueuePath queue,
       Resource resource) {
     updateMinMaxResourceToConf(label, queue, resource, MAXIMUM_CAPACITY);
   }
@@ -2586,9 +2591,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return queueResourceVectors;
   }
 
-  private void updateMinMaxResourceToConf(String label, String queue,
+  private void updateMinMaxResourceToConf(String label, QueuePath queue,
       Resource resource, String type) {
-    if (queue.equals("root")) {
+    if (queue.isRoot()) {
       throw new IllegalArgumentException(
           "Cannot set resource, root queue will take 100% of cluster capacity");
     }
@@ -2603,9 +2608,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
             + ResourceUtils.
             getCustomResourcesStrings(resource) + "]");
 
-    String prefix = getQueuePrefix(queue) + type;
+    String prefix = getQueuePrefix(queue.getFullPath()) + type;
     if (!label.isEmpty()) {
-      prefix = getQueuePrefix(queue) + ACCESSIBLE_NODE_LABELS + DOT + label
+      prefix = getQueuePrefix(queue.getFullPath()) + ACCESSIBLE_NODE_LABELS + DOT + label
           + DOT + type;
     }
     set(prefix, resourceString.toString());
