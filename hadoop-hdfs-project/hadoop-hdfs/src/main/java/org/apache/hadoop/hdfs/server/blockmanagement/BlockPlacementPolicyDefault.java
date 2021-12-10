@@ -84,7 +84,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
   private static final BlockPlacementStatus ONE_RACK_PLACEMENT =
       new BlockPlacementStatusDefault(1, 1, 1);
 
-  private static final ConcurrentHashMap<NodeNotChosenReason, LongAdder> notChosenReasonMap =
+  private static final ConcurrentHashMap<NodeNotChosenReason, LongAdder> NOT_CHOSEN_REASON_MAP =
       new ConcurrentHashMap<>();
 
   public enum NodeNotChosenReason {
@@ -1010,7 +1010,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
   }
 
   private static void incrNotChosenReasonNum(NodeNotChosenReason reason) {
-    notChosenReasonMap.computeIfAbsent(reason, k -> new LongAdder())
+    NOT_CHOSEN_REASON_MAP.computeIfAbsent(reason, k -> new LongAdder())
         .increment();
   }
 
@@ -1399,40 +1399,40 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
     return new NodeNotChosenReasonMetrics();
   }
 
-  public class NodeNotChosenReasonMetrics {
+  public static class NodeNotChosenReasonMetrics {
 
     public long getNotInService() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.NOT_IN_SERVICE, new LongAdder()).longValue();
     }
 
     public long getNodeStale() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.NODE_STALE, new LongAdder()).longValue();
     }
 
     public long getNodeTooBusy() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.NODE_TOO_BUSY, new LongAdder()).longValue();
     }
 
     public long getTooManyNodesOnRack() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.TOO_MANY_NODES_ON_RACK, new LongAdder()).longValue();
     }
 
     public long getNotEnoughStorageSpace() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.NOT_ENOUGH_STORAGE_SPACE, new LongAdder()).longValue();
     }
 
     public long getNoRequiredStorageType() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.NO_REQUIRED_STORAGE_TYPE, new LongAdder()).longValue();
     }
 
     public long getNodeSlow() {
-      return notChosenReasonMap
+      return NOT_CHOSEN_REASON_MAP
           .getOrDefault(NodeNotChosenReason.NODE_SLOW, new LongAdder()).longValue();
     }
   }
