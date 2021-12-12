@@ -439,7 +439,7 @@ public class DFSAdmin extends FsShell {
     "\t[-rollEdits]\n" +
     "\t[-restoreFailedStorage true|false|check]\n" +
     "\t[-refreshNodes]\n" +
-    "\t[-refreshTopology <ipAddr>]\n" +
+      "\t[-refreshTopology <ipAddr>]\n" +
     "\t[" + SetQuotaCommand.USAGE + "]\n" +
     "\t[" + ClearQuotaCommand.USAGE +"]\n" +
     "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +

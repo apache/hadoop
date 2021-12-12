@@ -981,7 +981,8 @@ public interface ClientProtocol {
   /**
    * Tells the namenode to refresh cluster's network topology.
    * @param ipAddr the IP-address of the node to refresh
-   * @throws IOException
+   * @return true if refresh is successful, false otherwise.
+   * @throws IOException If an I/O error occurred
    */
   @Idempotent
   boolean refreshTopology(String ipAddr) throws IOException;
