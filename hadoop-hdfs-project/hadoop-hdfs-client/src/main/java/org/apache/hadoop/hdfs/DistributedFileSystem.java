@@ -1692,6 +1692,17 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
+   * Refresh the cluster's network topology. Requires super-user privileges.
+   * @param ipAddr the IP-address of the node to refresh
+   * @return true if refresh succeeds. false otherwise.
+   *         in this case.
+   * @throws IOException
+   */
+  public boolean refreshTopology(String ipAddr) throws IOException {
+    return dfs.refreshTopology(ipAddr);
+  }
+
+  /**
    * Finalize previously upgraded files system state.
    * @throws IOException
    */

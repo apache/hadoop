@@ -1195,6 +1195,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
+  public boolean refreshTopology(String ipAddr) throws IOException {
+    return clientProto.refreshTopology(ipAddr);
+  }
+
+  @Override // ClientProtocol
   public void finalizeUpgrade() throws IOException {
     clientProto.finalizeUpgrade();
   }

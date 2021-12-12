@@ -439,6 +439,7 @@ public class DFSAdmin extends FsShell {
     "\t[-rollEdits]\n" +
     "\t[-restoreFailedStorage true|false|check]\n" +
     "\t[-refreshNodes]\n" +
+    "\t[-refreshTopology <ipAddr>]\n" +
     "\t[" + SetQuotaCommand.USAGE + "]\n" +
     "\t[" + ClearQuotaCommand.USAGE +"]\n" +
     "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
@@ -1000,6 +1001,51 @@ public class DFSAdmin extends FsShell {
   }
 
   /**
+   * Command to ask the namenode to refresh cluster topology.
+   * @return 0 if it succeeds.
+   * @throws IOException
+   */
+  public int refreshTopology(String[] argv, int i) throws IOException {
+    int exitCode = -1;
+    String ipAddr = argv[i].trim();
+    if (ipAddr.isEmpty()) {
+      throw new IllegalArgumentException("ipAddr cannot be empty!");
+    }
+    DistributedFileSystem dfs = getDFS();
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtilClient.isLogicalUri(dfsConf, dfsUri);
+    if (isHaEnabled) {
+      boolean failure = false;
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<ClientProtocol>> proxies =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf, nsId,
+              ClientProtocol.class);
+      for (ProxyAndInfo<ClientProtocol> proxy : proxies) {
+        if (proxy.getProxy().refreshTopology(ipAddr)) {
+          System.out.println("Refresh topology successful at " +
+              proxy.getAddress() + " for " + ipAddr);
+        } else {
+          System.out.println("Refresh topology fail at " +
+              proxy.getAddress() + " for " + ipAddr);
+          failure = true;
+        }
+      }
+      if (!failure) {
+        exitCode = 0;
+      }
+    } else {
+      if (dfs.refreshTopology(ipAddr)) {
+        System.out.println("Refresh topology successful for " + ipAddr);
+        exitCode = 0;
+      } else {
+        System.out.println("Refresh topology fail for " + ipAddr);
+      }
+    }
+    return exitCode;
+  }
+
+  /**
    * Command to list all the open files currently managed by NameNode.
    * Usage: hdfs dfsadmin -listOpenFiles
    *
@@ -1194,6 +1240,9 @@ public class DFSAdmin extends FsShell {
       "\t\tDecommissioned nodes are not automatically shutdown and \n" +
       "\t\tare not chosen for writing new replicas.\n";
 
+    String refreshTopology = "-refreshTopology <ipAddr>: Updates the topology " +
+        "of the specific node in NameNode.\n";
+
     String finalizeUpgrade = "-finalizeUpgrade: Finalize upgrade of HDFS.\n" +
       "\t\tDatanodes delete their previous version working directories,\n" +
       "\t\tfollowed by Namenode doing the same.\n" + 
@@ -1336,6 +1385,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(restoreFailedStorage);
     } else if ("refreshNodes".equals(cmd)) {
       System.out.println(refreshNodes);
+    } else if ("refreshTopology".equals(cmd)) {
+      System.out.println(refreshTopology);
     } else if ("finalizeUpgrade".equals(cmd)) {
       System.out.println(finalizeUpgrade);
     } else if (RollingUpgradeCommand.matches("-"+cmd)) {
@@ -1404,6 +1455,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(rollEdits);
       System.out.println(restoreFailedStorage);
       System.out.println(refreshNodes);
+      System.out.println(refreshTopology);
       System.out.println(finalizeUpgrade);
       System.out.println(RollingUpgradeCommand.DESCRIPTION);
       System.out.println(upgrade);
@@ -2227,6 +2279,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-triggerBlockReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode <namenode_host:ipc_port>]]");
+    } else if ("-refreshTopology".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-refreshTopology <ipAddr>]");
     } else if ("-listOpenFiles".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-listOpenFiles [-blockingDecommission] [-path <path>]]");
@@ -2397,6 +2452,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-refreshTopology".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -2475,6 +2535,8 @@ public class DFSAdmin extends FsShell {
         exitCode = triggerBlockReport(argv);
       } else if ("-listOpenFiles".equals(cmd)) {
         exitCode = listOpenFiles(argv);
+      } else if ("-refreshTopology".equals(cmd)) {
+        exitCode = refreshTopology(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

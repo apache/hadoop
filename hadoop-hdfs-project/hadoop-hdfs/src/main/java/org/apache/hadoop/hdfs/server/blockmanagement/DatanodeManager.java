@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -1295,6 +1296,81 @@ public class DatanodeManager {
     } finally {
       namesystem.writeUnlock();
     }
+  }
+
+  private void checkTopologySwitchMappingImpl(final Configuration conf)
+      throws UnsupportedActionException {
+    Class<? extends DNSToSwitchMapping> previousImpl =
+        dnsToSwitchMapping.getClass();
+    Class<? extends DNSToSwitchMapping> newImpl =
+        conf.getClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            ScriptBasedMapping.class, DNSToSwitchMapping.class);
+    if (!previousImpl.getSimpleName().equals(newImpl.getSimpleName())) {
+      // Implementations of DNSToSwitchMapping has changed dynamically,
+      // it is not supported.
+      String msg = "Trying to switch the implementation from " + previousImpl
+          + " to " + newImpl + ". It's not allowed to change the"
+          + " implementation of DNSToSwitchMapping dynamicall.";
+      LOG.error(msg);
+      throw new UnsupportedActionException(msg);
+    }
+  }
+
+  /**
+   * Refresh cluster's network topology.
+   * @param conf configuration
+   * @param ipAddr the IP-address of the node to refresh
+   * @return true if refresh is successful, false otherwise.
+   * @throws IOException
+   */
+  public boolean refreshTopology(final Configuration conf, final String ipAddr)
+      throws IOException {
+    boolean refreshSuccess = true;
+    try {
+      // 1. Check whether admin tries to change the implementation.
+      checkTopologySwitchMappingImpl(conf);
+
+      // 2. Reload DNS to switch mapping.
+      LOG.info("refreshTopology: " + ipAddr + " ...");
+      dnsToSwitchMapping.reloadCachedMappings(
+          Collections.singletonList(ipAddr));
+
+      // 3. Update network topology
+      for (DatanodeDescriptor datanode : datanodeMap.values()) {
+        if (datanode.getIpAddr().equals(ipAddr) ||
+            datanode.getHostName().equals(ipAddr)) {
+          String oldNetWorkLocation = datanode.getNetworkLocation();
+          String newNetWorkLocation;
+          try {
+            newNetWorkLocation = resolveNetworkLocation(datanode);
+          } catch (UnresolvedTopologyException ute) {
+            LOG.error(ute.getMessage());
+            refreshSuccess = false;
+            break;
+          }
+          if (!oldNetWorkLocation.equals(newNetWorkLocation)) {
+            namesystem.writeLock();
+            try {
+              // This datanode's network location changes.
+              // 1. Remove the old network location in NetworkTopology.
+              // 2. Set datanode's network location to the new one.
+              // 3. Add the updated datanode into the NetworkTopology.
+              networktopology.remove(datanode);
+              datanode.setNetworkLocation(newNetWorkLocation);
+              networktopology.add(datanode);
+            } finally {
+              namesystem.writeUnlock();
+            }
+          }
+          break;
+        }
+      }
+    } catch (UnsupportedActionException uae) {
+      // Nothing to do,
+      // because this exception surely happened before reload cache.
+      throw new IOException(uae.getMessage());
+    }
+    return refreshSuccess;
   }
 
   /** Reread include/exclude files. */

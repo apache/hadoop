@@ -979,6 +979,14 @@ public interface ClientProtocol {
   void refreshNodes() throws IOException;
 
   /**
+   * Tells the namenode to refresh cluster's network topology.
+   * @param ipAddr the IP-address of the node to refresh
+   * @throws IOException
+   */
+  @Idempotent
+  boolean refreshTopology(String ipAddr) throws IOException;
+
+  /**
    * Finalize previous upgrade.
    * Remove file system state saved during the upgrade.
    * The upgrade will become irreversible.
