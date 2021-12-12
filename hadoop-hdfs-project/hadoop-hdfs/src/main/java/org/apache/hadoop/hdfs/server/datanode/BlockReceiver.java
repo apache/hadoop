@@ -1501,8 +1501,8 @@ class BlockReceiver implements Closeable {
           Status myStatus = pkt != null ? pkt.ackStatus : Status.SUCCESS;
           sendAckUpstream(ack, expected, totalAckTimeNanos,
             (pkt != null ? pkt.offsetInBlock : 0),
-            PipelineAck.combineHeader(datanode.getECN(), myStatus,
-                datanode.getSLOWByBlockPoolId(block.getBlockPoolId())));
+              PipelineAck.combineHeader(datanode.getECN(), myStatus,
+                  datanode.getSLOWByBlockPoolId(block.getBlockPoolId())));
           if (pkt != null) {
             // remove the packet from the ack queue
             removeAckHead();

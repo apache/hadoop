@@ -552,7 +552,7 @@ public class TestDataTransferProtocol {
   }
 
   @Test
-  public void TestPipeLineAckCompatibilityWithSLOW() throws IOException {
+  public void testPipeLineAckCompatibilityWithSLOW() throws IOException {
     DataTransferProtos.PipelineAckProto proto = DataTransferProtos
         .PipelineAckProto.newBuilder()
         .setSeqno(0)

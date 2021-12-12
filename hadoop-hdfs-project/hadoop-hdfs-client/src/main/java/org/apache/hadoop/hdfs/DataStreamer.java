@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -525,7 +526,7 @@ class DataStreamer extends Daemon {
   // List of congested data nodes. The stream will back off if the DataNodes
   // are congested
   private final List<DatanodeInfo> congestedNodes = new ArrayList<>();
-  private Map<DatanodeInfo, Integer> slowNodeMap = new HashMap<>();
+  private final Map<DatanodeInfo, Integer> slowNodeMap = new HashMap<>();
   private static final int CONGESTION_BACKOFF_MEAN_TIME_IN_MS = 5000;
   private static final int CONGESTION_BACK_OFF_MAX_TIME_IN_MS =
       CONGESTION_BACKOFF_MEAN_TIME_IN_MS * 10;
@@ -1203,16 +1204,19 @@ class DataStreamer extends Daemon {
               slowNodeMap.clear();
             }
           } else {
-            Map<DatanodeInfo, Integer> newSlowNodeMap = new HashMap<>();
+            Set<DatanodeInfo> discontinuousNodes = new HashSet<>(slowNodeMap.keySet());
             for (DatanodeInfo slowNode : slowNodesFromAck) {
               if (!slowNodeMap.containsKey(slowNode)) {
-                newSlowNodeMap.put(slowNode, 1);
+                slowNodeMap.put(slowNode, 1);
               } else {
                 int oldCount = slowNodeMap.get(slowNode);
-                newSlowNodeMap.put(slowNode, ++oldCount);
+                slowNodeMap.put(slowNode, ++oldCount);
               }
+              discontinuousNodes.remove(slowNode);
             }
-            slowNodeMap = newSlowNodeMap;
+            for (DatanodeInfo discontinuousNode : discontinuousNodes) {
+              slowNodeMap.remove(discontinuousNode);
+            }
           }
           LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
 
