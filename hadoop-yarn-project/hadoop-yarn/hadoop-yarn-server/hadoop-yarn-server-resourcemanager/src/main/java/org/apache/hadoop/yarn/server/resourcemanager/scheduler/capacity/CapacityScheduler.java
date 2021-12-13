@@ -183,6 +183,8 @@ public class CapacityScheduler extends
 
   private CapacitySchedulerQueueManager queueManager;
 
+  private CapacitySchedulerQueueContext queueContext;
+
   private WorkflowPriorityMappingsManager workflowPriorityMappingsMgr;
 
   // timeout to join when we stop this service
@@ -268,6 +270,11 @@ public class CapacityScheduler extends
   }
 
   @Override
+  public CapacitySchedulerQueueContext getQueueContext() {
+    return queueContext;
+  }
+
+  @Override
   public RMContainerTokenSecretManager getContainerTokenSecretManager() {
     return this.rmContext.getContainerTokenSecretManager();
   }
@@ -319,6 +326,7 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
       this.activitiesManager = new ActivitiesManager(rmContext);
       activitiesManager.init(conf);
+      this.queueContext = new CapacitySchedulerQueueContext(this);
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
       this.assignMultipleEnabled = this.conf.getAssignMultipleEnabled();
@@ -844,6 +852,7 @@ public class CapacityScheduler extends
   @Lock(CapacityScheduler.class)
   private void reinitializeQueues(CapacitySchedulerConfiguration newConf)
   throws IOException {
+    queueContext.reinitialize();
     this.queueManager.reinitializeQueues(newConf);
     updatePlacementRules();
 

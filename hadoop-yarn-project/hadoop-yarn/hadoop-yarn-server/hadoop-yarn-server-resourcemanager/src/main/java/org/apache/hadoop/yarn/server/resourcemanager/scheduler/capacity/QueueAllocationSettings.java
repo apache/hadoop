@@ -32,12 +32,13 @@ public class QueueAllocationSettings {
   private final Resource minimumAllocation;
   private Resource maximumAllocation;
 
-  public QueueAllocationSettings(CapacitySchedulerContext csContext) {
-    this.minimumAllocation = csContext.getMinimumResourceCapability();
+  public QueueAllocationSettings(Resource minimumAllocation) {
+    this.minimumAllocation = minimumAllocation;
   }
 
-  void setupMaximumAllocation(CapacitySchedulerConfiguration csConf, String queuePath,
-      CSQueue parent, CapacitySchedulerContext csContext) {
+  void setupMaximumAllocation(CapacitySchedulerConfiguration configuration,
+      CapacitySchedulerConfiguration originalSchedulerConfiguration, String queuePath,
+      CSQueue parent) {
     /* YARN-10869: When using AutoCreatedLeafQueues, the passed configuration
      * object is a cloned one containing only the template configs
      * (see ManagedParentQueue#getLeafQueueConfigs). To ensure that the actual
@@ -45,8 +46,8 @@ public class QueueAllocationSettings {
      * be used.
      */
     Resource clusterMax = ResourceUtils
-        .fetchMaximumAllocationFromConfig(csContext.getConfiguration());
-    Resource queueMax = csConf.getQueueMaximumAllocation(queuePath);
+        .fetchMaximumAllocationFromConfig(originalSchedulerConfiguration);
+    Resource queueMax = configuration.getQueueMaximumAllocation(queuePath);
 
     maximumAllocation = Resources.clone(
         parent == null ? clusterMax : parent.getMaximumAllocation());
@@ -59,8 +60,8 @@ public class QueueAllocationSettings {
 
     if (queueMax == Resources.none()) {
       // Handle backward compatibility
-      long queueMemory = csConf.getQueueMaximumAllocationMb(queuePath);
-      int queueVcores = csConf.getQueueMaximumAllocationVcores(queuePath);
+      long queueMemory = configuration.getQueueMaximumAllocationMb(queuePath);
+      int queueVcores = configuration.getQueueMaximumAllocationVcores(queuePath);
       if (queueMemory != UNDEFINED) {
         maximumAllocation.setMemorySize(queueMemory);
       }
