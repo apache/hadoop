@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -498,12 +499,17 @@ public class ApplicationMasterService extends AbstractService implements
     if (app == null) {
       return null;
     }
-    RMAppAttempt attempt = app.getAppAttempts().get(appAttemptId);
-    if (attempt == null) {
-      return null;
-    }
 
-    return attempt.getRMAppAttemptMetrics();
+    Map<ApplicationAttemptId, RMAppAttempt> attempts = app.getAppAttempts();
+    if (attempts == null) {
+      return null;
+    } else {
+      RMAppAttempt attempt = attempts.get(appAttemptId);
+      if (attempt == null) {
+        return null;
+      }
+      return attempt.getRMAppAttemptMetrics();
+    }
   }
 
   public void registerAppAttempt(ApplicationAttemptId attemptId) {
