@@ -54,7 +54,7 @@ public class TestNodesPage {
   // future. In that case this value should be adjusted to the new value.
   private final int numberOfThInMetricsTable = 25;
   private final int numberOfActualTableHeaders = 16;
-  private final int numberOfThForOpportunisticContainers = 4;
+  private final int numberOfThForOpportunisticContainers = 5;
 
   private Injector injector;
   
