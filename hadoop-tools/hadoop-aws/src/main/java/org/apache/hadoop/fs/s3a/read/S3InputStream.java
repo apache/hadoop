@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.fs.s3a.read;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
@@ -74,7 +76,7 @@ public abstract class S3InputStream
   // Read-specific operation context.
   private S3AReadOpContext context;
 
-  // S3 object attributes.
+  // Attributes of the S3 object being read.
   private S3ObjectAttributes s3Attributes;
 
   // Callbacks used for interacting with the underlying S3 client.
@@ -87,6 +89,17 @@ public abstract class S3InputStream
   private final ChangeTracker changeTracker;
   private final IOStatistics ioStatistics;
 
+  /**
+   * Initializes a new instance of the {@code S3InputStream} class.
+   *
+   * @param context read-specific operation context.
+   * @param s3Attributes attributes of the S3 object being read.
+   * @param client callbacks used for interacting with the underlying S3 client.
+   *
+   * @throws IllegalArgumentException if context is null.
+   * @throws IllegalArgumentException if s3Attributes is null.
+   * @throws IllegalArgumentException if client is null.
+   */
   public S3InputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
@@ -122,55 +135,32 @@ public abstract class S3InputStream
     this.seekTargetPos = 0;
   }
 
-  protected S3File getFile() {
-    return this.s3File;
-  }
-
-  protected S3Reader getReader() {
-    return this.reader;
-  }
-
-  protected S3ObjectAttributes getS3ObjectAttributes() {
-    return this.s3Attributes;
-  }
-
-  public FilePosition getFilePosition() {
-    return this.fpos;
-  }
-
-  public String getName() {
-    return this.name;
-  }
-
-  public boolean isClosed() {
-    return this.closed;
-  }
-
-  protected long getSeekTargetPos() {
-    return this.seekTargetPos;
-  }
-
-  protected void setSeekTargetPos(long pos) {
-    this.seekTargetPos = pos;
-  }
-
-  protected BlockData getBlockData() {
-    return this.blockData;
-  }
-
-  protected S3AReadOpContext getContext() {
-    return this.context;
-  }
-
+  /**
+   * Gets the internal IO statistics.
+   *
+   * @return the internal IO statistics.
+   */
   @Override
   public IOStatistics getIOStatistics() {
     return this.ioStatistics;
   }
 
+  /**
+   * Access the input stream statistics.
+   * This is for internal testing and may be removed without warning.
+   * @return the statistics for this input stream
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public S3AInputStreamStatistics getS3AStreamStatistics() {
     return this.streamStatistics;
   }
 
+  /**
+   * Sets the number of bytes to read ahead each time.
+   *
+   * @param readahead the number of bytes to read ahead each time..
+   */
   @Override
   public synchronized void setReadahead(Long readahead) {
     // We support read head by prefetching therefore we ignore the supplied value.
@@ -179,6 +169,12 @@ public abstract class S3InputStream
     }
   }
 
+  /**
+   * Indicates whether the given {@code capability} is supported by this stream.
+   *
+   * @param capability the capability to check.
+   * @return true if the given {@code capability} is supported by this stream, false otherwise.
+   */
   @Override
   public boolean hasCapability(String capability) {
     return capability.equalsIgnoreCase(StreamCapabilities.IOSTATISTICS)
@@ -209,6 +205,12 @@ public abstract class S3InputStream
     return this.fpos.buffer().remaining();
   }
 
+  /**
+   * Gets the current position.
+   *
+   * @return the current position.
+   * @throws IOException if there is an IO error during this operation.
+   */
   public long getPos() throws IOException {
     this.throwIfClosed();
 
@@ -243,6 +245,7 @@ public abstract class S3InputStream
    * It returns false on reaching the end of the stream.
    *
    * @return true if at least one such buffer is available for reading, false otherwise.
+   * @throws IOException if there is an IO error during this operation.
    */
   protected abstract boolean ensureCurrentBuffer() throws IOException;
 
@@ -259,13 +262,33 @@ public abstract class S3InputStream
     return this.fpos.buffer().get() & 0xff;
   }
 
+  /**
+   * Reads bytes from this stream and copies them into
+   * the given {@code buffer} starting at the beginning (offset 0).
+   * Returns the number of bytes actually copied in to the given buffer.
+   *
+   * @param buffer the buffer to copy data into.
+   * @return the number of bytes actually copied in to the given buffer.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
-  public int read(byte[] b) throws IOException {
-    return this.read(b, 0, b.length);
+  public int read(byte[] buffer) throws IOException {
+    return this.read(buffer, 0, buffer.length);
   }
 
+  /**
+   * Reads up to {@code len} bytes from this stream and copies them into
+   * the given {@code buffer} starting at the given {@code offset}.
+   * Returns the number of bytes actually copied in to the given buffer.
+   *
+   * @param buffer the buffer to copy data into.
+   * @param offset data is copied starting at this offset.
+   * @param len max number of bytes to copy.
+   * @return the number of bytes actually copied in to the given buffer.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
-  public int read(byte[] b, int off, int len) throws IOException {
+  public int read(byte[] buffer, int offset, int len) throws IOException {
     this.throwIfClosed();
 
     if (len == 0) {
@@ -284,16 +307,56 @@ public abstract class S3InputStream
         break;
       }
 
-      ByteBuffer buffer = this.fpos.buffer();
-      int bytesToRead = Math.min(numBytesRemaining, buffer.remaining());
-      buffer.get(b, off, bytesToRead);
+      ByteBuffer buf = this.fpos.buffer();
+      int bytesToRead = Math.min(numBytesRemaining, buf.remaining());
+      buf.get(buffer, offset, bytesToRead);
       this.incrementBytesRead(bytesToRead);
-      off += bytesToRead;
+      offset += bytesToRead;
       numBytesRemaining -= bytesToRead;
       numBytesRead += bytesToRead;
     }
 
     return numBytesRead;
+  }
+
+  protected S3File getFile() {
+    return this.s3File;
+  }
+
+  protected S3Reader getReader() {
+    return this.reader;
+  }
+
+  protected S3ObjectAttributes getS3ObjectAttributes() {
+    return this.s3Attributes;
+  }
+
+  protected FilePosition getFilePosition() {
+    return this.fpos;
+  }
+
+  protected String getName() {
+    return this.name;
+  }
+
+  protected boolean isClosed() {
+    return this.closed;
+  }
+
+  protected long getSeekTargetPos() {
+    return this.seekTargetPos;
+  }
+
+  protected void setSeekTargetPos(long pos) {
+    this.seekTargetPos = pos;
+  }
+
+  protected BlockData getBlockData() {
+    return this.blockData;
+  }
+
+  protected S3AReadOpContext getContext() {
+    return this.context;
   }
 
   private void incrementBytesRead(int bytesRead) {
@@ -327,6 +390,11 @@ public abstract class S3InputStream
     return String.format("%d:%d", blockNumber, offset);
   }
 
+  /**
+   * Closes this stream and releases all acquired resources.
+   *
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
   public void close() throws IOException {
     if (this.closed) {
@@ -363,7 +431,10 @@ public abstract class S3InputStream
     } else {
       if (fileSize == 0 && pos == 0) {
         // Do nothing. Valid combination.
-      } else if (pos >= fileSize) {
+        return;
+      }
+
+      if (pos >= fileSize) {
         throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF + " " + pos);
       }
     }

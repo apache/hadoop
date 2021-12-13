@@ -23,7 +23,6 @@ import com.twitter.util.FuturePool;
 import org.apache.hadoop.fs.common.BlockData;
 import org.apache.hadoop.fs.common.BlockManager;
 import org.apache.hadoop.fs.common.BufferData;
-import org.apache.hadoop.fs.common.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -45,6 +44,17 @@ public class S3CachingInputStream extends S3InputStream {
 
   private BlockManager blockManager;
 
+  /**
+   * Initializes a new instance of the {@code S3CachingInputStream} class.
+   *
+   * @param context read-specific operation context.
+   * @param s3Attributes attributes of the S3 object being read.
+   * @param client callbacks used for interacting with the underlying S3 client.
+   *
+   * @throws IllegalArgumentException if context is null.
+   * @throws IllegalArgumentException if s3Attributes is null.
+   * @throws IllegalArgumentException if client is null.
+   */
   public S3CachingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
@@ -64,6 +74,8 @@ public class S3CachingInputStream extends S3InputStream {
 
   /**
    * Moves the current read position so that the next read will occur at {@code pos}.
+   *
+   * @param pos the next read will take place at this position.
    *
    * @throws IllegalArgumentException if pos is outside of the range [0, file size].
    */

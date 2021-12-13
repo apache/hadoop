@@ -54,9 +54,13 @@ public class S3EInputStream
   /**
    * Initializes a new instance of the {@code S3EInputStream} class.
    *
-   * @param context .
-   * @param s3Attributes .
-   * @param client .
+   * @param context read-specific operation context.
+   * @param s3Attributes attributes of the S3 object being read.
+   * @param client callbacks used for interacting with the underlying S3 client.
+   *
+   * @throws IllegalArgumentException if context is null.
+   * @throws IllegalArgumentException if s3Attributes is null.
+   * @throws IllegalArgumentException if client is null.
    */
   public S3EInputStream(
       S3AReadOpContext context,
@@ -78,30 +82,64 @@ public class S3EInputStream
     }
   }
 
+  /**
+   * Returns the number of bytes available for reading without blocking.
+   *
+   * @return the number of bytes available for reading without blocking.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
   public synchronized int available() throws IOException {
     this.throwIfClosed();
     return this.inputStream.available();
   }
 
+  /**
+   * Gets the current position.
+   *
+   * @return the current position.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
   public synchronized long getPos() throws IOException {
     this.throwIfClosed();
     return this.inputStream.getPos();
   }
 
+  /**
+   * Reads and returns one byte from this stream.
+   *
+   * @return the next byte from this stream.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
   public synchronized int read() throws IOException {
     this.throwIfClosed();
     return this.inputStream.read();
   }
 
+  /**
+   * Reads up to {@code len} bytes from this stream and copies them into
+   * the given {@code buffer} starting at the given {@code offset}.
+   * Returns the number of bytes actually copied in to the given buffer.
+   *
+   * @param buffer the buffer to copy data into.
+   * @param offset data is copied starting at this offset.
+   * @param len max number of bytes to copy.
+   * @return the number of bytes actually copied in to the given buffer.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
-  public synchronized int read(byte[] buf, int off, int len) throws IOException {
+  public synchronized int read(byte[] buffer, int offset, int len) throws IOException {
     this.throwIfClosed();
-    return this.inputStream.read(buf, off, len);
+    return this.inputStream.read(buffer, offset, len);
   }
 
+  /**
+   * Closes this stream and releases all acquired resources.
+   *
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
   public synchronized void close() throws IOException {
     if (this.inputStream != null) {
@@ -111,12 +149,23 @@ public class S3EInputStream
     }
   }
 
+  /**
+   * Updates internal data such that the next read will take place at the given {@code pos}.
+   *
+   * @param pos new read position.
+   * @throws IOException if there is an IO error during this operation.
+   */
   @Override
   public synchronized void seek(long pos) throws IOException {
     this.throwIfClosed();
     this.inputStream.seek(pos);
   }
 
+  /**
+   * Sets the number of bytes to read ahead each time.
+   *
+   * @param readahead the number of bytes to read ahead each time..
+   */
   @Override
   public synchronized void setReadahead(Long readahead) {
     if (!this.isClosed()) {
@@ -124,6 +173,12 @@ public class S3EInputStream
     }
   }
 
+  /**
+   * Indicates whether the given {@code capability} is supported by this stream.
+   *
+   * @param capability the capability to check.
+   * @return true if the given {@code capability} is supported by this stream, false otherwise.
+   */
   @Override
   public boolean hasCapability(String capability) {
     if (!this.isClosed()) {
@@ -147,6 +202,11 @@ public class S3EInputStream
     return this.inputStream.getS3AStreamStatistics();
   }
 
+  /**
+   * Gets the internal IO statistics.
+   *
+   * @return the internal IO statistics.
+   */
   @Override
   public IOStatistics getIOStatistics() {
     if (this.isClosed()) {

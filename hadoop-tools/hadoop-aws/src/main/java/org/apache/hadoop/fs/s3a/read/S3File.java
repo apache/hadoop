@@ -63,6 +63,21 @@ public class S3File implements Closeable {
   // That allows us to close the object when closing the stream.
   private Map<InputStream, S3Object> s3Objects;
 
+  /**
+   * Initializes a new instance of the {@code S3File} class.
+   *
+   * @param context read-specific operation context.
+   * @param s3Attributes attributes of the S3 object being read.
+   * @param client callbacks used for interacting with the underlying S3 client.
+   * @param streamStatistics statistics about stream access.
+   * @param changeTracker helps enforce change tracking policy.
+   *
+   * @throws IllegalArgumentException if context is null.
+   * @throws IllegalArgumentException if s3Attributes is null.
+   * @throws IllegalArgumentException if client is null.
+   * @throws IllegalArgumentException if streamStatistics is null.
+   * @throws IllegalArgumentException if changeTracker is null.
+   */
   public S3File(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
@@ -137,8 +152,8 @@ public class S3File implements Closeable {
    * @param offset Start offset (0 based) of the section to read.
    * @param size Size of the section to read.
    * @return an {@code InputStream} corresponding to the given section of this file.
-   * @throws IOException if there is an error opening this file section for reading.
    *
+   * @throws IOException if there is an error opening this file section for reading.
    * @throws IllegalArgumentException if offset is negative.
    * @throws IllegalArgumentException if offset is greater than or equal to file size.
    * @throws IllegalArgumentException if size is greater than the remaining bytes.
@@ -176,7 +191,18 @@ public class S3File implements Closeable {
     return stream;
   }
 
-  public void close(InputStream inputStream) {
+  /**
+   * Closes this stream and releases all acquired resources.
+   */
+  @Override
+  public synchronized void close() {
+    List<InputStream> streams = new ArrayList<InputStream>(this.s3Objects.keySet());
+    for (InputStream stream : streams) {
+      this.close(stream);
+    }
+  }
+
+  void close(InputStream inputStream) {
     S3Object obj;
     synchronized (this.s3Objects) {
       obj = this.s3Objects.get(inputStream);
@@ -188,13 +214,5 @@ public class S3File implements Closeable {
 
     Io.closeIgnoringIoException(inputStream);
     Io.closeIgnoringIoException(obj);
-  }
-
-  @Override
-  public synchronized void close() {
-    List<InputStream> streams = new ArrayList<InputStream>(this.s3Objects.keySet());
-    for (InputStream stream : streams) {
-      this.close(stream);
-    }
   }
 }

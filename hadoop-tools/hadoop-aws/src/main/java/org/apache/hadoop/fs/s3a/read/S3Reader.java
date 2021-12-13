@@ -63,7 +63,7 @@ public class S3Reader implements Closeable {
    * @param offset the absolute offset into the underlying file where reading starts.
    * @param size the number of bytes to be read.
    *
-   * @return number of bytes actually read
+   * @return number of bytes actually read.
    * @throws IOException if there is an error reading from the file.
    *
    * @throws IllegalArgumentException if buffer is null.

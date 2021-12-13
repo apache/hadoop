@@ -82,6 +82,9 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param changeDetectionPolicy change detection policy.
    * @param readahead readahead for GET operations/skip, etc.
    * @param auditSpan active audit
+   * @param futurePool the FuturePool instance used by async prefetches.
+   * @param prefetchBlockSize the size (in number of bytes) of each prefetched block.
+   * @param prefetchBlockCount maximum number of prefetched blocks.
    */
   public S3AReadOpContext(
       final Path path,

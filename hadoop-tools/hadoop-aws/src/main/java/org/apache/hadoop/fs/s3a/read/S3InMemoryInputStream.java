@@ -42,6 +42,17 @@ public class S3InMemoryInputStream extends S3InputStream {
 
   private ByteBuffer buffer;
 
+  /**
+   * Initializes a new instance of the {@code S3InMemoryInputStream} class.
+   *
+   * @param context read-specific operation context.
+   * @param s3Attributes attributes of the S3 object being read.
+   * @param client callbacks used for interacting with the underlying S3 client.
+   *
+   * @throws IllegalArgumentException if context is null.
+   * @throws IllegalArgumentException if s3Attributes is null.
+   * @throws IllegalArgumentException if client is null.
+   */
   public S3InMemoryInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
@@ -52,6 +63,13 @@ public class S3InMemoryInputStream extends S3InputStream {
     LOG.debug("Created in-memory input stream for {} (size = {})", this.getName(), fileSize);
   }
 
+  /**
+   * Ensures that a non-empty valid buffer is available for immediate reading.
+   * It returns true when at least one such buffer is available for reading.
+   * It returns false on reaching the end of the stream.
+   *
+   * @return true if at least one such buffer is available for reading, false otherwise.
+   */
   @Override
   protected boolean ensureCurrentBuffer() throws IOException {
     if (this.isClosed()) {
