@@ -87,10 +87,20 @@ public class AllocationBasedResourceUtilizationTracker implements
     return hasResourcesAvailable(container.getResource());
   }
 
+  /**
+   * Converts memory in megabytes to bytes by bitwise left-shifting 20 times.
+   * @param memMB the memory in megabytes
+   * @return the memory in bytes
+   */
   private static long convertMBToBytes(final long memMB) {
     return memMB << LEFT_SHIFT_MB_IN_BYTES;
   }
 
+  /**
+   * Converts memory in bytes to megabytes by bitwise right-shifting 20 times.
+   * @param bytes the memory in bytes
+   * @return the memory in megabytes
+   */
   private static long convertBytesToMB(final long bytes) {
     return bytes >> RIGHT_SHIFT_BYTES_IN_MB;
   }
@@ -115,9 +125,8 @@ public class AllocationBasedResourceUtilizationTracker implements
               getContainersMonitor().getPmemAllocatedForContainers()));
     }
     if (this.containersAllocation.getPhysicalMemory() +
-        (int) convertBytesToMB(pMemBytes) >
-        (int) convertBytesToMB(getContainersMonitor()
-            .getPmemAllocatedForContainers())) {
+        convertBytesToMB(pMemBytes) > convertBytesToMB(
+            getContainersMonitor().getPmemAllocatedForContainers())) {
       return false;
     }
 
@@ -133,8 +142,8 @@ public class AllocationBasedResourceUtilizationTracker implements
     // Check virtual memory.
     if (getContainersMonitor().isVmemCheckEnabled() &&
         this.containersAllocation.getVirtualMemory() +
-            (int) convertBytesToMB(vMemBytes) >
-            (int) convertBytesToMB(getContainersMonitor()
+            convertBytesToMB(vMemBytes) >
+            convertBytesToMB(getContainersMonitor()
                 .getVmemAllocatedForContainers())) {
       return false;
     }

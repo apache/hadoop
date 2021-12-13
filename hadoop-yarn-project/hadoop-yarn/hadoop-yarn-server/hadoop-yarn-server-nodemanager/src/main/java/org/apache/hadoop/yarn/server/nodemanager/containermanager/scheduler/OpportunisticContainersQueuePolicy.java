@@ -38,5 +38,7 @@ public enum OpportunisticContainersQueuePolicy {
    * if the computed resources above + resources used by the container
    * is less than or equal to the node capacity.
    */
-  BY_RESOURCES,
+  BY_RESOURCES;
+
+  public static final OpportunisticContainersQueuePolicy DEFAULT = BY_QUEUE_LEN;
 }

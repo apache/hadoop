@@ -1281,8 +1281,8 @@
   <property>
     <description>
       Max number of OPPORTUNISTIC containers to queue at the
-      nodemanager (NM). If the value is 0, NMs do not allow any
-      OPPORTUNISTIC containers.
+      nodemanager (NM). If the value is 0 or negative,
+      NMs do not allow any OPPORTUNISTIC containers.
       If the value is positive, the NM caps the number of OPPORTUNISTIC
       containers that can be queued at the NM.
     </description>

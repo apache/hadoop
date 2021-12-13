@@ -76,8 +76,7 @@ public class BaseContainerSchedulerTest extends BaseContainerManagerTest {
 
     @Override
     public void preTransition(ContainerImpl op,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
-            ContainerState beforeState,
+        ContainerState beforeState,
         ContainerEvent eventToBeProcessed) {
       if (!states.containsKey(op.getContainerId())) {
         states.put(op.getContainerId(), new ArrayList<>());
@@ -87,12 +86,8 @@ public class BaseContainerSchedulerTest extends BaseContainerManagerTest {
     }
 
     @Override
-    public void postTransition(ContainerImpl op,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
-            ContainerState beforeState,
-        org.apache.hadoop.yarn.server.nodemanager.containermanager.container.
-            ContainerState afterState,
-        ContainerEvent processedEvent) {
+    public void postTransition(ContainerImpl op, ContainerState beforeState,
+        ContainerState afterState, ContainerEvent processedEvent) {
       states.get(op.getContainerId()).add(afterState);
       events.get(op.getContainerId()).add(processedEvent.getType());
     }

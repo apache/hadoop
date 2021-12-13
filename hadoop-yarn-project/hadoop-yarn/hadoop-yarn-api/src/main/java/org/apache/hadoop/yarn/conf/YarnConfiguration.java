@@ -1252,8 +1252,6 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY =
       NM_PREFIX + "opportunistic-containers-queue-policy";
-  public static final String DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY =
-      "BY_QUEUE_LEN";
 
   /** Max Queue length of <code>OPPORTUNISTIC</code> containers on the NM.
    *  If set to 0, NM does not accept any <code>OPPORTUNISTIC</code> containers.

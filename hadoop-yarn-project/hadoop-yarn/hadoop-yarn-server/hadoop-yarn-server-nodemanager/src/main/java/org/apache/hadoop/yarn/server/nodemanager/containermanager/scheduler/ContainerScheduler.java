@@ -127,19 +127,17 @@ public class ContainerScheduler extends AbstractService implements
 
   private static OpportunisticContainersQueuePolicy
   getOppContainersQueuePolicyFromConf(final Context context) {
-    final String queuePolicy;
+    final OpportunisticContainersQueuePolicy queuePolicy;
     if (context == null || context.getConf() == null) {
-      queuePolicy = YarnConfiguration
-          .DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY;
+      queuePolicy = OpportunisticContainersQueuePolicy.DEFAULT;
     } else {
-      queuePolicy = context.getConf().get(
+      queuePolicy = context.getConf().getEnum(
           YarnConfiguration.NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY,
-          YarnConfiguration
-              .DEFAULT_NM_OPPORTUNISTIC_CONTAINERS_QUEUE_POLICY
+          OpportunisticContainersQueuePolicy.DEFAULT
       );
     }
 
-    return OpportunisticContainersQueuePolicy.valueOf(queuePolicy);
+    return queuePolicy;
   }
 
   @VisibleForTesting

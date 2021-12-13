@@ -65,12 +65,22 @@ public class TestContainerSchedulerOppContainersByResources
   }
 
   private static boolean isSuccessfulRun(final ContainerStatus containerStatus) {
-    return containerStatus.getContainerSubState() == ContainerSubState.RUNNING
-        || containerStatus.getContainerSubState() == ContainerSubState.COMPLETING
-        || (
-        containerStatus.getContainerSubState() == ContainerSubState.DONE &&
-            containerStatus.getState() == org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE
-    );
+    final org.apache.hadoop.yarn.api.records.ContainerState state =
+        containerStatus.getState();
+    final ContainerSubState subState = containerStatus.getContainerSubState();
+    switch (subState) {
+    case RUNNING:
+    case COMPLETING:
+    case DONE:
+      if (subState == ContainerSubState.DONE) {
+        return state ==
+            org.apache.hadoop.yarn.api.records.ContainerState.COMPLETE;
+      }
+
+      return true;
+    default:
+      return false;
+    }
   }
 
   private void verifyRunAndKilledContainers(
@@ -222,8 +232,7 @@ public class TestContainerSchedulerOppContainersByResources
 
     // Wait for the OContainer to get killed
     BaseContainerManagerTest.waitForNMContainerState(containerManager,
-        createContainerId(1), ContainerState.DONE,
-        40);
+        createContainerId(1), ContainerState.DONE,40);
 
     // Get container statuses.
     // Container 0 should be running and container 1 should be killed
