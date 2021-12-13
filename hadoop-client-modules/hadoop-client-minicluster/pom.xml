@@ -690,6 +690,7 @@
                       <exclude>org.bouncycastle:*</exclude>
                       <!-- Leave snappy that includes native methods which cannot be relocated. -->
                       <exclude>org.xerial.snappy:*</exclude>
+                      <exclude>javax.ws.rs:javax.ws.rs-api</exclude>
                     </excludes>
                   </artifactSet>
                   <filters>
@@ -734,6 +735,12 @@
                         <exclude>testjar/*</exclude>
                         <exclude>testshell/*</exclude>
                         <exclude>testdata/*</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>com.fasterxml.jackson.*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/versions/11/module-info.class</exclude>
                       </excludes>
                     </filter>
 
