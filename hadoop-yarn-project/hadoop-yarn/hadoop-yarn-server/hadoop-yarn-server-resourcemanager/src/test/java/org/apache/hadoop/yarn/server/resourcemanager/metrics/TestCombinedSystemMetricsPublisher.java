@@ -203,8 +203,6 @@ public class TestCombinedSystemMetricsPublisher {
           MemoryTimelineStore.class, TimelineStore.class);
       yarnConf.setClass(YarnConfiguration.TIMELINE_SERVICE_STATE_STORE_CLASS,
           MemoryTimelineStateStore.class, TimelineStateStore.class);
-      yarnConf.setInt(YarnConfiguration.RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL,
-          1);
     }
 
     if (v2Enabled) {

@@ -55,7 +55,7 @@ public class UsersManager implements AbstractUsersManager {
   /*
    * Member declaration for UsersManager class.
    */
-  private final LeafQueue lQueue;
+  private final AbstractLeafQueue lQueue;
   private final RMNodeLabelsManager labelManager;
   private final ResourceCalculator resourceCalculator;
   private final CapacitySchedulerContext scheduler;
@@ -301,7 +301,7 @@ public class UsersManager implements AbstractUsersManager {
    * @param resourceCalculator
    *          rc
    */
-  public UsersManager(QueueMetrics metrics, LeafQueue lQueue,
+  public UsersManager(QueueMetrics metrics, AbstractLeafQueue lQueue,
       RMNodeLabelsManager labelManager, CapacitySchedulerContext scheduler,
       ResourceCalculator resourceCalculator) {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();

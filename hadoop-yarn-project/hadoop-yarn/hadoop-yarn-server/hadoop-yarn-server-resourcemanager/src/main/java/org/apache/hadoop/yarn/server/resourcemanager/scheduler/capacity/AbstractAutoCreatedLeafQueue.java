@@ -34,7 +34,7 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
  * Abstract class for dynamic auto created queues managed by an implementation
  * of AbstractManagedParentQueue
  */
-public class AbstractAutoCreatedLeafQueue extends LeafQueue {
+public class AbstractAutoCreatedLeafQueue extends AbstractLeafQueue {
 
   protected AbstractManagedParentQueue parent;
 

@@ -375,8 +375,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       permissions.add(
           new Permission(csQueue.getPrivilegedEntity(), csQueue.getACLs()));
 
-      if (queue instanceof LeafQueue) {
-        LeafQueue lQueue = (LeafQueue) queue;
+      if (queue instanceof AbstractLeafQueue) {
+        AbstractLeafQueue lQueue = (AbstractLeafQueue) queue;
 
         // Clear Priority ACLs first since reinitialize also call same.
         appPriorityACLManager.clearPriorityACLs(lQueue.getQueuePath());
@@ -397,17 +397,17 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws YarnException if the queue does not exist or the queue
    *           is not the type of LeafQueue.
    */
-  public LeafQueue getAndCheckLeafQueue(String queue) throws YarnException {
+  public AbstractLeafQueue getAndCheckLeafQueue(String queue) throws YarnException {
     CSQueue ret = this.getQueue(queue);
     if (ret == null) {
       throw new YarnException("The specified Queue: " + queue
           + " doesn't exist");
     }
-    if (!(ret instanceof LeafQueue)) {
+    if (!(ret instanceof AbstractLeafQueue)) {
       throw new YarnException("The specified Queue: " + queue
           + " is not a Leaf Queue.");
     }
-    return (LeafQueue) ret;
+    return (AbstractLeafQueue) ret;
   }
 
   /**
@@ -527,7 +527,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws YarnException if the given path is not eligible to be auto created
    * @throws IOException if the given path can not be added to the parent
    */
-  public LeafQueue createQueue(QueuePath queue)
+  public AbstractLeafQueue createQueue(QueuePath queue)
       throws YarnException, IOException {
     String leafQueueName = queue.getLeafName();
     String parentQueueName = queue.getParent();
@@ -668,7 +668,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return leafQueue;
   }
 
-  private LeafQueue createLegacyAutoQueue(QueuePath queue)
+  private AbstractLeafQueue createLegacyAutoQueue(QueuePath queue)
       throws IOException, SchedulerDynamicEditException {
     CSQueue parentQueue = getQueue(queue.getParent());
     // Case 1: Handle ManagedParentQueue

@@ -86,14 +86,26 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
           conf.getInt(YarnConfiguration.RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL,
               YarnConfiguration.DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL)
               * 1000;
+      if (putEventInterval <= 0) {
+        throw new IllegalArgumentException(
+            "RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL should be greater than 0");
+      }
       dispatcherPoolSize = conf.getInt(
           YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE,
           YarnConfiguration.
               DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE);
+      if (dispatcherPoolSize <= 0) {
+        throw new IllegalArgumentException(
+            "RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE should be greater than 0");
+      }
       dispatcherBatchSize = conf.getInt(
           YarnConfiguration.RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE,
           YarnConfiguration.
               DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE);
+      if (dispatcherBatchSize <= 1) {
+        throw new IllegalArgumentException(
+            "RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE should be greater than 1");
+      }
       putEventThread = new PutEventThread();
       sendEventThreadPool = Executors.newFixedThreadPool(dispatcherPoolSize);
       entityQueue = new LinkedBlockingQueue<>(dispatcherBatchSize + 1);
@@ -126,7 +138,8 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         putEventThread.join();
         SendEntity task = new SendEntity();
         if (!task.buffer.isEmpty()) {
-          LOG.info(String.format("Initiating final putEntities, remaining entities left in entityQueue: %d", task.buffer.size()));
+          LOG.info("Initiating final putEntities, remaining entities left in entityQueue: {}",
+              task.buffer.size());
           sendEventThreadPool.submit(task);
         }
       } finally {
@@ -461,8 +474,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
         LOG.error("Error when publishing entity batch  [ " + entity.getEntityType() + ","
             + entity.getEntityId() + " ] ", e);
       }
-    }
-    else {
+    } else {
       try {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Publishing the entity " + entity.getEntityId()
@@ -481,7 +493,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
 
     private ArrayList<TimelineEntity> buffer;
 
-    public SendEntity(){
+    SendEntity() {
       buffer = new ArrayList();
       entityQueue.drainTo(buffer);
     }
@@ -489,7 +501,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     @Override
     public void run() {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(String.format("Number of timeline entities being sent in batch: %d", buffer.size()));
+        LOG.debug("Number of timeline entities being sent in batch: {}", buffer.size());
       }
       if (buffer.isEmpty()) {
         return;
@@ -505,7 +517,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
   private class TimelineV1PublishEvent extends TimelinePublishEvent {
     private TimelineEntity entity;
 
-    public TimelineV1PublishEvent(SystemMetricsEventType type,
+    TimelineV1PublishEvent(SystemMetricsEventType type,
         TimelineEntity entity, ApplicationId appId) {
       super(type, appId);
       this.entity = entity;
@@ -525,7 +537,7 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
   }
 
   private class PutEventThread extends Thread {
-    public PutEventThread() {
+    PutEventThread() {
       super("PutEventThread");
     }
 
@@ -566,5 +578,3 @@ public class TimelineServiceV1Publisher extends AbstractSystemMetricsPublisher {
     }
   }
 }
-
-

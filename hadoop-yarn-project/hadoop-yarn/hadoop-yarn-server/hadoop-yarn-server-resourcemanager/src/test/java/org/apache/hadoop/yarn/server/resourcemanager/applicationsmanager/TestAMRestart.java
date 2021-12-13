@@ -587,7 +587,6 @@ public class TestAMRestart extends ParameterizedSchedulerTestBase {
     getConf().set(
         YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     getConf().setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
-    getConf().setInt(YarnConfiguration.RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL, 1);
 
     MockRM rm1 = new MockRM(getConf());
     MemoryRMStateStore memStore = (MemoryRMStateStore) rm1.getRMStateStore();

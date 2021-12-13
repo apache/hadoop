@@ -40,6 +40,11 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   public ReservationQueue(CapacitySchedulerContext cs, String queueName,
       PlanQueue parent) throws IOException {
     super(cs, queueName, parent, null);
+    super.setupQueueConfigs(cs.getClusterResource(),
+        cs.getConfiguration());
+
+    LOG.debug("Initialized ReservationQueue: name={}, fullname={}",
+        queueName, getQueuePath());
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),
