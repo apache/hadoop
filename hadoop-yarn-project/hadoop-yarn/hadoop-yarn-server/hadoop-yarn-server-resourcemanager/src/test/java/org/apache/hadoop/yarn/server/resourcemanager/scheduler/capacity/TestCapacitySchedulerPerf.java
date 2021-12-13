@@ -177,7 +177,7 @@ public class TestCapacitySchedulerPerf {
       LeafQueue qb = (LeafQueue)cs.getQueue(queueName);
       // For now make user limit large so we can activate all applications
       qb.setUserLimitFactor((float)100.0);
-      qb.setupConfigurableCapacities();
+      qb.setupConfigurableCapacities(cs.getConfiguration());
       lqs[i] = qb;
     }
 
