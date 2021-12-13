@@ -127,6 +127,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
@@ -430,6 +431,7 @@ public class TestPBImplRecords extends BasePBImplRecordsTest {
     generateByNewInstance(UpdatedContainer.class);
     generateByNewInstance(ContainerUpdateRequest.class);
     generateByNewInstance(ContainerUpdateResponse.class);
+    generateByNewInstance(EnhancedHeadroom.class);
     // genByNewInstance does not apply to QueueInfo, cause
     // it is recursive(has sub queues)
     typeValueCache.put(QueueInfo.class, QueueInfo.
