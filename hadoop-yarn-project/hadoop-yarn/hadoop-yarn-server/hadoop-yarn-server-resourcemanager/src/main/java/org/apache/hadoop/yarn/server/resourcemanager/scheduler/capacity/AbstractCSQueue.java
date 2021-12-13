@@ -82,7 +82,6 @@ public abstract class AbstractCSQueue implements CSQueue {
   protected final QueueAllocationSettings queueAllocationSettings;
   volatile CSQueue parent;
   protected final QueuePath queuePath;
-  final String queueName;
   protected QueueNodeLabelsSettings queueNodeLabelsSettings;
   private volatile QueueAppLifetimeAndLimitSettings queueAppLifetimeSettings;
   private CSQueuePreemptionSettings preemptionSettings;
@@ -143,7 +142,6 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.labelManager = cs.getRMContext().getNodeLabelManager();
     this.parent = parent;
     this.queuePath = createQueuePath(parent, queueName);
-    this.queueName = queuePath.getLeafName();
     this.resourceCalculator = cs.getResourceCalculator();
     this.activitiesManager = cs.getActivitiesManager();
 
@@ -176,13 +174,18 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   protected void setupConfigurableCapacities(
       CapacitySchedulerConfiguration configuration) {
-    CSQueueUtils.loadCapacitiesByLabelsFromConf(getQueuePath(), queueCapacities,
+    CSQueueUtils.loadCapacitiesByLabelsFromConf(queuePath, queueCapacities,
         configuration, this.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 
   @Override
   public String getQueuePath() {
     return queuePath.getFullPath();
+  }
+
+  @Override
+  public QueuePath getQueuePathObject() {
+    return this.queuePath;
   }
 
   @Override
@@ -241,7 +244,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Override
   public String getQueueName() {
-    return queueName;
+    return this.queuePath.getLeafName();
   }
 
   @Override
@@ -279,11 +282,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       // Sanity check
-      CSQueueUtils.checkMaxCapacity(getQueuePath(),
+      CSQueueUtils.checkMaxCapacity(this.queuePath,
           queueCapacities.getCapacity(), maximumCapacity);
       float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
           maximumCapacity, parent);
-      CSQueueUtils.checkAbsoluteCapacity(getQueuePath(),
+      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
           queueCapacities.getAbsoluteCapacity(), absMaxCapacity);
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
@@ -301,11 +304,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       // Sanity check
-      CSQueueUtils.checkMaxCapacity(getQueuePath(),
+      CSQueueUtils.checkMaxCapacity(this.queuePath,
           queueCapacities.getCapacity(nodeLabel), maximumCapacity);
       float absMaxCapacity = CSQueueUtils.computeAbsoluteMaximumCapacity(
           maximumCapacity, parent);
-      CSQueueUtils.checkAbsoluteCapacity(getQueuePath(),
+      CSQueueUtils.checkAbsoluteCapacity(this.queuePath,
           queueCapacities.getAbsoluteCapacity(nodeLabel), absMaxCapacity);
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
@@ -518,7 +521,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   private void validateAbsoluteVsPercentageCapacityConfig(
       CapacityConfigType localType) {
-    if (!getQueuePath().equals("root")
+    if (!queuePath.isRoot()
         && !this.capacityConfigType.equals(localType)) {
       throw new IllegalArgumentException("Queue '" + getQueuePath()
           + "' should use either percentage based capacity"
@@ -623,8 +626,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     // consistency here.
     // TODO, improve this
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
-    queueInfo.setQueueName(queueName);
-    queueInfo.setQueuePath(getQueuePath());
+    queueInfo.setQueueName(queuePath.getLeafName());
+    queueInfo.setQueuePath(queuePath.getFullPath());
     queueInfo.setAccessibleNodeLabels(queueNodeLabelsSettings.getAccessibleNodeLabels());
     queueInfo.setCapacity(queueCapacities.getCapacity());
     queueInfo.setMaximumCapacity(queueCapacities.getMaximumCapacity());

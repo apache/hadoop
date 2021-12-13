@@ -23,7 +23,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractCSQueue.CapacityConfigType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica
     .FiCaSchedulerApp;
@@ -122,7 +121,7 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
       LOG.info(
           "Reinitialized Managed Parent Queue: [{}] with capacity [{}]"
               + " with max capacity [{}]",
-          queueName, super.getCapacity(), super.getMaximumCapacity());
+          getQueueName(), super.getCapacity(), super.getMaximumCapacity());
     } catch (YarnException ye) {
       LOG.error("Exception while computing policy changes for leaf queue : "
           + getQueuePath(), ye);
@@ -165,12 +164,12 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
     CapacitySchedulerConfiguration conf =
         super.initializeLeafQueueConfigs(leafQueueTemplateConfPrefix);
     builder.configuration(conf);
-    String templateQueuePath = csContext.getConfiguration()
-        .getAutoCreatedQueueTemplateConfPrefix(getQueuePath());
+    QueuePath templateQueuePath = csContext.getConfiguration()
+        .getAutoCreatedQueueObjectTemplateConfPrefix(getQueuePath());
 
     Set<String> templateConfiguredNodeLabels = csContext
         .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
-        .getLabelsByQueue(templateQueuePath);
+        .getLabelsByQueue(templateQueuePath.getFullPath());
     for (String nodeLabel : templateConfiguredNodeLabels) {
       Resource templateMinResource = conf.getMinimumResourceRequirement(
           nodeLabel, csContext.getConfiguration()

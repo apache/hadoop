@@ -257,7 +257,9 @@ public class OpportunisticContainerAllocatorAMService
 
     int limitMin, limitMax;
 
-    if (comparator == NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH) {
+    if (comparator == NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH ||
+        comparator ==
+            NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH_THEN_RESOURCES) {
       limitMin = rmContext.getYarnConfiguration()
           .getInt(YarnConfiguration.NM_CONTAINER_QUEUING_MIN_QUEUE_LENGTH,
               YarnConfiguration.

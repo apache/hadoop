@@ -96,15 +96,15 @@ public class TestAbsoluteResourceWithAutoQueue
   private CapacitySchedulerConfiguration setupMinMaxResourceConfiguration(
       CapacitySchedulerConfiguration csConf) {
     // Update min/max resource to queueA/B/C
-    csConf.setMinimumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MINRES);
-    csConf.setMinimumResourceRequirement("", QUEUEB_FULL, QUEUE_B_MINRES);
-    csConf.setMinimumResourceRequirement("", QUEUEC_FULL, QUEUE_C_MINRES);
-    csConf.setMinimumResourceRequirement("", QUEUED_FULL, QUEUE_D_MINRES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUEA_FULL), QUEUE_A_MINRES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUEB_FULL), QUEUE_B_MINRES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUEC_FULL), QUEUE_C_MINRES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(QUEUED_FULL), QUEUE_D_MINRES);
 
-    csConf.setMaximumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MAXRES);
-    csConf.setMaximumResourceRequirement("", QUEUEB_FULL, QUEUE_B_MAXRES);
-    csConf.setMaximumResourceRequirement("", QUEUEC_FULL, QUEUE_C_MAXRES);
-    csConf.setMaximumResourceRequirement("", QUEUED_FULL, QUEUE_D_MAXRES);
+    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUEA_FULL), QUEUE_A_MAXRES);
+    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUEB_FULL), QUEUE_B_MAXRES);
+    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUEC_FULL), QUEUE_C_MAXRES);
+    csConf.setMaximumResourceRequirement("", new QueuePath(QUEUED_FULL), QUEUE_D_MAXRES);
 
     return csConf;
   }
