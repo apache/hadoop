@@ -200,7 +200,7 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>1.26</snakeyaml.version>
     <hbase.one.version>1.7.1</hbase.one.version>
-    <hbase.two.version>2.0.2</hbase.two.version>
+    <hbase.two.version>2.2.4</hbase.two.version>
     <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <junit.vintage.version>5.5.1</junit.vintage.version>
@@ -1015,7 +1015,7 @@
       <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
-        <version>2.1.5</version>
+        <version>2.0.22</version>
       </dependency>
       <dependency>
         <groupId>org.apache.sshd</groupId>
@@ -2427,9 +2427,10 @@
       </activation>
       <properties>
         <hbase.version>${hbase.two.version}</hbase.version>
-        <hbase-compatible-hadoop.version>3.0.0</hbase-compatible-hadoop.version>
+        <hbase-compatible-hadoop.version>2.8.5</hbase-compatible-hadoop.version>
         <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
         <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-2</hbase-server-artifactid>
+        <hbase-compatible-jetty.version>9.3.27.v20190418</hbase-compatible-jetty.version>
       </properties>
       <dependencyManagement>
         <dependencies>

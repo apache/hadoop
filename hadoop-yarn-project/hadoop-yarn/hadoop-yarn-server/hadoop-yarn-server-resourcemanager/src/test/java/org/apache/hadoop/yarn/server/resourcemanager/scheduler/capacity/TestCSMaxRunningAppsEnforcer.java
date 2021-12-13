@@ -139,7 +139,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   private void removeApp(FiCaSchedulerApp attempt) {
-    LeafQueue queue = attempt.getCSLeafQueue();
+    AbstractLeafQueue queue = attempt.getCSLeafQueue();
     queue.finishApplicationAttempt(attempt, queue.getQueuePath());
     maxAppsEnforcer.untrackApp(attempt);
     maxAppsEnforcer.updateRunnabilityOnAppRemoval(attempt);

@@ -675,10 +675,10 @@ public class ParentQueue extends AbstractCSQueue {
           // parent Queue has been converted to child queue. The CS has already
           // checked to ensure that this child-queue is in STOPPED state if
           // Child queue has been converted to ParentQueue.
-          if ((childQueue instanceof LeafQueue
+          if ((childQueue instanceof AbstractLeafQueue
               && newChildQueue instanceof ParentQueue)
               || (childQueue instanceof ParentQueue
-                  && newChildQueue instanceof LeafQueue)) {
+                  && newChildQueue instanceof AbstractLeafQueue)) {
             // We would convert this LeafQueue to ParentQueue, or vice versa.
             // consider this as the combination of DELETE then ADD.
             newChildQueue.setParent(this);
@@ -1134,7 +1134,7 @@ public class ParentQueue extends AbstractCSQueue {
           assignment = childAssignment;
         }
         Resource blockedHeadroom = null;
-        if (childQueue instanceof LeafQueue) {
+        if (childQueue instanceof AbstractLeafQueue) {
           blockedHeadroom = childLimits.getHeadroom();
         } else {
           blockedHeadroom = childLimits.getBlockedHeadroom();
@@ -1548,7 +1548,7 @@ public class ParentQueue extends AbstractCSQueue {
       FiCaSchedulerNode node = csContext.getNode(
           toKillContainer.getAllocatedNode());
       if (null != attempt && null != node) {
-        LeafQueue lq = attempt.getCSLeafQueue();
+        AbstractLeafQueue lq = attempt.getCSLeafQueue();
         lq.completedContainer(clusterResource, attempt, node, toKillContainer,
             SchedulerUtils.createPreemptedContainerStatus(
                 toKillContainer.getContainerId(),
