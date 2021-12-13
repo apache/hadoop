@@ -532,8 +532,8 @@ class DataStreamer extends Daemon {
       CONGESTION_BACKOFF_MEAN_TIME_IN_MS * 10;
   private int lastCongestionBackoffTime;
   private int maxPipelineRecoveryRetries;
-  private boolean treatSlowNodeAsBadNode;
-  private int treatSlowNodeAsBadNodeThreshold;
+  private boolean markSlowNodeAsBadNode;
+  private int markSlowNodeAsBadNodeThreshold;
 
   protected final LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes;
   private final String[] favoredNodes;
@@ -563,8 +563,8 @@ class DataStreamer extends Daemon {
     this.errorState = new ErrorState(conf.getDatanodeRestartTimeout());
     this.addBlockFlags = flags;
     this.maxPipelineRecoveryRetries = conf.getMaxPipelineRecoveryRetries();
-    this.treatSlowNodeAsBadNode = conf.getMarkSlowNodeAsBadNode();
-    this.treatSlowNodeAsBadNodeThreshold = conf.getMarkSlowNodeAsBadNodeThreshold();
+    this.markSlowNodeAsBadNode = conf.getMarkSlowNodeAsBadNode();
+    this.markSlowNodeAsBadNodeThreshold = conf.getMarkSlowNodeAsBadNodeThreshold();
   }
 
   /**
@@ -1220,24 +1220,7 @@ class DataStreamer extends Daemon {
           }
           LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
 
-          // treat slowNode as badNode, handle one slowNode every time
-          if (treatSlowNodeAsBadNode) {
-            for (Map.Entry<DatanodeInfo, Integer> entry :
-                slowNodeMap.entrySet()) {
-              if (entry.getValue() >= treatSlowNodeAsBadNodeThreshold) {
-                DatanodeInfo slowNode = entry.getKey();
-                int index = getDatanodeIndex(slowNode);
-                if (index >= 0) {
-                  errorState.setBadNodeIndex(
-                      getDatanodeIndex(entry.getKey()));
-                  throw new IOException("Receive reply from slowNode " + slowNode +
-                      " for continuous " + treatSlowNodeAsBadNodeThreshold +
-                      " times, treating it as badNode");
-                }
-                slowNodeMap.remove(entry.getKey());
-              }
-            }
-          }
+          markSlowNode();
 
           assert seqno != PipelineAck.UNKOWN_SEQNO :
               "Ack for unknown seqno should be a failed ack: " + ack;
@@ -1301,6 +1284,26 @@ class DataStreamer extends Daemon {
             scope.close();
           }
           scope = null;
+        }
+      }
+    }
+
+    void markSlowNode() throws IOException {
+      if (markSlowNodeAsBadNode) {
+        for (Map.Entry<DatanodeInfo, Integer> entry :
+            slowNodeMap.entrySet()) {
+          if (entry.getValue() >= markSlowNodeAsBadNodeThreshold) {
+            DatanodeInfo slowNode = entry.getKey();
+            int index = getDatanodeIndex(slowNode);
+            if (index >= 0) {
+              errorState.setBadNodeIndex(
+                  getDatanodeIndex(entry.getKey()));
+              throw new IOException("Receive reply from slowNode " + slowNode +
+                  " for continuous " + markSlowNodeAsBadNodeThreshold +
+                  " times, treating it as badNode");
+            }
+            slowNodeMap.remove(entry.getKey());
+          }
         }
       }
     }
