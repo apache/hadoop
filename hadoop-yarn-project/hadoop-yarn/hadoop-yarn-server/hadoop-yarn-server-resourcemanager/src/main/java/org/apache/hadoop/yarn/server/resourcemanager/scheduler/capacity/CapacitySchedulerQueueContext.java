@@ -22,7 +22,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
@@ -31,7 +30,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 /**
@@ -42,7 +40,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 public class CapacitySchedulerQueueContext {
 
   // Manager classes
-  private CapacitySchedulerContext csContext;
+  private final CapacitySchedulerContext csContext;
   private final CapacitySchedulerQueueManager queueManager;
   private final RMNodeLabelsManager labelManager;
   private final PreemptionManager preemptionManager;
@@ -67,9 +65,9 @@ public class CapacitySchedulerQueueContext {
   }
 
   public void reinitialize() {
-    // When csConfProvider.loadConfiguration is called the useLocalConfigurationProvider is
-    // correctly set to load the config entries from the capacity-scheduler.xml, here we
-    // just need to copy the csConfiguration
+    // When csConfProvider.loadConfiguration is called, the useLocalConfigurationProvider is
+    // correctly set to load the config entries from the capacity-scheduler.xml.
+    // For this reason there is no need to reload from it again.
     this.configuration = new CapacitySchedulerConfiguration(csContext.getConfiguration(), false);
     this.minimumAllocation = csContext.getMinimumResourceCapability();
   }

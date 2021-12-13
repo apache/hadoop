@@ -146,21 +146,21 @@ public abstract class AbstractCSQueue implements CSQueue {
         (CSQueueMetrics) old.getMetrics() :
         CSQueueMetrics.forQueue(getQueuePath(), parent,
             queueContext.getConfiguration().getEnableUserMetrics(), queueContext.getConfiguration());
-    usageTracker = new CSQueueUsageTracker(metrics);
+    this.usageTracker = new CSQueueUsageTracker(metrics);
 
-    queueCapacities = new QueueCapacities(parent == null);
+    this.queueCapacities = new QueueCapacities(parent == null);
     this.queueAllocationSettings = new QueueAllocationSettings(queueContext.getMinimumAllocation());
 
-    queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
+    this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
 
     this.resourceTypes = new HashSet<>();
     for (AbsoluteResourceType type : AbsoluteResourceType.values()) {
-      resourceTypes.add(type.toString().toLowerCase());
+      this.resourceTypes.add(type.toString().toLowerCase());
     }
 
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    readLock = lock.readLock();
-    writeLock = lock.writeLock();
+    this.readLock = lock.readLock();
+    this.writeLock = lock.writeLock();
 
     LOG.debug("Initialized {}: name={}, fullname={}", this.getClass().getSimpleName(),
         queueName, getQueuePath());
@@ -354,7 +354,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       // Setup queue's maximumAllocation respecting the global
       // and the queue settings
-      // TODO remove the getSchedulerConfiguration() param after the AQC configuration duplication
+      // TODO remove the getConfiguration() param after the AQC configuration duplication
       //  removal is resolved
       this.queueAllocationSettings.setupMaximumAllocation(configuration,
           queueContext.getConfiguration(), getQueuePath(),
@@ -382,7 +382,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           this, labelManager, null);
 
       // Store preemption settings
-      // TODO remove the getSchedulerConfiguration() param after the AQC configuration duplication
+      // TODO remove the getConfiguration() param after the AQC configuration duplication
       //  removal is resolved
       this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration,
           queueContext.getConfiguration());
