@@ -96,6 +96,10 @@ public class CapacitySchedulerQueueContext {
     return configuration;
   }
 
+  public void setConfigurationEntry(String name, String value) {
+    this.configuration.set(name, value);
+  }
+
   public Resource getMinimumAllocation() {
     return minimumAllocation;
   }

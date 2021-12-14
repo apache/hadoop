@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
@@ -55,7 +54,7 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     writeLock.lock();
     try {
       // Set new configs
-      setupQueueConfigs(clusterResource, queueContext.getConfiguration());
+      setupQueueConfigs(clusterResource);
 
     } finally {
       writeLock.unlock();
@@ -175,22 +174,12 @@ public abstract class AbstractManagedParentQueue extends ParentQueue {
     CapacitySchedulerConfiguration leafQueueConfigs = new
         CapacitySchedulerConfiguration(new Configuration(false), false);
 
-    Map<String, String> rtProps = queueContext
-        .getConfiguration().getConfigurationProperties()
-        .getPropertiesWithPrefix(YarnConfiguration.RESOURCE_TYPES + ".", true);
-    for (Map.Entry<String, String> entry : rtProps.entrySet()) {
-      leafQueueConfigs.set(entry.getKey(), entry.getValue());
-    }
-
     Map<String, String> templateConfigs = queueContext
         .getConfiguration().getConfigurationProperties()
         .getPropertiesWithPrefix(configPrefix, true);
 
-    for (final Iterator<Map.Entry<String, String>> iterator =
-         templateConfigs.entrySet().iterator(); iterator.hasNext(); ) {
-      Map.Entry<String, String> confKeyValuePair = iterator.next();
-      leafQueueConfigs.set(confKeyValuePair.getKey(),
-          confKeyValuePair.getValue());
+    for (Map.Entry<String, String> confKeyValuePair : templateConfigs.entrySet()) {
+      leafQueueConfigs.set(confKeyValuePair.getKey(), confKeyValuePair.getValue());
     }
 
     return leafQueueConfigs;

@@ -39,8 +39,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   public ReservationQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       PlanQueue parent) throws IOException {
     super(queueContext, queueName, parent, null);
-    super.setupQueueConfigs(queueContext.getClusterResource(),
-        queueContext.getConfiguration());
+    super.setupQueueConfigs(queueContext.getClusterResource());
 
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
@@ -84,8 +83,7 @@ public class ReservationQueue extends AbstractAutoCreatedLeafQueue {
   }
 
   @Override
-  protected void setupConfigurableCapacities(CapacitySchedulerConfiguration
-      configuration) {
+  protected void setupConfigurableCapacities() {
     super.updateAbsoluteCapacities();
   }
 }

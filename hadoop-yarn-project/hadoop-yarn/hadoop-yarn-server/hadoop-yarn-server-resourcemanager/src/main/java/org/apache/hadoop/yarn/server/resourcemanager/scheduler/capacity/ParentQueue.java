@@ -134,7 +134,7 @@ public class ParentQueue extends AbstractCSQueue {
         queueContext.getConfiguration()
             .getAllowZeroCapacitySum(getQueuePath());
 
-    setupQueueConfigs(queueContext.getClusterResource(), queueContext.getConfiguration());
+    setupQueueConfigs(queueContext.getClusterResource());
   }
 
   // returns what is configured queue ordering policy
@@ -144,14 +144,14 @@ public class ParentQueue extends AbstractCSQueue {
         queueOrderingPolicy.getConfigName();
   }
 
-  protected void setupQueueConfigs(Resource clusterResource,
-      CapacitySchedulerConfiguration configuration)
+  protected void setupQueueConfigs(Resource clusterResource)
       throws IOException {
     writeLock.lock();
     try {
+      CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
       autoCreatedQueueTemplate = new AutoCreatedQueueTemplate(
           configuration, this.queuePath);
-      super.setupQueueConfigs(clusterResource, configuration);
+      super.setupQueueConfigs(clusterResource);
       StringBuilder aclsString = new StringBuilder();
       for (Map.Entry<AccessType, AccessControlList> e : getACLs().entrySet()) {
         aclsString.append(e.getKey()).append(":")
@@ -633,7 +633,7 @@ public class ParentQueue extends AbstractCSQueue {
       ParentQueue newlyParsedParentQueue = (ParentQueue) newlyParsedQueue;
 
       // Set new configs
-      setupQueueConfigs(clusterResource, queueContext.getConfiguration());
+      setupQueueConfigs(clusterResource);
 
       // Re-configure existing child queues and add new ones
       // The CS has already checked to ensure all existing child queues are present!
