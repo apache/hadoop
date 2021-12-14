@@ -774,25 +774,32 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeLabelRemovelResidualConfigs() throws Exception {
+  public void testNodeLabelRemovalResidualConfigsAreCleared() throws Exception {
     WebResource r = resource();
     ClientResponse response;
 
     // 1. Create Node Label: label1
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("label1"));
+    WebResource addNodeLabelsResource = r.path("ws").path("v1").path("cluster")
+        .path("add-node-labels");
+    WebResource getNodeLabelsResource = r.path("ws").path("v1").path("cluster")
+        .path("get-node-labels");
+    WebResource removeNodeLabelsResource = r.path("ws").path("v1").path("cluster")
+        .path("remove-node-labels");
+    WebResource schedulerConfResource = r.path("ws").path("v1").path("cluster")
+        .path(RMWSConsts.SCHEDULER_CONF);
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path("add-node-labels").queryParam("user.name", userName)
+        addNodeLabelsResource.queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
+            .entity(logAndReturnJson(addNodeLabelsResource, 
+                    toJson(nodeLabelsInfo, NodeLabelsInfo.class)),
                 MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
 
     // 2. Verify new Node Label
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
+        getNodeLabelsResource.queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
@@ -817,12 +824,11 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
 
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path(RMWSConsts.SCHEDULER_CONF)
+        schedulerConfResource
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
+                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     
@@ -864,12 +870,11 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(rootA_A2UpdateInfo);
 
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path(RMWSConsts.SCHEDULER_CONF)
+        schedulerConfResource
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
+                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
@@ -896,12 +901,11 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
 
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path(RMWSConsts.SCHEDULER_CONF)
+        schedulerConfResource
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
+                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     assertEquals(Sets.newHashSet("*"), cs.getConfiguration().getAccessibleNodeLabels("root"));
@@ -911,8 +915,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     MultivaluedMapImpl params = new MultivaluedMapImpl();
     params.add("labels", "label1");
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path("remove-node-labels")
+        removeNodeLabelsResource
             .queryParam("user.name", userName)
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
@@ -920,8 +923,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     
     // Verify
     response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
+        getNodeLabelsResource.queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
@@ -937,6 +939,11 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(20.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a1", "label1"), 0.001f);
     assertEquals(80.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a2", "label1"), 0.001f);
     assertEquals(80.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a2", "label1"), 0.001f);
+  }
+
+  private Object logAndReturnJson(WebResource ws, String json) {
+    LOG.info("Sending to web resource: {}, json: {}", ws, json);
+    return json;
   }
 
   private String getAccessibleNodeLabelsCapacityPropertyName(String label) {
