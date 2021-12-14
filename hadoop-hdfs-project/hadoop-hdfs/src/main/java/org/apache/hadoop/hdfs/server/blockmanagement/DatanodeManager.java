@@ -214,7 +214,7 @@ public class DatanodeManager {
   private static Set<String> slowNodesUuidSet = Sets.newConcurrentHashSet();
   private Daemon slowPeerCollectorDaemon;
   private final long slowPeerCollectionInterval;
-  private final int maxSlowPeerReportNodes;
+  private volatile int maxSlowPeerReportNodes;
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -513,6 +513,15 @@ public class DatanodeManager {
   @VisibleForTesting
   public boolean getEnableAvoidSlowDataNodesForRead() {
     return this.avoidSlowDataNodesForRead;
+  }
+
+  public void setMaxSlowpeerCollectNodes(int maxNodes) {
+    this.maxSlowPeerReportNodes = maxNodes;
+  }
+
+  @VisibleForTesting
+  public int getMaxSlowpeerCollectNodes() {
+    return this.maxSlowPeerReportNodes;
   }
 
   /**
