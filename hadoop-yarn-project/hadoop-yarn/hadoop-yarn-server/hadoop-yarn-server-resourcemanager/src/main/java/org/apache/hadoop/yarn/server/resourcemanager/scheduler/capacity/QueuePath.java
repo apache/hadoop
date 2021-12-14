@@ -61,12 +61,12 @@ public class QueuePath implements Iterable<String> {
   }
 
   /**
-   * Concatenate queue path parts into one queue path string.
-   * @param parts Parts of the full queue pathAutoCreatedQueueTemplate
-   * @return full path of the given queue parts
+   * Constructor to create Queue path from queue names. 
+   * The provided queue names will be concatenated by dots, giving a full queue path.
+   * @param queues Queue names
    */
-  public static String concatenatePath(String... parts) {
-    return String.join(DOT, parts);
+  public QueuePath(String... queues) {
+    this(String.join(DOT, queues));
   }
 
   /**
