@@ -886,30 +886,30 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(80.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a2", "label1"), 0.001f);
     assertEquals(80.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a2", "label1"), 0.001f);
     
-    //5. Un-assign node label: "label1" + Remove residual properties
+    //5. De-assign node label: "label1" + Remove residual properties
     updateInfo = new SchedConfUpdateInfo();
     updateForRoot = new HashMap<>();
     updateForRoot.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "*");
-//    updateForRoot.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
-//    updateForRoot.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
+    updateForRoot.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+    updateForRoot.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
     rootUpdateInfo = new QueueConfigInfo("root", updateForRoot);
 
     updateForRootA = new HashMap<>();
     updateForRootA.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
-//    updateForRootA.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
-//    updateForRootA.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
+    updateForRootA.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+    updateForRootA.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
     rootAUpdateInfo = new QueueConfigInfo("root.a", updateForRootA);
 
     updateForRootA_A1 = new HashMap<>();
     updateForRootA_A1.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
-//    updateForRootA_A1.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
-//    updateForRootA_A1.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
+    updateForRootA_A1.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+    updateForRootA_A1.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
     rootA_A1UpdateInfo = new QueueConfigInfo("root.a.a1", updateForRootA_A1);
 
     updateForRootA_A2 = new HashMap<>();
     updateForRootA_A2.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
-//    updateForRootA_A2.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
-//    updateForRootA_A2.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
+    updateForRootA_A2.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+    updateForRootA_A2.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
     rootA_A2UpdateInfo = new QueueConfigInfo("root.a.a2", updateForRootA_A2);
 
     updateInfo.getUpdateQueueInfo().add(rootUpdateInfo);
