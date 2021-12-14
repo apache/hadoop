@@ -275,8 +275,9 @@ public class TestApplicationLimits {
     Resource clusterResource = 
       Resources.createResource(100 * 16 * GB, 100 * 16);
 
-    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator, Resources.createResource(GB, 1),
-        Resources.createResource(16*GB, 16), clusterResource);
+    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator,
+        Resources.createResource(GB, 1), Resources.createResource(16*GB, 16),
+        clusterResource);
     CapacitySchedulerQueueManager queueManager = csContext.getCapacitySchedulerQueueManager();
     CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
 
@@ -299,7 +300,7 @@ public class TestApplicationLimits {
     assertThat(queue.calculateAndGetAMResourceLimit()).
         isEqualTo(amResourceLimit);
     assertThat(queue.getUserAMResourceLimit()).isEqualTo(
-      Resource.newInstance(80*GB, 1));
+        Resource.newInstance(80*GB, 1));
     
     // Assert in metrics
     assertThat(queue.getMetrics().getAMResourceLimitMB()).isEqualTo(
@@ -307,10 +308,8 @@ public class TestApplicationLimits {
     assertThat(queue.getMetrics().getAMResourceLimitVCores()).isEqualTo(
         amResourceLimit.getVirtualCores());
 
-    assertEquals(
-        (int)(clusterResource.getMemorySize() * queue.getAbsoluteCapacity()),
-        queue.getMetrics().getAvailableMB()
-        );
+    assertEquals((int)(clusterResource.getMemorySize() * queue.getAbsoluteCapacity()),
+        queue.getMetrics().getAvailableMB());
     
     // Add some nodes to the cluster & test new limits
     clusterResource = Resources.createResource(120 * 16 * GB);
@@ -322,10 +321,8 @@ public class TestApplicationLimits {
     assertThat(queue.getUserAMResourceLimit()).isEqualTo(
         Resource.newInstance(96*GB, 1));
     
-    assertEquals(
-        (int)(clusterResource.getMemorySize() * queue.getAbsoluteCapacity()),
-        queue.getMetrics().getAvailableMB()
-        );
+    assertEquals((int)(clusterResource.getMemorySize() * queue.getAbsoluteCapacity()),
+        queue.getMetrics().getAvailableMB());
 
     // should return -1 if per queue setting not set
     assertEquals(
@@ -343,11 +340,10 @@ public class TestApplicationLimits {
     assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
 
     // should default to global setting if per queue setting not set
-    assertEquals(
-        (long)CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT, 
+    assertEquals((long)
+            CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
         (long)csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-            queue.getQueuePath())
-            );
+            queue.getQueuePath()));
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(PREFIX + queue.getQueuePath()
@@ -365,10 +361,9 @@ public class TestApplicationLimits {
 
     queue = (LeafQueue)queues.get(A);
 
-    assertEquals((long) 0.5, 
+    assertEquals((long) 0.5,
         (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-          queue.getQueuePath())
-        );
+          queue.getQueuePath()));
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
@@ -579,8 +574,8 @@ public class TestApplicationLimits {
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
 
-    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator, Resources.createResource(GB),
-            Resources.createResource(16*GB), clusterResource);
+    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator,
+        Resources.createResource(GB), Resources.createResource(16*GB), clusterResource);
     CapacitySchedulerQueueManager queueManager = csContext.getCapacitySchedulerQueueManager();
     CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
 
