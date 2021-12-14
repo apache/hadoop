@@ -22,10 +22,13 @@ import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -34,12 +37,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -58,10 +62,15 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_CAPACITY;
+import static org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test scheduler configuration mutation via REST API.
@@ -216,7 +225,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        .entity(toJson(updateInfo,
         SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
     newConf = getSchedulerConf();
@@ -284,7 +293,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -323,7 +332,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -350,7 +359,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo1,
+        .entity(toJson(updateInfo1,
         SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -371,7 +380,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo2,
+        .entity(toJson(updateInfo2,
         SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
 
@@ -401,7 +410,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo1,
+        .entity(toJson(updateInfo1,
         SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -419,7 +428,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo2,
+        .entity(toJson(updateInfo2,
         SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -448,7 +457,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -480,7 +489,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        .entity(toJson(updateInfo,
         SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
 
@@ -513,7 +522,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON)
-        .entity(YarnWebServiceUtils.toJson(updateInfo,
+        .entity(toJson(updateInfo,
             SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
         .put(ClientResponse.class);
 
@@ -538,7 +547,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -569,7 +578,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -601,7 +610,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
 
@@ -629,7 +638,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -664,7 +673,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     LOG.debug("Response headers: " + response.getHeaders());
@@ -683,7 +692,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -713,7 +722,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -738,7 +747,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -753,7 +762,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -762,6 +771,180 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(CapacitySchedulerConfiguration
         .DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS,
         newCSConf.getMaximumSystemApplications());
+  }
+
+  @Test
+  public void testNodeLabelRemovelResidualConfigs() throws Exception {
+    WebResource r = resource();
+    ClientResponse response;
+
+    // 1. Create Node Label: label1
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("label1"));
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("add-node-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
+                MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+
+    // 2. Verify new Node Label
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("get-node-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
+    for (NodeLabelInfo nl : nodeLabelsInfo.getNodeLabelsInfo()) {
+      assertEquals("label1", nl.getName());
+      assertTrue(nl.getExclusivity());
+    }
+
+    // 3. Assign 'label1' to root.a
+    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+    Map<String, String> updateForRoot = new HashMap<>();
+    updateForRoot.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "*");
+    QueueConfigInfo rootUpdateInfo = new QueueConfigInfo("root", updateForRoot);
+
+    Map<String, String> updateForRootA = new HashMap<>();
+    updateForRootA.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "label1");
+    QueueConfigInfo rootAUpdateInfo = new QueueConfigInfo("root.a", updateForRootA);
+    
+    updateInfo.getUpdateQueueInfo().add(rootUpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
+
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path(RMWSConsts.SCHEDULER_CONF)
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(updateInfo,
+                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    assertEquals(Sets.newHashSet("*"), cs.getConfiguration().getAccessibleNodeLabels("root"));
+    assertEquals(Sets.newHashSet("label1"), cs.getConfiguration().getAccessibleNodeLabels("root.a"));
+    
+    // 4. Set partition capacities to queues as below
+    updateInfo = new SchedConfUpdateInfo();
+    updateForRoot = new HashMap<>();
+    updateForRoot.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "100");
+    updateForRoot.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "100");
+    rootUpdateInfo = new QueueConfigInfo("root", updateForRoot);
+
+    updateForRootA = new HashMap<>();
+    
+    updateForRootA.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "100");
+    updateForRootA.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "100");
+    rootAUpdateInfo = new QueueConfigInfo("root.a", updateForRootA);
+    
+    // Avoid the following exception by adding some capacities to root.a.a1 and root.a.a2 to label1
+    // Illegal capacity sum of 0.0 for children of queue a for label=label1. 
+    // It is set to 0, but parent percent != 0, and doesn't allow children capacity to set to 0
+    Map<String, String> updateForRootA_A1 = new HashMap<>();
+    updateForRootA_A1.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "20");
+    updateForRootA_A1.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "20");
+    QueueConfigInfo rootA_A1UpdateInfo = new QueueConfigInfo("root.a.a1", updateForRootA_A1);
+
+    Map<String, String> updateForRootA_A2 = new HashMap<>();
+    updateForRootA_A2.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "80");
+    updateForRootA_A2.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "80");
+    QueueConfigInfo rootA_A2UpdateInfo = new QueueConfigInfo("root.a.a2", updateForRootA_A2);
+    
+
+    updateInfo.getUpdateQueueInfo().add(rootUpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootA_A1UpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootA_A2UpdateInfo);
+
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path(RMWSConsts.SCHEDULER_CONF)
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(updateInfo,
+                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity("root", "label1"), 0.001f);
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root", "label1"), 0.001f);
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity("root.a", "label1"), 0.001f);
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a", "label1"), 0.001f);
+    assertEquals(20.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a1", "label1"), 0.001f);
+    assertEquals(20.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a1", "label1"), 0.001f);
+    assertEquals(80.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a2", "label1"), 0.001f);
+    assertEquals(80.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a2", "label1"), 0.001f);
+    
+    //5. Un-assign node label: "label1"
+    updateInfo = new SchedConfUpdateInfo();
+    updateForRoot = new HashMap<>();
+    updateForRoot.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "*");
+    rootUpdateInfo = new QueueConfigInfo("root", updateForRoot);
+
+    updateForRootA = new HashMap<>();
+    updateForRootA.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
+    rootAUpdateInfo = new QueueConfigInfo("root.a", updateForRootA);
+
+    updateInfo.getUpdateQueueInfo().add(rootUpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
+
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path(RMWSConsts.SCHEDULER_CONF)
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(updateInfo,
+                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class);
+    assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    assertEquals(Sets.newHashSet("*"), cs.getConfiguration().getAccessibleNodeLabels("root"));
+    assertNull(cs.getConfiguration().getAccessibleNodeLabels("root.a"));
+
+    //6. Remove node label 'label1'
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    params.add("labels", "label1");
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("remove-node-labels")
+            .queryParam("user.name", userName)
+            .queryParams(params)
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    
+    // Verify
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("get-node-labels").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
+    assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
+    
+    //6. Check residual configs
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity("root", "label1"), 0.001f);
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root", "label1"), 0.001f);
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity("root.a", "label1"), 0.001f);
+    assertEquals(100.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a", "label1"), 0.001f);
+    assertEquals(20.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a1", "label1"), 0.001f);
+    assertEquals(20.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a1", "label1"), 0.001f);
+    assertEquals(80.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a2", "label1"), 0.001f);
+    assertEquals(80.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a2", "label1"), 0.001f);
+  }
+
+  private String getAccessibleNodeLabelsCapacityPropertyName(String label) {
+    return String.format("%s.%s.%s", ACCESSIBLE_NODE_LABELS, label, CAPACITY);
+  }
+
+  private String getAccessibleNodeLabelsMaxCapacityPropertyName(String label) {
+    return String.format("%s.%s.%s", ACCESSIBLE_NODE_LABELS, label, MAXIMUM_CAPACITY);
   }
 
   @Test
@@ -784,7 +967,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
             .path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
             .queryParam("user.name", userName)
             .accept(MediaType.APPLICATION_JSON)
-            .entity(YarnWebServiceUtils.toJson(updateInfo,
+            .entity(toJson(updateInfo,
                 SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
