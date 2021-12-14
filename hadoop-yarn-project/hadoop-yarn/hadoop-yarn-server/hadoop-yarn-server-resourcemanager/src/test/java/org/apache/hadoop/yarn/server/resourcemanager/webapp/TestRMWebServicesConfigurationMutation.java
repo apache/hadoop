@@ -845,7 +845,6 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     rootUpdateInfo = new QueueConfigInfo("root", updateForRoot);
 
     updateForRootA = new HashMap<>();
-    
     updateForRootA.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "100");
     updateForRootA.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "100");
     rootAUpdateInfo = new QueueConfigInfo("root.a", updateForRootA);
@@ -887,18 +886,36 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(80.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a2", "label1"), 0.001f);
     assertEquals(80.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a2", "label1"), 0.001f);
     
-    //5. Un-assign node label: "label1"
+    //5. Un-assign node label: "label1" + Remove residual properties
     updateInfo = new SchedConfUpdateInfo();
     updateForRoot = new HashMap<>();
     updateForRoot.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "*");
+//    updateForRoot.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+//    updateForRoot.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
     rootUpdateInfo = new QueueConfigInfo("root", updateForRoot);
 
     updateForRootA = new HashMap<>();
     updateForRootA.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
+//    updateForRootA.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+//    updateForRootA.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
     rootAUpdateInfo = new QueueConfigInfo("root.a", updateForRootA);
+
+    updateForRootA_A1 = new HashMap<>();
+    updateForRootA_A1.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
+//    updateForRootA_A1.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+//    updateForRootA_A1.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
+    rootA_A1UpdateInfo = new QueueConfigInfo("root.a.a1", updateForRootA_A1);
+
+    updateForRootA_A2 = new HashMap<>();
+    updateForRootA_A2.put(CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS, "");
+//    updateForRootA_A2.put(getAccessibleNodeLabelsCapacityPropertyName("label1"), "");
+//    updateForRootA_A2.put(getAccessibleNodeLabelsMaxCapacityPropertyName("label1"), "");
+    rootA_A2UpdateInfo = new QueueConfigInfo("root.a.a2", updateForRootA_A2);
 
     updateInfo.getUpdateQueueInfo().add(rootUpdateInfo);
     updateInfo.getUpdateQueueInfo().add(rootAUpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootA_A1UpdateInfo);
+    updateInfo.getUpdateQueueInfo().add(rootA_A2UpdateInfo);
 
     response =
         schedulerConfResource
@@ -931,14 +948,14 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
     
     //6. Check residual configs
-    assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity("root", "label1"), 0.001f);
-    assertEquals(100.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root", "label1"), 0.001f);
-    assertEquals(100.0, cs.getConfiguration().getLabeledQueueCapacity("root.a", "label1"), 0.001f);
-    assertEquals(100.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a", "label1"), 0.001f);
-    assertEquals(20.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a1", "label1"), 0.001f);
-    assertEquals(20.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a1", "label1"), 0.001f);
-    assertEquals(80.0, cs.getConfiguration().getLabeledQueueCapacity("root.a.a2", "label1"), 0.001f);
-    assertEquals(80.0, cs.getConfiguration().getLabeledQueueMaximumCapacity("root.a.a2", "label1"), 0.001f);
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root", "label1") + CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root", "label1") + MAXIMUM_CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root.a", "label1") + CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root.a", "label1")+ MAXIMUM_CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root.a.a1", "label1") + CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root.a.a1", "label1")+ MAXIMUM_CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root.a.a2", "label1") + CAPACITY));
+    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix("root.a.a2", "label1")+ MAXIMUM_CAPACITY));
   }
 
   private Object logAndReturnJson(WebResource ws, String json) {
