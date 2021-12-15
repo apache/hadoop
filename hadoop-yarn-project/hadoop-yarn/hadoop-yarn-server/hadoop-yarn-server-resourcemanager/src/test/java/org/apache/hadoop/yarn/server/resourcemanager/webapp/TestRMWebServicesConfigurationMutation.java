@@ -86,8 +86,8 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
   private static final String LABEL_1 = "label1";
   public static final QueuePath ROOT = new QueuePath("root");
   public static final QueuePath ROOT_A = new QueuePath("root", "a");
-  public static final QueuePath ROOT_A_A1 = new QueuePath("root", "a", "a1");
-  public static final QueuePath ROOT_A_A2 = new QueuePath("root", "a", "a2");
+  public static final QueuePath ROOT_A_A1 = QueuePath.createFromQueues("root", "a", "a1");
+  public static final QueuePath ROOT_A_A2 = QueuePath.createFromQueues("root", "a", "a2");
   private static MockRM rm;
   private static String userName;
   private static CapacitySchedulerConfiguration csConf;
