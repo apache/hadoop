@@ -267,6 +267,8 @@ public class TestApplicationLimits {
   
   @Test
   public void testLimitsComputation() throws Exception {
+    final float epsilon = 1e-5f;
+
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
@@ -340,10 +342,9 @@ public class TestApplicationLimits {
     assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
 
     // should default to global setting if per queue setting not set
-    assertEquals((long)
-            CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
-        (long)csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-            queue.getQueuePath()));
+    assertEquals(CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
+        csConf.getMaximumApplicationMasterResourcePerQueuePercent(
+            queue.getQueuePath()), epsilon);
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(PREFIX + queue.getQueuePath()
@@ -361,9 +362,9 @@ public class TestApplicationLimits {
 
     queue = (LeafQueue)queues.get(A);
 
-    assertEquals((long) 0.5,
-        (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-          queue.getQueuePath()));
+    assertEquals(0.5f,
+        csConf.getMaximumApplicationMasterResourcePerQueuePercent(
+          queue.getQueuePath()), epsilon);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
