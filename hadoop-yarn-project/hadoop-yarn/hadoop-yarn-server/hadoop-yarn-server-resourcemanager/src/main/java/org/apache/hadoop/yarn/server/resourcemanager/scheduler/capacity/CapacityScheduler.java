@@ -620,6 +620,11 @@ public class CapacityScheduler extends
     Thread.sleep(cs.getAsyncScheduleInterval());
   }
 
+  @VisibleForTesting
+  public void setAsyncSchedulingConf(AsyncSchedulingConfiguration conf) {
+    this.asyncSchedulingConf = conf;
+  }
+
   static class AsyncScheduleThread extends Thread {
 
     private final CapacityScheduler cs;
@@ -3451,7 +3456,7 @@ public class CapacityScheduler extends
     return asyncSchedulingConf.getAsyncSchedulerThreads();
   }
 
-  private static class AsyncSchedulingConfiguration {
+  static class AsyncSchedulingConfiguration {
     // timeout to join when we stop this service
     private static final long THREAD_JOIN_TIMEOUT_MS = 1000;
 

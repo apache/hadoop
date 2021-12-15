@@ -936,7 +936,7 @@ public class TestLeafQueue {
       LeafQueue q, final Map<NodeId, FiCaSchedulerNode> nodes,
       final Map<ApplicationAttemptId, FiCaSchedulerApp> apps)
       throws IOException {
-    TestUtils.applyResourceCommitRequest(clusterResource, assign, nodes, apps);
+    TestUtils.applyResourceCommitRequest(clusterResource, assign, nodes, apps, csConf);
   }
 
   @Test
