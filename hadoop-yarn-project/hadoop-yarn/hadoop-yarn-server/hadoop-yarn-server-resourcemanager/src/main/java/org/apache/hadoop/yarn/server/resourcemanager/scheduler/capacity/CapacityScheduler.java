@@ -3445,7 +3445,7 @@ public class CapacityScheduler extends
   public void setQueueManager(CapacitySchedulerQueueManager qm) {
     this.queueManager = qm;
   }
-  
+
   @VisibleForTesting
   public List<AsyncScheduleThread> getAsyncSchedulerThreads() {
     return asyncSchedulingConf.getAsyncSchedulerThreads();
@@ -3453,19 +3453,19 @@ public class CapacityScheduler extends
 
   private static class AsyncSchedulingConfiguration {
     // timeout to join when we stop this service
-    protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
-    
+    private static final long THREAD_JOIN_TIMEOUT_MS = 1000;
+
     @VisibleForTesting
     protected List<AsyncScheduleThread> asyncSchedulerThreads;
     private ResourceCommitterService resourceCommitterService;
-    
+
     private long asyncScheduleInterval;
     private static final String ASYNC_SCHEDULER_INTERVAL =
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_PREFIX
             + ".scheduling-interval-ms";
     private static final long DEFAULT_ASYNC_SCHEDULER_INTERVAL = 5;
     private long asyncMaxPendingBacklogs;
-    
+
     private final boolean scheduleAsynchronously;
 
     AsyncSchedulingConfiguration(CapacitySchedulerConfiguration conf,
