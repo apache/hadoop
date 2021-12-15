@@ -22,15 +22,12 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  * Enhanced head room in AllocateResponse.
- *
  * This provides a channel for RMs to return load information for AMRMProxy
  * decision making when rerouting resource requests.
  *
  * Contains total pending container count and active cores for a cluster.
  */
-
 public abstract class EnhancedHeadroom {
-
   public static EnhancedHeadroom newInstance(int totalPendingCount,
       int totalActiveCores) {
     EnhancedHeadroom enhancedHeadroom =
@@ -40,12 +37,28 @@ public abstract class EnhancedHeadroom {
     return enhancedHeadroom;
   }
 
+  /**
+   * Set total pending container count
+   * @param totalPendingCount the pending container count
+   */
   public abstract void setTotalPendingCount(int totalPendingCount);
 
+  /**
+   * Get total pending container count
+   * @return the pending container count
+   */
   public abstract int getTotalPendingCount();
 
+  /**
+   * Set total active cores for the cluster
+   * @param totalActiveCores the total active cores for the cluster
+   */
   public abstract void setTotalActiveCores(int totalActiveCores);
 
+  /**
+   * Get total active cores for the cluster
+   * @return totalActiveCores the total active cores for the cluster
+   */
   public abstract int getTotalActiveCores();
 
   @Override

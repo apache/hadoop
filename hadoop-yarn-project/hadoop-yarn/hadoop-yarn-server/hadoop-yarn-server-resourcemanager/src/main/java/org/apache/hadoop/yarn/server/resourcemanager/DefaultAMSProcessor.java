@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -335,14 +336,16 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
         .pullJustFinishedContainers());
     response.setAvailableResources(allocation.getResourceLimit());
 
-    int totalVirtualCores = this.rmContext.getScheduler().getRootQueueMetrics()
-        .getAllocatedVirtualCores() + this.rmContext.getScheduler()
-        .getRootQueueMetrics().getAvailableVirtualCores();
-    int pendingContainers = this.rmContext.getScheduler().getRootQueueMetrics()
-        .getPendingContainers();
-
-    response.setEnhancedHeadroom(
-        EnhancedHeadroom.newInstance(pendingContainers, totalVirtualCores));
+    QueueMetrics queueMetrics =
+        this.rmContext.getScheduler().getRootQueueMetrics();
+    if (queueMetrics != null) {
+      int totalVirtualCores =
+          queueMetrics.getAllocatedVirtualCores() + queueMetrics
+              .getAvailableVirtualCores();
+      int pendingContainers = queueMetrics.getPendingContainers();
+      response.setEnhancedHeadroom(
+          EnhancedHeadroom.newInstance(pendingContainers, totalVirtualCores));
+    }
 
     addToContainerUpdates(response, allocation,
         ((AbstractYarnScheduler)getScheduler())
