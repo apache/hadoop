@@ -102,9 +102,6 @@ public class TestAllocateLatenciesMetrics {
     nm1.nodeHeartbeat(oppContainersStatus, true);
     nm2.nodeHeartbeat(oppContainersStatus, true);
 
-    OpportunisticContainerAllocatorAMService amservice =
-        (OpportunisticContainerAllocatorAMService) rm
-            .getApplicationMasterService();
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
             .withAppName("app").withUser("user").withAcls(null)
@@ -133,19 +130,15 @@ public class TestAllocateLatenciesMetrics {
 
     // make sure the containers get allocated
     nm1.nodeHeartbeat(true);
-    Thread.sleep(500);
-
-    for (int i = 0; i < 2; i++) {
-      allocateResponse.getAllocatedContainers().addAll(
-          am1.allocate(new ArrayList<ResourceRequest>(),
-              new ArrayList<ContainerId>()).getAllocatedContainers());
-      nm1.nodeHeartbeat(true);
-      Thread.sleep(500);
-    }
-
     List<Container> allocatedContainers =
-        allocateResponse.getAllocatedContainers();
-    Assert.assertEquals(2, allocatedContainers.size());
+        am1.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
+    while (allocatedContainers.size() != 2) {
+      nm1.nodeHeartbeat(true);
+      allocatedContainers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers());
+      Thread.sleep(100);
+    }
 
     Container container = allocatedContainers.get(0);
     MockNM allocNode = nodes.get(container.getNodeId());
