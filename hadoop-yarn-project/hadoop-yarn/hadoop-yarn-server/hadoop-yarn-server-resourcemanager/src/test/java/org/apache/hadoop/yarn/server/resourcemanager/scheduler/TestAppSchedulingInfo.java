@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.LocalityAppPlacementAllocator;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.junit.Assert;
 import org.junit.Test;
@@ -181,8 +182,7 @@ public class TestAppSchedulingInfo {
   @Test
   public void testApplicationPlacementType() {
     String DEFAULT_APPLICATION_PLACEMENT_TYPE_CLASS =
-        "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement."
-            + "LocalityAppPlacementAllocator";
+        LocalityAppPlacementAllocator.class.getName();
     Configuration conf = new Configuration();
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getYarnConfiguration()).thenReturn(conf);
