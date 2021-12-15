@@ -251,7 +251,7 @@ goto :eof
 :timelinereader
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\*
-  set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*
+  set CLASSPATH=%HADOOP_YARN_HOME%\%YARN_DIR%\timelineservice\lib\*;%CLASSPATH%
   set CLASS=org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer
   set YARN_OPTS=%YARN_OPTS% %YARN_TIMELINEREADER_OPTS%
   goto :eof

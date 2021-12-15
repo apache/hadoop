@@ -193,7 +193,7 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*" before
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
 	nodeattributes)
