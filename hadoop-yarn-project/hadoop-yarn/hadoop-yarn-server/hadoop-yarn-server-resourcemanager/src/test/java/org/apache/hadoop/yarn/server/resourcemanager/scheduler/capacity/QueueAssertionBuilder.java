@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -5,7 +23,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuot
 import org.junit.Assert;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +117,7 @@ class QueueAssertionBuilder {
       return this;
     }
 
-    public class ValueAssertion {
+    private class ValueAssertion {
       private float expectedValue = 0;
       private Resource expectedResource = null;
       private String assertionType;
@@ -150,11 +167,19 @@ class QueueAssertionBuilder {
     return this;
   }
 
+  /**
+   * Creates a new assertion group for a specific queue.
+   * @param queuePath path of the queue
+   * @return queue assertion group
+   */
   public QueueAssertion withQueue(String queuePath) {
     assertions.putIfAbsent(queuePath, new QueueAssertion(queuePath));
     return assertions.get(queuePath);
   }
 
+  /**
+   * Executes assertions created for all queues.
+   */
   public void finishAssertion() {
     for (Map.Entry<String, QueueAssertion> assertionEntry : assertions.entrySet()) {
       for (QueueAssertion.ValueAssertion assertion : assertionEntry.getValue().assertions) {
@@ -175,6 +200,10 @@ class QueueAssertionBuilder {
     }
   }
 
+  /**
+   * Returns all queues that have defined assertions.
+   * @return queue paths
+   */
   public Set<String> getQueues() {
     return assertions.keySet();
   }

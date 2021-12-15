@@ -289,7 +289,7 @@ public class ParentQueue extends AbstractCSQueue {
   void setChildQueues(Collection<CSQueue> childQueues) throws IOException {
     writeLock.lock();
     try {
-      boolean isLegacyQueueMode = csContext.getConfiguration().isLegacyQueueMode();
+      boolean isLegacyQueueMode = queueContext.getConfiguration().isLegacyQueueMode();
       if (isLegacyQueueMode) {
         QueueCapacityType childrenCapacityType =
             getCapacityConfigurationTypeForQueues(childQueues);
@@ -317,7 +317,7 @@ public class ParentQueue extends AbstractCSQueue {
                   .getConfiguredMinResource(nodeLabel));
             }
             Resource resourceByLabel = labelManager.getResourceByLabel(nodeLabel,
-                scheduler.getClusterResource());
+                queueContext.getClusterResource());
             Resource parentMinResource =
                 usageTracker.getQueueResourceQuotas().getConfiguredMinResource(nodeLabel);
             if (!parentMinResource.equals(Resources.none()) && Resources.lessThan(
@@ -325,7 +325,7 @@ public class ParentQueue extends AbstractCSQueue {
               throw new IOException(
                   "Parent Queues" + " capacity: " + parentMinResource
                       + " is less than" + " to its children:" + minRes
-                      + " for queue:" + queueName);
+                      + " for queue:" + getQueueName());
             }
           }
         }
@@ -347,7 +347,7 @@ public class ParentQueue extends AbstractCSQueue {
                 // It is wrong when percent sum != {0, 1}
                 throw new IOException(
                     "Illegal" + " capacity sum of " + childrenPctSum
-                        + " for children of queue " + queueName + " for label="
+                        + " for children of queue " + getQueueName() + " for label="
                         + nodeLabel + ". It should be either 0 or 1.0");
               } else {
                 // We also allow children's percent sum = 0 under the following
@@ -360,7 +360,7 @@ public class ParentQueue extends AbstractCSQueue {
                       > PRECISION) && (!allowZeroCapacitySum)) {
                     throw new IOException(
                         "Illegal" + " capacity sum of " + childrenPctSum
-                            + " for children of queue " + queueName
+                            + " for children of queue " + getQueueName()
                             + " for label=" + nodeLabel
                             + ". It is set to 0, but parent percent != 0, and "
                             + "doesn't allow children capacity to set to 0");
@@ -375,8 +375,8 @@ public class ParentQueue extends AbstractCSQueue {
                   && !allowZeroCapacitySum) {
                 throw new IOException(
                     "Illegal" + " capacity sum of " + childrenPctSum
-                        + " for children of queue " + queueName + " for label="
-                        + nodeLabel + ". queue=" + queueName
+                        + " for children of queue " + getQueueName() + " for label="
+                        + nodeLabel + ". queue=" + getQueueName()
                         + " has zero capacity, but child"
                         + "queues have positive capacities");
               }
