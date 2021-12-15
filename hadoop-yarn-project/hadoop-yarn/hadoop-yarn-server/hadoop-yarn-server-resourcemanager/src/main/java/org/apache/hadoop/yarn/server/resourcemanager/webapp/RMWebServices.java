@@ -2761,7 +2761,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
             .build();
       }
-      return Response.status(Status.OK).entity("Configuration change successfully applied.").build();
+      return Response.status(Status.OK).entity("Configuration change successfully applied.")
+          .build();
     } else {
       return Response.status(Status.BAD_REQUEST)
           .entity(String.format("Configuration change only supported by " +
@@ -2770,7 +2771,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
   }
 
-  private Void refreshQueues(MutableConfigurationProvider provider, LogMutation logMutation) throws Exception {
+  private Void refreshQueues(MutableConfigurationProvider provider, LogMutation logMutation)
+      throws Exception {
     try {
       rm.getRMContext().getRMAdminService().refreshQueues();
     } catch (IOException | YarnException e) {

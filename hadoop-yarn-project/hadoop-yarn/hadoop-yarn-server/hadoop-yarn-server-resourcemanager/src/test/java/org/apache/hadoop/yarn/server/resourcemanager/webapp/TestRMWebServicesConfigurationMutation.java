@@ -856,7 +856,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     rootAUpdateInfo = new QueueConfigInfo(ROOT_A.getFullPath(), updateForRootA);
 
     // Avoid the following exception by adding some capacities to root.a.a1 and root.a.a2 to label1
-    // Illegal capacity sum of 0.0 for children of queue a for label=label1. 
+    // Illegal capacity sum of 0.0 for children of queue a for label=label1.
     // It is set to 0, but parent percent != 0, and doesn't allow children capacity to set to 0
     Map<String, String> updateForRootA_A1 = new HashMap<>();
     updateForRootA_A1.put(getAccessibleNodeLabelsCapacityPropertyName(LABEL_1), "20");
@@ -961,15 +961,21 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
 
     //6. Check residual configs
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT.getFullPath()
-        , LABEL_1) + CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT.getFullPath(), LABEL_1) + MAXIMUM_CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT_A.getFullPath(), LABEL_1) + CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT_A.getFullPath(), LABEL_1) + MAXIMUM_CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT_A_A1.getFullPath(), LABEL_1) + CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT_A_A1.getFullPath(), LABEL_1) + MAXIMUM_CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT_A_A2.getFullPath(), LABEL_1) + CAPACITY));
-    assertNull(cs.getConfiguration().get(CapacitySchedulerConfiguration.getNodeLabelPrefix(ROOT_A_A2.getFullPath(), LABEL_1) + MAXIMUM_CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT, LABEL_1, CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT, LABEL_1, MAXIMUM_CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT_A, LABEL_1, CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT_A, LABEL_1, MAXIMUM_CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT_A_A1, LABEL_1, CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT_A_A1, LABEL_1, MAXIMUM_CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT_A_A2, LABEL_1, CAPACITY));
+    assertNull(getConfValueForQueueAndLabelAndType(cs, ROOT_A_A2, LABEL_1, MAXIMUM_CAPACITY));
+  }
+
+  private String getConfValueForQueueAndLabelAndType(CapacityScheduler cs,
+      QueuePath queuePath, String label, String type) {
+    return cs.getConfiguration().get(
+        CapacitySchedulerConfiguration.getNodeLabelPrefix(
+            queuePath.getFullPath(), label) + type);
   }
 
   private Object logAndReturnJson(WebResource ws, String json) {
