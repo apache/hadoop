@@ -4541,7 +4541,7 @@ public class BlockManager implements BlockStatsMXBean {
     if (pendingReconstructionBlocksCount == 0 &&
         lowRedundancyBlocksCount == 0) {
       LOG.info("Node {} is dead and there are no low redundancy" +
-          " blocks or blocks pending reconstruction. Safe to decommission or",
+          " blocks or blocks pending reconstruction. Safe to decommission or" +
           " put in maintenance.", node);
       return true;
     }
@@ -5359,5 +5359,15 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public StoragePolicySatisfyManager getSPSManager() {
     return spsManager;
+  }
+
+  public void setExcludeSlowNodesEnabled(boolean enable) {
+    placementPolicies.getPolicy(CONTIGUOUS).setExcludeSlowNodesEnabled(enable);
+    placementPolicies.getPolicy(STRIPED).setExcludeSlowNodesEnabled(enable);
+  }
+
+  @VisibleForTesting
+  public boolean getExcludeSlowNodesEnabled(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getExcludeSlowNodesEnabled();
   }
 }

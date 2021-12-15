@@ -260,6 +260,9 @@ goto :eof
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\router-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.router.Router
   set YARN_OPTS=%YARN_OPTS% %HADOOP_ROUTER_OPTS%
+  if defined YARN_ROUTER_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_ROUTER_HEAPSIZE%m
+  )
   goto :eof
 
 :nodemanager

@@ -87,7 +87,6 @@ public class ParentQueue extends AbstractCSQueue {
   protected final List<CSQueue> childQueues;
   private final boolean rootQueue;
   private volatile int numApplications;
-  private final CapacitySchedulerContext scheduler;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -108,27 +107,20 @@ public class ParentQueue extends AbstractCSQueue {
   // after every time recalculation
   private volatile Map<String, Float> effectiveMinRatioPerResource;
 
-  public ParentQueue(CapacitySchedulerContext cs,
+  public ParentQueue(CapacitySchedulerQueueContext queueContext,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
-    this(cs, cs.getConfiguration(), queueName, parent, old, false);
-  }
-  private ParentQueue(CapacitySchedulerContext cs,
-      CapacitySchedulerConfiguration csConf, String queueName,
-      CSQueue parent,
-      CSQueue old) throws IOException {
-    this(cs, csConf, queueName, parent, old, false);
+    this(queueContext, queueName, parent, old, false);
   }
 
-  private ParentQueue(CapacitySchedulerContext cs,
-      CapacitySchedulerConfiguration csConf, String queueName, CSQueue parent,
-      CSQueue old, boolean isDynamic)
+  private ParentQueue(CapacitySchedulerQueueContext queueContext,
+      String queueName, CSQueue parent, CSQueue old, boolean isDynamic)
       throws IOException {
-    super(cs, queueName, parent, old);
+    super(queueContext, queueName, parent, old);
     setDynamicQueue(isDynamic);
-    this.scheduler = cs;
     this.rootQueue = (parent == null);
 
-    float rawCapacity = csConf.getNonLabeledQueueCapacity(getQueuePath());
+    float rawCapacity = queueContext.getConfiguration()
+        .getNonLabeledQueueCapacity(this.queuePath);
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
@@ -139,13 +131,10 @@ public class ParentQueue extends AbstractCSQueue {
 
     this.childQueues = new ArrayList<>();
     this.allowZeroCapacitySum =
-        cs.getConfiguration().getAllowZeroCapacitySum(getQueuePath());
+        queueContext.getConfiguration()
+            .getAllowZeroCapacitySum(getQueuePath());
 
-    setupQueueConfigs(cs.getClusterResource(), csConf);
-
-    LOG.info("Initialized parent-queue " + queueName +
-        " name=" + queueName +
-        ", fullname=" + getQueuePath());
+    setupQueueConfigs(queueContext.getClusterResource());
   }
 
   // returns what is configured queue ordering policy
@@ -155,42 +144,43 @@ public class ParentQueue extends AbstractCSQueue {
         queueOrderingPolicy.getConfigName();
   }
 
-  protected void setupQueueConfigs(Resource clusterResource,
-      CapacitySchedulerConfiguration csConf)
+  protected void setupQueueConfigs(Resource clusterResource)
       throws IOException {
     writeLock.lock();
     try {
+      CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
       autoCreatedQueueTemplate = new AutoCreatedQueueTemplate(
-          csConf, getQueuePath());
-      super.setupQueueConfigs(clusterResource, csConf);
+          configuration, this.queuePath);
+      super.setupQueueConfigs(clusterResource);
       StringBuilder aclsString = new StringBuilder();
-      for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {
-        aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
+      for (Map.Entry<AccessType, AccessControlList> e : getACLs().entrySet()) {
+        aclsString.append(e.getKey()).append(":")
+            .append(e.getValue().getAclString());
       }
 
       StringBuilder labelStrBuilder = new StringBuilder();
-      if (queueNodeLabelsSettings.getAccessibleNodeLabels() != null) {
-        for (String nodeLabel : queueNodeLabelsSettings.getAccessibleNodeLabels()) {
+      if (getAccessibleNodeLabels() != null) {
+        for (String nodeLabel : getAccessibleNodeLabels()) {
           labelStrBuilder.append(nodeLabel).append(",");
         }
       }
 
       // Initialize queue ordering policy
-      queueOrderingPolicy = csConf.getQueueOrderingPolicy(
+      queueOrderingPolicy = configuration.getQueueOrderingPolicy(
           getQueuePath(), parent == null ?
               null :
               ((ParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
 
-      LOG.info(queueName + ", " + getCapacityOrWeightString()
-          + ", absoluteCapacity=" + this.queueCapacities.getAbsoluteCapacity()
-          + ", maxCapacity=" + this.queueCapacities.getMaximumCapacity()
-          + ", absoluteMaxCapacity=" + this.queueCapacities
-          .getAbsoluteMaximumCapacity() + ", state=" + getState() + ", acls="
-          + aclsString + ", labels=" + labelStrBuilder.toString() + "\n"
-          + ", reservationsContinueLooking=" + reservationsContinueLooking
+      LOG.info(getQueueName() + ", " + getCapacityOrWeightString()
+          + ", absoluteCapacity=" + getAbsoluteCapacity()
+          + ", maxCapacity=" + getMaximumCapacity()
+          + ", absoluteMaxCapacity=" + getAbsoluteMaximumCapacity()
+          + ", state=" + getState() + ", acls="
+          + aclsString + ", labels=" + labelStrBuilder + "\n"
+          + ", reservationsContinueLooking=" + isReservationsContinueLooking()
           + ", orderingPolicy=" + getQueueOrderingPolicyConfigName()
-          + ", priority=" + priority
+          + ", priority=" + getPriority()
           + ", allowZeroCapacitySum=" + allowZeroCapacitySum);
     } finally {
       writeLock.unlock();
@@ -473,7 +463,7 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   public String toString() {
-    return queueName + ": " +
+    return getQueueName() + ": " +
         "numChildQueue= " + childQueues.size() + ", " +
         getCapacityOrWeightString() + ", " +
         "absoluteCapacity=" + queueCapacities.getAbsoluteCapacity() + ", " +
@@ -491,11 +481,10 @@ public class ParentQueue extends AbstractCSQueue {
           childQueuePath.lastIndexOf(".") + 1);
 
       if (isLeaf) {
-        childQueue = new LeafQueue(csContext, csContext.getConfiguration(),
+        childQueue = new LeafQueue(queueContext,
             queueShortName, this, null, true);
       } else{
-        childQueue = new ParentQueue(csContext, csContext.getConfiguration(),
-            queueShortName, this, null, true);
+        childQueue = new ParentQueue(queueContext, queueShortName, this, null, true);
       }
       childQueue.setDynamicQueue(true);
       // It should be sufficient now, we don't need to set more, because weights
@@ -526,7 +515,7 @@ public class ParentQueue extends AbstractCSQueue {
       // should not happen, since it will be handled before calling this method)
       // , but we will move on.
       CSQueue queue =
-          csContext.getCapacitySchedulerQueueManager().getQueueByFullName(
+          queueContext.getQueueManager().getQueueByFullName(
               childQueuePath);
       if (queue != null) {
         LOG.warn(
@@ -536,7 +525,7 @@ public class ParentQueue extends AbstractCSQueue {
       }
 
       // Check if the max queue limit is exceeded.
-      int maxQueues = csContext.getConfiguration().
+      int maxQueues = queueContext.getConfiguration().
           getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
       if (childQueues.size() >= maxQueues) {
         throw new SchedulerDynamicEditException(
@@ -567,8 +556,8 @@ public class ParentQueue extends AbstractCSQueue {
       // Call updateClusterResource.
       // Which will deal with all effectiveMin/MaxResource
       // Calculation
-      this.updateClusterResource(csContext.getClusterResource(),
-          new ResourceLimits(this.csContext.getClusterResource()));
+      this.updateClusterResource(queueContext.getClusterResource(),
+          new ResourceLimits(queueContext.getClusterResource()));
 
       return newQueue;
     } finally {
@@ -599,14 +588,14 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Now we can do remove and update
       this.childQueues.remove(queue);
-      this.scheduler.getCapacitySchedulerQueueManager()
+      queueContext.getQueueManager()
           .removeQueue(queue.getQueuePath());
 
       // Call updateClusterResource,
       // which will deal with all effectiveMin/MaxResource
       // Calculation
-      this.updateClusterResource(csContext.getClusterResource(),
-          new ResourceLimits(this.csContext.getClusterResource()));
+      this.updateClusterResource(queueContext.getClusterResource(),
+          new ResourceLimits(queueContext.getClusterResource()));
 
     } finally {
       writeLock.unlock();
@@ -620,7 +609,7 @@ public class ParentQueue extends AbstractCSQueue {
    * false otherwise
    */
   public boolean isEligibleForAutoQueueCreation() {
-    return isDynamicQueue() || csContext.getConfiguration().
+    return isDynamicQueue() || queueContext.getConfiguration().
         isAutoQueueCreationV2Enabled(getQueuePath());
   }
   
@@ -647,7 +636,7 @@ public class ParentQueue extends AbstractCSQueue {
       ParentQueue newlyParsedParentQueue = (ParentQueue) newlyParsedQueue;
 
       // Set new configs
-      setupQueueConfigs(clusterResource, csContext.getConfiguration());
+      setupQueueConfigs(clusterResource);
 
       // Re-configure existing child queues and add new ones
       // The CS has already checked to ensure all existing child queues are present!
@@ -678,17 +667,17 @@ public class ParentQueue extends AbstractCSQueue {
           // parent Queue has been converted to child queue. The CS has already
           // checked to ensure that this child-queue is in STOPPED state if
           // Child queue has been converted to ParentQueue.
-          if ((childQueue instanceof LeafQueue
+          if ((childQueue instanceof AbstractLeafQueue
               && newChildQueue instanceof ParentQueue)
               || (childQueue instanceof ParentQueue
-                  && newChildQueue instanceof LeafQueue)) {
+                  && newChildQueue instanceof AbstractLeafQueue)) {
             // We would convert this LeafQueue to ParentQueue, or vice versa.
             // consider this as the combination of DELETE then ADD.
             newChildQueue.setParent(this);
             currentChildQueues.put(newChildQueueName, newChildQueue);
             // inform CapacitySchedulerQueueManager
             CapacitySchedulerQueueManager queueManager =
-                this.csContext.getCapacitySchedulerQueueManager();
+                queueContext.getQueueManager();
             queueManager.addQueue(newChildQueueName, newChildQueue);
             continue;
           }
@@ -771,9 +760,9 @@ public class ParentQueue extends AbstractCSQueue {
       String userName, String queue) throws AccessControlException {
     writeLock.lock();
     try {
-      if (queue.equals(queueName)) {
+      if (queue.equals(getQueueName())) {
         throw new AccessControlException(
-            "Cannot submit application " + "to non-leaf queue: " + queueName);
+            "Cannot submit application " + "to non-leaf queue: " + getQueueName());
       }
 
       if (getState() != QueueState.RUNNING) {
@@ -1137,7 +1126,7 @@ public class ParentQueue extends AbstractCSQueue {
           assignment = childAssignment;
         }
         Resource blockedHeadroom = null;
-        if (childQueue instanceof LeafQueue) {
+        if (childQueue instanceof AbstractLeafQueue) {
           blockedHeadroom = childLimits.getHeadroom();
         } else {
           blockedHeadroom = childLimits.getBlockedHeadroom();
@@ -1412,7 +1401,7 @@ public class ParentQueue extends AbstractCSQueue {
     // Careful! Locking order is important!
     writeLock.lock();
     try {
-      FiCaSchedulerNode node = scheduler.getNode(
+      FiCaSchedulerNode node = queueContext.getNode(
           rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource,
           rmContainer.getContainer().getResource(), node.getPartition());
@@ -1450,7 +1439,7 @@ public class ParentQueue extends AbstractCSQueue {
       FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null) {
       FiCaSchedulerNode node =
-          scheduler.getNode(rmContainer.getContainer().getNodeId());
+          queueContext.getNode(rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource, rmContainer.getContainer()
           .getResource(), node.getPartition());
       LOG.info("movedContainer" + " queueMoveIn=" + getQueuePath()
@@ -1469,7 +1458,7 @@ public class ParentQueue extends AbstractCSQueue {
       FiCaSchedulerApp application, RMContainer rmContainer) {
     if (application != null) {
       FiCaSchedulerNode node =
-          scheduler.getNode(rmContainer.getContainer().getNodeId());
+          queueContext.getNode(rmContainer.getContainer().getNodeId());
       super.releaseResource(clusterResource,
           rmContainer.getContainer().getResource(),
           node.getPartition());
@@ -1556,12 +1545,12 @@ public class ParentQueue extends AbstractCSQueue {
     while (Resources.greaterThan(resourceCalculator, partitionResource,
         usageTracker.getQueueUsage().getUsed(partition), maxResource)) {
       RMContainer toKillContainer = killableContainerIter.next();
-      FiCaSchedulerApp attempt = csContext.getApplicationAttempt(
+      FiCaSchedulerApp attempt = queueContext.getApplicationAttempt(
           toKillContainer.getContainerId().getApplicationAttemptId());
-      FiCaSchedulerNode node = csContext.getNode(
+      FiCaSchedulerNode node = queueContext.getNode(
           toKillContainer.getAllocatedNode());
       if (null != attempt && null != node) {
-        LeafQueue lq = attempt.getCSLeafQueue();
+        AbstractLeafQueue lq = attempt.getCSLeafQueue();
         lq.completedContainer(clusterResource, attempt, node, toKillContainer,
             SchedulerUtils.createPreemptedContainerStatus(
                 toKillContainer.getContainerId(),
@@ -1669,7 +1658,7 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public boolean isEligibleForAutoDeletion() {
     return isDynamicQueue() && getChildQueues().size() == 0 &&
-        csContext.getConfiguration().
+        queueContext.getConfiguration().
             isAutoExpiredDeletionEnabled(this.getQueuePath());
   }
 

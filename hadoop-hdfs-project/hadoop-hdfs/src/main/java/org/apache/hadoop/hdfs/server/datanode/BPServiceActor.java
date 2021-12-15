@@ -70,6 +70,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
@@ -112,6 +113,7 @@ class BPServiceActor implements Runnable {
   private String nnId = null;
   private volatile RunningState runningState = RunningState.CONNECTING;
   private volatile boolean shouldServiceRun = true;
+  private volatile boolean isSlownode = false;
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
@@ -205,6 +207,7 @@ class BPServiceActor implements Runnable {
         String.valueOf(getScheduler().getLastBlockReportTime()));
     info.put("maxBlockReportSize", String.valueOf(getMaxBlockReportSize()));
     info.put("maxDataLength", String.valueOf(maxDataLength));
+    info.put("isSlownode", String.valueOf(isSlownode));
     return info;
   }
 
@@ -729,6 +732,7 @@ class BPServiceActor implements Runnable {
               handleRollingUpgradeStatus(resp);
             }
             commandProcessingThread.enqueue(resp.getCommands());
+            isSlownode = resp.getIsSlownode();
           }
         }
 
@@ -1190,7 +1194,7 @@ class BPServiceActor implements Runnable {
 
     private final long heartbeatIntervalMs;
     private final long lifelineIntervalMs;
-    private final long blockReportIntervalMs;
+    private volatile long blockReportIntervalMs;
     private final long outliersReportIntervalMs;
 
     Scheduler(long heartbeatIntervalMs, long lifelineIntervalMs,
@@ -1346,6 +1350,15 @@ class BPServiceActor implements Runnable {
       this.nextBlockReportTime.getAndSet(nextBlockReportTime);
     }
 
+    long getBlockReportIntervalMs() {
+      return this.blockReportIntervalMs;
+    }
+
+    void setBlockReportIntervalMs(long intervalMs) {
+      Preconditions.checkArgument(intervalMs > 0);
+      this.blockReportIntervalMs = intervalMs;
+    }
+
     /**
      * Wrapped for testing.
      * @return
@@ -1473,5 +1486,9 @@ class BPServiceActor implements Runnable {
     if (commandProcessingThread != null) {
       commandProcessingThread.interrupt();
     }
+  }
+
+  boolean isSlownode() {
+    return isSlownode;
   }
 }

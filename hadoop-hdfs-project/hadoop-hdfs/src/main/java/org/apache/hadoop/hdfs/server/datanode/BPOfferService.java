@@ -378,7 +378,7 @@ class BPOfferService {
 
     if(nsInfo.getState() == HAServiceState.ACTIVE
         && bpServiceToActive == null) {
-      LOG.info("Acknowledging ACTIVE Namenode during handshake" + actor);
+      LOG.info("Acknowledging ACTIVE Namenode during handshake {}", actor);
       bpServiceToActive = actor;
     }
 
@@ -853,4 +853,12 @@ class BPOfferService {
     return isAlive();
   }
 
+  boolean isSlownode() {
+    for (BPServiceActor actor : bpServices) {
+      if (actor.isSlownode()) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
