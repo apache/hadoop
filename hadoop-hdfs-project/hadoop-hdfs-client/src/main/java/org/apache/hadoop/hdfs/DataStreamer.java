@@ -532,7 +532,6 @@ class DataStreamer extends Daemon {
       CONGESTION_BACKOFF_MEAN_TIME_IN_MS * 10;
   private int lastCongestionBackoffTime;
   private int maxPipelineRecoveryRetries;
-  private boolean markSlowNodeAsBadNode;
   private int markSlowNodeAsBadNodeThreshold;
 
   protected final LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes;
@@ -563,7 +562,6 @@ class DataStreamer extends Daemon {
     this.errorState = new ErrorState(conf.getDatanodeRestartTimeout());
     this.addBlockFlags = flags;
     this.maxPipelineRecoveryRetries = conf.getMaxPipelineRecoveryRetries();
-    this.markSlowNodeAsBadNode = conf.getMarkSlowNodeAsBadNode();
     this.markSlowNodeAsBadNodeThreshold = conf.getMarkSlowNodeAsBadNodeThreshold();
   }
 
@@ -1158,7 +1156,7 @@ class DataStreamer extends Daemon {
           long seqno = ack.getSeqno();
           // processes response status from datanodes.
           ArrayList<DatanodeInfo> congestedNodesFromAck = new ArrayList<>();
-          ArrayList<DatanodeInfo> slowNodesFromAck = new ArrayList<>();
+          ArrayList<DatanodeInfo> slownodesFromAck = new ArrayList<>();
           for (int i = ack.getNumOfReplies()-1; i >=0  && dfsClient.clientRunning; i--) {
             final Status reply = PipelineAck.getStatusFromHeader(ack
                 .getHeaderFlag(i));
@@ -1168,7 +1166,7 @@ class DataStreamer extends Daemon {
             }
             if (PipelineAck.getSLOWFromHeader(ack.getHeaderFlag(i)) ==
                 PipelineAck.SLOW.SLOW) {
-              slowNodesFromAck.add(targets[i]);
+              slownodesFromAck.add(targets[i]);
             }
             // Restart will not be treated differently unless it is
             // the local node or the only one in the pipeline.
@@ -1199,28 +1197,15 @@ class DataStreamer extends Daemon {
             }
           }
 
-          if (slowNodesFromAck.isEmpty()) {
+          if (slownodesFromAck.isEmpty()) {
             if (!slowNodeMap.isEmpty()) {
               slowNodeMap.clear();
             }
           } else {
-            Set<DatanodeInfo> discontinuousNodes = new HashSet<>(slowNodeMap.keySet());
-            for (DatanodeInfo slowNode : slowNodesFromAck) {
-              if (!slowNodeMap.containsKey(slowNode)) {
-                slowNodeMap.put(slowNode, 1);
-              } else {
-                int oldCount = slowNodeMap.get(slowNode);
-                slowNodeMap.put(slowNode, ++oldCount);
-              }
-              discontinuousNodes.remove(slowNode);
-            }
-            for (DatanodeInfo discontinuousNode : discontinuousNodes) {
-              slowNodeMap.remove(discontinuousNode);
-            }
+            markSlowNode(slownodesFromAck);
+            LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
           }
-          LOG.debug("SlowNodeMap content: {}.", slowNodeMap);
 
-          markSlowNode();
 
           assert seqno != PipelineAck.UNKOWN_SEQNO :
               "Ack for unknown seqno should be a failed ack: " + ack;
@@ -1288,10 +1273,23 @@ class DataStreamer extends Daemon {
       }
     }
 
-    void markSlowNode() throws IOException {
-      if (markSlowNodeAsBadNode) {
-        for (Map.Entry<DatanodeInfo, Integer> entry :
-            slowNodeMap.entrySet()) {
+    void markSlowNode(List<DatanodeInfo> slownodesFromAck) throws IOException {
+      Set<DatanodeInfo> discontinuousNodes = new HashSet<>(slowNodeMap.keySet());
+      for (DatanodeInfo slowNode : slownodesFromAck) {
+        if (!slowNodeMap.containsKey(slowNode)) {
+          slowNodeMap.put(slowNode, 1);
+        } else {
+          int oldCount = slowNodeMap.get(slowNode);
+          slowNodeMap.put(slowNode, ++oldCount);
+        }
+        discontinuousNodes.remove(slowNode);
+      }
+      for (DatanodeInfo discontinuousNode : discontinuousNodes) {
+        slowNodeMap.remove(discontinuousNode);
+      }
+
+      if (!slowNodeMap.isEmpty()) {
+        for (Map.Entry<DatanodeInfo, Integer> entry : slowNodeMap.entrySet()) {
           if (entry.getValue() >= markSlowNodeAsBadNodeThreshold) {
             DatanodeInfo slowNode = entry.getKey();
             int index = getDatanodeIndex(slowNode);

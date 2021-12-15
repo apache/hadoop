@@ -5512,6 +5512,14 @@
 </property>
 
 <property>
+  <name>dfs.pipeline.slownode</name>
+  <value>false</value>
+  <description>
+    If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
   <name>dfs.qjournal.accept-recovery.timeout.ms</name>
   <value>120000</value>
   <description>

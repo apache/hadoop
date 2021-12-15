@@ -60,8 +60,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMA
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
@@ -146,7 +144,6 @@ public class DfsClientConf {
   private final int retryIntervalForGetLastBlockLength;
   private final long datanodeRestartTimeout;
   private final long slowIoWarningThresholdMs;
-  private final boolean markSlowNodeAsBadNode;
   private final int markSlowNodeAsBadNodeThreshold;
 
   /** wait time window before refreshing blocklocation for inputstream. */
@@ -267,9 +264,6 @@ public class DfsClientConf {
         DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
     readUseCachePriority = conf.getBoolean(DFS_CLIENT_READ_USE_CACHE_PRIORITY,
         DFS_CLIENT_READ_USE_CACHE_PRIORITY_DEFAULT);
-    markSlowNodeAsBadNode = conf.getBoolean(
-        DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_KEY,
-        DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_DEFAULT);
     markSlowNodeAsBadNodeThreshold = conf.getInt(
         DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY,
         DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT);
@@ -654,13 +648,6 @@ public class DfsClientConf {
    */
   public long getSlowIoWarningThresholdMs() {
     return slowIoWarningThresholdMs;
-  }
-
-  /**
-   * @return whether slowNode should be marked as badNode
-   */
-  public boolean getMarkSlowNodeAsBadNode() {
-    return markSlowNodeAsBadNode;
   }
 
   /**

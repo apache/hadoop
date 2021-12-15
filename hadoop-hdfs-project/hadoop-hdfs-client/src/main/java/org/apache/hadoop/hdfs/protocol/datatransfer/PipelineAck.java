@@ -43,8 +43,10 @@ public class PipelineAck {
   final static int OOB_END = Status.OOB_RESERVED3_VALUE; // the last OOB type
 
   public enum SLOW {
-    NORMAL(0),
-    SLOW(1);
+    DISABLED(0),
+    NORMAL(1),
+    SLOW(2),
+    RESERVED(3);
 
     private final int value;
     private static final SLOW[] VALUES = values();
@@ -86,7 +88,7 @@ public class PipelineAck {
     STATUS(null, 4),
     RESERVED(STATUS.BITS, 1),
     ECN_BITS(RESERVED.BITS, 2),
-    SLOW_BITS(ECN_BITS.BITS, 1);
+    SLOW_BITS(ECN_BITS.BITS, 2);
 
     private final LongBitFormat BITS;
 
@@ -271,7 +273,7 @@ public class PipelineAck {
   }
 
   public static int combineHeader(ECN ecn, Status status) {
-    return combineHeader(ecn, status, SLOW.NORMAL);
+    return combineHeader(ecn, status, SLOW.DISABLED);
   }
 
   public static int combineHeader(ECN ecn, Status status, SLOW slow) {

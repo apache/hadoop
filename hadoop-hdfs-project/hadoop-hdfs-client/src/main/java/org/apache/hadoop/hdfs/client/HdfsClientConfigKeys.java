@@ -154,9 +154,6 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
       "dfs.client.slow.io.warning.threshold.ms";
   long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
-  String  DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_KEY =
-      "dfs.client.mark.slownode.as.badnode";
-  boolean DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_DEFAULT = false;
   String  DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY =
       "dfs.client.mark.slownode.as.badnode.threshold";
   int DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT = 10;

@@ -901,7 +901,6 @@ public class TestClientProtocolForPipelineRecovery {
 
     final int threshold = 3;
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_KEY, true);
     conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY, threshold);
 
     // Need 4 datanodes to verify the replaceDatanode during pipeline recovery

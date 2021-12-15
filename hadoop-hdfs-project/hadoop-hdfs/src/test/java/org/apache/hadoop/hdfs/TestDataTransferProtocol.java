@@ -574,7 +574,7 @@ public class TestDataTransferProtocol {
     PipelineAck oldAck = new PipelineAck();
     oldAck.readFields(new ByteArrayInputStream(oldAckBytes.toByteArray()));
     assertEquals(PipelineAck.combineHeader(PipelineAck.ECN.SUPPORTED, Status
-        .CHECKSUM_OK, PipelineAck.SLOW.NORMAL), oldAck.getHeaderFlag(0));
+        .CHECKSUM_OK, PipelineAck.SLOW.DISABLED), oldAck.getHeaderFlag(0));
 
     PipelineAck newAck = new PipelineAck();
     ByteArrayOutputStream newAckBytes = new ByteArrayOutputStream();
