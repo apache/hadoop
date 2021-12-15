@@ -965,10 +965,10 @@ public class DataNode extends ReconfigurableBase
         clearFailure, Joiner.on(",").join(storageLocations)));
 
     IOException ioe = null;
+    Preconditions.checkNotNull(data, "Storage not yet initialized");
     // Remove volumes and block infos from FsDataset.
     data.removeVolumes(storageLocations, clearFailure);
 
-    Preconditions.checkNotNull(data, "Storage not yet initialized");
     // Remove volumes from DataStorage.
     try {
       storage.removeVolumes(storageLocations);
