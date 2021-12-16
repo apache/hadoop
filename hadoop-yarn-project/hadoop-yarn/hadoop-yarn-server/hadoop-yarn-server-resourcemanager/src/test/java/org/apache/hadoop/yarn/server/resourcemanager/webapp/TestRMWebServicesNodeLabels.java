@@ -180,10 +180,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     LOG.info("posted node nodelabel");
 
     // Verify, using get-labels-to-Nodes
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("label-mappings").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabelMappings(r);
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(2, labelsToNodesInfo.getLabelsToNodes().size());
@@ -197,12 +194,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Verify, using get-labels-to-Nodes for specified set of labels
     params = new MultivaluedMapImpl();
     params.add("labels", "a");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("label-mappings").queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+    response = getNodeLabelMappings(r);
     assertApplicationJsonUtf8Response(response);
     labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
@@ -443,6 +435,15 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
   }
 
+  private ClientResponse getNodeLabelMappings(WebResource r) {
+    ClientResponse response;
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("label-mappings").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    return response;
+  }
+
   private ClientResponse replaceLabelsOnNode(WebResource r, String node, MultivaluedMapImpl params) {
     return replaceLabelsOnNode(r, node, params, userName);
   }
@@ -628,10 +629,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp200(response);
 
     // Verify partition info in label-mappings
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("label-mappings").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabelMappings(r);
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
