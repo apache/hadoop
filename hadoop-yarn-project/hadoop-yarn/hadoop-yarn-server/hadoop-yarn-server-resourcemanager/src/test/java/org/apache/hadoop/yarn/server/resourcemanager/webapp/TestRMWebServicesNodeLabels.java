@@ -131,10 +131,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp200(response);
 
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
@@ -150,10 +147,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp200(response);
     
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(2, nodeLabelsInfo.getNodeLabels().size());
@@ -378,10 +372,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp401(response);
 
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(2, nodeLabelsInfo.getNodeLabels().size());
@@ -398,10 +389,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .post(ClientResponse.class);
     assertHttp200(response);
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
@@ -422,10 +410,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .post(ClientResponse.class);
     assertHttp200(response);
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
@@ -516,10 +501,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .post(ClientResponse.class);
     assertHttp200(response);
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(new NodeLabelInfo("y", false),
@@ -540,10 +522,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp200(response);
 
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertTrue(nodeLabelsInfo.getNodeLabelsInfo().isEmpty());
@@ -554,15 +533,19 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
     // Verify
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals("z", nodeLabelsInfo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nodeLabelsInfo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
+  }
+
+  private ClientResponse getNodeLabels(WebResource r) {
+    return r.path("ws").path("v1").path("cluster")
+        .path("get-node-labels")
+        .queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
   private ClientResponse addNodeLabels(WebResource r, NodeLabelsInfo nodeLabelsInfo) throws Exception {
@@ -695,10 +678,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp200(response);
 
     // Verify partition info in get-node-labels
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("get-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
