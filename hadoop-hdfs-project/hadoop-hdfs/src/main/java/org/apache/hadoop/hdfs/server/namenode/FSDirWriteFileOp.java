@@ -402,10 +402,16 @@ class FSDirWriteFileOp {
     INodesInPath parent = FSDirMkdirOp.createMissingDirs(fsd,
         iip.getParentINodesInPath(), permissions, true);
     if (parent != null) {
-      iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
-          replication, blockSize, holder, clientMachine, shouldReplicate,
-          ecPolicyName, storagePolicy);
-      newNode = iip != null ? iip.getLastINode().asFile() : null;
+      try {
+        fsn.writeUnlock();
+        fsn.writeLock();
+        iip = addFile(fsd, parent, iip.getLastLocalName(), permissions,
+            replication, blockSize, holder, clientMachine, shouldReplicate,
+            ecPolicyName, storagePolicy);
+        newNode = iip != null ? iip.getLastINode().asFile() : null;
+      } finally {
+        fsn.writeUnlock();
+      }
     }
     if (newNode == null) {
       throw new IOException("Unable to add " + src +  " to namespace");
