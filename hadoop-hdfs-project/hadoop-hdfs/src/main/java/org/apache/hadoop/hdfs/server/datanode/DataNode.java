@@ -780,6 +780,7 @@ public class DataNode extends ReconfigurableBase
               .newFixedThreadPool(changedVolumes.newLocations.size());
           List<Future<IOException>> exceptions = Lists.newArrayList();
 
+          Preconditions.checkNotNull(data, "Storage not yet initialized");
           for (final StorageLocation location : changedVolumes.newLocations) {
             exceptions.add(service.submit(new Callable<IOException>() {
               @Override
@@ -879,6 +880,7 @@ public class DataNode extends ReconfigurableBase
         clearFailure, Joiner.on(",").join(storageLocations)));
 
     IOException ioe = null;
+    Preconditions.checkNotNull(data, "Storage not yet initialized");
     // Remove volumes and block infos from FsDataset.
     data.removeVolumes(storageLocations, clearFailure);
 
@@ -1982,6 +1984,7 @@ public class DataNode extends ReconfigurableBase
     FileInputStream fis[] = new FileInputStream[2];
     
     try {
+      Preconditions.checkNotNull(data, "Storage not yet initialized");
       fis[0] = (FileInputStream)data.getBlockInputStream(blk, 0);
       fis[1] = DatanodeUtil.getMetaDataInputStream(blk, data);
     } catch (ClassCastException e) {
@@ -2939,6 +2942,7 @@ public class DataNode extends ReconfigurableBase
   @Override // InterDatanodeProtocol
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
       throws IOException {
+    Preconditions.checkNotNull(data, "Storage not yet initialized");
     return data.initReplicaRecovery(rBlock);
   }
 
@@ -2949,6 +2953,7 @@ public class DataNode extends ReconfigurableBase
   public String updateReplicaUnderRecovery(final ExtendedBlock oldBlock,
       final long recoveryId, final long newBlockId, final long newLength)
       throws IOException {
+    Preconditions.checkNotNull(data, "Storage not yet initialized");
     final Replica r = data.updateReplicaUnderRecovery(oldBlock,
         recoveryId, newBlockId, newLength);
     // Notify the namenode of the updated block info. This is important
@@ -3221,7 +3226,7 @@ public class DataNode extends ReconfigurableBase
           "The block pool is still running. First do a refreshNamenodes to " +
           "shutdown the block pool service");
     }
-   
+    Preconditions.checkNotNull(data, "Storage not yet initialized");
     data.deleteBlockPool(blockPoolId, force);
   }
 
@@ -3683,6 +3688,7 @@ public class DataNode extends ReconfigurableBase
   @Override
   public List<DatanodeVolumeInfo> getVolumeReport() throws IOException {
     checkSuperuserPrivilege();
+    Preconditions.checkNotNull(data, "Storage not yet initialized");
     Map<String, Object> volumeInfoMap = data.getVolumeInfoMap();
     if (volumeInfoMap == null) {
       LOG.warn("DataNode volume info not available.");
