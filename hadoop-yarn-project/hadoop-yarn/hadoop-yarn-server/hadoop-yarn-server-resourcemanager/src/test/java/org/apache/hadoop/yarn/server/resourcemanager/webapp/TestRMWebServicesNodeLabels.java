@@ -161,42 +161,21 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add labels to a node
     MultivaluedMapImpl params = new MultivaluedMapImpl();
     params.add("labels", "a");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
     params = new MultivaluedMapImpl();
     params.add("labels", "b");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid1:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid1:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
     params = new MultivaluedMapImpl();
     params.add("labels", "b");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid2:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid2:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -240,14 +219,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Replace
     params = new MultivaluedMapImpl();
     params.add("labels", "b");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -288,14 +260,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Remove all
     params = new MultivaluedMapImpl();
     params.add("labels", "");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
     // Verify
@@ -307,14 +272,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add a label back for auth tests
     params = new MultivaluedMapImpl();
     params.add("labels", "a");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -327,14 +285,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Auth fail replace labels on node
     params = new MultivaluedMapImpl();
     params.add("labels", "b");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nid:0")
-            .path("replace-labels")
-            .queryParam("user.name", notUserName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params, notUserName);
     assertHttp401(response);
     // Verify
     response = getLabelsOfNode(r, "nid:0");
@@ -394,12 +345,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Reset for testing : Add labels to a node
     params = new MultivaluedMapImpl();
     params.add("labels", "y");
-    response =
-        r.path("ws").path("v1").path("cluster").path("nodes").path("nid:0")
-            .path("replace-labels").queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params);
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -495,6 +441,23 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals("z", nodeLabelsInfo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nodeLabelsInfo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
+  }
+
+  private ClientResponse replaceLabelsOnNode(WebResource r, String node, MultivaluedMapImpl params) {
+    return replaceLabelsOnNode(r, node, params, userName);
+  }
+
+  private ClientResponse replaceLabelsOnNode(WebResource r, String node, MultivaluedMapImpl params, String userName) {
+    ClientResponse response;
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("nodes").path(node)
+            .path("replace-labels")
+            .queryParam("user.name", userName)
+            .queryParams(params)
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    return response;
   }
 
   private ClientResponse removeNodeLabel(WebResource r, MultivaluedMapImpl params) {
@@ -611,10 +574,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // replace label which doesn't exist
     MultivaluedMapImpl params = new MultivaluedMapImpl();
     params.add("labels", "idontexist");
-    response = r.path("ws").path("v1").path("cluster").path("nodes")
-        .path("nid:0").path("replace-labels").queryParam("user.name", userName)
-        .queryParams(params).accept(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", params);
 
     String expectedMessage =
         "Not all labels being replaced contained by known label"
@@ -664,14 +624,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add node label to a node
     MultivaluedMapImpl params = new MultivaluedMapImpl();
     params.add("labels", "a");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path("nodeId:0")
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nodeId:0", params);
     assertHttp200(response);
 
     // Verify partition info in label-mappings
