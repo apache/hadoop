@@ -239,13 +239,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class), 
         Pair.of("a", DEFAULT_NL_EXCLUSIVITY));
     
-    // Fail to add a label with post
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("add-node-labels").queryParam("user.name", notUserName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabels\":\"c\"}", MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    // Fail to add a label with wrong user
+    response = addNodeLabelsWithUser(r, Lists.newArrayList(Pair.of("c", DEFAULT_NL_EXCLUSIVITY)), notUserName);
     assertHttp401(response);
 
     // Verify
@@ -280,7 +275,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Reset for testing : Add labels to a node
     response = replaceLabelsOnNode(r, "nid:0", "y");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
 
     //setting rmWebService for non-centralized NodeLabel Configuration
     rmWebService.isCentralizedNodeLabelConfiguration = false;
@@ -464,12 +458,20 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private ClientResponse addNodeLabels(WebResource r, List<Pair<String, Boolean>> nlInfos) throws Exception {
+    return addNodeLabelsInternal(r, nlInfos, userName);
+  }
+
+  private ClientResponse addNodeLabelsWithUser(WebResource r, List<Pair<String, Boolean>> nlInfos, String userName) throws Exception {
+    return addNodeLabelsInternal(r, nlInfos, userName);
+  }
+
+  private ClientResponse addNodeLabelsInternal(WebResource r, List<Pair<String, Boolean>> nlInfos, String userName) throws Exception {
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     for (Pair<String, Boolean> nlInfo : nlInfos) {
       nodeLabelsInfo.getNodeLabelsInfo().add
           (new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight()));
     }
-    
+
     return r.path("ws").path("v1").path("cluster")
         .path("add-node-labels")
         .queryParam("user.name", userName)
@@ -477,6 +479,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
             MediaType.APPLICATION_JSON)
         .post(ClientResponse.class);
+
   }
 
   private void assertApplicationJsonUtf8Response(ClientResponse response) {
