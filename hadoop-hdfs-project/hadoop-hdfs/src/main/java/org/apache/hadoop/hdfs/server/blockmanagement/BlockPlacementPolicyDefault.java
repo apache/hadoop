@@ -170,7 +170,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY,
         DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_DEFAULT);
     if (mxBeanName == null) {
-      mxBeanName = MBeans.register("NameNode", "BlockPlacementStats", this);
+      registerMxBeans(this);
     }
   }
 
@@ -1401,6 +1401,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy
 
   @Override
   public void clear() {
+    unregisterMxBeans();
+  }
+
+  private synchronized static void registerMxBeans(Object obj) {
+    mxBeanName = MBeans.register("NameNode", "BlockPlacementStats", obj);
+  }
+
+  private synchronized static void unregisterMxBeans() {
     MBeans.unregister(mxBeanName);
     mxBeanName = null;
   }
