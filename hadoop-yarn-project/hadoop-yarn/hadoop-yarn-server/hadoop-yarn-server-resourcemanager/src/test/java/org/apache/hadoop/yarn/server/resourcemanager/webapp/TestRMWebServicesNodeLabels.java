@@ -152,23 +152,17 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             Pair.of("b", false)));
     
     // Add labels to a node
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("labels", "a");
-    response = replaceLabelsOnNode(r, "nid:0", params);
+    response = replaceLabelsOnNode(r, "nid:0", "a");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
-    params = new MultivaluedMapImpl();
-    params.add("labels", "b");
-    response = replaceLabelsOnNode(r, "nid1:0", params);
+    response = replaceLabelsOnNode(r, "nid1:0", "b");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
-    params = new MultivaluedMapImpl();
-    params.add("labels", "b");
-    response = replaceLabelsOnNode(r, "nid2:0", params);
+    response = replaceLabelsOnNode(r, "nid2:0", "b");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -185,9 +179,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertTrue(nodes.getNodeIDs().contains("nid:0"));
 
     // Verify, using get-labels-to-Nodes for specified set of labels
-    params = new MultivaluedMapImpl();
-    params.add("labels", "a");
-    response = getNodeLabelMappings(r, params);
+    response = getNodeLabelMappings(r, "a");
     assertApplicationJsonUtf8Response(response);
     labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
@@ -202,9 +194,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
     
     // Replace
-    params = new MultivaluedMapImpl();
-    params.add("labels", "b");
-    response = replaceLabelsOnNode(r, "nid:0", params);
+    response = replaceLabelsOnNode(r, "nid:0", "b");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -234,9 +224,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoContains(nodeLabelsInfo, Pair.of("a", DEFAULT_NL_EXCLUSIVITY));
     
     // Remove all
-    params = new MultivaluedMapImpl();
-    params.add("labels", "");
-    response = replaceLabelsOnNode(r, "nid:0", params);
+    response = replaceLabelsOnNode(r, "nid:0", "");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
     // Verify
@@ -245,9 +233,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsSize(response.getEntity(NodeLabelsInfo.class), 0);
     
     // Add a label back for auth tests
-    params = new MultivaluedMapImpl();
-    params.add("labels", "a");
-    response = replaceLabelsOnNode(r, "nid:0", params);
+    response = replaceLabelsOnNode(r, "nid:0", "a");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -258,9 +244,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         Pair.of("a", DEFAULT_NL_EXCLUSIVITY));
     
     // Auth fail replace labels on node
-    params = new MultivaluedMapImpl();
-    params.add("labels", "b");
-    response = replaceLabelsOnNode(r, "nid:0", params, notUserName);
+    response = replaceLabelsOnNodeWithUserName(r, "nid:0", notUserName, "b");
     assertHttp401(response);
     // Verify
     response = getLabelsOfNode(r, "nid:0");
@@ -283,9 +267,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsSize(response.getEntity(NodeLabelsInfo.class), 2);
     
     // Remove cluster label (succeed, we no longer need it)
-    params = new MultivaluedMapImpl();
-    params.add("labels", "b");
-    response = removeNodeLabel(r, params);
+    response = removeNodeLabel(r, "b");
     assertHttp200(response);
     // Verify
     response = getNodeLabels(r);
@@ -294,9 +276,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         Lists.newArrayList(Pair.of("a", true)));
     
     // Remove cluster label with post
-    params = new MultivaluedMapImpl();
-    params.add("labels", "a");
-    response = removeNodeLabel(r, params);
+    response = removeNodeLabel(r, "a");
     assertHttp200(response);
     // Verify
     response = getNodeLabels(r);
@@ -311,9 +291,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         Pair.of("x", false), Pair.of("y", false)));
     assertHttp200(response);
     // Reset for testing : Add labels to a node
-    params = new MultivaluedMapImpl();
-    params.add("labels", "y");
-    response = replaceLabelsOnNode(r, "nid:0", params);
+    response = replaceLabelsOnNode(r, "nid:0", "y");
     assertHttp200(response);
     LOG.info("posted node nodelabel");
 
@@ -362,9 +340,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoDoesNotContain(nodeLabelsInfo, Pair.of("x", false));
 
     //  Case3 : Remove cluster label should be successful
-    params = new MultivaluedMapImpl();
-    params.add("labels", "x");
-    response = removeNodeLabel(r, params);
+    response = removeNodeLabel(r, "x");
     assertHttp200(response);
     // Verify
     response = getNodeLabels(r);
@@ -373,9 +349,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         Pair.of("y", false), 0);
 
     // Remove y
-    params = new MultivaluedMapImpl();
-    params.add("labels", "y");
-    response = removeNodeLabel(r, params);
+    response = removeNodeLabel(r, "y");
     assertHttp200(response);
 
     // Verify
@@ -448,43 +422,45 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return response;
   }
 
-  private ClientResponse getNodeLabelMappings(WebResource r, MultivaluedMapImpl params) {
-    ClientResponse response;
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("label-mappings").queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    return response;
+  private ClientResponse getNodeLabelMappings(WebResource r, String... labelNames) {
+    MultivaluedMapImpl params = createMultiValuedMap(labelNames);
+    return r.path("ws").path("v1").path("cluster")
+        .path("label-mappings").queryParam("user.name", userName)
+        .queryParams(params)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
 
-  private ClientResponse replaceLabelsOnNode(WebResource r, String node, MultivaluedMapImpl params) {
-    return replaceLabelsOnNode(r, node, params, userName);
+  private ClientResponse replaceLabelsOnNode(WebResource r, String node, String... labelNames) {
+    return replaceLabelsOnNodeWithUserName(r, node, userName, labelNames);
   }
 
-  private ClientResponse replaceLabelsOnNode(WebResource r, String node, MultivaluedMapImpl params, String userName) {
-    ClientResponse response;
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("nodes").path(node)
-            .path("replace-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
-    return response;
+  private ClientResponse replaceLabelsOnNodeWithUserName(WebResource r, String node, String userName, String... labelNames) {
+    MultivaluedMapImpl params = createMultiValuedMap(labelNames);
+    return r.path("ws").path("v1").path("cluster")
+        .path("nodes").path(node)
+        .path("replace-labels")
+        .queryParam("user.name", userName)
+        .queryParams(params)
+        .accept(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
   }
 
-  private ClientResponse removeNodeLabel(WebResource r, MultivaluedMapImpl params) {
-    ClientResponse response;
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("remove-node-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
-    return response;
+  private MultivaluedMapImpl createMultiValuedMap(String[] labelNames) {
+    MultivaluedMapImpl params = new MultivaluedMapImpl();
+    for (String labelName: labelNames) {
+      params.add("labels", labelName);
+    }
+    return params;
+  }
+
+  private ClientResponse removeNodeLabel(WebResource r, String... labelNames) {
+    MultivaluedMapImpl params = createMultiValuedMap(labelNames);
+    return r.path("ws").path("v1").path("cluster")
+        .path("remove-node-labels")
+        .queryParam("user.name", userName)
+        .queryParams(params)
+        .accept(MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
   }
 
   private ClientResponse getLabelsOfNode(WebResource r, String node) {
@@ -586,9 +562,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response;
     // replace label which doesn't exist
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("labels", "idontexist");
-    response = replaceLabelsOnNode(r, "nid:0", params);
+    response = replaceLabelsOnNode(r, "nid:0", "idontexist");
 
     String expectedMessage =
         "Not all labels being replaced contained by known label"
@@ -601,9 +575,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       throws Exception {
     WebResource r = resource();
     ClientResponse response;
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("labels", "irealldontexist");
-    response = removeNodeLabel(r, params);
+    response = removeNodeLabel(r, "irealldontexist");
     String expectedMessage =
         "java.io.IOException: Node label=irealldontexist to be"
             + " removed doesn't existed in cluster node labels"
@@ -634,9 +606,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     }
 
     // Add node label to a node
-    MultivaluedMapImpl params = new MultivaluedMapImpl();
-    params.add("labels", "a");
-    response = replaceLabelsOnNode(r, "nodeId:0", params);
+    response = replaceLabelsOnNode(r, "nodeId:0", "a");
     assertHttp200(response);
 
     // Verify partition info in label-mappings
