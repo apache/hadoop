@@ -450,7 +450,7 @@ public class TestUtils {
       final Map<ApplicationAttemptId, FiCaSchedulerApp> apps) throws IOException {
     applyResourceCommitRequest(clusterResource, csAssignment, nodes, apps, null);
   }
-  
+
   public static void applyResourceCommitRequest(Resource clusterResource,
       CSAssignment csAssignment,
       final Map<NodeId, FiCaSchedulerNode> nodes,
