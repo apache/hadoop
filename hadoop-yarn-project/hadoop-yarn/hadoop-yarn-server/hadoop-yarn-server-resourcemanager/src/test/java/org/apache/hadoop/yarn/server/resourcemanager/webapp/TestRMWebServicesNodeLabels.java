@@ -127,13 +127,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add a label
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("a"));
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("add-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-                MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
 
     // Verify
@@ -152,13 +146,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add another
     nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("b", false));
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("add-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-                MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
     
     // Verify
@@ -448,15 +436,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("x", false));
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("y", false));
-    response =
-        r.path("ws")
-            .path("v1")
-            .path("cluster")
-            .path("add-node-labels")
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-                MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
     // Reset for testing : Add labels to a node
     params = new MultivaluedMapImpl();
@@ -571,15 +551,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // add a new nodelabel with exclusivity
     nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("z", false));
-    response =
-        r.path("ws")
-            .path("v1")
-            .path("cluster")
-            .path("add-node-labels")
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-                MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
     // Verify
     response =
@@ -591,6 +563,16 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals("z", nodeLabelsInfo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nodeLabelsInfo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
+  }
+
+  private ClientResponse addNodeLabels(WebResource r, NodeLabelsInfo nodeLabelsInfo) throws Exception {
+    return r.path("ws").path("v1").path("cluster")
+        .path("add-node-labels")
+        .queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
+            MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
   }
 
   private void assertApplicationJsonUtf8Response(ClientResponse response) {
@@ -618,11 +600,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add a invalid label
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("a&"));
-    response = r.path("ws").path("v1").path("cluster").path("add-node-labels")
-        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-            MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     String expectedMessage =
         "java.io.IOException: label name should only contains"
             + " {0-9, a-z, A-Z, -, _} and should not started with"
@@ -637,20 +615,12 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ClientResponse response;
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("newLabel", true));
-    response = r.path("ws").path("v1").path("cluster").path("add-node-labels")
-        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-            MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
     // new info and change exclusivity
     nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("newLabel", false));
-    response = r.path("ws").path("v1").path("cluster").path("add-node-labels")
-        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
-        .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class),
-            MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     String expectedMessage =
         "java.io.IOException: Exclusivity cannot be modified for an existing"
             + " label with : <newLabel:exclusivity=false>";
@@ -721,12 +691,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add a node label
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(new NodeLabelInfo("a"));
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("add-node-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeLabelsInfo, NodeLabelsInfo.class), MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = addNodeLabels(r, nodeLabelsInfo);
     assertHttp200(response);
 
     // Verify partition info in get-node-labels
