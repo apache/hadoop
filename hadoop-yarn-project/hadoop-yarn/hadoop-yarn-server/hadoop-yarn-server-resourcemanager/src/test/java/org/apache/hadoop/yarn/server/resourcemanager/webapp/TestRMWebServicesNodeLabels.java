@@ -194,7 +194,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Verify, using get-labels-to-Nodes for specified set of labels
     params = new MultivaluedMapImpl();
     params.add("labels", "a");
-    response = getNodeLabelMappings(r);
+    response = getNodeLabelMappings(r, params);
     assertApplicationJsonUtf8Response(response);
     labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
@@ -439,6 +439,16 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("label-mappings").queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    return response;
+  }
+
+  private ClientResponse getNodeLabelMappings(WebResource r, MultivaluedMapImpl params) {
+    ClientResponse response;
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("label-mappings").queryParam("user.name", userName)
+            .queryParams(params)
             .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     return response;
   }
