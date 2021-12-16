@@ -81,6 +81,9 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
+
+import org.hamcrest.MatcherAssert;
+import static org.hamcrest.core.IsCollectionContaining.hasItems;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1691,10 +1694,16 @@ public class TestDecommission extends AdminStatesBaseTest {
     Instant checkUntil = Instant.now().plus(checkDuration);
     while (Instant.now().isBefore(checkUntil)) {
       BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      assertEquals(0, decomManager.getNumPendingNodes());
-      assertEquals(numDeadNodes, decomManager.getNumTrackedNodes());
-      assertTrue(deadNodeProps.keySet().stream()
-          .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
+      assertEquals(
+          "Unexpected number of decommissioning nodes queued in DatanodeAdminManager.",
+          0, decomManager.getNumPendingNodes());
+      assertEquals(
+          "Unexpected number of decommissioning nodes tracked in DatanodeAdminManager.",
+          numDeadNodes, decomManager.getNumTrackedNodes());
+      assertTrue(
+          "Dead decommissioning nodes unexpectedly transitioned out of DECOMMISSION_INPROGRESS.",
+          deadNodeProps.keySet().stream()
+              .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
       Thread.sleep(500);
     }
 
@@ -1721,9 +1730,10 @@ public class TestDecommission extends AdminStatesBaseTest {
             && liveDecommNodes.stream().allMatch(
                 node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)),
         500, 30000);
-    for (final DatanodeDescriptor node : decomManager.getPendingNodes()) {
-      assertTrue(liveDecommNodes.contains(node));
-    }
+    MatcherAssert.assertThat(
+        "Live decommissioning nodes not queued in DatanodeAdminManager as expected.",
+        liveDecommNodes, hasItems(decomManager.getPendingNodes().toArray(
+            new DatanodeDescriptor[decomManager.getPendingNodes().size()])));
 
     // Run DatanodeAdminManager.Monitor, then validate the dead nodes are re-queued & the
     // live nodes are decommissioned
@@ -1732,36 +1742,56 @@ public class TestDecommission extends AdminStatesBaseTest {
       // DatanodeAdminBackoffMonitor will re-queue the dead nodes, then call
       // "processPendingNodes" to de-queue the live nodes & decommission them
       BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      assertEquals(2, decomManager.getNumPendingNodes());
-      assertEquals(0, decomManager.getNumTrackedNodes());
+      assertEquals(
+          "DatanodeAdminBackoffMonitor did not re-queue dead decommissioning nodes as expected.",
+          2, decomManager.getNumPendingNodes());
+      assertEquals(
+          "DatanodeAdminBackoffMonitor did not re-queue dead decommissioning nodes as expected.",
+          0, decomManager.getNumTrackedNodes());
     } else {
       // For TestDecommission a single tick/execution of the DatanodeAdminDefaultMonitor
       // will re-queue the dead nodes. A seconds tick is needed to de-queue the live nodes
       // & decommission them
       BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      assertEquals(4, decomManager.getNumPendingNodes());
-      assertEquals(0, decomManager.getNumTrackedNodes());
+      assertEquals(
+          "DatanodeAdminDefaultMonitor did not re-queue dead decommissioning nodes as expected.",
+          4, decomManager.getNumPendingNodes());
+      assertEquals(
+          "DatanodeAdminDefaultMonitor did not re-queue dead decommissioning nodes as expected.",
+          0, decomManager.getNumTrackedNodes());
       BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      assertEquals(2, decomManager.getNumPendingNodes());
-      assertEquals(0, decomManager.getNumTrackedNodes());
+      assertEquals(
+          "DatanodeAdminDefaultMonitor did not decommission live nodes as expected.",
+          2, decomManager.getNumPendingNodes());
+      assertEquals(
+          "DatanodeAdminDefaultMonitor did not decommission live nodes as expected.",
+          0, decomManager.getNumTrackedNodes());
     }
-    assertTrue(liveDecommNodes.stream()
+    assertTrue("Live nodes not DECOMMISSIONED as expected.", liveDecommNodes.stream()
         .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSIONED)));
-    assertTrue(deadNodeProps.keySet().stream()
-        .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
-    for (final DatanodeDescriptor node : decomManager.getPendingNodes()) {
-      assertTrue(deadNodeProps.keySet().contains(node));
-    }
+    assertTrue("Dead nodes not DECOMMISSION_INPROGRESS as expected.",
+        deadNodeProps.keySet().stream()
+            .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
+    MatcherAssert.assertThat(
+        "Dead decommissioning nodes not queued in DatanodeAdminManager as expected.",
+        deadNodeProps.keySet(), hasItems(decomManager.getPendingNodes().toArray(
+            new DatanodeDescriptor[decomManager.getPendingNodes().size()])));
 
     // Validate the 2 "dead" nodes are not removed from the tracked nodes set
     // after several seconds of operation
     checkUntil = Instant.now().plus(checkDuration);
     while (Instant.now().isBefore(checkUntil)) {
       BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
-      assertEquals(0, decomManager.getNumPendingNodes());
-      assertEquals(numDeadNodes, decomManager.getNumTrackedNodes());
-      assertTrue(deadNodeProps.keySet().stream()
-          .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
+      assertEquals(
+          "Unexpected number of decommissioning nodes queued in DatanodeAdminManager.",
+          0, decomManager.getNumPendingNodes());
+      assertEquals(
+          "Unexpected number of decommissioning nodes tracked in DatanodeAdminManager.",
+          numDeadNodes, decomManager.getNumTrackedNodes());
+      assertTrue(
+          "Dead decommissioning nodes unexpectedly transitioned out of DECOMMISSION_INPROGRESS.",
+          deadNodeProps.keySet().stream()
+              .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
       Thread.sleep(500);
     }
 

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This abstract class provides some base methods which are inherited by
@@ -51,7 +52,6 @@ public abstract class DatanodeAdminMonitorBase
   protected Configuration conf;
 
   private final PriorityQueue<DatanodeDescriptor> pendingNodes = new PriorityQueue<>(
-      DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT,
       PENDING_NODES_QUEUE_COMPARATOR);
 
   /**
@@ -174,7 +174,7 @@ public abstract class DatanodeAdminMonitorBase
    * @param numDecommissioningNodes The total number of nodes being decommissioned
    * @return List of unhealthy nodes to be re-queued
    */
-  List<DatanodeDescriptor> identifyUnhealthyNodesToRequeue(
+  Stream<DatanodeDescriptor> identifyUnhealthyNodesToRequeue(
       final List<DatanodeDescriptor> unhealthyDns, int numDecommissioningNodes) {
     if (!unhealthyDns.isEmpty()) {
       // Compute the number of unhealthy nodes to re-queue
@@ -189,8 +189,8 @@ public abstract class DatanodeAdminMonitorBase
       // Order unhealthy nodes by lastUpdate descending such that nodes
       // which have been unhealthy the longest are preferred to be re-queued
       return unhealthyDns.stream().sorted(PENDING_NODES_QUEUE_COMPARATOR.reversed())
-          .limit(numUnhealthyNodesToRequeue).collect(Collectors.toList());
+          .limit(numUnhealthyNodesToRequeue);
     }
-    return unhealthyDns;
+    return Stream.empty();
   }
 }

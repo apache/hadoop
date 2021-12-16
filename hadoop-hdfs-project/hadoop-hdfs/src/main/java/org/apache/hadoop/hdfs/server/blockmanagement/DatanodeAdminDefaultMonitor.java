@@ -185,7 +185,6 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         it = new CyclicIteration<>(outOfServiceNodeBlocks,
         iterkey).iterator();
     final List<DatanodeDescriptor> toRemove = new ArrayList<>();
-    final List<DatanodeDescriptor> toRequeue = new ArrayList<>();
     final List<DatanodeDescriptor> unhealthyDns = new ArrayList<>();
 
     while (it.hasNext() && !exceededNumBlocksPerCheck() && namesystem
@@ -274,7 +273,8 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // an invalid state.
         LOG.warn("DatanodeAdminMonitor caught exception when processing node "
             + "{}.", dn, e);
-        toRequeue.add(dn);
+        getPendingNodes().add(dn);
+        toRemove.add(dn);
       } finally {
         iterkey = dn;
       }
@@ -282,8 +282,8 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
 
     // Having more nodes decommissioning than can be tracked will impact decommissioning
     // performance due to queueing delay
-    int numTrackedNodes = outOfServiceNodeBlocks.size() - toRemove.size() - toRequeue.size();
-    int numQueuedNodes = getPendingNodes().size() + toRequeue.size();
+    int numTrackedNodes = outOfServiceNodeBlocks.size() - toRemove.size();
+    int numQueuedNodes = getPendingNodes().size();
     int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
     if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
       LOG.warn(
@@ -292,14 +292,10 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
           numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
 
       // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
-      toRequeue.addAll(identifyUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes));
-    }
-
-    // In some cases, datanodes are removed from the tracked nodes set
-    // and re-queued to be decommissioned at a later time
-    for (DatanodeDescriptor dn : toRequeue) {
-      getPendingNodes().add(dn);
-      outOfServiceNodeBlocks.remove(dn);
+      identifyUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+        getPendingNodes().add(dn);
+        outOfServiceNodeBlocks.remove(dn);
+      });
     }
 
     // Remove the datanodes that are DECOMMISSIONED or in service after

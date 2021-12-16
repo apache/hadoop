@@ -206,13 +206,11 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           final List<DatanodeDescriptor> unhealthyDns = outOfServiceNodeBlocks.keySet().stream()
               .filter(dn -> !blockManager.isNodeHealthyForDecommissionOrMaintenance(dn))
               .collect(Collectors.toList());
-          final List<DatanodeDescriptor> toRequeue =
-              identifyUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes);
-          for (DatanodeDescriptor dn : toRequeue) {
+          identifyUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
             getPendingNodes().add(dn);
             outOfServiceNodeBlocks.remove(dn);
             pendingRep.remove(dn);
-          }
+          });
         }
 
         processPendingNodes();
