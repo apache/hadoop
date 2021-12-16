@@ -6310,14 +6310,6 @@
   </property>
 
   <property>
-    <name>dfs.client.mark.slownode.as.badnode</name>
-    <value>false</value>
-    <description>
-      Whether clients should mark slownode as badnode to rebuild the pipeline.
-    </description>
-  </property>
-
-  <property>
     <name>dfs.client.mark.slownode.as.badnode.threshold</name>
     <value>10</value>
     <description>
