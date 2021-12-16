@@ -203,12 +203,12 @@ public class DataNodeDiskMetrics {
     }
 
     final PriorityQueue<DiskLatency> topNReports = new PriorityQueue<>(
-        maxSlowDisksToBeExcluded,
+        diskLatencies.size(),
         (o1, o2) -> Doubles.compare(
             o1.getMaxLatency(), o2.getMaxLatency()));
 
     for (DiskLatency diskLatency : diskLatencies) {
-      if (topNReports.size() < dn.getFSDataset().getVolumeInfoMap().size()) {
+      if (topNReports.size() < maxSlowDisksToBeExcluded) {
         topNReports.add(diskLatency);
       } else if (topNReports.peek().getMaxLatency() <
           diskLatency.getMaxLatency()) {

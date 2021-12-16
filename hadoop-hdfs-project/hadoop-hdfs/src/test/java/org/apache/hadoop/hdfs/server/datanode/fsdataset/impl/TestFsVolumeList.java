@@ -80,7 +80,7 @@ public class TestFsVolumeList {
   private String baseDir;
   private BlockScanner blockScanner;
   private final static int NUM_DATANODES = 3;
-  private final static int STORAGES_PER_DATANODE = 2;
+  private final static int STORAGES_PER_DATANODE = 5;
   private final static int DEFAULT_BLOCK_SIZE = 102400;
   private final static int BUFFER_LENGTH = 1024;
 
@@ -666,26 +666,49 @@ public class TestFsVolumeList {
     DataNode dn1 = dataNodes.get(1);
     DataNode dn2 = dataNodes.get(2);
 
-    // Mock the first disk of each datanode is a slow disk.
-    String slowDiskOnDn0 = dn0.getFSDataset().getFsVolumeReferences().getReference(0)
+    // Mock the first disk of each datanode is a slowest disk.
+    String slowDisk0OnDn0 = dn0.getFSDataset().getFsVolumeReferences().getReference(0)
         .getVolume().getBaseURI().getPath();
-    String slowDiskOnDn1 = dn1.getFSDataset().getFsVolumeReferences().getReference(0)
+    String slowDisk0OnDn1 = dn1.getFSDataset().getFsVolumeReferences().getReference(0)
         .getVolume().getBaseURI().getPath();
-    String slowDiskOnDn2 = dn2.getFSDataset().getFsVolumeReferences().getReference(0)
+    String slowDisk0OnDn2 = dn2.getFSDataset().getFsVolumeReferences().getReference(0)
         .getVolume().getBaseURI().getPath();
 
-    dn0.getDiskMetrics().addSlowDiskForTesting(slowDiskOnDn0, ImmutableMap.of(
+    String slowDisk1OnDn0 = dn0.getFSDataset().getFsVolumeReferences().getReference(1)
+        .getVolume().getBaseURI().getPath();
+    String slowDisk1OnDn1 = dn1.getFSDataset().getFsVolumeReferences().getReference(1)
+        .getVolume().getBaseURI().getPath();
+    String slowDisk1OnDn2 = dn2.getFSDataset().getFsVolumeReferences().getReference(1)
+        .getVolume().getBaseURI().getPath();
+
+    dn0.getDiskMetrics().addSlowDiskForTesting(slowDisk0OnDn0, ImmutableMap.of(
         SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
         SlowDiskReports.DiskOp.METADATA, 2.0));
-    dn1.getDiskMetrics().addSlowDiskForTesting(slowDiskOnDn1, ImmutableMap.of(
+    dn1.getDiskMetrics().addSlowDiskForTesting(slowDisk0OnDn1, ImmutableMap.of(
         SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
         SlowDiskReports.DiskOp.METADATA, 2.0));
-    dn2.getDiskMetrics().addSlowDiskForTesting(slowDiskOnDn2, ImmutableMap.of(
+    dn2.getDiskMetrics().addSlowDiskForTesting(slowDisk0OnDn2, ImmutableMap.of(
         SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.5,
         SlowDiskReports.DiskOp.METADATA, 2.0));
+
+    dn0.getDiskMetrics().addSlowDiskForTesting(slowDisk1OnDn0, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.0,
+        SlowDiskReports.DiskOp.METADATA, 1.0));
+    dn1.getDiskMetrics().addSlowDiskForTesting(slowDisk1OnDn1, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.0,
+        SlowDiskReports.DiskOp.METADATA, 1.0));
+    dn2.getDiskMetrics().addSlowDiskForTesting(slowDisk1OnDn2, ImmutableMap.of(
+        SlowDiskReports.DiskOp.READ, 1.0, SlowDiskReports.DiskOp.WRITE, 1.0,
+        SlowDiskReports.DiskOp.METADATA, 1.0));
 
     // Wait until the data on the slow disk is collected successfully.
-    Thread.sleep(5000);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override public Boolean get() {
+        return dn0.getDiskMetrics().getSlowDisksToBeExcluded().size() == 1 &&
+            dn1.getDiskMetrics().getSlowDisksToBeExcluded().size() == 1 &&
+            dn2.getDiskMetrics().getSlowDisksToBeExcluded().size() == 1;
+      }
+    }, 1000, 5000);
 
     // Create a file with 3 replica.
     DFSTestUtil.createFile(fs, new Path("/file0"), false, BUFFER_LENGTH, 1000,
@@ -693,13 +716,13 @@ public class TestFsVolumeList {
 
     // Asserts that the number of blocks created on a slow disk is 0.
     Assert.assertEquals(0, dn0.getVolumeReport().stream()
-        .filter(v -> (v.getPath() + "/").equals(slowDiskOnDn0)).collect(Collectors.toList()).get(0)
+        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn0)).collect(Collectors.toList()).get(0)
         .getNumBlocks());
     Assert.assertEquals(0, dn1.getVolumeReport().stream()
-        .filter(v -> (v.getPath() + "/").equals(slowDiskOnDn1)).collect(Collectors.toList()).get(0)
+        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn1)).collect(Collectors.toList()).get(0)
         .getNumBlocks());
     Assert.assertEquals(0, dn2.getVolumeReport().stream()
-        .filter(v -> (v.getPath() + "/").equals(slowDiskOnDn2)).collect(Collectors.toList()).get(0)
+        .filter(v -> (v.getPath() + "/").equals(slowDisk0OnDn2)).collect(Collectors.toList()).get(0)
         .getNumBlocks());
   }
 }
