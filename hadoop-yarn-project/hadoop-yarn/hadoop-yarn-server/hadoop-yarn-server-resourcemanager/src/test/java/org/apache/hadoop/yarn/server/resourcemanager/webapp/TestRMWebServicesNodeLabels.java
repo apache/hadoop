@@ -174,21 +174,18 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     response = getNodeLabelMappings(r);
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
-    assertEquals(2, labelsToNodesInfo.getLabelsToNodes().size());
-    NodeIDsInfo nodes = labelsToNodesInfo.getLabelsToNodes().get(
-        new NodeLabelInfo(LABEL_B, false));
-    assertTrue(nodes.getNodeIDs().contains(NODE_2));
-    assertTrue(nodes.getNodeIDs().contains(NODE_1));
-    nodes = labelsToNodesInfo.getLabelsToNodes().get(new NodeLabelInfo(LABEL_A));
-    assertTrue(nodes.getNodeIDs().contains(NODE_0));
-
+    assertLabelsToNodesInfo(labelsToNodesInfo, 2, Lists.newArrayList(
+        Pair.of(Pair.of(LABEL_B, false), Lists.newArrayList(NODE_1, NODE_2)),
+        Pair.of(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY), Lists.newArrayList(NODE_0))
+    ));
+    
     // Verify, using get-labels-to-Nodes for specified set of labels
     response = getNodeLabelMappingsByLabels(r, LABEL_A);
     assertApplicationJsonUtf8Response(response);
     labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
-    assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
-    nodes = labelsToNodesInfo.getLabelsToNodes().get(new NodeLabelInfo(LABEL_A));
-    assertTrue(nodes.getNodeIDs().contains(NODE_0));
+    assertLabelsToNodesInfo(labelsToNodesInfo, 1, Lists.newArrayList(
+        Pair.of(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY), Lists.newArrayList(NODE_0))
+    ));
 
     // Verify
     response = getLabelsOfNode(r, NODE_0);
@@ -334,6 +331,22 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoAtPosition(response.getEntity(NodeLabelsInfo.class),
         Pair.of(LABEL_Z, false), 0);
     assertNodeLabelsSize(nodeLabelsInfo, 1);
+  }
+
+  private void assertLabelsToNodesInfo(LabelsToNodesInfo labelsToNodesInfo, int size, 
+      List<Pair<Pair<String, Boolean>, List<String>>> nodeLabelsToNodesList) {
+    assertEquals(size, labelsToNodesInfo.getLabelsToNodes().size());
+
+    for (Pair<Pair<String, Boolean>, List<String>> nodeLabelToNodes : nodeLabelsToNodesList) {
+      Pair<String, Boolean> expectedNLData = nodeLabelToNodes.getLeft();
+      List<String> expectedNodes = nodeLabelToNodes.getRight();
+      NodeLabelInfo expectedNLInfo = new NodeLabelInfo(expectedNLData.getLeft(), expectedNLData.getRight());
+      NodeIDsInfo actualNodes = labelsToNodesInfo.getLabelsToNodes().get(expectedNLInfo);
+      assertNotNull(actualNodes);
+      for (String expectedNode : expectedNodes) {
+        assertTrue(actualNodes.getNodeIDs().contains(expectedNode));  
+      }
+    }
   }
 
   private void assertNodeLabelsInfo(NodeLabelsInfo nodeLabelsInfo, List<Pair<String, Boolean>> nlInfos) {
@@ -603,10 +616,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     response = getNodeLabelMappings(r);
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
-    assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
-    NodeIDsInfo nodes = labelsToNodesInfo.getLabelsToNodes().get(
-        new NodeLabelInfo(LABEL_A));
-    assertTrue(nodes.getNodeIDs().contains("nodeId:0"));
+    assertLabelsToNodesInfo(labelsToNodesInfo, 1, Lists.newArrayList(
+        Pair.of(Pair.of(LABEL_A, DEFAULT_NL_EXCLUSIVITY), Lists.newArrayList("nodeId:0"))
+    ));
+    NodeIDsInfo nodes = labelsToNodesInfo.getLabelsToNodes().get(new NodeLabelInfo(LABEL_A));
     assertNotNull(nodes.getPartitionInfo());
     assertNotNull(nodes.getPartitionInfo().getResourceAvailable());
   }
