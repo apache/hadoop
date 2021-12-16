@@ -154,19 +154,16 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add labels to a node
     response = replaceLabelsOnNode(r, "nid:0", "a");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
 
     // Add labels to another node
     response = replaceLabelsOnNode(r, "nid1:0", "b");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
 
     // Add labels to another node
     response = replaceLabelsOnNode(r, "nid2:0", "b");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
 
-    // Verify, using get-labels-to-Nodes
+    // Verify all, using get-labels-to-Nodes
     response = getNodeLabelMappings(r);
     assertApplicationJsonUtf8Response(response);
     LabelsToNodesInfo labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
@@ -196,7 +193,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Replace
     response = replaceLabelsOnNode(r, "nid:0", "b");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
 
     // Verify
     response = getLabelsOfNode(r, "nid:0");
@@ -226,7 +222,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Remove all
     response = replaceLabelsOnNode(r, "nid:0", "");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
     // Verify
     response = getLabelsOfNode(r, "nid:0");
     assertApplicationJsonUtf8Response(response);
@@ -235,7 +230,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Add a label back for auth tests
     response = replaceLabelsOnNode(r, "nid:0", "a");
     assertHttp200(response);
-    LOG.info("posted node nodelabel");
 
     // Verify
     response = getLabelsOfNode(r, "nid:0");
@@ -326,7 +320,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .entity("{\"nodeLabelName\": [\"x\"]}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
     assertHttp404(response);
-    LOG.info("posted node nodelabel");
 
     // Verify, using node-to-labels that previous operation has failed
     response =
@@ -345,8 +338,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Verify
     response = getNodeLabels(r);
     assertApplicationJsonUtf8Response(response);
-    assertNodeLabelsInfoAtPosition(response.getEntity(NodeLabelsInfo.class),
-        Pair.of("y", false), 0);
+    assertNodeLabelsInfoAtPosition(response.getEntity(NodeLabelsInfo.class), Pair.of("y", false), 0);
 
     // Remove y
     response = removeNodeLabel(r, "y");
@@ -357,7 +349,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsSize(response.getEntity(NodeLabelsInfo.class), 0);
 
-    // add a new nodelabel with exclusivity
+    // add a new nodelabel with exclusivity=false
     response = addNodeLabels(r, Lists.newArrayList(Pair.of("z", false)));
     assertHttp200(response);
     // Verify
@@ -435,6 +427,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private ClientResponse replaceLabelsOnNodeWithUserName(WebResource r, String node, String userName, String... labelNames) {
+    LOG.info("Replacing labels on node '{}', label(s): {}", node, labelNames);
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
     return r.path("ws").path("v1").path("cluster")
         .path("nodes").path(node)
