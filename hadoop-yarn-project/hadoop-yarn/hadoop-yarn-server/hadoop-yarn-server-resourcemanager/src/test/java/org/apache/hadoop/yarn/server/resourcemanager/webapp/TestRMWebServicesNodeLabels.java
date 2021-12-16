@@ -28,6 +28,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,6 +135,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .entity(toJson(nlsifo, NodeLabelsInfo.class),
                 MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
 
     // Verify
     response =
@@ -159,7 +161,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .entity(toJson(nlsifo, NodeLabelsInfo.class),
                 MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
-
+    assertHttp200(response);
+    
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -187,6 +190,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
@@ -200,6 +204,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Add labels to another node
@@ -213,6 +218,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Verify, using get-labels-to-Nodes
@@ -270,6 +276,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Verify
@@ -298,6 +305,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .entity(toJson(ntli, NodeToLabelsEntryList.class),
               MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
         
     // Verify, using node-to-labels
     response =
@@ -322,6 +330,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
     // Verify
     response =
@@ -345,6 +354,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     // Verify
@@ -369,6 +379,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp401(response);
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -387,6 +398,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON)
             .entity("{\"nodeLabels\":\"c\"}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp401(response);
 
     // Verify
     response =
@@ -408,6 +420,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -432,6 +445,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -457,6 +471,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON)
             .entity(toJson(nlsifo, NodeLabelsInfo.class),
                 MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    assertHttp200(response);
     // Reset for testing : Add labels to a node
     params = new MultivaluedMapImpl();
     params.add("labels", "y");
@@ -466,6 +481,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     LOG.info("posted node nodelabel");
 
     //setting rmWebService for non Centralized NodeLabel Configuration
@@ -486,6 +502,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON)
             .entity(toJson(ntli, NodeToLabelsEntryList.class),
                 MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
     response =
@@ -507,6 +524,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON)
             .entity("{\"nodeLabelName\": [\"x\"]}", MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp404(response);
     LOG.info("posted node nodelabel");
 
     // Verify, using node-to-labels that previous operation has failed
@@ -532,6 +550,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -555,6 +574,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
 
     // Verify
     response =
@@ -578,7 +598,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON)
             .entity(toJson(nlsifo, NodeLabelsInfo.class),
                 MediaType.APPLICATION_JSON).post(ClientResponse.class);
-
+    assertHttp200(response);
     // Verify
     response =
         r.path("ws").path("v1").path("cluster")
@@ -590,6 +610,18 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals("z", nlsifo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nlsifo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nlsifo.getNodeLabels().size());
+  }
+
+  private void assertHttp200(ClientResponse response) {
+    assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  private void assertHttp401(ClientResponse response) {
+    assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
+  }
+
+  private void assertHttp404(ClientResponse response) {
+    assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
   }
 
   @Test
@@ -624,6 +656,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .entity(toJson(nlsifo, NodeLabelsInfo.class),
             MediaType.APPLICATION_JSON)
         .post(ClientResponse.class);
+    assertHttp200(response);
     // new info and change exclusivity
     NodeLabelsInfo nlsinfo2 = new NodeLabelsInfo();
     nlsinfo2.getNodeLabelsInfo().add(new NodeLabelInfo("newlabel", false));
@@ -708,6 +741,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .accept(MediaType.APPLICATION_JSON)
             .entity(toJson(nlsifo, NodeLabelsInfo.class), MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
 
     // Verify partition info in get-node-labels
     response =
@@ -736,6 +770,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             .queryParams(params)
             .accept(MediaType.APPLICATION_JSON)
             .post(ClientResponse.class);
+    assertHttp200(response);
 
     // Verify partition info in label-mappings
     response =
