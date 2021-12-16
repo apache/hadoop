@@ -125,7 +125,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   @Test
   public void testNodeLabels() throws Exception {
     WebResource r = resource();
-
     ClientResponse response;
 
     // Add a label
@@ -176,7 +175,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertTrue(nodes.getNodeIDs().contains("nid:0"));
 
     // Verify, using get-labels-to-Nodes for specified set of labels
-    response = getNodeLabelMappings(r, "a");
+    response = getNodeLabelMappingsByLabels(r, "a");
     assertApplicationJsonUtf8Response(response);
     labelsToNodesInfo = response.getEntity(LabelsToNodesInfo.class);
     assertEquals(1, labelsToNodesInfo.getLabelsToNodes().size());
@@ -188,7 +187,6 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertApplicationJsonUtf8Response(response);
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class), 
         Pair.of("a", DEFAULT_NL_EXCLUSIVITY));
-
     
     // Replace
     response = replaceLabelsOnNode(r, "nid:0", "b");
@@ -414,7 +412,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return response;
   }
 
-  private ClientResponse getNodeLabelMappings(WebResource r, String... labelNames) {
+  private ClientResponse getNodeLabelMappingsByLabels(WebResource r, String... labelNames) {
     MultivaluedMapImpl params = createMultiValuedMap(labelNames);
     return r.path("ws").path("v1").path("cluster")
         .path("label-mappings").queryParam("user.name", userName)
