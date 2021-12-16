@@ -51,6 +51,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-timelineservice</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- This is needed for GenericObjectMapper in GenericConverter -->
@@ -67,6 +73,12 @@
       <artifactId>hadoop-common</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
@@ -81,6 +93,10 @@
           <groupId>org.mortbay.jetty</groupId>
           <artifactId>jetty-util</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -88,6 +104,12 @@
       <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>hadoop-shaded-guava</artifactId>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${hbase-compatible-guava.version}</version>
     </dependency>
 
     <dependency>

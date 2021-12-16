@@ -117,7 +117,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
-  protected CapacitySchedulerContext csContext;
+  protected CapacitySchedulerQueueContext queueContext;
   protected YarnAuthorizationProvider authorizer = null;
 
   protected ActivitiesManager activitiesManager;
@@ -131,33 +131,40 @@ public abstract class AbstractCSQueue implements CSQueue {
   // is it a dynamic queue?
   private boolean dynamicQueue = false;
 
-  public AbstractCSQueue(CapacitySchedulerContext cs,
-      String queueName, CSQueue parent, CSQueue old) throws IOException {
-    this(cs, cs.getConfiguration(), queueName, parent, old);
-  }
-
-  public AbstractCSQueue(CapacitySchedulerContext cs,
-      CapacitySchedulerConfiguration configuration, String queueName,
+  public AbstractCSQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       CSQueue parent, CSQueue old) {
-    this.labelManager = cs.getRMContext().getNodeLabelManager();
     this.parent = parent;
     this.queuePath = createQueuePath(parent, queueName);
-    this.resourceCalculator = cs.getResourceCalculator();
-    this.activitiesManager = cs.getActivitiesManager();
+
+    this.queueContext = queueContext;
+    this.resourceCalculator = queueContext.getResourceCalculator();
+    this.activitiesManager = queueContext.getActivitiesManager();
+    this.labelManager = queueContext.getLabelManager();
 
     // must be called after parent and queueName is set
     CSQueueMetrics metrics = old != null ?
         (CSQueueMetrics) old.getMetrics() :
         CSQueueMetrics.forQueue(getQueuePath(), parent,
-            cs.getConfiguration().getEnableUserMetrics(), configuration);
-    usageTracker = new CSQueueUsageTracker(metrics);
-    this.csContext = cs;
-    this.queueAllocationSettings = new QueueAllocationSettings(csContext);
-    queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
-    queueCapacities = new QueueCapacities(parent == null);
+            queueContext.getConfiguration().getEnableUserMetrics(),
+            queueContext.getConfiguration());
+    this.usageTracker = new CSQueueUsageTracker(metrics);
+
+    this.queueCapacities = new QueueCapacities(parent == null);
+    this.queueAllocationSettings = new QueueAllocationSettings(queueContext.getMinimumAllocation());
+
+    this.queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
+
+    this.resourceTypes = new HashSet<>();
+    for (AbsoluteResourceType type : AbsoluteResourceType.values()) {
+      this.resourceTypes.add(type.toString().toLowerCase());
+    }
+
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    readLock = lock.readLock();
-    writeLock = lock.writeLock();
+    this.readLock = lock.readLock();
+    this.writeLock = lock.writeLock();
+
+    LOG.debug("Initialized {}: name={}, fullname={}", this.getClass().getSimpleName(),
+        queueName, getQueuePath());
   }
 
   private static QueuePath createQueuePath(CSQueue parent, String queueName) {
@@ -167,15 +174,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return new QueuePath(parent.getQueuePath(), queueName);
   }
 
-  @VisibleForTesting
   protected void setupConfigurableCapacities() {
-    setupConfigurableCapacities(csContext.getConfiguration());
-  }
-
-  protected void setupConfigurableCapacities(
-      CapacitySchedulerConfiguration configuration) {
     CSQueueUtils.loadCapacitiesByLabelsFromConf(queuePath, queueCapacities,
-        configuration, this.queueNodeLabelsSettings.getConfiguredNodeLabels());
+        queueContext.getConfiguration(), this.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 
   @Override
@@ -262,6 +263,10 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueEntity;
   }
 
+  public CapacitySchedulerQueueContext getQueueContext() {
+    return queueContext;
+  }
+
   public Set<String> getAccessibleNodeLabels() {
     return queueNodeLabelsSettings.getAccessibleNodeLabels();
   }
@@ -324,52 +329,48 @@ public abstract class AbstractCSQueue implements CSQueue {
     return this.queueNodeLabelsSettings.getDefaultLabelExpression();
   }
 
-  protected void setupQueueConfigs(Resource clusterResource,
-      CapacitySchedulerConfiguration configuration) throws
+  protected void setupQueueConfigs(Resource clusterResource) throws
       IOException {
 
     writeLock.lock();
     try {
+      CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
-        setDynamicQueueProperties(configuration);
+        setDynamicQueueProperties();
       }
 
       // Collect and set the Node label configuration
       this.queueNodeLabelsSettings = new QueueNodeLabelsSettings(configuration, parent,
-          getQueuePath(), csContext);
+          getQueuePath(), queueContext.getQueueManager().getConfiguredNodeLabelsForAllQueues());
 
       // Initialize the queue capacities
-      setupConfigurableCapacities(configuration);
+      setupConfigurableCapacities();
       updateAbsoluteCapacities();
-
       updateCapacityConfigType();
 
       // Fetch minimum/maximum resource limits for this queue if
       // configured
-      this.resourceTypes = new HashSet<>();
-      for (AbsoluteResourceType type : AbsoluteResourceType.values()) {
-        resourceTypes.add(type.toString().toLowerCase());
-      }
       updateConfigurableResourceLimits(clusterResource);
 
       // Setup queue's maximumAllocation respecting the global
       // and the queue settings
       this.queueAllocationSettings.setupMaximumAllocation(configuration, getQueuePath(),
-          parent, csContext);
+          parent);
 
       // Initialize the queue state based on previous state, configured state
       // and its parent state
-      initializeQueueState(configuration);
+      initializeQueueState();
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
 
       this.acls = configuration.getAcls(getQueuePath());
 
-      this.userWeights = getUserWeightsFromHierarchy(configuration);
+      this.userWeights = getUserWeightsFromHierarchy();
 
       this.reservationsContinueLooking =
           configuration.getReservationContinueLook();
-      this.configuredCapacityVectors = csContext.getConfiguration()
+
+      this.configuredCapacityVectors = configuration
           .parseConfiguredResourceVector(queuePath.getFullPath(),
               this.queueNodeLabelsSettings.getConfiguredNodeLabels());
 
@@ -378,7 +379,7 @@ public abstract class AbstractCSQueue implements CSQueue {
           this, labelManager, null);
 
       // Store preemption settings
-      this.preemptionSettings = new CSQueuePreemptionSettings(this, csContext, configuration);
+      this.preemptionSettings = new CSQueuePreemptionSettings(this, configuration);
       this.priority = configuration.getQueuePriority(
           getQueuePath());
 
@@ -396,32 +397,30 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   /**
    * Set properties specific to dynamic queues.
-   * @param configuration configuration on which the properties are set
    */
-  protected void setDynamicQueueProperties(
-      CapacitySchedulerConfiguration configuration) {
+  protected void setDynamicQueueProperties() {
     // Set properties from parent template
     if (parent instanceof ParentQueue) {
       ((ParentQueue) parent).getAutoCreatedQueueTemplate()
-          .setTemplateEntriesForChild(configuration, getQueuePath());
+          .setTemplateEntriesForChild(queueContext.getConfiguration(), getQueuePath());
 
       String parentTemplate = String.format("%s.%s", parent.getQueuePath(),
           AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX);
       parentTemplate = parentTemplate.substring(0, parentTemplate.lastIndexOf(
           DOT));
-      Set<String> parentNodeLabels = csContext
-          .getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+      Set<String> parentNodeLabels = queueContext.getQueueManager()
+          .getConfiguredNodeLabelsForAllQueues()
           .getLabelsByQueue(parentTemplate);
 
       if (parentNodeLabels != null && parentNodeLabels.size() > 1) {
-        csContext.getCapacitySchedulerQueueManager().getConfiguredNodeLabels()
+        queueContext.getQueueManager()
+            .getConfiguredNodeLabelsForAllQueues()
             .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
       }
     }
   }
 
-  private UserWeights getUserWeightsFromHierarchy(
-      CapacitySchedulerConfiguration configuration) {
+  private UserWeights getUserWeightsFromHierarchy() {
     UserWeights unionInheritedWeights = UserWeights.createEmpty();
     CSQueue parentQ = parent;
     if (parentQ != null) {
@@ -431,25 +430,23 @@ public abstract class AbstractCSQueue implements CSQueue {
     // Insert this queue's userWeights, overriding parent's userWeights if
     // there is an overlap.
     unionInheritedWeights.addFrom(
-        configuration.getAllUserWeightsForQueue(getQueuePath()));
+        queueContext.getConfiguration().getAllUserWeightsForQueue(getQueuePath()));
     return unionInheritedWeights;
   }
 
   protected Resource getMinimumAbsoluteResource(String queuePath, String label) {
-    Resource minResource = csContext.getConfiguration()
+    return queueContext.getConfiguration()
         .getMinimumResourceRequirement(label, queuePath, resourceTypes);
-    return minResource;
   }
 
   protected Resource getMaximumAbsoluteResource(String queuePath, String label) {
-    Resource maxResource = csContext.getConfiguration()
+    return queueContext.getConfiguration()
         .getMaximumResourceRequirement(label, queuePath, resourceTypes);
-    return maxResource;
   }
 
   protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
       String label) {
-    return csContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
+    return queueContext.getConfiguration().checkConfigTypeIsAbsoluteResource(label,
         queuePath, resourceTypes);
   }
 
@@ -566,9 +563,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return configuredCapacityVectors.get(label);
   }
 
-  private void initializeQueueState(CapacitySchedulerConfiguration configuration) {
+  private void initializeQueueState() {
     QueueState previousState = getState();
-    QueueState configuredState = configuration
+    QueueState configuredState = queueContext.getConfiguration()
         .getConfiguredState(getQueuePath());
     QueueState parentState = (parent == null) ? null : parent.getState();
 
@@ -743,7 +740,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   @Private
-  public boolean getReservationContinueLooking() {
+  public boolean isReservationsContinueLooking() {
     return reservationsContinueLooking;
   }
 
@@ -764,7 +761,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   @Private
   public boolean getIntraQueuePreemptionDisabled() {
-    return preemptionSettings.getIntraQueuePreemptionDisabled();
+    return preemptionSettings.isIntraQueuePreemptionDisabled();
   }
 
   @Private
@@ -1026,12 +1023,12 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   public Resource getTotalKillableResource(String partition) {
-    return csContext.getPreemptionManager().getKillableResource(getQueuePath(),
+    return queueContext.getPreemptionManager().getKillableResource(getQueuePath(),
         partition);
   }
 
   public Iterator<RMContainer> getKillableContainers(String partition) {
-    return csContext.getPreemptionManager().getKillableContainers(
+    return queueContext.getPreemptionManager().getKillableContainers(
         getQueuePath(),
         partition);
   }
@@ -1383,7 +1380,7 @@ public abstract class AbstractCSQueue implements CSQueue {
     long idleDurationSeconds =
         (Time.monotonicNow() - getLastSubmittedTimestamp())/1000;
     return isDynamicQueue() && isEligibleForAutoDeletion() &&
-        (idleDurationSeconds > this.csContext.getConfiguration().
+        (idleDurationSeconds > queueContext.getConfiguration().
             getAutoExpiredDeletionTime());
   }
 

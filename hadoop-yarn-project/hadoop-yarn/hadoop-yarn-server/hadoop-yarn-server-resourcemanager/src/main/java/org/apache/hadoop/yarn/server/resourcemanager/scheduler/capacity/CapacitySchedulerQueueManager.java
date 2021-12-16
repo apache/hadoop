@@ -106,6 +106,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return this.root;
   }
 
+  @VisibleForTesting
+  protected void setRootQueue(CSQueue rootQueue) {
+    this.root = rootQueue;
+  }
+
   @Override
   public Map<String, CSQueue> getQueues() {
     return queues.getFullNameQueues();
@@ -167,7 +172,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
   public void initializeQueues(CapacitySchedulerConfiguration conf)
     throws IOException {
     configuredNodeLabels = new ConfiguredNodeLabels(conf);
-    root = parseQueue(this.csContext, conf, null,
+    root = parseQueue(this.csContext.getQueueContext(), conf, null,
         CapacitySchedulerConfiguration.ROOT, queues, queues, NOOP);
     setQueueAcls(authorizer, appPriorityACLManager, queues);
     labelManager.reinitializeQueueLabels(getQueueToLabels());
@@ -183,7 +188,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     // Parse new queues
     CSQueueStore newQueues = new CSQueueStore();
     configuredNodeLabels = new ConfiguredNodeLabels(newConf);
-    CSQueue newRoot = parseQueue(this.csContext, newConf, null,
+    CSQueue newRoot = parseQueue(this.csContext.getQueueContext(), newConf, null,
         CapacitySchedulerConfiguration.ROOT, newQueues, queues, NOOP);
 
     // When failing over, if using configuration store, don't validate queue
@@ -215,7 +220,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
   /**
    * Parse the queue from the configuration.
-   * @param csContext the CapacitySchedulerContext
+   * @param queueContext the CapacitySchedulerQueueContext
    * @param conf the CapacitySchedulerConfiguration
    * @param parent the parent queue
    * @param queueName the queue name
@@ -226,7 +231,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws IOException
    */
   static CSQueue parseQueue(
-      CapacitySchedulerContext csContext,
+      CapacitySchedulerQueueContext queueContext,
       CapacitySchedulerConfiguration conf,
       CSQueue parent, String queueName,
       CSQueueStore newQueues,
@@ -265,7 +270,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       // Check if the queue will be dynamically managed by the Reservation
       // system
       if (isReservableQueue) {
-        queue = new PlanQueue(csContext, queueName, parent,
+        queue = new PlanQueue(queueContext, queueName, parent,
             oldQueues.get(fullQueueName));
 
         //initializing the "internal" default queue, for SLS compatibility
@@ -273,7 +278,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
             queueName + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
 
         List<CSQueue> childQueues = new ArrayList<>();
-        ReservationQueue resQueue = new ReservationQueue(csContext,
+        ReservationQueue resQueue = new ReservationQueue(queueContext,
             defReservationId, (PlanQueue) queue);
         try {
           resQueue.setEntitlement(new QueueEntitlement(1.0f, 1.0f));
@@ -285,11 +290,11 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         newQueues.add(resQueue);
 
       } else if (isAutoCreateEnabled) {
-        queue = new ManagedParentQueue(csContext, queueName, parent,
+        queue = new ManagedParentQueue(queueContext, queueName, parent,
             oldQueues.get(fullQueueName));
 
       } else{
-        queue = new LeafQueue(csContext, queueName, parent,
+        queue = new LeafQueue(queueContext, queueName, parent,
             oldQueues.get(fullQueueName));
         // Used only for unit tests
         queue = hook.hook(queue);
@@ -302,10 +307,10 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       ParentQueue parentQueue;
       if (isAutoCreateEnabled) {
-        parentQueue = new ManagedParentQueue(csContext, queueName, parent,
+        parentQueue = new ManagedParentQueue(queueContext, queueName, parent,
             oldQueues.get(fullQueueName));
       } else{
-        parentQueue = new ParentQueue(csContext, queueName, parent,
+        parentQueue = new ParentQueue(queueContext, queueName, parent,
             oldQueues.get(fullQueueName));
       }
 
@@ -314,7 +319,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
 
       List<CSQueue> childQueues = new ArrayList<>();
       for (String childQueueName : childQueueNames) {
-        CSQueue childQueue = parseQueue(csContext, conf, queue, childQueueName,
+        CSQueue childQueue = parseQueue(queueContext, conf, queue, childQueueName,
             newQueues, oldQueues, hook);
         childQueues.add(childQueue);
       }
@@ -375,8 +380,8 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
       permissions.add(
           new Permission(csQueue.getPrivilegedEntity(), csQueue.getACLs()));
 
-      if (queue instanceof LeafQueue) {
-        LeafQueue lQueue = (LeafQueue) queue;
+      if (queue instanceof AbstractLeafQueue) {
+        AbstractLeafQueue lQueue = (AbstractLeafQueue) queue;
 
         // Clear Priority ACLs first since reinitialize also call same.
         appPriorityACLManager.clearPriorityACLs(lQueue.getQueuePath());
@@ -397,17 +402,17 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws YarnException if the queue does not exist or the queue
    *           is not the type of LeafQueue.
    */
-  public LeafQueue getAndCheckLeafQueue(String queue) throws YarnException {
+  public AbstractLeafQueue getAndCheckLeafQueue(String queue) throws YarnException {
     CSQueue ret = this.getQueue(queue);
     if (ret == null) {
       throw new YarnException("The specified Queue: " + queue
           + " doesn't exist");
     }
-    if (!(ret instanceof LeafQueue)) {
+    if (!(ret instanceof AbstractLeafQueue)) {
       throw new YarnException("The specified Queue: " + queue
           + " is not a Leaf Queue.");
     }
-    return (LeafQueue) ret;
+    return (AbstractLeafQueue) ret;
   }
 
   /**
@@ -527,7 +532,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * @throws YarnException if the given path is not eligible to be auto created
    * @throws IOException if the given path can not be added to the parent
    */
-  public LeafQueue createQueue(QueuePath queue)
+  public AbstractLeafQueue createQueue(QueuePath queue)
       throws YarnException, IOException {
     String leafQueueName = queue.getLeafName();
     String parentQueueName = queue.getParent();
@@ -633,7 +638,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
    * for all queues.
    * @return configured node labels
    */
-  public ConfiguredNodeLabels getConfiguredNodeLabels() {
+  public ConfiguredNodeLabels getConfiguredNodeLabelsForAllQueues() {
     return configuredNodeLabels;
   }
 
@@ -668,7 +673,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
     return leafQueue;
   }
 
-  private LeafQueue createLegacyAutoQueue(QueuePath queue)
+  private AbstractLeafQueue createLegacyAutoQueue(QueuePath queue)
       throws IOException, SchedulerDynamicEditException {
     CSQueue parentQueue = getQueue(queue.getParent());
     // Case 1: Handle ManagedParentQueue
@@ -676,7 +681,7 @@ public class CapacitySchedulerQueueManager implements SchedulerQueueManager<
         (ManagedParentQueue) parentQueue;
     AutoCreatedLeafQueue autoCreatedLeafQueue =
         new AutoCreatedLeafQueue(
-            csContext, queue.getLeafName(), autoCreateEnabledParentQueue);
+            csContext.getQueueContext(), queue.getLeafName(), autoCreateEnabledParentQueue);
 
     addLegacyDynamicQueue(autoCreatedLeafQueue);
     return autoCreatedLeafQueue;
