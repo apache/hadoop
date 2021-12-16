@@ -289,12 +289,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoDoesNotContain(nodeLabelsInfo, Pair.of("x", false));
 
     // Case2 : failure to Replace labels using replace-labels
-    response =
-        r.path("ws").path("v1").path("cluster").path("nodes").path("nid:0")
-            .path("replace-labels").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity("{\"nodeLabelName\": [\"x\"]}", MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceLabelsOnNode(r, "nid:0", "x");
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
