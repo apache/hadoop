@@ -2692,10 +2692,10 @@ public class TestConfiguration {
 
   @Test
   public void testConcurrentModificationDuringIteration() throws InterruptedException {
-    Configuration conf = new Configuration();
+    Configuration configuration = new Configuration();
     new Thread(() -> {
       while (true) {
-        conf.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
+        configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
       }
     }).start();
 
@@ -2704,7 +2704,7 @@ public class TestConfiguration {
     new Thread(() -> {
       while (true) {
         try {
-          conf.iterator();
+          configuration.iterator();
         } catch (final ConcurrentModificationException e) {
           exceptionOccurred.set(true);
           break;
