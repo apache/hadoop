@@ -360,13 +360,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Remove cluster label (succeed, we no longer need it)
     params = new MultivaluedMapImpl();
     params.add("labels", "b");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("remove-node-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = removeNodeLabel(r, params);
     assertHttp200(response);
     // Verify
     response = getNodeLabels(r);
@@ -381,13 +375,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Remove cluster label with post
     params = new MultivaluedMapImpl();
     params.add("labels", "a");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("remove-node-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = removeNodeLabel(r, params);
     assertHttp200(response);
     // Verify
     response = getNodeLabels(r);
@@ -472,13 +460,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     //  Case3 : Remove cluster label should be successful
     params = new MultivaluedMapImpl();
     params.add("labels", "x");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("remove-node-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = removeNodeLabel(r, params);
     assertHttp200(response);
     // Verify
     response = getNodeLabels(r);
@@ -492,13 +474,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     // Remove y
     params = new MultivaluedMapImpl();
     params.add("labels", "y");
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("remove-node-labels")
-            .queryParam("user.name", userName)
-            .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = removeNodeLabel(r, params);
     assertHttp200(response);
 
     // Verify
@@ -519,6 +495,18 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals("z", nodeLabelsInfo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nodeLabelsInfo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
+  }
+
+  private ClientResponse removeNodeLabel(WebResource r, MultivaluedMapImpl params) {
+    ClientResponse response;
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("remove-node-labels")
+            .queryParam("user.name", userName)
+            .queryParams(params)
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    return response;
   }
 
   private ClientResponse getLabelsOfNode(WebResource r, String node) {
@@ -641,10 +629,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     ClientResponse response;
     MultivaluedMapImpl params = new MultivaluedMapImpl();
     params.add("labels", "irealldontexist");
-    response =
-        r.path("ws").path("v1").path("cluster").path("remove-node-labels")
-            .queryParam("user.name", userName).queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    response = removeNodeLabel(r, params);
     String expectedMessage =
         "java.io.IOException: Node label=irealldontexist to be"
             + " removed doesn't existed in cluster node labels"
