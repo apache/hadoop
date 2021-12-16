@@ -56,7 +56,6 @@ import org.junit.Test;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
@@ -101,7 +100,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
           TestRMWebServicesAppsModification.TestRMCustomAuthFilter.class);
       serve("/*").with(GuiceContainer.class);
     }
-  };
+  }
 
   @Override
   @Before
@@ -120,7 +119,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeLabels() throws JSONException, Exception {
+  public void testNodeLabels() throws Exception {
     WebResource r = resource();
 
     ClientResponse response;
@@ -293,7 +292,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
             
     // Replace labels using node-to-labels
     NodeToLabelsEntryList ntli = new NodeToLabelsEntryList();
-    ArrayList<String> labels = new ArrayList<String>();
+    ArrayList<String> labels = new ArrayList<>();
     labels.add("a");
     NodeToLabelsEntry nli = new NodeToLabelsEntry("nid:0", labels);
     ntli.getNodeToLabels().add(nli);
@@ -489,7 +488,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
     // Case1 : Replace labels using node-to-labels
     ntli = new NodeToLabelsEntryList();
-    labels = new ArrayList<String>();
+    labels = new ArrayList<>();
     labels.add("x");
     nli = new NodeToLabelsEntry("nid:0", labels);
     ntli.getNodeToLabels().add(nli);
@@ -626,7 +625,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   @Test
   public void testLabelInvalidAddition()
-      throws UniformInterfaceException, Exception {
+      throws Exception {
     WebResource r = resource();
     ClientResponse response;
     // Add a invalid label
@@ -646,7 +645,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   @Test
   public void testLabelChangeExclusivity()
-      throws Exception, JSONException {
+      throws Exception {
     WebResource r = resource();
     ClientResponse response;
     NodeLabelsInfo nlsifo = new NodeLabelsInfo();
@@ -691,7 +690,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   @Test
   public void testLabelInvalidReplace()
-      throws UniformInterfaceException, Exception {
+      throws Exception {
     WebResource r = resource();
     ClientResponse response;
     // replace label which doesnt exist
@@ -710,7 +709,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   @Test
   public void testLabelInvalidRemove()
-      throws UniformInterfaceException, Exception {
+      throws Exception {
     WebResource r = resource();
     ClientResponse response;
     MultivaluedMapImpl params = new MultivaluedMapImpl();
