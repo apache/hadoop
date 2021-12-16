@@ -591,9 +591,9 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
       throws Exception {
     WebResource r = resource();
     ClientResponse response;
-    response = removeNodeLabel(r, "irealldontexist");
+    response = removeNodeLabel(r, "ireallydontexist");
     String expectedMessage =
-        "java.io.IOException: Node label=irealldontexist to be"
+        "java.io.IOException: Node label=ireallydontexist to be"
             + " removed doesn't existed in cluster node labels"
             + " collection.";
     validateJsonExceptionContent(response, expectedMessage);
