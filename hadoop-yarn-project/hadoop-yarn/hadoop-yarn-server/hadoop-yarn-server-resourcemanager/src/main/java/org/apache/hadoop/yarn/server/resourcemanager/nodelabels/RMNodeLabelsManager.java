@@ -176,7 +176,7 @@ public class RMNodeLabelsManager extends CommonNodeLabelsManager {
 
       if(effectiveModifiedLabelMappings.isEmpty()) {
         if (LOG.isDebugEnabled()) {
-          LOG.info("No Modified Node label Mapping to replace");
+          LOG.debug("No Modified Node label Mapping to replace");
         }
         return;
       }
