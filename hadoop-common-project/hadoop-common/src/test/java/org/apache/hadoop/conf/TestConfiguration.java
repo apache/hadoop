@@ -2137,12 +2137,12 @@ public class TestConfiguration extends TestCase {
 
   @Test
   public void testConcurrentModificationDuringIteration() throws InterruptedException {
-    final Configuration conf = new Configuration();
+    final Configuration configuration = new Configuration();
     new Thread(new Runnable() {
       @Override
       public void run() {
         while (true) {
-          conf.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
+          configuration.set(String.valueOf(Math.random()), String.valueOf(Math.random()));
         }
       }
     }).start();
@@ -2154,7 +2154,7 @@ public class TestConfiguration extends TestCase {
       public void run() {
         while (true) {
           try {
-            conf.iterator();
+            configuration.iterator();
           } catch (final ConcurrentModificationException e) {
             exceptionOccurred.set(true);
             break;

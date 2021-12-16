@@ -2696,10 +2696,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     // methods that allow non-strings to be put into configurations are removed,
     // we could replace properties with a Map<String,String> and get rid of this
     // code.
-    Properties properties = getProps();
+    Properties props = getProps();
     Map<String, String> result = new HashMap<>();
-    synchronized (properties) {
-      for (Map.Entry<Object, Object> item : properties.entrySet()) {
+    synchronized (props) {
+      for (Map.Entry<Object, Object> item : props.entrySet()) {
         if (item.getKey() instanceof String && item.getValue() instanceof String) {
           result.put((String) item.getKey(), (String) item.getValue());
         }
