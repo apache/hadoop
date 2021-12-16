@@ -228,14 +228,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     labels.add("a");
     NodeToLabelsEntry nli = new NodeToLabelsEntry("nid:0", labels);
     nodeToLabelsEntries.getNodeToLabels().add(nli);
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("replace-node-to-labels")
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
-              MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
+    response = replaceNodeToLabels(r, nodeToLabelsEntries);
     assertHttp200(response);
         
     // Verify, using node-to-labels
@@ -350,15 +343,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     labels.add("x");
     nli = new NodeToLabelsEntry("nid:0", labels);
     nodeToLabelsEntries.getNodeToLabels().add(nli);
-    response =
-        r.path("ws")
-            .path("v1")
-            .path("cluster")
-            .path("replace-node-to-labels")
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
-                MediaType.APPLICATION_JSON).post(ClientResponse.class);
+    response = replaceNodeToLabels(r, nodeToLabelsEntries);
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
@@ -433,6 +418,20 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertEquals("z", nodeLabelsInfo.getNodeLabelsInfo().get(0).getName());
     assertFalse(nodeLabelsInfo.getNodeLabelsInfo().get(0).getExclusivity());
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
+  }
+
+  private ClientResponse replaceNodeToLabels(WebResource r,
+      NodeToLabelsEntryList nodeToLabelsEntries) throws Exception {
+    ClientResponse response;
+    response =
+        r.path("ws").path("v1").path("cluster")
+            .path("replace-node-to-labels")
+            .queryParam("user.name", userName)
+            .accept(MediaType.APPLICATION_JSON)
+            .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
+              MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
+    return response;
   }
 
   private ClientResponse getNodeLabelMappings(WebResource r) {
