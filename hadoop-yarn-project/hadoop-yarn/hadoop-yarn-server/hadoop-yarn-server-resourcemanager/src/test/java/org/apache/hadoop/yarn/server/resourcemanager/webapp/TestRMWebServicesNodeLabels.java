@@ -198,12 +198,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertNodeLabelsInfoContains(response.getEntity(NodeLabelsInfo.class), Pair.of("b", false));
             
     // Replace labels using node-to-labels
-    NodeToLabelsEntryList nodeToLabelsEntries = new NodeToLabelsEntryList();
-    ArrayList<String> labels = new ArrayList<>();
-    labels.add("a");
-    NodeToLabelsEntry nli = new NodeToLabelsEntry("nid:0", labels);
-    nodeToLabelsEntries.getNodeToLabels().add(nli);
-    response = replaceNodeToLabels(r, nodeToLabelsEntries);
+    response = replaceNodeToLabels(r, Lists.newArrayList(Pair.of("nid:0", Lists.newArrayList("a"))));
     assertHttp200(response);
         
     // Verify, using node-to-labels
@@ -291,12 +286,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     rmWebService.isCentralizedNodeLabelConfiguration = false;
 
     // Case1 : Replace labels using node-to-labels
-    nodeToLabelsEntries = new NodeToLabelsEntryList();
-    labels = new ArrayList<>();
-    labels.add("x");
-    nli = new NodeToLabelsEntry("nid:0", labels);
-    nodeToLabelsEntries.getNodeToLabels().add(nli);
-    response = replaceNodeToLabels(r, nodeToLabelsEntries);
+    response = replaceNodeToLabels(r, Lists.newArrayList(Pair.of("nid:0", Lists.newArrayList("x"))));
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
@@ -390,17 +380,22 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private ClientResponse replaceNodeToLabels(WebResource r,
-      NodeToLabelsEntryList nodeToLabelsEntries) throws Exception {
-    ClientResponse response;
-    response =
-        r.path("ws").path("v1").path("cluster")
-            .path("replace-node-to-labels")
-            .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
-            .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
-              MediaType.APPLICATION_JSON)
-            .post(ClientResponse.class);
-    return response;
+      List<Pair<String, List<String>>> nodeToLabelInfos) throws Exception {
+    NodeToLabelsEntryList nodeToLabelsEntries = new NodeToLabelsEntryList();
+    
+    for (Pair<String, List<String>> nodeToLabelInfo : nodeToLabelInfos) {
+      ArrayList<String> labelList = new ArrayList<>(nodeToLabelInfo.getRight());
+      String nodeId = nodeToLabelInfo.getLeft();
+      NodeToLabelsEntry nli = new NodeToLabelsEntry(nodeId, labelList);
+      nodeToLabelsEntries.getNodeToLabels().add(nli);
+    }
+    return r.path("ws").path("v1").path("cluster")
+        .path("replace-node-to-labels")
+        .queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON)
+        .entity(toJson(nodeToLabelsEntries, NodeToLabelsEntryList.class),
+          MediaType.APPLICATION_JSON)
+        .post(ClientResponse.class);
   }
 
   private ClientResponse getNodeLabelMappings(WebResource r) {
