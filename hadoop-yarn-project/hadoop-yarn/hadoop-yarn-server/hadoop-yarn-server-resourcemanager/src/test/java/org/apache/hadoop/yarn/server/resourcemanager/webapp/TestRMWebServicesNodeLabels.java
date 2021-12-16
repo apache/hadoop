@@ -210,7 +210,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp200(response);
         
     // Verify, using node-to-labels
-    response = getNodeLabels(r);
+    response = getNodeToLabels(r);
     assertApplicationJsonUtf8Response(response);
     NodeToLabelsInfo nodeToLabelsInfo = response.getEntity(NodeToLabelsInfo.class);
     NodeLabelsInfo nodeLabelsInfo = nodeToLabelsInfo.getNodeToLabels().get(NODE_0);
@@ -289,7 +289,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
-    response = getNodeLabels(r);
+    response = getNodeToLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeToLabelsInfo = response.getEntity(NodeToLabelsInfo.class);
     nodeLabelsInfo = nodeToLabelsInfo.getNodeToLabels().get(NODE_0);
@@ -301,7 +301,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     assertHttp404(response);
 
     // Verify, using node-to-labels that previous operation has failed
-    response = getNodeLabels(r);
+    response = getNodeToLabels(r);
     assertApplicationJsonUtf8Response(response);
     nodeToLabelsInfo = response.getEntity(NodeToLabelsInfo.class);
     nodeLabelsInfo = nodeToLabelsInfo.getNodeToLabels().get(NODE_0);
@@ -447,6 +447,13 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private ClientResponse getNodeLabels(WebResource r) {
     return r.path("ws").path("v1").path("cluster")
         .path("get-node-labels")
+        .queryParam("user.name", userName)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+  }
+
+  private ClientResponse getNodeToLabels(WebResource r) {
+    return r.path("ws").path("v1").path("cluster")
+        .path("get-node-to-labels")
         .queryParam("user.name", userName)
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
   }
