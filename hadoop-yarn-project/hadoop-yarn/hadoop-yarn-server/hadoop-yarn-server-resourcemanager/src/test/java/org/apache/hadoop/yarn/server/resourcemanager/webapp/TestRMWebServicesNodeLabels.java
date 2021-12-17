@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -339,17 +340,21 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   private void assertLabelsToNodesInfo(LabelsToNodesInfo labelsToNodesInfo, int size,
       List<Pair<Pair<String, Boolean>, List<String>>> nodeLabelsToNodesList) {
-    assertEquals(size, labelsToNodesInfo.getLabelsToNodes().size());
+    Map<NodeLabelInfo, NodeIDsInfo> labelsToNodes = labelsToNodesInfo.getLabelsToNodes();
+    assertNotNull("Labels to nodes mapping should not be null.", labelsToNodes);
+    assertEquals("Size of label to nodes mapping is not the expected.", size, labelsToNodes.size());
 
     for (Pair<Pair<String, Boolean>, List<String>> nodeLabelToNodes : nodeLabelsToNodesList) {
       Pair<String, Boolean> expectedNLData = nodeLabelToNodes.getLeft();
       List<String> expectedNodes = nodeLabelToNodes.getRight();
       NodeLabelInfo expectedNLInfo = new NodeLabelInfo(expectedNLData.getLeft(),
           expectedNLData.getRight());
-      NodeIDsInfo actualNodes = labelsToNodesInfo.getLabelsToNodes().get(expectedNLInfo);
-      assertNotNull(actualNodes);
+      NodeIDsInfo actualNodes = labelsToNodes.get(expectedNLInfo);
+      assertNotNull(String.format("Node info not found. Expected NodeLabel data: %s",
+          expectedNLData), actualNodes);
       for (String expectedNode : expectedNodes) {
-        assertTrue(actualNodes.getNodeIDs().contains(expectedNode));
+        assertTrue(String.format("Can't find node ID in actual Node IDs list: %s",
+                actualNodes.getNodeIDs()), actualNodes.getNodeIDs().contains(expectedNode));
       }
     }
   }
@@ -361,6 +366,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     for (int i = 0; i < nodeLabelsInfo.getNodeLabelsInfo().size(); i++) {
       Pair<String, Boolean> expected = nlInfos.get(i);
       NodeLabelInfo actual = nodeLabelsInfo.getNodeLabelsInfo().get(i);
+      LOG.debug("Checking NodeLabelInfo: {}", actual);
       assertEquals(expected.getLeft(), actual.getName());
       assertEquals(expected.getRight(), actual.getExclusivity());
     }
@@ -369,6 +375,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private void assertNodeLabelsInfoAtPosition(NodeLabelsInfo nodeLabelsInfo, Pair<String,
       Boolean> nlInfo, int pos) {
     NodeLabelInfo actual = nodeLabelsInfo.getNodeLabelsInfo().get(pos);
+    LOG.debug("Checking NodeLabelInfo: {}", actual);
     assertEquals(nlInfo.getLeft(), actual.getName());
     assertEquals(nlInfo.getRight(), actual.getExclusivity());
   }
@@ -376,13 +383,17 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   private void assertNodeLabelsInfoContains(NodeLabelsInfo nodeLabelsInfo,
       Pair<String, Boolean> nlInfo) {
     NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight());
-    assertTrue(nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo));
+    assertTrue(String.format("Cannot find nodeLabelInfo '%s' among items of node label info list:" +
+            " %s", nodeLabelInfo, nodeLabelsInfo.getNodeLabelsInfo()),
+        nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo));
   }
 
   private void assertNodeLabelsInfoDoesNotContain(NodeLabelsInfo nodeLabelsInfo, Pair<String,
       Boolean> nlInfo) {
     NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight());
-    assertFalse(nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo));
+    assertFalse(String.format("Should have not found nodeLabelInfo '%s' among " +
+        "items of node label info list: %s", nodeLabelInfo, nodeLabelsInfo.getNodeLabelsInfo()),
+        nodeLabelsInfo.getNodeLabelsInfo().contains(nodeLabelInfo));
   }
 
   private void assertNodeLabelsSize(NodeLabelsInfo nodeLabelsInfo, int expectedSize) {
@@ -485,17 +496,17 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return addNodeLabelsInternal(r, nlInfos, userName);
   }
 
-  private ClientResponse addNodeLabelsWithUser(WebResource r, List<Pair<String, Boolean>> nlInfos
-      , String userName) throws Exception {
+  private ClientResponse addNodeLabelsWithUser(WebResource r, List<Pair<String, Boolean>> nlInfos,
+      String userName) throws Exception {
     return addNodeLabelsInternal(r, nlInfos, userName);
   }
 
-  private ClientResponse addNodeLabelsInternal(WebResource r, List<Pair<String, Boolean>> nlInfos
-      , String userName) throws Exception {
+  private ClientResponse addNodeLabelsInternal(WebResource r, List<Pair<String, Boolean>> nlInfos,
+      String userName) throws Exception {
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     for (Pair<String, Boolean> nlInfo : nlInfos) {
-      nodeLabelsInfo.getNodeLabelsInfo().add
-          (new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight()));
+      NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nlInfo.getLeft(), nlInfo.getRight());
+      nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
     }
 
     return r.path("ws").path("v1").path("cluster")
