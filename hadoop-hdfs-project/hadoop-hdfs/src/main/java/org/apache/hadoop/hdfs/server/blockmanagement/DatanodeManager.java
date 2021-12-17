@@ -2182,7 +2182,8 @@ public class DatanodeManager {
     for (int i = 0; i < reports.length; i++) {
       final DatanodeDescriptor d = datanodes.get(i);
       reports[i] = new DatanodeStorageReport(
-          new DatanodeInfoBuilder().setFrom(d).build(), d.getStorageReports());
+          new DatanodeInfoBuilder().setFrom(d).setNumBlocks(d.numBlocks()).build(),
+          d.getStorageReports());
     }
     return reports;
   }
