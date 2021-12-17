@@ -183,7 +183,8 @@ RUN apt-get -q update \
 RUN pip2 install \
     configparser==4.0.2 \
     pylint==1.9.2 \
-    isort==4.3.21
+    isort==4.3.21 \
+    lazy-object-proxy==1.6.0
 
 ####
 # Install dateutil.parser
