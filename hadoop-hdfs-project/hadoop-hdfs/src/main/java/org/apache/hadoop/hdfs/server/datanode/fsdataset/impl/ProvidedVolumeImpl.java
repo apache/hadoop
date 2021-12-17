@@ -376,7 +376,6 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     ProvidedBlockIteratorState() {
       iterStartMs = Time.now();
       lastSavedMs = iterStartMs;
-      atEnd = false;
       lastBlockId = -1L;
     }
 
@@ -387,9 +386,6 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
     // The wall-clock ms since the epoch at which this iterator was created.
     @JsonProperty
     private long iterStartMs;
-
-    @JsonProperty
-    private boolean atEnd;
 
     // The id of the last block read when the state of the iterator is saved.
     // This implementation assumes that provided blocks are returned
