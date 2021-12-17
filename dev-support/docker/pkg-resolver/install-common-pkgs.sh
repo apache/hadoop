@@ -19,4 +19,4 @@
 ######
 # Install pylint and python-dateutil
 ######
-pip2 install configparser==4.0.2 pylint==1.9.2 isort==4.3.21 python-dateutil==2.7.3
+pip2 install configparser==4.0.2 pylint==1.9.2 isort==4.3.21 lazy-object-proxy==1.6.0 python-dateutil==2.7.3
