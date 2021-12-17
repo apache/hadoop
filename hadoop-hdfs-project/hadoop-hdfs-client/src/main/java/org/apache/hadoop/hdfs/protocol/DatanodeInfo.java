@@ -699,9 +699,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
     private long nonDfsUsed = 0L;
     private long lastBlockReportTime = 0L;
     private long lastBlockReportMonotonic = 0L;
-    private int numBlocks;
+    private int numBlocks = 0;
 
-
+    // Please use setNumBlocks explicitly to set numBlocks as this method doesn't have
+    // sufficient info about numBlocks
     public DatanodeInfoBuilder setFrom(DatanodeInfo from) {
       this.capacity = from.getCapacity();
       this.dfsUsed = from.getDfsUsed();
@@ -718,7 +719,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.upgradeDomain = from.getUpgradeDomain();
       this.lastBlockReportTime = from.getLastBlockReportTime();
       this.lastBlockReportMonotonic = from.getLastBlockReportMonotonic();
-      this.numBlocks = from.getNumBlocks();
       setNodeID(from);
       return this;
     }
