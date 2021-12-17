@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -82,8 +83,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.hamcrest.MatcherAssert;
-import static org.hamcrest.core.IsCollectionContaining.hasItems;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -1730,10 +1729,9 @@ public class TestDecommission extends AdminStatesBaseTest {
             && liveDecommNodes.stream().allMatch(
                 node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)),
         500, 30000);
-    MatcherAssert.assertThat(
-        "Live decommissioning nodes not queued in DatanodeAdminManager as expected.",
-        liveDecommNodes, hasItems(decomManager.getPendingNodes().toArray(
-            new DatanodeDescriptor[decomManager.getPendingNodes().size()])));
+    assertThat(liveDecommNodes)
+        .as("Check all live decommissioning nodes queued in DatanodeAdminManager")
+        .containsAll(decomManager.getPendingNodes());
 
     // Run DatanodeAdminManager.Monitor, then validate the dead nodes are re-queued & the
     // live nodes are decommissioned
@@ -1772,10 +1770,9 @@ public class TestDecommission extends AdminStatesBaseTest {
     assertTrue("Dead nodes not DECOMMISSION_INPROGRESS as expected.",
         deadNodeProps.keySet().stream()
             .allMatch(node -> node.getAdminState().equals(AdminStates.DECOMMISSION_INPROGRESS)));
-    MatcherAssert.assertThat(
-        "Dead decommissioning nodes not queued in DatanodeAdminManager as expected.",
-        deadNodeProps.keySet(), hasItems(decomManager.getPendingNodes().toArray(
-            new DatanodeDescriptor[decomManager.getPendingNodes().size()])));
+    assertThat(deadNodeProps.keySet())
+        .as("Check all dead decommissioning nodes queued in DatanodeAdminManager")
+        .containsAll(decomManager.getPendingNodes());
 
     // Validate the 2 "dead" nodes are not removed from the tracked nodes set
     // after several seconds of operation
