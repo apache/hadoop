@@ -245,8 +245,8 @@ public abstract class BaseRouterWebServicesTest {
         null, createHttpServletRequest(user));
   }
 
-  protected Response removeFromCluserNodeLabels(String user) throws Exception {
-    return routerWebService.removeFromCluserNodeLabels(
+  protected Response removeFromClusterNodeLabels(String user) throws Exception {
+    return routerWebService.removeFromClusterNodeLabels(
         null, createHttpServletRequest(user));
   }
 

@@ -398,7 +398,7 @@ public interface RMWebServiceProtocol {
    * @return Response containing the status code
    * @throws Exception in case of bad request
    */
-  Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
+  Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception;
 
   /**
