@@ -2983,6 +2983,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.fsdatasetasyncdisk.max.threads.per.volume</name>
+  <value>4</value>
+  <description>
+    The maximum number of threads per volume used to process async disk
+    operations on the datanode. These threads consume I/O and CPU at the
+    same time. This will affect normal data node operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.cachereport.intervalMsec</name>
   <value>10000</value>
   <description>

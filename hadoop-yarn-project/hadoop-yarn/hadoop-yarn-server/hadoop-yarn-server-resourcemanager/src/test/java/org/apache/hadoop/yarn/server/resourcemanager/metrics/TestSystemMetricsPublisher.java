@@ -87,11 +87,14 @@ public class TestSystemMetricsPublisher {
   private static TimelineServiceV1Publisher metricsPublisher;
   private static TimelineStore store;
 
-  @Parameterized.Parameter
-  public boolean rmTimelineServerV1PublisherBatchEnabled;
+  private boolean rmTimelineServerV1PublisherBatchEnabled;
+  private int rmTimelineServerV1PublisherInterval;
 
-  @Parameterized.Parameter(1)
-  public int rmTimelineServerV1PublisherInterval;
+  public TestSystemMetricsPublisher(boolean rmTimelineServerV1PublisherBatchEnabled,
+      int rmTimelineServerV1PublisherInterval) {
+    this.rmTimelineServerV1PublisherBatchEnabled = rmTimelineServerV1PublisherBatchEnabled;
+    this.rmTimelineServerV1PublisherInterval = rmTimelineServerV1PublisherInterval;
+  }
 
   @Before
   public void setup() throws Exception {
