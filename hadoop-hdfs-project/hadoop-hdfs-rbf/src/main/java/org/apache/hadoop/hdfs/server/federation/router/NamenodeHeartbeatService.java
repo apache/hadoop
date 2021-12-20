@@ -272,7 +272,7 @@ public class NamenodeHeartbeatService extends PeriodicService {
     } else if (localTarget == null) {
       // block info available, HA status not expected
       LOG.debug(
-          "Reporting non-HA namenode as operational: " + getNamenodeDesc());
+          "Reporting non-HA namenode as operational: {}", getNamenodeDesc());
     } else {
       // block info available, HA status should be available, but was not
       // fetched do nothing and let the current state stand
