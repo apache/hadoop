@@ -114,11 +114,11 @@ public class MiniRouterDFSCluster {
   private static final Random RND = new Random();
 
   /** Nameservices in the federated cluster. */
-  private List<String> nameservices;
+  protected List<String> nameservices;
   /** Namenodes in the federated cluster. */
   private List<NamenodeContext> namenodes;
   /** Routers in the federated cluster. */
-  private List<RouterContext> routers;
+  protected List<RouterContext> routers;
   /** If the Namenodes are in high availability.*/
   private boolean highAvailability;
   /** Number of datanodes per nameservice. */
@@ -136,14 +136,14 @@ public class MiniRouterDFSCluster {
   protected static final long DEFAULT_CACHE_INTERVAL_MS =
       TimeUnit.SECONDS.toMillis(5);
   /** Heartbeat interval in milliseconds. */
-  private long heartbeatInterval;
+  protected long heartbeatInterval;
   /** Cache flush interval in milliseconds. */
-  private long cacheFlushInterval;
+  protected long cacheFlushInterval;
 
   /** Router configuration initializes. */
   private Configuration routerConf;
   /** Router configuration overrides. */
-  private Configuration routerOverrides;
+  protected Configuration routerOverrides;
   /** Namenode configuration overrides. */
   private Configuration namenodeOverrides;
 
@@ -1133,7 +1133,7 @@ public class MiniRouterDFSCluster {
    * <li>/ns1 -> ns1->/target-ns1.
    * </ul>
    */
-  public void installMockLocations() {
+  public void installMockLocations() throws IOException {
     for (RouterContext r : routers) {
       MockResolver resolver =
           (MockResolver) r.router.getSubclusterResolver();
