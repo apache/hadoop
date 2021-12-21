@@ -650,21 +650,6 @@ public class DataNode extends ReconfigurableBase
    *   <li>SLOW.SLOW when SLOW is enabled and DN is slownode.</li>
    * </ul>
    */
-  public PipelineAck.SLOW getSLOW() {
-    if (!pipelineSupportSlownode) {
-      return PipelineAck.SLOW.DISABLED;
-    }
-    return isSlownode() ? PipelineAck.SLOW.SLOW : PipelineAck.SLOW.NORMAL;
-  }
-
-  /**
-   * The SLOW bit for the DataNode.
-   * The DataNode should return:
-   * <ul>
-   *   <li>SLOW.NORMAL by default.</li>
-   *   <li>SLOW.SLOW when DN is slow.</li>
-   * </ul>
-   */
   public PipelineAck.SLOW getSLOWByBlockPoolId(String bpId) {
     if (!pipelineSupportSlownode) {
       return PipelineAck.SLOW.DISABLED;

@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
@@ -179,7 +180,7 @@ public class PipelineAck {
     if (proto.getFlagCount() > 0) {
       return proto.getFlag(i);
     } else {
-      return combineHeader(ECN.DISABLED, proto.getReply(i));
+      return combineHeader(ECN.DISABLED, proto.getReply(i), SLOW.DISABLED);
     }
   }
 
@@ -268,6 +269,7 @@ public class PipelineAck {
     return StatusFormat.setStatus(old, status);
   }
 
+  @VisibleForTesting
   public static int setSLOWForHeader(int old, SLOW slow) {
     return StatusFormat.setSLOW(old, slow);
   }

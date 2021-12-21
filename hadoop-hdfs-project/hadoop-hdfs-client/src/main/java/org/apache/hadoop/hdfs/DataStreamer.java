@@ -1294,8 +1294,7 @@ class DataStreamer extends Daemon {
             DatanodeInfo slowNode = entry.getKey();
             int index = getDatanodeIndex(slowNode);
             if (index >= 0) {
-              errorState.setBadNodeIndex(
-                  getDatanodeIndex(entry.getKey()));
+              errorState.setBadNodeIndex(index);
               throw new IOException("Receive reply from slowNode " + slowNode +
                   " for continuous " + markSlowNodeAsBadNodeThreshold +
                   " times, treating it as badNode");

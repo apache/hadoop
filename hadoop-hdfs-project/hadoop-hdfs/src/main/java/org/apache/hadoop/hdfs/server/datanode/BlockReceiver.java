@@ -1624,9 +1624,9 @@ class BlockReceiver implements Closeable {
         replies = new int[] { myHeader };
       } else if (mirrorError) { // ack read error
         int h = PipelineAck.combineHeader(datanode.getECN(), Status.SUCCESS,
-            datanode.getSLOW());
+            datanode.getSLOWByBlockPoolId(block.getBlockPoolId()));
         int h1 = PipelineAck.combineHeader(datanode.getECN(), Status.ERROR,
-            datanode.getSLOW());
+            datanode.getSLOWByBlockPoolId(block.getBlockPoolId()));
         replies = new int[] {h, h1};
       } else {
         short ackLen = type == PacketResponderType.LAST_IN_PIPELINE ? 0 : ack
